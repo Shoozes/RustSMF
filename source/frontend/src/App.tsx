@@ -43,13 +43,19 @@ export default function App() {
         onFileChange={handleFileInputChange}
       />
 
-      {/* Simple pure error banner (no extra deps) - clear on load or dismiss */}
-      {ui.errorMsg && (
-        <div data-testid="error-banner" className="bg-red-900/80 text-red-200 text-xs px-3 py-1 flex items-center gap-2">
-          <span>{ui.errorMsg}</span>
-          <button className="ml-auto underline" onClick={ui.clearError}>dismiss</button>
-        </div>
-      )}
+      {/* Simple pure error banner (no extra deps) - always in DOM even when not shown (for e2e), hidden via style when no error */}
+      <div
+        data-testid="error-banner"
+        className="bg-red-900/80 text-red-200 text-xs px-3 py-1 flex items-center gap-2"
+        style={{ display: ui.errorMsg ? 'flex' : 'none' }}
+      >
+        {ui.errorMsg && (
+          <>
+            <span>{ui.errorMsg}</span>
+            <button className="ml-auto underline" onClick={ui.clearError}>dismiss</button>
+          </>
+        )}
+      </div>
 
       <div className="main-area">
         <Outliner
