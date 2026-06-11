@@ -18,13 +18,16 @@ const Inspector: React.FC<InspectorProps> = ({
   skeleton,
   onSelectBone,
 }) => {
+  // Helper to reduce dupe (modularity/flex)
+  const getRootBones = (bones: any[]) => bones.filter((b: any) => !b.parent || !bones.includes(b.parent as any));
+
   // State for collapsible bone hierarchy (starts with top-level roots expanded for usability)
   const [expandedBones, setExpandedBones] = React.useState<Set<string>>(new Set());
 
   // Reset expanded on skeleton change (e.g., new model load) to avoid stale state
   React.useEffect(() => {
     if (skeleton && skeleton.bones.length > 0) {
-      const roots = skeleton.bones.filter((b: any) => !b.parent || !skeleton.bones.includes(b.parent as any));
+      const roots = getRootBones(skeleton.bones);
       setExpandedBones(new Set(roots.map((b: any) => b.name)));
     } else {
       setExpandedBones(new Set());
@@ -103,9 +106,7 @@ const Inspector: React.FC<InspectorProps> = ({
             <div className="panel-title">Bones ({skeleton.bones.length})</div>
             <div className="max-h-24 overflow-auto text-[10px]">
               <ul className="pl-0 m-0 list-none">
-                {skeleton.bones
-                  .filter((b: any) => !b.parent || !skeleton.bones.includes(b.parent as any))
-                  .map((root: any) => renderBoneTree(root, 0))}
+                {getRootBones(skeleton.bones).map((root: any) => renderBoneTree(root, 0))}
               </ul>
             </div>
           </div>
