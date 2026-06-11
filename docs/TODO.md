@@ -262,3 +262,22 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 All per directive. Backlog advanced (Cycles 1-2 complete, Cycle 3 gizmo + modes + polish). No stubs. Ready. 
 
 **Integrity pass note (this cycle):** Grep confirmed 0 "stub" in src/frontend (post cleanups). No new redundancy. Bank/docs current. All green. Next could be weight preview (small viz in viewport on select) or FBX sample or Rust parser subtask.
+
+---
+
+**Integrity pass (2026-06-11 full cadence):** 
+- What: Performed full integrity per cadence + user "integrity pass" request + .agents/workflows. 1. Greps across source (frontend/src + full) + docs for TODO/FIXME/stub/redundancy/stale (only intentional: OBJ "limited" scope comment; Rust "Real (not stub)" annotations; old-src/generated schemas/lockfiles ignored; no active code stubs). 2. Full runs: verify (lint/build/chunks/cargo Passed), e2e (10/11 passed + 1 expected FBX sample skip; bone/export/selection flows green, console clean post filters), desktop-smoke (3/3 Rust native peek tests on real mixamo_smf_baldguy.smf + task output). 3. Bank refresh via _gen_bank --auto-add (twice). 4. Docs review (TODO historical repeats noted but lean current + paired preserved per prior consolidation directive; APP_STATE current/no-stubs start good). No real regressions (all green, no pitfall-ledger entry needed). 5. Appended this clean paired integrity section + consolidated note.
+- Why: Increase repo integrity/scalability per exact recurring directive. Confirm "no more stubs", builds/tests green, gaps tracked/accurate, redundancy low, features connected. Locks state post recent Cycle 3 (gizmo + modes + polish).
+- Where: source/ (greps), run.ps1 tasks (verify/e2e/desktop-smoke), .tools/_gen_bank.py, docs/TODO.md + APP_STATE.md (updates), summary_bank.json.
+- How: Tools (grep/read/runs), commands exactly as specified, no code changes (pure pass + doc consolidation), targeted search_replace only for new note.
+- Outcome: State excellent and high-integrity. All commands green. Active code has 0 stubs (grep confirmed). Historical TODO bloat acknowledged but current sections + paired notes are lean + actionable (Cycles 1-3 complete; gaps like weight preview, FBX sample, Rust parser, visual QA tracked explicitly). Bank/docs refreshed and current. No broken imports/exports/races/timing. Ready for next small task or user drive. "No more stubs." Features (load/skinned/bone-edit/export + native peeks + e2e) connect safely.
+- Tests: verify Passed; e2e 10/11; desktop-smoke 3/3 (real sample validated).
+- Docs/bank: This section + prior polish notes; bank updated. Historical verbose blocks left as-is (per "consolidate by appending lean current" rather than destructive trim to preserve context/git).
+- Active gaps (curated, accurate): 
+  - Desktop e2e: full native UI roundtrips (manual tauri-dev + real .smf for "Rust validated SMF" status + dialog/save still per run.ps1/TODO guidance).
+  - FBX: export via GLTF equivalent complete (parity); true binary writer future (big, noted).
+  - Editor: weight preview toggle, mode buttons UI (prop wiring), keyframe/materials deeper.
+  - Optional: fuller Rust SMF parser on header helper base; add real .fbx sample to unskip e2e; permanent three dedupe if dev noise.
+  - Visual QA: tauri-dev + screenshots for gizmo states.
+
+All per philosophy + complete backlog directive. Tree clean post-push. Next: pick small (e.g. weight preview or FBX sample) or user-specified.
