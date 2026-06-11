@@ -231,4 +231,32 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     // Canvas still present (no crash)
     await expect(page.getByTestId('three-canvas')).toBeVisible();
   });
+
+  // Additional robustness: confirm bone status update works in load flow (covers raycast/list + new validated status path indirectly)
+  test('bone selection updates status (select UX coverage)', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf sample found in reference datafiles – adjust SAMPLE_SMF path');
+
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(SAMPLE_SMF!);
+
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips/i);
+
+    // Bone list select
+    const inspector = page.getByTestId('inspector');
+    const anyBoneEntry = inspector.locator('div').filter({ hasText: /./ }).nth(4);
+    if (await anyBoneEntry.count() > 0) {
+      await anyBoneEntry.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(60);
+      await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
+    }
+
+    // Canvas/raycast click for 3D select
+    const canvas = page.getByTestId('three-canvas');
+    await canvas.click({ position: { x: 60, y: 60 } });
+    await page.waitForTimeout(80);
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
+  });
 });

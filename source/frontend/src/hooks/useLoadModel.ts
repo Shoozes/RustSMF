@@ -60,6 +60,7 @@ export function useLoadModel() {
       }
 
       // Rust subtask: early validation for desktop .smf using validate_smf (real, wires new command for bad/corrupt edge case)
+      let rustValidated = false;
       if (name.endsWith('.smf') && res.path) {
         try {
           const val = await (await import('../backend-client/tauri')).validateSmf(res.path);
@@ -69,6 +70,7 @@ export function useLoadModel() {
             ui.setIsLoading(false);
             return;
           }
+          rustValidated = true;
         } catch {}
       }
 
@@ -109,6 +111,9 @@ export function useLoadModel() {
         let status = `Loaded: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length} | verts: ${loaded.skinnedMeshes?.[0]?.geometry?.attributes?.position?.count || '?'}`;
         if (rustPeekMsg) {
           status = `${rustPeekMsg} | ${status}`;
+        }
+        if (rustValidated && name.endsWith('.smf')) {
+          status = `Rust validated SMF | ${status}`;
         }
         ui.setStatus(status);
       }

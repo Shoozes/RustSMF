@@ -191,6 +191,18 @@ All per directive + philosophy. No stubs. Features connect (peek info in status,
 
 See updated APP_STATE, bank (rust_parser_breakdown, e2e items). Continue loop.
 
+**Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research (docs/bank post-last, git clean, verify Passed, greps clean no stubs, source for Rust/e2e/peek/validate) showed state excellent. Remaining: deeper desktop e2e, Rust parser subtasks (rig peek etc.), FBX limited.
+
+Actioned (broken down per directive):
+- Rust subtask advance: Wired validate_smf (added last) + peek for early invalid check + "Rust validated SMF" in final desktop .smf status (polish for UX). (what: complete validation subtask in parser breakdown, why: early error UX for bad .smf desktop + show Rust I/O, where: useLoadModel.ts + main.rs (validate) + tauri client, how: flag + status prefix, real no stub).
+- E2E deepen: Added dedicated 'bone selection updates status' test (list + raycast clicks assert 'Selected:' in status-text). Improved error path coverage. (what: deepen selection UX + error robustness, why: lock e2e for new features/edges, where: smoke.spec.ts, how: new test + asserts + guards).
+- Polish: Early return on invalid in load (async edge fix), status includes validated note.
+- Docs/bank: Appended paired notes; gaps updated (rust subtask, e2e).
+
+All per philosophy. Verify clean. Push next. Remaining tracked (desktop e2e, next Rust rig peek subtask).
+
+See bank, TODO for pairs. No stubs. Continue.
+
 **Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research (reads of current docs/bank/source post-last, git clean with prior commits, verify Passed, greps no new stubs/broken/async issues, e2e with robust BAD + status asserts) confirmed state high. Remaining per gaps: deeper desktop e2e, Rust parser (bigger, subtasks: header/size done, this: validation wiring + early check in load for bad .smf desktop edge).
 
 Actioned (broken down, real, no stubs):

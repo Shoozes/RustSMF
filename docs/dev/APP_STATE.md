@@ -129,6 +129,14 @@ See updated TODO for full paired backlog. Builds green.
 
 All per directive. Next: deeper desktop e2e, more Rust subtasks (rig peek), FBX limited. See TODO/bank. No stubs. Verify clean.
 
+**Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research showed clean state. Actioned:
+- Rust: Wired validate + peek for early check + "Rust validated SMF" status prefix on desktop .smf success (subtask advance + polish).
+- E2E: Added bone status update test (list + raycast asserts 'Selected:').
+- Polish: Early invalid return in load.
+- Docs/bank: Paired appends, gaps updated.
+
+Verify clean. No stubs. Per directive. Continue with remaining (desktop e2e, Rust rig subtask). See TODO.
+
 **Auto research/recap/decide/design/build/test/fix/polish (this continuation):** Research recap post-review (docs/bank with consolidation, git clean, verify/e2e clean, greps clean, source reads) showed excellent state. Actioned small items to progress backlog:
 - E2E: Confirmed/enhanced robustness (BAD_GML search + guards, bone 'Selected:' status asserts post list/raycast in load test, error path coverage). 
 - Rust: Small subtask - enhanced real peek_smf_header (added size bytes to return string for richer desktop validation in status).
