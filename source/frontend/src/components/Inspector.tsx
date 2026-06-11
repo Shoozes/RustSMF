@@ -18,6 +18,25 @@ const Inspector: React.FC<InspectorProps> = ({
   skeleton,
   onSelectBone,
 }) => {
+  // Recursive renderer for proper bone hierarchy tree (depth-based indent, follows .children)
+  const renderBoneTree = (bone: any, depth: number): React.ReactNode => {
+    const indent = '  '.repeat(depth);
+    const isSelected = selected === bone.name;
+    return (
+      <React.Fragment key={bone.name || depth}>
+        <div
+          className={`cursor-pointer px-1 rounded hover:bg-slate-700 ${isSelected ? 'bg-slate-600' : ''}`}
+          onClick={() => onSelectBone && onSelectBone(bone.name)}
+        >
+          {indent}{bone.name}
+        </div>
+        {bone.children &&
+          bone.children
+            .filter((c: any) => c.isBone)
+            .map((child: any) => renderBoneTree(child, depth + 1))}
+      </React.Fragment>
+    );
+  };
   return (
     <div data-testid="inspector" className="inspector">
       <div className="panel-title">Inspector</div>
@@ -49,19 +68,9 @@ const Inspector: React.FC<InspectorProps> = ({
           <div className="mt-3">
             <div className="panel-title">Bones ({skeleton.bones.length})</div>
             <div className="max-h-24 overflow-auto text-[10px]">
-              {skeleton.bones.map((b, idx) => {
-                const parentName = b.parent ? (b.parent as any).name : null;
-                const indent = parentName ? '  ' : '';
-                return (
-                  <div
-                    key={idx}
-                    className={`cursor-pointer px-1 rounded hover:bg-slate-700 ${selected === b.name ? 'bg-slate-600' : ''}`}
-                    onClick={() => onSelectBone && onSelectBone(b.name)}
-                  >
-                    {indent}{b.name}{parentName ? ` (parent: ${parentName})` : ''}
-                  </div>
-                );
-              })}
+              {skeleton.bones
+                .filter((b: any) => !b.parent || !skeleton.bones.includes(b.parent as any))
+                .map((root: any) => renderBoneTree(root, 0))}
             </div>
           </div>
         )}
