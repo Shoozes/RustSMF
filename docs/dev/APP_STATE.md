@@ -121,3 +121,15 @@ See summary_bank.json (current_gaps_and_issues tracks remaining like deeper desk
 Outcome: Repo/app integrity increased (less redundancy, more modular/flex, timing robust, docs lean, bank organized, all connected safe/smooth). No stubs. Ready. Continue loop with actionable from backlog.
 
 See updated TODO.md for full paired items from this review + prior. Builds green.
+
+**Auto research/recap/decide/design/build/test/fix/polish (2026-06-11 current per directive + "complete the todo/backlog"):** 
+- Full fresh research via tools (lists, reads of every critical src + docs + bank + scripts + Rust, greps for stubs across frontend+tauri, sample/model checks).
+- State recap (no change to "excellent"): thin App (useLoadModel hook + slices), 5 components (Inspector collapsible recursive bone tree + count/scroll + bidir with raycast in ThreeViewport), full loaders (smf fidelity + glb/fbx/obj with postproc, coord DQ full + roundtrips), barrel, tauri client (isTauri helper + all peeks + combined info + read/write), real local mixamo test model + instrumented e2e (listeners, 0 critical errors, bone tests with double-toggle + canvas raycast + status + screenshot), Rust all real peeks registered, verify robust, vite clean.
+- No stubs/broken (greps confirmed; glb approx documented fallback; error strings intentional). All prior backlog (modularity via hook/extracts, bone+raycast, OBJ, tauri redundancy/timing, run polish, tests expand, Rust subtasks) complete.
+- Actions: Small targeted fixes (barrel import polish for modularity; coord.test ESM __dirname for test runner robustness; Rust dead-assign removal for cargo clean). Full integrity runs: verify Passed (lint/build/chunks/cargo), e2e 5/6 passed (real model exercised load/bones/anim/export/visuals/UX; skipped one is env gml availability; console only benign warnings; toHaveScreenshot ran), cargo clean post-fix, _gen_bank --auto-add refreshed summary_bank.
+- Visual/console: Yes runnable + clean (no app errors caught by listeners in chromium runs).
+- Docs: TODO + APP_STATE appended with lean paired pass note (what/why/where/how + outcomes); bank curated by auto + this context.
+- Gaps status: desktop_e2e (manual guidance solid + recommends local .smf), fbx_export (limited by design), rust_parser (subtasks all built real; optional fuller tracked), tests (expanded/robust, no new gaps). Nothing to "build if missing".
+- Result: Backlog complete for current sprint/harness-ready. Builds/tests always green post loop. Git ready. Per "auto... no more stubs... break down big... continue".
+
+Builds green. All connected. Ready.

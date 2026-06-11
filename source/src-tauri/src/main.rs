@@ -113,7 +113,6 @@ async fn peek_smf_rig_basic(path: String) -> Result<String, String> {
     if off + 16 > bytes.len() { return Ok("header too short".to_string()); }
     off += 8; // skip tex/model offsets
     let off_rig = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize;
-    off += 8; // skip rest
     if off_rig + 4 > bytes.len() {
         return Ok(format!("rig offset {} beyond file", off_rig));
     }

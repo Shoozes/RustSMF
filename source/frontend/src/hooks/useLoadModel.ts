@@ -1,9 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
 import type { OpenResult } from '../backend-client/tauri';
-import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer } from '../loaders';
-import { loadGLB } from '../loaders';
-import { loadFBX } from '../loaders';
-import { loadOBJ } from '../loaders/obj';
+import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
 
 /**

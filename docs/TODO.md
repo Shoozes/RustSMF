@@ -46,7 +46,18 @@ All per directive. Builds green. No stubs. Ready for push or next (desktop e2e m
 
 All per directive. Ran full verify (Passed), e2e (clean), bank gen. Then commit + gitpush.
 
-Next: user/manual execution of desktop e2e subtask guidance, or further small Rust if prioritized. Builds green. No stubs. Ready.
+Next: user/manual execution of desktop e2e subtask guidance (use tauri-dev + load local tests/mixamo_smf_baldguy.smf for native peeks/I/O/collapse), or optional further Rust if new samples. Builds green. No stubs. Ready.
+
+**Auto research/recap/decide/design/build/test/fix/polish (current 2026-06-11 continuation per exact user directive):** 
+- Research (fresh): list_dir + full reads (TODO/APP_STATE/summary_bank/project.json/run.ps1 + all src/*.ts/tsx + Rust main + tests + .agents skills + capabilities) + grep (no active code TODO/stub/FIXME except intentional glb approx + error throws; Rust peeks all annotated "Real (not stub)"); e2e console logs inspected.
+- Recap: State excellent post prior modularity/bone/raycast/OBJ/Rust-peeks/e2e/console. App thin orchestrator, hook+barrel+components+loaders+store complete (no stubs). Local real mixamo model wired. Collapsible bone tree + 3D pick live. All I/O + fidelity + roundtrips + tests (5/6 e2e pass, 1 env-skip for gml) + visuals. Rust combined info + all peeks done. Vite dedupe/chunks, verify robust.
+- Decide/breakdown: Remaining per bank/TODO are tracked design choices (FBX export limited intentional; desktop e2e manual with guidance already detailed in run.ps1 + docs; Rust parser "fuller" broken to small real subtasks -- all header/validate/rig/anim/model/combined complete, no TS dupe by design). No large missing impl. Prioritize: small polish (consistency), full runs (verify/e2e/cargo/unit-attempt), docs/bank refresh, commit/push. Expand tests: already strong (no critical new gaps per review); roundtrips + e2e cover fidelity.
+- Build/test/fix/polish: 1. Barrel import consistency (hook now single `from '../loaders'` for smf/glb/fbx/obj/coord; removed direct obj path). 2. ESM __dirname fix in coord.test.ts (mirrors smoke.spec for robustness; prevents crash in direct ESM node test). 3. Rust: removed dead `off +=8` assignment in peek_rig_basic (cargo now 0 warnings). 4. Re-ran verify (lint/build/chunk/cargo Passed), full e2e (5 passed core flows incl. real model load + bone toggle/raycast/status/collapse + export + screenshot + error banner + no critical console ERRORs; only benign GL/THREE material warnings), cargo clean, bank _gen --auto-add.
+- Integrity: All green. Visual tests runnable (toHaveScreenshot exercised). Console listeners confirm 0 app errors. "No more stubs." "If missing build it" -- nothing critical missing.
+- Docs/bank: This pass appended (paired); bank auto-refreshed (paths updated); TODO/APP_STATE lean note added. Redundancy low.
+- Outcome: Backlog actionable items complete or explicitly tracked (no stubs). Features connect. Ready for desktop manual or next increment. Per philosophy + complete todo/backlog directive.
+
+All per directive. Ran full verify (Passed), e2e (clean, visuals+console good), bank gen, small fixes, commit + gitpush.
 
 ---
 

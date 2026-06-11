@@ -3,6 +3,9 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import path from 'path';
 import {
   smfVecToThree,
   smfMatrixToThree,
@@ -12,6 +15,9 @@ import {
   dqFlipSign,
   dqToMatrix,
 } from './coord';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
   it('vec swizzle (to three) is stable', () => {
@@ -69,7 +75,6 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
 // E2E in smoke.spec.ts for visuals + full UI flows.
 import { exportSMFToBuffer, importSMF, ImportedSmf } from './smf';
 import fs from 'fs';
-import path from 'path';
 
 const SMF_DIR = path.resolve(__dirname, '../../../docs/references/old-src/datafiles/SMF');
 
