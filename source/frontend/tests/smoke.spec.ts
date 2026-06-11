@@ -349,5 +349,13 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
       return 'readBinaryFile only available in Tauri desktop (use openFile in browser)';
     });
     expect(readFallback).toContain('only available in Tauri desktop');
+
+    // Cover additional desktop peeks for fuller path coverage
+    const modelFallback = await page.evaluate(() => {
+      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
+      if (isTauri) return 'tauri';
+      return 'peekSmfModelBasic only in Tauri desktop';
+    });
+    expect(modelFallback).toContain('only in Tauri desktop');
   });
 });

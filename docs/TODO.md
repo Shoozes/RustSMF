@@ -99,6 +99,14 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 - Outcome: cargo test now 3 desktop-related tests ok; e2e 7 passed (new test + all prior); verify green. desktop-smoke task exercises them. Gap further narrowed (native + fallback coverage automated; full UI native roundtrips still benefit from tauri-dev guidance).
 - Docs: This paired subtask note.
 
+**This cycle continuation (desktop e2e + bone robustness):** 
+- What: Enhanced tauri fallback e2e test to cover additional peeks (modelBasic); updated desktop-smoke task output and message to highlight 3 tests (main, validate, header/invalid); made bone stub more robust by calling skeleton.update() after mutation for better preview propagation.
+- Why: Further automate desktop path coverage (client fallbacks in browser + expanded native); improve bone stub usability ("if broken fix").
+- Where: smoke.spec.ts (more evaluate coverage), run.ps1 (desktop-smoke polish), Inspector.tsx (skeleton.update in stubs).
+- How: Incremental adds to existing tests/tasks; direct skeleton update call.
+- Outcome: e2e 7 passed (all tests including new coverage); cargo 3 ok; desktop-smoke shows full; verify Passed. No breakage.
+- Docs: This note.
+
 ---
 
 

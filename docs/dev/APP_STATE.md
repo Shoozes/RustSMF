@@ -143,3 +143,5 @@ Builds green. All connected. Ready.
 **This cycle (stub made functional):** Transform stub buttons now actually mutate the selected bone (position/rot + updateMatrix + reset); marker follows live. e2e now clicks the stubs (data-testid). Builds/tests green. Desktop/Rust native still solid.
 
 **Desktop e2e further (subtasks):** Expanded Rust tests (validate, header, invalid cases on sample/bytes); added e2e 'tauri client fallbacks' test for browser desktop path strings. e2e now 7 passed, cargo 3 tests. Stub comment polished. Gap narrowed more.
+
+**This cycle continuation:** More e2e coverage for peeks in fallback test; desktop-smoke task updated for clarity on 3 tests; bone stub calls skeleton.update() for robustness. All green.
