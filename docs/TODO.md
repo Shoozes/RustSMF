@@ -176,3 +176,18 @@ Outcome: Backlog progressed (e2e deeper via status + error, polish on peek/UX), 
 
 See summary_bank (gaps), run.ps1 verify, source (no new stubs). Continue.
 
+**Auto research/recap/decide/design/build/test/fix/polish (this continuation pass):** Research (post-review: docs/bank current with consolidation items, git clean with review commits, verify Passed, greps no new stubs/broken imports/exports/async issues, code for peek/e2e/raycast, e2e runs with BAD robust + status assert) confirmed state high integrity. Backlog from gaps: deeper desktop e2e, Rust parser (bigger - broken down), FBX limited, polish.
+
+Actioned (prioritized small per "break down", "complete backlog", "no more stubs"):
+- E2E: Sharpened robustness further (BAD_GML search + guards already solid; added/confirmed status asserts for 'Selected:' after bone list + raycast canvas clicks in load test, error path details). Targeted e2e for new coverage (status, edges). (what: deepen test coverage for selection UX/status + corrupt edges without skips, why: ensure show-ready reliable e2e + fidelity, where: smoke.spec.ts + beforeEach listeners, how: asserts + recursive search + skip guards).
+- Rust subtask (from parser breakdown): Enhanced real peek_smf_header to include size bytes in return ( "Rust SMF peek: SMF_vXX... (size: N bytes)" or not-SMF with size). Used automatically in hook final status for desktop .smf. (what: small real progress on rust-smf-parser group, why: better desktop validation/UX info without full parser dupe, where: src-tauri/src/main.rs (impl + register), frontend hook (uses returned string), how: update format in cmd, no other changes).
+- Polish: Confirmed no async/timing issues (peek sequenced before import, final status combined, refs/effects clean, drop await safe). Raycast edges (no-skel return, dist threshold). No redundancy/broken. 
+- Docs/bank: Will append this pass with pairs; curate gaps for new items.
+- Verify/build: Passed, clean.
+
+Paired examples: E2E (what=sharpen asserts/robustness, why=complete test backlog for edges/UX, where=smoke + hook, how=asserts + search). Rust subtask (what=enhance peek size, why=advance broken-down parser item, where=main.rs/hook, how=real bytes info).
+
+All per directive + philosophy. No stubs. Features connect (peek info in status, e2e covers select/status). Ready for push. Remaining tracked (deeper desktop, next Rust subtasks e.g. rig peek, FBX).
+
+See updated APP_STATE, bank (rust_parser_breakdown, e2e items). Continue loop.
+

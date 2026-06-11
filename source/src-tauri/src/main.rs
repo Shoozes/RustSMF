@@ -58,7 +58,7 @@ async fn write_file_binary(path: String, data: Vec<u8>) -> Result<(), String> {
 async fn peek_smf_header(path: String) -> Result<String, String> {
     // Real (not stub) small SMF header peek for desktop validation / rust-smf-parser progress.
     // Reads initial bytes, extracts version strZ if present (SMF_v11 or v12).
-    // Frontend can call optionally for .smf desktop loads to surface Rust I/O early.
+    // Includes size for extra info. Frontend uses for desktop .smf to surface Rust I/O in status.
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
     if bytes.is_empty() {
         return Ok("empty file".to_string());
@@ -68,10 +68,11 @@ async fn peek_smf_header(path: String) -> Result<String, String> {
         if b == 0 { break; }
         s.push(b as char);
     }
+    let size = bytes.len();
     if s.starts_with("SMF_v") {
-        Ok(format!("Rust SMF peek: {}", s))
+        Ok(format!("Rust SMF peek: {} (size: {} bytes)", s, size))
     } else {
-        Ok("not SMF header or unknown".to_string())
+        Ok(format!("not SMF header or unknown (size: {} bytes)", size))
     }
 }
 

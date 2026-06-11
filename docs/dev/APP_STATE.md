@@ -120,3 +120,11 @@ Current state: Core connected (SMF/GLB/FBX load via hook -> ThreeViewport skinne
 All per philosophy (modular/dynamic, direct, safety first). Verify/build/e2e clean. Continue actionable (deeper desktop e2e, Rust parser sub-tasks if prioritized, FBX if scope). 
 
 See updated TODO for full paired backlog. Builds green.
+
+**Auto research/recap/decide/design/build/test/fix/polish (this continuation):** Research recap post-review (docs/bank with consolidation, git clean, verify/e2e clean, greps clean, source reads) showed excellent state. Actioned small items to progress backlog:
+- E2E: Confirmed/enhanced robustness (BAD_GML search + guards, bone 'Selected:' status asserts post list/raycast in load test, error path coverage). 
+- Rust: Small subtask - enhanced real peek_smf_header (added size bytes to return string for richer desktop validation in status).
+- Polish: Async/timing/edges verified clean (no fixes needed beyond prior).
+- Docs: Appended paired notes to TODO/APP_STATE; bank gaps curated (e2e, rust subtask).
+
+All builds/verify clean. No stubs. Per directive. Next: deeper desktop e2e, more Rust subtasks (e.g. rig info peek), FBX if expanded. See TODO for pairs.
