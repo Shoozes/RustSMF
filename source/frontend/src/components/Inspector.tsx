@@ -49,15 +49,19 @@ const Inspector: React.FC<InspectorProps> = ({
           <div className="mt-3">
             <div className="panel-title">Bones ({skeleton.bones.length})</div>
             <div className="max-h-24 overflow-auto text-[10px]">
-              {skeleton.bones.map((b, idx) => (
-                <div
-                  key={idx}
-                  className={`cursor-pointer px-1 rounded hover:bg-slate-700 ${selected === b.name ? 'bg-slate-600' : ''}`}
-                  onClick={() => onSelectBone && onSelectBone(b.name)}
-                >
-                  {b.name}
-                </div>
-              ))}
+              {skeleton.bones.map((b, idx) => {
+                const parentName = b.parent ? (b.parent as any).name : null;
+                const indent = parentName ? '  ' : '';
+                return (
+                  <div
+                    key={idx}
+                    className={`cursor-pointer px-1 rounded hover:bg-slate-700 ${selected === b.name ? 'bg-slate-600' : ''}`}
+                    onClick={() => onSelectBone && onSelectBone(b.name)}
+                  >
+                    {indent}{b.name}{parentName ? ` (parent: ${parentName})` : ''}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
