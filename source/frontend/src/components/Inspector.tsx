@@ -19,11 +19,17 @@ const Inspector: React.FC<InspectorProps> = ({
   onSelectBone,
 }) => {
   // State for collapsible bone hierarchy (starts with top-level roots expanded for usability)
-  const [expandedBones, setExpandedBones] = React.useState<Set<string>>(() => {
-    if (!skeleton) return new Set();
-    const roots = skeleton.bones.filter((b: any) => !b.parent || !skeleton.bones.includes(b.parent as any));
-    return new Set(roots.map((b: any) => b.name));
-  });
+  const [expandedBones, setExpandedBones] = React.useState<Set<string>>(new Set());
+
+  // Reset expanded on skeleton change (e.g., new model load) to avoid stale state
+  React.useEffect(() => {
+    if (skeleton && skeleton.bones.length > 0) {
+      const roots = skeleton.bones.filter((b: any) => !b.parent || !skeleton.bones.includes(b.parent as any));
+      setExpandedBones(new Set(roots.map((b: any) => b.name)));
+    } else {
+      setExpandedBones(new Set());
+    }
+  }, [skeleton]);
 
   const toggleBone = (name: string, e: React.MouseEvent) => {
     e.stopPropagation();

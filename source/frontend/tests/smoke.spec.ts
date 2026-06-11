@@ -129,6 +129,12 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
       await anyBoneEntry.click({ force: true }).catch(() => {});
       await page.waitForTimeout(60);
     }
+    // Toggle first +/- if present (tests collapse edge for deep rigs)
+    const toggle = inspector.locator('span').filter({ hasText: /[+-]/ }).first();
+    if (await toggle.count() > 0) {
+      await toggle.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(60);
+    }
     await expect(page.getByTestId('three-canvas')).toBeVisible();
 
     // Exercise 3D viewport click (exercises raycast bone pick handler + orbit compat; no crash expected)
@@ -253,12 +259,19 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips/i);
 
     // Bone list select (targets label divs inside li for the nested/collapsible tree structure; clicks name to select)
+    // Also exercises toggle for collapse/expand
     const inspector = page.getByTestId('inspector');
     const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /./ }).nth(0);
     if (await anyBoneEntry.count() > 0) {
       await anyBoneEntry.click({ force: true }).catch(() => {});
       await page.waitForTimeout(60);
       await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
+    }
+    // Toggle first +/- if present (tests collapse edge for deep rigs)
+    const toggle = inspector.locator('span').filter({ hasText: /[+-]/ }).first();
+    if (await toggle.count() > 0) {
+      await toggle.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(60);
     }
 
     // Canvas/raycast click for 3D select
