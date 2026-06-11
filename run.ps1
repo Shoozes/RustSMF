@@ -130,9 +130,9 @@ switch -Exact ($Task.ToLowerInvariant()) {
             # The new peek_smf_model_basic etc. surface mesh counts etc. in status for desktop .smf.
             # Full exe launch + UI probe would require extra (e.g. Start-Process + window inspection + timeout).
             # For now this confirms the tauri desktop bundle step + the web e2e (test:e2e) covers the logic.
-            # Recommended: run '.\run.ps1 -Task tauri-dev' (or cargo tauri dev), then use Open + load a real .smf from docs/references/old-src/datafiles/SMF/ to see Rust info in status + full native I/O + export.
-            # This exercises the complete desktop path (binary read before full load, peeks, save via write_file_binary).
-            Write-Ok "[SMOKE] Unbundled build complete. See APP_STATE.md + TODO.md (deeper desktop e2e gap) for manual tauri-dev smoke with real samples + Rust peek validation."
+            # Recommended: run '.\run.ps1 -Task tauri-dev' (or cargo tauri dev), then use Open + load the real local test model from source/frontend/tests/mixamo_smf_baldguy.smf (or old-src if needed) to see Rust info in status (incl. model peek for mesh count), full native I/O, export, and UI features like collapsible bone hierarchy.
+            # This exercises the complete desktop path (binary read before full load, peeks, save via write_file_binary) + recent editor basics (bone collapse).
+            Write-Ok "[SMOKE] Unbundled build complete. See APP_STATE.md + TODO.md (deeper desktop e2e gap) for manual tauri-dev smoke with the local real .smf + Rust peek/collapse validation."
             Pop-Location
         } else {
             Write-Warn "src-tauri missing."
