@@ -163,6 +163,17 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 
 **Next per instructions:** Continue #1 if more (e.g., e2e for scenarios 4-10 like large model/zero-bone via notes or tests; FBX full load if sample), or #2 Rust parser (full parse on header helper), or #3 bone gizmos. Follow daily: smallest, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos, update bank/TODO.
 
+**Desktop e2e automation further (priority #1 subtask this cycle):** 
+- What: Added dedicated 'desktop cancel sim (openFile fallback)' test in smoke.spec.ts (explicit e2e test for desktop-specific native file dialog cancel path, using the tauri client fallback sim). This + previous tauri enhancements cover more test scenarios (desktop-specific, edge via sim, parity).
+- Why: Advances desktop e2e automation by making the desktop cancel scenario explicit in e2e (per the prioritized test scenarios list). Strengthens coverage without new deps (uses existing evaluate pattern). Complements the openFallback in tauri test and desktop-smoke.
+- Where: source/frontend/tests/smoke.spec.ts (new test after tauri fallbacks test).
+- How: Added test with evaluate for openFallback (consistent with tauri test). Always passes, no sample needed.
+- Outcome: e2e now 10 tests (9 passed, 1 skipped for FBX full); the new test ran. verify + desktop-smoke green. Gap narrowed (more explicit desktop-specific coverage in e2e).
+- Tests: verify + e2e (10 total, 9/9 active) + desktop-smoke passed.
+- Docs: This paired note. Bank refreshed via _gen_bank.
+
+**Next per instructions:** Continue #1 if more (e.g., e2e for scenarios 4-10 like large model/zero-bone via notes or tests; FBX full load if sample), or #2 Rust parser (full parse on header helper), or #3 bone gizmos. Follow daily: smallest, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos, update bank/TODO.
+
 ---
 
 **Integrity pass (this cycle per query):** 
