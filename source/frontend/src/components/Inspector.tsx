@@ -18,10 +18,28 @@ const Inspector: React.FC<InspectorProps> = ({
   skeleton,
   onSelectBone,
 }) => {
-  // Recursive renderer for proper bone hierarchy tree (nested <ul><li> for semantic hierarchy, depth indent, follows .children)
+  // State for collapsible bone hierarchy (starts with top-level roots expanded for usability)
+  const [expandedBones, setExpandedBones] = React.useState<Set<string>>(() => {
+    if (!skeleton) return new Set();
+    const roots = skeleton.bones.filter((b: any) => !b.parent || !skeleton.bones.includes(b.parent as any));
+    return new Set(roots.map((b: any) => b.name));
+  });
+
+  const toggleBone = (name: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setExpandedBones(prev => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  };
+
+  // Recursive renderer for proper bone hierarchy tree (nested <ul><li>, collapsible, depth indent, follows .children)
   const renderBoneTree = (bone: any, depth: number): React.ReactNode => {
     const isSelected = selected === bone.name;
     const childBones = bone.children ? bone.children.filter((c: any) => c.isBone) : [];
+    const hasChildren = childBones.length > 0;
+    const isExpanded = expandedBones.has(bone.name);
     return (
       <li key={bone.name || depth} className="list-none">
         <div
@@ -29,9 +47,17 @@ const Inspector: React.FC<InspectorProps> = ({
           onClick={() => onSelectBone && onSelectBone(bone.name)}
           style={{ paddingLeft: `${depth * 12}px` }}
         >
+          {hasChildren && (
+            <span
+              className="inline-block w-3 text-center mr-1 select-none"
+              onClick={(e) => toggleBone(bone.name, e)}
+            >
+              {isExpanded ? '−' : '+'}
+            </span>
+          )}
           {bone.name}
         </div>
-        {childBones.length > 0 && (
+        {hasChildren && isExpanded && (
           <ul className="pl-0 m-0">
             {childBones.map((child: any) => renderBoneTree(child, depth + 1))}
           </ul>

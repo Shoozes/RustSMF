@@ -252,7 +252,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips/i);
 
-    // Bone list select (targets label divs inside li for the nested tree structure)
+    // Bone list select (targets label divs inside li for the nested/collapsible tree structure; clicks name to select)
     const inspector = page.getByTestId('inspector');
     const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /./ }).nth(0);
     if (await anyBoneEntry.count() > 0) {
