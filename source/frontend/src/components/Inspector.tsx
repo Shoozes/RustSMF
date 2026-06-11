@@ -151,6 +151,7 @@ const Inspector: React.FC<InspectorProps> = ({
             }}> reset </button>
             {onToggleWeightPreview && (
               <button
+                data-testid="weight-preview-btn"
                 className="ml-2 px-1 py-0 bg-slate-700 hover:bg-slate-600 text-xs"
                 onClick={onToggleWeightPreview}
               >
@@ -160,14 +161,17 @@ const Inspector: React.FC<InspectorProps> = ({
             {onSetTransformMode && (
               <>
                 <button
+                  data-testid="mode-translate-btn"
                   className={`ml-1 px-1 py-0 text-xs ${transformMode === 'translate' ? 'bg-slate-500' : 'bg-slate-700 hover:bg-slate-600'}`}
                   onClick={() => onSetTransformMode('translate')}
                 >T</button>
                 <button
+                  data-testid="mode-rotate-btn"
                   className={`px-1 py-0 text-xs ${transformMode === 'rotate' ? 'bg-slate-500' : 'bg-slate-700 hover:bg-slate-600'}`}
                   onClick={() => onSetTransformMode('rotate')}
                 >R</button>
                 <button
+                  data-testid="mode-scale-btn"
                   className={`px-1 py-0 text-xs ${transformMode === 'scale' ? 'bg-slate-500' : 'bg-slate-700 hover:bg-slate-600'}`}
                   onClick={() => onSetTransformMode('scale')}
                 >S</button>

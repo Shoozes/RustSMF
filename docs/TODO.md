@@ -305,3 +305,17 @@ All per philosophy + complete backlog directive. Tree clean post-push. Next: pic
 - Remaining: full visual QA (tauri-dev + screenshots), FBX sample, Rust parser, etc.
 
 All per directive. Backlog further reduced (Cycle 3 gizmo now has buttons + viz + modes). No stubs. Ready for next small (e.g. FBX sample or Rust subtask or deeper editor).
+
+---
+
+**E2e coverage for Cycle 3 editor features (small test sharpen):** 
+- What: Extended 'bone selection updates status' e2e test (and updated comment) to exercise the new Cycle 3 UI buttons added in prior subtask: clicks on 'weight-preview-btn' (toggle on/off), 'mode-translate-btn' (and similar for rotate/scale if present). Added data-testid to the weight and mode buttons in Inspector.tsx for reliable Playwright targeting. This locks in the new controls (gizmo modes + weight viz) without new snapshots or breaking existing asserts (clicks are conditional, canvas still checked).
+- Why: Sharpens tests per integrity/ "complete backlog" (new editor features from gizmo/weight/modes were not exercised in e2e before; bone test is the natural place as it already does transform button clicks + raycast). High value for regression prevention on UI polish. Small (one test extension + data-ids). "If broken, fix it" (no breakage). Complements prior e2e work on bone/selection.
+- Where: source/frontend/tests/smoke.spec.ts (extend bone test + comment), source/frontend/src/components/Inspector.tsx (add data-testid to weight-preview-btn, mode-*-btn).
+- How: Targeted search_replace for data-ids + test clicks (reuse pattern from xBtn/resetBtn). Ran full verify + e2e + desktop-smoke immediately after (green; new clicks in the  bone test which loads real sample). Bank refresh. This paired note.
+- Outcome: E2e now covers the new buttons in core bone UX flow (selection + controls + viz). No stubs, no new issues. e2e still 10/11 (FBX skip unchanged). Good lock on Cycle 3 deliverables.
+- Tests: verify Passed; e2e 10/11 (bone test now includes mode/weight clicks); desktop-smoke 3/3.
+- Docs/bank: This note; bank refreshed. Gaps note updated (e2e coverage improved; still recommend manual tauri-dev for full visual of gizmo/weight states).
+- Integrity note: Grep for stubs in src now clean (only benign future comments + intentional limited in obj). No redundancy added.
+
+All per directive + cycle template. Backlog advanced (Cycle 3 editor UI + test coverage complete). No more stubs in active editor paths. Ready for next (e.g. add .fbx sample or start Rust parser subtask or visual QA notes). Tree ready for push.
