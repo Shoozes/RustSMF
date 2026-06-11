@@ -3,7 +3,7 @@ import type { OpenResult } from '../backend-client/tauri';
 import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer } from '../loaders';
 import { loadGLB } from '../loaders';
 import { loadFBX } from '../loaders';
-import { loadOBJ } from '../loaders';
+import { loadOBJ } from '../loaders/obj';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
 
 /**

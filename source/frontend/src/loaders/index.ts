@@ -5,6 +5,7 @@
 export * from './smf';
 export * from './glb';
 export * from './fbx';
+export * from './obj';
 export * from './coord';
 
 // Note: coord.test.ts is test-only, not re-exported here.

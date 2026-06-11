@@ -5,7 +5,7 @@ import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 // OBJ is typically static meshes (no skinning/rigging), but we support any animations if present.
 // Used for preview/import parity. Export not supported (use GLB/SMF).
 
-export interface LoadedModel {
+interface LoadedModel {
   root: THREE.Group;
   skeleton?: THREE.Skeleton;
   skinnedMeshes: THREE.SkinnedMesh[];
