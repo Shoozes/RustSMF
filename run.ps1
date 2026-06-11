@@ -126,11 +126,13 @@ switch -Exact ($Task.ToLowerInvariant()) {
         if (Test-Path $SrcTauriDir) {
             Push-Location $SrcTauriDir
             cargo tauri build --no-bundle
-            # Desktop binary path (read_file_binary) + full SMF/GLB/FBX load is exercised in TS loaders + App.loadModel.
+            # Desktop binary path (read_file_binary) + full SMF/GLB/FBX load + Rust peeks (header/rig/anim/model + combined get_smf_desktop_info for early validation + status) is exercised in useLoadModel + tauri client.
+            # The new peek_smf_model_basic etc. surface mesh counts etc. in status for desktop .smf.
             # Full exe launch + UI probe would require extra (e.g. Start-Process + window inspection + timeout).
             # For now this confirms the tauri desktop bundle step + the web e2e (test:e2e) covers the logic.
-            # Run tauri-dev manually + open a .smf for interactive desktop smoke.
-            Write-Ok "[SMOKE] Unbundled build complete. See APP_STATE.md for manual desktop binary read test."
+            # Recommended: run '.\run.ps1 -Task tauri-dev' (or cargo tauri dev), then use Open + load a real .smf from docs/references/old-src/datafiles/SMF/ to see Rust info in status + full native I/O + export.
+            # This exercises the complete desktop path (binary read before full load, peeks, save via write_file_binary).
+            Write-Ok "[SMOKE] Unbundled build complete. See APP_STATE.md + TODO.md (deeper desktop e2e gap) for manual tauri-dev smoke with real samples + Rust peek validation."
             Pop-Location
         } else {
             Write-Warn "src-tauri missing."

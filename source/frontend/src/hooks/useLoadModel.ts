@@ -1,9 +1,8 @@
 import { useCallback, useRef, useEffect } from 'react';
-import { OpenResult } from '../backend-client/tauri';
-import { readBinaryFile } from '../backend-client/tauri';
-import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer } from '../loaders/smf';
-import { loadGLB } from '../loaders/glb';
-import { loadFBX } from '../loaders/fbx';
+import type { OpenResult } from '../backend-client/tauri';
+import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer } from '../loaders';
+import { loadGLB } from '../loaders';
+import { loadFBX } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
 
 /**
@@ -52,7 +51,7 @@ export function useLoadModel() {
       if (!data && res.path) {
         // For desktop .smf, combined info first (using path) before full data read.
         // Improves timing: early error on bad; one Rust call reduces FS/awaits (was separate validate/peek/rig/anim).
-        // Dynamic import here (and similar below) for tauri client: keeps web bundle clean; causes benign vite "static+dynamic" warning but works and chunks correctly.
+        // All runtime tauri (including peeks) via dynamic import; only type import for OpenResult (eliminates mixed chunk warning).
         if (name.endsWith('.smf')) {
           try {
             const info = await (await import('../backend-client/tauri')).getSmfDesktopInfo(res.path);
@@ -71,6 +70,7 @@ export function useLoadModel() {
           } catch {}
         }
         ui.setStatus('Reading binary from desktop path...');
+        const { readBinaryFile } = await import('../backend-client/tauri');
         data = await readBinaryFile(res.path);
       } else if (name.endsWith('.smf') && res.path) {
         // Browser or data-provided .smf: still do combined for info (no early read opt)

@@ -26,7 +26,7 @@
 - `src/store/` + `src/utils/`: Populated (SimpleOrbit extracted + reusable, threeDisposal helper, store types + usePlaybackSlice demo hook + READMEs). No empty dirs.
 
 ### Tauri & Bridge
-- Full: openFile (dialog or browser input), readBinaryFile (invoke for desktop binary), saveFile stub, invokeCommand. Used for all formats.
+- Full: openFile (dialog or browser input), readBinaryFile (invoke for desktop binary via custom cmd), saveFile (native dialog + write_file_binary), invokeCommand + several real SMF peek/validate/info cmds (header, rig, anim, model, combined for early validation + rich status on desktop .smf loads). Used for all formats + desktop UX polish. Browser fallbacks preserved.
 
 ### Tests & Quality
 - smoke.spec.ts: UI elements, real sample load (Axe.smf etc), export smoke, screenshot.
@@ -46,7 +46,7 @@
 - Samples: docs/references/old-src/datafiles/SMF/*.smf (and skinned glb/fbx).
 - Git: .tools/gitpush.ps1 (gt.txt PAT)
 
-See summary_bank.json (smf_export_and_fidelity now "no more stubs", threejs_viewport_core, modularity_and_structure, current_gaps_and_issues (mostly resolved), playwright_e2e_and_tests), plan.md, .agents/instructions/*.md.
+See summary_bank.json (smf_export_and_fidelity now "no more stubs", threejs_viewport_core, modularity_and_structure, current_gaps_and_issues (mostly resolved + recent Rust model peek + barrel + verify robustness), playwright_e2e_and_tests), docs/TODO.md, .agents/instructions/*.md.
 
 Philosophy: features connect (load → viewport skinned/anim → export fidelity + roundtrips + e2e + tauri + modularity). All actionable backlog items broken down and completed or explicitly tracked. Builds green. No critical stubs/broken flows.
 
