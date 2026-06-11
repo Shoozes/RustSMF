@@ -71,6 +71,24 @@ const BAD_GML = getGmlFiles().length > 0 ? getGmlFiles()[0] : null;
 // fallback to this .ts spec file itself which is guaranteed present and will fail all model loaders -> exercises error banner, status, no-crash).
 const BAD_INPUT_FOR_ERROR_TEST = (BAD_GML && fs.existsSync(BAD_GML)) ? BAD_GML : path.resolve(__dirname, 'smoke.spec.ts');
 
+// FBX sample for full FBX import happy path test (per test scenarios #13)
+// No .fbx samples found easily in old-src or tests; structure added for when available (falls back gracefully).
+// Complements desktop e2e automation and FBX parity.
+let _fbxFilesCache = null;
+function getFbxFiles() {
+  if (_fbxFilesCache) return _fbxFilesCache;
+  // Simple search; currently none, so empty. Add sample to enable full load test.
+  _fbxFilesCache = [];
+  return _fbxFilesCache;
+}
+let SAMPLE_FBX = null;
+const LOCAL_TEST_FBX = path.resolve(__dirname, 'test.fbx');
+if (fs.existsSync(LOCAL_TEST_FBX)) {
+  SAMPLE_FBX = LOCAL_TEST_FBX;
+} else if (getFbxFiles().length > 0) {
+  SAMPLE_FBX = path.join(SMF_DIR, getFbxFiles()[0]); // reuse dir for now
+}
+
 test.describe('RustSMF basic shell and model flow (Chromium)', () => {
   test.beforeEach(async ({ page }) => {
     // Capture browser console errors and warnings during tests (for Chrome/Playwright)
@@ -442,5 +460,38 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     // Then bone select, export, etc. (same as SMF happy path).
     // For now, this covers the dispatch/UI part without requiring sample.
     // TODO: Add real FBX sample test when available in docs/references or tests/.
+  });
+
+  // FBX import happy path (full load if sample) - per test scenarios #13 and desktop e2e priority
+  // Exercises loadFBX + "Loaded FBX" status, bone, export (same as SMF happy path).
+  // UI coverage in previous test; this for full when sample present.
+  test('FBX import happy path (full load if sample)', async ({ page }) => {
+    test.skip(!SAMPLE_FBX, 'No .fbx test model available (local or old-src reference; see FBX UI test for current coverage)');
+
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(SAMPLE_FBX!);
+
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded FBX|bones|clips/i);
+
+    // Bone select, transform stub, export (same as SMF)
+    const inspector = page.getByTestId('inspector');
+    const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /./ }).nth(0);
+    if (await anyBoneEntry.count() > 0) {
+      await anyBoneEntry.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(60);
+    }
+    const xBtn = inspector.getByTestId('transform-x-btn');
+    if (await xBtn.count() > 0) {
+      await xBtn.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(40);
+    }
+    await expect(page.getByTestId('three-canvas')).toBeVisible();
+
+    const exportBtn = page.getByTestId('export-btn');
+    await exportBtn.click();
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.(smf|glb)/i, { timeout: 5000 });
   });
 });
