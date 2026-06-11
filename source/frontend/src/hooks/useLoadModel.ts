@@ -52,6 +52,7 @@ export function useLoadModel() {
       if (!data && res.path) {
         // For desktop .smf, combined info first (using path) before full data read.
         // Improves timing: early error on bad; one Rust call reduces FS/awaits (was separate validate/peek/rig/anim).
+        // Dynamic import here (and similar below) for tauri client: keeps web bundle clean; causes benign vite "static+dynamic" warning but works and chunks correctly.
         if (name.endsWith('.smf')) {
           try {
             const info = await (await import('../backend-client/tauri')).getSmfDesktopInfo(res.path);
@@ -127,11 +128,6 @@ export function useLoadModel() {
       }
 
       ui.setSelected(loaded.skinnedMeshes?.[0]?.name || 'root');
-
-      if (rustPeekMsg) {
-        // Polish: surface Rust peek with final loaded info for desktop .smf
-        const currentStatus = ui.status; // but since state, better append in final set below; for simplicity include in loaded status
-      }
 
     } catch (e: any) {
       console.error(e);

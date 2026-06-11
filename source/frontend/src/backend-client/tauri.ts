@@ -13,10 +13,12 @@ export interface OpenResult {
   data?: Uint8Array // for small files or future binary bridge
 }
 
-export async function openFile(): Promise<OpenResult | null> {
-  // Detect Tauri environment
-  const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+function isTauriEnv(): boolean {
+  return !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+}
 
+export async function openFile(): Promise<OpenResult | null> {
+  const isTauri = isTauriEnv()
   if (isTauri) {
     try {
       const selected = await open({
@@ -55,7 +57,7 @@ export async function openFile(): Promise<OpenResult | null> {
 }
 
 export async function saveFile(data: Uint8Array | Blob, suggestedName: string): Promise<void> {
-  const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+  const isTauri = isTauriEnv()
   if (isTauri) {
     const filePath = await save({
       defaultPath: suggestedName,
@@ -83,7 +85,7 @@ export async function saveFile(data: Uint8Array | Blob, suggestedName: string): 
 
 // Example future command (will be used once Rust side has parse_smf etc)
 export async function invokeCommand<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
-  const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+  const isTauri = isTauriEnv()
   if (!isTauri) {
     throw new Error(`Command ${cmd} only available in Tauri desktop`)
   }
@@ -96,7 +98,7 @@ export async function invokeCommand<T>(cmd: string, args?: Record<string, unknow
  * - In browser: not directly usable for arbitrary paths (security); openFile() already returns data.
  */
 export async function readBinaryFile(path: string): Promise<Uint8Array> {
-  const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+  const isTauri = isTauriEnv()
   if (!isTauri) {
     throw new Error('readBinaryFile only available in Tauri desktop (use openFile in browser)')
   }
@@ -105,7 +107,7 @@ export async function readBinaryFile(path: string): Promise<Uint8Array> {
 }
 
 export async function peekSmfHeader(path: string): Promise<string> {
-  const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+  const isTauri = isTauriEnv()
   if (!isTauri) {
     return 'peek_smf_header only in Tauri desktop'
   }
@@ -113,7 +115,7 @@ export async function peekSmfHeader(path: string): Promise<string> {
 }
 
 export async function validateSmf(path: string): Promise<string> {
-  const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+  const isTauri = isTauriEnv()
   if (!isTauri) {
     return 'validateSmf only in Tauri desktop'
   }
@@ -121,7 +123,7 @@ export async function validateSmf(path: string): Promise<string> {
 }
 
 export async function peekSmfRigBasic(path: string): Promise<string> {
-  const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+  const isTauri = isTauriEnv()
   if (!isTauri) {
     return 'peekSmfRigBasic only in Tauri desktop'
   }
@@ -129,7 +131,7 @@ export async function peekSmfRigBasic(path: string): Promise<string> {
 }
 
 export async function peekSmfAnimBasic(path: string): Promise<string> {
-  const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+  const isTauri = isTauriEnv()
   if (!isTauri) {
     return 'peekSmfAnimBasic only in Tauri desktop'
   }
@@ -137,7 +139,7 @@ export async function peekSmfAnimBasic(path: string): Promise<string> {
 }
 
 export async function getSmfDesktopInfo(path: string): Promise<string> {
-  const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+  const isTauri = isTauriEnv()
   if (!isTauri) {
     return 'getSmfDesktopInfo only in Tauri desktop'
   }

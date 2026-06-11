@@ -55,6 +55,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const onSelectBoneRef = useRef(onSelectBone);
   const skeletonRefForPick = useRef(skeleton);
 
+  // Ref for onTimeUpdate to decouple RAF reporting from setup effect deps (timing/robustness: avoids re-init of scene/RAF if fn identity ever shifts; mirrors bone pick ref pattern)
+  const onTimeUpdateRef = useRef(onTimeUpdate);
+
   // One-time base scene + renderer + orbit + RAF + resize + internal R key reset
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -139,9 +142,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         const delta = clockRef.current.getDelta();
         mixer.update(delta);
         const action = currentActionRef.current;
-        if (action && onTimeUpdate) {
+        const report = onTimeUpdateRef.current;
+        if (action && report) {
           // Always report for scrubber sync (even when paused, last known time)
-          onTimeUpdate(action.time);
+          report(action.time);
         }
       }
       renderer.render(scene, camera);
@@ -170,7 +174,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       renderer.dispose();
     };
     // Note: intentionally no deps on playback props; RAF always runs, control via effects below.
-  }, [onTimeUpdate]);
+    // onTimeUpdate (and onSelectBone/skeleton) kept via refs to avoid re-creating renderer/scene/RAF/ listeners on every parent render.
+  }, []);
 
   // React to playbackSpeed changes (apply to current action)
   useEffect(() => {
@@ -216,6 +221,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   // Keep latest onSelectBone and skeleton for raycast handler (stable click listener)
   useEffect(() => { onSelectBoneRef.current = onSelectBone; }, [onSelectBone]);
   useEffect(() => { skeletonRefForPick.current = skeleton; }, [skeleton]);
+  // Sync onTimeUpdate ref (for stable RAF time reporting without setup effect re-runs)
+  useEffect(() => { onTimeUpdateRef.current = onTimeUpdate; }, [onTimeUpdate]);
 
   // Attach/replace model root + skeleton helper + create internal mixer when root prop changes.
   // IMPORTANT: deps ONLY model data (root/skeleton/clips). Never include playback props (isPlaying/currentTime/currentClipName/playbackSpeed)

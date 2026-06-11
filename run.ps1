@@ -28,7 +28,7 @@ function Stop-StaleDevStack {
 
 function Invoke-FrontendNpm([string[]]$NpmArgs) {
     if (-not (Test-Path -LiteralPath $FrontendDir)) {
-        Write-Warn "source/frontend not present yet. See plan.md for scaffold step."
+        Write-Warn "source/frontend not present yet. See docs/TODO.md and docs/dev/APP_STATE.md for current state."
         return $false
     }
     Push-Location $FrontendDir
@@ -42,7 +42,7 @@ function Invoke-FrontendNpm([string[]]$NpmArgs) {
 
 function Invoke-TauriCargo([string[]]$CargoArgs) {
     if (-not (Test-Path -LiteralPath $SrcTauriDir)) {
-        Write-Warn "source/src-tauri not present yet. See plan.md for scaffold step."
+        Write-Warn "source/src-tauri not present yet. See docs/TODO.md and docs/dev/APP_STATE.md for current state."
         return $false
     }
     Push-Location $SrcTauriDir
@@ -86,7 +86,7 @@ switch -Exact ($Task.ToLowerInvariant()) {
             cargo tauri dev
             Pop-Location
         } else {
-            Write-Warn "source/src-tauri missing — run scaffold first (plan.md)."
+            Write-Warn "source/src-tauri missing — see docs/TODO.md for state."
         }
     }
     "compile" {
@@ -145,7 +145,7 @@ Tasks (used by .tools/project.json):
 
 Example:  .\run.ps1 -Task verify
 
-See plan.md for full scaffold + conversion steps. Source/frontend and src-tauri are populated in the next increment.
+See docs/TODO.md, docs/dev/APP_STATE.md and summary_bank.json for state, commands, gaps. Source/frontend and src-tauri fully populated (modular hook+components+loaders+Rust peeks).
 "@
     }
 }
