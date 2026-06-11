@@ -19,6 +19,7 @@ interface ThreeViewportProps {
   playbackSpeed?: number;
   onTimeUpdate?: (time: number) => void;
   onSelectBone?: (boneName: string) => void;
+  selectedBoneName?: string;
 }
 
 // SimpleOrbit imported from ../utils/SimpleOrbit (filled modularity dir, single source of truth)
@@ -33,6 +34,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   playbackSpeed = 1,
   onTimeUpdate,
   onSelectBone,
+  selectedBoneName,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -54,6 +56,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const mouseRef = useRef(new THREE.Vector2());
   const onSelectBoneRef = useRef(onSelectBone);
   const skeletonRefForPick = useRef(skeleton);
+
+  // For selected bone 3D highlight marker (visual feedback when list or raycast selects a bone)
+  const selectedBoneNameRef = useRef(selectedBoneName);
+  const boneHighlightRef = useRef<THREE.Object3D | null>(null);
 
   // Ref for onTimeUpdate to decouple RAF reporting from setup effect deps (timing/robustness: avoids re-init of scene/RAF if fn identity ever shifts; mirrors bone pick ref pattern)
   const onTimeUpdateRef = useRef(onTimeUpdate);
@@ -148,6 +154,20 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
           report(action.time);
         }
       }
+
+      // keep bone highlight marker following the (possibly animated) selected bone
+      const hl = boneHighlightRef.current;
+      const skel = skeletonRefForPick.current;
+      const sel = selectedBoneNameRef.current;
+      if (hl && skel && sel) {
+        const bone = skel.bones.find((b: any) => b.name === sel);
+        if (bone) {
+          const wp = new THREE.Vector3();
+          bone.getWorldPosition(wp);
+          hl.position.copy(wp);
+        }
+      }
+
       renderer.render(scene, camera);
       frameRef.current = requestAnimationFrame(animate);
     };
@@ -171,6 +191,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       resizeObsRef.current?.disconnect();
       window.removeEventListener('keydown', onKey);
       canvas.removeEventListener('click', onCanvasClick);
+      if (boneHighlightRef.current) {
+        scene.remove(boneHighlightRef.current);
+        boneHighlightRef.current = null;
+      }
       renderer.dispose();
     };
     // Note: intentionally no deps on playback props; RAF always runs, control via effects below.
@@ -223,6 +247,43 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => { skeletonRefForPick.current = skeleton; }, [skeleton]);
   // Sync onTimeUpdate ref (for stable RAF time reporting without setup effect re-runs)
   useEffect(() => { onTimeUpdateRef.current = onTimeUpdate; }, [onTimeUpdate]);
+
+  // Sync selected bone name ref (for animate loop + highlight without stale closures)
+  useEffect(() => { selectedBoneNameRef.current = selectedBoneName; }, [selectedBoneName]);
+
+  // Bone selection 3D highlight marker (small sphere+axes that follows the selected bone's world position).
+  // Provides visual editor feedback (clickable list or raycast selection now "lights up" in viewport).
+  // Reuses existing skeleton/bone refs; cheap, no skin affect.
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    // remove old marker
+    if (boneHighlightRef.current) {
+      scene.remove(boneHighlightRef.current);
+      boneHighlightRef.current = null;
+    }
+    if (!selectedBoneName || !skeleton) return;
+
+    const bone = skeleton.bones.find((b: any) => b.name === selectedBoneName);
+    if (!bone) return;
+
+    const group = new THREE.Group();
+    const sphere = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08),
+      new THREE.MeshBasicMaterial({ color: 0xff4444, depthTest: false, transparent: true, opacity: 0.85 })
+    );
+    group.add(sphere);
+    const axes = new THREE.AxesHelper(0.25);
+    (axes.material as any).depthTest = false;
+    group.add(axes);
+    scene.add(group);
+    boneHighlightRef.current = group;
+
+    const wp = new THREE.Vector3();
+    bone.getWorldPosition(wp);
+    group.position.copy(wp);
+  }, [selectedBoneName, skeleton]);
 
   // Attach/replace model root + skeleton helper + create internal mixer when root prop changes.
   // IMPORTANT: deps ONLY model data (root/skeleton/clips). Never include playback props (isPlaying/currentTime/currentClipName/playbackSpeed)

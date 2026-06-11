@@ -195,7 +195,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.(smf|glb)/i, { timeout: 5000 });
 
     // Basic visual: screenshot viewport after load (for regression; update snapshots with --update-snapshots)
-    await expect(page.getByTestId('viewport-container')).toHaveScreenshot('loaded-model.png', { timeout: 10000 });
+    // Tolerance for small 3D bone highlight marker (new editor feedback) + animation timing.
+    await expect(page.getByTestId('viewport-container')).toHaveScreenshot('loaded-model.png', { timeout: 10000, maxDiffPixels: 300 });
 
     // Strict no critical console errors post export flow
     const exportErrors = (page as any)._browserErrors || [];

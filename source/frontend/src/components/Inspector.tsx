@@ -111,6 +111,19 @@ const Inspector: React.FC<InspectorProps> = ({
             </div>
           </div>
         )}
+
+        {/* Basic transform gizmo stub for selected bone (editor parity step).
+            3D marker in viewport provides visual highlight on selection (list or raycast).
+            Full IK/pose editing is future work. */}
+        {selected && selected !== 'Scene' && (
+          <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
+            <div>Transform stub for: <span className="font-mono text-amber-300">{selected}</span></div>
+            <button className="mr-1 mt-0.5 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => console.log('stub: move +X on', selected)}> +X </button>
+            <button className="mr-1 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => console.log('stub: move +Y on', selected)}> +Y </button>
+            <button className="px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => console.log('stub: rotate on', selected)}> rot </button>
+            <span className="ml-1 text-slate-500">(stub)</span>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -83,6 +83,7 @@ export default function App() {
             playbackSpeed={playback.playbackSpeed}
             onTimeUpdate={playback.setCurrentTime}
             onSelectBone={handleSelectBone}
+            selectedBoneName={ui.selected}
           />
           {/* Simple pure loading overlay (no deps) */}
           {ui.isLoading && (

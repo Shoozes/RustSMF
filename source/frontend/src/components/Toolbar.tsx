@@ -19,7 +19,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     <div className="toolbar">
       <div className="font-semibold tracking-wide">RustSMF</div>
       <button data-testid="open-model-btn" onClick={onOpen} disabled={isLoading}>
-        Open Model (.glb / .smf)
+        Open Model (.smf / .glb / .fbx / .obj)
       </button>
       <button data-testid="export-btn" onClick={onExport} disabled={isLoading}>
         Export (SMF if possible / GLB)

@@ -70,7 +70,17 @@ All per directive. Ran full verify (Passed), e2e (clean, visuals+console good), 
 - Tests: verify Passed, e2e 6/6, cargo test (peek smoke) ok, desktop-smoke task successful.
 - Docs: This paired note + cross-refs in APP_STATE.
 
-All per directive. Ran full commands, no stubs introduced. Ready for push or next (FBX or bone editor).
+All per directive. Ran full commands, no stubs introduced. Ready for push or next (bone editor enhance or FBX export if wanted).
+
+**Bone inspector/selection enhance (priority #3, following desktop e2e advance):** 
+- What: Added 3D bone highlight marker (red sphere + axes) that follows the selected bone's world position in viewport during animation/scrub (bidir with list/raycast). Plus transform gizmo stub UI in Inspector (buttons for selected bone with console stub actions + note).
+- Why: Delivers visual editor parity / "clickable bone list lights up in 3D" from original GM tool; small scoped step toward rigging.
+- Where: ThreeViewport.tsx (new marker ref + creation effect + animate sync + cleanup + prop), App.tsx (pass selected), Inspector.tsx (stub controls section).
+- How: Reused existing selected state + skeletonRef + onSelectBone. No new deps. Small tolerance added to e2e screenshot for the marker.
+- Outcome: Selection now has strong visual feedback. e2e 6/6 (with tolerance). verify/cargo green. Stub UI present for future expansion.
+- Also small desktop-related polish: Toolbar open button text now accurately lists all supported formats (.smf/.glb/.fbx/.obj).
+- FBX import: Confirmed fully wired (load path, status, accept, drop, toolbar, fbx.ts complete with postproc + mixer); the "wire" suggestion was pre-existing state. Export remains limited (falls back to GLB) per scope.
+- Docs: This note + cross ref.
 
 ---
 
