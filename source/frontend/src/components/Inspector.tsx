@@ -18,23 +18,25 @@ const Inspector: React.FC<InspectorProps> = ({
   skeleton,
   onSelectBone,
 }) => {
-  // Recursive renderer for proper bone hierarchy tree (depth-based indent, follows .children)
+  // Recursive renderer for proper bone hierarchy tree (nested <ul><li> for semantic hierarchy, depth indent, follows .children)
   const renderBoneTree = (bone: any, depth: number): React.ReactNode => {
-    const indent = '  '.repeat(depth);
     const isSelected = selected === bone.name;
+    const childBones = bone.children ? bone.children.filter((c: any) => c.isBone) : [];
     return (
-      <React.Fragment key={bone.name || depth}>
+      <li key={bone.name || depth} className="list-none">
         <div
           className={`cursor-pointer px-1 rounded hover:bg-slate-700 ${isSelected ? 'bg-slate-600' : ''}`}
           onClick={() => onSelectBone && onSelectBone(bone.name)}
+          style={{ paddingLeft: `${depth * 12}px` }}
         >
-          {indent}{bone.name}
+          {bone.name}
         </div>
-        {bone.children &&
-          bone.children
-            .filter((c: any) => c.isBone)
-            .map((child: any) => renderBoneTree(child, depth + 1))}
-      </React.Fragment>
+        {childBones.length > 0 && (
+          <ul className="pl-0 m-0">
+            {childBones.map((child: any) => renderBoneTree(child, depth + 1))}
+          </ul>
+        )}
+      </li>
     );
   };
   return (
@@ -68,9 +70,11 @@ const Inspector: React.FC<InspectorProps> = ({
           <div className="mt-3">
             <div className="panel-title">Bones ({skeleton.bones.length})</div>
             <div className="max-h-24 overflow-auto text-[10px]">
-              {skeleton.bones
-                .filter((b: any) => !b.parent || !skeleton.bones.includes(b.parent as any))
-                .map((root: any) => renderBoneTree(root, 0))}
+              <ul className="pl-0 m-0 list-none">
+                {skeleton.bones
+                  .filter((b: any) => !b.parent || !skeleton.bones.includes(b.parent as any))
+                  .map((root: any) => renderBoneTree(root, 0))}
+              </ul>
             </div>
           </div>
         )}

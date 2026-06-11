@@ -37,7 +37,11 @@ See docs/dev/APP_STATE.md (current consolidated), summary_bank.json (gaps + grou
 - All: re-verify + build clean (separate tauri chunk, no warning), e2e listeners good, commit + successful gitpush.
 - No new stubs/breaks/edges found; "expand tests" and "no more stubs search" remain ongoing but current coverage + greps excellent.
 
-**Integrity pass (this query):** Full re-research (reads, greps for stubs/broken, imports, async patterns; fresh verify + full e2e + cargo + _gen_bank). State remains excellent: no new stubs/TODOs/broken imports/races/timing issues in code (only tracking text in docs). Tauri lazy centralization (previous) + barrel usage confirmed working (clean separate tauri chunk, builds green). E2E listeners clean. Bank refreshed. Docs current. Paired items up to date.
+**Integrity pass (this query):** Full re-research (reads of TODO/APP_STATE/bank, greps for stubs/broken/imports/async in src, fresh verify + full e2e + _gen_bank). State excellent: no new issues/stubs (only glb intentional placeholders + error strings). Bone tree polished to semantic nested <ul><li> with padding (better hierarchy). Bank auto-refreshed (obj.ts + recent). Verify/e2e clean (no THREE warning). 
+- Fixes: None critical (three dedupe from prior holds).
+- Polish: Bone inspector now uses proper tree rendering (advances #3 priority).
+- Docs: This pass note added with pairs.
+All per directive. Builds green. No stubs. Ready for push or next (desktop e2e manual).
 
 All per directive. Ran full verify (Passed), e2e (clean), bank gen. Then commit + gitpush.
 
