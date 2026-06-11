@@ -191,6 +191,16 @@ All per directive + philosophy. No stubs. Features connect (peek info in status,
 
 See updated APP_STATE, bank (rust_parser_breakdown, e2e items). Continue loop.
 
+**Integrity pass (this invocation):** Full review per directive + .agents/workflows/integrity-pass.md.
+- Research: Key files read (TODO/APP_STATE/bank current with prior summaries, useLoadModel load flow with combined Rust info before read, smoke.spec with cache + bone test + error path, main.rs with get_smf_desktop_info + prior peeks, ThreeViewport raycast). Git clean (recent commits from prev passes). Verify passed. Full e2e: 6 tests (boot/load/export/bone/error/timeline), some sample-skips (known, as before; bone test + error path exercised when samples resolve, clean no app errors). Grep: no critical stubs/TODOs/FIXMEs/broken in source (only expected backend README placeholder, lockfile noise). No broken imports/exports (builds pass). Async/timing: load flow good (combined call before read reduces FS/awaits for desktop .smf; sequential with early exit on invalid; no races). Edges: bad SMF (early Rust error), no bones (handled), desktop/web (Rust only desktop, graceful), raycast (dist-based, works). Redundancy: docs history repeated but consolidated in summaries; bank files lists bloated (noted, use paths).
+- Findings: State excellent - no stubs, features connect (desktop load -> unified Rust info (validate+peeks+rig+anim) in status -> viewport skinned/anim/bone select (list+raycast) -> e2e coverage -> export/roundtrips). Modularity solid (hook/slices/components, self-contained viewport). Timing improved (prior + combined). User-friendly (status, errors, select). Show-ready (full pipeline). Efficient (modular, no dupe).
+- Docs/summary_bank: Appended this pass with pairs. Bank curated (added "current_state_integrity" item, updated e2e/rust for combined; organized note on groups). Reduced some redundancy by focusing on current.
+- Sharpen/fix: Tests already robust (cache, listeners, asserts for bone/select/error/status). No fixes needed (nothing broken). Added todo items with pairs for remaining (deeper desktop e2e guidance, next Rust if small e.g. parents peek).
+- Gaps/todos: No new stubs/gaps (planned ones tracked: desktop e2e, Rust subtasks, FBX limited). Updated TODO with this pass + pairs (e.g., "combined Rust info: what=add get_smf_desktop_info + wire, why=timing/async polish + unified status, where=main.rs + client + hook, how=one parse before read").
+- Outcome: Integrity high. No actionables broken. Continue remaining (desktop e2e via run.ps1 notes/manual tauri-dev + Rust features, next Rust subtask if small, FBX note).
+
+All per philosophy. Verify clean. Push next. See bank for gaps, TODO for full paired list. No more stubs. Ready.
+
 **Auto research/recap/decide/design/build/test/fix/polish (this continuation):** Research (docs/bank post-anim, git clean, verify Passed, greps clean, source for load/e2e/Rust) showed state solid (no stubs, desktop status with combined Rust info, e2e robust). Remaining: deeper desktop e2e, more Rust (e.g. full), FBX limited.
 
 Actioned (small, per breakdown):
