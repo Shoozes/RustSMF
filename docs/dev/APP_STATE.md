@@ -104,19 +104,19 @@ Next per gaps/TODO: optional raycast in viewport for bone 3D pick (list select s
 
 Remaining per gaps: deeper e2e error cases, optional Rust parser (design keeps frontend 3D ownership), FBX export (intentionally limited). Run verify + push after edits. Builds green.
 
-**Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research confirmed remaining: deeper error e2e, Rust optional, FBX limited. Broke down and actioned:
-- e2e error: new test using BAD_GML (Alarm_0.gml from old-src), asserts banner + error status on invalid load. Bone/raycast clicks reinforced.
-- Raycast: small polish (maxDist 1.5, selection logic).
-- UX: bone select now also sets friendly status via shared handler.
-- Rust: implemented real peek_smf_header (header strZ parse) + client + optional wire in .smf desktop load. No stubs. Cargo clean.
-- Verify full passed, builds ok. Docs/bank appended with pairs.
+**Recent passes summary (see git/TODO for full bootstrap history; consolidated to reduce redundancy):** Multiple integrity/continue passes covered: modular extraction (hook/slices/components, App thin), FBX import, bone inspector + raycast 3D pick, native Tauri save/write, e2e expansions (console listeners, bone clicks, error paths, status asserts, robust BAD_GML search), Rust real peek_smf_header (header validation, wired to status for desktop .smf), peek status polish, docs/bank updates with pairs, full verifies/e2e/builds clean, pushes.
 
-Core remains no-stubs, connected, pushed.
+Current state: Core connected (SMF/GLB/FBX load via hook -> ThreeViewport skinned/anim/mixer/raycast bones + SkeletonHelper + timeline + Inspector list/hierarchy/select status + error UX + drag-drop + export fidelity + roundtrips + Tauri I/O + peek). No stubs. Modular. Tests instrumented. Builds green.
 
-**Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research recap: verify Passed, git clean, greps no new stubs, e2e has error test + bone clicks, peek wired, status handler live. Remaining per prior: deeper e2e (now enhanced with status assert), Rust bigger (peek is real step), FBX limited.
-- E2E polish: Added `toContainText(/Selected:/i)` assert post bone list + 3D canvas click (validates handleSelectBone + raycast UX in status-text).
-- Peek status: Polished integration so desktop .smf final status includes Rust peek msg + loaded details.
-- Docs/bank: Updated with pairs. Bank gen + gaps (e2e coverage, peek polish).
-- All builds/verify/e2e clean. No stubs. Small progress on backlog. 
+**Auto research/recap/decide/design/build/test/fix/polish (this integrity pass per directive):** Full review performed (see research in todo). 
+- Docs: Consolidated history/redundancy in this file and TODO.md (trimmed repeated early passes to summary + recent; kept current state, paired backlog, recent actions).
+- summary_bank: Reviewed groups (good coverage for viewport, tauri, tests, gaps with raycast/rust/e2e/peek/integrity). Organized by noting bloated files lists from gen (prefer paths); added/updated items for this pass (docs_consolidation, test robustness). 
+- Tests sharpened: Made BAD_GML robust (recursive search for any .gml for reliable error path test, less skips). Bone status assert already in place for select UX. Console listeners, visuals, roundtrips good. No broken imports/exports found (build/lint pass, greps clean). 
+- Fixes/polish: Peek status improved (Rust msg + loaded in final for desktop .smf). Async/timing good (refs for stable closures in load/playback/effects, separated deps in viewport, awaits proper in load/drop/peek). No races found. Modularity/flexibility promoted (central handleSelectBone, thin App).
+- Gaps/stubs: None in core (glb approx documented intentional; backend placeholder expected). Edge cases searched (corrupt via error test, no bones handled, desktop peek graceful in web, raycast no-skel, async load sequencing). Fuller Rust parser broken down as bigger future (peek is real implemented step).
+- Todos: Organized/added with pairs (what/why/where/how) in TODO.md for consolidation, bank organization, test robustness, Rust subtasking, etc.
+- Review: Features connect safely (load -> viewport/anim/bones -> export/roundtrip + I/O + tests + UX). User friendly (status, errors, selection), show ready (viewport, timeline, inspector), efficient (modular, no dupe, refs avoid re-renders). Scalability improved (docs leaner, bank focused).
 
-Next: as in TODO (fuller Rust if pursued as major, etc.).
+All per philosophy (modular/dynamic, direct, safety first). Verify/build/e2e clean. Continue actionable (deeper desktop e2e, Rust parser sub-tasks if prioritized, FBX if scope). 
+
+See updated TODO for full paired backlog. Builds green.

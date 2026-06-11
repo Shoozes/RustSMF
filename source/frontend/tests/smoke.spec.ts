@@ -22,7 +22,24 @@ const SAMPLE_SMF = fs.existsSync(SMF_DIR)
     : null
   : null;
 
-const BAD_GML = path.resolve(__dirname, '../../docs/references/old-src/objects/oAnimEditMessage/Alarm_0.gml');
+const BAD_GML_DIR_SEARCH = path.resolve(__dirname, '../../docs/references/old-src');
+const BAD_GML = fs.existsSync(BAD_GML_DIR_SEARCH)
+  ? (function() {
+      const gmls = [];
+      function findGml(dir) {
+        try {
+          const items = fs.readdirSync(dir);
+          for (const item of items) {
+            const full = path.join(dir, item);
+            if (fs.statSync(full).isDirectory()) findGml(full);
+            else if (item.endsWith('.gml')) gmls.push(full);
+          }
+        } catch {}
+      }
+      findGml(BAD_GML_DIR_SEARCH);
+      return gmls[0] || null;
+    })()
+  : null;
 
 test.describe('RustSMF basic shell and model flow (Chromium)', () => {
   test.beforeEach(async ({ page }) => {

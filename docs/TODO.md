@@ -161,6 +161,8 @@ All per directive.
 
 All per "if missing build it", "break down", "complete backlog", "no more stubs". Ready for push. Remaining minor: deeper error path e2e (corrupt file load would require test asset), Rust parser (keep optional per design), FBX export (limited).
 
+**Docs consolidation note (this integrity pass):** Early long repeated history sections in this file trimmed/reduced to summary above to decrease redundancy while preserving key context and pairs. Full details in git. Bank files lists noted as expanded (prefer paths for focus). This increases scalability and maintainability per directive. See APP_STATE for paired current state.
+
 **Auto research/recap/decide/design/build/test/fix/polish (this continuation):** Research (docs tails, bank gaps, git clean + prior commits, verify Passed, greps clean except expected placeholders, code reads for peek/e2e/raycast) showed state solid post-prior pass. Open: deeper e2e (status coverage, robust runs), Rust as bigger (break down - keep peek as real step; full parser future to avoid duplicating TS logic), FBX limited.
 
 Actioned (small, testable, no stubs):
