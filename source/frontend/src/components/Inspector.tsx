@@ -6,6 +6,8 @@ interface InspectorProps {
   clips: THREE.AnimationClip[];
   currentClipName: string;
   onChangeClip: (clip: THREE.AnimationClip) => void;
+  skeleton?: THREE.Skeleton;
+  onSelectBone?: (boneName: string) => void;
 }
 
 const Inspector: React.FC<InspectorProps> = ({
@@ -13,6 +15,8 @@ const Inspector: React.FC<InspectorProps> = ({
   clips,
   currentClipName,
   onChangeClip,
+  skeleton,
+  onSelectBone,
 }) => {
   return (
     <div data-testid="inspector" className="inspector">
@@ -37,6 +41,20 @@ const Inspector: React.FC<InspectorProps> = ({
                 onClick={() => onChangeClip(c)}
               >
                 {c.name || `clip_${idx}`} (${(c.duration || 0).toFixed(2)}s)
+              </div>
+            ))}
+          </div>
+        )}
+        {skeleton && skeleton.bones.length > 0 && (
+          <div className="mt-3">
+            <div className="panel-title">Bones</div>
+            {skeleton.bones.map((b, idx) => (
+              <div
+                key={idx}
+                className={`cursor-pointer px-1 rounded hover:bg-slate-700 ${selected === b.name ? 'bg-slate-600' : ''}`}
+                onClick={() => onSelectBone && onSelectBone(b.name)}
+              >
+                {b.name}
               </div>
             ))}
           </div>

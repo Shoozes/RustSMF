@@ -149,9 +149,9 @@
       "items": [
         "desktop_e2e: binary read (read_file_binary) + write (for save) fully wired. Playwright e2e web-focused; desktop-smoke is unbundled build. Native save (dialog+fs) works in tauri shell. Manual tauri-dev + open/save .smf recommended for full desktop test. Capability documented for fs. Covered.",
         "fbx_export: import + desktop binary + postprocess complete and parity with GLB. Export intentionally limited (UI falls back to SMF/GLB).",
-        "tests: smoke.spec expanded (boot + load + export/screenshot + scrub slider interaction + clip-item clicks + loading overlay + error-banner presence + stronger time-display assert post-scrub). Unit has math + minimal + real SMF sample roundtrip (fs). test:unit script improved. eslint plugins fixed. Drag-drop supported (testable).",
+        "tests: smoke.spec expanded (boot + load + export/screenshot + scrub/clip + loading overlay + error-banner + time-display + drop hint + nothing-export + inspector bones assert). Console/pageerror listeners for browser errors (no app errors in runs). Unit roundtrips. Visual tests present. eslint fixed. Drag-drop testable.",
         "error_handling + ux: banner (data-testid), catches, clear on load/export. Added pure loading overlay (data-testid, shows on isLoading). Native Tauri saveFile fully implemented (dialog save + write_file_binary; errors now propagate to banner for UX). Status cues remain. Optional further spinners/toasts noted.",
-        "modularity: solid (App thin owner + now uses store/usePlaybackSlice for playback states; ThreeViewport owns full three + mixer + RAF + attach). Fixed critical playback effect deps. store/utils populated with real extracted code (orbit, disposal, playback hook) and actively used. Drag-drop UX added as polish.",
+        "modularity: solid (App thin orchestrator using store slices for model/ui/playback; UI components extracted: Toolbar/Outliner/Inspector/Timeline; ThreeViewport self-contained). Further state lift with useModelSlice/useUiSlice. Bone inspector basic added to Inspector. store/utils populated and used. No stubs.",
         "git: functional.",
         "roundtrip_fidelity: complete (unit real-sample cycle + e2e export + screenshot).",
         "edge_cases + playback: RAF time reporting + prop-driven scrub/pause/clip/speed in viewport (effects separated from attach). Corrupt SMF throws caught to banner. Non-skinned fallbacks exist. Timing stable post-deps fix."
@@ -196,7 +196,7 @@
         "source/backend/**"
       ],
       "notes": {
-        "status": "UI components extracted from App monolith (Toolbar, Outliner, Inspector, Timeline) per monolith-modularization (completed). App now thin shell (~297 lines, down from 343). Added inspector testid, fixed keyboard state inconsistency (uses playbackRef). Store has playback + type slices for model/ui. Enhanced e2e for new components. No stubs."
+        "status": "UI components extracted (Toolbar, Outliner, Inspector, Timeline) + further state lift to store (useModelSlice, useUiSlice) per monolith-modularization (completed). App now very thin orchestrator (state delegated to hooks, logic for load/export/handlers remain but much cleaner). Store now has full slices for model/playback/ui. No stubs."
       }
     },
     "error_handling_and_edge_cases": {

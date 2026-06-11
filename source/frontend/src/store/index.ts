@@ -1,12 +1,9 @@
 /**
  * Store / state slices (no external store lib to stay dep-free and browser+tauri friendly).
  *
- * For current scale we keep primary ownership in App.tsx (or page root).
- * These provide:
- *  - Shared TypeScript shapes for model/playback/ui to aid future extraction, components, tests.
- *  - A tiny example useAppState hook + context if a subtree wants isolated state.
- *
- * When modularity grows (multiple viewports, inspectors, future backend sync), lift slices here.
+ * Primary ownership lifted from App.tsx for modularity.
+ * Provides shared shapes and hooks for model, playback, ui state.
+ * Components and hooks consume these to reduce App bloat.
  */
 
 import { useState, useCallback } from 'react';
@@ -31,10 +28,9 @@ export interface UiState {
   status: string;
   selected: string;
   isLoading: boolean;
+  errorMsg: string;
 }
 
-// Example hook demonstrating a slice bundle (can be consumed by App or split later).
-// Not forced on the root App yet to keep diff small; import and use where beneficial.
 export function usePlaybackSlice(initial: Partial<PlaybackState> = {}) {
   const [isPlaying, setIsPlaying] = useState<boolean>(initial.isPlaying ?? false);
   const [currentTime, setCurrentTime] = useState<number>(initial.currentTime ?? 0);
@@ -58,6 +54,45 @@ export function usePlaybackSlice(initial: Partial<PlaybackState> = {}) {
     currentClipName, setCurrentClipName,
     playbackSpeed, setPlaybackSpeed,
     toggle, scrub, selectClip,
+  };
+}
+
+export function useModelSlice(initial: Partial<LoadedModelState> = {}) {
+  const [root, setRoot] = useState<THREE.Group | null>(initial.root ?? null);
+  const [skeleton, setSkeleton] = useState<THREE.Skeleton | undefined>(initial.skeleton);
+  const [clips, setClips] = useState<THREE.AnimationClip[]>(initial.clips ?? []);
+  const [lastSmfData, setLastSmfData] = useState<any>(initial.lastSmfData ?? null);
+
+  const clear = useCallback(() => {
+    setRoot(null);
+    setSkeleton(undefined);
+    setClips([]);
+    setLastSmfData(null);
+  }, []);
+
+  return {
+    root, setRoot,
+    skeleton, setSkeleton,
+    clips, setClips,
+    lastSmfData, setLastSmfData,
+    clear,
+  };
+}
+
+export function useUiSlice(initial: Partial<UiState> = {}) {
+  const [status, setStatus] = useState<string>(initial.status ?? 'Three.js viewport ready (Y-up). Open .smf/.glb/.fbx. SMF/GLB export (FBX limited).');
+  const [selected, setSelected] = useState<string>(initial.selected ?? 'Scene');
+  const [isLoading, setIsLoading] = useState<boolean>(initial.isLoading ?? false);
+  const [errorMsg, setErrorMsg] = useState<string>(initial.errorMsg ?? '');
+
+  const clearError = useCallback(() => setErrorMsg(''), []);
+
+  return {
+    status, setStatus,
+    selected, setSelected,
+    isLoading, setIsLoading,
+    errorMsg, setErrorMsg,
+    clearError,
   };
 }
 

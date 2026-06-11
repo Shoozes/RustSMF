@@ -10,38 +10,30 @@ import Timeline from './components/Timeline'
 import Outliner from './components/Outliner'
 import Inspector from './components/Inspector'
 import Toolbar from './components/Toolbar'
-import { usePlaybackSlice } from './store'
+import { usePlaybackSlice, useModelSlice, useUiSlice } from './store'
 
 // Main application: UI shell + state + loaders. Three.js viewport, scene, orbit, RAF, skinned attach
 // and mixer driving are fully delegated to <ThreeViewport> for modularity (no more duplication/dead code).
 // All model data (root/skeleton/clips) flow as props; playback is driven by props + callbacks.
 export default function App() {
-  const [status, setStatus] = useState('Three.js viewport ready (Y-up). Open .smf/.glb/.fbx. SMF/GLB export (FBX limited).')
-  const [selected, setSelected] = useState<string>('Scene')
-  const [clips, setClips] = useState<THREE.AnimationClip[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string>('')
+  // UI and model state via store hooks for modularity (lifted from previous monolithic state)
+  const ui = useUiSlice()
+  const model = useModelSlice()
 
-  // Model data passed down to the self-contained ThreeViewport (modularity)
-  const [currentRoot, setCurrentRoot] = useState<THREE.Group | null>(null)
-  const [currentSkeleton, setCurrentSkeleton] = useState<THREE.Skeleton | undefined>(undefined)
-
-  // Keep raw ImportedSmf for high-fidelity SMF export roundtrips (SMF path only)
+  // Keep raw ImportedSmf for high-fidelity SMF export roundtrips (SMF path only) - ref stays local as it's not reactive UI
   const lastSmfDataRef = useRef<any>(null) // ImportedSmf | null
 
-  // Playback state via store hook for modularity (reduces local state duplication, demonstrates store)
+  // Playback state via store hook for modularity
   const playback = usePlaybackSlice()
   const playbackRef = useRef(playback)
   useEffect(() => { playbackRef.current = playback }, [playback])
 
-  // Logical clear (resets UI state and signals viewport via null root)
+  // Logical clear (resets UI state and signals viewport via null root) - now delegates to slices
   function clearLoadedModel() {
     lastSmfDataRef.current = null
-    setCurrentRoot(null)
-    setCurrentSkeleton(undefined)
-    setClips([])
-    setSelected('Scene')
-    setErrorMsg('')
+    model.clear()
+    ui.setSelected('Scene')
+    ui.clearError()
     const pb = playbackRef.current
     pb.setIsPlaying(false)
     pb.setCurrentTime(0)
@@ -55,9 +47,9 @@ export default function App() {
   // skeleton helper, mixer and RAF are handled inside ThreeViewport via props.
   const loadModel = useCallback(async (res: OpenResult) => {
     clearLoadedModel()
-    setIsLoading(true)
-    setErrorMsg('')
-    setStatus('Loading model...')
+    ui.setIsLoading(true)
+    ui.clearError()
+    ui.setStatus('Loading model...')
 
     try {
       let loaded: any
@@ -66,7 +58,7 @@ export default function App() {
       // Unified binary read for desktop (tauri) path-only case for all binary formats.
       let data: Uint8Array | undefined = res.data
       if (!data && res.path) {
-        setStatus('Reading binary from desktop path...')
+        ui.setStatus('Reading binary from desktop path...')
         data = await readBinaryFile(res.path)
       }
 
@@ -89,10 +81,10 @@ export default function App() {
       const root = loaded.root as THREE.Group
       const availableClips = loaded.clips || (root as any).animations || []
 
-      // Signal to viewport (it will attach root, build internal mixer/helper, start first clip)
-      setCurrentRoot(root)
-      setCurrentSkeleton(loaded.skeleton)
-      setClips(availableClips)
+      // Signal to viewport via model slice (it will attach root, build internal mixer/helper, start first clip)
+      model.setRoot(root)
+      model.setSkeleton(loaded.skeleton)
+      model.setClips(availableClips)
 
       if (availableClips.length > 0) {
         const first = availableClips[0]
@@ -104,20 +96,20 @@ export default function App() {
       }
 
       if (name.endsWith('.fbx')) {
-        setStatus(`Loaded FBX: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length || 0}`)
+        ui.setStatus(`Loaded FBX: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length || 0}`)
       } else {
-        setStatus(`Loaded: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length} | verts: ${loaded.skinnedMeshes?.[0]?.geometry?.attributes?.position?.count || '?'}`)
+        ui.setStatus(`Loaded: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length} | verts: ${loaded.skinnedMeshes?.[0]?.geometry?.attributes?.position?.count || '?'}`)
       }
 
-      setSelected(loaded.skinnedMeshes?.[0]?.name || 'root')
+      ui.setSelected(loaded.skinnedMeshes?.[0]?.name || 'root')
 
     } catch (e: any) {
       console.error(e)
       const msg = e?.message || String(e)
-      setErrorMsg(`Load error: ${msg}`)
-      setStatus(`Load error: ${msg}. Try a .glb or .smf from docs/references/old-src/datafiles/SMF/.`)
+      ui.setErrorMsg(`Load error: ${msg}`)
+      ui.setStatus(`Load error: ${msg}. Try a .glb or .smf from docs/references/old-src/datafiles/SMF/.`)
     } finally {
-      setIsLoading(false)
+      ui.setIsLoading(false)
     }
   }, [])
 
@@ -138,55 +130,55 @@ export default function App() {
   // persistent hidden <input data-testid="model-file-input"> for reliable e2e
   // file simulation with page.setInputFiles in Playwright.
   const handleOpen = async () => {
-    setStatus('Opening file picker (GLB/SMF supported)...')
+    ui.setStatus('Opening file picker (GLB/SMF supported)...')
     try {
       const res: OpenResult | null = await openFile()
       if (!res) {
-        setStatus('No file selected.')
+        ui.setStatus('No file selected.')
         return
       }
       await loadModel(res)
     } catch (e: any) {
       const msg = e?.message || String(e)
-      setErrorMsg(`Open error: ${msg}`)
-      setStatus(`Open error: ${msg}`)
+      ui.setErrorMsg(`Open error: ${msg}`)
+      ui.setStatus(`Open error: ${msg}`)
     }
   }
 
   // Export: prefer high-fidelity SMF when we have the raw data (for roundtrips on SMF loads),
-  // otherwise fall back to GLB using the currentRoot model group + clips (viewport owns the viz copy).
+  // otherwise fall back to GLB using the model.root from store (viewport owns the viz copy).
   // Uses saveFile util (now fully supports native Tauri save via dialog + write command).
   const handleExport = async () => {
     const smfData = lastSmfDataRef.current
     if (smfData) {
-      setStatus('Exporting as SMF (fidelity path using imported data + coord transforms)...')
+      ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms)...')
       try {
         const buf = exportSMFToBuffer(smfData)
         await saveFile(buf, 'exported_model.smf')
-        setStatus('Exported .smf (using our ImportedSmf + DQ handling). Test roundtrip by re-importing!')
+        ui.setStatus('Exported .smf (using our ImportedSmf + DQ handling). Test roundtrip by re-importing!')
         return
       } catch (e: any) {
-        setStatus(`SMF export error: ${e?.message || e}. Falling back to GLB...`)
+        ui.setStatus(`SMF export error: ${e?.message || e}. Falling back to GLB...`)
       }
     }
 
     // GLB fallback for GLB/FBX loads (and SMF if wanted): export the model root we hold in state.
-    const rootToExport = currentRoot
+    const rootToExport = model.root
     if (!rootToExport) {
-      setStatus('Nothing to export.')
+      ui.setStatus('Nothing to export.')
       return
     }
-    setStatus('Exporting current model as GLB...')
+    ui.setStatus('Exporting current model as GLB...')
     try {
       const exporter = new GLTFExporter()
-      const result = await exporter.parseAsync(rootToExport, { binary: true, animations: clips })
+      const result = await exporter.parseAsync(rootToExport, { binary: true, animations: model.clips })
       const buf = new Uint8Array(result as ArrayBuffer)
       await saveFile(buf, 'exported_model.glb')
-      setStatus('Exported .glb (animations included when present).')
+      ui.setStatus('Exported .glb (animations included when present).')
     } catch (e: any) {
       const msg = e?.message || String(e)
-      setErrorMsg(`Export error: ${msg}`)
-      setStatus(`Export error: ${msg}`)
+      ui.setErrorMsg(`Export error: ${msg}`)
+      ui.setStatus(`Export error: ${msg}`)
     }
   }
 
@@ -242,22 +234,22 @@ export default function App() {
         onOpen={handleOpen}
         onExport={handleExport}
         onPing={pingRust}
-        isLoading={isLoading}
+        isLoading={ui.isLoading}
         onFileChange={handleFileInputChange}
       />
 
       {/* Simple pure error banner (no extra deps) - clear on load or dismiss */}
-      {errorMsg && (
+      {ui.errorMsg && (
         <div data-testid="error-banner" className="bg-red-900/80 text-red-200 text-xs px-3 py-1 flex items-center gap-2">
-          <span>{errorMsg}</span>
-          <button className="ml-auto underline" onClick={() => setErrorMsg('')}>dismiss</button>
+          <span>{ui.errorMsg}</span>
+          <button className="ml-auto underline" onClick={ui.clearError}>dismiss</button>
         </div>
       )}
 
       <div className="main-area">
         <Outliner
-          clipsCount={clips.length}
-          onSelectScene={() => setSelected('Scene')}
+          clipsCount={model.clips.length}
+          onSelectScene={() => ui.setSelected('Scene')}
         />
 
         <div
@@ -268,24 +260,24 @@ export default function App() {
             e.preventDefault()
             const file = e.dataTransfer.files?.[0]
             if (!file) return
-            setIsLoading(true)
-            setStatus('Loading dropped file...')
+            ui.setIsLoading(true)
+            ui.setStatus('Loading dropped file...')
             try {
               const buf = await file.arrayBuffer()
               await loadModel({ name: file.name, data: new Uint8Array(buf) })
             } catch (err: any) {
               const m = err?.message || String(err)
-              setErrorMsg(`Drop load error: ${m}`)
-              setStatus(`Drop load error: ${m}`)
+              ui.setErrorMsg(`Drop load error: ${m}`)
+              ui.setStatus(`Drop load error: ${m}`)
             } finally {
-              setIsLoading(false)
+              ui.setIsLoading(false)
             }
           }}
         >
           <ThreeViewport
-            root={currentRoot}
-            skeleton={currentSkeleton}
-            clips={clips}
+            root={model.root}
+            skeleton={model.skeleton}
+            clips={model.clips}
             isPlaying={playback.isPlaying}
             currentTime={playback.currentTime}
             currentClipName={playback.currentClipName}
@@ -293,23 +285,25 @@ export default function App() {
             onTimeUpdate={playback.setCurrentTime}
           />
           {/* Simple pure loading overlay (no deps) */}
-          {isLoading && (
+          {ui.isLoading && (
             <div data-testid="loading-overlay" className="absolute inset-0 bg-slate-950/60 flex items-center justify-center text-sm text-slate-200 pointer-events-none">
               Loading model…
             </div>
           )}
-          <div data-testid="status-text" className={`absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
-            {status}
-            {isLoading && ' …'}
+          <div data-testid="status-text" className={`absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${ui.isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
+            {ui.status}
+            {ui.isLoading && ' …'}
           </div>
           <div className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 pointer-events-none">Drop .smf/.glb/.fbx here</div>
         </div>
 
         <Inspector
-          selected={selected}
-          clips={clips}
+          selected={ui.selected}
+          clips={model.clips}
           currentClipName={playback.currentClipName}
           onChangeClip={changeClip}
+          skeleton={model.skeleton}
+          onSelectBone={(name) => ui.setSelected(name)}
         />
       </div>
 
@@ -321,7 +315,7 @@ export default function App() {
         onReset={() => playback.setCurrentTime(0)}
         onScrub={onScrub}
         onSpeedChange={setSpeed}
-        disabled={clips.length === 0}
+        disabled={model.clips.length === 0}
       />
     </div>
   )

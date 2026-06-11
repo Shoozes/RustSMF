@@ -81,6 +81,9 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('inspector')).toBeVisible();
     await expect(page.getByTestId('inspector')).toContainText(/Clips|Selected/i);
 
+    // Bones inspector (basic hierarchy from skeleton)
+    await expect(page.getByTestId('inspector')).toContainText(/Bones/i);
+
     // Canvas still there (Three.js kept rendering)
     await expect(page.getByTestId('three-canvas')).toBeVisible();
   });
