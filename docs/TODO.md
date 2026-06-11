@@ -130,6 +130,19 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 - Tests: verify + e2e + desktop-smoke green.
 - Docs: This paired note. Bank refreshed.
 
+**Desktop e2e automation further (priority #1 subtask this cycle):** 
+- What: Extended tauri fallback e2e test with validateFallback and headerFallback (covering remaining from tauri client: validateSmf, peekSmfHeader used in desktop .smf load/early validation). Enhanced desktop-smoke with check for 'SMF rig basic|...' to validate individual basics in native tests.
+- Why: Completes desktop path/peek simulation in web e2e (now covers header/validate/rig/anim/model/info/read fallbacks); strengthens task validation for native peeks on samples. Addresses more test scenarios (desktop parity, native paths, error in fallbacks, edge via sim).
+- Where: source/frontend/tests/smoke.spec.ts (tauri test), run.ps1 (desktop-smoke output checks).
+- How: Added two evaluate for fallbacks (pattern match); pwsh if-match for basics. Reuses existing structure/SAMPLE_SMF.
+- Outcome: e2e 8 passed (tauri test now has full-ish desktop client coverage); desktop-smoke shows validation for basics + sample; verify green. Gap further narrowed (automation of desktop sim + validation improved; full UI tauri-dev still manual per guidance).
+- Tests: verify + e2e (8/8) + desktop-smoke passed.
+- Docs: This paired note. Bank refreshed via _gen_bank.
+
+**Next per instructions:** Continue #1 if more (e.g., e2e for scenarios 4-10 edges like zero-bone/large via notes or additional tests; FBX full if sample), or #2 Rust parser (full parse on header helper), or #3 bone gizmos. Follow daily: smallest, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos.
+
+---
+
 **Next per instructions:** Continue #1 if more desktop (e.g., e2e for more edges like zero-bone via note, or FBX full load if sample found), or #2 Rust parser (extend header helper to full parse cmd), or #3 bone gizmos (TransformControls on stub). Follow daily workflow on next: smallest, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos, update bank/TODO.
 
 ---
