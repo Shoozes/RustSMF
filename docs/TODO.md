@@ -86,6 +86,15 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 - Outcome: e2e 7 passed (all tests including new coverage); cargo 3 ok; desktop-smoke shows full; verify Passed. No breakage.
 - Docs: This note.
 
+**Desktop e2e automation increment (priority #1 per suggestions, this cycle):** 
+- What: Enhanced export flow e2e test to include bone selection + transform stub clicks (using local mixamo_smf_baldguy.smf) before export, with status assert for Exported and screenshot after interaction. Updated run.ps1 desktop-smoke to check cargo test output for 'model~' (confirms real sample used in native Rust peek/validation tests) and improved messaging for tauri-dev full UI.
+- Why: Automates more of the desktop e2e gap (UI bone interaction + export roundtrip with real .smf sample in web e2e; native binary/peek validation + sample usage in desktop-smoke task). Complements existing Rust native tests and browser fallback tests; reduces manual steps; locks fidelity for bone/export in editor flows. Keeps CI/web friendly.
+- Where: source/frontend/tests/smoke.spec.ts (export test + bone flow), run.ps1 (desktop-smoke task + output check + comments).
+- How: Reuse existing SAMPLE_SMF, data-testid for stubs, playwright clicks/asserts/screenshot (with tolerance); pwsh string match on cargo output for sample validation. No new deps.
+- Outcome: e2e still 7 passed (enhanced export test exercises bone+export+sample); desktop-smoke confirms sample and 3 tests; verify green. Gap narrowed (more automated coverage for "bone selection + export" with real samples; full tauri-dev UI still manual per guidance).
+- Tests: Full verify + e2e + desktop-smoke passed post change.
+- Docs: This paired note + cross-ref in APP_STATE. Bank refreshed.
+
 ---
 
 

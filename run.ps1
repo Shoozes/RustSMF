@@ -130,9 +130,13 @@ switch -Exact ($Task.ToLowerInvariant()) {
             # The Rust tests (in main.rs) perform actual std::fs reads against the local mixamo_smf_baldguy.smf (or old-src samples) when present and assert on header + counts (exact same parsing as the Tauri commands).
             # This closes part of the automated desktop e2e gap for the native FS/peek layer (complements web Playwright e2e which covers shared TS loaders + UI).
             # Full UI + native dialog/save roundtrip in the running app still benefits from manual: run '.\run.ps1 -Task tauri-dev', then Open + load source/frontend/tests/mixamo_smf_baldguy.smf and watch status for "Rust validated SMF | SMF model basic: ~N meshes ..." + bone tree + export.
-            cargo test 2>&1 | Out-String | Write-Host
+            $cargoOutput = cargo test 2>&1 | Out-String
+            Write-Host $cargoOutput
             if ($LASTEXITCODE -ne 0) { Write-Warn "cargo test (desktop peek smoke) had issues" }
-            Write-Ok "[SMOKE] Unbundled build + Rust native peek tests complete (3 tests: main peek, validate, header/invalid). See TODO.md (desktop e2e subtask) + the local real .smf for full tauri-dev manual validation of peeks + UI."
+            if ($cargoOutput -match 'model~') {
+                Write-Ok "Rust desktop peek tests used real sample (mixamo or old-src) for native binary read + header/rig/anim/model validation."
+            }
+            Write-Ok "[SMOKE] Unbundled build + Rust native peek tests complete (3 tests: main peek, validate, header/invalid). See TODO.md (desktop e2e subtask) + the local real .smf for full tauri-dev manual validation of peeks + UI (bone tree, export, native I/O)."
             Pop-Location
         } else {
             Write-Warn "src-tauri missing."

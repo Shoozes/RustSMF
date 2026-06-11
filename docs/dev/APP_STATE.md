@@ -141,3 +141,5 @@ Builds green. All connected. Ready.
 **Desktop e2e further (subtasks):** Expanded Rust tests (validate, header, invalid cases on sample/bytes); added e2e 'tauri client fallbacks' test for browser desktop path strings. e2e now 7 passed, cargo 3 tests. Stub comment polished. Gap narrowed more.
 
 **This cycle continuation:** More e2e coverage for peeks in fallback test; desktop-smoke task updated for clarity on 3 tests; bone stub calls skeleton.update() for robustness. All green.
+
+**Desktop e2e automation increment (priority #1 this cycle):** Enhanced export e2e test to do bone selection + transform stub (local mixamo sample) before export + status/screenshot. run.ps1 desktop-smoke now checks cargo output for 'model~' (real sample in native tests) + better messaging. e2e 7/7, desktop-smoke confirms sample. Gap further closed (UI bone+export + native validation automated with samples). Manual tauri-dev still for full shell. Docs updated.
