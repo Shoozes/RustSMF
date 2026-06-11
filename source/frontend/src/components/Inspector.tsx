@@ -15,7 +15,7 @@ const Inspector: React.FC<InspectorProps> = ({
   onChangeClip,
 }) => {
   return (
-    <div className="inspector">
+    <div data-testid="inspector" className="inspector">
       <div className="panel-title">Inspector</div>
       <div className="text-xs">
         <div className="mb-1 text-slate-400">Selected</div>

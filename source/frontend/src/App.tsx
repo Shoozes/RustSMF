@@ -126,7 +126,7 @@ export default function App() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key.toLowerCase() === ' ') {
         e.preventDefault()
-        setIsPlaying(p => !p)
+        playbackRef.current.setIsPlaying(p => !p)
       }
     }
     window.addEventListener('keydown', onKey)

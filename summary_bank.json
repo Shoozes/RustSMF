@@ -196,7 +196,7 @@
         "source/backend/**"
       ],
       "notes": {
-        "status": "UI components extracted from App monolith (Toolbar, Outliner, Inspector, Timeline) per monolith-modularization. App now thin shell (~297 lines, down from 343). Store has playback + type slices for model/ui. Future: more state lift, context or full hook. No stubs."
+        "status": "UI components extracted from App monolith (Toolbar, Outliner, Inspector, Timeline) per monolith-modularization (completed). App now thin shell (~297 lines, down from 343). Added inspector testid, fixed keyboard state inconsistency (uses playbackRef). Store has playback + type slices for model/ui. Enhanced e2e for new components. No stubs."
       }
     },
     "error_handling_and_edge_cases": {
