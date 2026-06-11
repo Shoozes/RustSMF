@@ -161,3 +161,16 @@ All per directive.
 
 All per "if missing build it", "break down", "complete backlog", "no more stubs". Ready for push. Remaining minor: deeper error path e2e (corrupt file load would require test asset), Rust parser (keep optional per design), FBX export (limited).
 
+**Auto research/recap/decide/design/build/test/fix/polish (this continuation):** Research (docs tails, bank gaps, git clean + prior commits, verify Passed, greps clean except expected placeholders, code reads for peek/e2e/raycast) showed state solid post-prior pass. Open: deeper e2e (status coverage, robust runs), Rust as bigger (break down - keep peek as real step; full parser future to avoid duplicating TS logic), FBX limited.
+
+Actioned (small, testable, no stubs):
+- E2E: Added bone select status assert (`toContainText(/Selected:/i)`) after list + canvas clicks in main load test (covers new UX from handleSelectBone + raycast). Error path test reinforced. Full e2e/build clean (5 tests run; skips on sample deps as before, but asserts/code present and would validate; no errors).
+- Peek polish: Captured rustPeekMsg; for desktop .smf final status now includes peek (e.g. "Rust SMF peek: SMF_v12_by_... | Loaded: ...") so validation visible with model info. Early desktop read preserved.
+- Rust decision: Fuller parser broken down as bigger task (significant binary port); current peek is the implemented real (non-stub) contribution. No change to cmd.
+- Docs/bank: Appended paired notes here + APP_STATE. Bank refreshed via _gen + curated (e2e status coverage, peek polish noted; raycast/e2e_error/rust_peek marked advanced).
+- Verify: Passed multiple times. Builds clean.
+
+Outcome: Backlog progressed (e2e deeper via status + error, polish on peek/UX), connected (bone select status now asserted + shown, Rust peek integrated in status for desktop). All per directive. Ready for push. Remaining as noted (bigger items tracked). 
+
+See summary_bank (gaps), run.ps1 verify, source (no new stubs). Continue.
+

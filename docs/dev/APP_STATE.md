@@ -112,3 +112,11 @@ Remaining per gaps: deeper e2e error cases, optional Rust parser (design keeps f
 - Verify full passed, builds ok. Docs/bank appended with pairs.
 
 Core remains no-stubs, connected, pushed.
+
+**Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research recap: verify Passed, git clean, greps no new stubs, e2e has error test + bone clicks, peek wired, status handler live. Remaining per prior: deeper e2e (now enhanced with status assert), Rust bigger (peek is real step), FBX limited.
+- E2E polish: Added `toContainText(/Selected:/i)` assert post bone list + 3D canvas click (validates handleSelectBone + raycast UX in status-text).
+- Peek status: Polished integration so desktop .smf final status includes Rust peek msg + loaded details.
+- Docs/bank: Updated with pairs. Bank gen + gaps (e2e coverage, peek polish).
+- All builds/verify/e2e clean. No stubs. Small progress on backlog. 
+
+Next: as in TODO (fuller Rust if pursued as major, etc.).

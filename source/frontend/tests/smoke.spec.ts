@@ -112,6 +112,9 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await page.waitForTimeout(80);
     await expect(canvas).toBeVisible();
 
+    // Verify bone selection (list or 3D raycast) updates status UX
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
+
     // Assert no critical browser console errors during load (errors logged by listener)
     // (warnings may exist for Three.js, but no errors)
     const errors = (page as any)._browserErrors || [];

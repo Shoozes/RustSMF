@@ -51,11 +51,11 @@ export function useLoadModel() {
         data = await readBinaryFile(res.path);
       }
 
+      let rustPeekMsg = '';
       // Optional Rust peek for .smf desktop (real header peek command, advances rust-smf-parser)
       if (name.endsWith('.smf') && res.path) {
         try {
-          const peek = await (await import('../backend-client/tauri')).peekSmfHeader(res.path);
-          ui.setStatus(peek);
+          rustPeekMsg = await (await import('../backend-client/tauri')).peekSmfHeader(res.path);
         } catch {}
       }
 
@@ -93,10 +93,19 @@ export function useLoadModel() {
       if (name.endsWith('.fbx')) {
         ui.setStatus(`Loaded FBX: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length || 0}`);
       } else {
-        ui.setStatus(`Loaded: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length} | verts: ${loaded.skinnedMeshes?.[0]?.geometry?.attributes?.position?.count || '?'}`);
+        let status = `Loaded: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length} | verts: ${loaded.skinnedMeshes?.[0]?.geometry?.attributes?.position?.count || '?'}`;
+        if (rustPeekMsg) {
+          status = `${rustPeekMsg} | ${status}`;
+        }
+        ui.setStatus(status);
       }
 
       ui.setSelected(loaded.skinnedMeshes?.[0]?.name || 'root');
+
+      if (rustPeekMsg) {
+        // Polish: surface Rust peek with final loaded info for desktop .smf
+        const currentStatus = ui.status; // but since state, better append in final set below; for simplicity include in loaded status
+      }
 
     } catch (e: any) {
       console.error(e);
