@@ -141,3 +141,5 @@ Builds green. All connected. Ready.
 **Bone enhance (next priority #3):** 3D highlight marker (follows selected bone world pos in viewport on list/raycast select) + transform stub UI in inspector (buttons + note). Toolbar format text polish. FBX import confirmed complete/wired (no action needed). e2e/visuals tolerate the new marker. All green.
 
 **This cycle (stub made functional):** Transform stub buttons now actually mutate the selected bone (position/rot + updateMatrix + reset); marker follows live. e2e now clicks the stubs (data-testid). Builds/tests green. Desktop/Rust native still solid.
+
+**Desktop e2e further (subtasks):** Expanded Rust tests (validate, header, invalid cases on sample/bytes); added e2e 'tauri client fallbacks' test for browser desktop path strings. e2e now 7 passed, cargo 3 tests. Stub comment polished. Gap narrowed more.

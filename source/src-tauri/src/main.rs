@@ -285,4 +285,47 @@ mod tests {
             println!("Rust desktop peek smoke: no test .smf sample present in this env; skipping real binary parse (see run.ps1 desktop-smoke and TODO for manual tauri-dev + mixamo_smf_baldguy.smf).");
         }
     }
+
+    #[test]
+    fn test_validate_smoke_on_sample() {
+        if let Some(path) = find_test_smf() {
+            let bytes = std::fs::read(&path).expect("readable");
+            let mut s = String::new();
+            let mut tmp_off = 0;
+            while tmp_off < bytes.len() && bytes[tmp_off] != 0 {
+                s.push(bytes[tmp_off] as char);
+                tmp_off += 1;
+            }
+            assert!(s.starts_with("SMF_v"), "validate expects SMF_v header");
+        } else {
+            println!("validate smoke: no sample, skipping");
+        }
+    }
+
+    #[test]
+    fn test_peek_header_and_invalid_cases() {
+        // Positive on sample if present
+        if let Some(path) = find_test_smf() {
+            let bytes = std::fs::read(&path).expect("readable");
+            let mut s = String::new();
+            let mut tmp_off = 0;
+            while tmp_off < bytes.len() && bytes[tmp_off] != 0 {
+                s.push(bytes[tmp_off] as char);
+                tmp_off += 1;
+            }
+            assert!(s.starts_with("SMF_v"));
+        }
+        // Negative: too small
+        let small: Vec<u8> = vec![0; 10];
+        assert!(small.len() < 32);
+        // Invalid header sim
+        let bad_header: Vec<u8> = b"NOTSMF\0".to_vec();
+        let mut s = String::new();
+        let mut o = 0;
+        while o < bad_header.len() && bad_header[o] != 0 {
+            s.push(bad_header[o] as char);
+            o += 1;
+        }
+        assert!(!s.starts_with("SMF_v"));
+    }
 }

@@ -142,7 +142,7 @@ const Inspector: React.FC<InspectorProps> = ({
                 if (bone) { bone.position.set(0,0,0); bone.rotation.set(0,0,0); bone.updateMatrix(); console.log('stub: reset', selected); }
               }
             }}> reset </button>
-            <span className="ml-1 text-slate-500">(live preview stub; anim may override)</span>
+            <span className="ml-1 text-slate-500">(live preview stub; pause anim with Space for best effect, anim may override)</span>
           </div>
         )}
       </div>

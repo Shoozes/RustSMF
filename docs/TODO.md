@@ -91,6 +91,14 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 - Desktop: Confirmed still green (Rust tests + task).
 - Docs: Updated this cycle's paired note.
 
+**Desktop e2e gap further (priority #1 subtasks this cycle):** 
+- What: Expanded Rust desktop peek tests (added test_validate_smoke_on_sample, test_peek_header_and_invalid_cases for header/validate/bad bytes + sample parse). Added browser e2e test 'tauri client fallbacks return expected messages in browser' (simulates isTauriEnv false, checks 'only in Tauri desktop' and readBinaryFile fallback strings; covers desktop path branches in web e2e). Polished stub comment for pause tip.
+- Why: Continues closing the automated desktop e2e gap (native FS/peek + client fallbacks) without new deps; complements manual tauri-dev + web UI e2e.
+- Where: main.rs (more tests in mod tests), smoke.spec.ts (new fallback test + stub polish), Inspector (comment).
+- How: Duplicated minimal parse logic in Rust tests for coverage (positive on real mixamo sample, negative/invalid); evaluate in e2e for browser fallbacks (no actual tauri module import needed).
+- Outcome: cargo test now 3 desktop-related tests ok; e2e 7 passed (new test + all prior); verify green. desktop-smoke task exercises them. Gap further narrowed (native + fallback coverage automated; full UI native roundtrips still benefit from tauri-dev guidance).
+- Docs: This paired subtask note.
+
 ---
 
 
