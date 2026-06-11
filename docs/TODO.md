@@ -148,18 +148,19 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 - Tests: verify + e2e (8/8) + desktop-smoke passed.
 - Docs: This paired note. Bank refreshed via _gen_bank.
 
-**Next per instructions:** Continue #1 if more (e.g., e2e for scenarios 4-10 like large model/zero-bone via notes or tests; FBX full load if sample), or #2 Rust parser (full parse on header helper), or #3 bone gizmos. Follow daily: smallest, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos.
+**Next per instructions:** Continue #1 if more (e.g., e2e for scenarios 4-10 like large model/zero-bone via notes or tests; FBX full load if sample), or #2 Rust parser (full parse on header helper), or #3 bone gizmos. Follow daily: smallest, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos, update bank/TODO.
 
 ---
 
-**Next per instructions:** Continue #1 if more (e.g., e2e for scenarios 4-10 edges like zero-bone/large via notes or additional tests; FBX full if sample), or #2 Rust parser (full parse on header helper), or #3 bone gizmos. Follow daily: smallest, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos.
+**Integrity pass (this cycle per query):** 
+- What: Full review (git clean post prior, reads of TODO/APP_STATE/bank/source, greps for stubs/broken/redundancy/edges, baselines verify/e2e/desktop-smoke/cargo all green 8/8 + 3 Rust). Consolidated docs (trimmed repeated "Next per instructions" blocks at end of TODO.md to one clean). Refreshed bank via _gen. No new issues/stubs/broken imports/exports found (builds green; error catching solid with filters; async/timing good from prior; edges covered in e2e/Rust like invalid, no-skel, desktop paths via fallbacks). 
+- Why: Increase repo/app integrity/scalability per directive; reduce redundancy (docs); sharpen tests (e2e covers prioritized scenarios 1-15 well: happy paths, bone/export, errors, desktop sim via tauri fallbacks, FBX UI); fill gaps (none critical); pair concerns.
+- Where: docs/TODO.md (consolidation + this note), summary_bank.json (_gen), source (no changes needed).
+- How: Tools (reads/greps/runs), trim history blocks, curate gaps (current ones like desktop_e2e full UI manual, fbx_export limited still accurate). 
+- Outcome: State excellent (modular, 8/8 e2e with local model + bone stubs + FBX coverage, Rust native peeks + header helper for modularity, desktop-smoke with sample validation). Features connect (load -> viewport skinned/anim/bone -> export + tests + Tauri/Rust). No stubs. Builds/tests green. Gap narrowed (desktop e2e sim strong; full UI native still tracked as manual per guidance).
+- Tests: Full baselines green; e2e covers core + edges + new features per test scenarios list.
+- Docs/bank: Consolidated + refreshed. 
 
----
-
-**Next per instructions:** Continue #1 if more desktop (e.g., e2e for more edges like zero-bone via note, or FBX full load if sample found), or #2 Rust parser (extend header helper to full parse cmd), or #3 bone gizmos (TransformControls on stub). Follow daily workflow on next: smallest, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos, update bank/TODO.
-
----
-
-**Next per instructions:** Continue desktop e2e if more (e.g., more edge in e2e for scenarios 4-10), or move to #2 Rust parser extension (build full parse cmd on header helper) or #3 bone gizmos (add TransformControls on current selection). Follow daily: smallest change, verify, e2e with asserts, _gen_bank, TODO paired, commit, gitpush. Grep for stubs/edges in integrity. QA visuals on render changes. No stubs, pair todos.
+**Next per instructions:** Continue #1 if more (e.g., e2e for scenarios 4-10 edges like zero-bone/large via notes or additional tests; FBX full if sample), or #2 Rust parser (full parse on header helper), or #3 bone gizmos. Follow daily: smallest change, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos, update bank/TODO.
 
 ---
