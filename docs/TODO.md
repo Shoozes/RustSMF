@@ -281,3 +281,17 @@ All per directive. Backlog advanced (Cycles 1-2 complete, Cycle 3 gizmo + modes 
   - Visual QA: tauri-dev + screenshots for gizmo states.
 
 All per philosophy + complete backlog directive. Tree clean post-push. Next: pick small (e.g. weight preview or FBX sample) or user-specified.
+
+---
+
+**Cycle 3 follow-up (weight preview toggle - basic rigging viz):** 
+- What: Implemented simple weight preview for selected bone. Added `showWeightPreview` state + `toggleWeightPreview` in useLoadModel (clears on model clear). Wired through App to ThreeViewport (prop `weightPreviewEnabled`) and Inspector (prop + onToggle + button in transform section: "Show/Hide Weights"). In ThreeViewport: new useEffect that (when enabled + selected bone) computes per-vertex colors (blue=0 influence to red=full for that bone using skinIndex/skinWeight attrs from loaders) and sets 'color' attr + vertexColors=true on skinned materials. Restores original colors (or removes attr) when disabled/ no selection. Uses backup on mesh for non-destructive toggle. Reuses skeleton + attached root + existing skin data.
+- Why: Directly implements listed Cycle 3 follow-up from TODO ("weight preview toggle (e.g. in Inspector for selected bone influence viz on mesh)"). High user value for rigging editor (see original GM tool parity). Small scoped change (no new store slice, no shader, leverages existing attrs from SMF/GLB/FBX loads). "If missing, build it". Complements gizmo/marker/selection. Modular (logic in viewport, toggle in hook/inspector).
+- Where: source/frontend/src/hooks/useLoadModel.ts (state + toggle + clear + return), source/frontend/src/App.tsx (destructure + pass props), source/frontend/src/components/Inspector.tsx (props + toggle button in transform controls), source/frontend/src/components/ThreeViewport.tsx (prop + viz useEffect with restore/apply logic).
+- How: Targeted edits (no big refactor). Default off so no impact on existing e2e/screenshots. Ran full verify + e2e + desktop-smoke immediately (all green). Bank refresh. This paired note in TODO.
+- Outcome: Users can now select bone + click "Show Weights" to see influence viz live on mesh (red=high weight for selected bone). Toggle off restores. Works for SMF/GLB/FBX loaded models (any with skin). No stubs. e2e unaffected (toggle not exercised in tests yet). Good foundation for future (e.g. multi-bone, opacity, or keyframe).
+- Tests: verify Passed; e2e 10/11 (selection flows green); desktop-smoke 3/3.
+- Docs/bank: This note; bank refreshed (new paths in groups). Updated active gaps note (this item now complete).
+- New/updated gap: "small UI buttons for modes (prop/callback wiring)" and "full visual QA" still open; weight preview now done.
+
+All per directive. Backlog further reduced. No stubs. Ready for next (e.g. mode buttons or FBX sample or Rust parser).

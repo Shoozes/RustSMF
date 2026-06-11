@@ -25,6 +25,8 @@ export default function App() {
     onScrub,
     setSpeed,
     pingRust,
+    showWeightPreview,
+    toggleWeightPreview,
   } = useLoadModel();
 
   // Setup keyboard once
@@ -84,6 +86,7 @@ export default function App() {
             onTimeUpdate={playback.setCurrentTime}
             onSelectBone={handleSelectBone}
             selectedBoneName={ui.selected}
+            weightPreviewEnabled={showWeightPreview}
           />
           {/* Simple pure loading overlay (no deps) */}
           {ui.isLoading && (
@@ -105,6 +108,8 @@ export default function App() {
           onChangeClip={changeClip}
           skeleton={model.skeleton}
           onSelectBone={handleSelectBone}
+          showWeightPreview={showWeightPreview}
+          onToggleWeightPreview={toggleWeightPreview}
         />
       </div>
 

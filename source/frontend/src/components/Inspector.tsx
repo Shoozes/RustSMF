@@ -8,6 +8,8 @@ interface InspectorProps {
   onChangeClip: (clip: THREE.AnimationClip) => void;
   skeleton?: THREE.Skeleton;
   onSelectBone?: (boneName: string) => void;
+  showWeightPreview?: boolean;
+  onToggleWeightPreview?: () => void;
 }
 
 const Inspector: React.FC<InspectorProps> = ({
@@ -17,6 +19,8 @@ const Inspector: React.FC<InspectorProps> = ({
   onChangeClip,
   skeleton,
   onSelectBone,
+  showWeightPreview = false,
+  onToggleWeightPreview,
 }) => {
   // Helper to reduce dupe (modularity/flex)
   const getRootBones = (bones: any[]) => bones.filter((b: any) => !b.parent || !bones.includes(b.parent as any));
@@ -141,6 +145,14 @@ const Inspector: React.FC<InspectorProps> = ({
                 if (bone) { bone.position.set(0,0,0); bone.rotation.set(0,0,0); bone.updateMatrix(); if (skeleton) skeleton.update(); console.log('reset', selected); }
               }
             }}> reset </button>
+            {onToggleWeightPreview && (
+              <button
+                className="ml-2 px-1 py-0 bg-slate-700 hover:bg-slate-600 text-xs"
+                onClick={onToggleWeightPreview}
+              >
+                {showWeightPreview ? 'Hide' : 'Show'} Weights
+              </button>
+            )}
             <span className="ml-1 text-slate-500">(gizmo + nudges; T/R/S keys for translate/rotate/scale; Space pause anim, anim may override)</span>
           </div>
         )}

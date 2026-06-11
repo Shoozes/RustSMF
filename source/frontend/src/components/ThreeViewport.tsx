@@ -21,6 +21,7 @@ interface ThreeViewportProps {
   onTimeUpdate?: (time: number) => void;
   onSelectBone?: (boneName: string) => void;
   selectedBoneName?: string;
+  weightPreviewEnabled?: boolean;
 }
 
 // SimpleOrbit imported from ../utils/SimpleOrbit (filled modularity dir, single source of truth)
@@ -36,6 +37,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   onTimeUpdate,
   onSelectBone,
   selectedBoneName,
+  weightPreviewEnabled = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -311,6 +313,94 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     bone.getWorldPosition(wp);
     group.position.copy(wp);
   }, [selectedBoneName, skeleton]);
+
+  // Weight preview viz for selected bone (Cycle 3 rigging polish follow-up).
+  // Simple per-bone influence viz using existing skin attrs (from SMF/GLB/FBX loaders).
+  // Colors: blue (0 influence) to red (full weight on selected bone).
+  // Toggles cleanly; restores original vertex colors when disabled.
+  // Uses attached root for skinned meshes; non-destructive to skinning/anim.
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene) return;
+
+    const restoreMeshes = () => {
+      const meshes: any[] = [];
+      if (attachedModelRef.current) {
+        attachedModelRef.current.traverse((obj: any) => {
+          if (obj.isSkinnedMesh) meshes.push(obj);
+        });
+      }
+      meshes.forEach((mesh) => {
+        const geo = mesh.geometry;
+        if (!geo) return;
+        const orig = (mesh as any)._origColorAttr;
+        if (orig) {
+          geo.setAttribute('color', orig);
+          delete (mesh as any)._origColorAttr;
+        } else if (geo.attributes.color) {
+          geo.deleteAttribute('color');
+        }
+        if (mesh.material) {
+          (mesh.material as any).vertexColors = false;
+          (mesh.material as any).needsUpdate = true;
+        }
+      });
+    };
+
+    if (!weightPreviewEnabled || !selectedBoneName || !skeleton) {
+      restoreMeshes();
+      return;
+    }
+
+    const boneIndex = skeleton.bones.findIndex((b: any) => b.name === selectedBoneName);
+    if (boneIndex < 0) {
+      restoreMeshes();
+      return;
+    }
+
+    const meshes: any[] = [];
+    if (attachedModelRef.current) {
+      attachedModelRef.current.traverse((obj: any) => {
+        if (obj.isSkinnedMesh) meshes.push(obj);
+      });
+    }
+
+    meshes.forEach((mesh) => {
+      const geo = mesh.geometry;
+      if (!geo) return;
+      const posAttr = geo.attributes.position;
+      if (!posAttr) return;
+      const count = posAttr.count;
+      const skinIndices = geo.attributes.skinIndex?.array as any;
+      const skinWeights = geo.attributes.skinWeight?.array as any;
+      if (!skinIndices || !skinWeights) return;
+
+      // backup original color once per mesh
+      if (!(mesh as any)._origColorAttr && geo.attributes.color) {
+        (mesh as any)._origColorAttr = geo.attributes.color.clone();
+      }
+
+      const colors = new Float32Array(count * 3);
+      for (let v = 0; v < count; v++) {
+        let w = 0;
+        for (let i = 0; i < 4; i++) {
+          const idx = skinIndices[v * 4 + i];
+          if (idx === boneIndex) {
+            w = Math.max(w, skinWeights[v * 4 + i]);
+          }
+        }
+        // blue (low) -> red (high)
+        colors[v * 3 + 0] = w;     // r
+        colors[v * 3 + 1] = 0;     // g
+        colors[v * 3 + 2] = 1 - w; // b
+      }
+      geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+      if (mesh.material) {
+        (mesh.material as any).vertexColors = true;
+        (mesh.material as any).needsUpdate = true;
+      }
+    });
+  }, [weightPreviewEnabled, selectedBoneName, skeleton]);
 
   // Cycle 3: Transform gizmo for selected bone (basic rigging polish).
   // Reuses the selectedBoneName + skeleton already synced via refs/effects + raycast/list selection.

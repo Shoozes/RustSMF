@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 import type { OpenResult } from '../backend-client/tauri';
 import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
@@ -22,11 +22,15 @@ export function useLoadModel() {
   // Track original source format for context-aware export (SMF has fidelity path; FBX gets its own exportFBX entry)
   const lastSourceFormatRef = useRef<string>(''); // 'smf' | 'fbx' | 'glb' | 'obj'
 
+  // Weight preview toggle for selected bone (Cycle 3 rigging polish follow-up)
+  const [showWeightPreview, setShowWeightPreview] = useState(false);
+
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
     model.clear();
     ui.setSelected('Scene');
     ui.clearError();
+    setShowWeightPreview(false);
     const pb = playbackRef.current;
     pb.setIsPlaying(false);
     pb.setCurrentTime(0);
@@ -255,6 +259,10 @@ export function useLoadModel() {
     playbackRef.current.toggle();
   }, [playbackRef]);
 
+  const toggleWeightPreview = useCallback(() => {
+    setShowWeightPreview(v => !v);
+  }, []);
+
   const changeClip = useCallback((clip: THREE.AnimationClip) => {
     playback.selectClip(clip.name || 'clip', clip.duration);
   }, [playback]);
@@ -316,5 +324,7 @@ export function useLoadModel() {
     onScrub,
     setSpeed,
     pingRust,
+    showWeightPreview,
+    toggleWeightPreview,
   };
 }
