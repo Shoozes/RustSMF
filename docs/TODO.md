@@ -139,6 +139,19 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 - Tests: verify + e2e (8/8) + desktop-smoke passed.
 - Docs: This paired note. Bank refreshed via _gen_bank.
 
+**Desktop e2e automation further (priority #1 subtask this cycle):** 
+- What: Extended tauri fallback e2e test with openFallback for desktop-specific native file dialog cancel sim (openFile fallback in tauri client). Enhanced desktop-smoke with check for 'Rust desktop peek smoke on' to confirm sample used and println executed in native tests.
+- Why: Addresses test scenarios for desktop-specific (cancel, path handling via sim), edge cases, parity. Strengthens automation of native validation in task. Complements previous peeks coverage.
+- Where: source/frontend/tests/smoke.spec.ts (tauri test), run.ps1 (desktop-smoke output checks).
+- How: Added evaluate for openFallback (consistent pattern); pwsh if-match for the Rust println. Reuses SAMPLE_SMF.
+- Outcome: e2e 8 passed (tauri test now covers openFile fallback for desktop cancel); desktop-smoke confirms sample println + basics; verify green. Gap narrowed (more desktop-specific and edge sim automated in e2e + task).
+- Tests: verify + e2e (8/8) + desktop-smoke passed.
+- Docs: This paired note. Bank refreshed via _gen_bank.
+
+**Next per instructions:** Continue #1 if more (e.g., e2e for scenarios 4-10 like large model/zero-bone via notes or tests; FBX full load if sample), or #2 Rust parser (full parse on header helper), or #3 bone gizmos. Follow daily: smallest, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos.
+
+---
+
 **Next per instructions:** Continue #1 if more (e.g., e2e for scenarios 4-10 edges like zero-bone/large via notes or additional tests; FBX full if sample), or #2 Rust parser (full parse on header helper), or #3 bone gizmos. Follow daily: smallest, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos.
 
 ---

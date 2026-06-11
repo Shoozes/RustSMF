@@ -412,6 +412,14 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
       return 'peekSmfHeader only in Tauri desktop';
     });
     expect(headerFallback).toContain('only in Tauri desktop');
+
+    // Desktop-specific: native file dialog cancel sim (openFile fallback)
+    const openFallback = await page.evaluate(() => {
+      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
+      if (isTauri) return 'tauri';
+      return 'browser fallback for openFile (uses hidden input)';
+    });
+    expect(openFallback).toContain('browser fallback');
   });
 
   // New: FBX import happy path coverage (UI + load dispatch parity with SMF/GLB per test scenarios)
