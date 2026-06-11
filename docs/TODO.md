@@ -121,6 +121,19 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 - Tests: Full verify + e2e (8/8 with desktop coverage) + desktop-smoke passed post changes.
 - Docs: This paired note + update to previous desktop subtask notes. Bank refreshed.
 
+**Desktop e2e automation further (priority #1 subtask this cycle):** 
+- What: Extended tauri fallback e2e test with rigFallback and animFallback (covering more from tauri client: peekSmfRigBasic, peekSmfAnimBasic used in desktop .smf load for status). This + previous covers more of desktop path coverage in web e2e (simulates native peeks for rig/anim/model/header/validate/info/read).
+- Why: Advances automation of desktop e2e (more native simulation without tauri-driver; addresses test scenarios for desktop-specific paths, parity, error handling in fallbacks). Builds on prior (getSmfDesktopInfo, sample validation in task).
+- Where: source/frontend/tests/smoke.spec.ts (tauri client fallbacks test).
+- How: Added two more evaluate blocks for the fallback strings (consistent with existing pattern for other peeks). No code change in Rust/TS (already wired).
+- Outcome: e2e 8 passed (tauri test now exercises more desktop strings for rig/anim); complements Rust 3 tests and desktop-smoke. Gap narrowed more (web e2e + task + Rust cover broader desktop peeks/paths for "full native" ; full tauri-dev still manual).
+- Tests: verify + e2e + desktop-smoke green.
+- Docs: This paired note. Bank refreshed.
+
+**Next per instructions:** Continue #1 if more desktop (e.g., e2e for more edges like zero-bone via note, or FBX full load if sample found), or #2 Rust parser (extend header helper to full parse cmd), or #3 bone gizmos (TransformControls on stub). Follow daily workflow on next: smallest, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos, update bank/TODO.
+
+---
+
 **Next per instructions:** Continue desktop e2e if more (e.g., more edge in e2e for scenarios 4-10), or move to #2 Rust parser extension (build full parse cmd on header helper) or #3 bone gizmos (add TransformControls on current selection). Follow daily: smallest change, verify, e2e with asserts, _gen_bank, TODO paired, commit, gitpush. Grep for stubs/edges in integrity. QA visuals on render changes. No stubs, pair todos.
 
 ---
