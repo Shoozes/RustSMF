@@ -25,15 +25,22 @@ const SAMPLE_SMF = fs.existsSync(SMF_DIR)
 test.describe('RustSMF basic shell and model flow (Chromium)', () => {
   test.beforeEach(async ({ page }) => {
     // Capture browser console errors and warnings during tests (for Chrome/Playwright)
+    const browserErrors: string[] = [];
     page.on('console', msg => {
       const type = msg.type();
       if (type === 'error' || type === 'warning') {
-        console.log(`[BROWSER ${type.toUpperCase()}] ${msg.text()}`);
+        const text = `[BROWSER ${type.toUpperCase()}] ${msg.text()}`;
+        console.log(text);
+        browserErrors.push(text);
       }
     });
     page.on('pageerror', err => {
-      console.error(`[PAGE ERROR] ${err}`);
+      const text = `[PAGE ERROR] ${err}`;
+      console.error(text);
+      browserErrors.push(text);
     });
+    // Expose for assert (simple, attach to page for access in test)
+    (page as any)._browserErrors = browserErrors;
   });
   test('app boots with expected UI elements and initial state', async ({ page }) => {
     await page.goto('/');
@@ -86,6 +93,12 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     // Canvas still there (Three.js kept rendering)
     await expect(page.getByTestId('three-canvas')).toBeVisible();
+
+    // Assert no critical browser console errors during load (errors logged by listener)
+    // (warnings may exist for Three.js, but no errors)
+    const errors = (page as any)._browserErrors || [];
+    const criticalErrors = errors.filter((e: string) => e.includes('ERROR'));
+    expect(criticalErrors.length).toBe(0);
   });
 
   test('export flow and basic visuals (smoke for roundtrip prep)', async ({ page }) => {

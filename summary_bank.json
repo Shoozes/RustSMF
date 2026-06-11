@@ -151,7 +151,7 @@
         "fbx_export: import + desktop binary + postprocess complete and parity with GLB. Export intentionally limited (UI falls back to SMF/GLB).",
         "tests: smoke.spec expanded (boot + load + export/screenshot + scrub/clip + loading overlay + error-banner + time-display + drop hint + nothing-export + inspector bones assert). Console/pageerror listeners for browser errors (no app errors in runs). Unit roundtrips. Visual tests present. eslint fixed. Drag-drop testable.",
         "error_handling + ux: banner (data-testid), catches, clear on load/export. Added pure loading overlay (data-testid, shows on isLoading). Native Tauri saveFile fully implemented (dialog save + write_file_binary; errors now propagate to banner for UX). Status cues remain. Optional further spinners/toasts noted.",
-        "modularity: solid (App thin orchestrator using store slices for model/ui/playback; UI components extracted: Toolbar/Outliner/Inspector/Timeline; ThreeViewport self-contained). Store slices complete (useModelSlice/useUiSlice/usePlaybackSlice). Bone inspector polished (count, scrollable list, selection). No stubs. App ~thin after lifts."
+        "modularity: solid (App very thin orchestrator using useLoadModel hook + store slices; UI components extracted. Load logic extracted to hook. No stubs."
         "git: functional.",
         "roundtrip_fidelity: complete (unit real-sample cycle + e2e export + screenshot).",
         "edge_cases + playback: RAF time reporting + prop-driven scrub/pause/clip/speed in viewport (effects separated from attach). Corrupt SMF throws caught to banner. Non-skinned fallbacks exist. Timing stable post-deps fix."

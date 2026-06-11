@@ -1,232 +1,36 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react'
-import * as THREE from 'three'
-import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
-import { openFile, OpenResult, invokeCommand, readBinaryFile, saveFile } from './backend-client/tauri'
-import { loadGLB } from './loaders/glb'
-import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer } from './loaders/smf'
-import { loadFBX } from './loaders/fbx'
+import React, { useEffect } from 'react'
 import ThreeViewport from './components/ThreeViewport'
 import Timeline from './components/Timeline'
 import Outliner from './components/Outliner'
 import Inspector from './components/Inspector'
 import Toolbar from './components/Toolbar'
-import { usePlaybackSlice, useModelSlice, useUiSlice } from './store'
+import { useLoadModel } from './hooks/useLoadModel'
 
 // Main application: UI shell + state + loaders. Three.js viewport, scene, orbit, RAF, skinned attach
 // and mixer driving are fully delegated to <ThreeViewport> for modularity (no more duplication/dead code).
 // All model data (root/skeleton/clips) flow as props; playback is driven by props + callbacks.
 export default function App() {
-  // UI and model state via store hooks for modularity (lifted from previous monolithic state)
-  const ui = useUiSlice()
-  const model = useModelSlice()
+  const {
+    ui,
+    model,
+    playback,
+    loadModel,
+    handleOpen,
+    handleExport,
+    handleFileInputChange,
+    setupKeyboard,
+    togglePlay,
+    changeClip,
+    onScrub,
+    setSpeed,
+    pingRust,
+  } = useLoadModel();
 
-  // Keep raw ImportedSmf for high-fidelity SMF export roundtrips (SMF path only) - ref stays local as it's not reactive UI
-  const lastSmfDataRef = useRef<any>(null) // ImportedSmf | null
-
-  // Playback state via store hook for modularity
-  const playback = usePlaybackSlice()
-  const playbackRef = useRef(playback)
-  useEffect(() => { playbackRef.current = playback }, [playback])
-
-  // Logical clear (resets UI state and signals viewport via null root) - now delegates to slices
-  function clearLoadedModel() {
-    lastSmfDataRef.current = null
-    model.clear()
-    ui.setSelected('Scene')
-    ui.clearError()
-    const pb = playbackRef.current
-    pb.setIsPlaying(false)
-    pb.setCurrentTime(0)
-    pb.setDuration(0)
-    pb.setCurrentClipName('')
-    pb.setPlaybackSpeed(1)
-  }
-
-  // Load a model (GLB/SMF/FBX). Desktop path-only cases now uniformly use readBinaryFile for robustness
-  // (tauri openFile returns path; browser hidden input path gives data). The actual three scene attach,
-  // skeleton helper, mixer and RAF are handled inside ThreeViewport via props.
-  const loadModel = useCallback(async (res: OpenResult) => {
-    clearLoadedModel()
-    ui.setIsLoading(true)
-    ui.clearError()
-    ui.setStatus('Loading model...')
-
-    try {
-      let loaded: any
-      const name = (res.name || res.path || '').toLowerCase()
-
-      // Unified binary read for desktop (tauri) path-only case for all binary formats.
-      let data: Uint8Array | undefined = res.data
-      if (!data && res.path) {
-        ui.setStatus('Reading binary from desktop path...')
-        data = await readBinaryFile(res.path)
-      }
-
-      if (name.endsWith('.smf')) {
-        if (!data) {
-          throw new Error('Could not obtain binary data for .smf (browser provides via input; desktop uses read_file_binary)')
-        }
-        const imported = importSMF(data.buffer)
-        lastSmfDataRef.current = imported
-        loaded = buildSmfScene(imported)
-      } else if (name.endsWith('.fbx')) {
-        const urlOrBuf: string | ArrayBuffer = data ? data.buffer : (res.path || '')
-        loaded = await loadFBX(urlOrBuf)
-      } else {
-        // GLB / GLTF
-        const urlOrBuf: string | ArrayBuffer = data ? data.buffer : (res.path || '')
-        loaded = await loadGLB(urlOrBuf)
-      }
-
-      const root = loaded.root as THREE.Group
-      const availableClips = loaded.clips || (root as any).animations || []
-
-      // Signal to viewport via model slice (it will attach root, build internal mixer/helper, start first clip)
-      model.setRoot(root)
-      model.setSkeleton(loaded.skeleton)
-      model.setClips(availableClips)
-
-      if (availableClips.length > 0) {
-        const first = availableClips[0]
-        const pb = playbackRef.current
-        pb.setCurrentClipName(first.name || 'clip_0')
-        pb.setDuration(first.duration)
-        pb.setIsPlaying(true)
-        pb.setCurrentTime(0)
-      }
-
-      if (name.endsWith('.fbx')) {
-        ui.setStatus(`Loaded FBX: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length || 0}`)
-      } else {
-        ui.setStatus(`Loaded: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length} | verts: ${loaded.skinnedMeshes?.[0]?.geometry?.attributes?.position?.count || '?'}`)
-      }
-
-      ui.setSelected(loaded.skinnedMeshes?.[0]?.name || 'root')
-
-    } catch (e: any) {
-      console.error(e)
-      const msg = e?.message || String(e)
-      ui.setErrorMsg(`Load error: ${msg}`)
-      ui.setStatus(`Load error: ${msg}. Try a .glb or .smf from docs/references/old-src/datafiles/SMF/.`)
-    } finally {
-      ui.setIsLoading(false)
-    }
-  }, [])
-
-  // Keyboard (space toggles play; R reset handled inside viewport)
+  // Setup keyboard once
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === ' ') {
-        e.preventDefault()
-        playbackRef.current.setIsPlaying(p => !p)
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [])
-
-  // Live open (now actually loads!)
-  // The button triggers the real openFile (tauri or dynamic). We also expose a
-  // persistent hidden <input data-testid="model-file-input"> for reliable e2e
-  // file simulation with page.setInputFiles in Playwright.
-  const handleOpen = async () => {
-    ui.setStatus('Opening file picker (GLB/SMF supported)...')
-    try {
-      const res: OpenResult | null = await openFile()
-      if (!res) {
-        ui.setStatus('No file selected.')
-        return
-      }
-      await loadModel(res)
-    } catch (e: any) {
-      const msg = e?.message || String(e)
-      ui.setErrorMsg(`Open error: ${msg}`)
-      ui.setStatus(`Open error: ${msg}`)
-    }
-  }
-
-  // Export: prefer high-fidelity SMF when we have the raw data (for roundtrips on SMF loads),
-  // otherwise fall back to GLB using the model.root from store (viewport owns the viz copy).
-  // Uses saveFile util (now fully supports native Tauri save via dialog + write command).
-  const handleExport = async () => {
-    const smfData = lastSmfDataRef.current
-    if (smfData) {
-      ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms)...')
-      try {
-        const buf = exportSMFToBuffer(smfData)
-        await saveFile(buf, 'exported_model.smf')
-        ui.setStatus('Exported .smf (using our ImportedSmf + DQ handling). Test roundtrip by re-importing!')
-        return
-      } catch (e: any) {
-        ui.setStatus(`SMF export error: ${e?.message || e}. Falling back to GLB...`)
-      }
-    }
-
-    // GLB fallback for GLB/FBX loads (and SMF if wanted): export the model root we hold in state.
-    const rootToExport = model.root
-    if (!rootToExport) {
-      ui.setStatus('Nothing to export.')
-      return
-    }
-    ui.setStatus('Exporting current model as GLB...')
-    try {
-      const exporter = new GLTFExporter()
-      const result = await exporter.parseAsync(rootToExport, { binary: true, animations: model.clips })
-      const buf = new Uint8Array(result as ArrayBuffer)
-      await saveFile(buf, 'exported_model.glb')
-      ui.setStatus('Exported .glb (animations included when present).')
-    } catch (e: any) {
-      const msg = e?.message || String(e)
-      ui.setErrorMsg(`Export error: ${msg}`)
-      ui.setStatus(`Export error: ${msg}`)
-    }
-  }
-
-  const pingRust = async () => {
-    try {
-      const msg = await invokeCommand<string>('greet', { name: 'RustSMF' })
-      setStatus(msg + ' (real tauri invoke)')
-    } catch (e: any) {
-      setStatus('Ping only works in Tauri desktop shell: ' + (e?.message || e))
-    }
-  }
-
-  // Playback controls driven by store hook (modularity). Viewport consumes the values via props.
-  const togglePlay = useCallback(() => {
-    playbackRef.current.toggle()
-  }, [])  // uses ref to avoid stale; stable for handlers
-
-  const changeClip = (clip: THREE.AnimationClip) => {
-    playback.selectClip(clip.name || 'clip', clip.duration)
-  }
-
-  const onScrub = (t: number) => {
-    playback.scrub(Math.max(0, Math.min(t, playback.duration || 0)))
-  }
-
-  const setSpeed = (s: number) => {
-    playback.setPlaybackSpeed(s)
-  }
-
-  // File input handler for e2e and toolbar
-  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setIsLoading(true);
-    setStatus('Loading selected file...');
-    try {
-      const buf = await file.arrayBuffer();
-      await loadModel({ name: file.name, data: new Uint8Array(buf) });
-    } catch (err: any) {
-      const m = err?.message || String(err)
-      setErrorMsg(`File load error: ${m}`)
-      setStatus(`File load error: ${m}`);
-    } finally {
-      setIsLoading(false);
-      // reset input so same file can be chosen again
-      (e.target as HTMLInputElement).value = '';
-    }
-  };
+    const cleanup = setupKeyboard();
+    return cleanup;
+  }, [setupKeyboard]);
 
   return (
     <div className="app-shell">
