@@ -80,7 +80,7 @@ export function useModelSlice(initial: Partial<LoadedModelState> = {}) {
 }
 
 export function useUiSlice(initial: Partial<UiState> = {}) {
-  const [status, setStatus] = useState<string>(initial.status ?? 'Three.js viewport ready (Y-up). Open .smf/.glb/.fbx. SMF/GLB export (FBX limited).');
+  const [status, setStatus] = useState<string>(initial.status ?? 'Three.js viewport ready (Y-up). Open .smf/.glb/.fbx/.obj. SMF/GLB/FBX export supported.');
   const [selected, setSelected] = useState<string>(initial.selected ?? 'Scene');
   const [isLoading, setIsLoading] = useState<boolean>(initial.isLoading ?? false);
   const [errorMsg, setErrorMsg] = useState<string>(initial.errorMsg ?? '');

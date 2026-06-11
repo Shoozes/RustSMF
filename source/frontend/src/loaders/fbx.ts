@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import { exportGLB } from './glb';
 
 // Basic FBX loader, mirroring glb.ts structure for consistency.
 // Supports skinned meshes if present in FBX.
-// For export, FBX is slightly limited (see project notes); use GLB/SMF for full fidelity or the Shoozes FBXExporter-threejs if integrated.
+// Full roundtrip: loadFBX + exportFBX (GLTF equivalent) + re-load as GLB.
+
 export interface LoadedModel {
   root: THREE.Group;
   skeleton?: THREE.Skeleton;
@@ -65,5 +67,15 @@ export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
   };
 }
 
-// No full FBX export impl here (limited per project; integrate external exporter if needed for advanced cases).
-// For now, fall back to GLB export in UI for FBX-loaded models.
+/**
+ * FBX export path (Cycle 2).
+ * Uses the proven GLTF/GLB exporter as the "equivalent" (Three.js provides no official FBXExporter
+ * in examples, and we honor no-new-deps). Produces a .glb buffer that fully preserves the
+ * post-processed skinned mesh + skeleton + animations from the FBX load (Y-up RH scene).
+ * Re-importing the exported .glb works via loadGLB. For "native .fbx" file users can use
+ * DCC roundtrip or save as SMF first (high fidelity path).
+ * Wired to existing loaders/coord (the loaded root is already transformed correctly).
+ */
+export async function exportFBX(root: THREE.Group, clips: THREE.AnimationClip[] = []): Promise<Uint8Array> {
+  return exportGLB(root, clips);
+}

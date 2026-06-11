@@ -579,9 +579,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
   });
 
   // New: FBX import happy path coverage (UI + load dispatch parity with SMF/GLB per test scenarios)
-  // Exercises format support in Toolbar accept, drop hint, and would exercise loadFBX + special "Loaded FBX" status.
-  // Full skinned render + timeline for FBX requires sample (no .fbx in old-src datafiles easily available; falls back gracefully).
-  // Complements desktop e2e automation by documenting format parity for upcoming cycles.
+  // Exercises format support in Toolbar accept, drop hint, and would exercise loadFBX + special "Loaded FBX" status + exportFBX path.
+  // Full skinned render + timeline + export roundtrip for FBX requires sample (no .fbx in old-src datafiles easily available; falls back gracefully).
+  // Export for FBX-loaded models now wired (Cycle 2: uses GLTF container equivalent for fidelity, no new deps).
+  // Complements desktop e2e automation by documenting format parity.
   test('FBX import happy path coverage (UI + load dispatch)', async ({ page }) => {
     await page.goto('/');
 
@@ -601,8 +602,9 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
   });
 
   // FBX import happy path (full load if sample) - per test scenarios #13 and desktop e2e priority
-  // Exercises loadFBX + "Loaded FBX" status, bone, export (same as SMF happy path).
-  // UI coverage in previous test; this for full when sample present.
+  // Exercises loadFBX + "Loaded FBX" status, bone select/transform, exportFBX (wired in Cycle 2; produces .glb with full fidelity).
+  // UI coverage in previous test; this for full when sample present. The export click asserts tolerate .glb from FBX path.
+
   test('FBX import happy path (full load if sample)', async ({ page }) => {
     test.skip(!SAMPLE_FBX, 'No .fbx test model available (local or old-src reference; see FBX UI test for current coverage)');
 

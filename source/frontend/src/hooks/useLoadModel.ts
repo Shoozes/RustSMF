@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect } from 'react';
 import type { OpenResult } from '../backend-client/tauri';
-import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ } from '../loaders';
+import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
 
 /**
@@ -18,6 +18,9 @@ export function useLoadModel() {
 
   // Keep raw ImportedSmf for high-fidelity SMF export roundtrips
   const lastSmfDataRef = useRef<any>(null);
+
+  // Track original source format for context-aware export (SMF has fidelity path; FBX gets its own exportFBX entry)
+  const lastSourceFormatRef = useRef<string>(''); // 'smf' | 'fbx' | 'glb' | 'obj'
 
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
@@ -46,6 +49,12 @@ export function useLoadModel() {
 
       let rustPeekMsg = '';
       let rustValidated = false;
+
+      // Record source format for export decision (FBX path etc.)
+      if (name.endsWith('.smf')) lastSourceFormatRef.current = 'smf';
+      else if (name.endsWith('.fbx')) lastSourceFormatRef.current = 'fbx';
+      else if (name.endsWith('.glb') || name.endsWith('.gltf')) lastSourceFormatRef.current = 'glb';
+      else if (name.endsWith('.obj')) lastSourceFormatRef.current = 'obj';
       // Single dynamic import for all Tauri client fns when on desktop .smf path.
       // Reduces redundancy (multiple awaits), improves timing (one module load), centralizes.
       let tauri: any = null;
@@ -184,12 +193,25 @@ export function useLoadModel() {
       ui.setStatus('Nothing to export.');
       return;
     }
+
+    const srcFmt = lastSourceFormatRef.current;
+    const isFBXSource = srcFmt === 'fbx';
+
+    if (isFBXSource) {
+      ui.setStatus('Exporting FBX-loaded model (via GLTF container for full skin/anim fidelity; no new deps)...');
+      try {
+        const buf = await exportFBX(rootToExport, model.clips);
+        await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.glb');
+        ui.setStatus('Exported .glb (from FBX source via GLTF equivalent). Re-import as .glb works; for true .fbx use DCC or save-as-SMF first.');
+        return;
+      } catch (e: any) {
+        ui.setStatus(`FBX export error: ${e?.message || e}. Falling back to generic GLB...`);
+      }
+    }
+
     ui.setStatus('Exporting current model as GLB...');
     try {
-      const { GLTFExporter } = await import('three/examples/jsm/exporters/GLTFExporter.js');
-      const exporter = new GLTFExporter();
-      const result = await exporter.parseAsync(rootToExport, { binary: true, animations: model.clips });
-      const buf = new Uint8Array(result as ArrayBuffer);
+      const buf = await exportGLB(rootToExport, model.clips);
       await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.glb');
       ui.setStatus('Exported .glb (animations included when present).');
     } catch (e: any) {

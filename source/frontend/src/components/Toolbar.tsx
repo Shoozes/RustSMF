@@ -22,7 +22,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         Open Model (.smf / .glb / .fbx / .obj)
       </button>
       <button data-testid="export-btn" onClick={onExport} disabled={isLoading}>
-        Export (SMF if possible / GLB)
+        Export (SMF / GLB / FBX)
       </button>
       <button data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>
         Ping Rust

@@ -176,3 +176,16 @@ export async function loadGLBAsSmfData(urlOrBuffer: string | ArrayBuffer): Promi
 
   return { meshes, textures, bones, animations };
 }
+
+/**
+ * Reusable GLB/GLTF binary export for the current Three scene root + clips.
+ * Extracted for modularity (used by main GLB export and FBX export equivalent path).
+ * Preserves skinned meshes, skeleton, and animation clips via GLTFExporter.
+ * No new dependencies. The produced buffer is a valid .glb that roundtrips via loadGLB.
+ */
+export async function exportGLB(root: THREE.Group, clips: THREE.AnimationClip[] = []): Promise<Uint8Array> {
+  const { GLTFExporter } = await import('three/examples/jsm/exporters/GLTFExporter.js');
+  const exporter = new GLTFExporter();
+  const result = await exporter.parseAsync(root, { binary: true, animations: clips });
+  return new Uint8Array(result as ArrayBuffer);
+}
