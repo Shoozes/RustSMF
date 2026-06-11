@@ -249,4 +249,16 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 - Tests: All green as above.
 - Docs/bank: This note; bank updated.
 
-All cycles per directive executed. Backlog significantly reduced (Cycles 1 full, 2 full, 3 gizmo + polish). No active code stubs in editor/FBX/desktop paths. Ready for user direction or next (weight preview, Rust parser on header helper, add real FBX sample for e2e unskip, etc.). App in excellent production-ready shape.
+**Cycle 3 follow-up (expose gizmo modes via small UI - keyboard T/R/S):** 
+- What: Extended the existing onKey handler (in one-time scene setup useEffect) to support T=translate, R=rotate, S=scale for the TransformControls when attached (i.e., bone selected). Modes checked first (so 'r' sets rotate when gizmo active instead of orbit reset; orbit reset still works when no bone/gizmo). Updated comments in ThreeViewport and the hint text in Inspector transform section to document the keys. Small, no new props/state/dependencies.
+- Why: Directly addresses a listed Cycle 3 follow-up ("expose mode (translate/rotate) on the controls or a small UI"). Makes the gizmo fully usable (default translate + handles + keys for quick switch) without big wiring (e.g. no new store slice or prop drilling yet). Complements the nudge buttons. "If missing, build it" for editor polish. Keyboard is idiomatic for 3D tools and keeps UI minimal.
+- Where: source/frontend/src/components/ThreeViewport.tsx (onKey extension + comment), source/frontend/src/components/Inspector.tsx (hint text + section comment), docs/TODO.md (this paired).
+- How: Targeted edits. Ran verify + e2e (green, bone tests cover selection where modes would apply) + desktop-smoke. Bank. No behavior change to existing flows.
+- Outcome: Gizmo modes now quickly accessible via keys (T/R/S). Docs/UI hints accurate. Still no stubs. e2e unaffected (no key simulation in current tests, but functionality present). Progress toward fuller rigging feel.
+- Tests: verify Passed; e2e 10/11; desktop-smoke 3/3.
+- Docs/bank: This note; bank refreshed.
+- Remaining Cycle 3 follow-ups (accurate): weight preview toggle (e.g. in Inspector for selected bone influence viz on mesh), small UI buttons for modes (would need prop/callback wiring from hook to Viewport), full visual QA (tauri-dev + manual screenshots of gizmo states with real model), permanent three instance fix in vite if dev noise bothers (current harden + filters suffice for CI/manual).
+
+All per directive. Backlog advanced (Cycles 1-2 complete, Cycle 3 gizmo + modes + polish). No stubs. Ready. 
+
+**Integrity pass note (this cycle):** Grep confirmed 0 "stub" in src/frontend (post cleanups). No new redundancy. Bank/docs current. All green. Next could be weight preview (small viz in viewport on select) or FBX sample or Rust parser subtask.

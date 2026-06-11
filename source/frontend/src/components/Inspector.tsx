@@ -112,9 +112,8 @@ const Inspector: React.FC<InspectorProps> = ({
           </div>
         )}
 
-        {/* Bone transform controls (Cycle 3: 3D TransformControls gizmo in viewport for freeform edit on selected bone;
-            + quick nudge buttons for precise adjustments. 3D marker provides visual feedback.
-            Full IK/vertex weights/keyframe authoring future. */}
+        {/* Bone transform controls (Cycle 3: 3D TransformControls gizmo in viewport + quick nudges. T/R/S keys set mode.
+            3D marker provides visual feedback. Full IK/vertex weights/keyframe authoring future. */}
         {selected && selected !== 'Scene' && (
           <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
             <div>Transform for: <span className="font-mono text-amber-300">{selected}</span> (gizmo active in viewport)</div>
@@ -142,7 +141,7 @@ const Inspector: React.FC<InspectorProps> = ({
                 if (bone) { bone.position.set(0,0,0); bone.rotation.set(0,0,0); bone.updateMatrix(); if (skeleton) skeleton.update(); console.log('reset', selected); }
               }
             }}> reset </button>
-            <span className="ml-1 text-slate-500">(gizmo + nudges; pause anim with Space for best effect, anim may override)</span>
+            <span className="ml-1 text-slate-500">(gizmo + nudges; T/R/S keys for translate/rotate/scale; Space pause anim, anim may override)</span>
           </div>
         )}
       </div>
