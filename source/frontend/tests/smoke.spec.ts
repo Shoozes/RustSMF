@@ -132,8 +132,11 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('three-canvas')).toBeVisible();
 
     // Exercise bone list selection (simulates user picking bone in inspector for coverage)
+    // Also verifies collapsible hierarchy tree (nested ul/li with +/- toggles) using the real local model
     const inspector = page.getByTestId('inspector');
     await expect(inspector).toContainText(/Bones \(\d+\)/i);
+    // Verify collapsible UI present (hierarchy with toggles)
+    await expect(inspector.locator('span').filter({ hasText: /[+-]/ }).first()).toBeVisible();
     const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /./ }).nth(0);
     if (await anyBoneEntry.count() > 0) {
       await anyBoneEntry.click({ force: true }).catch(() => {});
