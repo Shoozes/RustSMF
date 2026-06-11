@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react';
 
 const THREE_VENDOR_PATTERNS = [
   '/node_modules/three/',
-  '/node_modules/three-stdlib/'
+  '/node_modules/three-stdlib/',
+  '/node_modules/three/examples/jsm/'
 ];
 
 export default defineConfig({
@@ -12,7 +13,7 @@ export default defineConfig({
     dedupe: ['three']
   },
   optimizeDeps: {
-    include: ['three']
+    include: ['three', 'three/examples/jsm/controls/TransformControls']
   },
   build: {
     manifest: true,
