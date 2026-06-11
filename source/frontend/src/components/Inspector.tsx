@@ -118,10 +118,31 @@ const Inspector: React.FC<InspectorProps> = ({
         {selected && selected !== 'Scene' && (
           <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
             <div>Transform stub for: <span className="font-mono text-amber-300">{selected}</span></div>
-            <button className="mr-1 mt-0.5 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => console.log('stub: move +X on', selected)}> +X </button>
-            <button className="mr-1 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => console.log('stub: move +Y on', selected)}> +Y </button>
-            <button className="px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => console.log('stub: rotate on', selected)}> rot </button>
-            <span className="ml-1 text-slate-500">(stub)</span>
+            <button data-testid="transform-x-btn" className="mr-1 mt-0.5 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
+              if (skeleton) {
+                const bone = skeleton.bones.find((b: any) => b.name === selected);
+                if (bone) { bone.position.x += 0.1; bone.updateMatrix(); console.log('stub: +X applied to', selected); }
+              }
+            }}> +X </button>
+            <button data-testid="transform-y-btn" className="mr-1 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
+              if (skeleton) {
+                const bone = skeleton.bones.find((b: any) => b.name === selected);
+                if (bone) { bone.position.y += 0.1; bone.updateMatrix(); console.log('stub: +Y applied to', selected); }
+              }
+            }}> +Y </button>
+            <button data-testid="transform-rot-btn" className="px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
+              if (skeleton) {
+                const bone = skeleton.bones.find((b: any) => b.name === selected);
+                if (bone) { bone.rotation.z += 0.2; bone.updateMatrix(); console.log('stub: rot applied to', selected); }
+              }
+            }}> rot </button>
+            <button data-testid="transform-reset-btn" className="ml-1 px-1 py-0 bg-slate-800 text-xs" onClick={() => {
+              if (skeleton) {
+                const bone = skeleton.bones.find((b: any) => b.name === selected);
+                if (bone) { bone.position.set(0,0,0); bone.rotation.set(0,0,0); bone.updateMatrix(); console.log('stub: reset', selected); }
+              }
+            }}> reset </button>
+            <span className="ml-1 text-slate-500">(live preview stub; anim may override)</span>
           </div>
         )}
       </div>

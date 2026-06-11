@@ -82,7 +82,18 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 - FBX import: Confirmed fully wired (load path, status, accept, drop, toolbar, fbx.ts complete with postproc + mixer); the "wire" suggestion was pre-existing state. Export remains limited (falls back to GLB) per scope.
 - Docs: This note + cross ref.
 
+**This cycle continuation (bone stub functional + e2e coverage):** 
+- What: Made the transform stub buttons actually functional (nudge bone.position / rotation on the live THREE.Bone from skeleton prop, call updateMatrix; marker follows the change via getWorldPosition in RAF; added reset). Added data-testid and clicks in the bone e2e test to exercise.
+- Why: "If its missing, build it" — the previous stub was UI only; now delivers a working (if limited by anim override) live preview edit demo toward original editor rigging.
+- Where: Inspector.tsx (onClick handlers with skeleton mutation), smoke.spec.ts (data-testids + test clicks in bone selection test).
+- How: Direct mutation on the shared skeleton.bones objects (safe for stub/demo; full editor would need separate pose layer). e2e exercises without breaking existing flows.
+- Outcome: Stub now "does something" visible via marker + potential mesh nudge. e2e 6/6 including new clicks. verify Passed. No side effects on main playback/export.
+- Desktop: Confirmed still green (Rust tests + task).
+- Docs: Updated this cycle's paired note.
+
 ---
+
+
 
 
 

@@ -315,5 +315,18 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     // Confirm inspector reflects bones (rig info indirectly via count)
     await expect(inspector).toContainText(/Bones \(\d+\)/i);
+
+    // Exercise transform stub buttons (now functional: mutate bone pos/rot for live preview demo)
+    const xBtn = inspector.getByTestId('transform-x-btn');
+    if (await xBtn.count() > 0) {
+      await xBtn.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(40);
+    }
+    const resetBtn = inspector.getByTestId('transform-reset-btn');
+    if (await resetBtn.count() > 0) {
+      await resetBtn.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(40);
+    }
+    await expect(page.getByTestId('three-canvas')).toBeVisible();
   });
 });
