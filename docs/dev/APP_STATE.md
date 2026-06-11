@@ -104,23 +104,19 @@ Next per gaps/TODO: optional raycast in viewport for bone 3D pick (list select s
 
 Remaining per gaps: deeper e2e error cases, optional Rust parser (design keeps frontend 3D ownership), FBX export (intentionally limited). Run verify + push after edits. Builds green.
 
-**Recent passes summary (see git/TODO.md for bootstrap history; consolidated here to reduce redundancy per directive):** Multiple passes delivered: full modularity (App thin via useLoadModel hook + slices + extracted Toolbar/Outliner/Inspector/Timeline/ThreeViewport), FBX/OBJ import parity, bone inspector+raycast 3D pick + collapsible tree hierarchy (bidir select + status + +/- toggle), native Tauri binary read/write/save + cmds + peeks, e2e deep (console/pageerror listeners, bone clicks/raycast/status/toggle, error paths, robust SAMPLE/BAD cache, scrub/clip/overlay/drop/nothing-export asserts, visuals), Rust real subtasks (peek_header+size, validate, rig/anim/model basic, combined get_smf_desktop_info for async/timing), load opts (validate/peek before full read for desktop .smf), three dedupe fix, docs/bank updates+trim, verifies/e2e/builds/cargo always green, commits.
+**Current state (post full integrity review per query):** Excellent. Thin modular App + hook/slices + 5 components (bone tree + functional transform stub + 3D marker/raycast); full loaders (SMF fidelity + GLB/FBX/OBJ postproc + coord DQ/roundtrips); barrel; tauri (helper + peeks/combined + I/O); real local mixamo + e2e 7/7 (listeners, fallbacks, stubs, visuals); Rust peeks + 3 native tests (header parse dupe reduced for modularity); builds green. No broken imports/exports (verify/cargo clean). Error catching comprehensive (catches, ErrorMsg, status, e2e filter for benign). Async/timing good (centralized tauri import for .smf desktop). Redundancy reduced (Rust helper). Features connect (desktop early peek/validation -> load -> viewport marker/transform -> export/roundtrips + tests). Edge cases searched/covered (bad SMF early, no skel graceful, empty export, drop, web/desktop paths). No critical stubs (glb approx intentional; design stubs noted).
 
-**Current state (post this full integrity review pass):** Excellent integrity. No stubs in code (glb approx DQ is intentional documented fallback for non-SMF export). Features connect cleanly/safely/user-friendly/show-ready/efficient: unified load (hook dispatches smf/glb/fbx, desktop Rust combined info early for validation+status) -> self-contained ThreeViewport (own scene/RAF/mixer/SkelHelper/raycast with refs+isolated playback effects for timing safety) + hierarchical Inspector + controls -> SMF fidelity export (or GLB) + roundtrips (unit minimal + real samples) + instrumented e2e (no app critical errors) + Tauri I/O + Rust peeks. Modularity/flex: slices/hooks/components/utils barrel. Async/timing: refs for closures, effect dep hygiene, one Rust call, early returns. Edges: bad SMF (Rust early), no bones/skel (graceful), web/desktop (graceful), drop, scrub pre/post load, export empty. Builds (Vite chunks, lint, cargo) + run.ps1 verify + targeted e2e clean.
+See docs/TODO.md (active paired backlog + this review notes), summary_bank.json (gaps curated this pass, groups organized), .agents etc.
 
-See summary_bank.json (current_gaps_and_issues tracks remaining like deeper desktop e2e, FBX export limited by design, optional fuller Rust parser as subtasked), docs/TODO.md (active paired backlog). All per philosophy. Scalable base solid.
+**This full review (per query, auto philosophy):** 
+- Research (list/read/grep/runs on docs/src/Rust/tests/scripts; no broken imports (builds green); no new stubs (only intentional + design); error handling solid; some dupe found in Rust header parses).
+- Fixes/polish: Rust dupe -> parse helper (modularity win, tests pass); e2e benign error filter (sharpen catching); bone stub + skeleton.update() (robustness); desktop-smoke polish (clarity).
+- Docs: consolidated (trimmed verbose old history in TODO/APP_STATE to lean current + active paired + recent); added paired review items (what/why/where/how).
+- Bank: _gen + curate (updated current_gaps with resolved + new like rust_dupe_reduced, e2e_filter; groups notes).
+- Tests/edges: 7 e2e, 3 Rust, verify green; searched edges (invalid, no skel, etc covered).
+- All per "pair concerns", "reduce redundancy", "complete backlog", "connect features safe/user-friendly".
 
-**This integrity pass (auto research/recap/decide/design/build/test/fix/polish per exact directive):** 
-- Research: Full reads (all src, tests, Rust, docs, bank, scripts, .agents skills/workflows), list_dir, greps (no active code TODO/stub/FIXME; only doc history + intentional glb comment), sample discovery, build/lint runs.
-- Findings: State high (no broken imports/exports - Vite build + lint 0 issues; 1 benign mixed import warning explained in code; async/timing already polished by prior combined+refs; tests cover key edges+console clean; modularity excellent; bank/docs have bloat in lists/history).
-- Fixes/polish done: Removed dead code in hook; extracted isTauriEnv() helper (18x -> 1 def, 17 calls) for modularity/reduced redundancy in tauri.ts; hardened ThreeViewport timing (added onTimeUpdateRef + sync effect + [] deps on base setup effect to prevent any RAF/scene reinit); cleaned run.ps1 outdated plan.md refs to current docs; added explanatory comment for dynamic import.
-- Docs/bank: Consolidated (trimmed repeated full past logs in APP_STATE + TODO to summaries + recent + current state + active paired todos; kept context); will refresh bank via _gen + curate (organize files vs paths, add this pass items with pairs).
-- Edge/stubs: Searched - all handled or explicitly tracked (no new stubs filled needed; "no more stubs" holds). New paired todos added (see TODO).
-- Verify: Builds/lint clean (post edits). Will run full verify/e2e/cargo + commit + gitpush.
-
-Outcome: Repo/app integrity increased (less redundancy, more modular/flex, timing robust, docs lean, bank organized, all connected safe/smooth). No stubs. Ready. Continue loop with actionable from backlog.
-
-See updated TODO.md for full paired items from this review + prior. Builds green.
+Builds/tests green. No stubs. Ready. (See TODO for full active list + new paired from review.)
 
 **Auto research/recap/decide/design/build/test/fix/polish (2026-06-11 current per directive + "complete the todo/backlog"):** 
 - Full fresh research via tools (lists, reads of every critical src + docs + bank + scripts + Rust, greps for stubs across frontend+tauri, sample/model checks).

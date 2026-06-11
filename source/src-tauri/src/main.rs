@@ -14,6 +14,36 @@ fn sanitize_path(path: PathBuf) -> String {
     path_str
 }
 
+// Helper to reduce redundancy in SMF header parsing across peek/validate/info commands.
+// Returns (version_str, file_size, off_tex, off_model, off_rig, off_anim) or error string.
+// Promotes modularity and easier maintenance for rust-smf parser progress.
+fn parse_smf_header_info(bytes: &[u8]) -> Result<(String, usize, usize, usize, usize, usize), String> {
+    if bytes.is_empty() {
+        return Err("empty file".to_string());
+    }
+    if bytes.len() < 32 {
+        return Err("too small".to_string());
+    }
+    let mut off = 0;
+    while off < bytes.len() && bytes[off] != 0 {
+        off += 1;
+    }
+    let version_end = off;
+    let mut s = String::new();
+    for &b in bytes.iter().take(version_end) {
+        s.push(b as char);
+    }
+    off += 1; // skip null
+    if off + 16 > bytes.len() {
+        return Err("header short".to_string());
+    }
+    let off_tex = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
+    let off_model = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
+    let off_rig = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
+    let off_anim = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize;
+    Ok((s, bytes.len(), off_tex, off_model, off_rig, off_anim))
+}
+
 #[command]
 async fn open_file(app: tauri::AppHandle) -> Result<Option<String>, String> {
     let file_path = app.dialog().file().blocking_pick_file();
@@ -57,22 +87,17 @@ async fn write_file_binary(path: String, data: Vec<u8>) -> Result<(), String> {
 #[command]
 async fn peek_smf_header(path: String) -> Result<String, String> {
     // Real (not stub) small SMF header peek for desktop validation / rust-smf-parser progress.
-    // Reads initial bytes, extracts version strZ if present (SMF_v11 or v12).
-    // Includes size for extra info. Frontend uses for desktop .smf to surface Rust I/O in status.
+    // Uses shared parse helper for modularity. Frontend uses for desktop .smf to surface Rust I/O in status.
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
-    if bytes.is_empty() {
-        return Ok("empty file".to_string());
-    }
-    let mut s = String::new();
-    for &b in bytes.iter().take(64) {
-        if b == 0 { break; }
-        s.push(b as char);
-    }
-    let size = bytes.len();
-    if s.starts_with("SMF_v") {
-        Ok(format!("Rust SMF peek: {} (size: {} bytes)", s, size))
-    } else {
-        Ok(format!("not SMF header or unknown (size: {} bytes)", size))
+    match parse_smf_header_info(&bytes) {
+        Ok((s, size, _, _, _, _)) => {
+            if s.starts_with("SMF_v") {
+                Ok(format!("Rust SMF peek: {} (size: {} bytes)", s, size))
+            } else {
+                Ok(format!("not SMF header or unknown (size: {} bytes)", size))
+            }
+        }
+        Err(msg) => Ok(msg),
     }
 }
 
@@ -80,20 +105,17 @@ async fn peek_smf_header(path: String) -> Result<String, String> {
 #[command]
 async fn validate_smf(path: String) -> Result<String, String> {
     // Real (not stub) basic SMF validation using header logic. Returns "valid SMF" or "invalid: reason".
-    // Can be used for early desktop .smf checks before full load.
+    // Uses shared parse helper. Can be used for early desktop .smf checks before full load.
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
-    if bytes.is_empty() {
-        return Ok("invalid: empty file".to_string());
-    }
-    let mut s = String::new();
-    for &b in bytes.iter().take(64) {
-        if b == 0 { break; }
-        s.push(b as char);
-    }
-    if s.starts_with("SMF_v") {
-        Ok("valid SMF".to_string())
-    } else {
-        Ok(format!("invalid: not SMF header (starts with '{}')", s.chars().take(20).collect::<String>()))
+    match parse_smf_header_info(&bytes) {
+        Ok((s, _, _, _, _, _)) => {
+            if s.starts_with("SMF_v") {
+                Ok("valid SMF".to_string())
+            } else {
+                Ok(format!("invalid: not SMF header (starts with '{}')", s.chars().take(20).collect::<String>()))
+            }
+        }
+        Err(msg) => Ok(format!("invalid: {}", msg)),
     }
 }
 
@@ -103,21 +125,16 @@ async fn validate_smf(path: String) -> Result<String, String> {
 #[command]
 async fn peek_smf_rig_basic(path: String) -> Result<String, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
-    if bytes.len() < 32 {
-        return Ok("too small for SMF rig peek".to_string());
+    match parse_smf_header_info(&bytes) {
+        Ok((_, _, _, _, off_rig, _)) => {
+            if off_rig + 4 > bytes.len() {
+                return Ok(format!("rig offset {} beyond file", off_rig));
+            }
+            let bone_count = u32::from_le_bytes([bytes[off_rig], bytes[off_rig+1], bytes[off_rig+2], bytes[off_rig+3]]);
+            Ok(format!("SMF rig basic: ~{} bones (at rig offset {})", bone_count, off_rig))
+        }
+        Err(msg) => Ok(msg),
     }
-    // parse offsets like peek (version strZ + 4 u32)
-    let mut off = 0;
-    while off < bytes.len() && bytes[off] != 0 { off += 1; }
-    off += 1; // skip null
-    if off + 16 > bytes.len() { return Ok("header too short".to_string()); }
-    off += 8; // skip tex/model offsets
-    let off_rig = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize;
-    if off_rig + 4 > bytes.len() {
-        return Ok(format!("rig offset {} beyond file", off_rig));
-    }
-    let bone_count = u32::from_le_bytes([bytes[off_rig], bytes[off_rig+1], bytes[off_rig+2], bytes[off_rig+3]]);
-    Ok(format!("SMF rig basic: ~{} bones (at rig offset {})", bone_count, off_rig))
 }
 
 // Small real subtask for rust-smf-parser (after rig): basic anim peek.
@@ -126,21 +143,16 @@ async fn peek_smf_rig_basic(path: String) -> Result<String, String> {
 #[command]
 async fn peek_smf_anim_basic(path: String) -> Result<String, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
-    if bytes.len() < 32 {
-        return Ok("too small for SMF anim peek".to_string());
+    match parse_smf_header_info(&bytes) {
+        Ok((_, _, _, _, _, off_anim)) => {
+            if off_anim + 4 > bytes.len() {
+                return Ok(format!("anim offset {} beyond file", off_anim));
+            }
+            let clip_count = u32::from_le_bytes([bytes[off_anim], bytes[off_anim+1], bytes[off_anim+2], bytes[off_anim+3]]);
+            Ok(format!("SMF anim basic: ~{} clips (at anim offset {})", clip_count, off_anim))
+        }
+        Err(msg) => Ok(msg),
     }
-    // parse offsets: version strZ + 4 u32 (tex, model, rig, anim)
-    let mut off = 0;
-    while off < bytes.len() && bytes[off] != 0 { off += 1; }
-    off += 1;
-    if off + 16 > bytes.len() { return Ok("header too short".to_string()); }
-    off += 12; // skip tex/model/rig offsets
-    let off_anim = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize;
-    if off_anim + 4 > bytes.len() {
-        return Ok(format!("anim offset {} beyond file", off_anim));
-    }
-    let clip_count = u32::from_le_bytes([bytes[off_anim], bytes[off_anim+1], bytes[off_anim+2], bytes[off_anim+3]]);
-    Ok(format!("SMF anim basic: ~{} clips (at anim offset {})", clip_count, off_anim))
 }
 
 // Small real subtask for rust-smf-parser breakdown (after anim): basic model peek.
@@ -149,21 +161,16 @@ async fn peek_smf_anim_basic(path: String) -> Result<String, String> {
 #[command]
 async fn peek_smf_model_basic(path: String) -> Result<String, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
-    if bytes.len() < 32 {
-        return Ok("too small for SMF model peek".to_string());
+    match parse_smf_header_info(&bytes) {
+        Ok((_, _, _, off_model, _, _)) => {
+            if off_model + 1 > bytes.len() {
+                return Ok(format!("model offset {} beyond file", off_model));
+            }
+            let model_count = bytes[off_model] as u32; // u8 count of meshes per format
+            Ok(format!("SMF model basic: ~{} meshes (at model offset {})", model_count, off_model))
+        }
+        Err(msg) => Ok(msg),
     }
-    // parse offsets: version strZ + 4 u32 (tex, model, rig, anim)
-    let mut off = 0;
-    while off < bytes.len() && bytes[off] != 0 { off += 1; }
-    off += 1;
-    if off + 16 > bytes.len() { return Ok("header too short".to_string()); }
-    off += 4; // skip tex offset
-    let off_model = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize;
-    if off_model + 1 > bytes.len() {
-        return Ok(format!("model offset {} beyond file", off_model));
-    }
-    let model_count = bytes[off_model] as u32; // u8 count of meshes per format
-    Ok(format!("SMF model basic: ~{} meshes (at model offset {})", model_count, off_model))
 }
 
 // Polish for timing/async: combined desktop info cmd to reduce multiple FS calls and awaits in load for .smf desktop.
@@ -172,28 +179,15 @@ async fn peek_smf_model_basic(path: String) -> Result<String, String> {
 #[command]
 async fn get_smf_desktop_info(path: String) -> Result<String, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
-    if bytes.len() < 32 {
-        return Ok("too small".to_string());
+    match parse_smf_header_info(&bytes) {
+        Ok((s, _, off_tex, off_model, off_rig, off_anim)) => {
+            let valid = if s.starts_with("SMF_v") { "valid SMF" } else { "invalid" };
+            let rig_count = if off_rig + 4 <= bytes.len() { u32::from_le_bytes([bytes[off_rig], bytes[off_rig+1], bytes[off_rig+2], bytes[off_rig+3]]) } else { 0 };
+            let anim_count = if off_anim + 4 <= bytes.len() { u32::from_le_bytes([bytes[off_anim], bytes[off_anim+1], bytes[off_anim+2], bytes[off_anim+3]]) } else { 0 };
+            Ok(format!("{} | rig ~{} | anim ~{} (offsets t{} m{} r{} a{})", valid, rig_count, anim_count, off_tex, off_model, off_rig, off_anim))
+        }
+        Err(msg) => Ok(msg),
     }
-    // parse header for offsets (version strZ + 4 u32)
-    let mut off = 0;
-    while off < bytes.len() && bytes[off] != 0 { off += 1; }
-    off += 1;
-    if off + 16 > bytes.len() { return Ok("header short".to_string()); }
-    let off_tex = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
-    let off_model = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
-    let off_rig = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
-    let off_anim = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize;
-    // validate
-    let mut s = String::new();
-    let mut tmp_off = 0;
-    while tmp_off < bytes.len() && bytes[tmp_off] != 0 { tmp_off += 1; s.push(bytes[tmp_off-1] as char); }
-    let valid = if s.starts_with("SMF_v") { "valid SMF" } else { "invalid" };
-    // rig count
-    let rig_count = if off_rig + 4 <= bytes.len() { u32::from_le_bytes([bytes[off_rig], bytes[off_rig+1], bytes[off_rig+2], bytes[off_rig+3]]) } else { 0 };
-    // anim count
-    let anim_count = if off_anim + 4 <= bytes.len() { u32::from_le_bytes([bytes[off_anim], bytes[off_anim+1], bytes[off_anim+2], bytes[off_anim+3]]) } else { 0 };
-    Ok(format!("{} | rig ~{} | anim ~{} (offsets t{} m{} r{} a{})", valid, rig_count, anim_count, off_tex, off_model, off_rig, off_anim))
 }
 
 fn main() {
