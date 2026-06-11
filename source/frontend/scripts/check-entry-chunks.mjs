@@ -12,6 +12,6 @@ try {
     console.warn('WARN: three vendor not split - check vite.config');
   }
   console.log('Entry chunk check passed (basic)');
-} catch (e) {
+} catch {
   console.log('Entry chunk check skipped (no dist yet)');
 }

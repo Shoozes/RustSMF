@@ -101,14 +101,15 @@ switch -Exact ($Task.ToLowerInvariant()) {
         $ok = $true
         if (Test-Path $FrontendDir) {
             Push-Location $FrontendDir
-            npm run lint 2>&1 | Out-Null; if ($LASTEXITCODE -ne 0) { $ok = $false }
-            npm run build 2>&1 | Out-Null; if ($LASTEXITCODE -ne 0) { $ok = $false }
+            $lint = & npm run lint 2>&1; if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "lint failed" }
+            $build = & npm run build 2>&1; if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "build failed" }
+            & node scripts/check-entry-chunks.mjs 2>&1 | Out-Null
             Pop-Location
         }
         if (Test-Path $SrcTauriDir) {
-            Push-Location $SrcTauriDir; cargo check; if ($LASTEXITCODE -ne 0) { $ok = $false }; Pop-Location
+            Push-Location $SrcTauriDir; & cargo check 2>&1 | Out-Null; if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "cargo failed" }; Pop-Location
         }
-        if ($ok) { Write-Ok "[VERIFY] Passed (or partial)." } else { Write-Warn "[VERIFY] Some checks failed (expected until scaffold complete)." }
+        if ($ok) { Write-Ok "[VERIFY] Passed." } else { Write-Warn "[VERIFY] Some checks failed." }
     }
     "test:e2e" {
         Write-Info "[E2E] Running Playwright..."

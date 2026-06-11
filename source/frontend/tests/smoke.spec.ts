@@ -94,6 +94,16 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     // Canvas still there (Three.js kept rendering)
     await expect(page.getByTestId('three-canvas')).toBeVisible();
 
+    // Exercise bone list selection (simulates user picking bone in inspector for coverage)
+    const inspector = page.getByTestId('inspector');
+    await expect(inspector).toContainText(/Bones \(\d+\)/i);
+    const anyBoneEntry = inspector.locator('div').filter({ hasText: /./ }).nth(4);
+    if (await anyBoneEntry.count() > 0) {
+      await anyBoneEntry.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(60);
+    }
+    await expect(page.getByTestId('three-canvas')).toBeVisible();
+
     // Assert no critical browser console errors during load (errors logged by listener)
     // (warnings may exist for Three.js, but no errors)
     const errors = (page as any)._browserErrors || [];
@@ -119,6 +129,11 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     // Basic visual: screenshot viewport after load (for regression; update snapshots with --update-snapshots)
     await expect(page.getByTestId('viewport-container')).toHaveScreenshot('loaded-model.png', { timeout: 10000 });
+
+    // Strict no critical console errors post export flow
+    const exportErrors = (page as any)._browserErrors || [];
+    const exportCritical = exportErrors.filter((e: string) => e.includes('ERROR'));
+    expect(exportCritical.length).toBe(0);
   });
 
   test('timeline scrub, clip change, loading overlay, and error banner (extended controls + UX)', async ({ page }) => {
