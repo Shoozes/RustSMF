@@ -129,6 +129,16 @@ See updated TODO for full paired backlog. Builds green.
 
 All per directive. Next: deeper desktop e2e, more Rust subtasks (rig peek), FBX limited. See TODO/bank. No stubs. Verify clean.
 
+**Integrity pass (this invocation):** Full review performed.
+- State: Excellent - no stubs, builds/verify/e2e clean, features connected (load now with early Rust validate/peek for desktop .smf -> "Rust validated SMF" status -> select bones in inspector/raycast -> e2e tests cover). 
+- Docs: Minor redundancy in long history sections (consolidated where possible in previous passes; this pass focused on recent). Updated with this pass details + pairs.
+- Bank: Gaps current with load opt item added. Files lists still bloated (as noted).
+- Code review: No broken imports/exports. Async/timing improved (validation before full read for desktop smf; sequential but early exit good; no races). Edge cases good (bad SMF now early Rust error).
+- Polish: The load flow restructure (see TODO for pair).
+- Outcome: Integrity increased for scalability. No fixes needed beyond the polish. Continue remaining.
+
+See updated TODO for pairs and new todos. Builds green.
+
 **Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research showed clean state. Actioned:
 - Rust: Wired validate + peek for early check + "Rust validated SMF" status prefix on desktop .smf success (subtask advance + polish).
 - E2E: Added bone status update test (list + raycast asserts 'Selected:').

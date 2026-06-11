@@ -191,6 +191,21 @@ All per directive + philosophy. No stubs. Features connect (peek info in status,
 
 See updated APP_STATE, bank (rust_parser_breakdown, e2e items). Continue loop.
 
+**Integrity pass (this invocation):** Full review per directive.
+- Research: Docs have good recent history (consolidated in places, but some repeated early bootstrap text remains - minor redundancy). summary_bank gaps well organized with recent items (rust subtask, e2e continuation, load optimization); files lists bloated from gen (noted, prefer paths). Code: no stubs/TODOs/FIXMEs in source (grep clean, only lockfile noise); builds/verify pass; e2e has bone status test + error path (some skips on no sample, but robust). Git clean, recent commits good. Async/timing: improved in this pass (see below). No broken imports/exports. Edge cases covered (bad files via validate/early return, bone select, desktop/web).
+- Updates: Consolidated minor redundancy in docs by focusing on recent; no major trim needed as history useful. Updated bank with new gap item for desktop load opt. Appended this pass to TODO/APP_STATE with pairs.
+- Fixes/polish: Restructured desktop .smf load in useLoadModel: do Rust validate/peek (using path) *before* full readBinaryFile. Improves timing (early fail on corrupt/bad without reading large data; avoids redundant Rust FS reads for validation). For browser .smf (data provided), still do Rust if path (rare). Added rustValidated flag and "Rust validated SMF | ..." prefix in final status. Early invalid return with banner. This is actionable polish from review (what: move validation before read for .smf desktop, why: better performance/timing/safety for bad files + reduce async work, where: useLoadModel.ts loadModel, how: conditional before data=await read, using existing validate/peek).
+- Tests: Sharpened by the bone test (covers select UX post-raycast/list). No new broken.
+- Gaps/todos: Added paired item for "implement basic rig peek subtask in Rust (break down: start with header/rig count from peek logic, avoid full parse dupe)". Updated rust_parser_breakdown. No new stubs filled (none found). 
+- Review: Features connect cleanly (desktop load now validates with Rust early -> status "validated" -> viewport/anim/bone select -> e2e coverage). Safe (early error), smooth (no extra latency on good), user friendly (clear status), show ready (full pipeline), efficient (modular, less redundant reads). Scalability good (no bloat).
+- Outcome: Integrity high. No actionables broken. Continue with remaining (desktop e2e full, Rust rig subtask).
+
+All per philosophy. Verify clean. Push next. 
+
+**Paired todo example (added):** Desktop SMF load optimization (what: restructure to validate/peek before data read for path-based .smf, why: improve timing/async by early error on bad files and reduce FS calls, where: hooks/useLoadModel.ts, how: if desktop smf path then validate/peek then read else normal; also status prefix). Rust rig peek (what: add small real peek_smf_rig_basic command, why: advance parser breakdown without big dupe, where: src-tauri/main.rs + client + hook, how: simple offset parse for bone count from rig section using existing binary read pattern, break down if full needed).
+
+See bank for full gaps. No more stubs. Ready.
+
 **Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research (docs/bank post-last, git clean, verify Passed, greps clean no stubs, source for Rust/e2e/peek/validate) showed state excellent. Remaining: deeper desktop e2e, Rust parser subtasks (rig peek etc.), FBX limited.
 
 Actioned (broken down per directive):

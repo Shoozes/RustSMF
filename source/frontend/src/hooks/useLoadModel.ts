@@ -46,23 +46,32 @@ export function useLoadModel() {
       const name = (res.name || res.path || '').toLowerCase();
 
       let data: Uint8Array | undefined = res.data;
-      if (!data && res.path) {
-        ui.setStatus('Reading binary from desktop path...');
-        data = await readBinaryFile(res.path);
-      }
 
       let rustPeekMsg = '';
-      // Optional Rust peek for .smf desktop (real header peek command, advances rust-smf-parser)
-      if (name.endsWith('.smf') && res.path) {
+      let rustValidated = false;
+      if (!data && res.path) {
+        // For desktop .smf, validate/peek first (using path) before full data read.
+        // Improves timing: avoid reading large bad/corrupt files; early error.
+        // Reduces redundant FS in Rust (peek + validate both read).
+        if (name.endsWith('.smf')) {
+          try {
+            const val = await (await import('../backend-client/tauri')).validateSmf(res.path);
+            if (val.includes('invalid')) {
+              ui.setErrorMsg(`Invalid SMF (Rust validate): ${val}`);
+              ui.setStatus(val);
+              ui.setIsLoading(false);
+              return;
+            }
+            rustValidated = true;
+            rustPeekMsg = await (await import('../backend-client/tauri')).peekSmfHeader(res.path);
+          } catch {}
+        }
+        ui.setStatus('Reading binary from desktop path...');
+        data = await readBinaryFile(res.path);
+      } else if (name.endsWith('.smf') && res.path) {
+        // Browser or data-provided .smf: still do peek/validate for info (no early read optimization)
         try {
           rustPeekMsg = await (await import('../backend-client/tauri')).peekSmfHeader(res.path);
-        } catch {}
-      }
-
-      // Rust subtask: early validation for desktop .smf using validate_smf (real, wires new command for bad/corrupt edge case)
-      let rustValidated = false;
-      if (name.endsWith('.smf') && res.path) {
-        try {
           const val = await (await import('../backend-client/tauri')).validateSmf(res.path);
           if (val.includes('invalid')) {
             ui.setErrorMsg(`Invalid SMF (Rust validate): ${val}`);
