@@ -214,7 +214,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
   });
 
   test('handles invalid file load with error banner and status (error path)', async ({ page }) => {
-    test.skip(!fs.existsSync(BAD_GML), 'No bad test file for error path');
+    test.skip(!BAD_GML || !fs.existsSync(BAD_GML), 'No bad test file for error path');
 
     await page.goto('/');
 
