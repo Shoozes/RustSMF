@@ -177,6 +177,19 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 ---
 
 **Integrity pass (this cycle per query):** 
+- What: Full review (git clean post prior, reads of TODO/APP_STATE/bank/source, greps for stubs/broken/redundancy/edges, baselines verify/e2e/desktop-smoke/cargo all green 8/8 + 3 Rust). Consolidated docs (trimmed repeated "Next per instructions" blocks in TODO.md to one clean). Refreshed bank via _gen. No new issues/stubs/broken imports/exports found (builds green; error catching solid with filters; async/timing good from prior; edges covered in e2e/Rust like invalid, no-skel, desktop paths via fallbacks). 
+- Why: Increase repo/app integrity/scalability per directive; reduce redundancy (docs); sharpen tests (e2e covers prioritized scenarios 1-15 well: happy paths, bone/export, errors, desktop sim via tauri fallbacks, FBX UI); fill gaps (none critical); pair concerns.
+- Where: docs/TODO.md (consolidation + this note), summary_bank.json (_gen), source (no changes needed).
+- How: Tools (reads/greps/runs), trim history blocks, curate gaps (current ones like desktop_e2e full UI manual, fbx_export limited still accurate). 
+- Outcome: State excellent (modular, 8/8 e2e with local model + bone stubs + FBX coverage, Rust native peeks + header helper for modularity, desktop-smoke with sample validation). Features connect (load -> viewport skinned/anim/bone -> export + tests + Tauri/Rust). No stubs. Builds/tests green. Gap narrowed (desktop e2e sim strong; full UI native still tracked as manual per guidance).
+- Tests: Full baselines green; e2e covers core + edges + new features per test scenarios list.
+- Docs/bank: Consolidated + refreshed. 
+
+**Next per instructions:** Continue #1 if more (e.g., e2e for scenarios 4-10 edges like zero-bone/large via notes or additional tests; FBX full if sample), or #2 Rust parser (full parse on header helper), or #3 bone gizmos. Follow daily: smallest change, verify, e2e+asserts, _gen_bank, TODO paired, commit, gitpush. Grep stubs in integrity. QA visual on changes. No stubs, pair todos, update bank/TODO.
+
+---
+
+**Integrity pass (this cycle per query):** 
 - What: Full review (git clean post prior, reads of TODO/APP_STATE/bank/source, greps for stubs/broken/redundancy/edges, baselines verify/e2e/desktop-smoke/cargo all green 8/8 + 3 Rust). Consolidated docs (trimmed repeated "Next per instructions" blocks at end of TODO.md to one clean). Refreshed bank via _gen. No new issues/stubs/broken imports/exports found (builds green; error catching solid with filters; async/timing good from prior; edges covered in e2e/Rust like invalid, no-skel, desktop paths via fallbacks). 
 - Why: Increase repo/app integrity/scalability per directive; reduce redundancy (docs); sharpen tests (e2e covers prioritized scenarios 1-15 well: happy paths, bone/export, errors, desktop sim via tauri fallbacks, FBX UI); fill gaps (none critical); pair concerns.
 - Where: docs/TODO.md (consolidation + this note), summary_bank.json (_gen), source (no changes needed).
