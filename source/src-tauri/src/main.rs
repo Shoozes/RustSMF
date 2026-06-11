@@ -97,10 +97,34 @@ async fn validate_smf(path: String) -> Result<String, String> {
     }
 }
 
+// Small real subtask for rust-smf-parser (after header/size/validate): basic rig peek.
+// Parses header for RIG offset, reads first u32 at RIG as approx bone count (format has data starting with count-like in ref).
+// Returns info string for desktop .smf status. Real minimal parse, no full dupe of TS.
+#[command]
+async fn peek_smf_rig_basic(path: String) -> Result<String, String> {
+    let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    if bytes.len() < 32 {
+        return Ok("too small for SMF rig peek".to_string());
+    }
+    // parse offsets like peek (version strZ + 4 u32)
+    let mut off = 0;
+    while off < bytes.len() && bytes[off] != 0 { off += 1; }
+    off += 1; // skip null
+    if off + 16 > bytes.len() { return Ok("header too short".to_string()); }
+    off += 8; // skip tex/model offsets
+    let off_rig = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize;
+    off += 8; // skip rest
+    if off_rig + 4 > bytes.len() {
+        return Ok(format!("rig offset {} beyond file", off_rig));
+    }
+    let bone_count = u32::from_le_bytes([bytes[off_rig], bytes[off_rig+1], bytes[off_rig+2], bytes[off_rig+3]]);
+    Ok(format!("SMF rig basic: ~{} bones (at rig offset {})", bone_count, off_rig))
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary, peek_smf_header, validate_smf])
+        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary, peek_smf_header, validate_smf, peek_smf_rig_basic])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

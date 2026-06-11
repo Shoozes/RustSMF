@@ -119,3 +119,11 @@ export async function validateSmf(path: string): Promise<string> {
   }
   return invokeCommand<string>('validate_smf', { path })
 }
+
+export async function peekSmfRigBasic(path: string): Promise<string> {
+  const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+  if (!isTauri) {
+    return 'peekSmfRigBasic only in Tauri desktop'
+  }
+  return invokeCommand<string>('peek_smf_rig_basic', { path })
+}

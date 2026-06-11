@@ -16,30 +16,38 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const SMF_DIR = path.resolve(__dirname, '../../docs/references/old-src/datafiles/SMF');
-const SAMPLE_SMF = fs.existsSync(SMF_DIR)
-  ? fs.readdirSync(SMF_DIR).find(f => f.endsWith('.smf'))
-    ? path.join(SMF_DIR, fs.readdirSync(SMF_DIR).find(f => f.endsWith('.smf'))!)
-    : null
-  : null;
+let _smfFilesCache = null;
+function getSmfFiles() {
+  if (_smfFilesCache) return _smfFilesCache;
+  if (fs.existsSync(SMF_DIR)) {
+    _smfFilesCache = fs.readdirSync(SMF_DIR).filter(f => f.endsWith('.smf'));
+  } else {
+    _smfFilesCache = [];
+  }
+  return _smfFilesCache;
+}
+const SAMPLE_SMF = getSmfFiles().length > 0 ? path.join(SMF_DIR, getSmfFiles()[0]) : null;
 
 const BAD_GML_DIR_SEARCH = path.resolve(__dirname, '../../docs/references/old-src');
-const BAD_GML = fs.existsSync(BAD_GML_DIR_SEARCH)
-  ? (function() {
-      const gmls = [];
-      function findGml(dir) {
-        try {
-          const items = fs.readdirSync(dir);
-          for (const item of items) {
-            const full = path.join(dir, item);
-            if (fs.statSync(full).isDirectory()) findGml(full);
-            else if (item.endsWith('.gml')) gmls.push(full);
-          }
-        } catch {}
+let _gmlFilesCache = null;
+function getGmlFiles() {
+  if (_gmlFilesCache) return _gmlFilesCache;
+  const gmls = [];
+  function findGml(dir) {
+    try {
+      const items = fs.readdirSync(dir);
+      for (const item of items) {
+        const full = path.join(dir, item);
+        if (fs.statSync(full).isDirectory()) findGml(full);
+        else if (item.endsWith('.gml')) gmls.push(full);
       }
-      findGml(BAD_GML_DIR_SEARCH);
-      return gmls[0] || null;
-    })()
-  : null;
+    } catch {}
+  }
+  if (fs.existsSync(BAD_GML_DIR_SEARCH)) findGml(BAD_GML_DIR_SEARCH);
+  _gmlFilesCache = gmls;
+  return _gmlFilesCache;
+}
+const BAD_GML = getGmlFiles().length > 0 ? getGmlFiles()[0] : null;
 
 test.describe('RustSMF basic shell and model flow (Chromium)', () => {
   test.beforeEach(async ({ page }) => {

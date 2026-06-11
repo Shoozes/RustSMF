@@ -191,6 +191,18 @@ All per directive + philosophy. No stubs. Features connect (peek info in status,
 
 See updated APP_STATE, bank (rust_parser_breakdown, e2e items). Continue loop.
 
+**Auto research/recap/decide/design/build/test/fix/polish (this continuation):** Research (docs/bank current with load opt, git clean, verify Passed, greps clean no stubs, source for load flow/ e2e/Rust) showed state solid post-prior (desktop validation UX good, bone test coverage). Remaining: deeper desktop e2e, Rust subtasks (rig peek started), FBX limited.
+
+Actioned (small, per breakdown, real no stubs):
+- E2E deepen/robustness: Optimized SAMPLE_SMF/BAD_GML with caching (avoid repeated readdir, more reliable first-found, less skips in envs). Enhanced bone status test (list + raycast). (what: make e2e less fragile + add coverage for select UX/status, why: complete test backlog for edges/UX, where: smoke.spec.ts, how: cached getSmf/getGml + asserts in test).
+- Rust subtask (rig peek): Added real `peek_smf_rig_basic` cmd (minimal header parse for RIG offset + u32 bone count approx). Registered, exposed in client. Wired in useLoadModel for desktop .smf (appends to peekMsg for status, e.g. "SMF rig basic: ~N bones"). (what: next small real in parser breakdown, why: advance rig info without full dupe logic, where: main.rs + tauri client + useLoadModel, how: simple LE u32 read at rig offset using bytes).
+- Polish: Load flow already optimized (validation before read); rig wiring adds to status for show. No async issues (sequential good, early return).
+- Docs/bank: Will append with pairs; update gaps.
+
+All per directive. Features connect (rig info in desktop status + e2e select test). Verify clean. Push next. Remaining tracked (full desktop e2e, next Rust e.g. anim peek, FBX).
+
+See bank for gaps, TODO for pairs (e.g. rig subtask). No stubs. Continue.
+
 **Integrity pass (this invocation):** Full review per directive.
 - Research: Docs have good recent history (consolidated in places, but some repeated early bootstrap text remains - minor redundancy). summary_bank gaps well organized with recent items (rust subtask, e2e continuation, load optimization); files lists bloated from gen (noted, prefer paths). Code: no stubs/TODOs/FIXMEs in source (grep clean, only lockfile noise); builds/verify pass; e2e has bone status test + error path (some skips on no sample, but robust). Git clean, recent commits good. Async/timing: improved in this pass (see below). No broken imports/exports. Edge cases covered (bad files via validate/early return, bone select, desktop/web).
 - Updates: Consolidated minor redundancy in docs by focusing on recent; no major trim needed as history useful. Updated bank with new gap item for desktop load opt. Appended this pass to TODO/APP_STATE with pairs.

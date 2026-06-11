@@ -64,6 +64,10 @@ export function useLoadModel() {
             }
             rustValidated = true;
             rustPeekMsg = await (await import('../backend-client/tauri')).peekSmfHeader(res.path);
+            try {
+              const rig = await (await import('../backend-client/tauri')).peekSmfRigBasic(res.path);
+              if (rig) rustPeekMsg = `${rustPeekMsg} | ${rig}`;
+            } catch {}
           } catch {}
         }
         ui.setStatus('Reading binary from desktop path...');
@@ -80,6 +84,10 @@ export function useLoadModel() {
             return;
           }
           rustValidated = true;
+          try {
+            const rig = await (await import('../backend-client/tauri')).peekSmfRigBasic(res.path);
+            if (rig) rustPeekMsg = `${rustPeekMsg} | ${rig}`;
+          } catch {}
         } catch {}
       }
 

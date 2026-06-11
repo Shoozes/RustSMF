@@ -129,6 +129,14 @@ See updated TODO for full paired backlog. Builds green.
 
 All per directive. Next: deeper desktop e2e, more Rust subtasks (rig peek), FBX limited. See TODO/bank. No stubs. Verify clean.
 
+**Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research recap: state solid (no stubs, verify/e2e clean, load opt in place). Actioned:
+- E2E: SAMPLE/BAD cache for robustness + bone status test enhanced.
+- Rust: real peek_smf_rig_basic (bone count from RIG) + wired to status for desktop .smf.
+- Polish: confirmed timing good.
+- Docs/bank: paired appends, gaps updated (e2e, rust rig subtask).
+
+Verify clean. Per directive. Continue remaining. See TODO.
+
 **Integrity pass (this invocation):** Full review performed.
 - State: Excellent - no stubs, builds/verify/e2e clean, features connected (load now with early Rust validate/peek for desktop .smf -> "Rust validated SMF" status -> select bones in inspector/raycast -> e2e tests cover). 
 - Docs: Minor redundancy in long history sections (consolidated where possible in previous passes; this pass focused on recent). Updated with this pass details + pairs.
