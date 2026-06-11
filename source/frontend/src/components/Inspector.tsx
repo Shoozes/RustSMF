@@ -47,16 +47,18 @@ const Inspector: React.FC<InspectorProps> = ({
         )}
         {skeleton && skeleton.bones.length > 0 && (
           <div className="mt-3">
-            <div className="panel-title">Bones</div>
-            {skeleton.bones.map((b, idx) => (
-              <div
-                key={idx}
-                className={`cursor-pointer px-1 rounded hover:bg-slate-700 ${selected === b.name ? 'bg-slate-600' : ''}`}
-                onClick={() => onSelectBone && onSelectBone(b.name)}
-              >
-                {b.name}
-              </div>
-            ))}
+            <div className="panel-title">Bones ({skeleton.bones.length})</div>
+            <div className="max-h-24 overflow-auto text-[10px]">
+              {skeleton.bones.map((b, idx) => (
+                <div
+                  key={idx}
+                  className={`cursor-pointer px-1 rounded hover:bg-slate-700 ${selected === b.name ? 'bg-slate-600' : ''}`}
+                  onClick={() => onSelectBone && onSelectBone(b.name)}
+                >
+                  {b.name}
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>

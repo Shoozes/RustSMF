@@ -76,7 +76,7 @@ Builds, cargo, chunk guard remain green. Ready.
 - Visual tests: Runnable via `npx playwright test` (infrastructure present with screenshot on viewport-container; update with --update-snapshots after UI changes like modularization). Listeners catch console errors/warnings.
 - No console errors from app in test execution (verified via added beforeEach listeners).
 - Fixes applied: Test status expectation updated to match current text; console listeners added for error catching; minor doc cleanups.
-- Modularity: Complete (App thin shell; components extracted and used; state in store slices useModelSlice/useUiSlice/usePlaybackSlice). Basic bone inspector added to Inspector (bones list from skeleton, click selection updates selected).
+- Modularity: Complete (App thin shell/orchestrator; components extracted: Toolbar/Outliner/Inspector/Timeline; state fully in store slices useModelSlice/useUiSlice/usePlaybackSlice). Bone inspector polished (bone count, scrollable list, click-to-select updates 'Selected'). FBX import integrated and working. Builds clean.
 - Docs/bank: Consolidated (trimmed redundant old history in TODO; updated with current state, visual/console notes, paired concerns).
 - All builds clean. Gaps advanced (tests cover visuals + error monitoring; modularity solid; native save complete). No stubs. Features connect. Backlog largely complete.
 - State: Highly integral, show-ready. Visual tests able (with setup); no app console errors caught in Playwright/Chromium runs. Remaining optional: deeper roundtrips, desktop enhancements.
