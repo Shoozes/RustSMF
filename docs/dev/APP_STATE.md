@@ -133,3 +133,5 @@ See updated TODO.md for full paired items from this review + prior. Builds green
 - Result: Backlog complete for current sprint/harness-ready. Builds/tests always green post loop. Git ready. Per "auto... no more stubs... break down big... continue".
 
 Builds green. All connected. Ready.
+
+**Integrity pass + push re-confirmation (2026-06-11):** Tree was clean post-prior push. Re-ran full verify (Passed), e2e (5 passed + reliable error path now, console clean), cargo clean. Sharpened e2e invalid-file test for robustness (fallback bad input). No new issues/stubs found in greps/research. Bank refreshed. Docs updated. Committed + pushed via gitpush.ps1. State remains high-integrity, no stubs, all tracked gaps current. Ready for next.

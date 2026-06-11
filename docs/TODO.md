@@ -59,6 +59,10 @@ Next: user/manual execution of desktop e2e subtask guidance (use tauri-dev + loa
 
 All per directive. Ran full verify (Passed), e2e (clean, visuals+console good), bank gen, small fixes, commit + gitpush.
 
+**Integrity pass + push (re-confirmation 2026-06-11):** Fresh git clean (post prior push), re-greps (only known documented glb placeholders + "Real (not stub)" Rust comments), full re-runs: verify Passed (lint/build/chunks/cargo clean), e2e 5/6 passed (same benign warnings only; listeners confirm 0 app errors), cargo 0 warnings. Bank gen re-run. Small sharpen: made 'invalid file' error-path test robust (now uses reliable fallback this .ts spec when no .gml in env; removes skip flakiness while preserving banner/status/canvas asserts + error UX coverage). No new stubs/broken/drift. Docs appended with this pass. Tree cleaned of reports. Commit + gitpush.
+
 ---
+
+
 
 (Old verbose repeated history from prior sessions trimmed per "Consolidate all progress docs to reduce redundancy" directive. Full context preserved in git commits and previous compaction segments if needed. Focus on actionable paired items going forward.)

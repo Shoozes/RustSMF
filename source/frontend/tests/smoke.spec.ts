@@ -59,6 +59,10 @@ function getGmlFiles() {
 }
 const BAD_GML = getGmlFiles().length > 0 ? getGmlFiles()[0] : null;
 
+// Reliable bad input for error-path test (prefer real .gml from old-src if present for variety;
+// fallback to this .ts spec file itself which is guaranteed present and will fail all model loaders -> exercises error banner, status, no-crash).
+const BAD_INPUT_FOR_ERROR_TEST = (BAD_GML && fs.existsSync(BAD_GML)) ? BAD_GML : path.resolve(__dirname, 'smoke.spec.ts');
+
 test.describe('RustSMF basic shell and model flow (Chromium)', () => {
   test.beforeEach(async ({ page }) => {
     // Capture browser console errors and warnings during tests (for Chrome/Playwright)
@@ -242,12 +246,15 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
   });
 
   test('handles invalid file load with error banner and status (error path)', async ({ page }) => {
-    test.skip(!BAD_GML || !fs.existsSync(BAD_GML), 'No bad test file for error path');
+    // No longer strict skip: we provide a reliable fallback bad input (this .ts or .gml) so error UX is always exercised.
+    if (!BAD_INPUT_FOR_ERROR_TEST || !fs.existsSync(BAD_INPUT_FOR_ERROR_TEST)) {
+      test.skip(true, 'No bad input available for error path test (unexpected)');
+    }
 
     await page.goto('/');
 
     const input = page.getByTestId('model-file-input');
-    await input.setInputFiles(BAD_GML);
+    await input.setInputFiles(BAD_INPUT_FOR_ERROR_TEST);
 
     // Wait for attempt to finish
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 10000 });
