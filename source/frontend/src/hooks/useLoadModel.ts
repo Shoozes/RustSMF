@@ -253,6 +253,28 @@ export function useLoadModel() {
     }
   }, [ui]);
 
+  // Extracted for modularity: drop handler (mirrors handleFileInputChange but for DataTransfer)
+  const handleDrop = useCallback(async (file: File) => {
+    ui.setIsLoading(true);
+    ui.setStatus('Loading dropped file...');
+    try {
+      const buf = await file.arrayBuffer();
+      await loadModel({ name: file.name, data: new Uint8Array(buf) });
+    } catch (err: any) {
+      const m = err?.message || String(err);
+      ui.setErrorMsg(`Drop load error: ${m}`);
+      ui.setStatus(`Drop load error: ${m}`);
+    } finally {
+      ui.setIsLoading(false);
+    }
+  }, [ui, loadModel]);
+
+  // Extracted for modularity: bone selection updates UI state + status (used by Inspector + Viewport raycast)
+  const handleSelectBone = useCallback((name: string) => {
+    ui.setSelected(name);
+    ui.setStatus(`Selected: ${name}`);
+  }, [ui]);
+
   return {
     ui,
     model,
@@ -263,6 +285,8 @@ export function useLoadModel() {
     handleOpen,
     handleExport,
     handleFileInputChange,
+    handleDrop,
+    handleSelectBone,
     setupKeyboard,
     togglePlay,
     changeClip,

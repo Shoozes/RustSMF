@@ -6,18 +6,19 @@ import Inspector from './components/Inspector'
 import Toolbar from './components/Toolbar'
 import { useLoadModel } from './hooks/useLoadModel'
 
-// Main application: UI shell + state + loaders. Three.js viewport, scene, orbit, RAF, skinned attach
-// and mixer driving are fully delegated to <ThreeViewport> for modularity (no more duplication/dead code).
-// All model data (root/skeleton/clips) flow as props; playback is driven by props + callbacks.
+// Main application: thin UI shell / orchestrator.
+// Logic extracted to useLoadModel hook (load/export/handlers + tauri lazy) + store slices + focused components.
+// Drop and bone selection handlers now provided by hook for further modularity.
 export default function App() {
   const {
     ui,
     model,
     playback,
-    loadModel,
     handleOpen,
     handleExport,
     handleFileInputChange,
+    handleDrop,
+    handleSelectBone,
     setupKeyboard,
     togglePlay,
     changeClip,
@@ -25,12 +26,6 @@ export default function App() {
     setSpeed,
     pingRust,
   } = useLoadModel();
-
-  // Polish: on bone select from list or 3D raycast, update selection + status for UX
-  const handleSelectBone = (name: string) => {
-    ui.setSelected(name);
-    ui.setStatus(`Selected: ${name}`);
-  };
 
   // Setup keyboard once
   useEffect(() => {
@@ -66,22 +61,10 @@ export default function App() {
           data-testid="viewport-container"
           className="viewport-container relative"
           onDragOver={(e) => e.preventDefault()}
-          onDrop={async (e) => {
+          onDrop={(e) => {
             e.preventDefault()
             const file = e.dataTransfer.files?.[0]
-            if (!file) return
-            ui.setIsLoading(true)
-            ui.setStatus('Loading dropped file...')
-            try {
-              const buf = await file.arrayBuffer()
-              await loadModel({ name: file.name, data: new Uint8Array(buf) })
-            } catch (err: any) {
-              const m = err?.message || String(err)
-              ui.setErrorMsg(`Drop load error: ${m}`)
-              ui.setStatus(`Drop load error: ${m}`)
-            } finally {
-              ui.setIsLoading(false)
-            }
+            if (file) handleDrop(file)
           }}
         >
           <ThreeViewport
