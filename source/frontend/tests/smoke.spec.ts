@@ -266,5 +266,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await canvas.click({ position: { x: 60, y: 60 } });
     await page.waitForTimeout(80);
     await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
+
+    // Confirm inspector reflects bones (rig info indirectly via count)
+    await expect(inspector).toContainText(/Bones \(\d+\)/i);
   });
 });

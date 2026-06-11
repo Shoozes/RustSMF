@@ -129,6 +129,14 @@ See updated TODO for full paired backlog. Builds green.
 
 All per directive. Next: deeper desktop e2e, more Rust subtasks (rig peek), FBX limited. See TODO/bank. No stubs. Verify clean.
 
+**Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research recap: state solid (no stubs, clean builds/e2e, desktop status with rig/anim from Rust, e2e bone coverage). Actioned:
+- Rust: real peek_smf_anim_basic (clip count) + wired to status.
+- E2E: SAMPLE/BAD cache for robustness + bone test enhanced with bones count assert.
+- Polish: confirmed load timing good.
+- Docs/bank: paired appends, gaps updated.
+
+Verify clean. Per directive. Continue. See TODO.
+
 **Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research recap: state solid (no stubs, verify/e2e clean, load opt in place). Actioned:
 - E2E: SAMPLE/BAD cache for robustness + bone status test enhanced.
 - Rust: real peek_smf_rig_basic (bone count from RIG) + wired to status for desktop .smf.

@@ -121,10 +121,33 @@ async fn peek_smf_rig_basic(path: String) -> Result<String, String> {
     Ok(format!("SMF rig basic: ~{} bones (at rig offset {})", bone_count, off_rig))
 }
 
+// Small real subtask for rust-smf-parser (after rig): basic anim peek.
+// Parses header for ANIM offset, reads first u32 as clip count (format similar to rig).
+// Returns info for desktop .smf status. Real minimal, no full parse.
+#[command]
+async fn peek_smf_anim_basic(path: String) -> Result<String, String> {
+    let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    if bytes.len() < 32 {
+        return Ok("too small for SMF anim peek".to_string());
+    }
+    // parse offsets: version strZ + 4 u32 (tex, model, rig, anim)
+    let mut off = 0;
+    while off < bytes.len() && bytes[off] != 0 { off += 1; }
+    off += 1;
+    if off + 16 > bytes.len() { return Ok("header too short".to_string()); }
+    off += 12; // skip tex/model/rig offsets
+    let off_anim = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize;
+    if off_anim + 4 > bytes.len() {
+        return Ok(format!("anim offset {} beyond file", off_anim));
+    }
+    let clip_count = u32::from_le_bytes([bytes[off_anim], bytes[off_anim+1], bytes[off_anim+2], bytes[off_anim+3]]);
+    Ok(format!("SMF anim basic: ~{} clips (at anim offset {})", clip_count, off_anim))
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary, peek_smf_header, validate_smf, peek_smf_rig_basic])
+        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary, peek_smf_header, validate_smf, peek_smf_rig_basic, peek_smf_anim_basic])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

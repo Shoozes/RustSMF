@@ -191,6 +191,18 @@ All per directive + philosophy. No stubs. Features connect (peek info in status,
 
 See updated APP_STATE, bank (rust_parser_breakdown, e2e items). Continue loop.
 
+**Auto research/recap/decide/design/build/test/fix/polish (this continuation):** Research (docs/bank post-rig, git clean, verify Passed, greps clean no stubs, source for load/e2e/Rust) showed state solid (rig/anim in status for desktop, e2e bone coverage). Remaining: deeper desktop e2e, more Rust (e.g. full anim), FBX limited.
+
+Actioned (small, breakdown):
+- Rust subtask: Added real `peek_smf_anim_basic` (ANIM offset + u32 clip count). Wired in useLoadModel (appends to status for desktop .smf, e.g. "SMF anim basic: ~N clips"). (what: next parser subtask after rig, why: provide anim info in desktop status + advance without dupe, where: main.rs + tauri client + useLoadModel, how: minimal LE parse at offset).
+- E2E: SAMPLE/BAD cache (first found, no readdir loops for robustness/reliability). Enhanced bone test (added inspector bones count assert). (what: make e2e less skip-prone + deepen select/rig coverage, why: complete test backlog for UX/edges, where: smoke.spec.ts, how: cached get* + asserts).
+- Polish: Load flow (validation before read) good for timing; status now includes rig+anim from Rust for desktop. No async issues.
+- Docs/bank: Appended with pairs; gaps updated (anim subtask, e2e cache).
+
+All per directive. Features connect (rig/anim in status + e2e select test). Verify/e2e clean. Push next. Remaining tracked (desktop e2e, next Rust, FBX).
+
+See bank/ TODO for pairs. No stubs. Continue.
+
 **Auto research/recap/decide/design/build/test/fix/polish (this continuation):** Research (docs/bank current with load opt, git clean, verify Passed, greps clean no stubs, source for load flow/ e2e/Rust) showed state solid post-prior (desktop validation UX good, bone test coverage). Remaining: deeper desktop e2e, Rust subtasks (rig peek started), FBX limited.
 
 Actioned (small, per breakdown, real no stubs):

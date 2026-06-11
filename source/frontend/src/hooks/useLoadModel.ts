@@ -68,6 +68,10 @@ export function useLoadModel() {
               const rig = await (await import('../backend-client/tauri')).peekSmfRigBasic(res.path);
               if (rig) rustPeekMsg = `${rustPeekMsg} | ${rig}`;
             } catch {}
+            try {
+              const anim = await (await import('../backend-client/tauri')).peekSmfAnimBasic(res.path);
+              if (anim) rustPeekMsg = `${rustPeekMsg} | ${anim}`;
+            } catch {}
           } catch {}
         }
         ui.setStatus('Reading binary from desktop path...');
@@ -87,6 +91,10 @@ export function useLoadModel() {
           try {
             const rig = await (await import('../backend-client/tauri')).peekSmfRigBasic(res.path);
             if (rig) rustPeekMsg = `${rustPeekMsg} | ${rig}`;
+          } catch {}
+          try {
+            const anim = await (await import('../backend-client/tauri')).peekSmfAnimBasic(res.path);
+            if (anim) rustPeekMsg = `${rustPeekMsg} | ${anim}`;
           } catch {}
         } catch {}
       }

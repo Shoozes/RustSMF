@@ -127,3 +127,11 @@ export async function peekSmfRigBasic(path: string): Promise<string> {
   }
   return invokeCommand<string>('peek_smf_rig_basic', { path })
 }
+
+export async function peekSmfAnimBasic(path: string): Promise<string> {
+  const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+  if (!isTauri) {
+    return 'peekSmfAnimBasic only in Tauri desktop'
+  }
+  return invokeCommand<string>('peek_smf_anim_basic', { path })
+}
