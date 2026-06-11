@@ -1,9 +1,11 @@
 // Thin Tauri bridge with browser fallback.
-// Real SMF/GLB/FBX file I/O and native dialogs will use this.
-// For now: provides openFile() that prefers tauri dialog, falls back to <input type=file>.
+// Real SMF/GLB/FBX file I/O and native dialogs/save will use this.
+// openFile: tauri dialog or browser input.
+// saveFile: native Tauri (dialog + write_file_binary) or browser download.
+// readBinaryFile: for desktop binary loads when only path is available.
 
 import { invoke } from '@tauri-apps/api/core'
-import { open } from '@tauri-apps/plugin-dialog'
+import { open, save } from '@tauri-apps/plugin-dialog'
 
 export interface OpenResult {
   path?: string
@@ -55,11 +57,21 @@ export async function openFile(): Promise<OpenResult | null> {
 export async function saveFile(data: Uint8Array | Blob, suggestedName: string): Promise<void> {
   const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
   if (isTauri) {
-    // Future: use tauri dialog save + fs write
-    console.log('[tauri] save not fully wired yet — would write', suggestedName)
+    const filePath = await save({
+      defaultPath: suggestedName,
+      filters: [{ name: 'All Files', extensions: ['*'] }]
+    })
+    if (!filePath) return
+    let bytes: Uint8Array
+    if (data instanceof Blob) {
+      bytes = new Uint8Array(await data.arrayBuffer())
+    } else {
+      bytes = data
+    }
+    await invokeCommand('write_file_binary', { path: filePath, data: Array.from(bytes) })
     return
   }
-  // Browser download
+  // Browser (or fallback) download
   const blob = data instanceof Blob ? data : new Blob([data])
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')

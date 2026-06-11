@@ -119,8 +119,11 @@ switch -Exact ($Task.ToLowerInvariant()) {
         if (Test-Path $SrcTauriDir) {
             Push-Location $SrcTauriDir
             cargo tauri build --no-bundle
-            # In real smoke you would launch the exe and probe; placeholder here
-            Write-Ok "[SMOKE] Build step finished (full launch probe added post-scaffold)."
+            # Desktop binary path (read_file_binary) + full SMF/GLB/FBX load is exercised in TS loaders + App.loadModel.
+            # Full exe launch + UI probe would require extra (e.g. Start-Process + window inspection + timeout).
+            # For now this confirms the tauri desktop bundle step + the web e2e (test:e2e) covers the logic.
+            # Run tauri-dev manually + open a .smf for interactive desktop smoke.
+            Write-Ok "[SMOKE] Unbundled build complete. See APP_STATE.md for manual desktop binary read test."
             Pop-Location
         } else {
             Write-Warn "src-tauri missing."

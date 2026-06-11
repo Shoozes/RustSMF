@@ -44,10 +44,20 @@ async fn read_file_binary(path: String) -> Result<Vec<u8>, String> {
     std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))
 }
 
+#[command]
+async fn write_file_binary(path: String, data: Vec<u8>) -> Result<(), String> {
+    // Binary write for exports (SMF/GLB etc). Used by frontend saveFile for native desktop save.
+    // Note: Uses direct std::fs (consistent with read_file_binary). For packaged Tauri apps,
+    // additional filesystem scope/permissions may be required per Tauri v2 security model
+    // (see capabilities/default.json and Tauri fs docs). In dev it works; "fs:default" permission
+    // would need tauri-plugin-fs if switching to its API.
+    std::fs::write(&path, data).map_err(|e| format!("Failed to write {}: {}", path, e))
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary])
+        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -63,11 +63,18 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
   });
 });
 
-// Smoke for SMF export (prep for full roundtrip tests in next backlog item)
-import { exportSMF, ImportedSmf } from './smf';
+// Roundtrip tests for SMF export fidelity (core to conversion).
+// Unit: data-driven roundtrip on minimal (no DOM deps).
+// + Real sample cycle using reference .smf files (fs in node test env).
+// E2E in smoke.spec.ts for visuals + full UI flows.
+import { exportSMFToBuffer, importSMF, ImportedSmf } from './smf';
+import fs from 'fs';
+import path from 'path';
 
-describe('smf export smoke (data-driven)', () => {
-  it('exportSMF on minimal ImportedSmf produces a blob URL without crashing', () => {
+const SMF_DIR = path.resolve(__dirname, '../../../docs/references/old-src/datafiles/SMF');
+
+describe('smf export roundtrip (data-driven)', () => {
+  it('minimal ImportedSmf export -> reimport preserves structure', () => {
     const minimal: ImportedSmf = {
       meshes: [{
         name: 'test',
@@ -87,8 +94,49 @@ describe('smf export smoke (data-driven)', () => {
       animations: []
     };
 
-    const url = exportSMF(minimal);
-    assert.ok(typeof url === 'string' && url.startsWith('blob:'), 'should return blob URL');
-    URL.revokeObjectURL(url);
+    const buf = exportSMFToBuffer(minimal);
+    const reimported = importSMF(buf.buffer);
+
+    assert.strictEqual(reimported.meshes.length, 1);
+    assert.strictEqual(reimported.bones.length, 1);
+    assert.strictEqual(reimported.animations.length, 0);
+    // Positions roundtrip (within float eps, ignoring transform noise for minimal)
+    const origPos = minimal.meshes[0].positions;
+    const rePos = reimported.meshes[0].positions;
+    for (let i = 0; i < origPos.length; i++) {
+      assert.ok(Math.abs(origPos[i] - rePos[i]) < 1e-5, `pos[${i}] drift too large`);
+    }
+  });
+
+  it('real sample SMF roundtrip (import -> exportToBuffer -> reimport) preserves counts and data fidelity', () => {
+    if (!fs.existsSync(SMF_DIR)) {
+      // Skip gracefully in harness without samples
+      return;
+    }
+    const files = fs.readdirSync(SMF_DIR).filter(f => f.endsWith('.smf'));
+    if (files.length === 0) return;
+
+    const sampleFile = path.join(SMF_DIR, files[0]);
+    const raw = fs.readFileSync(sampleFile);
+    // Node Buffer/Uint8Array -> ArrayBuffer safe for the loader (BinaryReader DataView)
+    const ab = new Uint8Array(raw).buffer;
+
+    const imported = importSMF(ab);
+    const exportedBuf = exportSMFToBuffer(imported);
+    const reimported = importSMF(exportedBuf.buffer);
+
+    assert.strictEqual(reimported.meshes.length, imported.meshes.length, 'mesh count drift');
+    assert.strictEqual(reimported.bones.length, imported.bones.length, 'bone count drift');
+    assert.strictEqual(reimported.animations.length, imported.animations.length, 'anim count drift');
+
+    // Spot check first mesh positions (after full coord export/import cycle should be close)
+    if (imported.meshes.length > 0 && reimported.meshes.length > 0) {
+      const o = imported.meshes[0].positions;
+      const r = reimported.meshes[0].positions;
+      const len = Math.min(o.length, r.length, 12); // first few verts
+      for (let i = 0; i < len; i++) {
+        assert.ok(Math.abs(o[i] - r[i]) < 1e-3, `real sample pos drift at ${i}: ${o[i]} vs ${r[i]}`);
+      }
+    }
   });
 });

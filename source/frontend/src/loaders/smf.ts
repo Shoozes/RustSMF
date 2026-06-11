@@ -409,7 +409,7 @@ class BinaryWriter {
  * Note: Follows the reference's known limitations for complex rigs/anim (head/tail bone rotations).
  * Good for basic roundtrips on the samples.
  */
-export function exportSMF(imported: ImportedSmf): string {
+export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
   const { meshes, textures, bones: importedBones, animations } = imported;
 
   // Build nodeList similar to reference (tails + heads for disconnected)
@@ -514,8 +514,7 @@ export function exportSMF(imported: ImportedSmf): string {
     for (let v = 0; v < vcount; v++) {
       // positions/normals: back to SMF Z-up from our Y-up flat data
       const px = m.positions[v*3], py = m.positions[v*3+1], pz = m.positions[v*3+2];
-      const posSmf = [px, -pz, py]; // reverse of smfVecToThree approx [x,z,-y] wait adjust
-      // Better use coord if possible, but for flat:
+      const posSmf = [px, -pz, py]; // reverse of smfVecToThree approx [x,z,-y]
       mW.f32(posSmf[0]).f32(posSmf[1]).f32(posSmf[2]);
 
       const nx = m.normals[v*3], ny = m.normals[v*3+1], nz = m.normals[v*3+2];
@@ -532,7 +531,7 @@ export function exportSMF(imported: ImportedSmf): string {
       // Skin indices (map back)
       for (let j = 0; j < 4; j++) {
         const threeIdx = m.skinIndices[v*4 + j];
-        const smfNode = reverseSkinMap[threeIdx] ?? 0; // rough; full would use boneToNode
+        const smfNode = reverseSkinMap[threeIdx] ?? 0;
         mW.u8(smfNode);
       }
 
@@ -552,9 +551,8 @@ export function exportSMF(imported: ImportedSmf): string {
   nodeList.forEach((n) => {
     let dq: Float32Array;
     if (n.isHead) {
-      // head: use parent or identity-ish
       dq = new Float32Array(8);
-      dq[3] = 1; // identity quat
+      dq[3] = 1;
     } else {
       dq = importedBones[n.boneIndex].dq.slice();
       dq = dqNegate(dqNormalize(dq));
@@ -563,7 +561,6 @@ export function exportSMF(imported: ImportedSmf): string {
     dq.forEach(v => rW.f32(v));
     rW.u32(n.parent).u8(n.isBone);
 
-    // axis (from imported or default Y)
     const ax = importedBones[n.boneIndex]?.axis || [0, 1, 0];
     rW.f32(ax[0]).f32(ax[1]).f32(ax[2]);
   });
@@ -579,11 +576,11 @@ export function exportSMF(imported: ImportedSmf): string {
 
   animations.forEach((a) => {
     aW.strZ(a.name)
-      .u8(1) // loop
-      .f32(a.duration * 1000)
-      .u8(1) // linear
       .u8(1)
-      .u16(0) // locked
+      .f32(a.duration * 1000)
+      .u8(1)
+      .u8(1)
+      .u16(0)
       .u32(a.times.length);
 
     const prevDQs: (Float32Array | null)[] = new Array(nodeList.length).fill(null);
@@ -632,5 +629,10 @@ export function exportSMF(imported: ImportedSmf): string {
   let off = 0;
   parts.forEach(p => { out.set(p, off); off += p.length; });
 
-  return URL.createObjectURL(new Blob([out], { type: 'application/octet-stream' }));
+  return out;
+}
+
+export function exportSMF(imported: ImportedSmf): string {
+  const buf = exportSMFToBuffer(imported);
+  return URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
 }

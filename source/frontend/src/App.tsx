@@ -1,317 +1,132 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import * as THREE from 'three'
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js'
-import { openFile, OpenResult, invokeCommand, readBinaryFile } from './backend-client/tauri'
+import { openFile, OpenResult, invokeCommand, readBinaryFile, saveFile } from './backend-client/tauri'
 import { loadGLB } from './loaders/glb'
-import { importSMF, buildThreeScene as buildSmfScene, exportSMF } from './loaders/smf'
+import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer } from './loaders/smf'
+import { loadFBX } from './loaders/fbx'
+import ThreeViewport from './components/ThreeViewport'
+import { usePlaybackSlice } from './store'
 
-// Simple mouse orbit controller (Y-up, right-handed, matching Three.js default)
-// This keeps the viewport self-contained without pulling in extra OrbitControls dep yet.
-class SimpleOrbit {
-  yaw = 0.6
-  pitch = 0.4
-  distance = 4.5
-  target = new THREE.Vector3(0, 0.8, 0)
-
-  private dragging = false
-  private lastX = 0
-  private lastY = 0
-
-  attach(canvas: HTMLCanvasElement, onChange: () => void) {
-    const onDown = (e: MouseEvent) => {
-      if (e.button !== 0) return
-      this.dragging = true
-      this.lastX = e.clientX
-      this.lastY = e.clientY
-    }
-    const onUp = () => { this.dragging = false }
-    const onMove = (e: MouseEvent) => {
-      if (!this.dragging) return
-      const dx = e.clientX - this.lastX
-      const dy = e.clientY - this.lastY
-      this.yaw -= dx * 0.0035
-      this.pitch = Math.max(-1.4, Math.min(1.4, this.pitch - dy * 0.0035))
-      this.lastX = e.clientX
-      this.lastY = e.clientY
-      onChange()
-    }
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault()
-      this.distance = Math.max(1.2, Math.min(18, this.distance + e.deltaY * 0.003))
-      onChange()
-    }
-    canvas.addEventListener('mousedown', onDown)
-    window.addEventListener('mouseup', onUp)
-    window.addEventListener('mousemove', onMove)
-    canvas.addEventListener('wheel', onWheel, { passive: false })
-
-    // Touch support (basic)
-    canvas.addEventListener('touchstart', (e) => {
-      if (e.touches.length === 1) {
-        this.dragging = true
-        this.lastX = e.touches[0].clientX
-        this.lastY = e.touches[0].clientY
-      }
-    })
-    canvas.addEventListener('touchend', () => { this.dragging = false })
-    canvas.addEventListener('touchmove', (e) => {
-      if (!this.dragging || e.touches.length !== 1) return
-      const dx = e.touches[0].clientX - this.lastX
-      const dy = e.touches[0].clientY - this.lastY
-      this.yaw -= dx * 0.004
-      this.pitch = Math.max(-1.4, Math.min(1.4, this.pitch - dy * 0.004))
-      this.lastX = e.touches[0].clientX
-      this.lastY = e.touches[0].clientY
-      onChange()
-    })
-  }
-
-  getPosition(): THREE.Vector3 {
-    const x = Math.cos(this.pitch) * Math.sin(this.yaw) * this.distance
-    const y = Math.sin(this.pitch) * this.distance
-    const z = Math.cos(this.pitch) * Math.cos(this.yaw) * this.distance
-    return new THREE.Vector3(x, y, z).add(this.target)
-  }
-}
-
-// Main application with fully functional model loading (GLB + SMF), real skinned rendering,
-// AnimationMixer driven timeline, SkeletonHelper, and export.
+// Main application: UI shell + state + loaders. Three.js viewport, scene, orbit, RAF, skinned attach
+// and mixer driving are fully delegated to <ThreeViewport> for modularity (no more duplication/dead code).
+// All model data (root/skeleton/clips) flow as props; playback is driven by props + callbacks.
 export default function App() {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const [status, setStatus] = useState('Three.js viewport ready (Y-up). Open a .glb or .smf from the reference samples.')
+  const [status, setStatus] = useState('Three.js viewport ready (Y-up). Open .smf/.glb/.fbx. SMF/GLB export (FBX limited).')
   const [selected, setSelected] = useState<string>('Scene')
   const [clips, setClips] = useState<THREE.AnimationClip[]>([])
-  const [currentClipName, setCurrentClipName] = useState<string>('')
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string>('')
 
-  // Three.js core refs (persistent)
-  const rendererRef = useRef<THREE.WebGLRenderer | null>(null)
-  const sceneRef = useRef<THREE.Scene | null>(null)
-  const cameraRef = useRef<THREE.PerspectiveCamera | null>(null)
-  const orbitRef = useRef(new SimpleOrbit())
-  const frameRef = useRef<number | null>(null)
-  const resizeObsRef = useRef<ResizeObserver | null>(null)
+  // Model data passed down to the self-contained ThreeViewport (modularity)
+  const [currentRoot, setCurrentRoot] = useState<THREE.Group | null>(null)
+  const [currentSkeleton, setCurrentSkeleton] = useState<THREE.Skeleton | undefined>(undefined)
 
-  // Model + animation state (replaces pure placeholder)
-  const modelRootRef = useRef<THREE.Group | null>(null)
-  const mixerRef = useRef<THREE.AnimationMixer | null>(null)
-  const currentActionRef = useRef<THREE.AnimationAction | null>(null)
-  const skeletonHelperRef = useRef<THREE.SkeletonHelper | null>(null)
-  const clockRef = useRef(new THREE.Clock())
-
-  // Keep raw ImportedSmf for high-fidelity SMF export (roundtrips)
+  // Keep raw ImportedSmf for high-fidelity SMF export roundtrips (SMF path only)
   const lastSmfDataRef = useRef<any>(null) // ImportedSmf | null
 
-  // Build initial empty scene + lights + grid (called once)
-  function initBaseScene(scene: THREE.Scene) {
-    scene.background = new THREE.Color(0x0b1120)
+  // Playback state via store hook for modularity (reduces local state duplication, demonstrates store)
+  const playback = usePlaybackSlice()
+  const playbackRef = useRef(playback)
+  useEffect(() => { playbackRef.current = playback }, [playback])
 
-    const hemi = new THREE.HemisphereLight(0xbfd4ff, 0x080820, 0.6)
-    scene.add(hemi)
-    const dir = new THREE.DirectionalLight(0xffffff, 0.95)
-    dir.position.set(4, 7, 3)
-    scene.add(dir)
-
-    const grid = new THREE.GridHelper(14, 14, 0x475569, 0x334155)
-    grid.position.y = 0.001
-    scene.add(grid)
-    scene.add(new THREE.AxesHelper(1.8))
-  }
-
-  // Remove previous loaded model + helpers
-  function clearLoadedModel(scene: THREE.Scene) {
-    if (modelRootRef.current) {
-      scene.remove(modelRootRef.current)
-      modelRootRef.current.traverse((o: any) => {
-        if (o.geometry) o.geometry.dispose?.()
-        if (o.material) {
-          const mats = Array.isArray(o.material) ? o.material : [o.material]
-          mats.forEach((m: any) => m.dispose?.())
-        }
-      })
-    }
-    if (skeletonHelperRef.current) {
-      scene.remove(skeletonHelperRef.current)
-      skeletonHelperRef.current.dispose?.()
-      skeletonHelperRef.current = null
-    }
-    if (mixerRef.current) {
-      mixerRef.current.stopAllAction()
-    }
-    modelRootRef.current = null
-    mixerRef.current = null
-    currentActionRef.current = null
+  // Logical clear (resets UI state and signals viewport via null root)
+  function clearLoadedModel() {
     lastSmfDataRef.current = null
+    setCurrentRoot(null)
+    setCurrentSkeleton(undefined)
     setClips([])
-    setCurrentClipName('')
-    setIsPlaying(false)
-    setCurrentTime(0)
-    setDuration(0)
+    setSelected('Scene')
+    setErrorMsg('')
+    const pb = playbackRef.current
+    pb.setIsPlaying(false)
+    pb.setCurrentTime(0)
+    pb.setDuration(0)
+    pb.setCurrentClipName('')
+    pb.setPlaybackSpeed(1)
   }
 
-  // Load a model (GLB or SMF) and integrate into scene + animation system
+  // Load a model (GLB/SMF/FBX). Desktop path-only cases now uniformly use readBinaryFile for robustness
+  // (tauri openFile returns path; browser hidden input path gives data). The actual three scene attach,
+  // skeleton helper, mixer and RAF are handled inside ThreeViewport via props.
   const loadModel = useCallback(async (res: OpenResult) => {
-    const scene = sceneRef.current
-    const renderer = rendererRef.current
-    if (!scene || !renderer) return
-
-    clearLoadedModel(scene)
+    clearLoadedModel()
     setIsLoading(true)
+    setErrorMsg('')
     setStatus('Loading model...')
 
     try {
       let loaded: any
       const name = (res.name || res.path || '').toLowerCase()
 
+      // Unified binary read for desktop (tauri) path-only case for all binary formats.
+      let data: Uint8Array | undefined = res.data
+      if (!data && res.path) {
+        setStatus('Reading binary from desktop path...')
+        data = await readBinaryFile(res.path)
+      }
+
       if (name.endsWith('.smf')) {
-        let data: Uint8Array | undefined = res.data
-        if (!data && res.path) {
-          // Desktop path-only case: use the new binary read command for full SMF support
-          setStatus('Reading binary from desktop path...')
-          data = await readBinaryFile(res.path)  // from backend-client
-        }
         if (!data) {
-          throw new Error('Could not obtain binary data for .smf (browser should provide it via file input; desktop uses read_file_binary)')
+          throw new Error('Could not obtain binary data for .smf (browser provides via input; desktop uses read_file_binary)')
         }
         const imported = importSMF(data.buffer)
         lastSmfDataRef.current = imported
         loaded = buildSmfScene(imported)
+      } else if (name.endsWith('.fbx')) {
+        const urlOrBuf: string | ArrayBuffer = data ? data.buffer : (res.path || '')
+        loaded = await loadFBX(urlOrBuf)
       } else {
         // GLB / GLTF
-        let urlOrBuf: string | ArrayBuffer = ''
-        if (res.data) {
-          urlOrBuf = res.data.buffer
-        } else if (res.path) {
-          // In tauri we could read bytes, for demo use object URL if path is local file (limited)
-          // Better: the openFile in tauri returns path; for full desktop we would read via invoke.
-          // For now assume browser or that user drags in dev.
-          urlOrBuf = res.path // GLTFLoader can take blob: or http in some cases; for real files use data path
-        }
-        loaded = await loadGLB(urlOrBuf || (res as any))
+        const urlOrBuf: string | ArrayBuffer = data ? data.buffer : (res.path || '')
+        loaded = await loadGLB(urlOrBuf)
       }
 
       const root = loaded.root as THREE.Group
-      modelRootRef.current = root
-      scene.add(root)
-
-      // Skeleton helper for nice rig viz (uses the skeleton if present)
-      if (loaded.skeleton) {
-        const helper = new THREE.SkeletonHelper(root)
-        ;(helper.material as THREE.LineBasicMaterial).linewidth = 2
-        scene.add(helper)
-        skeletonHelperRef.current = helper
-      }
-
-      // Animation
-      const mixer = loaded.mixer || new THREE.AnimationMixer(root)
-      mixerRef.current = mixer
-
       const availableClips = loaded.clips || (root as any).animations || []
+
+      // Signal to viewport (it will attach root, build internal mixer/helper, start first clip)
+      setCurrentRoot(root)
+      setCurrentSkeleton(loaded.skeleton)
       setClips(availableClips)
 
       if (availableClips.length > 0) {
         const first = availableClips[0]
-        const action = mixer.clipAction(first)
-        action.play()
-        currentActionRef.current = action
-        setCurrentClipName(first.name || 'clip_0')
-        setDuration(first.duration)
-        setIsPlaying(true)
+        const pb = playbackRef.current
+        pb.setCurrentClipName(first.name || 'clip_0')
+        pb.setDuration(first.duration)
+        pb.setIsPlaying(true)
+        pb.setCurrentTime(0)
       }
 
-      setStatus(`Loaded: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones.length || '?'} | clips: ${availableClips.length} | verts in first mesh: ${loaded.skinnedMeshes?.[0]?.geometry.attributes.position.count || '?'}`)
+      if (name.endsWith('.fbx')) {
+        setStatus(`Loaded FBX: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length || 0}`)
+      } else {
+        setStatus(`Loaded: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length} | verts: ${loaded.skinnedMeshes?.[0]?.geometry?.attributes?.position?.count || '?'}`)
+      }
 
-      // Auto select something useful
       setSelected(loaded.skinnedMeshes?.[0]?.name || 'root')
 
     } catch (e: any) {
       console.error(e)
-      setStatus(`Load error: ${e?.message || e}. Try a .glb or .smf from the reference datafiles.`)
+      const msg = e?.message || String(e)
+      setErrorMsg(`Load error: ${msg}`)
+      setStatus(`Load error: ${msg}. Try a .glb or .smf from docs/references/old-src/datafiles/SMF/.`)
     } finally {
       setIsLoading(false)
     }
   }, [])
 
-  // Main three init (once)
+  // Keyboard (space toggles play; R reset handled inside viewport)
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true })
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
-    renderer.setSize(800, 600)
-    rendererRef.current = renderer
-
-    const scene = new THREE.Scene()
-    sceneRef.current = scene
-    initBaseScene(scene)
-
-    const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100)
-    cameraRef.current = camera
-
-    const orbit = orbitRef.current
-    const updateCamera = () => {
-      camera.position.copy(orbit.getPosition())
-      camera.lookAt(orbit.target)
-      camera.updateMatrixWorld()
-    }
-    updateCamera()
-    orbit.attach(canvas, updateCamera)
-
-    // RAF with mixer update + render
-    const animate = () => {
-      const mixer = mixerRef.current
-      if (mixer) {
-        const delta = clockRef.current.getDelta()
-        mixer.update(delta)
-        // sync scrubber UI
-        if (currentActionRef.current) {
-          const t = currentActionRef.current.time
-          setCurrentTime(t)
-        }
-      }
-      renderer.render(scene, camera)
-      frameRef.current = requestAnimationFrame(animate)
-    }
-    frameRef.current = requestAnimationFrame(animate)
-
-    // Resize
-    const container = canvas.parentElement!
-    const onResize = () => {
-      const w = container.clientWidth || 800
-      const h = container.clientHeight || 600
-      renderer.setSize(w, h)
-      camera.aspect = w / h
-      camera.updateProjectionMatrix()
-    }
-    const ro = new ResizeObserver(onResize)
-    ro.observe(container)
-    resizeObsRef.current = ro
-    setTimeout(onResize, 50)
-
     const onKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'r') {
-        orbit.yaw = 0.6; orbit.pitch = 0.4; orbit.distance = 4.5
-        updateCamera()
-      }
       if (e.key.toLowerCase() === ' ') {
         e.preventDefault()
-        togglePlay()
+        setIsPlaying(p => !p)
       }
     }
     window.addEventListener('keydown', onKey)
-
-    setStatus('Viewport ready. Open a .glb or .smf (reference samples work great).')
-
-    return () => {
-      if (frameRef.current) cancelAnimationFrame(frameRef.current)
-      resizeObsRef.current?.disconnect()
-      window.removeEventListener('keydown', onKey)
-      renderer.dispose()
-    }
+    return () => window.removeEventListener('keydown', onKey)
   }, [])
 
   // Live open (now actually loads!)
@@ -328,30 +143,22 @@ export default function App() {
       }
       await loadModel(res)
     } catch (e: any) {
-      setStatus(`Open error: ${e?.message || e}`)
+      const msg = e?.message || String(e)
+      setErrorMsg(`Open error: ${msg}`)
+      setStatus(`Open error: ${msg}`)
     }
   }
 
-  // Helper that clicks the hidden test-friendly input (web path for e2e)
-  const triggerFileInput = () => {
-    const input = document.querySelector<HTMLInputElement>('[data-testid="model-file-input"]')
-    input?.click()
-  }
-
   // Export: prefer high-fidelity SMF when we have the raw data (for roundtrips on SMF loads),
-  // otherwise fall back to GLB (which always works for any loaded model).
+  // otherwise fall back to GLB using the currentRoot model group + clips (viewport owns the viz copy).
+  // Uses saveFile util (now fully supports native Tauri save via dialog + write command).
   const handleExport = async () => {
     const smfData = lastSmfDataRef.current
     if (smfData) {
       setStatus('Exporting as SMF (fidelity path using imported data + coord transforms)...')
       try {
-        const url = exportSMF(smfData)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = 'exported_model.smf'
-        a.click()
-        // revoke later
-        setTimeout(() => URL.revokeObjectURL(url), 5000)
+        const buf = exportSMFToBuffer(smfData)
+        await saveFile(buf, 'exported_model.smf')
         setStatus('Exported .smf (using our ImportedSmf + DQ handling). Test roundtrip by re-importing!')
         return
       } catch (e: any) {
@@ -359,21 +166,23 @@ export default function App() {
       }
     }
 
-    // GLB fallback / for GLB loads
-    const scene = sceneRef.current
-    if (!scene) return
-    setStatus('Exporting current scene as GLB...')
+    // GLB fallback for GLB/FBX loads (and SMF if wanted): export the model root we hold in state.
+    const rootToExport = currentRoot
+    if (!rootToExport) {
+      setStatus('Nothing to export.')
+      return
+    }
+    setStatus('Exporting current model as GLB...')
     try {
       const exporter = new GLTFExporter()
-      const result = await exporter.parseAsync(scene, { binary: true, animations: clips })
-      const blob = new Blob([result as ArrayBuffer], { type: 'application/octet-stream' })
-      const a = document.createElement('a')
-      a.href = URL.createObjectURL(blob)
-      a.download = 'exported_model.glb'
-      a.click()
+      const result = await exporter.parseAsync(rootToExport, { binary: true, animations: clips })
+      const buf = new Uint8Array(result as ArrayBuffer)
+      await saveFile(buf, 'exported_model.glb')
       setStatus('Exported .glb (animations included when present).')
     } catch (e: any) {
-      setStatus(`Export error: ${e?.message || e}`)
+      const msg = e?.message || String(e)
+      setErrorMsg(`Export error: ${msg}`)
+      setStatus(`Export error: ${msg}`)
     }
   }
 
@@ -386,50 +195,21 @@ export default function App() {
     }
   }
 
-  // Timeline controls
-  const togglePlay = () => {
-    const action = currentActionRef.current
-    if (!action) return
-    if (isPlaying) {
-      action.paused = true
-      setIsPlaying(false)
-    } else {
-      action.paused = false
-      if (action.time === 0 && duration > 0) action.play()
-      setIsPlaying(true)
-    }
-  }
+  // Playback controls driven by store hook (modularity). Viewport consumes the values via props.
+  const togglePlay = useCallback(() => {
+    playbackRef.current.toggle()
+  }, [])  // uses ref to avoid stale; stable for handlers
 
   const changeClip = (clip: THREE.AnimationClip) => {
-    const mixer = mixerRef.current
-    const root = modelRootRef.current
-    if (!mixer || !root) return
-
-    if (currentActionRef.current) currentActionRef.current.stop()
-
-    const action = mixer.clipAction(clip)
-    action.reset().play()
-    currentActionRef.current = action
-    setCurrentClipName(clip.name || 'clip')
-    setDuration(clip.duration)
-    setCurrentTime(0)
-    setIsPlaying(true)
+    playback.selectClip(clip.name || 'clip', clip.duration)
   }
 
   const onScrub = (t: number) => {
-    const action = currentActionRef.current
-    const mixer = mixerRef.current
-    if (!action || !mixer) return
-    action.time = Math.max(0, Math.min(t, duration || 0))
-    // Force an update so skinning reflects immediately
-    mixer.update(0)
-    setCurrentTime(action.time)
+    playback.scrub(Math.max(0, Math.min(t, playback.duration || 0)))
   }
 
-  // Simple speed control (stored on action)
   const setSpeed = (s: number) => {
-    const action = currentActionRef.current
-    if (action) action.setEffectiveTimeScale(s)
+    playback.setPlaybackSpeed(s)
   }
 
   return (
@@ -454,7 +234,9 @@ export default function App() {
               const buf = await file.arrayBuffer();
               await loadModel({ name: file.name, data: new Uint8Array(buf) });
             } catch (err: any) {
-              setStatus(`File load error: ${err?.message || err}`);
+              const m = err?.message || String(err)
+              setErrorMsg(`File load error: ${m}`)
+              setStatus(`File load error: ${m}`);
             } finally {
               setIsLoading(false);
               // reset input so same file can be chosen again
@@ -467,6 +249,14 @@ export default function App() {
         </div>
       </div>
 
+      {/* Simple pure error banner (no extra deps) - clear on load or dismiss */}
+      {errorMsg && (
+        <div data-testid="error-banner" className="bg-red-900/80 text-red-200 text-xs px-3 py-1 flex items-center gap-2">
+          <span>{errorMsg}</span>
+          <button className="ml-auto underline" onClick={() => setErrorMsg('')}>dismiss</button>
+        </div>
+      )}
+
       <div className="main-area">
         <div data-testid="outliner" className="sidebar">
           <div className="panel-title">Outliner</div>
@@ -477,12 +267,49 @@ export default function App() {
           </div>
         </div>
 
-        <div data-testid="viewport-container" className="viewport-container">
-          <canvas data-testid="three-canvas" ref={canvasRef} style={{ width: '100%', height: '100%' }} />
+        <div
+          data-testid="viewport-container"
+          className="viewport-container relative"
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={async (e) => {
+            e.preventDefault()
+            const file = e.dataTransfer.files?.[0]
+            if (!file) return
+            setIsLoading(true)
+            setStatus('Loading dropped file...')
+            try {
+              const buf = await file.arrayBuffer()
+              await loadModel({ name: file.name, data: new Uint8Array(buf) })
+            } catch (err: any) {
+              const m = err?.message || String(err)
+              setErrorMsg(`Drop load error: ${m}`)
+              setStatus(`Drop load error: ${m}`)
+            } finally {
+              setIsLoading(false)
+            }
+          }}
+        >
+          <ThreeViewport
+            root={currentRoot}
+            skeleton={currentSkeleton}
+            clips={clips}
+            isPlaying={playback.isPlaying}
+            currentTime={playback.currentTime}
+            currentClipName={playback.currentClipName}
+            playbackSpeed={playback.playbackSpeed}
+            onTimeUpdate={playback.setCurrentTime}
+          />
+          {/* Simple pure loading overlay (no deps) */}
+          {isLoading && (
+            <div data-testid="loading-overlay" className="absolute inset-0 bg-slate-950/60 flex items-center justify-center text-sm text-slate-200 pointer-events-none">
+              Loading model…
+            </div>
+          )}
           <div data-testid="status-text" className={`absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
             {status}
             {isLoading && ' …'}
           </div>
+          <div className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 pointer-events-none">Drop .smf/.glb/.fbx here</div>
         </div>
 
         <div className="inspector">
@@ -500,10 +327,11 @@ export default function App() {
                 {clips.map((c, idx) => (
                   <div
                     key={idx}
-                    className={`cursor-pointer px-1 rounded ${currentClipName === (c.name || `clip_${idx}`) ? 'bg-slate-600' : 'hover:bg-slate-700'}`}
+                    data-testid={`clip-item-${idx}`}
+                    className={`cursor-pointer px-1 rounded ${playback.currentClipName === (c.name || `clip_${idx}`) ? 'bg-slate-600' : 'hover:bg-slate-700'}`}
                     onClick={() => changeClip(c)}
                   >
-                    {c.name || `clip_${idx}`} ({c.duration.toFixed(2)}s)
+                    {c.name || `clip_${idx}`} (${(c.duration || 0).toFixed(2)}s)
                   </div>
                 ))}
               </div>
@@ -515,20 +343,21 @@ export default function App() {
       <div data-testid="timeline" className="timeline">
         <div className="flex items-center gap-2 text-xs mb-1">
           <button onClick={togglePlay} disabled={clips.length === 0}>
-            {isPlaying ? '⏸ Pause' : '▶ Play'}
+            {playback.isPlaying ? '⏸ Pause' : '▶ Play'}
           </button>
-          <button onClick={() => { const a = currentActionRef.current; if (a) { a.time = 0; setCurrentTime(0) } }} disabled={clips.length === 0}>⏮ Reset</button>
+          <button onClick={() => { playback.setCurrentTime(0); /* viewport applies via currentTime prop */ }} disabled={clips.length === 0}>⏮ Reset</button>
           <input
             type="range"
+            data-testid="scrub-slider"
             className="w-80 accent-emerald-500"
             min={0}
-            max={duration || 1}
+            max={playback.duration || 1}
             step={0.01}
-            value={currentTime}
+            value={playback.currentTime}
             onChange={(e) => onScrub(parseFloat(e.target.value))}
             disabled={clips.length === 0}
           />
-          <span className="tabular-nums w-24 text-right">{currentTime.toFixed(2)} / {(duration || 0).toFixed(2)}s</span>
+          <span data-testid="time-display" className="tabular-nums w-24 text-right">{playback.currentTime.toFixed(2)} / {(playback.duration || 0).toFixed(2)}s</span>
           <select className="bg-slate-700 text-xs px-1" onChange={(e) => setSpeed(parseFloat(e.target.value))} disabled={clips.length === 0}>
             <option value="1">1x</option>
             <option value="0.5">0.5x</option>
