@@ -138,6 +138,14 @@ export async function peekSmfAnimBasic(path: string): Promise<string> {
   return invokeCommand<string>('peek_smf_anim_basic', { path })
 }
 
+export async function peekSmfModelBasic(path: string): Promise<string> {
+  const isTauri = isTauriEnv()
+  if (!isTauri) {
+    return 'peekSmfModelBasic only in Tauri desktop'
+  }
+  return invokeCommand<string>('peek_smf_model_basic', { path })
+}
+
 export async function getSmfDesktopInfo(path: string): Promise<string> {
   const isTauri = isTauriEnv()
   if (!isTauri) {

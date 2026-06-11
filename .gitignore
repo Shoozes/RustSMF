@@ -36,6 +36,10 @@ _temp_payload.txt
 /playwright/.cache/
 /e2e/screenshots/
 source/frontend/artifacts/
+source/frontend/playwright-report/
+source/frontend/test-results/
+source/frontend/playwright-report/**
+source/frontend/test-results/**
 source/frontend/tsconfig.tsbuildinfo
 source/frontend/tsconfig.node.tsbuildinfo
 source/frontend/playwright.config.js

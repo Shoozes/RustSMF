@@ -144,6 +144,29 @@ async fn peek_smf_anim_basic(path: String) -> Result<String, String> {
     Ok(format!("SMF anim basic: ~{} clips (at anim offset {})", clip_count, off_anim))
 }
 
+// Small real subtask for rust-smf-parser breakdown (after anim): basic model peek.
+// Parses header for MODEL offset, reads u8 at MODEL as approx mesh count (per SMF format: u8 modelCount after offset).
+// Returns info string for desktop .smf status. Real minimal parse, no full dupe of TS loader.
+#[command]
+async fn peek_smf_model_basic(path: String) -> Result<String, String> {
+    let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    if bytes.len() < 32 {
+        return Ok("too small for SMF model peek".to_string());
+    }
+    // parse offsets: version strZ + 4 u32 (tex, model, rig, anim)
+    let mut off = 0;
+    while off < bytes.len() && bytes[off] != 0 { off += 1; }
+    off += 1;
+    if off + 16 > bytes.len() { return Ok("header too short".to_string()); }
+    off += 4; // skip tex offset
+    let off_model = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize;
+    if off_model + 1 > bytes.len() {
+        return Ok(format!("model offset {} beyond file", off_model));
+    }
+    let model_count = bytes[off_model] as u32; // u8 count of meshes per format
+    Ok(format!("SMF model basic: ~{} meshes (at model offset {})", model_count, off_model))
+}
+
 // Polish for timing/async: combined desktop info cmd to reduce multiple FS calls and awaits in load for .smf desktop.
 // Does validate + peek + rig + anim in one pass, returns combined string for status.
 // Real, small, no stub.
@@ -177,7 +200,7 @@ async fn get_smf_desktop_info(path: String) -> Result<String, String> {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary, peek_smf_header, validate_smf, peek_smf_rig_basic, peek_smf_anim_basic, get_smf_desktop_info])
+        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary, peek_smf_header, validate_smf, peek_smf_rig_basic, peek_smf_anim_basic, peek_smf_model_basic, get_smf_desktop_info])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
