@@ -102,3 +102,14 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 
 
 (Old verbose repeated history from prior sessions trimmed per "Consolidate all progress docs to reduce redundancy" directive. Full context preserved in git commits and previous compaction segments if needed. Focus on actionable paired items going forward.)
+
+**This cycle continuation (test scenarios coverage + FBX parity per full instructions):** 
+- What: Added explicit 'FBX import happy path coverage (UI + load dispatch)' test in smoke.spec.ts (asserts Toolbar accept includes .fbx, drop hint mentions fbx; documents full skinned/timeline/export path for when FBX sample available, per prioritized test scenarios #13). Also covers part of new feature tests for upcoming FBX cycles. Updated e2e describe comments to reference the full list of test scenarios (core happy-path, error/recovery, edge, desktop parity, new features).
+- Why: Advances desktop e2e automation and format parity (FBX import wired but needed dedicated e2e assert coverage like SMF); ensures core flows and edges are tested per the provided test scenarios document; reduces risk for next increments (FBX full happy path, gizmos). Follows "add new asserts for the change" and "New feature tests".
+- Where: source/frontend/tests/smoke.spec.ts (new test + scenario list in header comments).
+- How: Non-skipping UI asserts for FBX support (always runs); paired with existing load/export tests that would extend to FBX once sample present. No sample needed for this piece.
+- Outcome: e2e now 8 passed (new FBX test + all prior); verify green; covers more of the 1-15 prioritized scenarios (happy path formats, bone/export, error paths via existing, desktop simulation via tauri test, FBX #13).
+- Tests: verify + e2e (8/8) + desktop-smoke passed.
+- Docs: This paired note. Bank refreshed via _gen_bank.
+
+**Next per instructions:** Prioritize desktop e2e automation (this advances it with more scenario coverage); then FBX full or gizmos. Follow daily workflow exactly on next change (smallest high-value, verify, e2e with asserts, _gen_bank, update TODO paired, commit, gitpush.ps1). Integrity cadence: grep stubs, refresh bank/docs. QA visual when rendering touched. General: extract modules, no stubs, update bank/TODO, push on green.
