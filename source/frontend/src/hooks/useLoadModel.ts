@@ -25,12 +25,16 @@ export function useLoadModel() {
   // Weight preview toggle for selected bone (Cycle 3 rigging polish follow-up)
   const [showWeightPreview, setShowWeightPreview] = useState(false);
 
+  // Transform mode for gizmo (Cycle 3: small UI buttons for modes)
+  const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
+
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
     model.clear();
     ui.setSelected('Scene');
     ui.clearError();
     setShowWeightPreview(false);
+    setTransformMode('translate');
     const pb = playbackRef.current;
     pb.setIsPlaying(false);
     pb.setCurrentTime(0);
@@ -263,6 +267,10 @@ export function useLoadModel() {
     setShowWeightPreview(v => !v);
   }, []);
 
+  const setTransformModeHandler = useCallback((mode: 'translate' | 'rotate' | 'scale') => {
+    setTransformMode(mode);
+  }, []);
+
   const changeClip = useCallback((clip: THREE.AnimationClip) => {
     playback.selectClip(clip.name || 'clip', clip.duration);
   }, [playback]);
@@ -326,5 +334,7 @@ export function useLoadModel() {
     pingRust,
     showWeightPreview,
     toggleWeightPreview,
+    transformMode,
+    setTransformMode: setTransformModeHandler,
   };
 }

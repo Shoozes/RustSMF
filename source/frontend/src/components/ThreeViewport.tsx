@@ -22,6 +22,8 @@ interface ThreeViewportProps {
   onSelectBone?: (boneName: string) => void;
   selectedBoneName?: string;
   weightPreviewEnabled?: boolean;
+  transformMode?: 'translate' | 'rotate' | 'scale';
+  onSetTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => void;
 }
 
 // SimpleOrbit imported from ../utils/SimpleOrbit (filled modularity dir, single source of truth)
@@ -38,6 +40,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   onSelectBone,
   selectedBoneName,
   weightPreviewEnabled = false,
+  transformMode = 'translate',
+  onSetTransformMode,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -114,9 +118,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       const tc = transformControlsRef.current;
       if (tc) {
         const k = e.key.toLowerCase();
-        if (k === 't') { tc.setMode('translate'); return; }
-        if (k === 'r') { tc.setMode('rotate'); return; }
-        if (k === 's') { tc.setMode('scale'); return; }
+        if (k === 't') { tc.setMode('translate'); if (onSetTransformMode) onSetTransformMode('translate'); return; }
+        if (k === 'r') { tc.setMode('rotate'); if (onSetTransformMode) onSetTransformMode('rotate'); return; }
+        if (k === 's') { tc.setMode('scale'); if (onSetTransformMode) onSetTransformMode('scale'); return; }
       }
       if (e.key.toLowerCase() === 'r') {
         orbit.reset();
@@ -402,12 +406,21 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     });
   }, [weightPreviewEnabled, selectedBoneName, skeleton]);
 
+  // Apply transform mode from prop (for UI buttons) or default.
+  // useEffect to react to prop changes and set on tc.
+  useEffect(() => {
+    const tc = transformControlsRef.current;
+    if (tc && transformMode) {
+      tc.setMode(transformMode);
+    }
+  }, [transformMode]);
+
   // Cycle 3: Transform gizmo for selected bone (basic rigging polish).
   // Reuses the selectedBoneName + skeleton already synced via refs/effects + raycast/list selection.
-  // Attaches TransformControls (translate default; rotate/scale via 3D handles) to the bone Object3D.
+  // Attaches TransformControls (mode controlled by prop from Inspector buttons or default translate; rotate/scale via 3D handles) to the bone Object3D.
   // On change: bone matrices updated; existing boneHighlight marker (in RAF) and Inspector controls reflect live.
   // Dragging pauses orbit (common pattern). Detached on selection clear or unmount.
-  // Quick nudges in Inspector provide precise complement; 3D handles for freeform editing.
+  // Quick nudges + T/R/S buttons in Inspector provide precise + mode control; 3D handles for freeform editing. Keyboard T/R/S also supported.
   useEffect(() => {
     const scene = sceneRef.current;
     const cam = cameraRef.current;
@@ -429,7 +442,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     let tc = transformControlsRef.current;
     if (!tc) {
       tc = new TransformControls(cam, dom);
-      tc.setMode('translate'); // default useful for bone positioning; rotate/scale available via handles or future UI
+      tc.setMode(transformMode || 'translate'); // controlled by prop (UI buttons) or default
       tc.addEventListener('change', () => {
         // Ensure world matrices propagate for skinning + marker follow
         bone.updateMatrixWorld(true);

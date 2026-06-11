@@ -294,4 +294,14 @@ All per philosophy + complete backlog directive. Tree clean post-push. Next: pic
 - Docs/bank: This note; bank refreshed (new paths in groups). Updated active gaps note (this item now complete).
 - New/updated gap: "small UI buttons for modes (prop/callback wiring)" and "full visual QA" still open; weight preview now done.
 
-All per directive. Backlog further reduced. No stubs. Ready for next (e.g. mode buttons or FBX sample or Rust parser).
+**Cycle 3 follow-up (small UI buttons for gizmo modes - prop/callback wiring):** 
+- What: Added `transformMode` state + `setTransformMode` handler in useLoadModel (defaults to 'translate', resets on clear). Wired through App (destructure + pass `transformMode` + `onSetTransformMode` to Viewport and Inspector). In ThreeViewport: prop support + useEffect to tc.setMode when prop changes; also pass setter to onKey so keyboard updates the state (for button highlight sync); updated creation and comments. In Inspector: props + 3 small T/R/S buttons in transform section (highlight active mode, call setter); updated section comment and hint text. Buttons placed after weight viz for nice grouping.
+- Why: Completes the remaining Cycle 3 "small UI buttons for modes (prop/callback wiring)" gap from TODO. Makes gizmo fully usable via mouse (buttons) + keyboard + 3D handles + nudges. High value for editor polish, matches original tool expectations. Small, follows weight preview pattern (state in hook, wiring, UI in inspector, logic in viewport). "No more stubs" (removed "future UI" language). Modular, behavior preserving (keyboard still works, defaults good).
+- Where: source/frontend/src/hooks/useLoadModel.ts (state + handler + clear + return), source/frontend/src/App.tsx (destructure + passes), source/frontend/src/components/Inspector.tsx (props + buttons + comment/hint update), source/frontend/src/components/ThreeViewport.tsx (props + useEffect for mode + onKey sync + creation/comment updates).
+- How: Targeted edits, similar to weight preview. Default 'translate' + active highlighting. Ran full verify + e2e + desktop-smoke immediately (green; no test clicks on new buttons yet). Bank. This paired note.
+- Outcome: Now have T/R/S buttons in Inspector transform area that control gizmo mode live (highlights current). Keyboard syncs the state. Complements everything else. No stubs. e2e unaffected. Completes the gizmo UI polish subtask.
+- Tests: verify Passed; e2e 10/11; desktop-smoke 3/3.
+- Docs/bank: This note; bank refreshed. Updated gaps (this item complete; visual QA etc remain).
+- Remaining: full visual QA (tauri-dev + screenshots), FBX sample, Rust parser, etc.
+
+All per directive. Backlog further reduced (Cycle 3 gizmo now has buttons + viz + modes). No stubs. Ready for next small (e.g. FBX sample or Rust subtask or deeper editor).

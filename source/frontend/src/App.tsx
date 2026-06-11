@@ -27,6 +27,8 @@ export default function App() {
     pingRust,
     showWeightPreview,
     toggleWeightPreview,
+    transformMode,
+    setTransformMode,
   } = useLoadModel();
 
   // Setup keyboard once
@@ -87,6 +89,8 @@ export default function App() {
             onSelectBone={handleSelectBone}
             selectedBoneName={ui.selected}
             weightPreviewEnabled={showWeightPreview}
+            transformMode={transformMode}
+            onSetTransformMode={setTransformMode}
           />
           {/* Simple pure loading overlay (no deps) */}
           {ui.isLoading && (
@@ -110,6 +114,8 @@ export default function App() {
           onSelectBone={handleSelectBone}
           showWeightPreview={showWeightPreview}
           onToggleWeightPreview={toggleWeightPreview}
+          transformMode={transformMode}
+          onSetTransformMode={setTransformMode}
         />
       </div>
 

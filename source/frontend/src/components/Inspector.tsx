@@ -10,6 +10,8 @@ interface InspectorProps {
   onSelectBone?: (boneName: string) => void;
   showWeightPreview?: boolean;
   onToggleWeightPreview?: () => void;
+  transformMode?: 'translate' | 'rotate' | 'scale';
+  onSetTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => void;
 }
 
 const Inspector: React.FC<InspectorProps> = ({
@@ -21,6 +23,8 @@ const Inspector: React.FC<InspectorProps> = ({
   onSelectBone,
   showWeightPreview = false,
   onToggleWeightPreview,
+  transformMode = 'translate',
+  onSetTransformMode,
 }) => {
   // Helper to reduce dupe (modularity/flex)
   const getRootBones = (bones: any[]) => bones.filter((b: any) => !b.parent || !bones.includes(b.parent as any));
@@ -116,8 +120,8 @@ const Inspector: React.FC<InspectorProps> = ({
           </div>
         )}
 
-        {/* Bone transform controls (Cycle 3: 3D TransformControls gizmo in viewport + quick nudges. T/R/S keys set mode.
-            3D marker provides visual feedback. Full IK/vertex weights/keyframe authoring future. */}
+        {/* Bone transform controls (Cycle 3: 3D TransformControls gizmo in viewport + quick nudges + mode buttons.
+            3D marker provides visual feedback. */}
         {selected && selected !== 'Scene' && (
           <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
             <div>Transform for: <span className="font-mono text-amber-300">{selected}</span> (gizmo active in viewport)</div>
@@ -153,7 +157,23 @@ const Inspector: React.FC<InspectorProps> = ({
                 {showWeightPreview ? 'Hide' : 'Show'} Weights
               </button>
             )}
-            <span className="ml-1 text-slate-500">(gizmo + nudges; T/R/S keys for translate/rotate/scale; Space pause anim, anim may override)</span>
+            {onSetTransformMode && (
+              <>
+                <button
+                  className={`ml-1 px-1 py-0 text-xs ${transformMode === 'translate' ? 'bg-slate-500' : 'bg-slate-700 hover:bg-slate-600'}`}
+                  onClick={() => onSetTransformMode('translate')}
+                >T</button>
+                <button
+                  className={`px-1 py-0 text-xs ${transformMode === 'rotate' ? 'bg-slate-500' : 'bg-slate-700 hover:bg-slate-600'}`}
+                  onClick={() => onSetTransformMode('rotate')}
+                >R</button>
+                <button
+                  className={`px-1 py-0 text-xs ${transformMode === 'scale' ? 'bg-slate-500' : 'bg-slate-700 hover:bg-slate-600'}`}
+                  onClick={() => onSetTransformMode('scale')}
+                >S</button>
+              </>
+            )}
+            <span className="ml-1 text-slate-500">(gizmo + nudges; T/R/S buttons or keys for mode; Space pause anim, anim may override)</span>
           </div>
         )}
       </div>
