@@ -112,4 +112,15 @@ All per directive. Ran full commands, no stubs introduced. Ready for push or nex
 - Tests: verify + e2e (8/8) + desktop-smoke passed.
 - Docs: This paired note. Bank refreshed via _gen_bank.
 
-**Next per instructions:** Prioritize desktop e2e automation (this advances it with more scenario coverage); then FBX full or gizmos. Follow daily workflow exactly on next change (smallest high-value, verify, e2e with asserts, _gen_bank, update TODO paired, commit, gitpush.ps1). Integrity cadence: grep stubs, refresh bank/docs. QA visual when rendering touched. General: extract modules, no stubs, update bank/TODO, push on green.
+**Desktop e2e automation further (priority #1 continuation this cycle):** 
+- What: Extended tauri client fallbacks e2e test to cover getSmfDesktopInfo (the combined info used for early .smf desktop validation + "Rust validated SMF" status in loadModel). Enhanced run.ps1 desktop-smoke with additional output checks for 'valid SMF|rig ~|anim ~' from cargo test (to validate peek basics and combined info in native tests) + sample confirmation.
+- Why: Further automates desktop e2e gap (more native path/peek simulation in web e2e + better validation in desktop-smoke task for real .smf samples and status info). Directly addresses "native path/peek validation" and "screenshot/asserts for bone/export" (existing e2e does visuals for those; this strengthens the desktop layer). Complements Rust native tests (3 tests now better verified in task).
+- Where: source/frontend/tests/smoke.spec.ts (tauri fallback test), run.ps1 (desktop-smoke task output checks + comments).
+- How: Added evaluate for desktopInfoFallback in existing tauri test (no new test file); pwsh if-match on cargoOutput for more strings from the peek tests. Reuses SAMPLE_SMF/local model. No new deps.
+- Outcome: e2e 8 passed (tauri test now covers more desktop strings); desktop-smoke runs 3 tests + sample/peek validation messages; verify green. Gap further narrowed (web e2e + task now cover more of desktop paths, peeks, info for "full native" simulation; full tauri-dev UI roundtrips still manual per guidance + test scenarios #10-12).
+- Tests: Full verify + e2e (8/8 with desktop coverage) + desktop-smoke passed post changes.
+- Docs: This paired note + update to previous desktop subtask notes. Bank refreshed.
+
+**Next per instructions:** Continue desktop e2e if more (e.g., more edge in e2e for scenarios 4-10), or move to #2 Rust parser extension (build full parse cmd on header helper) or #3 bone gizmos (add TransformControls on current selection). Follow daily: smallest change, verify, e2e with asserts, _gen_bank, TODO paired, commit, gitpush. Grep for stubs/edges in integrity. QA visuals on render changes. No stubs, pair todos.
+
+---

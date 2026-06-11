@@ -136,6 +136,9 @@ switch -Exact ($Task.ToLowerInvariant()) {
             if ($cargoOutput -match 'model~') {
                 Write-Ok "Rust desktop peek tests used real sample (mixamo or old-src) for native binary read + header/rig/anim/model validation."
             }
+            if ($cargoOutput -match 'valid SMF|rig ~|anim ~') {
+                Write-Ok "Rust tests exercised combined desktop info + rig/anim counts (get_smf_desktop_info, peek basics)."
+            }
             Write-Ok "[SMOKE] Unbundled build + Rust native peek tests complete (3 tests: main peek, validate, header/invalid). See TODO.md (desktop e2e subtask) + the local real .smf for full tauri-dev manual validation of peeks + UI (bone tree, export, native I/O)."
             Pop-Location
         } else {

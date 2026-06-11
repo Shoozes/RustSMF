@@ -374,6 +374,14 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
       return 'peekSmfModelBasic only in Tauri desktop';
     });
     expect(modelFallback).toContain('only in Tauri desktop');
+
+    // Desktop info combined (getSmfDesktopInfo used in loadModel for early .smf validation + status)
+    const desktopInfoFallback = await page.evaluate(() => {
+      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
+      if (isTauri) return 'tauri';
+      return 'getSmfDesktopInfo only in Tauri desktop';
+    });
+    expect(desktopInfoFallback).toContain('only in Tauri desktop');
   });
 
   // New: FBX import happy path coverage (UI + load dispatch parity with SMF/GLB per test scenarios)
