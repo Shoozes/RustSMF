@@ -48,13 +48,14 @@ export function useLoadModel() {
 
       let rustPeekMsg = '';
       let rustValidated = false;
+      // Single dynamic import for all Tauri client fns when on desktop .smf path.
+      // Reduces redundancy (multiple awaits), improves timing (one module load), centralizes.
+      let tauri: any = null;
       if (!data && res.path) {
-        // For desktop .smf, combined info first (using path) before full data read.
-        // Improves timing: early error on bad; one Rust call reduces FS/awaits (was separate validate/peek/rig/anim).
-        // All runtime tauri (including peeks) via dynamic import; only type import for OpenResult (eliminates mixed chunk warning).
         if (name.endsWith('.smf')) {
+          tauri = await import('../backend-client/tauri');
           try {
-            const info = await (await import('../backend-client/tauri')).getSmfDesktopInfo(res.path);
+            const info = await tauri.getSmfDesktopInfo(res.path);
             if (info.includes('invalid')) {
               ui.setErrorMsg(`Invalid SMF (Rust): ${info}`);
               ui.setStatus(info);
@@ -64,18 +65,18 @@ export function useLoadModel() {
             rustValidated = true;
             rustPeekMsg = info;
             try {
-              const m = await (await import('../backend-client/tauri')).peekSmfModelBasic(res.path);
+              const m = await tauri.peekSmfModelBasic(res.path);
               rustPeekMsg = `${rustPeekMsg} | ${m}`;
             } catch {}
           } catch {}
         }
         ui.setStatus('Reading binary from desktop path...');
-        const { readBinaryFile } = await import('../backend-client/tauri');
-        data = await readBinaryFile(res.path);
+        if (!tauri) tauri = await import('../backend-client/tauri');
+        data = await tauri.readBinaryFile(res.path);
       } else if (name.endsWith('.smf') && res.path) {
-        // Browser or data-provided .smf: still do combined for info (no early read opt)
+        tauri = await import('../backend-client/tauri');
         try {
-          const info = await (await import('../backend-client/tauri')).getSmfDesktopInfo(res.path);
+          const info = await tauri.getSmfDesktopInfo(res.path);
           if (info.includes('invalid')) {
             ui.setErrorMsg(`Invalid SMF (Rust): ${info}`);
             ui.setStatus(info);
@@ -85,7 +86,7 @@ export function useLoadModel() {
           rustValidated = true;
           rustPeekMsg = info;
           try {
-            const m = await (await import('../backend-client/tauri')).peekSmfModelBasic(res.path);
+            const m = await tauri.peekSmfModelBasic(res.path);
             rustPeekMsg = `${rustPeekMsg} | ${m}`;
           } catch {}
         } catch {}
