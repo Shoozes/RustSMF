@@ -8,6 +8,12 @@ const THREE_VENDOR_PATTERNS = [
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    dedupe: ['three']
+  },
+  optimizeDeps: {
+    include: ['three']
+  },
   build: {
     manifest: true,
     chunkSizeWarningLimit: 1200,
