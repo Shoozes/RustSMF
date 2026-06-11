@@ -196,7 +196,7 @@
         "source/backend/**"
       ],
       "notes": {
-        "status": "Dirs populated with production code (no stubs). Future lifts (e.g. full context hook, separate timeline comp) easy from here."
+        "status": "UI components extracted from App monolith (Toolbar, Outliner, Inspector, Timeline) per monolith-modularization. App now thin shell (~297 lines, down from 343). Store has playback + type slices for model/ui. Future: more state lift, context or full hook. No stubs."
       }
     },
     "error_handling_and_edge_cases": {

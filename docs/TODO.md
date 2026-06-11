@@ -31,6 +31,7 @@ Next (if open): more e2e (scrub/clip/skel), run.ps1 desktop-smoke doc, optional 
 - UX added (missing feature built): Drag-and-drop on viewport (onDrop loads via same loadModel path; hint text; works for .smf/.glb/.fbx).
 - E2E polished: Added data-testid="time-display"; stronger post-scrub assert on time text update. Added nothing-to-export and drop-hint coverage in smoke.
 - Native Tauri save built (was stub/missing, now complete): Added write_file_binary cmd + registered; saveFile implements full Tauri (dialog + invoke write with Array.from(bytes)); errors now propagate to App error banner for UX. App handleExport unified to saveFile (uses exportSMFToBuffer for SMF). Capability updated with fs note. Dead exportSMF import cleaned from App.
+- Monolith extraction (priority 1): Used monolith-modularization skill to extract Toolbar/Outliner/Inspector/Timeline from App.tsx (App reduced to thin shell + state/handlers). Mechanical moves, behavior preserved, build clean, data-testid intact. Store usage demonstrated.
 - E2E/docs polish: Added coverage for drop hint + nothing-export; bank/docs updated (removed outdated "future" text, consolidated, paired notes).
 - Builds/cargo: Clean.
 - All "no more stubs"; backlog advanced (native save, e2e, modularity, error paths). Features connect safely. Integrity high.

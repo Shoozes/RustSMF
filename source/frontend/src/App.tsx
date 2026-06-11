@@ -6,6 +6,10 @@ import { loadGLB } from './loaders/glb'
 import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer } from './loaders/smf'
 import { loadFBX } from './loaders/fbx'
 import ThreeViewport from './components/ThreeViewport'
+import Timeline from './components/Timeline'
+import Outliner from './components/Outliner'
+import Inspector from './components/Inspector'
+import Toolbar from './components/Toolbar'
 import { usePlaybackSlice } from './store'
 
 // Main application: UI shell + state + loaders. Three.js viewport, scene, orbit, RAF, skinned attach
@@ -212,42 +216,35 @@ export default function App() {
     playback.setPlaybackSpeed(s)
   }
 
+  // File input handler for e2e and toolbar
+  const handleFileInputChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsLoading(true);
+    setStatus('Loading selected file...');
+    try {
+      const buf = await file.arrayBuffer();
+      await loadModel({ name: file.name, data: new Uint8Array(buf) });
+    } catch (err: any) {
+      const m = err?.message || String(err)
+      setErrorMsg(`File load error: ${m}`)
+      setStatus(`File load error: ${m}`);
+    } finally {
+      setIsLoading(false);
+      // reset input so same file can be chosen again
+      (e.target as HTMLInputElement).value = '';
+    }
+  };
+
   return (
     <div className="app-shell">
-      <div className="toolbar">
-        <div className="font-semibold tracking-wide">RustSMF</div>
-        <button data-testid="open-model-btn" onClick={handleOpen} disabled={isLoading}>Open Model (.glb / .smf)</button>
-        <button data-testid="export-btn" onClick={handleExport} disabled={isLoading}>Export (SMF if possible / GLB)</button>
-        <button data-testid="ping-rust-btn" onClick={pingRust} disabled={isLoading}>Ping Rust</button>
-        {/* Persistent hidden file input for reliable e2e file simulation (Playwright setInputFiles) */}
-        <input
-          type="file"
-          data-testid="model-file-input"
-          style={{ display: 'none' }}
-          accept=".smf,.glb,.gltf,.fbx"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            setIsLoading(true);
-            setStatus('Loading selected file...');
-            try {
-              const buf = await file.arrayBuffer();
-              await loadModel({ name: file.name, data: new Uint8Array(buf) });
-            } catch (err: any) {
-              const m = err?.message || String(err)
-              setErrorMsg(`File load error: ${m}`)
-              setStatus(`File load error: ${m}`);
-            } finally {
-              setIsLoading(false);
-              // reset input so same file can be chosen again
-              (e.target as HTMLInputElement).value = '';
-            }
-          }}
-        />
-        <div className="text-xs text-slate-400 ml-auto pr-2">
-          Drag orbit • Wheel zoom • R reset • Space play/pause
-        </div>
-      </div>
+      <Toolbar
+        onOpen={handleOpen}
+        onExport={handleExport}
+        onPing={pingRust}
+        isLoading={isLoading}
+        onFileChange={handleFileInputChange}
+      />
 
       {/* Simple pure error banner (no extra deps) - clear on load or dismiss */}
       {errorMsg && (
@@ -258,14 +255,10 @@ export default function App() {
       )}
 
       <div className="main-area">
-        <div data-testid="outliner" className="sidebar">
-          <div className="panel-title">Outliner</div>
-          <div className="text-xs space-y-0.5">
-            <div className="cursor-pointer hover:bg-slate-700 px-1 rounded" onClick={() => setSelected('Scene')}>Scene Root</div>
-            {clips.length > 0 && <div className="pl-2 text-emerald-400">+ {clips.length} Animation Clips</div>}
-            <div className="y-up-note mt-2">Y-up (Three). SMF Z-up + DQ converted via loaders/coord.ts</div>
-          </div>
-        </div>
+        <Outliner
+          clipsCount={clips.length}
+          onSelectScene={() => setSelected('Scene')}
+        />
 
         <div
           data-testid="viewport-container"
@@ -312,62 +305,24 @@ export default function App() {
           <div className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 pointer-events-none">Drop .smf/.glb/.fbx here</div>
         </div>
 
-        <div className="inspector">
-          <div className="panel-title">Inspector</div>
-          <div className="text-xs">
-            <div className="mb-1 text-slate-400">Selected</div>
-            <div className="font-mono text-amber-300 break-all">{selected}</div>
-            <div className="mt-3 text-[10px] text-slate-400">
-              Real SkinnedMesh + Skeleton + clips loaded here.<br />
-              Timeline below drives the AnimationMixer.
-            </div>
-            {clips.length > 0 && (
-              <div className="mt-3">
-                <div className="panel-title">Clips</div>
-                {clips.map((c, idx) => (
-                  <div
-                    key={idx}
-                    data-testid={`clip-item-${idx}`}
-                    className={`cursor-pointer px-1 rounded ${playback.currentClipName === (c.name || `clip_${idx}`) ? 'bg-slate-600' : 'hover:bg-slate-700'}`}
-                    onClick={() => changeClip(c)}
-                  >
-                    {c.name || `clip_${idx}`} (${(c.duration || 0).toFixed(2)}s)
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <Inspector
+          selected={selected}
+          clips={clips}
+          currentClipName={playback.currentClipName}
+          onChangeClip={changeClip}
+        />
       </div>
 
-      <div data-testid="timeline" className="timeline">
-        <div className="flex items-center gap-2 text-xs mb-1">
-          <button onClick={togglePlay} disabled={clips.length === 0}>
-            {playback.isPlaying ? '⏸ Pause' : '▶ Play'}
-          </button>
-          <button onClick={() => { playback.setCurrentTime(0); /* viewport applies via currentTime prop */ }} disabled={clips.length === 0}>⏮ Reset</button>
-          <input
-            type="range"
-            data-testid="scrub-slider"
-            className="w-80 accent-emerald-500"
-            min={0}
-            max={playback.duration || 1}
-            step={0.01}
-            value={playback.currentTime}
-            onChange={(e) => onScrub(parseFloat(e.target.value))}
-            disabled={clips.length === 0}
-          />
-          <span data-testid="time-display" className="tabular-nums w-24 text-right">{playback.currentTime.toFixed(2)} / {(playback.duration || 0).toFixed(2)}s</span>
-          <select className="bg-slate-700 text-xs px-1" onChange={(e) => setSpeed(parseFloat(e.target.value))} disabled={clips.length === 0}>
-            <option value="1">1x</option>
-            <option value="0.5">0.5x</option>
-            <option value="2">2x</option>
-          </select>
-        </div>
-        <div className="text-[10px] text-slate-400">
-          Real AnimationMixer + tracks from imported clips. SMF dual-quat converted in loaders/coord + smf.ts. Load a real .smf from docs/references/old-src/datafiles/SMF/ to see it in action.
-        </div>
-      </div>
+      <Timeline
+        isPlaying={playback.isPlaying}
+        currentTime={playback.currentTime}
+        duration={playback.duration}
+        onTogglePlay={togglePlay}
+        onReset={() => playback.setCurrentTime(0)}
+        onScrub={onScrub}
+        onSpeedChange={setSpeed}
+        disabled={clips.length === 0}
+      />
     </div>
   )
 }
