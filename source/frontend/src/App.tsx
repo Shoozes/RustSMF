@@ -88,7 +88,7 @@ export default function App() {
             {ui.status}
             {ui.isLoading && ' …'}
           </div>
-          <div className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 pointer-events-none">Drop .smf/.glb/.fbx here</div>
+          <div className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 pointer-events-none">Drop .smf/.glb/.fbx/.obj here</div>
         </div>
 
         <Inspector

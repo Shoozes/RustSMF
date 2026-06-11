@@ -3,6 +3,7 @@ import type { OpenResult } from '../backend-client/tauri';
 import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer } from '../loaders';
 import { loadGLB } from '../loaders';
 import { loadFBX } from '../loaders';
+import { loadOBJ } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
 
 /**
@@ -102,6 +103,9 @@ export function useLoadModel() {
       } else if (name.endsWith('.fbx')) {
         const urlOrBuf: string | ArrayBuffer = data ? data.buffer : (res.path || '');
         loaded = await loadFBX(urlOrBuf);
+      } else if (name.endsWith('.obj')) {
+        const urlOrBuf: string | ArrayBuffer = data ? data.buffer : (res.path || '');
+        loaded = await loadOBJ(urlOrBuf);
       } else {
         const urlOrBuf: string | ArrayBuffer = data ? data.buffer : (res.path || '');
         loaded = await loadGLB(urlOrBuf);

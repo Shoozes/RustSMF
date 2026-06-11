@@ -32,7 +32,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         type="file"
         data-testid="model-file-input"
         style={{ display: 'none' }}
-        accept=".smf,.glb,.gltf,.fbx"
+        accept=".smf,.glb,.gltf,.fbx,.obj"
         onChange={onFileChange}
       />
       <div className="text-xs text-slate-400 ml-auto pr-2">
