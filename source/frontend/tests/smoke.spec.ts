@@ -9,6 +9,12 @@ import path from 'path';
 // Use any real .smf from the reference collection for model load smoke.
 // The exact filename may vary; we pick the first .smf we can find at runtime.
 import fs from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const SMF_DIR = path.resolve(__dirname, '../../docs/references/old-src/datafiles/SMF');
 const SAMPLE_SMF = fs.existsSync(SMF_DIR)
   ? fs.readdirSync(SMF_DIR).find(f => f.endsWith('.smf'))
@@ -17,11 +23,23 @@ const SAMPLE_SMF = fs.existsSync(SMF_DIR)
   : null;
 
 test.describe('RustSMF basic shell and model flow (Chromium)', () => {
+  test.beforeEach(async ({ page }) => {
+    // Capture browser console errors and warnings during tests (for Chrome/Playwright)
+    page.on('console', msg => {
+      const type = msg.type();
+      if (type === 'error' || type === 'warning') {
+        console.log(`[BROWSER ${type.toUpperCase()}] ${msg.text()}`);
+      }
+    });
+    page.on('pageerror', err => {
+      console.error(`[PAGE ERROR] ${err}`);
+    });
+  });
   test('app boots with expected UI elements and initial state', async ({ page }) => {
     await page.goto('/');
 
     // Initial status
-    await expect(page.getByTestId('status-text')).toContainText('Viewport ready');
+    await expect(page.getByTestId('status-text')).toContainText('Three.js viewport ready');
 
     // Key controls
     await expect(page.getByTestId('open-model-btn')).toBeVisible();

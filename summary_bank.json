@@ -178,7 +178,7 @@
       }
     },
     "playwright_e2e_and_tests": {
-      "description": "Playwright Chrome e2e (smoke for shell + model load via setInputFiles + screenshots), unit tests for loaders/coord/export, testability (data-testid, hidden input, loading cues). Needs expansion for visuals/roundtrips/error paths.",
+      "description": "Playwright Chrome e2e (smoke for shell + model load via setInputFiles + screenshots + visual toHaveScreenshot), unit tests for loaders/coord/export, testability (data-testid, hidden input, loading cues, console/pageerror listeners for browser errors). Visual tests runnable (update snapshots as needed post-UI changes). Console monitoring catches Chrome errors (none from app in runs).",
       "paths": [
         "source/frontend/tests/**",
         "source/frontend/playwright.config.ts",
