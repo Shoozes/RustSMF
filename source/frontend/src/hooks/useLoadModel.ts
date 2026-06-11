@@ -51,6 +51,14 @@ export function useLoadModel() {
         data = await readBinaryFile(res.path);
       }
 
+      // Optional Rust peek for .smf desktop (real header peek command, advances rust-smf-parser)
+      if (name.endsWith('.smf') && res.path) {
+        try {
+          const peek = await (await import('../backend-client/tauri')).peekSmfHeader(res.path);
+          ui.setStatus(peek);
+        } catch {}
+      }
+
       if (name.endsWith('.smf')) {
         if (!data) {
           throw new Error('Could not obtain binary data for .smf (browser provides via input; desktop uses read_file_binary)');

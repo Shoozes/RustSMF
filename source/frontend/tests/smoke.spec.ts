@@ -22,6 +22,8 @@ const SAMPLE_SMF = fs.existsSync(SMF_DIR)
     : null
   : null;
 
+const BAD_GML = path.resolve(__dirname, '../../docs/references/old-src/objects/oAnimEditMessage/Alarm_0.gml');
+
 test.describe('RustSMF basic shell and model flow (Chromium)', () => {
   test.beforeEach(async ({ page }) => {
     // Capture browser console errors and warnings during tests (for Chrome/Playwright)
@@ -189,5 +191,24 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     // Drop zone hint is present (for drag-drop UX)
     await expect(page.locator('text=/Drop .* here/')).toBeAttached();
+  });
+
+  test('handles invalid file load with error banner and status (error path)', async ({ page }) => {
+    test.skip(!fs.existsSync(BAD_GML), 'No bad test file for error path');
+
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(BAD_GML);
+
+    // Wait for attempt to finish
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 10000 });
+
+    // Should show error UX
+    await expect(page.getByTestId('error-banner')).toBeAttached();
+    await expect(page.getByTestId('status-text')).toContainText(/error|Error|fail|unsupported/i);
+
+    // Canvas still present (no crash)
+    await expect(page.getByTestId('three-canvas')).toBeVisible();
   });
 });

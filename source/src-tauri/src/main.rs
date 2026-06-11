@@ -54,10 +54,31 @@ async fn write_file_binary(path: String, data: Vec<u8>) -> Result<(), String> {
     std::fs::write(&path, data).map_err(|e| format!("Failed to write {}: {}", path, e))
 }
 
+#[command]
+async fn peek_smf_header(path: String) -> Result<String, String> {
+    // Real (not stub) small SMF header peek for desktop validation / rust-smf-parser progress.
+    // Reads initial bytes, extracts version strZ if present (SMF_v11 or v12).
+    // Frontend can call optionally for .smf desktop loads to surface Rust I/O early.
+    let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    if bytes.is_empty() {
+        return Ok("empty file".to_string());
+    }
+    let mut s = String::new();
+    for &b in bytes.iter().take(64) {
+        if b == 0 { break; }
+        s.push(b as char);
+    }
+    if s.starts_with("SMF_v") {
+        Ok(format!("Rust SMF peek: {}", s))
+    } else {
+        Ok("not SMF header or unknown".to_string())
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary])
+        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary, peek_smf_header])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

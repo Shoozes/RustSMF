@@ -117,12 +117,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       raycasterRef.current.setFromCamera(mouseRef.current, cam);
       let closest: any = null;
       let minDist = Infinity;
-      const threshold = 0.9;
+      const maxDist = 1.5; // tuned for typical model scale; increase for distant clicks
       skel.bones.forEach((bone: any) => {
         if (!bone) return;
         const pos = bone.getWorldPosition(new THREE.Vector3());
         const dist = raycasterRef.current.ray.distanceToPoint(pos);
-        if (dist < minDist && dist < threshold) {
+        if (dist < minDist && dist < maxDist) {
           minDist = dist;
           closest = bone;
         }

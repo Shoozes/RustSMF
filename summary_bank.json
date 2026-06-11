@@ -475,6 +475,8 @@
         "roundtrip_fidelity: complete (unit real-sample cycle + e2e export + screenshot).",
         "edge_cases + playback: RAF time reporting + prop-driven scrub/pause/clip/speed in viewport (effects separated from attach). Corrupt SMF throws caught to banner. Non-skinned fallbacks exist. Timing stable post-deps fix.",
         "raycast_bone_3d_pick: implemented (ThreeViewport canvas 'click' handler + Raycaster + bone.getWorldPosition + ray dist threshold pick; refs for latest skeleton/cb; prop wired from App to reuse ui selected for Inspector highlight sync). Complements list selection. E2E canvas clicks + full verify exercise it. No deps/scene changes. Threshold tuned. (was listed as optional next; now built per 'if missing build it').",
+        "rust_smf_peek: real (non-stub) peek_smf_header cmd in Rust (reads header bytes, extracts SMF_v strZ or not). Registered + exposed in tauri client + optionally called early for desktop .smf loads (status). Small step for rust-smf-parser group.",
+        "e2e_error_paths: added dedicated test for invalid file (bad .gml load -> error banner + status assert). Reinforced bone/raycast selection coverage.",
         "integrity_pass_2026-06: eslint config migrated to flat (removed extends, restricted ts files, added node globals for scripts) + run.ps1 verify made robust/accurate (proper exit capture + chunk guard + clean 'Passed' msg). summary_bank auto-refreshed via _gen_bank (added source files to harness group, dropped missing plan.md). All direct builds (lint/build/cargo) + verify + targeted e2e green. No critical stubs or new issues. Glb approx DQ remains documented intentional fallback."
       ],
       "files": [

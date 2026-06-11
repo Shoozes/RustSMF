@@ -26,6 +26,12 @@ export default function App() {
     pingRust,
   } = useLoadModel();
 
+  // Polish: on bone select from list or 3D raycast, update selection + status for UX
+  const handleSelectBone = (name: string) => {
+    ui.setSelected(name);
+    ui.setStatus(`Selected: ${name}`);
+  };
+
   // Setup keyboard once
   useEffect(() => {
     const cleanup = setupKeyboard();
@@ -87,7 +93,7 @@ export default function App() {
             currentClipName={playback.currentClipName}
             playbackSpeed={playback.playbackSpeed}
             onTimeUpdate={playback.setCurrentTime}
-            onSelectBone={(name) => ui.setSelected(name)}
+            onSelectBone={handleSelectBone}
           />
           {/* Simple pure loading overlay (no deps) */}
           {ui.isLoading && (
@@ -108,7 +114,7 @@ export default function App() {
           currentClipName={playback.currentClipName}
           onChangeClip={changeClip}
           skeleton={model.skeleton}
-          onSelectBone={(name) => ui.setSelected(name)}
+          onSelectBone={handleSelectBone}
         />
       </div>
 

@@ -103,3 +103,12 @@ Next per gaps/TODO: optional raycast in viewport for bone 3D pick (list select s
 - Docs updated here + TODO (paired what/why/where/how). Bank covers via existing threejs_viewport_core group.
 
 Remaining per gaps: deeper e2e error cases, optional Rust parser (design keeps frontend 3D ownership), FBX export (intentionally limited). Run verify + push after edits. Builds green.
+
+**Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research confirmed remaining: deeper error e2e, Rust optional, FBX limited. Broke down and actioned:
+- e2e error: new test using BAD_GML (Alarm_0.gml from old-src), asserts banner + error status on invalid load. Bone/raycast clicks reinforced.
+- Raycast: small polish (maxDist 1.5, selection logic).
+- UX: bone select now also sets friendly status via shared handler.
+- Rust: implemented real peek_smf_header (header strZ parse) + client + optional wire in .smf desktop load. No stubs. Cargo clean.
+- Verify full passed, builds ok. Docs/bank appended with pairs.
+
+Core remains no-stubs, connected, pushed.

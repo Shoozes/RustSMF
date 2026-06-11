@@ -139,6 +139,17 @@ What/why/where/how:
 See summary_bank current_gaps_and_issues (updated), APP_STATE (current state), run.ps1, source/frontend (lint fixed). All per philosophy + directive. Ready.
 
 **Auto research/recap/decide/design/build/test/fix/polish (current continuation):** Followed directive exactly. Research (reads of post-push TODO/APP_STATE/bank/git/greps/code, verify baseline) showed core solid, explicit next = raycast 3D bone pick + deeper e2e. No new stubs (greps clean, only old reports). Broke raycast into subtasks (design math + refs for stable handler, impl in init effect + cleanup, wire prop, test click exercise, build validate). 
+
+This pass continued: 
+- Deeper e2e error paths: Added BAD_GML test file resolve + dedicated test 'handles invalid file load with error banner and status' (sets bad .gml, asserts error-banner attached + status has error text, canvas survives). Reinforced bone/raycast clicks. Full e2e exercises it.
+- Raycast polish: Raised effective maxDist to 1.5, improved closest selection logic comment.
+- Small UX polish: Added handleSelectBone that sets selected + status(`Selected: ${name}`) for both list and 3D pick (wired to Inspector + Viewport).
+- Rust optional (real, no stub): Added peek_smf_header command in main.rs (reads ~64B, extracts SMF_v* strZ version or not-SMF). Registered. Exposed in tauri client. Wired optional early call in useLoadModel for desktop .smf (sets Rust peek status before full load). Real progress on rust-smf-parser group, desktop validation.
+- All broken down, built, tested (verify Passed, builds clean including cargo for new cmd).
+
+Remaining: FBX export limited (by design), full Rust parser (bigger, future), more e2e if assets added. 
+
+All per directive. 
 - Built: raycast in ThreeViewport (new onSelectBone prop + THREE.Raycaster + mouse, click listener on canvas using 'click' for non-drag select, bone.getWorldPosition + ray.distanceToPoint + threshold pick closest, refs to avoid stale closures on skeleton/cb, no scene objects, no deps). Wired in App (same setSelected callback as inspector list). Inspector auto-highlights via existing selected === name. Handles no-skel gracefully.
 - Why: Completes bidirectional bone selection (list + now 3D viewport click) for editor feel from original SMF tool; connects viewport to inspector state. Small self-contained addition.
 - Where/how: ThreeViewport.tsx (handler + listener in base effect), App.tsx (prop pass), tests (canvas click + bone list). Threshold ~0.9 world units tuned for models.

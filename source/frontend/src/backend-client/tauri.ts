@@ -103,3 +103,11 @@ export async function readBinaryFile(path: string): Promise<Uint8Array> {
   const bytes: number[] = await invokeCommand<number[]>('read_file_binary', { path })
   return new Uint8Array(bytes)
 }
+
+export async function peekSmfHeader(path: string): Promise<string> {
+  const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+  if (!isTauri) {
+    return 'peek_smf_header only in Tauri desktop'
+  }
+  return invokeCommand<string>('peek_smf_header', { path })
+}
