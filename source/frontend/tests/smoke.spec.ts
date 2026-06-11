@@ -7,6 +7,14 @@ import path from 'path';
 // of load, bones (collapsible hierarchy tree), animation, export, OBJ fallback, etc.
 // For visuals, add toHaveScreenshot after load (see roundtrip item in TODO).
 
+// Desktop / native Tauri path coverage (highest-priority tracked gap):
+// - Real binary FS reads + SMF peeks (getSmfDesktopInfo, peek_*_basic, validate, read_file_binary, write) happen only when __TAURI__ present.
+// - Web Playwright e2e (this file) exercises the shared TS loadModel / export / UI / listeners / fallback paths using data from setInputFiles.
+// - Native peek + early validation logic is automated via Rust #[test] in src-tauri/src/main.rs (actual std::fs reads + header/rig/anim/model offset parsing against the local mixamo sample when present).
+// - run.ps1 desktop-smoke now runs the unbundled tauri build + cargo test (real native binary + peek smoke).
+// - For full end-to-end native UI + dialog + save roundtrips: manual `run.ps1 -Task tauri-dev` then load the local mixamo_smf_baldguy.smf and inspect status for "Rust validated SMF | ..." + bone tree + export. (Future: tauri-driver for true automated desktop webview e2e if deps allowed.)
+// Keep web e2e primary + fast; Rust + run.ps1 task provides the Tauri-specific real-binary validation.
+
 // Prefer the real local test .smf (mixamo_smf_baldguy.smf) added to this directory
 // for reliable, non-skipping e2e coverage of load, bones (incl. collapsible hierarchy),
 // animation, export, etc. Falls back to old-src samples if the local one is removed.

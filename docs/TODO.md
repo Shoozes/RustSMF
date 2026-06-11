@@ -61,6 +61,17 @@ All per directive. Ran full verify (Passed), e2e (clean, visuals+console good), 
 
 **Integrity pass + push (re-confirmation 2026-06-11):** Fresh git clean (post prior push), re-greps (only known documented glb placeholders + "Real (not stub)" Rust comments), full re-runs: verify Passed (lint/build/chunks/cargo clean), e2e 5/6 passed (same benign warnings only; listeners confirm 0 app errors), cargo 0 warnings. Bank gen re-run. Small sharpen: made 'invalid file' error-path test robust (now uses reliable fallback this .ts spec when no .gml in env; removes skip flakiness while preserving banner/status/canvas asserts + error UX coverage). No new stubs/broken/drift. Docs appended with this pass. Tree cleaned of reports. Commit + gitpush.
 
+**Desktop e2e gap progress (task #1 per latest suggestions, 2026-06-11 cycle):** 
+- What: Small high-value automated increment for native desktop path (real binary read + SMF peeks/early validation) without new deps or changing web e2e focus.
+- Why: Highest priority per build.md; locks down the Rust Tauri command layer (get_smf_desktop_info + all peek_* + read_file_binary) that only runs in desktop; complements web Playwright (which covers shared TS + UI with fallbacks); reduces reliance on purely manual steps.
+- Where: source/src-tauri/src/main.rs (new #[cfg(test)] smoke for real fs + offset parse against local mixamo_smf_baldguy.smf), run.ps1 (enhanced desktop-smoke now runs cargo tauri build --no-bundle + cargo test), source/frontend/tests/smoke.spec.ts (added clear strategy comment block explaining web vs Rust-native vs manual tauri-dev coverage; error path already made robust in prior sharpen so 6/6 e2e now passes reliably).
+- How: Added real sample-driven test in Rust that does the exact same byte reads + header/rig/anim/model parsing as the Tauri commands (finds the e2e local mixamo when present, graceful otherwise). Updated desktop-smoke task to invoke cargo test and updated its messaging. Extended spec with desktop coverage notes (keeps Playwright web-focused + fast). 
+- Outcome: cargo test / desktop-smoke now automatically validates native binary + peek layer when sample present (in this workspace it did full parse + count asserts). Full e2e now 6 passed (error path exercised). verify green. Manual tauri-dev + local model still recommended for full UI/native dialog/save/peek status ("Rust validated SMF | SMF model basic..."). Subtask advanced; gap narrowed but not 100% closed (true webview automation would need tauri-driver later).
+- Tests: verify Passed, e2e 6/6, cargo test (peek smoke) ok, desktop-smoke task successful.
+- Docs: This paired note + cross-refs in APP_STATE.
+
+All per directive. Ran full commands, no stubs introduced. Ready for push or next (FBX or bone editor).
+
 ---
 
 
