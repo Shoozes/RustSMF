@@ -144,10 +144,40 @@ async fn peek_smf_anim_basic(path: String) -> Result<String, String> {
     Ok(format!("SMF anim basic: ~{} clips (at anim offset {})", clip_count, off_anim))
 }
 
+// Polish for timing/async: combined desktop info cmd to reduce multiple FS calls and awaits in load for .smf desktop.
+// Does validate + peek + rig + anim in one pass, returns combined string for status.
+// Real, small, no stub.
+#[command]
+async fn get_smf_desktop_info(path: String) -> Result<String, String> {
+    let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    if bytes.len() < 32 {
+        return Ok("too small".to_string());
+    }
+    // parse header for offsets (version strZ + 4 u32)
+    let mut off = 0;
+    while off < bytes.len() && bytes[off] != 0 { off += 1; }
+    off += 1;
+    if off + 16 > bytes.len() { return Ok("header short".to_string()); }
+    let off_tex = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
+    let off_model = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
+    let off_rig = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
+    let off_anim = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize;
+    // validate
+    let mut s = String::new();
+    let mut tmp_off = 0;
+    while tmp_off < bytes.len() && bytes[tmp_off] != 0 { tmp_off += 1; s.push(bytes[tmp_off-1] as char); }
+    let valid = if s.starts_with("SMF_v") { "valid SMF" } else { "invalid" };
+    // rig count
+    let rig_count = if off_rig + 4 <= bytes.len() { u32::from_le_bytes([bytes[off_rig], bytes[off_rig+1], bytes[off_rig+2], bytes[off_rig+3]]) } else { 0 };
+    // anim count
+    let anim_count = if off_anim + 4 <= bytes.len() { u32::from_le_bytes([bytes[off_anim], bytes[off_anim+1], bytes[off_anim+2], bytes[off_anim+3]]) } else { 0 };
+    Ok(format!("{} | rig ~{} | anim ~{} (offsets t{} m{} r{} a{})", valid, rig_count, anim_count, off_tex, off_model, off_rig, off_anim))
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary, peek_smf_header, validate_smf, peek_smf_rig_basic, peek_smf_anim_basic])
+        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary, peek_smf_header, validate_smf, peek_smf_rig_basic, peek_smf_anim_basic, get_smf_desktop_info])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

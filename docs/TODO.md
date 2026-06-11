@@ -191,6 +191,18 @@ All per directive + philosophy. No stubs. Features connect (peek info in status,
 
 See updated APP_STATE, bank (rust_parser_breakdown, e2e items). Continue loop.
 
+**Auto research/recap/decide/design/build/test/fix/polish (this continuation):** Research (docs/bank post-anim, git clean, verify Passed, greps clean, source for load/e2e/Rust) showed state solid (no stubs, desktop status with combined Rust info, e2e robust). Remaining: deeper desktop e2e, more Rust (e.g. full), FBX limited.
+
+Actioned (small, per breakdown):
+- Rust/polish: Added real `get_smf_desktop_info` combined cmd (validate + peek + rig + anim in one, reduces calls/FS/awaits for timing). Wired in useLoadModel (replaces separate for desktop .smf; early error + status from one info). (what: consolidate Rust calls for desktop .smf load, why: better async/timing (one call vs 4), less redundant, where: main.rs + tauri client + useLoadModel, how: single parse returning combined; simplify hook if/else).
+- E2E: Cache already in place; confirmed bone test (with count assert) in runs.
+- Docs/bank: Appended with pairs; gaps updated (combined info polish, e2e).
+- Polish: Load flow now uses combined before read for desktop .smf (good for edges/timing); browser path preserved.
+
+All per directive. Features connect (unified Rust info in status + e2e select). Verify/e2e clean. Push next. Remaining tracked.
+
+See bank/ TODO for pairs. No stubs. Continue.
+
 **Auto research/recap/decide/design/build/test/fix/polish (this continuation):** Research (docs/bank post-rig, git clean, verify Passed, greps clean no stubs, source for load/e2e/Rust) showed state solid (rig/anim in status for desktop, e2e bone coverage). Remaining: deeper desktop e2e, more Rust (e.g. full anim), FBX limited.
 
 Actioned (small, breakdown):

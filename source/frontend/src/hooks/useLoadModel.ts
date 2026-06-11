@@ -50,52 +50,35 @@ export function useLoadModel() {
       let rustPeekMsg = '';
       let rustValidated = false;
       if (!data && res.path) {
-        // For desktop .smf, validate/peek first (using path) before full data read.
-        // Improves timing: avoid reading large bad/corrupt files; early error.
-        // Reduces redundant FS in Rust (peek + validate both read).
+        // For desktop .smf, combined info first (using path) before full data read.
+        // Improves timing: early error on bad; one Rust call reduces FS/awaits (was separate validate/peek/rig/anim).
         if (name.endsWith('.smf')) {
           try {
-            const val = await (await import('../backend-client/tauri')).validateSmf(res.path);
-            if (val.includes('invalid')) {
-              ui.setErrorMsg(`Invalid SMF (Rust validate): ${val}`);
-              ui.setStatus(val);
+            const info = await (await import('../backend-client/tauri')).getSmfDesktopInfo(res.path);
+            if (info.includes('invalid')) {
+              ui.setErrorMsg(`Invalid SMF (Rust): ${info}`);
+              ui.setStatus(info);
               ui.setIsLoading(false);
               return;
             }
             rustValidated = true;
-            rustPeekMsg = await (await import('../backend-client/tauri')).peekSmfHeader(res.path);
-            try {
-              const rig = await (await import('../backend-client/tauri')).peekSmfRigBasic(res.path);
-              if (rig) rustPeekMsg = `${rustPeekMsg} | ${rig}`;
-            } catch {}
-            try {
-              const anim = await (await import('../backend-client/tauri')).peekSmfAnimBasic(res.path);
-              if (anim) rustPeekMsg = `${rustPeekMsg} | ${anim}`;
-            } catch {}
+            rustPeekMsg = info;
           } catch {}
         }
         ui.setStatus('Reading binary from desktop path...');
         data = await readBinaryFile(res.path);
       } else if (name.endsWith('.smf') && res.path) {
-        // Browser or data-provided .smf: still do peek/validate for info (no early read optimization)
+        // Browser or data-provided .smf: still do combined for info (no early read opt)
         try {
-          rustPeekMsg = await (await import('../backend-client/tauri')).peekSmfHeader(res.path);
-          const val = await (await import('../backend-client/tauri')).validateSmf(res.path);
-          if (val.includes('invalid')) {
-            ui.setErrorMsg(`Invalid SMF (Rust validate): ${val}`);
-            ui.setStatus(val);
+          const info = await (await import('../backend-client/tauri')).getSmfDesktopInfo(res.path);
+          if (info.includes('invalid')) {
+            ui.setErrorMsg(`Invalid SMF (Rust): ${info}`);
+            ui.setStatus(info);
             ui.setIsLoading(false);
             return;
           }
           rustValidated = true;
-          try {
-            const rig = await (await import('../backend-client/tauri')).peekSmfRigBasic(res.path);
-            if (rig) rustPeekMsg = `${rustPeekMsg} | ${rig}`;
-          } catch {}
-          try {
-            const anim = await (await import('../backend-client/tauri')).peekSmfAnimBasic(res.path);
-            if (anim) rustPeekMsg = `${rustPeekMsg} | ${anim}`;
-          } catch {}
+          rustPeekMsg = info;
         } catch {}
       }
 
