@@ -286,6 +286,9 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     if (await toggle.count() > 0) {
       await toggle.click({ force: true }).catch(() => {});
       await page.waitForTimeout(60);
+      // Double-toggle to test both collapse and re-expand states
+      await toggle.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(60);
     }
 
     // Canvas/raycast click for 3D select
