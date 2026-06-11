@@ -1,0 +1,10 @@
+{
+  "identifier": "default",
+  "description": "default capability for RustSMF",
+  "local": true,
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "dialog:default"
+  ]
+}

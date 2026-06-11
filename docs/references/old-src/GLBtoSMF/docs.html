@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>GLB → SMF Exporter Documentation</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: Arial, sans-serif; }
+    .toc a { color: #1d4ed8; }
+    .toc a:hover { text-decoration: underline; }
+    details summary { cursor: pointer; font-weight: bold; margin-bottom: .5rem; }
+    code { background: #f3f4f6; padding: 2px 4px; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <div class="max-w-4xl mx-auto p-6">
+    <h1 class="text-3xl font-bold mb-6">GLB → SMF Exporter Documentation</h1>
+
+    <!-- Table of Contents -->
+    <nav class="mb-8">
+      <h2 class="text-2xl font-semibold mb-2">Contents</h2>
+      <ul class="list-disc pl-6 space-y-1 toc">
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#project-structure">Project Structure</a></li>
+        <li><a href="#setup">Setup & Serving</a></li>
+        <li><a href="#usage">Usage</a></li>
+        <li><a href="#modules">Key Modules</a></li>
+        <li><a href="#common-pitfalls">Common Pitfalls</a></li>
+        <li><a href="#license">License</a></li>
+      </ul>
+    </nav>
+
+    <!-- Overview -->
+    <section id="overview" class="mb-8">
+      <h2 class="text-2xl font-semibold mb-2">Overview</h2>
+      <p>
+        This tool imports a GLB/GLTF file, extracts its meshes, textures, bones, and animations, and repacks them into a compact <code>.smf</code> binary format (v12). A React-based UI (no JSX) allows you to upload, preview, convert, and download—all in the browser. Recent updates (July 2025) resolved buffer overrun errors by implementing non-indexed triangle lists. Current development (July 2025) focuses on ensuring rig attachment and correcting skinning mismatches in the SMF editor, with ongoing debugging of bone transformations and dual-quaternions.
+      </p>
+    </section>
+
+    <!-- Project Structure -->
+    <section id="project-structure" class="mb-8">
+      <h2 class="text-2xl font-semibold mb-2">Project Structure</h2>
+      <pre class="bg-gray-100 p-4 rounded text-sm overflow-auto">
+./
+├── index.html              ❏ entry-point, importmaps, mount point
+├── CustomSkeletonHelper.js ❏ Three.js bone helper overlay
+├── DebugLogger.js          ❏ captures & displays console logs
+├── ModelLoader.js          ❏ FBX/GLTF loading & normalization
+├── Utils.js                ❏ error wrappers, matrix helpers
+├── unpacker.js             ❏ GLB → structured JSON data with triangulation and rig prep
+├── exporter.js             ❏ structured data → SMF Blob URL with rig and skinning export
+├── main.js                 ❏ React UI (pure createElement)
+└── docs.html               ❏ this documentation
+      </pre>
+    </section>
+
+    <!-- Setup -->
+    <section id="setup" class="mb-8">
+      <h2 class="text-2xl font-semibold mb-2">Setup & Serving</h2>
+      <ul class="list-disc pl-6 space-y-1">
+        <li>Clone or download the repo into a folder.</li>
+        <li>
+          <strong>Important:</strong> <code>index.html</code> must be served via a local HTTP server
+          to avoid CORS issues when loading binary assets. For example:
+          <pre class="inline-block bg-gray-100 p-2 rounded">python -m http.server 8000</pre>
+        </li>
+        <li>
+          Open <code>http://localhost:8000/</code> in a modern browser (must support ES modules).
+        </li>
+      </ul>
+    </section>
+
+    <!-- Usage -->
+    <section id="usage" class="mb-8">
+      <h2 class="text-2xl font-semibold mb-2">Usage</h2>
+      <ol class="list-decimal pl-6 space-y-1">
+        <li>Click “Choose File” and select your <code>.glb</code> (or <code>.gltf</code>).</li>
+        <li>The debug logger pane (bottom) will show load details:</li>
+        <ul class="list-disc pl-6 text-sm">
+          <li>Meshes found, textures extracted, bones & animations enumerated.</li>
+        </ul>
+        <li>Click “Export SMF” → this runs <code>exportSMF()</code> → returns a Blob-URL.</li>
+        <li>Click “Download .smf” to save the binary file locally.</li>
+      </ol>
+    </section>
+
+    <!-- Modules -->
+    <section id="modules" class="mb-8">
+      <h2 class="text-2xl font-semibold mb-2">Key Modules</h2>
+
+      <details class="mb-4">
+        <summary>unpacker.js</summary>
+        <ul class="list-disc pl-6">
+          <li>Loads GLB via <code>GLTFLoader</code>.</li>
+          <li>Triangulates and converts to non-indexed triangle lists for SMF compatibility.</li>
+          <li>Prepares rig data by extracting bone hierarchies, logging transformations, and validating skinning attributes.</li>
+          <li>Extracts and deduplicates textures (canvas→dataURL).</li>
+          <li>Gathers per-mesh metadata: <code>name</code>, <code>verts</code>, <code>triangles</code>, <code>texIdx</code>.</li>
+          <li>Builds bone list and animation frames for export.</li>
+        </ul>
+      </details>
+
+      <details class="mb-4">
+        <summary>exporter.js</summary>
+        <ul class="list-disc pl-6">
+          <li><code>BinaryWriter</code> auto-grows its buffer for dynamic data sizes.</li>
+          <li>Chunks: <strong>Header</strong>, <strong>Textures</strong>, <strong>Models</strong>, <strong>Rig</strong>, <strong>Animations</strong>.</li>
+          <li>Writes:
+            <ul class="list-disc pl-6">
+              <li>RGBA pixel data for each texture.</li>
+              <li>Per-vertex: pos / normal / uv / tangent / skinIndex / skinWeight (44 bytes per vertex).</li>
+              <li>Bone dual-quaternions, hierarchy flags, and transformations in the <code>RIG</code> chunk for skinning.</li>
+              <li>Animation keyframes (normalized time + per-bone DQ).</li>
+            </ul>
+          </li>
+          <li>Patches header offsets once all chunks are built.</li>
+        </ul>
+      </details>
+
+      <details class="mb-4">
+        <summary>main.js (React UI)</summary>
+        <ul class="list-disc pl-6">
+          <li>Pure ES-Module, no JSX: uses <code>React.createElement</code>.</li>
+          <li>Manages state for <code>meshesData</code>, <code>texturesData</code>, <code>bonesData</code>, <code>animsData</code>, and <code>smfUrl</code>.</li>
+          <li>Wires up file input → <code>unpackGLB</code> → shows tables & previews.</li>
+          <li>“Export SMF” → calls <code>exportSMF</code> → shows download button.</li>
+        </ul>
+      </details>
+
+      <details class="mb-4">
+        <summary>ModelLoader.js & CustomSkeletonHelper.js</summary>
+        <ul class="list-disc pl-6">
+          <li>FBX/GLTF → baked transforms → normalized (180 units tall).</li>
+          <li>Custom skeleton overlay with bone-mid/joint markers & labels.</li>
+          <li>Useful for debugging bone orientations in Three.js scenes.</li>
+        </ul>
+      </details>
+
+      <details class="mb-4">
+        <summary>DebugLogger.js</summary>
+        <ul class="list-disc pl-6">
+          <li>Monkey-patches <code>console.log/warn/error</code> to an on-screen panel.</li>
+          <li>Adds timestamp, color-coding, and inline “suggestions.”</li>
+          <li>Very helpful for tracing texture, rig, skinning, and transformation export issues.</li>
+        </ul>
+      </details>
+    </section>
+
+    <!-- Common Pitfalls -->
+    <section id="common-pitfalls" class="mb-8">
+      <h2 class="text-2xl font-semibold mb-2">Common Pitfalls & Solutions</h2>
+      <ul class="list-disc pl-6 space-y-2">
+        <li>
+          <strong>Missing Tangents</strong>: GLTF tangents aren’t always present.
+          <code>unpacker.js</code> now computes tangents if needed.
+        </li>
+        <li>
+          <strong>CORS / Binary Loading</strong>: Must serve via HTTP (local server),
+          otherwise the browser blocks <code>GLTFLoader.loadAsync</code>.
+        </li>
+        <li>
+          <strong>Texture Duplication</strong>: GLB data-URLs differ even if pixel-identical.
+          We dedupe by comparing <code>canvas.toDataURL()</code>.
+        </li>
+        <li>
+          <strong>Buffer Overrun</strong>: Previously caused by indexed geometry. Resolved by
+          converting to non-indexed triangle lists in <code>unpacker.js</code> (July 2025 update).
+        </li>
+        <li>
+          <strong>Rig Attachment Issue</strong>: Rig loads but may not bind to the mesh. Under investigation (July 2025) for bone index mapping, dual-quaternion inconsistencies, or transformation errors. Debugging transformations and IK rotations ongoing.
+        </li>
+        <li>
+          <strong>Skinning Mismatch</strong>: Vertex weights may not align with SMF expectations. Debugging ongoing to correct weight normalization, bone binding, and index mapping.
+        </li>
+        <li>
+          <strong>Animation Synchronization</strong>: We build the unique, sorted
+          key-time list from all position/quaternion/scale tracks,
+          then sample the mixer at exactly those times.
+        </li>
+        <li>
+          <strong>Buffer Growth</strong>: Large models can exceed initial buffer sizes.
+          Our <code>BinaryWriter</code> auto-grows by 1 KB + needed bytes.
+        </li>
+        <li>
+          <strong>React Syntax</strong>: The UI is <em>not</em> JSX—if you see
+          “Unexpected token <” it means you accidentally tried JSX in a
+          raw <code>type="module"</code> file.
+        </li>
+      </ul>
+    </section>
+
+    <!-- License -->
+    <section id="license" class="mb-4">
+      <h2 class="text-2xl font-semibold mb-2">License</h2>
+      <p>
+        The core SMF export format and reference implementation by
+        <a href="https://github.com/TheSnidr/SMF-Open-Source" class="text-blue-600 hover:underline">Snidr & Bart</a>
+        is MIT-licensed. This exporter UI and glue code is also released MIT.
+      </p>
+    </section>
+  </div>
+</body>
+</html>

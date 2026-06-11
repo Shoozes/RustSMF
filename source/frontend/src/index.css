@@ -1,0 +1,104 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.toolbar {
+  height: 48px;
+  background: #1e293b;
+  border-bottom: 1px solid #334155;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.main-area {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.sidebar {
+  width: 220px;
+  background: #1e293b;
+  border-right: 1px solid #334155;
+  padding: 8px;
+  font-size: 12px;
+  overflow: auto;
+}
+
+.viewport-container {
+  flex: 1;
+  position: relative;
+  background: #0b1120;
+}
+
+.viewport-container canvas {
+  display: block;
+  outline: none;
+}
+
+.inspector {
+  width: 240px;
+  background: #1e293b;
+  border-left: 1px solid #334155;
+  padding: 8px;
+  font-size: 12px;
+  overflow: auto;
+}
+
+.timeline {
+  height: 92px;
+  background: #1e293b;
+  border-top: 1px solid #334155;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+button {
+  background: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+button:hover {
+  background: #475569;
+}
+
+button:active {
+  background: #1e293b;
+}
+
+.panel-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #94a3b8;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.5px;
+}
+
+.y-up-note {
+  font-size: 10px;
+  color: #64748b;
+  margin-top: 4px;
+}

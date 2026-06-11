@@ -1,0 +1,23 @@
+{
+  "name": "rustsmf-source",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "setup": "npm --workspace frontend run setup",
+    "build": "npm --workspace frontend run build",
+    "dev": "npm --workspace frontend run dev",
+    "tauri:dev": "npm --workspace frontend run tauri:dev",
+    "tauri:build": "npm --workspace frontend run tauri:build",
+    "lint": "npm --workspace frontend run lint",
+    "test:e2e": "npm --workspace frontend run test:e2e",
+    "test:unit": "npm --workspace frontend run test:unit",
+    "verify": "npm run lint && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && (cd src-tauri && cargo check || echo 'src-tauri not ready yet')",
+    "desktop:smoke": "npm --workspace frontend run tauri:build:smoke"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "name": "RustSMF",
+  "git": {
+    "remote": "https://github.com/Shoozes/RustSMF.git",
+    "defaultBranch": "main"
+  },
+  "paths": {
+    "secretsDir": ".tools/.secrets",
+    "tokenFile": "gt.txt"
+  },
+  "_note": "Dev controller button layout. Groups become tabs. .tools/ and generators are for human devs + LLM skills only — keep context lean by using summary_bank.json + _gen_struct.py / get-context.ps1 instead of broad reads of old-src, node_modules, or .tools internals. See plan.md and .agents/ for the SMF-to-Tauri+Three.js conversion directions.",
+  "window": {
+    "title": "RustSMF  //  Unified Controller",
+    "width": 780,
+    "height": 600
+  },
+  "groups": [
+    {
+      "label": "AI Context Tools",
+      "buttons": [
+        {
+          "label": "Dump Default Structure",
+          "description": "Generates focused structure output from the current summary bank groups (preferred over full tree for LLM sessions).",
+          "type": "python",
+          "script": ".tools/_gen_struct.py",
+          "args": [],
+          "capture": true,
+          "show_output": true
+        },
+        {
+          "label": "Sync Summary Bank",
+          "description": "Scans the repo for new or moved files and updates summary_bank.json without dropping custom groups. Run after adding loaders, UI panels, or Rust commands.",
+          "type": "python",
+          "script": ".tools/_gen_bank.py",
+          "args": [
+            "--auto-add"
+          ],
+          "capture": true,
+          "show_output": true
+        },
+        {
+          "label": "Edit Summary Bank",
+          "description": "Opens summary_bank.json in your default text editor. Curate narrow groups for smf_format, three_viewport, tauri_bridge, harness, etc.",
+          "type": "open_file",
+          "path": "summary_bank.json"
+        }
+      ]
+    },
+    {
+      "label": "Run & Test",
+      "buttons": [
+        {
+          "label": "Project Setup / Install",
+          "description": "Installs npm workspace (source/frontend), Playwright browsers, and any Cargo deps for the Tauri shell. Prepares for web + desktop dev.",
+          "type": "powershell",
+          "script": "run.ps1",
+          "args": [
+            "-Task",
+            "setup"
+          ],
+          "capture": true,
+          "show_output": true,
+          "spinner": true
+        },
+        {
+          "label": "Start Web Dev",
+          "description": "Launches Vite dev server for the Three.js + React frontend (browser-runnable 3D editor). Use for quick iteration on viewport, loaders, timeline.",
+          "type": "powershell",
+          "script": "run.ps1",
+          "args": [
+            "-Task",
+            "dev"
+          ],
+          "capture": false,
+          "show_output": false
+        },
+        {
+          "label": "Start Desktop (Tauri)",
+          "description": "Launches Tauri dev shell around the same frontend. Adds native file dialogs + binary FS for SMF/GLB/FBX workflows.",
+          "type": "powershell",
+          "script": "run.ps1",
+          "args": [
+            "-Task",
+            "tauri-dev"
+          ],
+          "capture": false,
+          "show_output": false
+        },
+        {
+          "label": "Compile Desktop",
+          "description": "Builds the packaged Tauri desktop app (nsis etc) from the current frontend build.",
+          "type": "powershell",
+          "script": "run.ps1",
+          "args": [
+            "-Task",
+            "compile"
+          ],
+          "capture": true,
+          "show_output": true,
+          "spinner": true
+        },
+        {
+          "label": "Verify Repo",
+          "description": "Runs lint, type checks, unit tests, frontend build + entry chunk checks, cargo check, and basic integrity in one sweep.",
+          "type": "powershell",
+          "script": "run.ps1",
+          "args": [
+            "-Task",
+            "verify"
+          ],
+          "capture": true,
+          "show_output": true,
+          "spinner": true
+        },
+        {
+          "label": "Run E2E Tests",
+          "description": "Executes the Playwright suite (viewport load, model import, skeleton/anim playback, export flows, screenshots of 3D states).",
+          "type": "powershell",
+          "script": "run.ps1",
+          "args": [
+            "-Task",
+            "test:e2e"
+          ],
+          "capture": true,
+          "show_output": true,
+          "spinner": true
+        },
+        {
+          "label": "Desktop Smoke",
+          "description": "Builds (no-bundle), boots the desktop app, exercises basic native commands + 3D smoke (load small model, check no crash).",
+          "type": "powershell",
+          "script": "run.ps1",
+          "args": [
+            "-Task",
+            "desktop-smoke"
+          ],
+          "capture": true,
+          "show_output": true,
+          "spinner": true
+        }
+      ]
+    },
+    {
+      "label": "Git",
+      "buttons": [
+        {
+          "label": "Push (Auto-Creates Repo)",
+          "description": "Commits all changes and pushes. Creates a private GitHub repo if one doesn't exist.",
+          "type": "powershell",
+          "script": ".tools/gitpush.ps1",
+          "args": [
+            "-Yes"
+          ],
+          "capture": true,
+          "show_output": true,
+          "spinner": true,
+          "prompt_arg": {
+            "label": "Commit message",
+            "flag": "-Message",
+            "initial_value": "manual"
+          }
+        },
+        {
+          "label": "Pull / Sync",
+          "description": "Fetches and rebases or merges from the remote repository.",
+          "type": "powershell",
+          "script": ".tools/gitpull.ps1",
+          "args": [
+            "-Yes"
+          ],
+          "capture": true,
+          "show_output": true,
+          "spinner": true
+        }
+      ]
+    }
+  ]
+}

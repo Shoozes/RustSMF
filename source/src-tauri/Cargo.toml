@@ -1,0 +1,20 @@
+[package]
+name = "rustsmf"
+version = "0.1.0"
+description = "RustSMF - Modern SMF/GLB/FBX 3D model & animation tool (Tauri + Three.js)"
+authors = ["Shoozes"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri-plugin-dialog = "2"
+
+[features]
+# This feature is used for production builds or when `devPath` points to the filesystem
+# DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]

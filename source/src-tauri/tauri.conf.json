@@ -1,0 +1,35 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "RustSMF",
+  "version": "0.1.0",
+  "identifier": "com.shoozes.rustsmf",
+  "build": {
+    "beforeDevCommand": "npm --prefix ./frontend run dev",
+    "devUrl": "http://localhost:5173",
+    "beforeBuildCommand": "npm --prefix ./frontend run build",
+    "frontendDist": "../frontend/dist",
+    "removeUnusedCommands": true
+  },
+  "app": {
+    "security": {
+      "csp": null,
+      "capabilities": ["default"]
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "RustSMF",
+        "width": 1280,
+        "height": 800,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ]
+  },
+  "bundle": {
+    "active": false,
+    "targets": ["nsis"],
+    "icon": ["icons/icon.png"],
+    "resources": {}
+  }
+}

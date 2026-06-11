@@ -1,0 +1,4 @@
+interface:
+  display_name: "Pitfall Ledger"
+  short_description: "Document regressions and solutions with relevance scoring"
+  default_prompt: "Document recent pitfalls in Q&A form, score solutions with the rubric, rerank relevance, and update integrity-pass context."

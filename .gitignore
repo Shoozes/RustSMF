@@ -1,0 +1,66 @@
+# Env
+.env
+.env.*
+node_modules
+__pycache__
+.pytest_cache
+
+# Build output
+venv/
+.venv/
+dist/
+runtime-data/
+target/
+source/src-tauri/target/
+source/frontend/dist/
+
+# Git
+git/
+.git/
+github/
+
+# Tools and metadata
+.secrets/
+_backup/
+_structure_with_content.txt
+_struct_summary.txt
+current_structure.txt
+tmp_struct.txt
+build_phase_prompt.txt
+_temp_payload.txt
+.tools/_focus_log.txt
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/e2e/screenshots/
+source/frontend/artifacts/
+source/frontend/tsconfig.tsbuildinfo
+source/frontend/tsconfig.node.tsbuildinfo
+source/frontend/playwright.config.js
+source/frontend/playwright.config.d.ts
+source/frontend/vite.config.js
+source/frontend/vite.config.d.ts
+
+# Tauri generated icons (we commit the final set; the generator outputs many)
+# Keep the src-tauri/icons/ that tauri-build needs.
+
+# Models and weights
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+*.bin
+*.onnx
+
+# Temporary data and directories
+temp_*/
+source/scripts/temp_ip_test/
+
+# Logs and outputs
+*.log
+qwen_sig.txt
+
+# Local reference media outputs
+source/test_assets/multi-reference/*.mp4

@@ -1,0 +1,208 @@
+{
+  "defaults": {
+    "groups": [
+      "harness_and_agents",
+      "smf_format_and_io"
+    ],
+    "tree": true,
+    "max_kb": 180,
+    "skip_dirs": [
+      ".env",
+      ".git",
+      ".idea",
+      ".pytest_cache",
+      ".secrets",
+      ".venv",
+      ".vscode",
+      "__pycache__",
+      "_backup",
+      "_struct_summary.txt",
+      "_structure_with_content.txt",
+      "_temp_payload.txt",
+      "build",
+      "build_phase_prompt.txt",
+      "current_structure.txt",
+      "dist",
+      "git",
+      "github",
+      "models",
+      "node_modules",
+      "playwright-report",
+      "public",
+      "qwen_sig.txt",
+      "release",
+      "runtime-data",
+      "target",
+      "test",
+      "test-results",
+      "tests",
+      "tmp_struct.txt",
+      "venv"
+    ]
+  },
+  "groups": {
+    "harness_and_agents": {
+      "description": "Agent harness, workflows, skills, context tools, run scripts, and project controller. Primary entry for LLM sessions.",
+      "files": [
+        "AGENTS.md",
+        "plan.md",
+        ".agents/copilot-instructions.md",
+        ".agents/instructions/backend.instructions.md",
+        ".agents/instructions/frontend.instructions.md",
+        ".agents/workflows/build.md",
+        ".agents/workflows/integrity-pass.md",
+        ".agents/workflows/qa.md",
+        ".agents/workflows/qa-focus.md",
+        ".agents/skills/monolith-modularization/SKILL.md",
+        ".agents/skills/pitfall-ledger/SKILL.md",
+        ".agents/skills/summary_bank_json/SKILL.md",
+        ".tools/project.json",
+        ".tools/_gen_bank.py",
+        ".tools/_gen_struct.py",
+        "run.bat",
+        "summary_bank.json"
+      ]
+    },
+    "smf_format_and_io": {
+      "description": "SMF binary format spec, import/export logic, GLB/FBX bridges, samples, and any future Rust/TS parsers. Highest fidelity area.",
+      "paths": [
+        "docs/references/old-src/GLBtoSMF/*.js",
+        "docs/references/old-src/datafiles/SMF/*.smf",
+        "docs/references/old-src/GLBtoSMF/smf_dq_math.js"
+      ],
+      "files": [
+        "docs/references/old-src/GLBtoSMF/importer.js",
+        "docs/references/old-src/GLBtoSMF/exporter.js",
+        "docs/references/old-src/GLBtoSMF/packer.js",
+        "docs/references/old-src/GLBtoSMF/unpacker.js",
+        "docs/references/old-src/GLBtoSMF/Utils.js",
+        "docs/references/old-src/GLBtoSMF/ModelLoader.js",
+        "docs/TODO.md"
+      ],
+      "notes": {
+        "format": "LE header strZ + 4 offsets (TEX/MODEL/RIG/ANIM). 44B verts. Dual quats central. See plan.md for full layout + coord pitfalls.",
+        "reference": "GLBtoSMF/ is the executable spec + known-bug notes (bone head/tail, sign flips, winding). Port + improve here first."
+      }
+    },
+    "threejs_viewport_core": {
+      "description": "Three.js scene + real loaders (GLB via GLTFLoader, SMF binary parser), SkinnedMesh/Skeleton/AnimationMixer, coord/DQ transforms, interactive timeline, SkeletonHelper. Fully functional Open + Play/Scrub/Export in App.tsx.",
+      "paths": [
+        "source/frontend/src/loaders/**/*",
+        "source/frontend/src/App.tsx",
+        "source/frontend/src/main.tsx",
+        "source/frontend/src/backend-client/tauri.ts"
+      ]
+    },
+    "tauri_bridge_and_fs": {
+      "description": "Tauri native commands (dialog, binary read/write), backend-client wrappers, tauri.conf, main.rs, path sanitization, browser fallback. (Scaffolded + cargo check passing + open_file + greet wired.)",
+      "paths": [
+        "source/src-tauri/**/*",
+        "source/frontend/backend-client/**/*",
+        "source/frontend/src/App.tsx"
+      ]
+    },
+    "docs_and_todo": {
+      "description": "Planning, state, testing notes, user guide, conversion directions. Keep lean and current.",
+      "files": [
+        "docs/TODO.md",
+        "docs/dev/APP_STATE.md",
+        "README.md"
+      ]
+    },
+    "old_reference_glb_smf": {
+      "description": "Archived original GameMaker SMF project + GLB converter reference (read-only spec + samples; do not edit the yyp/gml/shaders directly).",
+      "paths": [
+        "docs/references/old-src/GLBtoSMF/**",
+        "docs/references/old-src/datafiles/SMF/**",
+        "docs/references/old-src/scripts/**"
+      ],
+      "notes": {
+        "warning": "Huge tree (GML, shaders, sprites, rooms). Use narrow globs or specific files only. Prefer the GLBtoSMF/ JS bridge for implementation."
+      }
+    },
+    "tests_and_quality": {
+      "description": "Playwright e2e (viewport + model flows + screenshots), unit for loaders/coord, roundtrip fidelity, visual artifacts.",
+      "paths": [
+        "source/frontend/tests/**",
+        "source/frontend/playwright.config.ts",
+        "source/frontend/scripts/check-entry-chunks.mjs",
+        "source/frontend/src/loaders/coord.test.ts"
+      ]
+    },
+    "smf_export_and_fidelity": {
+      "description": "SMF export (data-driven exportSMF ported from reference with BinaryWriter, nodeList, DQ handling, coord transforms), roundtrips, data fidelity. High priority for conversion completeness.",
+      "paths": [
+        "source/frontend/src/loaders/smf.ts",
+        "source/frontend/src/loaders/coord.ts",
+        "source/frontend/src/App.tsx"
+      ],
+      "notes": {
+        "status": "Implemented and wired to Export button (prefers SMF for SMF-loaded models, falls back to GLB). Ready for roundtrip tests against real samples.",
+        "samples": "Use docs/references/old-src/datafiles/SMF/*.smf for validation and fidelity checks."
+      }
+    },
+    "current_gaps_and_issues": {
+      "description": "Known limitations, desktop/browser parity gaps, missing features, and edge cases to track.",
+      "status": "active",
+      "items": [
+        "desktop_smf_binary_read: tauri read_file_binary + bridge added. Needs dedicated e2e/desktop smoke test with real .smf.",
+        "fbx: not started.",
+        "tests: Playwright config + smoke.spec.ts (shell + model load) + unit smoke added (integrity pass). Needs visuals, roundtrips, more coverage.",
+        "error_handling: loading cues + disabled buttons improved. Still needs spinners/toasts + corrupt file UX.",
+        "monolithic_app_tsx: core in one file. Extraction candidate for Viewer + store.",
+        "git_first_push: repo created via MCP. gitpush.ps1 reviewed – ready (auto-create logic solid). Run with valid gt.txt token."
+      ]
+    },
+    "animation_and_timeline": {
+      "description": "AnimationMixer integration, timeline controls, clip management, playback timing/looping.",
+      "paths": [
+        "source/frontend/src/App.tsx"
+      ]
+    },
+    "git_and_github_bootstrap": {
+      "description": "Version control, gitpush.ps1 (auto repo create + push), .tools/project.json git config, first repo creation, CI readiness.",
+      "files": [
+        ".tools/gitpush.ps1",
+        ".tools/project.json",
+        "run.ps1",
+        ".gitignore"
+      ],
+      "notes": {
+        "remote": "https://github.com/Shoozes/RustSMF.git (created via MCP during this integrity pass)",
+        "token": "Requires gt.txt (GitHub PAT with repo:write, read:user) in .tools/.secrets/ or configured path for gitpush.ps1."
+      }
+    },
+    "playwright_e2e_and_tests": {
+      "description": "Playwright Chrome e2e (smoke for shell + model load, screenshots), unit tests for loaders/coord/export, testability improvements.",
+      "paths": [
+        "source/frontend/tests/**",
+        "source/frontend/playwright.config.ts",
+        "source/frontend/src/loaders/coord.test.ts",
+        "source/frontend/src/App.tsx"
+      ]
+    }
+  },
+  "exclusions": {
+    ".tools": {
+      "note": "[collapsed (+)] — dev controller only; prefer summary_bank groups + gens for context"
+    },
+    "scripts": {
+      "note": "[collapsed (+)]"
+    },
+    "source": {
+      "note": "[collapsed (+)]"
+    },
+    "source/backend": {
+      "note": "[collapsed (+)]"
+    },
+    "source/frontend": {
+      "note": "[collapsed (+)]"
+    },
+    "source/src-tauri": {
+      "note": "[collapsed (+)]"
+    },
+    "docs/references/old-src": {
+      "note": "[collapsed (+)] — use specific GLBtoSMF/ or datafiles/ paths in groups instead"
+    }
+  }
+}
