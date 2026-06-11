@@ -76,10 +76,31 @@ async fn peek_smf_header(path: String) -> Result<String, String> {
     }
 }
 
+// Small real subtask for rust-smf-parser breakdown (header peek + size done; this adds basic validation).
+#[command]
+async fn validate_smf(path: String) -> Result<String, String> {
+    // Real (not stub) basic SMF validation using header logic. Returns "valid SMF" or "invalid: reason".
+    // Can be used for early desktop .smf checks before full load.
+    let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    if bytes.is_empty() {
+        return Ok("invalid: empty file".to_string());
+    }
+    let mut s = String::new();
+    for &b in bytes.iter().take(64) {
+        if b == 0 { break; }
+        s.push(b as char);
+    }
+    if s.starts_with("SMF_v") {
+        Ok("valid SMF".to_string())
+    } else {
+        Ok(format!("invalid: not SMF header (starts with '{}')", s.chars().take(20).collect::<String>()))
+    }
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary, peek_smf_header])
+        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary, peek_smf_header, validate_smf])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

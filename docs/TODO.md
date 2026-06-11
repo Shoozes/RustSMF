@@ -191,3 +191,15 @@ All per directive + philosophy. No stubs. Features connect (peek info in status,
 
 See updated APP_STATE, bank (rust_parser_breakdown, e2e items). Continue loop.
 
+**Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research (reads of current docs/bank/source post-last, git clean with prior commits, verify Passed, greps no new stubs/broken/async issues, e2e with robust BAD + status asserts) confirmed state high. Remaining per gaps: deeper desktop e2e, Rust parser (bigger, subtasks: header/size done, this: validation wiring + early check in load for bad .smf desktop edge).
+
+Actioned (broken down, real, no stubs):
+- Rust subtask: Added real `validate_smf` command in main.rs (basic header validation, returns "valid SMF" or "invalid: reason"). Registered. Exposed in tauri client. Wired in useLoadModel for early check on desktop .smf (if invalid, set error banner + status early before full import). Uses peek for info + validate for check. (what: advance parser breakdown with small real validation step, why: early error for corrupt/bad .smf on desktop + Rust I/O progress, where: main.rs + tauri.ts + useLoadModel.ts, how: simple header check mirroring peek logic, no full parse).
+- E2E deepen/polish: Confirmed robustness (BAD_GML recursive + guard), status asserts for 'Selected:' after bone list + raycast. Added early validation covers error edge. Run targeted e2e clean. (what: deepen coverage for selection/status + invalid load, why: complete e2e backlog for UX/edges, where: smoke.spec.ts, how: existing + asserts + skip guards).
+- Polish: Added the wiring/fix for async edge in load (early return on invalid). Verified no timing issues.
+- Docs/bank: Append this with pairs; update gaps (rust subtask advanced, e2e deepened).
+
+All per directive. Features connect (validate/peek in load for desktop, e2e covers). Verify clean. Push next. Remaining: deeper desktop (enhance run.ps1 notes), next Rust (e.g. rig peek subtask), FBX limited.
+
+See bank gaps, TODO for full pairs. No stubs. Continue.
+

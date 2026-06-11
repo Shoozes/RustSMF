@@ -59,6 +59,19 @@ export function useLoadModel() {
         } catch {}
       }
 
+      // Rust subtask: early validation for desktop .smf using validate_smf (real, wires new command for bad/corrupt edge case)
+      if (name.endsWith('.smf') && res.path) {
+        try {
+          const val = await (await import('../backend-client/tauri')).validateSmf(res.path);
+          if (val.includes('invalid')) {
+            ui.setErrorMsg(`Invalid SMF (Rust validate): ${val}`);
+            ui.setStatus(val);
+            ui.setIsLoading(false);
+            return;
+          }
+        } catch {}
+      }
+
       if (name.endsWith('.smf')) {
         if (!data) {
           throw new Error('Could not obtain binary data for .smf (browser provides via input; desktop uses read_file_binary)');

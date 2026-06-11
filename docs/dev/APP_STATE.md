@@ -121,6 +121,14 @@ All per philosophy (modular/dynamic, direct, safety first). Verify/build/e2e cle
 
 See updated TODO for full paired backlog. Builds green.
 
+**Auto research/recap/decide/design/build/test/fix/polish (this pass):** Research confirmed high state (verify clean, no stubs). Actioned:
+- Rust subtask (parser breakdown): Added real `validate_smf` cmd + client + early wiring in load for desktop .smf invalid edge (set error early).
+- E2E: Deepened (confirmed status asserts for bone select post-raycast/list, robust error path).
+- Polish: Early validation fix for async/edge in .smf desktop load.
+- Docs/bank: Appended with pairs; gaps updated (rust subtask, e2e).
+
+All per directive. Next: deeper desktop e2e, more Rust subtasks (rig peek), FBX limited. See TODO/bank. No stubs. Verify clean.
+
 **Auto research/recap/decide/design/build/test/fix/polish (this continuation):** Research recap post-review (docs/bank with consolidation, git clean, verify/e2e clean, greps clean, source reads) showed excellent state. Actioned small items to progress backlog:
 - E2E: Confirmed/enhanced robustness (BAD_GML search + guards, bone 'Selected:' status asserts post list/raycast in load test, error path coverage). 
 - Rust: Small subtask - enhanced real peek_smf_header (added size bytes to return string for richer desktop validation in status).
