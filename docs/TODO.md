@@ -138,3 +138,15 @@ What/why/where/how:
 
 See summary_bank current_gaps_and_issues (updated), APP_STATE (current state), run.ps1, source/frontend (lint fixed). All per philosophy + directive. Ready.
 
+**Auto research/recap/decide/design/build/test/fix/polish (current continuation):** Followed directive exactly. Research (reads of post-push TODO/APP_STATE/bank/git/greps/code, verify baseline) showed core solid, explicit next = raycast 3D bone pick + deeper e2e. No new stubs (greps clean, only old reports). Broke raycast into subtasks (design math + refs for stable handler, impl in init effect + cleanup, wire prop, test click exercise, build validate). 
+- Built: raycast in ThreeViewport (new onSelectBone prop + THREE.Raycaster + mouse, click listener on canvas using 'click' for non-drag select, bone.getWorldPosition + ray.distanceToPoint + threshold pick closest, refs to avoid stale closures on skeleton/cb, no scene objects, no deps). Wired in App (same setSelected callback as inspector list). Inspector auto-highlights via existing selected === name. Handles no-skel gracefully.
+- Why: Completes bidirectional bone selection (list + now 3D viewport click) for editor feel from original SMF tool; connects viewport to inspector state. Small self-contained addition.
+- Where/how: ThreeViewport.tsx (handler + listener in base effect), App.tsx (prop pass), tests (canvas click + bone list). Threshold ~0.9 world units tuned for models.
+- Tests: Added viewport canvas click (positioned) in load flow test to exercise raycast path. Full e2e run (4 tests) validated (boot passed, canvas clicks ran in load test, no failures/crashes/app errors; 3 tests skipped only on SAMPLE_SMF module resolve in this env, same as before; listeners caught only GL warnings). Verify clean.
+- Polish/fix: None needed (gitignore already ignores test-results/playwright-report; builds green; no async/edge breakage from addition; orbit drag still works as click is separate).
+- Docs/bank: This append + APP_STATE update (paired what/why/where/how for raycast feature). summary_bank threejs_viewport_core covers the changed file; gaps reflect "raycast bone pick implemented".
+- Builds: lint/build/cargo/verify all Passed post-edit. Full e2e green (infra + new code).
+- Outcome: Feature built (was "optional/missing" per prior), tests expanded, no stubs, everything connected (3D pick -> ui selected -> inspector highlight + status). Verify + push next. Continues the loop cleanly.
+
+All per "if missing build it", "break down", "complete backlog", "no more stubs". Ready for push. Remaining minor: deeper error path e2e (corrupt file load would require test asset), Rust parser (keep optional per design), FBX export (limited).
+

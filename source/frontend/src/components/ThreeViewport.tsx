@@ -18,6 +18,7 @@ interface ThreeViewportProps {
   currentClipName?: string;
   playbackSpeed?: number;
   onTimeUpdate?: (time: number) => void;
+  onSelectBone?: (boneName: string) => void;
 }
 
 // SimpleOrbit imported from ../utils/SimpleOrbit (filled modularity dir, single source of truth)
@@ -31,6 +32,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   currentClipName,
   playbackSpeed = 1,
   onTimeUpdate,
+  onSelectBone,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -46,6 +48,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const currentActionRef = useRef<THREE.AnimationAction | null>(null);
   const attachedModelRef = useRef<THREE.Object3D | null>(null);
   const skeletonHelperRef = useRef<THREE.SkeletonHelper | null>(null);
+
+  // For raycast bone picking (3D click-to-select complementing Inspector list)
+  const raycasterRef = useRef(new THREE.Raycaster());
+  const mouseRef = useRef(new THREE.Vector2());
+  const onSelectBoneRef = useRef(onSelectBone);
+  const skeletonRefForPick = useRef(skeleton);
 
   // One-time base scene + renderer + orbit + RAF + resize + internal R key reset
   useEffect(() => {
@@ -93,6 +101,38 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     };
     window.addEventListener('keydown', onKey);
 
+    // Raycast-based bone selection on canvas click (non-drag clicks).
+    // Complements list selection in Inspector. Uses bone world positions + ray distance.
+    // Threshold in world units; works for typical rigged models. No scene mods.
+    const onCanvasClick = (event: MouseEvent) => {
+      const cb = onSelectBoneRef.current;
+      const skel = skeletonRefForPick.current;
+      const cam = cameraRef.current;
+      if (!cb || !skel || !cam || !sceneRef.current) return;
+      const canvasEl = canvasRef.current;
+      if (!canvasEl) return;
+      const rect = canvasEl.getBoundingClientRect();
+      mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycasterRef.current.setFromCamera(mouseRef.current, cam);
+      let closest: any = null;
+      let minDist = Infinity;
+      const threshold = 0.9;
+      skel.bones.forEach((bone: any) => {
+        if (!bone) return;
+        const pos = bone.getWorldPosition(new THREE.Vector3());
+        const dist = raycasterRef.current.ray.distanceToPoint(pos);
+        if (dist < minDist && dist < threshold) {
+          minDist = dist;
+          closest = bone;
+        }
+      });
+      if (closest && closest.name) {
+        cb(closest.name);
+      }
+    };
+    canvas.addEventListener('click', onCanvasClick);
+
     const animate = () => {
       const mixer = mixerRef.current;
       if (mixer) {
@@ -126,6 +166,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
       resizeObsRef.current?.disconnect();
       window.removeEventListener('keydown', onKey);
+      canvas.removeEventListener('click', onCanvasClick);
       renderer.dispose();
     };
     // Note: intentionally no deps on playback props; RAF always runs, control via effects below.
@@ -171,6 +212,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     action.setEffectiveTimeScale(playbackSpeed);
     currentActionRef.current = action;
   }, [currentClipName, clips, playbackSpeed]);
+
+  // Keep latest onSelectBone and skeleton for raycast handler (stable click listener)
+  useEffect(() => { onSelectBoneRef.current = onSelectBone; }, [onSelectBone]);
+  useEffect(() => { skeletonRefForPick.current = skeleton; }, [skeleton]);
 
   // Attach/replace model root + skeleton helper + create internal mixer when root prop changes.
   // IMPORTANT: deps ONLY model data (root/skeleton/clips). Never include playback props (isPlaying/currentTime/currentClipName/playbackSpeed)

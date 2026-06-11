@@ -92,3 +92,14 @@ Per philosophy: features connect cleanly/safely, gaps tracked, "no more stubs", 
 - Why now: User "integrity pass, continue, build" + prior backlog (expand tests, verify). All actionable completed without bloat. Git clean post prior; changes staged by this pass.
 
 Next per gaps/TODO: optional raycast in viewport for bone 3D pick (list select sufficient now), more roundtrip asserts or desktop smoke manual, Rust parser. Run verify + gitpush after any edit. Builds always green post this pass.
+
+**Auto research/recap/decide/design/build/test/fix/polish (current continuation):** Per recurring directive. Recap confirmed raycast as explicit "next" item (3D bone pick to complement list selection from prior inspector polish). No stubs/broken in source.
+- Decided: Prioritize building the missing raycast (small, high value for editor, broken down into design/impl/wire/test). Then full e2e validation + docs.
+- Built raycast: Added onSelectBone prop + raycaster/mouse refs + stable cb/skeleton refs + 'click' handler using ray.distanceToPoint on bone.getWorldPosition(world) + threshold closest pick. Listener attached in base init effect (cleanup too). No new objects/deps. Handles missing skeleton. 
+- Wired: App passes onSelectBone={(name)=>ui.setSelected(name)} (reuses existing selected state for inspector highlight sync).
+- Tested: Canvas click exercise added to e2e load test (exercises the new path safely alongside orbit). Full `npm run test:e2e` + verify ran clean post change (boot + load flows + clicks passed where SAMPLE resolved; no crashes, no app errors from console listeners).
+- Polish: .gitignore already covers test outputs (no action). Orbit/click coexist (click for pick, drag for orbit).
+- Outcome + why: "If missing, build it" + "complete backlog". Now bidirectional bone selection (3D + list) live. Features connect (viewport pick updates shared selected -> inspector UI + status). All builds green. No stubs introduced.
+- Docs updated here + TODO (paired what/why/where/how). Bank covers via existing threejs_viewport_core group.
+
+Remaining per gaps: deeper e2e error cases, optional Rust parser (design keeps frontend 3D ownership), FBX export (intentionally limited). Run verify + push after edits. Builds green.

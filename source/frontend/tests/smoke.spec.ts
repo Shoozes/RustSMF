@@ -104,6 +104,12 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     }
     await expect(page.getByTestId('three-canvas')).toBeVisible();
 
+    // Exercise 3D viewport click (exercises raycast bone pick handler + orbit compat; no crash expected)
+    const canvas = page.getByTestId('three-canvas');
+    await canvas.click({ position: { x: 60, y: 60 } });
+    await page.waitForTimeout(80);
+    await expect(canvas).toBeVisible();
+
     // Assert no critical browser console errors during load (errors logged by listener)
     // (warnings may exist for Three.js, but no errors)
     const errors = (page as any)._browserErrors || [];

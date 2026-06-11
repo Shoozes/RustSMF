@@ -87,6 +87,7 @@ export default function App() {
             currentClipName={playback.currentClipName}
             playbackSpeed={playback.playbackSpeed}
             onTimeUpdate={playback.setCurrentTime}
+            onSelectBone={(name) => ui.setSelected(name)}
           />
           {/* Simple pure loading overlay (no deps) */}
           {ui.isLoading && (
