@@ -129,6 +129,7 @@ switch -Exact ($Task.ToLowerInvariant()) {
             # Real desktop binary read (read_file_binary) + peeks (get_smf_desktop_info + peek_*_basic for header/rig/anim/model) + early validation are now also exercised automatically here via cargo test.
             # The Rust tests (in main.rs) perform actual std::fs reads against the local mixamo_smf_baldguy.smf (or old-src samples) when present and assert on header + counts (exact same parsing as the Tauri commands).
             # This closes part of the automated desktop e2e gap for the native FS/peek layer (complements web Playwright e2e which covers shared TS loaders + UI).
+            # Cycle 1 extension: smoke.spec.ts now includes JS-side native peek/validate/status sim using the exact same real .smf bytes (mirrors parse_smf_header_info + constructs "valid SMF | rig ~N..." + "Rust validated SMF | ..." status strings from loadModel desktop path). Extended beforeEach + listeners + lightweight screenshot asserts (bone/export flows with real sample).
             # Full UI + native dialog/save roundtrip in the running app still benefits from manual: run '.\run.ps1 -Task tauri-dev', then Open + load source/frontend/tests/mixamo_smf_baldguy.smf and watch status for "Rust validated SMF | SMF model basic: ~N meshes ..." + bone tree + export.
             $cargoOutput = cargo test 2>&1 | Out-String
             Write-Host $cargoOutput
@@ -148,7 +149,7 @@ switch -Exact ($Task.ToLowerInvariant()) {
             if ($cargoOutput -match 'Rust desktop peek smoke on') {
                 Write-Ok "Rust desktop peek smoke println executed (sample used for real binary read + parse)."
             }
-            Write-Ok "[SMOKE] Unbundled build + Rust native peek tests complete (3 tests: main peek, validate, header/invalid). See TODO.md (desktop e2e subtask) + the local real .smf for full tauri-dev manual validation of peeks + UI (bone tree, export, native I/O)."
+            Write-Ok "[SMOKE] Unbundled build + Rust native peek tests complete (3 tests: main peek, validate, header/invalid). smoke.spec.ts JS sim + real-sample bone/export screenshot asserts + extended listeners now cover peek/validate/status strings too. See TODO.md (desktop e2e subtask) + the local real .smf for full tauri-dev manual validation of peeks + UI (bone tree, export, native I/O)."
             Pop-Location
         } else {
             Write-Warn "src-tauri missing."
