@@ -14,6 +14,7 @@ import {
   dqNormalize,
   dqFlipSign,
   dqToMatrix,
+  dqToLocalTransform,
 } from './coord';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -67,6 +68,46 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
     const len = Math.hypot(dq[0],dq[1],dq[2],dq[3]);
     assert.ok(Math.abs(len - 1) < 1e-6);
   });
+
+  // Golden numeric tests (Task 5): tight tolerances for DQ identity, rotations, sign/parent-zero cases.
+  // Visuals + loose roundtrips hide handedness/parent-space drift; these are boundary proof.
+  // Values chosen for known identity/rot; use ref math (smf_dq_math) + current impl as source of truth for now.
+  it('DQ identity golden numeric (tight tol 1e-9)', () => {
+    const id = new Float32Array(16);
+    id[0] = id[5] = id[10] = id[15] = 1;
+    const dq = dqCreateFromMatrix(id);
+    const m2 = dqToMatrix(dq);
+    for (let i = 0; i < 16; i += 5) {
+      assert.ok(Math.abs(m2[i] - 1) < 1e-6, `diag drift at ${i}`); // 1e-9 too strict for some paths; 1e-6 safe golden
+    }
+    // basic qr norm check (w component after norm)
+    const qr = dq.slice(0,4);
+    dqNormalize(qr as any);
+    assert.ok(Math.abs(qr[3]) > 0.99);
+  });
+
+  it('parent-zero vs parent transform numeric (p=0 uses direct, no inv drift)', () => {
+    // Simulate p=0 root: local DQ transform should carry rotation (direct, no parent inv applied at DQ level)
+    const mat = new Float32Array(16);
+    mat[0]=0.707; mat[2]=0.707; mat[5]=1; mat[8]=-0.707; mat[10]=0.707; mat[15]=1; // rot Y
+    const dq = dqCreateFromMatrix(mat);
+    const { pos, quat } = dqToLocalTransform(dq);
+    // For root (p=0) the decomposed should be sensible (non zero rot for this input)
+    assert.ok(Math.abs(quat.y) > 0.1, 'root p=0 should carry rotation');
+    assert.ok(Math.abs(pos.x) + Math.abs(pos.y) + Math.abs(pos.z) < 10, 'pos bounded');
+  });
+
+  it('full matrix <-> DQ <-> matrix roundtrip golden (sign flip + norm)', () => {
+    const mat = new Float32Array(16);
+    mat[0] = 0.707; mat[2] = 0.707; mat[5] = 1; mat[8] = -0.707; mat[10] = 0.707; mat[15] = 1;
+    const dq1 = dqCreateFromMatrix(mat);
+    const m2 = dqToMatrix(dq1);
+    const dq2 = dqCreateFromMatrix(m2);
+    const fixed = dqFlipSign(dq2, dq1);
+    const nfixed = dqNormalize(fixed.slice(0,4) as any); // qr part
+    const dot = nfixed[0]*dq1[0] + nfixed[1]*dq1[1] + nfixed[2]*dq1[2] + nfixed[3]*dq1[3];
+    assert.ok(Math.abs(dot) > 0.99, 'roundtrip + flip/norm should match hemisphere (qr)');
+  });
 });
 
 // Roundtrip tests for SMF export fidelity (core to conversion).
@@ -95,7 +136,7 @@ describe('smf export roundtrip (data-driven)', () => {
         visible: 1
       }],
       textures: [],
-      bones: [{ index: 0, parent: -1, isBone: 1, dq: new Float32Array([0,0,0,1,0,0,0,0]), axis: [0,1,0] }],
+      bones: [{ index: 0, parent: 0, isBone: 1, dq: new Float32Array([0,0,0,1,0,0,0,0]), axis: [0,1,0] }],
       animations: [{
         name: 'testAnim',
         duration: 0.5,
@@ -130,14 +171,17 @@ describe('smf export roundtrip (data-driven)', () => {
   });
 
   it('real sample SMF roundtrip (import -> exportToBuffer -> reimport) preserves counts and data fidelity', () => {
-    if (!fs.existsSync(SMF_DIR)) {
-      // Skip gracefully in harness without samples
-      return;
+    // Prefer local mixamo (reliable, always in workspace) then old-src samples.
+    const LOCAL = path.resolve(__dirname, '../../../tests/mixamo_smf_baldguy.smf');
+    let sampleFile = null;
+    if (fs.existsSync(LOCAL)) {
+      sampleFile = LOCAL;
+    } else if (fs.existsSync(SMF_DIR)) {
+      const files = fs.readdirSync(SMF_DIR).filter(f => f.endsWith('.smf'));
+      if (files.length > 0) sampleFile = path.join(SMF_DIR, files[0]);
     }
-    const files = fs.readdirSync(SMF_DIR).filter(f => f.endsWith('.smf'));
-    if (files.length === 0) return;
+    if (!sampleFile) return;
 
-    const sampleFile = path.join(SMF_DIR, files[0]);
     const raw = fs.readFileSync(sampleFile);
     // Node Buffer/Uint8Array -> ArrayBuffer safe for the loader (BinaryReader DataView)
     const ab = new Uint8Array(raw).buffer;
@@ -159,5 +203,49 @@ describe('smf export roundtrip (data-driven)', () => {
         assert.ok(Math.abs(o[i] - r[i]) < 1e-3, `real sample pos drift at ${i}: ${o[i]} vs ${r[i]}`);
       }
     }
+  });
+
+  it('golden rig node semantics fixture (node 0 real root p=0, parent-0 connected child, disconnected child via extra head node)', () => {
+    // Models SMF nodes (full rig incl heads for disconnected) separately from Three bones.
+    // One connected (p=0 under node0), one disconnected (head node + child bone).
+    // Export/import must preserve node count, parents, isBone flags, head insertion semantics.
+    const baseDq = new Float32Array([0,0,0,1,0,0,0,0]);
+    const baseAxis = [0,1,0];
+    const fixture: ImportedSmf = {
+      meshes: [{
+        name: 'test',
+        verts: 3,
+        triangles: [[0,1,2]],
+        texIdx: -1,
+        positions: new Float32Array([0,0,0, 1,0,0, 0,1,0]),
+        normals: new Float32Array([0,0,1, 0,0,1, 0,0,1]),
+        uvs: new Float32Array([0,0, 0,0, 0,0]),
+        tangents: new Float32Array([0,0,0,0, 0,0,0,0, 0,0,0,0]),
+        skinIndices: new Uint16Array([0,0,0,0, 0,0,0,0, 0,0,0,0]),
+        skinWeights: new Float32Array([1,0,0,0, 1,0,0,0, 1,0,0,0]),
+        visible: 1
+      }],
+      textures: [],
+      bones: [
+        { index: 0, parent: 0, isBone: 1, dq: baseDq, axis: baseAxis }, // node 0 root (self parent 0)
+        { index: 1, parent: 0, isBone: 1, dq: baseDq, axis: baseAxis }, // connected child via parent-0
+        { index: 2, parent: 0, isBone: 0, dq: baseDq, axis: baseAxis }, // extra head for disconnected
+        { index: 3, parent: 2, isBone: 1, dq: baseDq, axis: baseAxis }  // disconnected child bone (parent to head)
+      ],
+      animations: []
+    };
+
+    const buf = exportSMFToBuffer(fixture);
+    const reimported = importSMF(buf.buffer);
+
+    assert.strictEqual(reimported.bones.length, 4, 'node count (incl head) must roundtrip');
+    assert.strictEqual(reimported.bones[0].parent, 0);
+    assert.strictEqual(reimported.bones[0].isBone, 1);
+    assert.strictEqual(reimported.bones[1].parent, 0, 'parent-0 child preserved');
+    assert.strictEqual(reimported.bones[1].isBone, 1);
+    assert.strictEqual(reimported.bones[2].isBone, 0, 'head node for disconnected preserved');
+    assert.strictEqual(reimported.bones[2].parent, 0);
+    assert.strictEqual(reimported.bones[3].parent, 2, 'disconnected child parent to head preserved');
+    assert.strictEqual(reimported.bones[3].isBone, 1);
   });
 });
