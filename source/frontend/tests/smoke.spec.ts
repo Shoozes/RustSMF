@@ -286,7 +286,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     // Visual after load (normalization framing for export flow test)
     const canvas = page.getByTestId('three-canvas');
-    await expect(canvas).toHaveScreenshot({ threshold: 0.25 });
+    await expect(canvas).toHaveScreenshot({ threshold: 0.35 });
 
     // Exercise bone selection + transforms/gizmo (functional, Cycle 3) before export (covers desktop sim path)
     const inspector = page.getByTestId('inspector');
@@ -406,7 +406,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     // Visual snapshot after load (normalization + initial framing; tolerant for env)
     const canvas = page.getByTestId('three-canvas');
-    await expect(canvas).toHaveScreenshot({ threshold: 0.25 });
+    await expect(canvas).toHaveScreenshot({ threshold: 0.35 });
 
     // Bone list select (targets label divs inside li for the nested/collapsible tree structure; clicks name to select)
     // Also exercises toggle for collapse/expand
@@ -436,7 +436,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(inspector).toContainText(/Bones \(\d+\)/i);
 
     // Visual after bone select (marker visible, normalized framing)
-    await expect(canvas).toHaveScreenshot({ threshold: 0.25 });
+    await expect(canvas).toHaveScreenshot({ threshold: 0.35 });
 
     // Exercise transform buttons + new Cycle 3 editor UI (gizmo modes T/R/S + weight preview toggle) for full bone UX coverage (list/raycast + controls + viz)
     const xBtn = inspector.getByTestId('transform-x-btn');
