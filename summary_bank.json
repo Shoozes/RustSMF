@@ -165,14 +165,15 @@
       }
     },
     "threejs_viewport_core": {
-      "description": "Three.js scene + real loaders (GLB via GLTFLoader, SMF binary parser, FBX), SkinnedMesh/Skeleton/AnimationMixer, coord/DQ transforms, interactive timeline, SkeletonHelper. Fully delegated to ThreeViewport (self contained) + App thin state owner. Open/Play/Scrub/Export/SMF roundtrips all connected.",
+      "description": "Three.js scene + real loaders (GLB via GLTFLoader, SMF binary parser, FBX/OBJ), SkinnedMesh/Skeleton/AnimationMixer, coord/DQ transforms, interactive timeline, SkeletonHelper. Fully delegated to ThreeViewport (self contained) + App thin state owner. Open/Play/Scrub/Export/SMF roundtrips all connected. **Cycle 3 editor polish complete**: 3D TransformControls gizmo (bone attach, modes via buttons/keyboard, live update), weight preview (per-vertex color viz blue->red for selected bone influence using skin attrs, toggle + restore), bone marker + raycast/list sync. E2e explicit coverage (bone test clicks for modes/weight).",
       "paths": [
         "source/frontend/src/loaders/**/*",
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/App.tsx",
         "source/frontend/src/main.tsx",
         "source/frontend/src/backend-client/tauri.ts",
-        "source/frontend/src/utils/SimpleOrbit.ts"
+        "source/frontend/src/utils/SimpleOrbit.ts",
+        "source/frontend/src/components/Inspector.tsx"
       ],
       "files": [
         ".tools/_gen_bank.py",
@@ -479,9 +480,25 @@
       ]
     },
     "current_gaps_and_issues": {
-      "description": "Known limitations, desktop/browser parity gaps, missing features, and edge cases to track. Updated during this integrity pass.",
+      "description": "Known limitations, desktop/browser parity gaps, missing features, and edge cases to track. Updated during this 2026-06-11 full integrity pass (docs/bank consolidate, recent Cycle 3 editor polish + e2e coverage locked, no stubs, clean builds).",
       "status": "active",
       "items": [
+        "integrity_pass_2026-06-11_docs_bank: what=full review + consolidate (trim TODO historical repeats to lean current+active paired; refresh APP_STATE to post-Cycle3 gizmo/weight/modes/e2e state; bank gen+curate for recent editor features in viewport_core group + explicit gaps like visual_qa_gizmo/fbx_sample/rust_parser); why=reduce redundancy + accurate groups/gaps for scalability/LLM context per user query; where=docs/*.md + summary_bank.json; how=reads/greps/runs/_gen + targeted edits + pairs (what/why/where/how); outcome=lean docs, organized bank, integrity up. No code changes needed (state clean).",
+        "e2e_editor_ui_coverage: completed (bone selection test now explicitly clicks weight-preview-btn (toggle) + mode-*-btns; data-testid added to buttons in Inspector; no crash, canvas/status asserts; complements prior transform clicks). why=lock Cycle 3 deliverables (gizmo modes + weight viz) for regression; where=smoke.spec.ts + Inspector.tsx; how=conditional clicks + waits (reuse xBtn pattern); tests=10/11 e2e green post. (was open gap; now done per 'complete backlog').",
+        "visual_qa_gizmo_weight_modes: open - what=manual tauri-dev (or dev) + exercise load/bone select (list+raycast+gizmo+modes+weight toggle)/timeline/export + take screenshots of major states (gizmo handles on bone, weight color viz red/blue, active mode buttons); why=rendering/input changes from Cycle 3 (gizmos/weight/modes); where=manual + TODO notes; how=run, exercise all, fix any dead buttons/layout immediately; pair with 'still needed per prior'.",
+        "fbx_sample_for_e2e: open - what=add real test.fbx (or old-src), update SAMPLE_FBX logic in smoke.spec, unskip 'FBX import happy path (full load if sample)' test (exercises loadFBX + 'Loaded FBX' status + bone + export same as SMF); why=completes format parity in e2e per test scenarios #13 + desktop e2e priority; where=source/frontend/tests/ + smoke.spec.ts; how=add sample file, verify e2e runs without skip.",
+        "rust_parser_small_subtask: open (optional) - what=small next e.g. extend parse_smf_header_info or add peek_smf_model_data_basic (e.g. verts count from MODEL); why=build on header helper (modularity base for fuller Rust SMF parser); where=src-tauri/src/main.rs + tauri client + useLoadModel (status append like prior peeks); how=minimal LE parse + register cmd + wire; cargo test. (prior subtasks: header/validate/rig/anim/model/combined done).",
+        "deeper_editor: open - what=keyframe authoring (basic add/scrub in Timeline/store), materials (simple UI/toggle); why=original GM tool parity beyond current Cycle 3 (gizmos/weight/modes/buttons); where=Timeline/Inspector + store + viewport; how=small if planned, pair with what/why/where/how.",
+        "three_dedupe_permanent: optional - what=if dev noise (multiple three in vite/Playwright for jsm like TransformControls) persists; why=robustness; where=vite.config (optimizeDeps/include + alias); how=if needed (current harden + e2e filters suffice for CI/manual).",
+        "docs_bank_ongoing: what=keep TODO/APP_STATE lean (trim history), bank groups curated (recent editor in viewport_core, current_gaps paired); why=reduced redundancy + accurate for scalability; where=docs + summary_bank; how=gen + manual + search_replace per pass.",
+        "sharpen_tests_catching_ongoing: what=more explicit e2e for new UI (weight/modes clicks already added; consider viz state like color attr indirect); filter benign; why=lock post-polish; where=smoke.spec + Rust; how=conditional + re-run. (listeners solid, no app errors.)",
+        "edge_cases_covered: bad input (gml/ts), no sample (graceful skip + robust search), no skel (guards in viewport/inspector), empty export (status), drop concurrent (hook clear), web/desktop parity (fallbacks + Rust smoke), raycast no skel, large? (unit), new UI toggles (e2e clicks). All tracked or handled. No new from review.",
+        "no_broken_imports_exports: full search + builds (verify/e2e pass, relative paths in hook/components/loaders/store/utils resolve, three dedupe in vite, no mixed instance errors post harden).",
+        "redundancy_low: docs history consolidated this pass; code (getRootBones helper, centralized tauri dynamic import in hook for timing/redundancy, narrow effect deps); no dupe in recent weight/gizmo viz code. Comments clean (removed 'future UI' remnants).",
+        "async_timing_solid: loadModel (one dynamic tauri import for .smf desktop + peeks before read for early error/perf); useEffects (refs for stable closures like playbackRef/selectedBoneNameRef, attach deps only model data not playback to avoid re-attach on scrub/RAF, separate playback effects mutate refs); weight/gizmo effects narrow deps; no races (try/catch for optional desktop info, clear on model change). setTimeout only for URL revoke (fine). Reviewed in pass - good.",
+        "modularity_flex_promoted: hook encapsulates load/export (state + handlers); Viewport self-contained (props for all, internal tc/weight/gizmo); Inspector buttons wired via props/cbs from hook; store slices; barrels. Recent weight/mode state in hook + props down = flexible for future (e.g. store lift if grows). No monolith regression.",
+        "philosophy_followed: all paired (what/why/where/how) in this pass + prior; no new stubs; small high-value only; behavior-preserving; test/run cadence; consolidate docs; features connect (load->skinned/anim/bone + Cycle 3 full UI controls + export + peeks + e2e). Scalability up (lean docs, organized bank, clean code).",
+        "prior_items_retained: [keep historical for context e.g. desktop_e2e, fbx_export limited, rust subtasks, modularity, test_robustness, rust_combined_info, etc. as before - all still accurate or completed per this review].",
         "desktop_e2e: binary read (read_file_binary) + write (for save) fully wired. Playwright e2e web-focused; desktop-smoke is unbundled build. Native save (dialog+fs) works in tauri shell. Manual tauri-dev + open/save .smf recommended for full desktop test. Capability documented for fs. Covered.",
         "fbx_export: import + desktop binary + postprocess complete and parity with GLB. Export intentionally limited (UI falls back to SMF/GLB).",
         "tests: smoke.spec expanded (boot + load + export/screenshot + scrub/clip + loading overlay + error-banner + time-display + drop hint + nothing-export + inspector bones assert + bone selection click simulation + stricter critical console error checks post-interaction). Console/pageerror listeners for browser errors (no app errors; only normal GL perf warnings). Unit roundtrips real samples. Visual toHaveScreenshot present and runnable. eslint flat config fixed (no-extends, ts ignored to avoid new deps, node globals for mjs, lint green). Drag-drop testable. Full targeted e2e passed.",

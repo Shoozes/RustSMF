@@ -442,7 +442,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     let tc = transformControlsRef.current;
     if (!tc) {
       tc = new TransformControls(cam, dom);
-      tc.setMode(transformMode || 'translate'); // controlled by prop (UI buttons) or default
+      tc.setMode(transformMode || 'translate'); // controlled by prop from Inspector buttons (or default)
       tc.addEventListener('change', () => {
         // Ensure world matrices propagate for skinning + marker follow
         bone.updateMatrixWorld(true);
