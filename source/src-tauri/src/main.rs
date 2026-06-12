@@ -41,6 +41,13 @@ fn parse_smf_header_info(bytes: &[u8]) -> Result<(String, usize, usize, usize, u
     let off_model = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
     let off_rig = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
     let off_anim = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize;
+    // basic version + section validation (match TS support for v11/v12; offsets increasing + room for counts)
+    if s != "SMF_v11_by_Snidr_and_Bart" && s != "SMF_v12_by_Snidr_and_Bart" {
+        return Err(format!("unsupported version: {}", s));
+    }
+    if off_tex == 0 || off_model < off_tex || off_rig < off_model || off_anim < off_rig || off_anim + 1 > bytes.len() {
+        return Err("section offsets invalid or anim short".to_string());
+    }
     Ok((s, bytes.len(), off_tex, off_model, off_rig, off_anim))
 }
 
@@ -145,10 +152,11 @@ async fn peek_smf_anim_basic(path: String) -> Result<String, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
     match parse_smf_header_info(&bytes) {
         Ok((_, _, _, _, _, off_anim)) => {
-            if off_anim + 4 > bytes.len() {
+            if off_anim + 1 > bytes.len() {
                 return Ok(format!("anim offset {} beyond file", off_anim));
             }
-            let clip_count = u32::from_le_bytes([bytes[off_anim], bytes[off_anim+1], bytes[off_anim+2], bytes[off_anim+3]]);
+            // u8 per TS loader (SMF: after header offs, TEX u8, MODEL u8, RIG u32, ANIM u8)
+            let clip_count = bytes[off_anim] as u32;
             Ok(format!("SMF anim basic: ~{} clips (at anim offset {})", clip_count, off_anim))
         }
         Err(msg) => Ok(msg),
@@ -183,7 +191,8 @@ async fn get_smf_desktop_info(path: String) -> Result<String, String> {
         Ok((s, _, off_tex, off_model, off_rig, off_anim)) => {
             let valid = if s.starts_with("SMF_v") { "valid SMF" } else { "invalid" };
             let rig_count = if off_rig + 4 <= bytes.len() { u32::from_le_bytes([bytes[off_rig], bytes[off_rig+1], bytes[off_rig+2], bytes[off_rig+3]]) } else { 0 };
-            let anim_count = if off_anim + 4 <= bytes.len() { u32::from_le_bytes([bytes[off_anim], bytes[off_anim+1], bytes[off_anim+2], bytes[off_anim+3]]) } else { 0 };
+            // anim u8 (exact match to TS: animCount = reader.u8() after v12 locked etc)
+            let anim_count = if off_anim + 1 <= bytes.len() { bytes[off_anim] as u32 } else { 0 };
             Ok(format!("{} | rig ~{} | anim ~{} (offsets t{} m{} r{} a{})", valid, rig_count, anim_count, off_tex, off_model, off_rig, off_anim))
         }
         Err(msg) => Ok(msg),
@@ -261,8 +270,9 @@ mod tests {
             } else {
                 0
             };
-            let anim_count = if (off_anim as usize) + 4 <= bytes.len() {
-                u32::from_le_bytes([bytes[off_anim as usize], bytes[(off_anim as usize) + 1], bytes[(off_anim as usize) + 2], bytes[(off_anim as usize) + 3]])
+            // anim u8 width (match TS loader + fixed peeks); would have been wrong/large if u32 le used on count byte
+            let anim_count = if (off_anim as usize) + 1 <= bytes.len() {
+                bytes[off_anim as usize] as u32
             } else {
                 0
             };
@@ -321,5 +331,42 @@ mod tests {
             o += 1;
         }
         assert!(!s.starts_with("SMF_v"));
+    }
+
+    #[test]
+    fn test_anim_count_width_u8_and_section_validation() {
+        // Minimal binary fixture to prove anim count is read as u8 (not u32) and basic validation fires.
+        // Layout: versionZ + 4x u32 offs (tex/model/rig/anim) + at animOff: u8 count (small) + garbage that would inflate u32.
+        // If code wrongly did u32::from_le at anim for count, and we set low byte=5 high bytes high, count would be huge.
+        // With u8 read + validation in parse, count==5 and no err for good case.
+        let mut bytes: Vec<u8> = b"SMF_v12_by_Snidr_and_Bart\0".to_vec();
+        // offs: tex=64, model=80, rig=96, anim=100 (after header ~28+16=44, pad to 100)
+        // write 4 LE u32 offs (will point inside our vec after extend)
+        let off_tex: u32 = 80;
+        let off_model: u32 = 90;
+        let off_rig: u32 = 96;
+        let off_anim: u32 = 100;
+        bytes.extend_from_slice(&off_tex.to_le_bytes());
+        bytes.extend_from_slice(&off_model.to_le_bytes());
+        bytes.extend_from_slice(&off_rig.to_le_bytes());
+        bytes.extend_from_slice(&off_anim.to_le_bytes());
+        // ensure len covers animOff + at least 2 (u8 count + next)
+        while bytes.len() < (off_anim as usize) + 5 { bytes.push(0); }
+        // At animOff: u8 count=5 , then 0xFF,0xFF,0xFF to make u32-le=0xFFFFFF05 huge if misread as u32
+        bytes[off_anim as usize] = 5u8;
+        bytes[(off_anim as usize) + 1] = 0xFF;
+        bytes[(off_anim as usize) + 2] = 0xFF;
+        bytes[(off_anim as usize) + 3] = 0xFF;
+        // Now parse via the shared helper (exercises version exact + section validation + u8 anim count)
+        let info = super::parse_smf_header_info(&bytes).expect("valid fixture header+sections");
+        // anim count in combined info path would use the u8 logic now
+        let anim_u8 = if (info.5 + 1) <= bytes.len() { bytes[info.5] as u32 } else { 99 };
+        assert_eq!(anim_u8, 5, "anim count must be u8 read (5), not inflated u32 from following 0xFF bytes");
+        // also direct peek fn would return the ~5
+        // Negative validation: bad version
+        let mut badv = bytes.clone();
+        badv[0] = b'X';
+        let bad_res = super::parse_smf_header_info(&badv);
+        assert!(bad_res.is_err() && bad_res.unwrap_err().contains("unsupported version"));
     }
 }

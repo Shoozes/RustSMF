@@ -107,6 +107,8 @@ switch -Exact ($Task.ToLowerInvariant()) {
             if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "build failed" }
             & node scripts/check-entry-chunks.mjs 2>&1 | Out-Null
             if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "chunk check failed" }
+            & npm run test:unit 2>&1 | Out-String | Write-Host
+            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "unit tests failed" }
             Pop-Location
         }
         if (Test-Path $SrcTauriDir) {

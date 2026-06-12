@@ -96,7 +96,17 @@ describe('smf export roundtrip (data-driven)', () => {
       }],
       textures: [],
       bones: [{ index: 0, parent: -1, isBone: 1, dq: new Float32Array([0,0,0,1,0,0,0,0]), axis: [0,1,0] }],
-      animations: []
+      animations: [{
+        name: 'testAnim',
+        duration: 0.5,
+        times: [0],
+        frames: [[new Float32Array([0,0,0,1,0,0,0,0])]],
+        nodeCount: 1,
+        loop: 1,
+        interpolation: 1,
+        sampleFrameMultiplier: 2,
+        lockedBones: [0]
+      }]
     };
 
     const buf = exportSMFToBuffer(minimal);
@@ -104,7 +114,13 @@ describe('smf export roundtrip (data-driven)', () => {
 
     assert.strictEqual(reimported.meshes.length, 1);
     assert.strictEqual(reimported.bones.length, 1);
-    assert.strictEqual(reimported.animations.length, 0);
+    assert.strictEqual(reimported.animations.length, 1);
+    // v12 anim metadata fidelity (Task 3)
+    const ra = reimported.animations[0];
+    assert.strictEqual(ra.loop, 1);
+    assert.strictEqual(ra.interpolation, 1);
+    assert.strictEqual(ra.sampleFrameMultiplier, 2);
+    assert.deepStrictEqual(ra.lockedBones, [0]);
     // Positions roundtrip (within float eps, ignoring transform noise for minimal)
     const origPos = minimal.meshes[0].positions;
     const rePos = reimported.meshes[0].positions;

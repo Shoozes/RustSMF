@@ -14,7 +14,7 @@
     "lint": "npm --workspace frontend run lint",
     "test:e2e": "npm --workspace frontend run test:e2e",
     "test:unit": "npm --workspace frontend run test:unit",
-    "verify": "npm run lint && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && (cd src-tauri && cargo check || echo 'src-tauri not ready yet')",
+    "verify": "npm run lint && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && cd src-tauri && cargo check",
     "desktop:smoke": "npm --workspace frontend run tauri:build:smoke"
   },
   "engines": {

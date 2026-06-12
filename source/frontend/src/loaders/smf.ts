@@ -62,6 +62,11 @@ export interface ImportedSmf {
     times: number[];
     frames: Float32Array[][]; // per-frame per-node DQ
     nodeCount: number;
+    // v12+ per-anim metadata (Blender exporter etc moved locked bones here; carry for fidelity)
+    loop: number;
+    interpolation: number;
+    sampleFrameMultiplier: number;
+    lockedBones: number[];
   }>;
 }
 
@@ -193,9 +198,10 @@ export function importSMF(buffer: ArrayBuffer): ImportedSmf {
     const duration = reader.f32() / 1000;
     const interp = reader.u8();
     const mult = reader.u8();
+    let lockedBones: number[] = [];
     if (isV12) {
       const locked = reader.u16();
-      for (let l = 0; l < locked; l++) reader.u16();
+      for (let l = 0; l < locked; l++) lockedBones.push(reader.u16());
     }
     const frameCount = reader.u32();
 
@@ -213,7 +219,7 @@ export function importSMF(buffer: ArrayBuffer): ImportedSmf {
       }
       frames.push(frameDqs);
     }
-    animations.push({ name, duration, times, frames, nodeCount });
+    animations.push({ name, duration, times, frames, nodeCount, loop, interpolation: interp, sampleFrameMultiplier: mult, lockedBones });
   }
 
   return { meshes, textures, bones, animations };
@@ -471,7 +477,9 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
   let animSize = 1;
   animations.forEach(a => {
     const perFrame = 4 + nodeList.length * 8 * 4;
-    animSize += (a.name.length + 1) + (1 + 4 + 1 + 1 + 2) + a.times.length * perFrame;
+    const lbsLen = (a.lockedBones?.length || 0) * 2;
+    // loop u8 + dur f32 + interp u8 + mult u8 + locked u16 count + locked list + frameCount u32
+    animSize += (a.name.length + 1) + (1 + 4 + 1 + 1 + 2 + lbsLen + 4) + a.times.length * perFrame;
   });
 
   // Header
@@ -575,13 +583,15 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
   };
 
   animations.forEach((a) => {
+    const lbs = a.lockedBones || [];
     aW.strZ(a.name)
-      .u8(1)
+      .u8(a.loop ?? 0)
       .f32(a.duration * 1000)
-      .u8(1)
-      .u8(1)
-      .u16(0)
-      .u32(a.times.length);
+      .u8(a.interpolation ?? 1)
+      .u8(a.sampleFrameMultiplier ?? 1)
+      .u16(lbs.length);
+    lbs.forEach(lb => aW.u16(lb));
+    aW.u32(a.times.length);
 
     const prevDQs: (Float32Array | null)[] = new Array(nodeList.length).fill(null);
 
