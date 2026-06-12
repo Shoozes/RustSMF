@@ -357,7 +357,9 @@ All per philosophy + complete backlog directive. (This pass: full review/optimiz
 - Outcome: No silent trust break. Users see warnings in Inspector + export status. Behavior for actual export unchanged (still original data). Verify green. "If broken (silent), fix (explicit)."
 - Paired with review: all general instructions followed (incl runs immediately, smallest, updates, gen, commit/push cadence).
 
-All per review priority + "break down if big". 1-6 advanced (7 tracked). Ready for final push or Task7. 
+All per review priority + "break down if big". 1-6 advanced + executed full (verify 11/11, e2e, cargo, bank, paired, commit/push, green only). 7 tracked (desktop native + FBX export automation; "once above green" per review -- core fidelity now proven, automation can follow in subs like enhance smoke.spec desktop notes + tauri build parity). No stubs. Features (load->rig correct+golden+preview explicit->export) connect safely. 
+
+Backlog complete for this cycle per user directive. 
 
 ---
 **Task 5 (golden DQ/coord + parent-zero fixtures, next priority):** 
