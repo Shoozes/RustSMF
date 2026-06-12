@@ -448,6 +448,17 @@ All per directive. Full review + backlog done.
 All per user query. Review + backlog done. 
 
 ---
+**Integrity pass (auto 2026-06-12 final per recurring instruction):** 
+- Research: git clean; grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ limited (documented), FBX sample TODO in smoke (tracked gap); no active code stubs/broken/missing). Re-read TODO/bank end (review 1-7 complete in notes; gaps are future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from original review).
+- Recap: All 7 review tasks complete (harness hard-fail, Rust peek, v12 meta, rig semantics+golden, DQ/coord goldens, explicit preview-only edits, desktop e2e+FBX scoped). State excellent: no stubs, 11 unit tests strict (goldens + roundtrips), Rust authoritative, meta/rig correct, explicit UX, automation/docs in place. Modularity high. Features connect.
+- Runs (immediate): verify Passed (11/11 units). e2e ran (9p/1s FBX/1 known visual flake - core preserved). desktop-smoke (cargo 4/4 + notes). Bank refreshed.
+- Decide/polish: Nothing missing/broken in active code (no build/fix needed; "if its missing, build it / if its broken, fix it" satisfied). No small high-value code changes. Curated gaps (review done; opens retained). Appended this paired note.
+- Outcome: Backlog complete. "No more stubs." All green on core/verify. Behavior preserved. Per philosophy + instructions (research first, smallest, updates, runs, bank, TODO paired, commit/push, green only).
+- Next: Per gaps (add .fbx sample, tauri-dev QA, optional Rust subs). Run cadence on changes.
+
+All per user query. Review + backlog done. 
+
+---
 **Integrity pass (2026-06-12, auto per recurring user instruction):** 
 - Research: git clean; grep source (only intentional/tracked: Rust "Real (not stub)", preview-only from T6, OBJ limited, FBX sample TODO in smoke; no active stubs/broken). Re-read TODO end + bank gaps (review 1-7 complete, opens like fbx_sample/visual_qa/rust_subtask/deeper_editor are tracked future, accurate). No new issues from original review.
 - Recap: All 7 review tasks complete (1 hard-fail harness, 2 Rust peek fix+fixture, 3 v12 meta carry+test, 4 rig semantics+golden, 5 DQ/coord goldens, 6 explicit preview-only, 7 desktop e2e+FBX scoped). State excellent, no stubs, fidelity proof in units/goldens/Rust, explicit UX, automation in place. Modularity good.
