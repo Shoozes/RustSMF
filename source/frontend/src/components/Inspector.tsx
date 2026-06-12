@@ -121,10 +121,11 @@ const Inspector: React.FC<InspectorProps> = ({
         )}
 
         {/* Bone transform controls (Cycle 3: 3D TransformControls gizmo in viewport + quick nudges + mode buttons.
-            3D marker provides visual feedback. */}
+            3D marker provides visual feedback. Live edits are PREVIEW-ONLY (see Task6); SMF export uses original loaded ImportedSmf DQs/bind/anim (no pose sync back yet). */}
         {selected && selected !== 'Scene' && (
           <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
             <div>Transform for: <span className="font-mono text-amber-300">{selected}</span> (gizmo active in viewport)</div>
+            <div className="text-[8px] text-amber-400">Preview-only (export uses loaded data; no live pose sync to SMF yet)</div>
             <button data-testid="transform-x-btn" className="mr-1 mt-0.5 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
               if (skeleton) {
                 const bone = skeleton.bones.find((b: any) => b.name === selected);

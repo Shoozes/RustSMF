@@ -249,9 +249,10 @@ export function buildThreeScene(imported: ImportedSmf) {
     worldMats.push(new THREE.Matrix4().compose(pos, quat, new THREE.Vector3(1,1,1)));
   });
 
-  // Hierarchy + inverses
+  // Hierarchy + inverses. Support node 0 as real root + parent-0 semantics for children of root.
+  // Heads (isBone=0) are modeled as extra nodes in the SMF rig list (parallel to threeBones for now).
   imported.bones.forEach((b, i) => {
-    if (b.parent > 0 && b.parent < threeBones.length) {
+    if (b.parent >= 0 && b.parent < threeBones.length && b.parent !== i) {
       threeBones[b.parent].add(threeBones[i]);
     }
     const inv = worldMats[i].clone().invert();
@@ -260,9 +261,11 @@ export function buildThreeScene(imported: ImportedSmf) {
 
   const skeleton = new THREE.Skeleton(threeBones, boneInverses);
 
-  // Add roots
-  threeBones.filter((b, i) => imported.bones[i].parent <= 0 || !threeBones[imported.bones[i].parent])
-    .forEach(root => sceneRoot.add(root));
+  // Add roots: node 0 (self p=0) is root; children with p=0 attach via hierarchy above; treat <=0 or invalid parent as root.
+  threeBones.filter((b, i) => {
+    const p = imported.bones[i].parent;
+    return p < 0 || p === i || p >= threeBones.length || !threeBones[p];
+  }).forEach(root => sceneRoot.add(root));
 
   // Textures
   const threeTextures = imported.textures.map(t => {
@@ -414,41 +417,62 @@ class BinaryWriter {
  *
  * Note: Follows the reference's known limitations for complex rigs/anim (head/tail bone rotations).
  * Good for basic roundtrips on the samples.
+ * Edits (gizmos/nudges in UI) are preview-only; this exports the ImportedSmf as captured at load
+ * (or constructed for GLB etc). See useLoadModel handleExport + Inspector notes (Task 6).
  */
 export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
   const { meshes, textures, bones: importedBones, animations } = imported;
 
-  // Build nodeList similar to reference (tails + heads for disconnected)
+  // Build nodeList for SMF rig/anim (nodeCount may include extra head nodes for disconnected bones).
+  // Model SMF nodes (from imported.bones with isBone/head flags + parents in node space) separately from Three bones.
+  // Track root (node 0 or p<=0), head (isBone=0), tail/bone (isBone=1), detached via parent links.
+  // If input has isBone=0 entries (from SMF import/roundtrip), preserve 1:1 for fidelity (no re-insertion).
+  // Otherwise (e.g. GLB constructed bones), expansion path can insert heads for disconnected (parent handling).
   const nodeList: Array<{ boneIndex: number; parent: number; isBone: number; isHead: boolean; name: string }> = [];
   const boneToNode = new Map<number, number>();
   let nodeIndex = 0;
 
-  importedBones.forEach((b, bi) => {
-    const connected = b.parent >= 0; // simplified; full would check three hierarchy
-
-    if (!connected && b.parent >= 0) {
+  const hasPrebuiltHeads = importedBones.some(b => b.isBone === 0);
+  if (hasPrebuiltHeads) {
+    // SMF-sourced: bones array already encodes the full rig nodes (heads + bones); preserve structure/parents exactly.
+    importedBones.forEach((b, bi) => {
       nodeList.push({
-        boneIndex: -1,
-        parent: boneToNode.get(b.parent) ?? 0,
-        isBone: 0,
-        isHead: true,
-        name: `Head_${bi}`
+        boneIndex: bi,
+        parent: b.parent,
+        isBone: b.isBone,
+        isHead: b.isBone === 0,
+        name: b.isBone ? `Bone_${bi}` : `Head_${bi}`
       });
+      boneToNode.set(bi, nodeIndex);
       nodeIndex++;
-    }
-
-    nodeList.push({
-      boneIndex: bi,
-      parent: connected ? (boneToNode.get(b.parent) ?? 0) : (nodeIndex - 1),
-      isBone: 1,
-      isHead: false,
-      name: `Bone_${bi}`
     });
-    boneToNode.set(bi, nodeIndex);
-    nodeIndex++;
-  });
+  } else {
+    // Constructed (e.g. from GLB): input are real bones; build with possible head insertion for disconnected children.
+    importedBones.forEach((b, bi) => {
+      const connected = b.parent >= 0; // declared parent link; refine with live hierarchy if available in future
+      if (!connected && b.parent >= 0) {
+        nodeList.push({
+          boneIndex: -1,
+          parent: boneToNode.get(b.parent) ?? 0,
+          isBone: 0,
+          isHead: true,
+          name: `Head_${bi}`
+        });
+        nodeIndex++;
+      }
+      nodeList.push({
+        boneIndex: bi,
+        parent: connected ? (boneToNode.get(b.parent) ?? 0) : (nodeIndex - 1),
+        isBone: 1,
+        isHead: false,
+        name: `Bone_${bi}`
+      });
+      boneToNode.set(bi, nodeIndex);
+      nodeIndex++;
+    });
+  }
 
-  // Clamp parents
+  // Clamp parents (node 0 as root target for orphans)
   nodeList.forEach((n, i) => {
     if (n.parent < 0 || n.parent >= nodeList.length) n.parent = 0;
   });

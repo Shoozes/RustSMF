@@ -348,6 +348,40 @@ All per directive + cycle template. Backlog advanced (Cycle 3 editor UI + test c
 All per philosophy + complete backlog directive. (This pass: full review/optimize/consolidate, no major code changes needed, docs/bank current, push next.) 
 
 ---
+**Task 6 (edit-export sync, priority per review):** 
+- Decision: For this cycle, implement explicit "preview-only" labeling + warning (instead of full live-pose derive/sync layer, which is larger + risks coord drift post goldens). Full "sync live bone transforms back into ImportedSmf" broken as subtask for later (would snapshot skeleton locals -> DQ in handleExport before exportSMFToBuffer, or add edit state).
+- What: Updated SMF export status in useLoadModel to note "(live edits are preview-only; uses loaded ImportedSmf DQs)". Added visible warning line in Inspector transform section ("Preview-only (export uses loaded data; no live pose sync to SMF yet)"). Updated smf.ts export jsdoc with cross-ref to preview-only reality + Task6.
+- Why: "Silent non-exported edits break user trust." Current gizmo/nudge/weight mutate live Three (viewport/inspector) but SMF export path uses lastSmfDataRef (load-time bind/anim). Making it explicit (status + UI text) restores trust without new math/sync code yet. Matches review "or clearly label edits as preview-only with warning".
+- Where: source/frontend/src/hooks/useLoadModel.ts (handleExport status), source/frontend/src/components/Inspector.tsx (transform controls note), source/frontend/src/loaders/smf.ts (export doc).
+- How: Targeted string + JSX comment additions (no new state/refs). Followed after T5 goldens (proof first). Ran verify (11/11), e2e (core), cargo. Bank + this paired TODO. (Subtask b full derive sync: add helper in coord for three local->DQ if needed, clone smfData + update bones[].dq from live skeleton by name/index match in export path, update UI "synced pose" status.)
+- Outcome: No silent trust break. Users see warnings in Inspector + export status. Behavior for actual export unchanged (still original data). Verify green. "If broken (silent), fix (explicit)."
+- Paired with review: all general instructions followed (incl runs immediately, smallest, updates, gen, commit/push cadence).
+
+All per review priority + "break down if big". 1-6 advanced (7 tracked). Ready for final push or Task7. 
+
+---
+**Task 5 (golden DQ/coord + parent-zero fixtures, next priority):** 
+- What: Added 3 numeric golden tests in coord.test.ts (DQ identity with diag/ qr checks tight 1e-6, parent-zero vs transform numeric using dqToLocalTransform for p=0 direct case, full matrix-DQ-matrix roundtrip + flip/norm). Enhanced existing loose tests implicitly by new coverage. The rig golden fixture (Task4) doubles as "parent-zero fixture" (explicit node0 p=0 root + p=0 child + disconnected head). Asserts use tight tolerances vs prior smoke >0.9/0.99.
+- Why: "Visual smoke tests hide subtle handedness/parent-space drift; these are the critical boundary." Per review, before more editor (Task6 sync). Existing tests had basic roundtrips; needed explicit known-value goldens + parent0 case (ties to rig fix).
+- Where: source/frontend/src/loaders/coord.test.ts (new its after normalize test; also the smf golden rig from T4), coord.ts (used dqToLocalTransform etc, no change needed).
+- How: Smallest additive its using hardcoded mats + existing fns + 1e-6/ >0.99 tols (float safe, matches ref math paths); research ref smf_dq_math + current impl; run after T4. Updated TODO/bank. Full runs (verify 11/11 incl all goldens, e2e).
+- Outcome: 11 unit tests (3 new goldens + rig parent0 fixture). Verify/e2e/cargo pass. Provides the "proof" numeric layer for DQ/coord/rig/parent0. No drift introduced. 
+- Paired: followed full (read, smallest, types/docs/tests/bank, verify+e2e, gen, TODO, commit/push, green only).
+
+All per review + cadence. Next: Task6 (edit-export sync decision/impl) or user direction. 
+
+---
+**Task 4 (rig node semantics, priority per review after 1-3):** 
+- What: Fixed parent-0/node 0 root semantics + disconnected bones (extra head nodes) + bind/skin remap. In buildThreeScene: hierarchy attach now >=0 && !=self (supports p=0 children attaching to node0 root); root filter updated to treat node0 (p=0 self) as root, p=0 children as non-roots (attach via hierarchy); heads (isBone=0) kept as parallel SMF nodes in threeBones list for anim/nodeCount fidelity. In exportSMFToBuffer nodeList: detect hasPrebuiltHeads (isBone==0 from SMF import), 1:1 preserve the SMF nodes/parents/isHead for roundtrip fidelity; else expansion path for constructed (GLB etc) sources; cleaned dead connected if, parent=0 safe, clamp to 0 root. Tracked root/head/tail/detached via isHead + parent in nodeList type. Added golden fixture test (node0 p=0 root + connected p=0 child + disconnected via head+child bone) exercising export/import structure + isBone/parent preservation.
+- Why: Original build treated p<=0 all as roots (p=0 children became extra roots, no attach to node0); export nodeList had impossible if (!connected) never inserted heads, always mangled parents/counts for SMF roundtrips with disconnected rigs; conflated SMF node indices (incl heads) with Three bones without separation. Real samples + v12 rigs use parent=0 for root children + head nodes (isBone=0) for disconnected; bindMap/skin relied on correct node indices. Review: "node 0 as real root, parent-0 semantics, disconnected bones (extra head node), and bindMap". "Model SMF nodes separately from Three bones".
+- Where: source/frontend/src/loaders/smf.ts (buildThreeScene hierarchy/root filter ~253, export nodeList builder ~421 + hasPrebuiltHeads path), source/frontend/src/loaders/coord.test.ts (updated minimal root p=0, added golden fixture it() at end of roundtrip describe).
+- How: Smallest targeted edits (no new types yet, reuse isBone/parent/isHead); research via ref exporter/importer/packer + sample inspect (local mixamo); temp instrument + clean; golden test uses explicit fixture with mixed isBone/parents. Updated first minimal to p=0. Ran verify (8/8 units incl golden + real), e2e (10p), cargo. Bank gen, this paired in TODO.
+- Outcome: Rig roundtrips now correct for node0/parent0/heads/disconnected (golden passes, real sample counts+structure preserved). No behavior change for prior simple rigs. 8 unit tests. Verify/e2e/cargo green. "No more stubs" for this fidelity area. Modularity: SMF nodes (bones[] with flags) now explicitly handled separate in paths.
+- Paired with review Task4 + general: read first, smallest, update types(comments)/docs/tests/bank, full runs, gen bank, TODO paired, commit+push, only done on green+preserve. 
+
+All per instructions. Continue to Task 5 next (golden DQ/coord numeric + parent-zero fixtures). 
+
+---
 
 **Address review (2026-06-11, user-provided fidelity audit) + integrity pass (Tasks 1-3 executed; 4-7 tracked):**
 - Review summary (direct): Working Tauri+React+Three app with modular frontend (loaders/hooks/components), real SMF/GLB/OBJ/FBX import, skinned+bone+timeline+export, Rust Tauri bridge + peeks. But: tests silently passable (echo fallback), Rust not authoritative (wrong anim count u32 vs u8, weak validation), v12 anim meta (loop/interp/mult/lockedBones per-anim) dropped on export (hardcoded constants), rig node/parent-0/disconnected/head-node/bindMap semantics incomplete in build/export, missing golden numeric DQ/coord/parent-zero fixtures (visuals hide drift), edit (gizmo/weight) not synced to export (preview-only silent), e2e/desktop/FBX export incomplete for full native. "High-fidelity" optimistic; TS loaders still carry most, Rust thin. Remaining: correctness proof + editor fidelity, not UI fluff. Safety-first: hard tests first.

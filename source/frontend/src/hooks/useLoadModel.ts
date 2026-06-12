@@ -185,11 +185,11 @@ export function useLoadModel() {
   const handleExport = useCallback(async () => {
     const smfData = lastSmfDataRef.current;
     if (smfData) {
-      ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms)...');
+      ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms; live edits are preview-only)...');
       try {
         const buf = exportSMFToBuffer(smfData);
         await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.smf');
-        ui.setStatus('Exported .smf (using our ImportedSmf + DQ handling). Test roundtrip by re-importing!');
+        ui.setStatus('Exported .smf (using our ImportedSmf + DQ handling; edits were preview-only). Test roundtrip by re-importing!');
         return;
       } catch (e: any) {
         ui.setStatus(`SMF export error: ${e?.message || e}. Falling back to GLB...`);
