@@ -493,6 +493,18 @@ All per query + process. Tests expanded, run.
 All per user query. Review + backlog done. 
 
 ---
+**Continuation (2026-06-12, per "continue"):** 
+- Research: git clean; grep (no new stubs/issues, only tracked); re-read TODO/bank (review 1-7 complete); ran verify (11/11 Passed), e2e (core preserved, known visual flake), desktop-smoke (4/4 cargo); bank gen.
+- Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
+- Polish/fix: None (clean; no high-value small changes needed).
+- Runs (immediate): As above, green on core/verify.
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
 **Continuation integrity pass (2026-06-12, per "continue"):** 
 - Research: git clean; grep no new issues; re-read TODO/bank (all review complete, gaps tracked future); ran full verify (11/11), e2e (core good), desktop-smoke (4/4 cargo); bank gen.
 - Recap: No changes since last; state remains excellent, no stubs, review 1-7 + tests done. e2e visual flake is known env (not code).
@@ -501,6 +513,42 @@ All per user query. Review + backlog done.
 - Update: This paired continuation note in TODO.
 - Outcome: Confirmed complete. "No more stubs." Green on verify/core. Preserved. Per instructions.
 - Next: Per gaps (e.g. fbx_sample to unskip, manual visual QA).
+
+All per user query. Review + backlog done. 
+
+---
+**Continuation (2026-06-12, per "continue"):** 
+- Research: git clean; grep (no new stubs/issues, only tracked); re-read TODO/bank (review 1-7 complete); ran verify (11/11 Passed), e2e (core preserved, known visual flake), desktop-smoke (4/4 cargo); bank gen.
+- Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
+- Polish/fix: None (clean; no high-value small changes needed).
+- Runs (immediate): As above, green on core/verify.
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
+**Continuation (2026-06-12, per "continue"):** 
+- Research: git clean; grep (no new stubs/issues, only tracked); re-read TODO/bank (review 1-7 complete); ran verify (11/11 Passed), e2e (core preserved, known visual flake), desktop-smoke (4/4 cargo); bank gen.
+- Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
+- Polish/fix: None (clean; no high-value small changes needed).
+- Runs (immediate): As above, green on core/verify.
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
+**Continuation (2026-06-12, per "continue"):** 
+- Research: git clean; grep (no new stubs/issues, only tracked); re-read TODO/bank (review 1-7 complete); ran verify (11/11 Passed), e2e (core preserved, known visual flake), desktop-smoke (4/4 cargo); bank gen.
+- Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
+- Polish/fix: None (clean; no high-value small changes needed).
+- Runs (immediate): As above, green on core/verify.
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
 
 All per user query. Review + backlog done. 
 
