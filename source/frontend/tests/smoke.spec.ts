@@ -428,7 +428,6 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     }
 
     // Canvas/raycast click for 3D select
-    const canvas = page.getByTestId('three-canvas');
     await canvas.click({ position: { x: 60, y: 60 } });
     await page.waitForTimeout(80);
     await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
@@ -477,6 +476,43 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
       // toggle back
       await playBtn.click({ force: true }).catch(() => {});
     }
+
+    // More interactive camera controls (zoom wheel, drag rotate, right-drag pan) + visual
+    // Tests the enhanced SimpleOrbit (pan added) and normalization (framing)
+    await canvas.hover({ position: { x: 150, y: 150 } });
+    await page.mouse.wheel(0, -150); // zoom in
+    await page.waitForTimeout(80);
+    await expect(canvas).toHaveScreenshot({ threshold: 0.35 });
+
+    await page.mouse.down();
+    await page.mouse.move(200, 120);
+    await page.mouse.up();
+    await page.waitForTimeout(80);
+    await expect(canvas).toHaveScreenshot({ threshold: 0.4 });
+
+    // right drag for pan (new support)
+    await page.mouse.down({ button: 'right' });
+    await page.mouse.move(180, 130);
+    await page.mouse.up();
+    await page.waitForTimeout(80);
+    await expect(canvas).toHaveScreenshot({ threshold: 0.4 });
+
+    // keyboard interactive (R reset, space play, T/R/S modes)
+    await page.keyboard.press('r');
+    await page.waitForTimeout(50);
+    await expect(canvas).toHaveScreenshot({ threshold: 0.4 });
+
+    await page.keyboard.press(' ');
+    await page.waitForTimeout(100);
+    await page.keyboard.press(' ');
+    await page.waitForTimeout(50);
+
+    await page.keyboard.press('t');
+    await page.waitForTimeout(30);
+    await page.keyboard.press('r');
+    await page.waitForTimeout(30);
+    await page.keyboard.press('s');
+    await page.waitForTimeout(30);
   });
 
   test('tauri client fallbacks return expected messages in browser (desktop path coverage)', async ({ page }) => {
