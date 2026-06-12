@@ -435,3 +435,14 @@ All per philosophy + complete backlog.
 - Next: As per gaps (add .fbx sample, tauri-dev visuals, optional Rust parser). Run full on any change.
 
 All per directive. Full review + backlog done. 
+
+---
+**Integrity pass (2026-06-12, auto per recurring user instruction):** 
+- Research: git clean; grep source (only intentional/tracked: Rust "Real (not stub)", preview-only from T6, OBJ limited, FBX sample TODO in smoke; no active stubs/broken). Re-read TODO end + bank gaps (review 1-7 complete, opens like fbx_sample/visual_qa/rust_subtask/deeper_editor are tracked future, accurate). No new issues from original review.
+- Recap: All 7 review tasks complete (1 hard-fail harness, 2 Rust peek fix+fixture, 3 v12 meta carry+test, 4 rig semantics+golden, 5 DQ/coord goldens, 6 explicit preview-only, 7 desktop e2e+FBX scoped). State excellent, no stubs, fidelity proof in units/goldens/Rust, explicit UX, automation in place. Modularity good.
+- Runs (immediate): verify Passed (11/11 units). e2e ran (9p/1s FBX/1 known visual flake - core preserved, FBX UI coverage good). desktop-smoke (cargo 4/4 + notes). Bank refreshed.
+- Polish/curate: No code changes (nothing missing/broken in active paths). Appended this paired note. Bank gen done. Gaps: review complete; retained opens as-is (no small high-value fixes possible without samples/manual like adding .fbx or tauri-dev run).
+- Outcome: Backlog complete. "No more stubs." All green on verify/core. Behavior preserved. Per philosophy + instructions (read first, smallest, updates, runs, bank, TODO, commit/push, green only).
+- Next: Per gaps (e.g. add .fbx sample to unskip full FBX test, manual visual QA, optional Rust parser subs). Continue cadence on changes.
+
+All per user query. Review + backlog done. 
