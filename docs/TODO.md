@@ -529,6 +529,18 @@ All per user query. Review + backlog done.
 All per user query. Review + backlog done. 
 
 ---
+**Continuation (2026-06-12, per "continue"):** 
+- Research: git clean; grep (no new stubs/issues, only tracked); re-read TODO/bank (review 1-7 complete); ran verify (11/11 Passed), e2e (core preserved, known visual flake), desktop-smoke (4/4 cargo); bank gen.
+- Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
+- Polish/fix: None (clean; no high-value small changes needed).
+- Runs (immediate): As above, green on core/verify.
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
 **Post-review issues fixes (2026-06-12, from user test report):** 
 - What: Fixed zoom/pan (enhanced SimpleOrbit with right-drag target pan; wheel zoom was present), model/camera normalization (bbox auto-frame target/distance on attach in ThreeViewport - no root scale to preserve skin), SMF anim visual (added updateMatrixWorld(true) after mixer in animate/scrub for skin/hierarchy), UI buttons (shortened toolbar labels, CSS nowrap/shrink, inspector mode buttons in gap flex wrapper for spacing).
 - Why: User reported: no zoom/pan, SMF play visually broken, giant/tiny models no fit, buttons squished/weird, need visual+control tests. These were missing/broken post prior review work (controls basic, no norm, anim update timing, layout tight).
