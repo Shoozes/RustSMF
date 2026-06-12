@@ -284,6 +284,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/mixamo|Loaded|bones|clips|verts/i);
 
+    // Visual after load (normalization framing for export flow test)
+    const canvas = page.getByTestId('three-canvas');
+    await expect(canvas).toHaveScreenshot({ threshold: 0.25 });
+
     // Exercise bone selection + transforms/gizmo (functional, Cycle 3) before export (covers desktop sim path)
     const inspector = page.getByTestId('inspector');
     const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /./ }).nth(0);
@@ -400,6 +404,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/mixamo|Loaded|bones|clips|verts/i);
 
+    // Visual snapshot after load (normalization + initial framing; tolerant for env)
+    const canvas = page.getByTestId('three-canvas');
+    await expect(canvas).toHaveScreenshot({ threshold: 0.25 });
+
     // Bone list select (targets label divs inside li for the nested/collapsible tree structure; clicks name to select)
     // Also exercises toggle for collapse/expand
     const inspector = page.getByTestId('inspector');
@@ -428,6 +436,9 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     // Confirm inspector reflects bones (rig info indirectly via count)
     await expect(inspector).toContainText(/Bones \(\d+\)/i);
 
+    // Visual after bone select (marker visible, normalized framing)
+    await expect(canvas).toHaveScreenshot({ threshold: 0.25 });
+
     // Exercise transform buttons + new Cycle 3 editor UI (gizmo modes T/R/S + weight preview toggle) for full bone UX coverage (list/raycast + controls + viz)
     const xBtn = inspector.getByTestId('transform-x-btn');
     if (await xBtn.count() > 0) {
@@ -455,6 +466,17 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
       await page.waitForTimeout(40);
     }
     await expect(page.getByTestId('three-canvas')).toBeVisible();
+
+    // Visual + control for animation play state (after load + bone UX)
+    // Click play if timeline button present (tests control + visual during anim; tolerant snapshot)
+    const playBtn = page.locator('button').filter({ hasText: /play|pause|▶|⏸/i }).first();
+    if (await playBtn.count() > 0) {
+      await playBtn.click({ force: true }).catch(() => {});
+      await page.waitForTimeout(120);
+      await expect(canvas).toHaveScreenshot({ threshold: 0.3 });
+      // toggle back
+      await playBtn.click({ force: true }).catch(() => {});
+    }
   });
 
   test('tauri client fallbacks return expected messages in browser (desktop path coverage)', async ({ page }) => {

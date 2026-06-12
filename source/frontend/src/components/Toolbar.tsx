@@ -19,10 +19,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
     <div className="toolbar">
       <div className="font-semibold tracking-wide">RustSMF</div>
       <button data-testid="open-model-btn" onClick={onOpen} disabled={isLoading}>
-        Open Model (.smf / .glb / .fbx / .obj)
+        Open Model
       </button>
       <button data-testid="export-btn" onClick={onExport} disabled={isLoading}>
-        Export (SMF / GLB / FBX)
+        Export
       </button>
       <button data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>
         Ping Rust
@@ -36,7 +36,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         onChange={onFileChange}
       />
       <div className="text-xs text-slate-400 ml-auto pr-2">
-        Drag orbit • Wheel zoom • R reset • Space play/pause
+        Drag rotate • Right-drag pan • Wheel zoom • R reset • Space play/pause
       </div>
     </div>
   );

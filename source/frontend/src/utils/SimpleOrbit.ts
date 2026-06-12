@@ -12,13 +12,14 @@ export class SimpleOrbit {
   target = new THREE.Vector3(0, 0.8, 0);
 
   private dragging = false;
+  private dragButton = 0;
   private lastX = 0;
   private lastY = 0;
 
   attach(canvas: HTMLCanvasElement, onChange: () => void) {
     const onDown = (e: MouseEvent) => {
-      if (e.button !== 0) return;
       this.dragging = true;
+      this.dragButton = e.button;
       this.lastX = e.clientX;
       this.lastY = e.clientY;
     };
@@ -27,8 +28,18 @@ export class SimpleOrbit {
       if (!this.dragging) return;
       const dx = e.clientX - this.lastX;
       const dy = e.clientY - this.lastY;
-      this.yaw -= dx * 0.0035;
-      this.pitch = Math.max(-1.4, Math.min(1.4, this.pitch - dy * 0.0035));
+      if (this.dragButton === 2) {
+        // right-drag pan (target move)
+        const factor = this.distance * 0.002;
+        const c = Math.cos(this.yaw);
+        const s = Math.sin(this.yaw);
+        this.target.x += dx * factor * c;
+        this.target.z += dx * factor * s;
+        this.target.y -= dy * factor;
+      } else {
+        this.yaw -= dx * 0.0035;
+        this.pitch = Math.max(-1.4, Math.min(1.4, this.pitch - dy * 0.0035));
+      }
       this.lastX = e.clientX;
       this.lastY = e.clientY;
       onChange();
@@ -47,6 +58,7 @@ export class SimpleOrbit {
     canvas.addEventListener('touchstart', (e) => {
       if (e.touches.length === 1) {
         this.dragging = true;
+        this.dragButton = 0;
         this.lastX = e.touches[0].clientX;
         this.lastY = e.touches[0].clientY;
       }
@@ -68,6 +80,7 @@ export class SimpleOrbit {
     this.yaw = 0.6;
     this.pitch = 0.4;
     this.distance = 4.5;
+    this.target.set(0, 0.8, 0);
   }
 
   getPosition(): THREE.Vector3 {

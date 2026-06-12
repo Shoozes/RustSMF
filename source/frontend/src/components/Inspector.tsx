@@ -160,10 +160,10 @@ const Inspector: React.FC<InspectorProps> = ({
               </button>
             )}
             {onSetTransformMode && (
-              <>
+              <div className="inline-flex gap-0.5 ml-1 items-center">
                 <button
                   data-testid="mode-translate-btn"
-                  className={`ml-1 px-1 py-0 text-xs ${transformMode === 'translate' ? 'bg-slate-500' : 'bg-slate-700 hover:bg-slate-600'}`}
+                  className={`px-1 py-0 text-xs ${transformMode === 'translate' ? 'bg-slate-500' : 'bg-slate-700 hover:bg-slate-600'}`}
                   onClick={() => onSetTransformMode('translate')}
                 >T</button>
                 <button
@@ -176,7 +176,7 @@ const Inspector: React.FC<InspectorProps> = ({
                   className={`px-1 py-0 text-xs ${transformMode === 'scale' ? 'bg-slate-500' : 'bg-slate-700 hover:bg-slate-600'}`}
                   onClick={() => onSetTransformMode('scale')}
                 >S</button>
-              </>
+              </div>
             )}
             <span className="ml-1 text-slate-500">(gizmo + nudges; T/R/S buttons or keys for mode; Space pause anim, anim may override)</span>
           </div>

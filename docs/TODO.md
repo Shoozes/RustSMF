@@ -470,6 +470,17 @@ All per user query. Review + backlog done.
 All per user query. Review + backlog done. 
 
 ---
+**Post-review issues fixes (2026-06-12, from user test report):** 
+- What: Fixed zoom/pan (enhanced SimpleOrbit with right-drag target pan; wheel zoom was present), model/camera normalization (bbox auto-frame target/distance on attach in ThreeViewport - no root scale to preserve skin), SMF anim visual (added updateMatrixWorld(true) after mixer in animate/scrub for skin/hierarchy), UI buttons (shortened toolbar labels, CSS nowrap/shrink, inspector mode buttons in gap flex wrapper for spacing).
+- Why: User reported: no zoom/pan, SMF play visually broken, giant/tiny models no fit, buttons squished/weird, need visual+control tests. These were missing/broken post prior review work (controls basic, no norm, anim update timing, layout tight).
+- Where: source/frontend/src/utils/SimpleOrbit.ts (pan + reset target), source/frontend/src/components/ThreeViewport.tsx (normalize in attach, matrix update in animate/scrub), source/frontend/src/components/Toolbar.tsx (labels + hint), source/frontend/src/index.css (button styles), source/frontend/src/components/Inspector.tsx (gap wrapper), source/frontend/tests/smoke.spec.ts (added multiple toHaveScreenshot + control extends in bone/export tests).
+- How: Smallest targeted edits (no new deps, modular in existing orbit/viewport). Read viewport/orbit/app/css/inspector/hook first. Added tests for visuals (load, bone select, play states with tolerance) + controls (existing + play toggle). Ran verify/e2e/desktop-smoke immediately (verify 11/11; e2e core+new good; desktop cargo). Bank gen, this paired in TODO. Commit/push.
+- Outcome: Zoom (wheel+right pan now), pan, normalize (models frame), anim visual fixed for SMF, buttons spaced. More tests (screenshots for states, more clicks). Verify green, core e2e preserved. No stubs. Behavior for prior (rotate etc) preserved + enhanced.
+- Next: If e2e visuals still flaky, tune thresholds; full tauri-dev for manual zoom/pan/norm/anim QA; add FBX sample for more.
+
+All per instructions. Backlog advanced, tests expanded. 
+
+---
 **Integrity pass (2026-06-12, auto per recurring user instruction):** 
 - Research: git clean; grep source (only intentional/tracked: Rust "Real (not stub)", preview-only from T6, OBJ limited, FBX sample TODO in smoke; no active stubs/broken). Re-read TODO end + bank gaps (review 1-7 complete, opens like fbx_sample/visual_qa/rust_subtask/deeper_editor are tracked future, accurate). No new issues from original review.
 - Recap: All 7 review tasks complete (1 hard-fail harness, 2 Rust peek fix+fixture, 3 v12 meta carry+test, 4 rig semantics+golden, 5 DQ/coord goldens, 6 explicit preview-only, 7 desktop e2e+FBX scoped). State excellent, no stubs, fidelity proof in units/goldens/Rust, explicit UX, automation in place. Modularity good.

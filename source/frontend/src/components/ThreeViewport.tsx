@@ -173,6 +173,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
           report(action.time);
         }
       }
+      // Force hierarchy/skin update after anim (helps SMF and skinned visual correctness on play/scrub)
+      if (attachedModelRef.current) {
+        attachedModelRef.current.updateMatrixWorld(true);
+      }
 
       // keep bone highlight marker following the (possibly animated) selected bone
       const hl = boneHighlightRef.current;
@@ -241,6 +245,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     }
     // Force skinning/matrix update immediately for scrub
     mixer.update(0);
+    if (attachedModelRef.current) attachedModelRef.current.updateMatrixWorld(true);
   }, [isPlaying, currentTime]);
 
   // React to clip selection change from parent (inspector list)
@@ -514,6 +519,21 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // Avoid clone here to keep skeleton bone refs and skinning correct.
     scene.add(root);
     attachedModelRef.current = root;
+
+    // Auto frame camera + orbit to model (fixes giant/tiny uploads; uses bbox, no model scale to preserve skin/bind)
+    const box = new THREE.Box3().setFromObject(root);
+    const center = box.getCenter(new THREE.Vector3());
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    const orbit = orbitRef.current;
+    orbit.target.copy(center);
+    orbit.distance = maxDim * 0.85 + 2;
+    orbit.yaw = 0.6;
+    orbit.pitch = 0.35;
+    if (cameraRef.current) {
+      cameraRef.current.position.copy(orbit.getPosition());
+      cameraRef.current.lookAt(orbit.target);
+    }
 
     // SkeletonHelper for rig viz (use provided skeleton if any)
     if (skeleton) {
