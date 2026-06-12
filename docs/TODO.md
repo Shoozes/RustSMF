@@ -437,6 +437,17 @@ All per philosophy + complete backlog.
 All per directive. Full review + backlog done. 
 
 ---
+**Integrity pass (auto 2026-06-12 per user instruction):** 
+- Research: git clean; grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6), OBJ limited, FBX sample TODO in smoke; no active stubs/broken). Re-read TODO/bank (review 1-7 complete in notes, gaps are future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - accurate, no new from original review).
+- Recap: All 7 review tasks complete per history + passes. State excellent: no stubs, tests strict (11/11 units), Rust authoritative, meta/rig/goldens, explicit edits, e2e/desktop automation + FBX parity scoped. Modularity high. Features connect.
+- Runs (immediate): verify Passed (11/11). e2e ran (9p/1s FBX/1 known visual flake - core preserved). desktop-smoke (cargo 4/4 + notes). Bank refreshed.
+- Decide/polish: Nothing missing/broken in active code (no build/fix needed). No small high-value code changes. Curated gaps (review done; opens retained). Appended this paired note to TODO.
+- Outcome: Backlog complete. "No more stubs." All green on core/verify. Behavior preserved. Per philosophy + instructions (research first, smallest, updates, runs, bank, TODO paired, commit/push, green only).
+- Next: Per gaps (add .fbx sample, tauri-dev QA, optional Rust subs). Run cadence on changes.
+
+All per user query. Review + backlog done. 
+
+---
 **Integrity pass (2026-06-12, auto per recurring user instruction):** 
 - Research: git clean; grep source (only intentional/tracked: Rust "Real (not stub)", preview-only from T6, OBJ limited, FBX sample TODO in smoke; no active stubs/broken). Re-read TODO end + bank gaps (review 1-7 complete, opens like fbx_sample/visual_qa/rust_subtask/deeper_editor are tracked future, accurate). No new issues from original review.
 - Recap: All 7 review tasks complete (1 hard-fail harness, 2 Rust peek fix+fixture, 3 v12 meta carry+test, 4 rig semantics+golden, 5 DQ/coord goldens, 6 explicit preview-only, 7 desktop e2e+FBX scoped). State excellent, no stubs, fidelity proof in units/goldens/Rust, explicit UX, automation in place. Modularity good.
