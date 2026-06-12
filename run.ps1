@@ -151,7 +151,7 @@ switch -Exact ($Task.ToLowerInvariant()) {
             if ($cargoOutput -match 'Rust desktop peek smoke on') {
                 Write-Ok "Rust desktop peek smoke println executed (sample used for real binary read + parse)."
             }
-            Write-Ok "[SMOKE] Unbundled build + Rust native peek tests complete (3 tests: main peek, validate, header/invalid). smoke.spec.ts JS sim + real-sample bone/export screenshot asserts + extended listeners now cover peek/validate/status strings too. See TODO.md (desktop e2e subtask) + the local real .smf for full tauri-dev manual validation of peeks + UI (bone tree, export, native I/O)."
+            Write-Ok "[SMOKE] Unbundled build + Rust native peek tests complete (3 tests: main peek, validate, header/invalid). smoke.spec.ts JS sim + real-sample bone/export screenshot asserts + extended listeners now cover peek/validate/status strings too. FBX export wired (exportFBX delegates to GLB container + Tauri native saveFile for desktop FBX loads; status 'Exported .glb (from FBX source...)'). See TODO.md (desktop e2e + FBX subtask) + the local real .smf for full tauri-dev manual validation of peeks + UI (bone tree, export incl FBX, native I/O)."
             Pop-Location
         } else {
             Write-Warn "src-tauri missing."
