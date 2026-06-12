@@ -420,3 +420,7 @@ All per review directive + integrity workflow + philosophy. Run full cadence (ve
 - Next: Per TODO gaps (e.g. add real .fbx sample to unskip, tauri-dev visual QA, optional Rust parser subs). Run cadence on any follow-up.
 
 All per user directive + review + Agents.md. Tree clean post push. Full review + backlog done. 
+
+**Final polish (this pass, per recurring directive):** Updated 2 outdated "transform stub" comments in smoke.spec.ts (lines ~287, ~646) to accurate "transforms/gizmo (functional, Cycle 3)" - smallest doc fix for correctness (no code behavior change; tests already exercise real buttons/data-testid from Inspector). Re-ran verify (green), e2e (core preserved), desktop-smoke, bank. Added this paired note. No new stubs introduced. 
+
+All per philosophy + complete backlog. 
