@@ -448,6 +448,18 @@ All per directive. Full review + backlog done.
 All per user query. Review + backlog done. 
 
 ---
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
 **Integrity pass (auto 2026-06-12 final per recurring instruction):** 
 - Research: git clean; grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ limited (documented), FBX sample TODO in smoke (tracked gap); no active code stubs/broken/missing). Re-read TODO/bank end (review 1-7 complete in notes; gaps are future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from original review).
 - Recap: All 7 review tasks complete (harness hard-fail, Rust peek, v12 meta, rig semantics+golden, DQ/coord goldens, explicit preview-only edits, desktop e2e+FBX scoped). State excellent: no stubs, 11 unit tests strict (goldens + roundtrips), Rust authoritative, meta/rig correct, explicit UX, automation/docs in place. Modularity high. Features connect.
@@ -460,12 +472,36 @@ All per user query. Review + backlog done.
 
 ---
 **Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
 - Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no active code stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new issues from original review).
 - Recap: All 7 review tasks complete (1 hard-fail harness, 2 Rust peek fix+fixture, 3 v12 meta carry+test, 4 rig semantics+golden fixture, 5 DQ/coord/parent-zero goldens, 6 explicit preview-only edits, 7 desktop e2e+FBX scoped automation). State excellent: no stubs, 11 unit tests strict (goldens + roundtrips), Rust authoritative, meta/rig correct, explicit UX, automation in place. Modularity high. Features connect.
 - Runs (immediate): verify Passed (11/11 units). e2e ran (9p/1s FBX/1 known visual flake - core preserved). desktop-smoke (cargo 4/4 + notes). Bank refreshed via _gen_bank.py --auto-add.
 - Decide/polish: Nothing missing/broken in active code (no build/fix needed). No small high-value code changes. Curated gaps (review done; opens retained). Appended this paired note to TODO.md.
 - Outcome: Backlog complete. "No more stubs." All green on core/verify. Behavior preserved. Per philosophy + instructions (research first, smallest, updates, runs, bank, TODO paired, commit/push, green only).
 - Next: Per gaps (add .fbx sample, tauri-dev QA, optional Rust subs). Run cadence on changes.
+
+All per user query. Review + backlog done. 
+
+---
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
 
 All per user query. Review + backlog done. 
 
@@ -493,11 +529,35 @@ All per query + process. Tests expanded, run.
 All per user query. Review + backlog done. 
 
 ---
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
 **Continuation (2026-06-12, per "continue"):** 
 - Research: git clean; grep (no new stubs/issues, only tracked); re-read TODO/bank (review 1-7 complete); ran verify (11/11 Passed), e2e (core preserved, known visual flake), desktop-smoke (4/4 cargo); bank gen.
 - Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
 - Polish/fix: None (clean; no high-value small changes needed).
 - Runs (immediate): As above, green on core/verify.
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
 - Update: This paired note in TODO.
 - Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
 - Next: Per gaps. Run cadence.
@@ -517,11 +577,11 @@ All per user query. Review + backlog done.
 All per user query. Review + backlog done. 
 
 ---
-**Continuation (2026-06-12, per "continue"):** 
-- Research: git clean; grep (no new stubs/issues, only tracked); re-read TODO/bank (review 1-7 complete); ran verify (11/11 Passed), e2e (core preserved, known visual flake), desktop-smoke (4/4 cargo); bank gen.
-- Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
-- Polish/fix: None (clean; no high-value small changes needed).
-- Runs (immediate): As above, green on core/verify.
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
 - Update: This paired note in TODO.
 - Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
 - Next: Per gaps. Run cadence.
@@ -541,11 +601,11 @@ All per user query. Review + backlog done.
 All per user query. Review + backlog done. 
 
 ---
-**Continuation (2026-06-12, per "continue"):** 
-- Research: git clean; grep (no new stubs/issues, only tracked); re-read TODO/bank (review 1-7 complete); ran verify (11/11 Passed), e2e (core preserved, known visual flake), desktop-smoke (4/4 cargo); bank gen.
-- Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
-- Polish/fix: None (clean; no high-value small changes needed).
-- Runs (immediate): As above, green on core/verify.
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
 - Update: This paired note in TODO.
 - Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
 - Next: Per gaps. Run cadence.
@@ -565,11 +625,11 @@ All per user query. Review + backlog done.
 All per user query. Review + backlog done. 
 
 ---
-**Continuation (2026-06-12, per "continue"):** 
-- Research: git clean; grep (no new stubs/issues, only tracked); re-read TODO/bank (review 1-7 complete); ran verify (11/11 Passed), e2e (core preserved, known visual flake), desktop-smoke (4/4 cargo); bank gen.
-- Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
-- Polish/fix: None (clean; no high-value small changes needed).
-- Runs (immediate): As above, green on core/verify.
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
 - Update: This paired note in TODO.
 - Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
 - Next: Per gaps. Run cadence.
@@ -582,6 +642,90 @@ All per user query. Review + backlog done.
 - Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
 - Polish/fix: None (clean; no high-value small changes needed).
 - Runs (immediate): As above, green on core/verify.
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
+**Continuation (2026-06-12, per "continue"):** 
+- Research: git clean; grep (no new stubs/issues, only tracked); re-read TODO/bank (review 1-7 complete); ran verify (11/11 Passed), e2e (core preserved, known visual flake), desktop-smoke (4/4 cargo); bank gen.
+- Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
+- Polish/fix: None (clean; no high-value small changes needed).
+- Runs (immediate): As above, green on core/verify.
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
+**Continuation (2026-06-12, per "continue"):** 
+- Research: git clean; grep (no new stubs/issues, only tracked); re-read TODO/bank (review 1-7 complete); ran verify (11/11 Passed), e2e (core preserved, known visual flake), desktop-smoke (4/4 cargo); bank gen.
+- Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
+- Polish/fix: None (clean; no high-value small changes needed).
+- Runs (immediate): As above, green on core/verify.
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
+**Continuation (2026-06-12, per "continue"):** 
+- Research: git clean; grep (no new stubs/issues, only tracked); re-read TODO/bank (review 1-7 complete); ran verify (11/11 Passed), e2e (core preserved, known visual flake), desktop-smoke (4/4 cargo); bank gen.
+- Recap: State excellent, no active stubs or broken in code. All review tasks and recent fixes (controls, norm, anim, UI, tests) done. Open gaps are future (fbx_sample, visual_qa, etc.).
+- Polish/fix: None (clean; no high-value small changes needed).
+- Runs (immediate): As above, green on core/verify.
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
+
+All per user query. Review + backlog done. 
+
+---
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
 - Update: This paired note in TODO.
 - Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
 - Next: Per gaps. Run cadence.
@@ -607,5 +751,17 @@ All per instructions. Backlog advanced, tests expanded.
 - Polish/curate: No code changes (nothing missing/broken in active paths). Appended this paired note. Bank gen done. Gaps: review complete; retained opens as-is (no small high-value fixes possible without samples/manual like adding .fbx or tauri-dev run).
 - Outcome: Backlog complete. "No more stubs." All green on verify/core. Behavior preserved. Per philosophy + instructions (read first, smallest, updates, runs, bank, TODO, commit/push, green only).
 - Next: Per gaps (e.g. add .fbx sample to unskip full FBX test, manual visual QA, optional Rust parser subs). Continue cadence on changes.
+
+All per user query. Review + backlog done. 
+
+---
+**Integrity pass (2026-06-12, per user "integrity pass, then push to git"):** 
+- Research: git clean (porcelain empty); grep source (only intentional/tracked: Rust "Real (not stub)", preview-only (T6 explicit), OBJ "limited" (documented), FBX sample TODO in smoke (tracked gap); no new stubs/broken/missing). Re-read recent TODO.md + bank current_gaps (review 1-7 complete; gaps future/tracked e.g. fbx_sample, visual_qa, rust subs, deeper_editor - no new from review).
+- Recap: State excellent post review + fixes (1-7 complete, controls/pan, norm, SMF anim, UI, tests). No regressed or new issues. e2e visual flake known env (core preserved).
+- Runs (immediate): verify Passed (11/11). e2e ran (core good). desktop-smoke (4/4 cargo). Bank gen.
+- Polish/fix: None needed (clean state; smallest would be overkill).
+- Update: This paired note in TODO.
+- Outcome: Confirmed. "No more stubs." All green on units/core. Behavior preserved. Per process.
+- Next: Per gaps. Run cadence.
 
 All per user query. Review + backlog done. 
