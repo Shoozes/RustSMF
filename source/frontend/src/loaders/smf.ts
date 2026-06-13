@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import {
   smfVecToThree,
-  smfMatrixToThree,
   dqToLocalTransform,
   dqNegate,
   dqNormalize,
@@ -16,9 +15,18 @@ import {
  * with proper Y-up conversion and DQ -> quat/pos for skinning.
  */
 
+type Float32Buffer = Float32Array<ArrayBufferLike>;
+type Uint16Buffer = Uint16Array<ArrayBufferLike>;
+
+function bytesToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer as ArrayBuffer;
+}
+
 class BinaryReader {
   private dv: DataView;
-  private off = 0;
+  off = 0;
 
   constructor(buffer: ArrayBuffer) {
     this.dv = new DataView(buffer);
@@ -46,21 +54,21 @@ export interface ImportedSmf {
     verts: number;
     triangles: number[][];
     texIdx: number;
-    positions: Float32Array;
-    normals: Float32Array;
-    uvs: Float32Array;
-    tangents: Float32Array;
-    skinIndices: Uint16Array;
-    skinWeights: Float32Array;
+    positions: Float32Buffer;
+    normals: Float32Buffer;
+    uvs: Float32Buffer;
+    tangents: Float32Buffer;
+    skinIndices: Uint16Buffer;
+    skinWeights: Float32Buffer;
     visible: number;
   }>;
   textures: Array<{ name: string; image: HTMLImageElement; previewUrl: string }>;
-  bones: Array<{ index: number; parent: number; isBone: number; dq: Float32Array; axis: number[] }>;
+  bones: Array<{ index: number; parent: number; isBone: number; dq: Float32Buffer; axis: number[] }>;
   animations: Array<{
     name: string;
     duration: number;
     times: number[];
-    frames: Float32Array[][]; // per-frame per-node DQ
+    frames: Float32Buffer[][]; // per-frame per-node DQ
     nodeCount: number;
     // v12+ per-anim metadata (Blender exporter etc moved locked bones here; carry for fidelity)
     loop: number;
@@ -176,7 +184,7 @@ export function importSMF(buffer: ArrayBuffer): ImportedSmf {
   const nodeCount = reader.u32();
   const bones: ImportedSmf['bones'] = [];
   for (let i = 0; i < nodeCount; i++) {
-    let dq = new Float32Array(8);
+    let dq: Float32Buffer = new Float32Array(8);
     for (let j = 0; j < 8; j++) dq[j] = reader.f32();
     dq = dqNegate(dq); // as per reference read path
     const parent = reader.u32();
@@ -206,13 +214,13 @@ export function importSMF(buffer: ArrayBuffer): ImportedSmf {
     const frameCount = reader.u32();
 
     const times: number[] = [];
-    const frames: Float32Array[][] = [];
+    const frames: Float32Buffer[][] = [];
     for (let f = 0; f < frameCount; f++) {
       const normTime = reader.f32();
       times.push(normTime * duration);
-      const frameDqs: Float32Array[] = [];
+      const frameDqs: Float32Buffer[] = [];
       for (let n = 0; n < nodeCount; n++) {
-        let dq = new Float32Array(8);
+        let dq: Float32Buffer = new Float32Array(8);
         for (let j = 0; j < 8; j++) dq[j] = reader.f32();
         dq = dqNegate(dq);
         frameDqs.push(dq);
@@ -262,7 +270,7 @@ export function buildThreeScene(imported: ImportedSmf) {
   const skeleton = new THREE.Skeleton(threeBones, boneInverses);
 
   // Add roots: node 0 (self p=0) is root; children with p=0 attach via hierarchy above; treat <=0 or invalid parent as root.
-  threeBones.filter((b, i) => {
+  threeBones.filter((_bone, i) => {
     const p = imported.bones[i].parent;
     return p < 0 || p === i || p >= threeBones.length || !threeBones[p];
   }).forEach(root => sceneRoot.add(root));
@@ -287,7 +295,7 @@ export function buildThreeScene(imported: ImportedSmf) {
 
   const skinnedMeshes: THREE.SkinnedMesh[] = [];
 
-  imported.meshes.forEach((m, i) => {
+  imported.meshes.forEach((m) => {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.BufferAttribute(m.positions, 3));
     geometry.setAttribute('normal', new THREE.BufferAttribute(m.normals, 3));
@@ -304,7 +312,6 @@ export function buildThreeScene(imported: ImportedSmf) {
 
     const material = new THREE.MeshStandardMaterial({
       map: m.texIdx >= 0 ? threeTextures[m.texIdx] : null,
-      skinning: true,
       side: THREE.DoubleSide,
     });
 
@@ -376,12 +383,10 @@ class BinaryWriter {
   private buf: ArrayBuffer;
   private dv: DataView;
   private off = 0;
-  private tag: string;
 
-  constructor(initialSize = 1024, tag = 'buf') {
+  constructor(initialSize = 1024, _tag = 'buf') {
     this.buf = new ArrayBuffer(initialSize);
     this.dv = new DataView(this.buf);
-    this.tag = tag;
   }
 
   private ensure(n: number) {
@@ -406,6 +411,10 @@ class BinaryWriter {
 
   getBuffer() {
     return this.buf.slice(0, this.off);
+  }
+
+  patchU32(offset: number, value: number) {
+    this.dv.setUint32(offset, value, true);
   }
 }
 
@@ -473,7 +482,7 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
   }
 
   // Clamp parents (node 0 as root target for orphans)
-  nodeList.forEach((n, i) => {
+  nodeList.forEach((n) => {
     if (n.parent < 0 || n.parent >= nodeList.length) n.parent = 0;
   });
 
@@ -646,7 +655,7 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
 
   let ptr = versionString.length + 1;
   [offTex, offModel, offRig, offAnim].forEach(o => {
-    hW.dv.setUint32(ptr, o, true);
+    hW.patchU32(ptr, o);
     ptr += 4;
   });
 
@@ -668,5 +677,5 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
 
 export function exportSMF(imported: ImportedSmf): string {
   const buf = exportSMFToBuffer(imported);
-  return URL.createObjectURL(new Blob([buf], { type: 'application/octet-stream' }));
+  return URL.createObjectURL(new Blob([bytesToArrayBuffer(buf)], { type: 'application/octet-stream' }));
 }

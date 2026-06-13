@@ -98,7 +98,7 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
 // use for basic GLB→SMF export when needed). See smf_export_and_fidelity group.
 export async function loadGLBAsSmfData(urlOrBuffer: string | ArrayBuffer): Promise<ImportedSmf> {
   const loaded = await loadGLB(urlOrBuffer);
-  const { root, skinnedMeshes, skeleton, clips } = loaded;
+  const { skinnedMeshes, skeleton, clips } = loaded;
 
   // Minimal meshes from first skinned (extend for multi-mesh later)
   const meshes: ImportedSmf['meshes'] = [];
@@ -111,7 +111,6 @@ export async function loadGLBAsSmfData(urlOrBuffer: string | ArrayBuffer): Promi
     const tan = geo.attributes.tangent?.array as Float32Array || new Float32Array(0);
     const skinInd = geo.attributes.skinIndex?.array as Uint16Array || new Uint16Array(0);
     const skinW = geo.attributes.skinWeight?.array as Float32Array || new Float32Array(0);
-    const triCount = (geo.index ? geo.index.count : pos.length / 3) / 3;
     const triangles: number[][] = [];
     if (geo.index) {
       const idx = geo.index.array;
@@ -143,7 +142,7 @@ export async function loadGLBAsSmfData(urlOrBuffer: string | ArrayBuffer): Promi
     skeleton.bones.forEach((b, i) => {
       const pos = b.position;
       const quat = b.quaternion;
-      // Approx DQ from pos/quat (placeholder; use coord.dqCreateFromMatrix for exact)
+      // Approximate DQ from pos/quat; exact GLB-to-SMF DQ reconstruction remains a tracked export-fidelity subtask.
       const dq = new Float32Array(8);
       dq[0] = quat.x; dq[1] = quat.y; dq[2] = quat.z; dq[3] = quat.w;
       dq[4] = 0.5 * (pos.x * quat.w - pos.y * quat.z + pos.z * quat.y); // rough dual
@@ -164,13 +163,17 @@ export async function loadGLBAsSmfData(urlOrBuffer: string | ArrayBuffer): Promi
   const animations: ImportedSmf['animations'] = [];
   clips.forEach((clip) => {
     const times = clip.tracks[0]?.times ? Array.from(clip.tracks[0].times) : [0];
-    const frames: Float32Array[][] = times.map(() => bones.map(() => new Float32Array(8))); // placeholder DQs
+    const frames: Float32Array[][] = times.map(() => bones.map(() => new Float32Array(8)));
     animations.push({
       name: clip.name || 'GLB_Anim',
       duration: clip.duration,
       times,
       frames,
-      nodeCount: bones.length
+      nodeCount: bones.length,
+      loop: 1,
+      interpolation: 1,
+      sampleFrameMultiplier: 1,
+      lockedBones: []
     });
   });
 

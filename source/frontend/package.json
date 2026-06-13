@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
     "check:entry-chunks": "node scripts/check-entry-chunks.mjs",
     "preview": "vite preview",
     "lint": "eslint .",

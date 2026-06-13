@@ -6,7 +6,7 @@ import { exportGLB } from './glb';
 // Supports skinned meshes if present in FBX.
 // Full roundtrip: loadFBX + exportFBX (GLTF equivalent) + re-load as GLB.
 
-export interface LoadedModel {
+interface FbxLoadedModel {
   root: THREE.Group;
   skeleton?: THREE.Skeleton;
   skinnedMeshes: THREE.SkinnedMesh[];
@@ -14,7 +14,7 @@ export interface LoadedModel {
   mixer: THREE.AnimationMixer;
 }
 
-export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<LoadedModel> {
+export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoadedModel> {
   const loader = new FBXLoader();
 
   let fbx: THREE.Group;

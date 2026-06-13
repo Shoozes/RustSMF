@@ -93,7 +93,7 @@ async fn write_file_binary(path: String, data: Vec<u8>) -> Result<(), String> {
 
 #[command]
 async fn peek_smf_header(path: String) -> Result<String, String> {
-    // Real (not stub) small SMF header peek for desktop validation / rust-smf-parser progress.
+    // Real small SMF header peek for desktop validation / rust-smf-parser progress.
     // Uses shared parse helper for modularity. Frontend uses for desktop .smf to surface Rust I/O in status.
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
     match parse_smf_header_info(&bytes) {
@@ -111,7 +111,7 @@ async fn peek_smf_header(path: String) -> Result<String, String> {
 // Small real subtask for rust-smf-parser breakdown (header peek + size done; this adds basic validation).
 #[command]
 async fn validate_smf(path: String) -> Result<String, String> {
-    // Real (not stub) basic SMF validation using header logic. Returns "valid SMF" or "invalid: reason".
+    // Real basic SMF validation using header logic. Returns "valid SMF" or "invalid: reason".
     // Uses shared parse helper. Can be used for early desktop .smf checks before full load.
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
     match parse_smf_header_info(&bytes) {
@@ -183,7 +183,7 @@ async fn peek_smf_model_basic(path: String) -> Result<String, String> {
 
 // Polish for timing/async: combined desktop info cmd to reduce multiple FS calls and awaits in load for .smf desktop.
 // Does validate + peek + rig + anim in one pass, returns combined string for status.
-// Real, small, no stub.
+// Real, small desktop summary command.
 #[command]
 async fn get_smf_desktop_info(path: String) -> Result<String, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;

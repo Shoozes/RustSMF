@@ -95,5 +95,3 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
     clearError,
   };
 }
-
-export type { LoadedModelState, PlaybackState, UiState };

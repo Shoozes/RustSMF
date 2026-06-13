@@ -6,6 +6,7 @@ import * as THREE from 'three';
  * R reset, drag, wheel, basic touch.
  */
 export class SimpleOrbit {
+  enabled = true;
   yaw = 0.6;
   pitch = 0.4;
   distance = 4.5;
@@ -16,8 +17,9 @@ export class SimpleOrbit {
   private lastX = 0;
   private lastY = 0;
 
-  attach(canvas: HTMLCanvasElement, onChange: () => void) {
+  attach(canvas: HTMLCanvasElement, onChange: () => void): () => void {
     const onDown = (e: MouseEvent) => {
+      if (!this.enabled) return;
       this.dragging = true;
       this.dragButton = e.button;
       this.lastX = e.clientX;
@@ -25,7 +27,7 @@ export class SimpleOrbit {
     };
     const onUp = () => { this.dragging = false; };
     const onMove = (e: MouseEvent) => {
-      if (!this.dragging) return;
+      if (!this.enabled || !this.dragging) return;
       const dx = e.clientX - this.lastX;
       const dy = e.clientY - this.lastY;
       if (this.dragButton === 2) {
@@ -45,27 +47,31 @@ export class SimpleOrbit {
       onChange();
     };
     const onWheel = (e: WheelEvent) => {
+      if (!this.enabled) return;
       e.preventDefault();
       this.distance = Math.max(1.2, Math.min(18, this.distance + e.deltaY * 0.003));
       onChange();
     };
+    const onContextMenu = (e: MouseEvent) => e.preventDefault();
     canvas.addEventListener('mousedown', onDown);
     window.addEventListener('mouseup', onUp);
     window.addEventListener('mousemove', onMove);
     canvas.addEventListener('wheel', onWheel, { passive: false });
+    canvas.addEventListener('contextmenu', onContextMenu);
 
     // Touch support (basic)
-    canvas.addEventListener('touchstart', (e) => {
+    const onTouchStart = (e: TouchEvent) => {
+      if (!this.enabled) return;
       if (e.touches.length === 1) {
         this.dragging = true;
         this.dragButton = 0;
         this.lastX = e.touches[0].clientX;
         this.lastY = e.touches[0].clientY;
       }
-    });
-    canvas.addEventListener('touchend', () => { this.dragging = false; });
-    canvas.addEventListener('touchmove', (e) => {
-      if (!this.dragging || e.touches.length !== 1) return;
+    };
+    const onTouchEnd = () => { this.dragging = false; };
+    const onTouchMove = (e: TouchEvent) => {
+      if (!this.enabled || !this.dragging || e.touches.length !== 1) return;
       const dx = e.touches[0].clientX - this.lastX;
       const dy = e.touches[0].clientY - this.lastY;
       this.yaw -= dx * 0.004;
@@ -73,7 +79,22 @@ export class SimpleOrbit {
       this.lastX = e.touches[0].clientX;
       this.lastY = e.touches[0].clientY;
       onChange();
-    });
+    };
+    canvas.addEventListener('touchstart', onTouchStart);
+    canvas.addEventListener('touchend', onTouchEnd);
+    canvas.addEventListener('touchmove', onTouchMove);
+
+    return () => {
+      this.dragging = false;
+      canvas.removeEventListener('mousedown', onDown);
+      window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('mousemove', onMove);
+      canvas.removeEventListener('wheel', onWheel);
+      canvas.removeEventListener('contextmenu', onContextMenu);
+      canvas.removeEventListener('touchstart', onTouchStart);
+      canvas.removeEventListener('touchend', onTouchEnd);
+      canvas.removeEventListener('touchmove', onTouchMove);
+    };
   }
 
   reset() {

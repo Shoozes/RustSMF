@@ -103,6 +103,8 @@ switch -Exact ($Task.ToLowerInvariant()) {
             Push-Location $FrontendDir
             & npm run lint 2>&1 | Out-String | Write-Host
             if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "lint failed" }
+            & npm run typecheck 2>&1 | Out-String | Write-Host
+            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "typecheck failed" }
             & npm run build 2>&1 | Out-String | Write-Host
             if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "build failed" }
             & node scripts/check-entry-chunks.mjs 2>&1 | Out-Null
@@ -127,7 +129,8 @@ switch -Exact ($Task.ToLowerInvariant()) {
         Write-Info "[SMOKE] Unbundled Tauri build + native Rust peek validation..."
         if (Test-Path $SrcTauriDir) {
             Push-Location $SrcTauriDir
-            cargo tauri build --no-bundle
+            & cargo tauri build --no-bundle
+            if ($LASTEXITCODE -ne 0) { throw "cargo tauri build --no-bundle failed" }
             # Real desktop binary read (read_file_binary) + peeks (get_smf_desktop_info + peek_*_basic for header/rig/anim/model) + early validation are now also exercised automatically here via cargo test.
             # The Rust tests (in main.rs) perform actual std::fs reads against the local mixamo_smf_baldguy.smf (or old-src samples) when present and assert on header + counts (exact same parsing as the Tauri commands).
             # This closes part of the automated desktop e2e gap for the native FS/peek layer (complements web Playwright e2e which covers shared TS loaders + UI).
@@ -135,7 +138,7 @@ switch -Exact ($Task.ToLowerInvariant()) {
             # Full UI + native dialog/save roundtrip in the running app still benefits from manual: run '.\run.ps1 -Task tauri-dev', then Open + load source/frontend/tests/mixamo_smf_baldguy.smf and watch status for "Rust validated SMF | SMF model basic: ~N meshes ..." + bone tree + export.
             $cargoOutput = cargo test 2>&1 | Out-String
             Write-Host $cargoOutput
-            if ($LASTEXITCODE -ne 0) { Write-Warn "cargo test (desktop peek smoke) had issues" }
+            if ($LASTEXITCODE -ne 0) { throw "cargo test (desktop peek smoke) failed" }
             if ($cargoOutput -match 'model~') {
                 Write-Ok "Rust desktop peek tests used real sample (mixamo or old-src) for native binary read + header/rig/anim/model validation."
             }
@@ -151,7 +154,7 @@ switch -Exact ($Task.ToLowerInvariant()) {
             if ($cargoOutput -match 'Rust desktop peek smoke on') {
                 Write-Ok "Rust desktop peek smoke println executed (sample used for real binary read + parse)."
             }
-            Write-Ok "[SMOKE] Unbundled build + Rust native peek tests complete (3 tests: main peek, validate, header/invalid). smoke.spec.ts JS sim + real-sample bone/export screenshot asserts + extended listeners now cover peek/validate/status strings too. FBX export wired (exportFBX delegates to GLB container + Tauri native saveFile for desktop FBX loads; status 'Exported .glb (from FBX source...)'). See TODO.md (desktop e2e + FBX subtask) + the local real .smf for full tauri-dev manual validation of peeks + UI (bone tree, export incl FBX, native I/O)."
+            Write-Ok "[SMOKE] Unbundled build + Rust native peek tests complete (4 tests: main peek, validate, header/invalid, anim-count width). smoke.spec.ts JS sim + real-sample bone/export screenshot asserts + extended listeners now cover peek/validate/status strings too. FBX export wired (exportFBX delegates to GLB container + Tauri native saveFile for desktop FBX loads; status 'Exported .glb (from FBX source...)'). See TODO.md (desktop e2e + FBX subtask) + the local real .smf for full tauri-dev manual validation of peeks + UI (bone tree, export incl FBX, native I/O)."
             Pop-Location
         } else {
             Write-Warn "src-tauri missing."

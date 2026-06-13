@@ -17,6 +17,12 @@ function isTauriEnv(): boolean {
   return !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
 }
 
+function copyToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength)
+  copy.set(bytes)
+  return copy.buffer as ArrayBuffer
+}
+
 export async function openFile(): Promise<OpenResult | null> {
   const isTauri = isTauriEnv()
   if (isTauri) {
@@ -24,7 +30,7 @@ export async function openFile(): Promise<OpenResult | null> {
       const selected = await open({
         multiple: false,
         filters: [
-          { name: '3D Models', extensions: ['smf', 'glb', 'gltf', 'fbx'] },
+          { name: '3D Models', extensions: ['smf', 'glb', 'gltf', 'fbx', 'obj'] },
           { name: 'All Files', extensions: ['*'] }
         ]
       })
@@ -74,7 +80,7 @@ export async function saveFile(data: Uint8Array | Blob, suggestedName: string): 
     return
   }
   // Browser (or fallback) download
-  const blob = data instanceof Blob ? data : new Blob([data])
+  const blob = data instanceof Blob ? data : new Blob([copyToArrayBuffer(data)])
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url

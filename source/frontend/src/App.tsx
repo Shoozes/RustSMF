@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react'
+import { useEffect } from 'react'
 import ThreeViewport from './components/ThreeViewport'
 import Timeline from './components/Timeline'
 import Outliner from './components/Outliner'

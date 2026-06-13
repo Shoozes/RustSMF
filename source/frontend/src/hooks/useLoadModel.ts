@@ -1,4 +1,5 @@
 import { useCallback, useRef, useEffect, useState } from 'react';
+import type * as THREE from 'three';
 import type { OpenResult } from '../backend-client/tauri';
 import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
@@ -28,6 +29,15 @@ export function useLoadModel() {
   // Transform mode for gizmo (Cycle 3: small UI buttons for modes)
   const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
 
+  const loadSeqRef = useRef(0);
+  const fileReadSeqRef = useRef(0);
+
+  const bytesToArrayBuffer = (bytes: Uint8Array): ArrayBuffer => {
+    const copy = new Uint8Array(bytes.byteLength);
+    copy.set(bytes);
+    return copy.buffer as ArrayBuffer;
+  };
+
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
     model.clear();
@@ -44,6 +54,8 @@ export function useLoadModel() {
   }, [model, ui, playbackRef]);
 
   const loadModel = useCallback(async (res: OpenResult) => {
+    const loadSeq = ++loadSeqRef.current;
+    const isCurrentLoad = () => loadSeqRef.current === loadSeq;
     clearLoadedModel();
     ui.setIsLoading(true);
     ui.clearError();
@@ -71,6 +83,7 @@ export function useLoadModel() {
           tauri = await import('../backend-client/tauri');
           try {
             const info = await tauri.getSmfDesktopInfo(res.path);
+            if (!isCurrentLoad()) return;
             if (info.includes('invalid')) {
               ui.setErrorMsg(`Invalid SMF (Rust): ${info}`);
               ui.setStatus(info);
@@ -81,6 +94,7 @@ export function useLoadModel() {
             rustPeekMsg = info;
             try {
               const m = await tauri.peekSmfModelBasic(res.path);
+              if (!isCurrentLoad()) return;
               rustPeekMsg = `${rustPeekMsg} | ${m}`;
             } catch {}
           } catch {}
@@ -88,10 +102,12 @@ export function useLoadModel() {
         ui.setStatus('Reading binary from desktop path...');
         if (!tauri) tauri = await import('../backend-client/tauri');
         data = await tauri.readBinaryFile(res.path);
+        if (!isCurrentLoad()) return;
       } else if (name.endsWith('.smf') && res.path) {
         tauri = await import('../backend-client/tauri');
         try {
           const info = await tauri.getSmfDesktopInfo(res.path);
+          if (!isCurrentLoad()) return;
           if (info.includes('invalid')) {
             ui.setErrorMsg(`Invalid SMF (Rust): ${info}`);
             ui.setStatus(info);
@@ -102,6 +118,7 @@ export function useLoadModel() {
           rustPeekMsg = info;
           try {
             const m = await tauri.peekSmfModelBasic(res.path);
+            if (!isCurrentLoad()) return;
             rustPeekMsg = `${rustPeekMsg} | ${m}`;
           } catch {}
         } catch {}
@@ -111,19 +128,21 @@ export function useLoadModel() {
         if (!data) {
           throw new Error('Could not obtain binary data for .smf (browser provides via input; desktop uses read_file_binary)');
         }
-        const imported = importSMF(data.buffer);
+        const imported = importSMF(bytesToArrayBuffer(data));
         lastSmfDataRef.current = imported;
         loaded = buildSmfScene(imported);
       } else if (name.endsWith('.fbx')) {
-        const urlOrBuf: string | ArrayBuffer = data ? data.buffer : (res.path || '');
+        const urlOrBuf: string | ArrayBuffer = data ? bytesToArrayBuffer(data) : (res.path || '');
         loaded = await loadFBX(urlOrBuf);
       } else if (name.endsWith('.obj')) {
-        const urlOrBuf: string | ArrayBuffer = data ? data.buffer : (res.path || '');
+        const urlOrBuf: string | ArrayBuffer = data ? bytesToArrayBuffer(data) : (res.path || '');
         loaded = await loadOBJ(urlOrBuf);
       } else {
-        const urlOrBuf: string | ArrayBuffer = data ? data.buffer : (res.path || '');
+        const urlOrBuf: string | ArrayBuffer = data ? bytesToArrayBuffer(data) : (res.path || '');
         loaded = await loadGLB(urlOrBuf);
       }
+
+      if (!isCurrentLoad()) return;
 
       const root = loaded.root as THREE.Group;
       const availableClips = loaded.clips || (root as any).animations || [];
@@ -157,17 +176,18 @@ export function useLoadModel() {
       ui.setSelected(loaded.skinnedMeshes?.[0]?.name || 'root');
 
     } catch (e: any) {
+      if (!isCurrentLoad()) return;
       console.error(e);
       const msg = e?.message || String(e);
       ui.setErrorMsg(`Load error: ${msg}`);
       ui.setStatus(`Load error: ${msg}. Try a .glb or .smf from docs/references/old-src/datafiles/SMF/.`);
     } finally {
-      ui.setIsLoading(false);
+      if (isCurrentLoad()) ui.setIsLoading(false);
     }
   }, [ui, model, playbackRef, clearLoadedModel]);
 
   const handleOpen = useCallback(async () => {
-    ui.setStatus('Opening file picker (GLB/SMF supported)...');
+    ui.setStatus('Opening file picker (.smf/.glb/.fbx/.obj supported)...');
     try {
       const res: OpenResult | null = await (await import('../backend-client/tauri')).openFile();
       if (!res) {
@@ -232,17 +252,17 @@ export function useLoadModel() {
   const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    ui.setIsLoading(true);
+    const readSeq = ++fileReadSeqRef.current;
     ui.setStatus('Loading selected file...');
     try {
       const buf = await file.arrayBuffer();
+      if (readSeq !== fileReadSeqRef.current) return;
       await loadModel({ name: file.name, data: new Uint8Array(buf) });
     } catch (err: any) {
       const m = err?.message || String(err);
       ui.setErrorMsg(`File load error: ${m}`);
       ui.setStatus(`File load error: ${m}`);
     } finally {
-      ui.setIsLoading(false);
       (e.target as HTMLInputElement).value = '';
     }
   }, [ui, loadModel]);
@@ -294,17 +314,16 @@ export function useLoadModel() {
 
   // Extracted for modularity: drop handler (mirrors handleFileInputChange but for DataTransfer)
   const handleDrop = useCallback(async (file: File) => {
-    ui.setIsLoading(true);
+    const readSeq = ++fileReadSeqRef.current;
     ui.setStatus('Loading dropped file...');
     try {
       const buf = await file.arrayBuffer();
+      if (readSeq !== fileReadSeqRef.current) return;
       await loadModel({ name: file.name, data: new Uint8Array(buf) });
     } catch (err: any) {
       const m = err?.message || String(err);
       ui.setErrorMsg(`Drop load error: ${m}`);
       ui.setStatus(`Drop load error: ${m}`);
-    } finally {
-      ui.setIsLoading(false);
     }
   }, [ui, loadModel]);
 

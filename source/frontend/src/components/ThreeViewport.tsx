@@ -55,6 +55,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   // TransformControls for selected bone (Cycle 3 editor polish). Attached to the live THREE.Bone when selectedBoneName changes.
   // Change events mutate the bone in place (position/rot/scale); works with existing marker + Inspector controls + RAF.
   const transformControlsRef = useRef<TransformControls | null>(null);
+  const transformTargetRef = useRef<THREE.Bone | null>(null);
 
   // Local mixer + action owned here (viewport is the source of truth for three playback)
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
@@ -110,7 +111,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       camera.updateMatrixWorld();
     };
     updateCamera();
-    orbit.attach(canvas, updateCamera);
+    const detachOrbit = orbit.attach(canvas, updateCamera);
 
     // Internal key handler for view reset (R) + Cycle 3 gizmo modes (T=translate, R=rotate, S=scale when bone selected/gizmo attached).
     // Modes take precedence on 'r' for editor UX when active. Space handled by App.
@@ -214,6 +215,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       resizeObsRef.current?.disconnect();
       window.removeEventListener('keydown', onKey);
       canvas.removeEventListener('click', onCanvasClick);
+      detachOrbit();
       if (boneHighlightRef.current) {
         scene.remove(boneHighlightRef.current);
         boneHighlightRef.current = null;
@@ -277,9 +279,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       const scene = sceneRef.current;
       if (tc) {
         tc.detach();
-        if (scene) scene.remove(tc);
+        if (scene) scene.remove(tc as unknown as THREE.Object3D);
         tc.dispose?.();
         transformControlsRef.current = null;
+        transformTargetRef.current = null;
       }
     };
   }, []);
@@ -304,7 +307,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     if (!selectedBoneName || !skeleton) return;
 
     const bone = skeleton.bones.find((b: any) => b.name === selectedBoneName);
-    if (!bone) return;
+    if (!bone) {
+      transformTargetRef.current = null;
+      return;
+    }
 
     const group = new THREE.Group();
     const sphere = new THREE.Mesh(
@@ -438,11 +444,13 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     }
 
     if (!selectedBoneName || !skeleton) {
+      transformTargetRef.current = null;
       return;
     }
 
     const bone = skeleton.bones.find((b: any) => b.name === selectedBoneName);
     if (!bone) return;
+    transformTargetRef.current = bone;
 
     let tc = transformControlsRef.current;
     if (!tc) {
@@ -450,16 +458,17 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       tc.setMode(transformMode || 'translate'); // controlled by prop from Inspector buttons (or default)
       tc.addEventListener('change', () => {
         // Ensure world matrices propagate for skinning + marker follow
-        bone.updateMatrixWorld(true);
-        if (skeleton) {
-          skeleton.update();
+        const activeBone = transformTargetRef.current;
+        const activeSkeleton = skeletonRefForPick.current;
+        if (activeBone) {
+          activeBone.updateMatrixWorld(true);
+        }
+        if (activeSkeleton) {
+          activeSkeleton.update();
         }
       });
       tc.addEventListener('dragging-changed', (event: any) => {
-        const o = orbitRef.current as any;
-        if (o && 'enabled' in o) {
-          o.enabled = !event.value;
-        }
+        orbitRef.current.enabled = !event.value;
       });
       try {
         scene.add(tc as any);

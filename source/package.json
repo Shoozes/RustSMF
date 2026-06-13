@@ -12,9 +12,10 @@
     "tauri:dev": "npm --workspace frontend run tauri:dev",
     "tauri:build": "npm --workspace frontend run tauri:build",
     "lint": "npm --workspace frontend run lint",
+    "typecheck": "npm --workspace frontend run typecheck",
     "test:e2e": "npm --workspace frontend run test:e2e",
     "test:unit": "npm --workspace frontend run test:unit",
-    "verify": "npm run lint && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && cd src-tauri && cargo check",
+    "verify": "npm run lint && npm run typecheck && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && cd src-tauri && cargo check",
     "desktop:smoke": "npm --workspace frontend run tauri:build:smoke"
   },
   "engines": {
