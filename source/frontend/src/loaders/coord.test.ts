@@ -250,7 +250,7 @@ describe('smf export roundtrip (data-driven)', () => {
   });
 });
 
-describe('smf.ts BinaryReader - bounds checking', () => {
+describe('BinaryReader - bounds checking (smfBinary shared impl used by smf)', () => {
   it('throws actionable error on truncated SMF input (too short for version string)', () => {
     // An empty buffer has no data at all; importSMF should throw a bounds error immediately
     const empty = new ArrayBuffer(0);

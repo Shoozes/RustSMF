@@ -6,6 +6,7 @@
 
 import { invoke } from '@tauri-apps/api/core'
 import { open, save } from '@tauri-apps/plugin-dialog'
+import { bytesToArrayBuffer } from '../loaders'
 
 export interface OpenResult {
   path?: string
@@ -15,12 +16,6 @@ export interface OpenResult {
 
 function isTauriEnv(): boolean {
   return !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
-}
-
-function copyToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const copy = new Uint8Array(bytes.byteLength)
-  copy.set(bytes)
-  return copy.buffer as ArrayBuffer
 }
 
 export async function openFile(): Promise<OpenResult | null> {
@@ -62,14 +57,14 @@ export async function openFile(): Promise<OpenResult | null> {
   })
 }
 
-export async function saveFile(data: Uint8Array | Blob, suggestedName: string): Promise<void> {
+export async function saveFile(data: Uint8Array | Blob, suggestedName: string): Promise<boolean> {
   const isTauri = isTauriEnv()
   if (isTauri) {
     const filePath = await save({
       defaultPath: suggestedName,
       filters: [{ name: 'All Files', extensions: ['*'] }]
     })
-    if (!filePath) return
+    if (!filePath) return false
     let bytes: Uint8Array
     if (data instanceof Blob) {
       bytes = new Uint8Array(await data.arrayBuffer())
@@ -77,16 +72,17 @@ export async function saveFile(data: Uint8Array | Blob, suggestedName: string): 
       bytes = data
     }
     await invokeCommand('write_file_binary', { path: filePath, data: Array.from(bytes) })
-    return
+    return true
   }
   // Browser (or fallback) download
-  const blob = data instanceof Blob ? data : new Blob([copyToArrayBuffer(data)])
+  const blob = data instanceof Blob ? data : new Blob([bytesToArrayBuffer(data)])
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
   a.download = suggestedName
   a.click()
   setTimeout(() => URL.revokeObjectURL(url), 4000)
+  return true
 }
 
 // Example future command (will be used once Rust side has parse_smf etc)

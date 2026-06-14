@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-13 (review pass; no new pitfalls; prior mitigations still effective)
+Last reviewed: 2026-06-13 (full review caught + fixed latent "incomplete binary helper dedupe after move" pitfall; added Q/A entry + prevention; prior mitigations still effective; see summary_bank issue__incomplete_binary_dedupe)
 
 ### Q: What pitfall are we preventing?
 
@@ -113,3 +113,24 @@ Last reviewed: 2026-06-13 (review pass; no new pitfalls; prior mitigations still
 **Relevance check:** Current. This is now a user-visible export path and should guide any future expansion of SMF conversion.
 
 **Next prevention step:** Add real-file skinned GLB/FBX fixtures if converter support expands to materials, morphs, multiple skeletons, or scale-aware formats.
+
+### Q: What pitfall are we preventing?
+**What:** Module moves/refactors (e.g. extracting BinaryReader/Writer + bytes util to smfBinary.ts) can leave duplicate code behind in the original files + consumers, plus the new file stays untracked, while docs claim "deduped".
+
+**Why it happened:** The integrity pass added smfBinary.ts and updated some notes, but smf.ts retained its local copies of the classes + bytes fn; useLoadModel and tauri kept their buffer copies; barrel was not updated to expose the util; no follow-up grep or consumer audit + `git add` for the moved file.
+
+**Where:** loaders/smf.ts (full dupe classes), hooks/useLoadModel.ts + backend-client/tauri.ts (bytes copy), loaders/index.ts, the untracked smfBinary.ts, docs/TODO/APP_STATE/summary_bank over-claims.
+
+**How to catch it:** After any cross-file move/extract: 1) grep -r for the fn/class name in src (should appear only in new home + imports), 2) run full `npm run typecheck && npm run lint`, 3) `git status` (new file must be intentional), 4) update barrel if the util is meant for sharing, 5) re-verify. Independent full review greps + file reads caught it.
+
+**Solutions tried:**
+1. 40/100 Assume the pass "took care of wiring", result: latent dupes + doc/code drift.
+2. 95/100 Full discovery grep + read of all buffer sites + consumers + barrel + status, plus immediate replace + tests, result: single source of truth, improved bounds active everywhere, doc claims corrected same pass.
+
+**Current solution:** smfBinary.ts is the owner (with header note); imports + barrel + deletions done; smfBinary now tracked in tree; paired entry added to TODO + new issue__ group in summary_bank.
+
+**Effectiveness:** 95/100, durable for this class of refactor. Prevents silent fidelity or error-handling drift (old check vs ensure impls).
+
+**Relevance check:** Current (and future P2 splits of smf/ThreeViewport will re-apply same discipline).
+
+**Next prevention step:** Consider a small CONTRIBUTING or AGENTS note, or pre-commit grep guard for known helper names. Use monolith-modularization skill explicitly on >400 line files before extract.

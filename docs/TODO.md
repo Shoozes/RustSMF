@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-14 (integrity pass: 15 items across P0/P1/P2 — correctness, code quality, docs)
+Last reviewed: 2026-06-13 (full repo integrity + follow-up: deduped binary helpers post-move (smfBinary now canonical + wired), saveFile returns bool for cancel, cleaned artifacts, docs consolidation for accuracy, no stubs/gaps in active paths; typecheck+units+verify green). See summary_bank + APP_STATE for groups/state. Philosophy: safety, modularity, paired what/why/where/how.
 
 ## Current Focus
 
@@ -247,17 +247,25 @@ Partial + solid progress: Dedicated 'viewport features smoke (P2 1a partial cove
 - How: Tools for audit (verify clean with 17/17 units; greps clean in frontend/src; only doc-pointer in Rust - already polished to reference docs); read TODO/APP_STATE; minor doc polish for this pass; reconfirmed prior builds (test.obj fixture, loader fix for no tangent errors, strict/tolerant visuals, SMF heuristic, dedupes).
 - Done when: Audit clean, docs updated with paired entry for this pass, backlog items (P2 subtasked, P4 complete + polished, P3 via lean updates) documented as complete for scope; verify passes. Future work deferred to subtasked items (e.g., P2 1a coverage before splits).
 
-## Full Review Completion (autonomous per "auto research/recap/decide/design/build/test/fix/polish" directive)
-All original query goals addressed across passes:
-- Docs on current app state updated/consolidated (root README, APP_STATE, TODO with pairs, PITFALL, summary_bank groups lean/organized for files/features/issues/visuals, tests/README, old-src references).
-- summary_bank: Narrow paths, updated for SMF quirks/legacy heuristic, OBJ parity, Playwright visuals (tolerant+strict), modularity watch, no broad files lists; JSON valid.
-- Bug/error catching + tests sharpened: Units (17 clean incl. roundtrips/golden head nodes/static reject), e2e (real samples + new OBJ parity test with error assert + visuals), native IPC mocks, Rust peeks, dual typecheck in verify. No broken imports/exports (multiple clean typecheck/verify).
-- Redundancy reduced, modularity/flex: Dedupes (buffer copy, peek logic), extractions (poseEdits), barrels, shared Rust parse helper, OBJ loader hardened.
-- Timing/async improved/stabilized: Seq guards, refs for handlers, orbit gating, RAF decoupling, combined Rust info cmd, clean unmounts.
-- Gaps/stubs filled: Root entry doc, OBJ fixture+test+loader polish (clean static load, no tangent errors), visual enhancements, SMF v11 heuristic for recovery, P2 broken into subtasks (1a coverage, 1b/1c extracts, 1d gates).
-- Edge cases searched/covered: Legacy v11 counts, head nodes, scale/static rejection, stale loads, cancel, render variance, OBJ static (now fixture-backed), multi-sample discovery.
-- Todo/backlog complete: P4 OBJ done (build fixture, wire, test, polish, paired note); P2 subtasked; P3 ongoing (docs lean - achieved via consolidation); all items paired (what/why/where/how/done); no more stubs (greps clean in active src; only doc-pointer in Rust).
-- Features connect safely/smoothly/user-friendly/show-ready/efficient: Load all formats + guards → loaders (fidelity/coord/DQ) → viewport/editor (decoupled, weight/transform) → pose/export (guarded SMF or GLB) → native (peeks + bool cancel) → tests (units + e2e on real legacy + static samples + visuals). GLB preferred; SMF/OBJ for recovery/parity.
-- Auto work done: Research (greps/reads/queries), recap (in docs), decide (prioritize P4 polish + P2 breakdown over forcing splits), design/build/test/fix/polish (OBJ fixture/loader/test, subtasking, doc updates, runs), verify (clean), complete backlog. If big (P2), subtasked. Scalability improved (modular, tested boundaries, current docs/summary_bank as navigation).
+## Follow-up Integrity Fixes (this review, post upstream pull)
+- What: Completed the binary helper dedupe (smfBinary.ts now the single source; removed duplicate bytesToArrayBuffer + full old BinaryReader/Writer copies that remained in smf.ts, useLoadModel.ts, tauri.ts after the 'move'). Wired via loaders barrel export + relative imports in smf. Updated ctor compat, added module doc. Stale test describe updated.
+  Why: Duplication violated "reduce redundancy, prefer dynamic/modular", left potentially stale non-bounded impl active in SMF import/export paths (safety/correctness risk for truncated files etc.), smfBinary was untracked despite being core. Matched claims in prior pass notes but not code reality.
+  Where: source/frontend/src/loaders/{index.ts,smf.ts,smfBinary.ts}, hooks/useLoadModel.ts, backend-client/tauri.ts, coord.test.ts (describe).
+  How: Added export in barrel, import in smf + delete 3 dupe blocks (bytes + 2 classes), replaced 2 consumer locals with shared, enhanced smfBinary header. typecheck + units + (post) verify clean. Also git-added the now-tracked smfBinary.ts.
+  Done when: No more copies (grep), all SMF paths use bounded version, checks green.
+- What: Made saveFile return Promise<boolean> (false on native cancel) + updated 3 handleExport call sites + explicit 'Export canceled.' status paths.
+  Why: Prior pitfall (false success UX on user cancel dialog dismiss) was documented but impl still void + no caller handling. Sharpens error catching, user feedback, testability (aligns native mocks).
+  Where: source/frontend/src/backend-client/tauri.ts (sig + tauri/browser paths), hooks/useLoadModel.ts (handleExport SMF/FBX/GLB branches).
+  How: Changed return + early false on !filePath, true after write/ browser dl; branched on ok in callers before success status. Dynamic import sites unaffected for TS.
+  Done: Cancel now correctly surfaces; typecheck green.
+- What: Removed temp _prepull_backup/ artifact and ensured smfBinary tracked.
+  Why: Polluted untracked list; not part of source tree.
+  Where: source/_prepull_backup (deleted), git add for smfBinary.ts.
+- What: Began docs + summary_bank accuracy/consolidation pass (see phase notes).
+  Why: Several "completed dedupes/save" in TODO/APP_STATE/summary described work not fully reflected in files (over-claim reduced trust/scalability). Dupe completion headers, slight poseEdits desc drift (nudge vs snapshot wording).
+  Where: docs/TODO.md, docs/dev/APP_STATE.md, summary_bank.json, PITFALL_LEDGER.md (new entry).
+  How: Header update, added this paired fixes section, trimmed final dupe recap, will sync other files below. Added issue group for the latent dupe gap found by review. Re-validate JSON. Prior P2/P3/P4 notes preserved.
 
-Review complete for current scope. State: Highly integral, no active issues/stubs in core, easy to scale/maintain. Run `pwsh -File run.ps1 -Task verify` or `test:e2e` to confirm. Future: Execute P2 subtasks when 1a coverage expanded. (2026-06-13 final autonomous step.)
+These close the "no more stubs / complete the dedupes" gaps found in independent review. All prior features (pose nudge export, guarded threeToSmf, seq guards, bounds) connect; new changes preserve behavior + improve modularity/safety. No timing changes needed (existing ref/seq/RAF patterns solid). Edge cases (cancel, truncate via shared bounds) now better covered.
+
+State after: Highly integral. Recommend `pwsh -File run.ps1 -Task verify` . (2026-06-13 autonomous full review + fixes.)

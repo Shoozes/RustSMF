@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-14 (integrity pass: poseEdits.ts created + wired; threeToSmf.ts created + barrel export; loadGLBAsSmfData dead code removed; BinaryReader bounds-checked; Inspector nudges routed through pose-edit layer; lastSourceFormatRef and poseEditsRef reset on clear; fetchSmfDesktopPeek extracted; lastSmfData removed from store; getRootBones moved to module scope; onScrub uses playbackRef; ResizeObserver setTimeout replaced with requestAnimationFrame; docs/summary_bank updated; verify passes 15 units).
+Last reviewed: 2026-06-13 (full review + fixes: binary helpers deduped and wired (smfBinary canonical for bytesTo + BinaryReader/Writer, dupes removed from smf/useLoadModel/tauri, barrel export added); saveFile now returns bool with cancel handling in exporters; _prepull artifact cleaned; smfBinary promoted to tracked; docs/summary_bank accuracy pass + new paired issue note; typecheck/lint/units/verify green. poseEdits is nudge-delta layer (not snapshot). No broken imports; no active stubs in src. smfBinary.ts is internal shared binary helpers (not barrel *).).
 
 ## Current Product State
 
@@ -18,10 +18,10 @@ Core flow:
 
 - `source/frontend/src/App.tsx`: Thin shell wiring toolbar, viewport, inspector, timeline, outliner, drop zone, status, and error banner.
 - `source/frontend/src/hooks/useLoadModel.ts`: Load/export orchestration, source format tracking, Tauri lazy imports, stale-load guards, selected bone handling, pose edit persistence, transform mode, and weight preview state.
-- `source/frontend/src/hooks/poseEdits.ts`: Pose snapshot, comparison, scale guard, SMF bone-name mapping, and ImportedSmf clone helpers.
+- `source/frontend/src/hooks/poseEdits.ts`: Nudge delta types (BoneNudgeDelta/PoseEditMap), applyNudgeDelta/clone/applyPoseEditsToSmf + bone index helpers for live pos/rot edits that export for SMF.
 - `source/frontend/src/components/ThreeViewport.tsx`: Renderer, scene, camera, orbit, model attach/dispose, mixer, skeleton helper, raycast bone picking, marker, TransformControls, and weight preview.
 - `source/frontend/src/components/*`: Focused UI surfaces for toolbar, inspector, timeline, and outliner.
-- `source/frontend/src/loaders/*`: SMF binary import/export, SMF binary helpers, guarded Three skinned-source to SMF conversion, GLB/FBX/OBJ loading, GLB export, and coordinate/DQ math.
+- `source/frontend/src/loaders/*`: SMF binary import/export (smf.ts + internal smfBinary.ts for bytesToArrayBuffer/BinaryReader/Writer with bounds), guarded threeToSmf for skinned non-SMF->SMF, GLB/FBX/OBJ loading + GLB export, coord (swizzles + DQ math, single source of truth). smfBinary intentionally not * re-exported (impl detail; bytesTo via barrel for shared use).
 - `source/frontend/src/store`: Lightweight React state slices for model, playback, and UI.
 - `source/frontend/src/backend-client/tauri.ts`: Browser/Tauri bridge for dialog, save, binary read, invokes, and desktop fallback messages.
 - `source/src-tauri/src/main.rs`: Tauri commands and Rust SMF header/section peeks with native tests.

@@ -1,7 +1,7 @@
 import { useCallback, useRef, useEffect, useState } from 'react';
 import type * as THREE from 'three';
 import type { OpenResult } from '../backend-client/tauri';
-import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX } from '../loaders';
+import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX, bytesToArrayBuffer } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
 import {
   type BoneNudgeDelta,
@@ -41,12 +41,6 @@ export function useLoadModel() {
 
   const loadSeqRef = useRef(0);
   const fileReadSeqRef = useRef(0);
-
-  const bytesToArrayBuffer = (bytes: Uint8Array): ArrayBuffer => {
-    const copy = new Uint8Array(bytes.byteLength);
-    copy.set(bytes);
-    return copy.buffer as ArrayBuffer;
-  };
 
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
@@ -227,7 +221,8 @@ export function useLoadModel() {
           ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
           : smfData;
         const buf = exportSMFToBuffer(dataToExport);
-        await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.smf');
+        const ok = await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.smf');
+        if (!ok) { ui.setStatus('Export canceled.'); return; }
         ui.setStatus('Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!');
         return;
       } catch (e: any) {
@@ -248,7 +243,8 @@ export function useLoadModel() {
       ui.setStatus('Exporting FBX-loaded model (via GLTF container for full skin/anim fidelity; no new deps)...');
       try {
         const buf = await exportFBX(rootToExport, model.clips);
-        await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.glb');
+        const ok = await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.glb');
+        if (!ok) { ui.setStatus('Export canceled.'); return; }
         ui.setStatus('Exported .glb (from FBX source via GLTF equivalent). Re-import as .glb works; for true .fbx use DCC or save-as-SMF first.');
         return;
       } catch (e: any) {
@@ -259,7 +255,8 @@ export function useLoadModel() {
     ui.setStatus('Exporting current model as GLB...');
     try {
       const buf = await exportGLB(rootToExport, model.clips);
-      await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.glb');
+      const ok = await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.glb');
+      if (!ok) { ui.setStatus('Export canceled.'); return; }
       ui.setStatus('Exported .glb (animations included when present).');
     } catch (e: any) {
       const msg = e?.message || String(e);

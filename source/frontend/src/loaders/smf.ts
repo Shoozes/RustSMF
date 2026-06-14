@@ -6,6 +6,7 @@ import {
   dqNormalize,
   dqFlipSign,
 } from './coord';
+import { bytesToArrayBuffer, BinaryReader, BinaryWriter } from './smfBinary';
 
 /**
  * SMF binary loader (ported/adapted from docs/references/old-src/GLBtoSMF/importer.js)
@@ -17,42 +18,6 @@ import {
 
 type Float32Buffer = Float32Array<ArrayBufferLike>;
 type Uint16Buffer = Uint16Array<ArrayBufferLike>;
-
-function bytesToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const copy = new Uint8Array(bytes.byteLength);
-  copy.set(bytes);
-  return copy.buffer as ArrayBuffer;
-}
-
-class BinaryReader {
-  private dv: DataView;
-  off = 0;
-
-  constructor(buffer: ArrayBuffer) {
-    this.dv = new DataView(buffer);
-  }
-
-  private check(n: number) {
-    if (this.off + n > this.dv.byteLength) {
-      throw new Error(`Unexpected end of SMF binary at offset ${this.off} (need ${n} bytes, have ${this.dv.byteLength - this.off})`);
-    }
-  }
-
-  u8() { this.check(1); const v = this.dv.getUint8(this.off); this.off += 1; return v; }
-  u16() { this.check(2); const v = this.dv.getUint16(this.off, true); this.off += 2; return v; }
-  u32() { this.check(4); const v = this.dv.getUint32(this.off, true); this.off += 4; return v; }
-  f32() { this.check(4); const v = this.dv.getFloat32(this.off, true); this.off += 4; return v; }
-
-  strZ() {
-    let s = '';
-    while (true) {
-      const c = this.u8();
-      if (c === 0) break;
-      s += String.fromCharCode(c);
-    }
-    return s;
-  }
-}
 
 export interface ImportedSmf {
   meshes: Array<{
@@ -380,48 +345,6 @@ export function buildThreeScene(imported: ImportedSmf) {
     clips,
     mixer,
   };
-}
-
-/**
- * BinaryWriter for SMF export (ported/adapted from reference).
- */
-class BinaryWriter {
-  private buf: ArrayBuffer;
-  private dv: DataView;
-  private off = 0;
-
-  constructor(initialSize = 1024, _tag = 'buf') {
-    this.buf = new ArrayBuffer(initialSize);
-    this.dv = new DataView(this.buf);
-  }
-
-  private ensure(n: number) {
-    if (this.off + n <= this.buf.byteLength) return;
-    const newSize = this.buf.byteLength + n + 1024;
-    const bigger = new ArrayBuffer(newSize);
-    new Uint8Array(bigger).set(new Uint8Array(this.buf));
-    this.buf = bigger;
-    this.dv = new DataView(this.buf);
-  }
-
-  u8(v: number) { this.ensure(1); this.dv.setUint8(this.off, v); this.off += 1; return this; }
-  u16(v: number) { this.ensure(2); this.dv.setUint16(this.off, v, true); this.off += 2; return this; }
-  u32(v: number) { this.ensure(4); this.dv.setUint32(this.off, v, true); this.off += 4; return this; }
-  f32(v: number) { this.ensure(4); this.dv.setFloat32(this.off, v, true); this.off += 4; return this; }
-
-  strZ(s: string) {
-    for (let i = 0; i < s.length; i++) this.u8(s.charCodeAt(i));
-    this.u8(0);
-    return this;
-  }
-
-  getBuffer() {
-    return this.buf.slice(0, this.off);
-  }
-
-  patchU32(offset: number, value: number) {
-    this.dv.setUint32(offset, value, true);
-  }
 }
 
 /**

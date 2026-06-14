@@ -92,6 +92,7 @@
         "source/frontend/src/components/Outliner.tsx",
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/loaders/**/*",
+        "source/frontend/src/loaders/smfBinary.ts",
         "source/frontend/src/loaders/threeToSmf.ts",
         "source/frontend/src/loaders/threeToSmf.test.ts"
       ],
@@ -120,10 +121,11 @@
       "files": []
     },
     "subsystem__smf_format_and_fidelity": {
-      "description": "SMF binary parsing/export, coordinate swizzles, dual-quaternion math, roundtrip fidelity, and old reference format material.",
-      "status": "SMF source roundtrip verified; non-SMF exact SMF export remains tracked work",
+      "description": "SMF binary parsing/export, coordinate swizzles, dual-quaternion math, roundtrip fidelity, and old reference format material. Internal binary helpers (bytes + bounded R/W) live in smfBinary.ts (shared, barrel exposes only bytesToArrayBuffer util).",
+      "status": "SMF source roundtrip verified; non-SMF exact SMF export remains tracked work; 2026-06-13 review completed wiring of smfBinary (no more dupes in smf.ts/hook/tauri)",
       "paths": [
         "source/frontend/src/loaders/smf.ts",
+        "source/frontend/src/loaders/smfBinary.ts",
         "source/frontend/src/loaders/coord.ts",
         "source/frontend/src/loaders/coord.test.ts",
         "docs/references/old-src/GLBtoSMF/*.js",
@@ -165,6 +167,7 @@
         "source/frontend/tests/smoke.spec.ts",
         "source/frontend/playwright.config.ts",
         "source/frontend/src/loaders/coord.test.ts",
+        "source/frontend/src/loaders/smfBinary.ts",
         "source/frontend/scripts/check-entry-chunks.mjs",
         "source/frontend/eslint.config.js",
         "run.ps1"
@@ -204,13 +207,33 @@
       "current_solution": "JS simulation now reads `bytes[p.offAnim]` as u8 and Rust fixture keeps the width locked.",
       "files": []
     },
+    "issue__incomplete_binary_dedupe": {
+      "description": "After 'BinaryReader bounds' / threeToSmf / poseEdits integrity changes, smfBinary.ts existed (with improved ensure/patch + bytesTo) but was untracked + not imported; smf.ts, useLoadModel.ts and tauri.ts retained full/partial duplicate bytesTo + (smf) entire old Binary* classes. Barrel did not surface the util. Docs over-claimed the dedupes.",
+      "status": "fixed 2026-06-13 in this review pass",
+      "last_seen": "2026-06-13",
+      "paths": [
+        "source/frontend/src/loaders/smfBinary.ts",
+        "source/frontend/src/loaders/smf.ts",
+        "source/frontend/src/hooks/useLoadModel.ts",
+        "source/frontend/src/backend-client/tauri.ts",
+        "source/frontend/src/loaders/index.ts",
+        "source/frontend/src/loaders/coord.test.ts",
+        "docs/TODO.md",
+        "docs/dev/APP_STATE.md",
+        "summary_bank.json"
+      ],
+      "current_solution": "smfBinary is now the canonical (exported bytesTo via barrel; smf imports Reader/Writer; consumers replaced locals; smfBinary tracked). Improved bounds now active on export path too. saveFile bool fixed in same sweep.",
+      "next_prevention": "On any refactor that moves helpers (esp. between loaders/* and bridges), immediately update all direct consumers + barrel + run full typecheck + grep for duplicate fn/class names. Treat untracked critical src files as P0 during review.",
+      "files": []
+    },
     "subsystem__modularity_candidates": {
-      "description": "High-line-count files that should be split only at safe, test-backed boundaries.",
-      "status": "watch",
+      "description": "High-line-count files that should be split only at safe, test-backed boundaries. smfBinary.ts is the focused home for binary (after dedupe).",
+      "status": "watch (dedupe of binary helpers to smfBinary completed 2026-06-13; P2 splits for smf/ThreeViewport still require expanded viewport coverage per prior subtask)",
       "paths": [
         "source/frontend/tests/smoke.spec.ts",
         "source/frontend/src/loaders/smf.ts",
-        "source/frontend/src/components/ThreeViewport.tsx"
+        "source/frontend/src/components/ThreeViewport.tsx",
+        "source/frontend/src/loaders/smfBinary.ts"
       ],
       "split_candidates": [
         "SMF BinaryReader/BinaryWriter helper module.",
