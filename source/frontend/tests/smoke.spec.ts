@@ -1,5 +1,15 @@
 import { test, expect } from '@playwright/test';
-import path from 'path';
+import fs from 'fs';
+import {
+  BAD_INPUT_FOR_ERROR_TEST,
+  SAMPLE_FBX,
+  SAMPLE_OBJ,
+  SAMPLE_SMF,
+  expectRenderedScreenshot,
+  getBrowserErrors,
+  pausePlaybackIfRunning,
+  setupBrowserDiagnostics,
+} from './helpers/smoke-helpers';
 
 // Basic smoke tests for the RustSMF shell + model loading.
 // These exercise the core Three.js viewport, loaders, timeline, and export paths.
@@ -7,192 +17,18 @@ import path from 'path';
 // of load, bones (collapsible hierarchy tree), animation, export, OBJ fallback, etc.
 // Visual smoke uses screenshot byte-size assertions to avoid brittle per-machine WebGL baselines.
 
-// Desktop / native Tauri path coverage (Cycle 1 + Task 7 closure):
-// - Real binary FS reads + SMF peeks (getSmfDesktopInfo, peek_*_basic, validate, read_file_binary, write) happen only when __TAURI__ present.
-// - Web Playwright e2e (this file) exercises the shared TS loadModel / export / UI / listeners / fallback paths using data from setInputFiles.
-// - Native peek + early validation logic + status strings are automated in TWO places:
-//   1. Rust #[test] in src-tauri/src/main.rs (real std::fs + parse_smf_header_info + rig/anim/model counts on local mixamo when present).
-//   2. JS simulation in this spec (using real SAMPLE_SMF bytes + header parse mirroring Rust) to lock "valid SMF | rig ~N | ...", "Rust validated SMF | ...", peek/validate status UX strings used by loadModel for desktop .smf early checks.
-// - run.ps1 desktop-smoke runs unbundled tauri build + cargo test (exercises native binary peeks) + guidance for tauri-dev full UI.
+// Desktop / native Tauri path coverage:
+// - Web Playwright e2e (this file) exercises shared TS load/export/UI/listener/browser fallback paths.
+// - native.spec.ts exercises mocked Tauri IPC for open/read/status/save/write/cancel paths.
+// - Rust #[test] in src-tauri/src/main.rs covers real std::fs SMF header/rig/anim/model peeks.
+// - run.ps1 desktop-smoke runs unbundled Tauri build, cargo tests, and the native IPC Playwright suite.
 // - Extended beforeEach/listeners + real-sample screenshot asserts (light + toHave) for bone selection / export flows.
-// - FBX export automation: UI dispatch + full load structure (skipped until sample; exportFBX -> GLB + Tauri native save) in dedicated tests. FBX parity complete in code (see fbx.ts, useLoadModel isFBXSource path, status).
-// - Full native UI + dialog + save roundtrips (incl FBX) still benefit from manual tauri-dev + local samples (status "Rust validated SMF..." + bone tree + export incl FBX source). Keep CI/web fallback. (tauri-driver future if deps.)
-// Keep web e2e primary + fast; Rust + run.ps1 + JS peek sim in spec now provide strong automated coverage of Tauri-specific real-binary + peek/validate/status paths. Task 7 (desktop e2e + FBX export) scoped complete per review (automation structure + wiring; full sample execution when .fbx added).
-
-// Prefer the real local test .smf (mixamo_smf_baldguy.smf) added to this directory
-// for reliable, non-skipping e2e coverage of load, bones (incl. collapsible hierarchy),
-// animation, export, etc. Falls back to old-src samples if the local one is removed.
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { dirname } from 'path';
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-const LOCAL_TEST_SMF = path.resolve(__dirname, 'mixamo_smf_baldguy.smf');
-
-const SMF_DIR = path.resolve(__dirname, '../../docs/references/old-src/datafiles/SMF');
-let _smfFilesCache = null;
-function getSmfFiles() {
-  if (_smfFilesCache) return _smfFilesCache;
-  if (fs.existsSync(SMF_DIR)) {
-    _smfFilesCache = fs.readdirSync(SMF_DIR).filter(f => f.endsWith('.smf'));
-  } else {
-    _smfFilesCache = [];
-  }
-  return _smfFilesCache;
-}
-
-let SAMPLE_SMF = null;
-if (fs.existsSync(LOCAL_TEST_SMF)) {
-  SAMPLE_SMF = LOCAL_TEST_SMF;
-} else if (getSmfFiles().length > 0) {
-  SAMPLE_SMF = path.join(SMF_DIR, getSmfFiles()[0]);
-}
-
-const BAD_GML_DIR_SEARCH = path.resolve(__dirname, '../../docs/references/old-src');
-let _gmlFilesCache = null;
-function getGmlFiles() {
-  if (_gmlFilesCache) return _gmlFilesCache;
-  const gmls = [];
-  function findGml(dir) {
-    try {
-      const items = fs.readdirSync(dir);
-      for (const item of items) {
-        const full = path.join(dir, item);
-        if (fs.statSync(full).isDirectory()) findGml(full);
-        else if (item.endsWith('.gml')) gmls.push(full);
-      }
-    } catch {}
-  }
-  if (fs.existsSync(BAD_GML_DIR_SEARCH)) findGml(BAD_GML_DIR_SEARCH);
-  _gmlFilesCache = gmls;
-  return _gmlFilesCache;
-}
-const BAD_GML = getGmlFiles().length > 0 ? getGmlFiles()[0] : null;
-
-// Reliable bad input for error-path test (prefer real .gml from old-src if present for variety;
-// fallback to this .ts spec file itself which is guaranteed present and will fail all model loaders -> exercises error banner, status, no-crash).
-const BAD_INPUT_FOR_ERROR_TEST = (BAD_GML && fs.existsSync(BAD_GML)) ? BAD_GML : path.resolve(__dirname, 'smoke.spec.ts');
-
-// FBX sample for full FBX import happy path test (per test scenarios #13)
-// No .fbx samples found easily in old-src or tests; structure added for when available (falls back gracefully).
-// Complements desktop e2e automation and FBX parity.
-let _fbxFilesCache = null;
-function getFbxFiles() {
-  if (_fbxFilesCache) return _fbxFilesCache;
-  // Simple search; currently none, so empty. Add sample to enable full load test.
-  _fbxFilesCache = [];
-  return _fbxFilesCache;
-}
-let SAMPLE_FBX = null;
-const LOCAL_TEST_FBX = path.resolve(__dirname, 'test.fbx');
-if (fs.existsSync(LOCAL_TEST_FBX)) {
-  SAMPLE_FBX = LOCAL_TEST_FBX;
-} else if (getFbxFiles().length > 0) {
-  SAMPLE_FBX = path.join(SMF_DIR, getFbxFiles()[0]); // reuse dir for now
-}
-
-// Desktop e2e automation (Cycle 1): pure-JS simulation of native Rust peek/validate + desktop info status strings.
-// Uses the REAL local .smf bytes (same sample as Rust tests + tauri-dev guidance) to parse header/offsets
-// mirroring parse_smf_header_info + get_smf_desktop_info + the "Rust validated SMF | ..." assembly in useLoadModel.
-// This locks the exact status/peek/validate messages that only appear on desktop .smf path (early validation + rich status).
-// CI-safe (fs + skip if no SAMPLE_SMF); complements Rust cargo tests (real FS) and browser fallback e2e.
-// Extends beforeEach/listeners coverage indirectly via dedicated test exercising desktop string paths.
-function simulateSmfHeaderParse(bytes: Uint8Array): { version: string; size: number; offTex: number; offModel: number; offRig: number; offAnim: number } | { error: string } {
-  if (!bytes || bytes.length === 0) return { error: 'empty file' };
-  if (bytes.length < 32) return { error: 'too small' };
-  let off = 0;
-  while (off < bytes.length && bytes[off] !== 0) off++;
-  const versionEnd = off;
-  let version = '';
-  for (let i = 0; i < versionEnd; i++) version += String.fromCharCode(bytes[i]);
-  off += 1; // skip null
-  if (off + 16 > bytes.length) return { error: 'header short' };
-  const offTex = (bytes[off] | (bytes[off+1] << 8) | (bytes[off+2] << 16) | (bytes[off+3] << 24)) >>> 0; off += 4;
-  const offModel = (bytes[off] | (bytes[off+1] << 8) | (bytes[off+2] << 16) | (bytes[off+3] << 24)) >>> 0; off += 4;
-  const offRig = (bytes[off] | (bytes[off+1] << 8) | (bytes[off+2] << 16) | (bytes[off+3] << 24)) >>> 0; off += 4;
-  const offAnim = (bytes[off] | (bytes[off+1] << 8) | (bytes[off+2] << 16) | (bytes[off+3] << 24)) >>> 0;
-  return { version, size: bytes.length, offTex, offModel, offRig, offAnim };
-}
-
-function simulateGetSmfDesktopInfo(bytes: Uint8Array): string {
-  const p = simulateSmfHeaderParse(bytes);
-  if ('error' in p) return p.error;
-  const valid = p.version.startsWith('SMF_v') ? 'valid SMF' : 'invalid';
-  const rigCount = (p.offRig + 4 <= bytes.length) ? (bytes[p.offRig] | (bytes[p.offRig+1]<<8) | (bytes[p.offRig+2]<<16) | (bytes[p.offRig+3]<<24)) >>> 0 : 0;
-  const animCount = (p.offAnim + 1 <= bytes.length) ? bytes[p.offAnim] : 0;
-  return `${valid} | rig ~${rigCount} | anim ~${animCount} (offsets t${p.offTex} m${p.offModel} r${p.offRig} a${p.offAnim})`;
-}
-
-function simulateValidateSmf(bytes: Uint8Array): string {
-  const p = simulateSmfHeaderParse(bytes);
-  if ('error' in p) return `invalid: ${p.error}`;
-  if (p.version.startsWith('SMF_v')) return 'valid SMF';
-  return `invalid: not SMF header (starts with '${p.version.slice(0,20)}')`;
-}
-
-async function pausePlaybackIfRunning(page) {
-  const pauseButton = page.locator('button').filter({ hasText: /Pause|⏸/i }).first();
-  if (await pauseButton.count() > 0) {
-    await pauseButton.click({ force: true }).catch(() => {});
-    await page.waitForTimeout(120);
-  }
-}
-
-async function expectRenderedScreenshot(locator, minBytes = 3000) {
-  const shot = await locator.screenshot();
-  expect(shot.length).toBeGreaterThan(minBytes);
-}
+// - FBX export automation: UI dispatch + full load/export path using the self-authored test.fbx fixture. FBX parity complete in code (see fbx.ts, useLoadModel isFBXSource path, status).
+// Keep browser e2e primary + fast; native.spec.ts and Rust tests cover desktop-specific binary/IPC/status behavior.
 
 test.describe('RustSMF basic shell and model flow (Chromium)', () => {
   test.beforeEach(async ({ page }) => {
-    // Capture browser console errors and warnings during tests (for Chrome/Playwright)
-    const browserErrors: string[] = [];
-    page.on('console', msg => {
-      const type = msg.type();
-      if (type === 'error' || type === 'warning') {
-        const text = `[BROWSER ${type.toUpperCase()}] ${msg.text()}`;
-        // Sharpen: ignore benign harness/vite/JSON parse noise from evaluate or dev server in tauri fallback tests (not app errors)
-        if (text.includes('SyntaxError') && (text.includes('import') || text.includes('JSON') || text.includes('Unexpected token'))) {
-          return;
-        }
-        // Three.js bundler noise (multiple instances / Object3D.add skew for jsm controls like TransformControls in dev server + workers).
-        // Harmless for functionality (dedupe in vite.config mitigates; real tauri/prod bundles are clean). Do not treat as critical app error.
-        if (text.includes('THREE.Object3D.add') || text.includes('Multiple instances of Three.js') || text.includes('TransformControls')) {
-          return;
-        }
-        console.log(text);
-        browserErrors.push(text);
-      }
-    });
-    page.on('pageerror', err => {
-      const text = `[PAGE ERROR] ${err}`;
-      console.error(text);
-      browserErrors.push(text);
-    });
-    // Extend for desktop e2e robustness: capture crashes / uncaught in page context (Tauri webview parity)
-    page.on('crash', () => {
-      const text = '[PAGE CRASH] page crashed during test (Tauri/webview simulation)';
-      console.error(text);
-      browserErrors.push(text);
-    });
-    // Network/request issues (harmless in local Vite e2e but useful for desktop path parity notes)
-    page.on('requestfailed', req => {
-      const url = req.url();
-      if (url.includes('tauri') || url.includes('localhost')) {
-        // ignore local dev noise
-        return;
-      }
-      const text = `[REQUEST FAILED] ${req.method()} ${url}`;
-      console.warn(text);
-      browserErrors.push(text);
-    });
-    // Expose for assert (simple, attach to page for access in test)
-    (page as any)._browserErrors = browserErrors;
-    // Tauri test context helper flag (for future path-only desktop branch tests or manual tauri-driver runs)
-    // When running inside real Tauri (tauri-dev), __TAURI__ will be present and peeks/status will be real.
-    (page as any)._tauriTestContext = { simulated: true, note: 'Extend with page.addInitScript for __TAURI__ mocks to drive desktop read/peek branches in browser e2e if needed.' };
+    setupBrowserDiagnostics(page);
   });
   test('app boots with expected UI elements and initial state', async ({ page }) => {
     await page.goto('/');
@@ -203,6 +39,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     // Key controls
     await expect(page.getByTestId('open-model-btn')).toBeVisible();
     await expect(page.getByTestId('export-btn')).toBeVisible();
+    await expect(page.getByTestId('export-smf-btn')).toBeVisible();
     await expect(page.getByTestId('ping-rust-btn')).toBeVisible();
 
     // Viewport + canvas
@@ -276,14 +113,14 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     // Assert no critical browser console errors during load (errors logged by listener)
     // (warnings may exist for Three.js, but no errors)
-    const errors = (page as any)._browserErrors || [];
+    const errors = getBrowserErrors(page);
     const criticalErrors = errors.filter((e: string) => e.includes('ERROR'));
     expect(criticalErrors.length).toBe(0);
 
     // Cycle 1: lightweight screenshot assert for bone flow (real sample + selection/collapse/raycast exercised)
     // Keeps CI green without mandatory snapshot updates while providing visual state coverage for bone/export prep.
-    const boneFlowShot = await page.getByTestId('viewport-container').screenshot();
-    expect(boneFlowShot.length).toBeGreaterThan(3000);
+    // Use strict visual for this core load + bone state when we want a committed reference render.
+    await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000, { strict: true, name: 'loaded-smf-bone-flow' });
   });
 
   test('export flow and basic visuals (smoke for roundtrip prep)', async ({ page }) => {
@@ -319,16 +156,16 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const exportBtn = page.getByTestId('export-btn');
     await exportBtn.click();
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.(smf|glb)/i, { timeout: 5000 });
+    await expect(page.getByTestId('status-text')).toContainText(/pose edit/i);
 
     // Basic visual: screenshot viewport after load + bone interaction (nonblank render regression smoke).
     await expectRenderedScreenshot(page.getByTestId('viewport-container'));
 
     // Cycle 1 extension: additional lightweight screenshot assert post-export (bone + export flow with real .smf)
-    const exportFlowShot = await page.getByTestId('viewport-container').screenshot();
-    expect(exportFlowShot.length).toBeGreaterThan(3000);
+    await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000, { strict: true, name: 'export-flow-smf' });
 
     // Strict no critical console errors post export flow
-    const exportErrors = (page as any)._browserErrors || [];
+    const exportErrors = getBrowserErrors(page);
     const exportCritical = exportErrors.filter((e: string) => e.includes('ERROR'));
     expect(exportCritical.length).toBe(0);
   });
@@ -378,6 +215,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await page.goto('/');
     await page.getByTestId('export-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Nothing to export/i);
+    await page.getByTestId('export-smf-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Nothing to export as SMF/i);
 
     // Drop zone hint is present (for drag-drop UX)
     await expect(page.locator('text=/Drop .* here/')).toBeAttached();
@@ -528,153 +367,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await page.waitForTimeout(30);
   });
 
-  test('tauri client fallbacks return expected messages in browser (desktop path coverage)', async ({ page }) => {
-    await page.goto('/');
-
-    // Simulate the isTauriEnv check and fallback returns used by all peek/read functions in tauri.ts
-    // This covers the desktop-only branches in browser e2e (complements Rust native tests in desktop-smoke)
-    const fallback = await page.evaluate(() => {
-      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
-      if (isTauri) return 'tauri-present';
-      return 'peekSmfHeader only in Tauri desktop';
-    });
-    expect(fallback).toContain('only in Tauri desktop');
-
-    // Also test the readBinaryFile error path message (used in desktop .smf load before full read)
-    const readFallback = await page.evaluate(() => {
-      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
-      if (isTauri) return 'tauri';
-      return 'readBinaryFile only available in Tauri desktop (use openFile in browser)';
-    });
-    expect(readFallback).toContain('only available in Tauri desktop');
-
-    // Cover additional desktop peeks for fuller path coverage
-    const modelFallback = await page.evaluate(() => {
-      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
-      if (isTauri) return 'tauri';
-      return 'peekSmfModelBasic only in Tauri desktop';
-    });
-    expect(modelFallback).toContain('only in Tauri desktop');
-
-    // Desktop info combined (getSmfDesktopInfo used in loadModel for early .smf validation + status)
-    const desktopInfoFallback = await page.evaluate(() => {
-      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
-      if (isTauri) return 'tauri';
-      return 'getSmfDesktopInfo only in Tauri desktop';
-    });
-    expect(desktopInfoFallback).toContain('only in Tauri desktop');
-
-    // Additional native peeks for fuller desktop path coverage (rig, anim, header, validate, model)
-    const rigFallback = await page.evaluate(() => {
-      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
-      if (isTauri) return 'tauri';
-      return 'peekSmfRigBasic only in Tauri desktop';
-    });
-    expect(rigFallback).toContain('only in Tauri desktop');
-
-    const animFallback = await page.evaluate(() => {
-      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
-      if (isTauri) return 'tauri';
-      return 'peekSmfAnimBasic only in Tauri desktop';
-    });
-    expect(animFallback).toContain('only in Tauri desktop');
-
-    // Remaining desktop client fns for fuller path coverage (validate, header peek)
-    const validateFallback = await page.evaluate(() => {
-      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
-      if (isTauri) return 'tauri';
-      return 'validateSmf only in Tauri desktop';
-    });
-    expect(validateFallback).toContain('only in Tauri desktop');
-
-    const headerFallback = await page.evaluate(() => {
-      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
-      if (isTauri) return 'tauri';
-      return 'peekSmfHeader only in Tauri desktop';
-    });
-    expect(headerFallback).toContain('only in Tauri desktop');
-
-    // Desktop-specific: native file dialog cancel sim (openFile fallback)
-    const openFallback = await page.evaluate(() => {
-      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
-      if (isTauri) return 'tauri';
-      return 'browser fallback for openFile (uses hidden input)';
-    });
-    expect(openFallback).toContain('browser fallback');
-  });
-
-  test('desktop cancel sim (openFile fallback)', async ({ page }) => {
-    await page.goto('/');
-
-    // Simulate the openFile in tauri client for cancel (no file selected returns null)
-    // This covers the desktop-specific native file dialog cancel path in sim (per test scenarios).
-    const openFallback = await page.evaluate(() => {
-      const isTauri = !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__;
-      if (isTauri) return 'tauri';
-      return 'browser fallback for openFile (uses hidden input)';
-    });
-    expect(openFallback).toContain('browser fallback');
-
-    // In e2e, we use setInputFiles to simulate selection after "open".
-    // This covers the desktop cancel path in sim.
-  });
-
-  // Cycle 1 desktop e2e: native peek/validate/status checks using real .smf sample bytes (mirrors Rust).
-  // Exercises the exact header/offset/count logic and the status strings ("valid SMF | rig ~N | ...", "Rust validated SMF | ...")
-  // that loadModel assembles only on the desktop .smf path (getSmfDesktopInfo + validate + model peek + prefix).
-  // Uses same LOCAL_TEST_SMF as Rust #[test] + tauri-dev manual. CI fallback (skip when no sample). Complements browser fallbacks + cargo native tests.
-  test('desktop native peek/validate/status simulation with real .smf (header + info strings for UI status)', async ({ page }) => {
-    test.skip(!SAMPLE_SMF, 'No .smf test model available for native peek/status sim (local mixamo_smf_baldguy.smf or old-src)');
-
-    const bytes = new Uint8Array(fs.readFileSync(SAMPLE_SMF!));
-    expect(bytes.length).toBeGreaterThan(32);
-
-    // Simulate native Rust parse (same as parse_smf_header_info in main.rs)
-    const parsed = simulateSmfHeaderParse(bytes);
-    if ('error' in parsed) throw new Error('sim parse failed on real sample: ' + parsed.error);
-    expect(parsed.version).toMatch(/^SMF_v/);
-    expect(parsed.size).toBe(bytes.length);
-    expect(parsed.offRig).toBeGreaterThan(0);
-    expect(parsed.offAnim).toBeGreaterThan(0);
-
-    // Simulate validate (used for early desktop .smf reject in loadModel)
-    const validateMsg = simulateValidateSmf(bytes);
-    expect(validateMsg).toBe('valid SMF');
-
-    // Simulate the combined desktop info (getSmfDesktopInfo) used for rich status before full read/load
-    const desktopInfo = simulateGetSmfDesktopInfo(bytes);
-    expect(desktopInfo).toMatch(/valid SMF \| rig ~\d+ \| anim ~\d+/);
-    expect(desktopInfo).toMatch(/offsets t\d+ m\d+ r\d+ a\d+/);
-
-    // Simulate the final status assembly that only desktop .smf path produces in useLoadModel.ts
-    // (prefix + peek info + model basic + TS loaded summary)
-    const modelBasicSim = `SMF model basic: ~${bytes[parsed.offModel] || 0} meshes (at model offset ${parsed.offModel})`;
-    const rustPeekMsg = `${desktopInfo} | ${modelBasicSim}`;
-    const finalDesktopStatus = `Rust validated SMF | ${rustPeekMsg} | Loaded: mixamo_smf_baldguy.smf | bones: \\d+ | clips: \\d+ | verts: \\d+`;
-    // We don't assert the exact runtime status here (e2e uses data-path), but lock that the string patterns desktop produces are sensible and match our expectations.
-    expect(desktopInfo).toMatch(/valid SMF/);
-    expect(rustPeekMsg).toMatch(/Rust validated|valid SMF|rig ~|anim ~/i); // pattern used in UI
-
-    // Also exercise a bad-header validate path (for error UX coverage parity with Rust invalid case)
-    const badBytes = Buffer.from('NOTSMF\0' + 'x'.repeat(40));
-    const badValidate = simulateValidateSmf(new Uint8Array(badBytes));
-    expect(badValidate).toMatch(/invalid/);
-
-    // Light "screenshot assert" for bone/export flow coverage using real sample state (no new snapshot dep)
-    // (The full toHave is in export flow test; this ensures rendering path exercised post native-string sim)
-    await page.goto('/');
-    const input = page.getByTestId('model-file-input');
-    await input.setInputFiles(SAMPLE_SMF!);
-    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
-    const canvasShot = await page.getByTestId('three-canvas').screenshot();
-    expect(canvasShot.length).toBeGreaterThan(2000); // basic visual assert that viewport rendered for bone/export relevant state after "desktop info" sim
-  });
-
-  // New: FBX import happy path coverage (UI + load dispatch parity with SMF/GLB per test scenarios)
-  // Exercises format support in Toolbar accept, drop hint, and would exercise loadFBX + special "Loaded FBX" status + exportFBX path.
-  // Full skinned render + timeline + export roundtrip for FBX requires sample (no .fbx in old-src datafiles easily available; falls back gracefully).
-  // Export for FBX-loaded models now wired (Cycle 2: uses GLTF container equivalent for fidelity, no new deps).
-  // Complements desktop e2e automation by documenting format parity.
+  // FBX UI parity coverage: format accept/drop hint/export control presence.
+  // Full fixture-backed FBX load/export coverage runs in the next test.
   test('FBX import happy path coverage (UI + load dispatch)', async ({ page }) => {
     await page.goto('/');
 
@@ -685,23 +379,17 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     // Drop hint mentions FBX
     await expect(page.locator('text=/Drop .* here/')).toContainText(/fbx/i);
 
-    // Exercise export button visibility (FBX export path wired to exportFBX -> GLB container + native Tauri save in desktop; status updated for FBX source).
-    // Covers the export dispatch for FBX parity without sample (full load+status in skipped test above, which auto-runs on SAMPLE_FBX). Click omitted to keep test isolated (other export tests cover the flow).
+    // Export dispatch is covered by the fixture-backed FBX test; this keeps the UI support check isolated.
     const exportBtn = page.getByTestId('export-btn');
     await expect(exportBtn).toBeVisible();
 
-    // If a FBX sample were available (like SAMPLE_SMF), this would do:
-    // await input.setInputFiles(fbxSample);
-    // await expect(status).toContainText(/Loaded FBX|bones|clips/i);
-    // Then bone select, exportFBX specific status, etc. (same as SMF happy path).
-    // Backlog: add a real FBX sample (e.g. test.fbx) to unskip full load+exportFBX roundtrip.
+    // The full fixture-backed FBX load+export path runs in the next test.
   });
 
   // FBX import happy path (full load if sample) - per test scenarios #13 and desktop e2e priority
   // Exercises loadFBX + "Loaded FBX" status, bone select/transform, exportFBX (wired; produces .glb container with full skin/anim fidelity via GLTF equivalent, no new deps).
   // Re-import as .glb works. UI coverage in previous test; this for full when sample present (the export click asserts tolerate .glb from FBX path).
-  // Full native desktop roundtrip (tauri save for FBX-loaded) covered by manual tauri-dev + sample (same Tauri saveFile path as SMF); web e2e covers the shared export dispatch + status.
-  // Automation complete in structure: test will auto-execute full when SAMPLE_FBX added.
+  // Native save behavior for FBX-loaded roots uses the same saveFile path covered by native.spec.ts.
 
   test('FBX import happy path (full load if sample)', async ({ page }) => {
     test.skip(!SAMPLE_FBX, 'No .fbx test model available (local or old-src reference; see FBX UI test for current coverage). Full roundtrip automation (load+bone+exportFBX status) is implemented and will run when sample present.');
@@ -731,5 +419,69 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const exportBtn = page.getByTestId('export-btn');
     await exportBtn.click();
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.(smf|glb)/i, { timeout: 5000 });
+  });
+
+  // OBJ static load parity (per P4 and edge case search).
+  // Exercises loadOBJ (static mesh, no skeleton) + status + outliner/inspector (no bones list) + render.
+  // Export uses GLB path (intentional limit). Complements SMF/FBX fixture coverage.
+  test('OBJ static load parity (full load if sample)', async ({ page }) => {
+    test.skip(!SAMPLE_OBJ || !SAMPLE_OBJ.endsWith('.obj'), 'No .obj test model available (local test.obj or future). Full static load coverage (status + no skeleton + render) will run when sample present.');
+
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(SAMPLE_OBJ!);
+
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded|model|OBJ/i);  // OBJ loader sets "OBJ_Root", status typically shows Loaded or verts
+
+    // No skeleton/bones for pure static OBJ
+    const inspector = page.getByTestId('inspector');
+    await expect(inspector).not.toContainText(/Bones \(\d+\)/i);
+
+    const outliner = page.getByTestId('outliner');
+    await expect(outliner).not.toContainText(/Bones/i);  // or + clips if any
+
+    await expect(page.getByTestId('three-canvas')).toBeVisible();
+
+    // Visual smoke for static render
+    await expectRenderedScreenshot(page.getByTestId('viewport-container'));
+
+    // Sharper error catching: no critical browser errors during static OBJ load (loader now avoids failed tangent computes on minimal static meshes).
+    const objErrors = getBrowserErrors(page);
+    const objCritical = objErrors.filter((e: string) => e.includes('ERROR'));
+    expect(objCritical.length).toBe(0);
+
+    // Optional strict visual for OBJ static state (committed reference for parity).
+    // (Run with --update-snapshots to refresh if render changes.)
+    // await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000, { strict: true, name: 'obj-static-parity' });
+  });
+
+  // Partial progress on P2 1a: viewport coverage (transform drag/weight preview/bone selection).
+  // Existing smoke tests already exercise: canvas visibility, weight-preview-btn, transform-x-btn, mode buttons, raycast click, bone list in inspector, marker.
+  // Added explicit assertions here for SMF load state to document coverage before any extract.
+  test('viewport features smoke (P2 1a partial coverage)', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf test model available');
+    await page.goto('/');
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(SAMPLE_SMF!);
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+
+    // Viewport basics
+    await expect(page.getByTestId('three-canvas')).toBeVisible();
+
+    // Weight preview toggle (for weight preview behavior)
+    const weightBtn = page.getByTestId('weight-preview-btn');
+    if (await weightBtn.count() > 0) {
+      await expect(weightBtn).toBeVisible();
+    }
+
+    // Transform buttons (for drag/gizmo coverage)
+    await expect(page.getByTestId('transform-x-btn')).toBeVisible();
+    await expect(page.getByTestId('mode-translate-btn')).toBeVisible();
+
+    // Bone selection via inspector (raycast complement)
+    const inspector = page.getByTestId('inspector');
+    await expect(inspector.locator('li > div').filter({ hasText: /./ }).first()).toBeVisible();
   });
 });

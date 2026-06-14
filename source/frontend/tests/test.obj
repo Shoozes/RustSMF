@@ -1,0 +1,11 @@
+# Minimal self-authored ASCII OBJ triangle fixture for RustSMF static load parity tests.
+# Matches the spirit of test.fbx (simple, no skin, no anim, for preview-only parity).
+# Includes normals and UVs to avoid computeTangents errors in Three.js.
+v 0.0 0.0 0.0
+v 1.0 0.0 0.0
+v 0.0 1.0 0.0
+vn 0 0 1
+vt 0 0
+vt 1 0
+vt 0 1
+f 1/1/1 2/2/1 3/3/1
