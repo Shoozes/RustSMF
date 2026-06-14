@@ -1,6 +1,10 @@
 import React from 'react';
 import * as THREE from 'three';
 
+function getRootBones(bones: any[]): any[] {
+  return bones.filter((b: any) => !b.parent || !bones.includes(b.parent as any));
+}
+
 interface InspectorProps {
   selected: string;
   clips: THREE.AnimationClip[];
@@ -12,6 +16,7 @@ interface InspectorProps {
   onToggleWeightPreview?: () => void;
   transformMode?: 'translate' | 'rotate' | 'scale';
   onSetTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => void;
+  onNudgeBone?: (boneName: string, delta: { x?: number; y?: number; rotZ?: number; reset?: boolean }) => void;
 }
 
 const Inspector: React.FC<InspectorProps> = ({
@@ -25,10 +30,8 @@ const Inspector: React.FC<InspectorProps> = ({
   onToggleWeightPreview,
   transformMode = 'translate',
   onSetTransformMode,
+  onNudgeBone,
 }) => {
-  // Helper to reduce dupe (modularity/flex)
-  const getRootBones = (bones: any[]) => bones.filter((b: any) => !b.parent || !bones.includes(b.parent as any));
-
   // State for collapsible bone hierarchy (starts with top-level roots expanded for usability)
   const [expandedBones, setExpandedBones] = React.useState<Set<string>>(new Set());
 
@@ -121,34 +124,21 @@ const Inspector: React.FC<InspectorProps> = ({
         )}
 
         {/* Bone transform controls (Cycle 3: 3D TransformControls gizmo in viewport + quick nudges + mode buttons.
-            3D marker provides visual feedback. Live edits are PREVIEW-ONLY (see Task6); SMF export uses original loaded ImportedSmf DQs/bind/anim (no pose sync back yet). */}
+            3D marker provides visual feedback. Nudge buttons feed the pose-edit layer; edits are captured at SMF export time. */}
         {selected && selected !== 'Scene' && (
           <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
             <div>Transform for: <span className="font-mono text-amber-300">{selected}</span> (gizmo active in viewport)</div>
-            <div className="text-[8px] text-amber-400">Preview-only (export uses loaded data; no live pose sync to SMF yet)</div>
             <button data-testid="transform-x-btn" className="mr-1 mt-0.5 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
-              if (skeleton) {
-                const bone = skeleton.bones.find((b: any) => b.name === selected);
-                if (bone) { bone.position.x += 0.1; bone.updateMatrix(); if (skeleton) skeleton.update(); console.log('+X applied to', selected); }
-              }
+              onNudgeBone && onNudgeBone(selected, { x: 0.1 });
             }}> +X </button>
             <button data-testid="transform-y-btn" className="mr-1 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
-              if (skeleton) {
-                const bone = skeleton.bones.find((b: any) => b.name === selected);
-                if (bone) { bone.position.y += 0.1; bone.updateMatrix(); if (skeleton) skeleton.update(); console.log('+Y applied to', selected); }
-              }
+              onNudgeBone && onNudgeBone(selected, { y: 0.1 });
             }}> +Y </button>
             <button data-testid="transform-rot-btn" className="px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
-              if (skeleton) {
-                const bone = skeleton.bones.find((b: any) => b.name === selected);
-                if (bone) { bone.rotation.z += 0.2; bone.updateMatrix(); if (skeleton) skeleton.update(); console.log('rot applied to', selected); }
-              }
+              onNudgeBone && onNudgeBone(selected, { rotZ: 0.2 });
             }}> rot </button>
             <button data-testid="transform-reset-btn" className="ml-1 px-1 py-0 bg-slate-800 text-xs" onClick={() => {
-              if (skeleton) {
-                const bone = skeleton.bones.find((b: any) => b.name === selected);
-                if (bone) { bone.position.set(0,0,0); bone.rotation.set(0,0,0); bone.updateMatrix(); if (skeleton) skeleton.update(); console.log('reset', selected); }
-              }
+              onNudgeBone && onNudgeBone(selected, { reset: true });
             }}> reset </button>
             {onToggleWeightPreview && (
               <button

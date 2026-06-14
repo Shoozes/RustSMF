@@ -208,7 +208,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const ro = new ResizeObserver(onResize);
     ro.observe(container);
     resizeObsRef.current = ro;
-    setTimeout(onResize, 50);
+    requestAnimationFrame(onResize);
 
     return () => {
       if (frameRef.current) cancelAnimationFrame(frameRef.current);

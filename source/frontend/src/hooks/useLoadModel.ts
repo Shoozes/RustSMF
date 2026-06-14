@@ -3,6 +3,13 @@ import type * as THREE from 'three';
 import type { OpenResult } from '../backend-client/tauri';
 import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
+import {
+  type BoneNudgeDelta,
+  type PoseEditMap,
+  applyNudgeDelta,
+  emptyPoseEdit,
+  applyPoseEditsToSmf,
+} from './poseEdits';
 
 /**
  * Custom hook to encapsulate model loading logic, error handling, and related handlers.
@@ -23,6 +30,9 @@ export function useLoadModel() {
   // Track original source format for context-aware export (SMF has fidelity path; FBX gets its own exportFBX entry)
   const lastSourceFormatRef = useRef<string>(''); // 'smf' | 'fbx' | 'glb' | 'obj'
 
+  // Pose edits recorded from nudge buttons and gizmo; applied to SMF at export time
+  const poseEditsRef = useRef<PoseEditMap>({});
+
   // Weight preview toggle for selected bone (Cycle 3 rigging polish follow-up)
   const [showWeightPreview, setShowWeightPreview] = useState(false);
 
@@ -40,6 +50,8 @@ export function useLoadModel() {
 
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
+    lastSourceFormatRef.current = '';
+    poseEditsRef.current = {};
     model.clear();
     ui.setSelected('Scene');
     ui.clearError();
@@ -75,29 +87,44 @@ export function useLoadModel() {
       else if (name.endsWith('.fbx')) lastSourceFormatRef.current = 'fbx';
       else if (name.endsWith('.glb') || name.endsWith('.gltf')) lastSourceFormatRef.current = 'glb';
       else if (name.endsWith('.obj')) lastSourceFormatRef.current = 'obj';
+
+      // Extract shared Tauri SMF desktop peek to avoid duplicated async branches
+      const fetchSmfDesktopPeek = async (
+        path: string,
+        tauriClient: any
+      ): Promise<{ rustPeekMsg: string; rustValidated: boolean }> => {
+        try {
+          const info = await tauriClient.getSmfDesktopInfo(path);
+          if (!isCurrentLoad()) return { rustPeekMsg: '', rustValidated: false };
+          if (info.includes('invalid')) {
+            ui.setErrorMsg(`Invalid SMF (Rust): ${info}`);
+            ui.setStatus(info);
+            ui.setIsLoading(false);
+            return { rustPeekMsg: info, rustValidated: false };
+          }
+          let msg = info;
+          try {
+            const m = await tauriClient.peekSmfModelBasic(path);
+            if (!isCurrentLoad()) return { rustPeekMsg: msg, rustValidated: true };
+            msg = `${msg} | ${m}`;
+          } catch {}
+          return { rustPeekMsg: msg, rustValidated: true };
+        } catch {
+          return { rustPeekMsg: '', rustValidated: false };
+        }
+      };
+
       // Single dynamic import for all Tauri client fns when on desktop .smf path.
       // Reduces redundancy (multiple awaits), improves timing (one module load), centralizes.
       let tauri: any = null;
       if (!data && res.path) {
         if (name.endsWith('.smf')) {
           tauri = await import('../backend-client/tauri');
-          try {
-            const info = await tauri.getSmfDesktopInfo(res.path);
-            if (!isCurrentLoad()) return;
-            if (info.includes('invalid')) {
-              ui.setErrorMsg(`Invalid SMF (Rust): ${info}`);
-              ui.setStatus(info);
-              ui.setIsLoading(false);
-              return;
-            }
-            rustValidated = true;
-            rustPeekMsg = info;
-            try {
-              const m = await tauri.peekSmfModelBasic(res.path);
-              if (!isCurrentLoad()) return;
-              rustPeekMsg = `${rustPeekMsg} | ${m}`;
-            } catch {}
-          } catch {}
+          const peek = await fetchSmfDesktopPeek(res.path, tauri);
+          if (!isCurrentLoad()) return;
+          if (!peek.rustValidated && peek.rustPeekMsg) return; // already set error above
+          rustValidated = peek.rustValidated;
+          rustPeekMsg = peek.rustPeekMsg;
         }
         ui.setStatus('Reading binary from desktop path...');
         if (!tauri) tauri = await import('../backend-client/tauri');
@@ -105,23 +132,11 @@ export function useLoadModel() {
         if (!isCurrentLoad()) return;
       } else if (name.endsWith('.smf') && res.path) {
         tauri = await import('../backend-client/tauri');
-        try {
-          const info = await tauri.getSmfDesktopInfo(res.path);
-          if (!isCurrentLoad()) return;
-          if (info.includes('invalid')) {
-            ui.setErrorMsg(`Invalid SMF (Rust): ${info}`);
-            ui.setStatus(info);
-            ui.setIsLoading(false);
-            return;
-          }
-          rustValidated = true;
-          rustPeekMsg = info;
-          try {
-            const m = await tauri.peekSmfModelBasic(res.path);
-            if (!isCurrentLoad()) return;
-            rustPeekMsg = `${rustPeekMsg} | ${m}`;
-          } catch {}
-        } catch {}
+        const peek = await fetchSmfDesktopPeek(res.path, tauri);
+        if (!isCurrentLoad()) return;
+        if (!peek.rustValidated && peek.rustPeekMsg) return; // already set error above
+        rustValidated = peek.rustValidated;
+        rustPeekMsg = peek.rustPeekMsg;
       }
 
       if (name.endsWith('.smf')) {
@@ -205,11 +220,15 @@ export function useLoadModel() {
   const handleExport = useCallback(async () => {
     const smfData = lastSmfDataRef.current;
     if (smfData) {
-      ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms; live edits are preview-only)...');
+      ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms + live pose edits)...');
       try {
-        const buf = exportSMFToBuffer(smfData);
+        const skeleton = model.skeleton;
+        const dataToExport = skeleton
+          ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
+          : smfData;
+        const buf = exportSMFToBuffer(dataToExport);
         await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.smf');
-        ui.setStatus('Exported .smf (using our ImportedSmf + DQ handling; edits were preview-only). Test roundtrip by re-importing!');
+        ui.setStatus('Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!');
         return;
       } catch (e: any) {
         ui.setStatus(`SMF export error: ${e?.message || e}. Falling back to GLB...`);
@@ -296,8 +315,8 @@ export function useLoadModel() {
   }, [playback]);
 
   const onScrub = useCallback((t: number) => {
-    playback.scrub(Math.max(0, Math.min(t, playback.duration || 0)));
-  }, [playback]);
+    playbackRef.current.scrub(Math.max(0, Math.min(t, playbackRef.current.duration || 0)));
+  }, [playbackRef]);
 
   const setSpeed = useCallback((s: number) => {
     playback.setPlaybackSpeed(s);
@@ -333,6 +352,31 @@ export function useLoadModel() {
     ui.setStatus(`Selected: ${name}`);
   }, [ui]);
 
+  // Route bone nudge buttons through pose-edit layer so edits are captured at export time.
+  // Applies the delta to the Three.js bone for immediate visual feedback, and records the
+  // cumulative edit in poseEditsRef for use by handleExport.
+  const onNudgeBone = useCallback((boneName: string, delta: BoneNudgeDelta) => {
+    const skeleton = model.skeleton;
+    if (!skeleton) return;
+    const bone = skeleton.bones.find(b => b.name === boneName);
+    if (!bone) return;
+
+    const prev = poseEditsRef.current[boneName] ?? emptyPoseEdit();
+    const next = applyNudgeDelta(prev, delta);
+    poseEditsRef.current = { ...poseEditsRef.current, [boneName]: next };
+
+    if (delta.reset) {
+      bone.position.set(0, 0, 0);
+      bone.rotation.set(0, 0, 0);
+    } else {
+      if (delta.x !== undefined) bone.position.x += delta.x;
+      if (delta.y !== undefined) bone.position.y += delta.y;
+      if (delta.rotZ !== undefined) bone.rotation.z += delta.rotZ;
+    }
+    bone.updateMatrix();
+    skeleton.update();
+  }, [model]);
+
   return {
     ui,
     model,
@@ -345,6 +389,7 @@ export function useLoadModel() {
     handleFileInputChange,
     handleDrop,
     handleSelectBone,
+    onNudgeBone,
     setupKeyboard,
     togglePlay,
     changeClip,

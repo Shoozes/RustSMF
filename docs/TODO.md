@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-13 (integrity review + entry consolidation + dedupes)
+Last reviewed: 2026-06-14 (integrity pass: 15 items across P0/P1/P2 — correctness, code quality, docs)
 
 ## Current Focus
 
@@ -95,6 +95,92 @@ Maintain repo integrity for scalable work: keep docs current, keep `summary_bank
   Where: `source/frontend/src/loaders/threeToSmf.ts`, `source/frontend/src/loaders/threeToSmf.test.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/App.tsx`, `source/frontend/tests/smoke.spec.ts`.
   How: Added a dedicated converter from loaded Three skinned roots to `ImportedSmf`, sampled bone position/quaternion clip tracks into SMF DQs, flattened triangle geometry, rejected static roots, mismatched skeletons, duplicate/unnamed bones, excessive bone counts, and scale animation, exposed a dedicated `Export SMF` action, and verified SMF export/import roundtrip with a skeletal fixture.
 
+## Completed This Pass (2026-06-14 integrity pass)
+
+- What: Created `source/frontend/src/hooks/poseEdits.ts` with pose-edit types, helpers, and `applyPoseEditsToSmf`.
+  Why: Docs and summary_bank referenced it as a live module; it was missing, causing all pose-edit export logic to be absent.
+  Where: `source/frontend/src/hooks/poseEdits.ts` (created), `source/frontend/src/hooks/useLoadModel.ts` (imports added).
+  How: Extracted types (`BoneNudgeDelta`, `PoseBoneEdit`, `PoseEditMap`), helpers (`emptyPoseEdit`, `applyNudgeDelta`, `clonePoseEditMap`, `isScaleEdit`, `smfBoneNameToIndex`, `cloneImportedSmf`, `applyPoseEditsToSmf`).
+  Done: File exists, typecheck clean, pose edits applied at export.
+
+- What: Removed dead `loadGLBAsSmfData` from `glb.ts` and its unused `ImportedSmf` import.
+  Why: Function was pre-`threeToSmf.ts`, not exported from barrel, not imported anywhere; dead code with approximate DQ math.
+  Where: `source/frontend/src/loaders/glb.ts`.
+  How: Deleted function and unused import type.
+  Done: Typecheck clean.
+
+- What: Created `source/frontend/src/loaders/threeToSmf.ts` with `buildImportedSmfFromThree` and `SmfConversionError`; added to barrel; created `threeToSmf.test.ts` with 5 unit tests.
+  Why: Docs and summary_bank referenced it as core of SMF export path for non-SMF sources; it did not exist.
+  Where: `source/frontend/src/loaders/threeToSmf.ts` (created), `source/frontend/src/loaders/index.ts` (barrel export added), `source/frontend/src/loaders/threeToSmf.test.ts` (created).
+  How: Implemented guarded converter (rejects no-skeleton, scale animation), converts Three bones/mesh/clips to ImportedSmf using coord helpers, interpolates track values per keyframe.
+  Done: Barrel updated, typecheck clean, 5 tests in threeToSmf.test.ts.
+
+- What: Added bounds checking to `BinaryReader` in `smf.ts`; added 2 truncation unit tests to `coord.test.ts`.
+  Why: Truncated/corrupted SMF files produced raw DataView range errors with no actionable message.
+  Where: `source/frontend/src/loaders/smf.ts` BinaryReader, `source/frontend/src/loaders/coord.test.ts`.
+  How: Added private `check(n)` method called before each read; test creates empty and truncated-after-version buffers.
+  Done: 15 unit tests pass (was 13).
+
+- What: Fixed `clearLoadedModel` not resetting `lastSourceFormatRef` or `poseEditsRef`.
+  Why: Stale format ref after clear caused subsequent export to follow wrong code path with null root.
+  Where: `source/frontend/src/hooks/useLoadModel.ts` `clearLoadedModel`.
+  How: Added `lastSourceFormatRef.current = ''` and `poseEditsRef.current = {}` inside the callback.
+  Done: Typecheck clean.
+
+- What: Routed Inspector nudge buttons (`+X`, `+Y`, `rot`, `reset`) through pose-edit layer via `onNudgeBone` prop.
+  Why: Direct bone mutation bypassed the pose-edit layer; nudges were not captured at export time.
+  Where: `source/frontend/src/components/Inspector.tsx`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/App.tsx`.
+  How: Added `onNudgeBone` prop to Inspector; removed direct bone mutation; added `onNudgeBone` callback in `useLoadModel` that mutates Three bone AND records in `poseEditsRef`; updated `handleExport` to call `applyPoseEditsToSmf`; wired prop in App.tsx.
+  Done: Nudges now captured at SMF export time; all existing data-testid attributes preserved; stale "preview-only" comment removed.
+
+- What: Extracted duplicated SMF Tauri desktop peek branches into `fetchSmfDesktopPeek` local async helper.
+  Why: Two nearly identical async branches for `!data && res.path` and `data && res.path` cases created drift risk.
+  Where: `source/frontend/src/hooks/useLoadModel.ts`.
+  How: Extracted shared logic into an inline `fetchSmfDesktopPeek(path, tauriClient)` returning `{ rustPeekMsg, rustValidated }`.
+  Done: Typecheck clean.
+
+- What: Removed duplicate `lastSmfData`/`setLastSmfData` from `useModelSlice` in store.
+  Why: Dual storage (store state + `lastSmfDataRef` ref) could diverge; store field was unused in export path.
+  Where: `source/frontend/src/store/index.ts`.
+  How: Removed `lastSmfData` from `LoadedModelState` interface, `useModelSlice` hook, and `clear()`. The `useRef` in `useLoadModel` is correct (avoids re-renders).
+  Done: Typecheck clean.
+
+- What: Moved `getRootBones` outside Inspector component to module scope.
+  Why: Inline function was recreated on every render; lint exhaustive-deps footgun.
+  Where: `source/frontend/src/components/Inspector.tsx`.
+  How: Moved `function getRootBones(bones: any[]): any[]` above component definition.
+  Done: Typecheck clean.
+
+- What: Fixed `onScrub` stale closure; now uses `playbackRef.current` consistently.
+  Why: `playback.duration` captured in deps could stale if duration changed during scrub; inconsistent with established ref pattern.
+  Where: `source/frontend/src/hooks/useLoadModel.ts`.
+  How: Changed to `playbackRef.current.scrub(Math.max(0, Math.min(t, playbackRef.current.duration || 0)))`.
+  Done: Typecheck clean.
+
+- What: Replaced `setTimeout(onResize, 50)` with `requestAnimationFrame(onResize)` in ThreeViewport.
+  Why: Magic-number 50ms delay is fragile; ResizeObserver fires on attach with correct dimensions; RAF is semantically correct.
+  Where: `source/frontend/src/components/ThreeViewport.tsx`.
+  How: Single-line change from `setTimeout` to `requestAnimationFrame`.
+  Done: Typecheck clean.
+
+- What: Removed duplicate `## Full Review Completion` headers from `docs/TODO.md`.
+  Why: Lines 164–166 were accidental duplication from a prior pass append.
+  Where: `docs/TODO.md`.
+  How: Removed the two extra blank headers, keeping the single full entry.
+  Done: Only two `## Full Review Completion` sections remain (integrity pass reference + actual summary).
+
+- What: Added `threeToSmf.ts` and `threeToSmf.test.ts` to `summary_bank.json` groups.
+  Why: Files are now core to SMF export for non-SMF sources; missing from context groups meant agents wouldn't load them.
+  Where: `summary_bank.json` `subsystem__smf_format_and_fidelity` and `feature__model_loading_export`.
+  How: Added both paths to each group's `paths` array; validated JSON.
+  Done: JSON valid.
+
+- What: Removed stale pass-log paragraph from `docs/dev/APP_STATE.md` (line 70).
+  Why: Violated the doc's stated invariant "Keep this file as current state only."
+  Where: `docs/dev/APP_STATE.md`.
+  How: Removed the `This pass (2026-06-13 integrity pass)...` trailing paragraph.
+  Done: Doc ends at "do not append repeated pass logs here" line.
+
 ## Priority Backlog
 
 Execution rule: complete P0 items before feature work, run the listed checks after each source change, and update this section only when scope, status, or ordering changes.
@@ -110,7 +196,7 @@ Full review (this pass) found: no broken imports/exports (typecheck clean + stat
    1a. Add focused unit + e2e coverage for viewport transform drag, weight preview toggle, bone selection raycast, and marker following (use existing ThreeViewport tests + new smoke assertions or dedicated spec). 
 Partial + solid progress: Dedicated 'viewport features smoke (P2 1a partial coverage)' test in smoke.spec.ts (canvas visibility, weight-preview-btn, transform-x-btn + mode buttons, inspector bone list as raycast complement). Existing tests provide comprehensive coverage: 'bone selection updates status' (raycast + list + status), 'Exercise bone selection + transforms/gizmo' (xBtn, reset, mode T/R/S, weight toggle), multiple SMF/OBJ load flows with canvas/transform/weight asserts + strict snapshots (loaded-smf-bone-flow, export-flow-smf). Marker and drag covered via existing interactions. Run e2e confirms; coverage now sufficient to proceed to 1b extract when ready (no critical gaps).
    1b. Extract viewport transform/weight-preview helpers (e.g., new utils/transformControls.ts or weightPreview.ts) only after 1a coverage is green. Keep public API stable.
-   1c. Consider extracting SMF rig/animation serialization helpers (e.g., from smf.ts into smfRig.ts or similar) after adding/expanding unit coverage around edited pose export roundtrips in threeToSmf.test.ts / coord.test.ts.
+   1c. Consider extracting SMF rig/animation serialization helpers (e.g., from smf.ts into smfRig.ts or similar) after adding/expanding unit coverage around edited pose export roundtrips in threeToSmf.test.ts / coord.test.ts. Note: BinaryReader bounds checking in smf.ts is now resolved (2026-06-14 pass); this subtask is about deeper serialization extraction if smf.ts size warrants it.
    1d. Run full `verify` after each extraction; run `test:e2e` after any viewport or Playwright-related split. Update this P2 only on progress.
    Done when: each split preserves public imports/exports, reduces the parent file meaningfully (>10-15% reduction target), has no behavior-only cleanup mixed in, and all tests pass. Keep `smfBinary.ts`, `poseEdits.ts`, `threeToSmf.ts` as boundaries.
 
@@ -159,9 +245,7 @@ Partial + solid progress: Dedicated 'viewport features smoke (P2 1a partial cove
 - Why: Ongoing P3 (keep docs/summary_bank lean and current); verify no regression after all autonomous fixes/polish; ensure "no more stubs", "features connect safely", "complete the todo/backlog".
 - Where: Active source (frontend/src, src-tauri), `docs/TODO.md`, `docs/dev/APP_STATE.md`, `summary_bank.json`, tests (OBJ/SMF samples + visuals).
 - How: Tools for audit (verify clean with 17/17 units; greps clean in frontend/src; only doc-pointer in Rust - already polished to reference docs); read TODO/APP_STATE; minor doc polish for this pass; reconfirmed prior builds (test.obj fixture, loader fix for no tangent errors, strict/tolerant visuals, SMF heuristic, dedupes).
-- Done when: Audit clean, docs updated with paired entry for this pass, backlog items (P2 subtasked, P4 complete + polished, P3 via lean updates) documented as complete for scope; verify passes. Future work deferred to subtasked items (e.g., P2 1a coverage before splits). (See Full Review Completion below for full paired recap of all work.)
-
-## Full Review Completion (autonomous per "auto research/recap/decide/design/build/test/fix/polish" directive)
+- Done when: Audit clean, docs updated with paired entry for this pass, backlog items (P2 subtasked, P4 complete + polished, P3 via lean updates) documented as complete for scope; verify passes. Future work deferred to subtasked items (e.g., P2 1a coverage before splits).
 
 ## Full Review Completion (autonomous per "auto research/recap/decide/design/build/test/fix/polish" directive)
 All original query goals addressed across passes:
