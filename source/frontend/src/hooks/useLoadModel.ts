@@ -10,6 +10,7 @@ import {
   emptyPoseEdit,
   applyPoseEditsToSmf,
 } from './poseEdits';
+import { findBoneByName } from '../utils/bonePicker';
 
 /**
  * Custom hook to encapsulate model loading logic, error handling, and related handlers.
@@ -401,7 +402,7 @@ export function useLoadModel() {
   const onNudgeBone = useCallback((boneName: string, delta: BoneNudgeDelta) => {
     const skeleton = model.skeleton;
     if (!skeleton) return;
-    const bone = skeleton.bones.find(b => b.name === boneName);
+    const bone = findBoneByName(skeleton, boneName);
     if (!bone) return;
 
     const prev = poseEditsRef.current[boneName] ?? emptyPoseEdit();

@@ -40,4 +40,4 @@ Philosophy (AGENTS.md): Safety, courtesy, show, efficiency. Dynamic/modular over
 
 All features connect through guarded loaders + seq-guarded async load (loadSeq/fileReadSeq + isCurrentLoad checks) + ref-decoupled timing (playback, orbit enable on drag, RAF reports) + clear error/status UX + fidelity gates that fail explicitly rather than drop data.
 
-Run verify after changes. Update state docs + summary_bank only on scope/status shifts (keep lean).
+Run verify after changes. Update state docs + summary_bank only on scope/status shifts (keep lean). Full integrity review 2026-06-14 confirmed clean connections, no issues in active code.

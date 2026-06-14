@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-13 (continuation pass: P0 non-SMF SMF export integration completed (threeToSmf converter now wired end-to-end in useLoadModel/Toolbar/App via dedicated handleExportSmf + export-smf-btn; guarded calls + roundtrip coverage added); P2 1b/1c advanced (weightPreview + smfRig extracts following monolith skill + coverage; public APIs preserved); summary_bank stale open_items cleaned + statuses; units expanded; all verify green. No new stubs/gaps. Features now fully connect for documented non-SMF SMF export path.).
+Last reviewed: 2026-06-14 (full repo/app integrity review pass: confirmed no broken imports/exports (typecheck+build+greps clean), no stubs/gaps in src (zero matches), timing/async guards solid (seq+refs+combined cmd), error paths actionable, edge coverage strong (bounds, rejects, pose roundtrips, cancel, u8, etc.); P0 wiring + P2 extracts complete and connected end-to-end; verify (19 units + cargo + build) green; features cleanly connect (safe gates, smooth UX, efficient modular). Only doc+summary currency updates (no source changes). See TODO for paired recap + P2/P3 notes. State highly integral for scalability.).
 
 ## Current Product State
 

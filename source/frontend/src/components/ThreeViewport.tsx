@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { SimpleOrbit } from '../utils/SimpleOrbit';
 import { disposeThreeObject } from '../utils/threeDisposal';
 import { restoreWeightPreview, applyWeightPreviewForBone } from '../utils/weightPreview';
+import { findClosestBone, DEFAULT_MAX_BONE_PICK_DIST, findBoneByName } from '../utils/bonePicker';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
 // Self-contained ThreeViewport.
@@ -145,18 +146,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
       mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
       raycasterRef.current.setFromCamera(mouseRef.current, cam);
-      let closest: any = null;
-      let minDist = Infinity;
-      const maxDist = 1.5; // tuned for typical model scale; increase for distant clicks
-      skel.bones.forEach((bone: any) => {
-        if (!bone) return;
-        const pos = bone.getWorldPosition(new THREE.Vector3());
-        const dist = raycasterRef.current.ray.distanceToPoint(pos);
-        if (dist < minDist && dist < maxDist) {
-          minDist = dist;
-          closest = bone;
-        }
-      });
+      const maxDist = DEFAULT_MAX_BONE_PICK_DIST; // from bonePicker (tuned for typical model scale)
+      const closest = findClosestBone(raycasterRef.current, skel, maxDist);
       if (closest && closest.name) {
         cb(closest.name);
       }
@@ -185,7 +176,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       const skel = skeletonRefForPick.current;
       const sel = selectedBoneNameRef.current;
       if (hl && skel && sel) {
-        const bone = skel.bones.find((b: any) => b.name === sel);
+        const bone = findBoneByName(skel, sel);
         if (bone) {
           const wp = new THREE.Vector3();
           bone.getWorldPosition(wp);
@@ -307,7 +298,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     }
     if (!selectedBoneName || !skeleton) return;
 
-    const bone = skeleton.bones.find((b: any) => b.name === selectedBoneName);
+    const bone = findBoneByName(skeleton, selectedBoneName);
     if (!bone) {
       transformTargetRef.current = null;
       return;
@@ -372,7 +363,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       return;
     }
 
-    const bone = skeleton.bones.find((b: any) => b.name === selectedBoneName);
+    const bone = findBoneByName(skeleton, selectedBoneName);
     if (!bone) return;
     transformTargetRef.current = bone;
 

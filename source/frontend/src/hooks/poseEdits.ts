@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { ImportedSmf } from '../loaders/smf';
 import { threeMatrixToSmf, dqCreateFromMatrix, dqNegate } from '../loaders/coord';
+import { findBoneByName } from '../utils/bonePicker';
 
 /**
  * Pose-edit layer types and helpers.
@@ -110,7 +111,7 @@ export function applyPoseEditsToSmf(
     const smfIdx = smfBoneNameToIndex(cloned.bones, boneName);
     if (smfIdx < 0) continue;
 
-    const threeBone = skeleton.bones.find(b => b.name === boneName);
+    const threeBone = findBoneByName(skeleton, boneName);
     if (!threeBone) continue;
 
     threeBone.updateMatrix();

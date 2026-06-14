@@ -47,7 +47,7 @@
   "groups": {
     "docs__state_backlog": {
       "description": "Current app state, active paired backlog, and durable regression-prevention notes. Keep concise; do not append repeated pass logs.",
-      "status": "current after 2026-06-13 integrity pass",
+      "status": "current after 2026-06-14 full integrity review (clean; docs+summary currency only; no new findings)",
       "paths": [
         "docs/TODO.md",
         "docs/dev/APP_STATE.md",
@@ -82,7 +82,7 @@
     },
     "feature__model_loading_export": {
       "description": "User-facing load, preview, edit-preview, and export flow across SMF, GLB/GLTF, FBX, and OBJ.",
-      "status": "core connected; SMF high-fid + live pose export; non-SMF (GLB/FBX) to SMF via guarded threeToSmf now fully wired end-to-end (P0); P2 modularity extracts in progress (weightPreview + smfRig)",
+      "status": "core connected; SMF high-fid + live pose export; non-SMF (GLB/FBX) to SMF via guarded threeToSmf fully wired end-to-end (P0 complete); P2 modularity extracts complete (weightPreview + smfRig + prior pose/three/smfBinary); 2026-06-14 review: all paths connected, verify green, no stubs/imports issues",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -101,14 +101,15 @@
     },
     "subsystem__viewport_editor": {
       "description": "Three.js viewport, orbit controls, model attach/dispose, animation mixer, skeleton helper, raycast bone selection, TransformControls, and weight preview.",
-      "status": "modular and typechecked; 2026-06-13 pass added orbit cleanup, transform drag gating, and current-target refs",
+      "status": "modular and typechecked; 2026-06-14 review + bonePicker extract (raycast picker helper + DEFAULT const for flexibility) confirmed ref-decoupled timing, drag gating, weight extract; P2 1b advanced (multiple safe extracts); no timing issues; public props stable; bonePicker now in paths",
       "paths": [
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/utils/SimpleOrbit.ts",
         "source/frontend/src/utils/threeDisposal.ts",
         "source/frontend/src/components/Inspector.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/src/utils/weightPreview.ts"
+        "source/frontend/src/utils/weightPreview.ts",
+        "source/frontend/src/utils/bonePicker.ts"
       ],
       "edge_cases": [
         "Overlapping loads must not overwrite newer state.",
@@ -119,7 +120,7 @@
     },
     "subsystem__smf_format_and_fidelity": {
       "description": "SMF binary parsing/export, coordinate swizzles, dual-quaternion math, roundtrip fidelity, and old reference format material. Internal binary helpers (bytes + bounded R/W) live in smfBinary.ts (shared, barrel exposes only bytesToArrayBuffer util).",
-      "status": "SMF source roundtrip verified; non-SMF exact SMF export remains tracked work; 2026-06-13 review completed wiring of smfBinary (no more dupes in smf.ts/hook/tauri)",
+      "status": "SMF source roundtrip verified; non-SMF exact SMF export wired (P0); 2026-06-14 review: smfBinary canonical (bounds everywhere), smfRig extract done, no dupes, fidelity gates + tests strong; full review clean",
       "paths": [
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/loaders/smfBinary.ts",
@@ -139,7 +140,7 @@
     },
     "subsystem__tauri_bridge_and_rust_peeks": {
       "description": "Tauri native dialog/save/read commands, browser fallbacks, Rust SMF header/section peeks, and desktop status messages.",
-      "status": "native peeks and fallback strings covered; full native UI roundtrip remains tracked",
+      "status": "native peeks and fallback strings covered; full native UI roundtrip remains tracked (open_items); 2026-06-14 review: Rust/TS u8+offsets aligned via shared parse helper + tests; combined info cmd for efficiency",
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -157,7 +158,7 @@
     },
     "tests__quality": {
       "description": "Automated quality gates: lint, app typecheck, Vite build, chunk guard, unit roundtrips, Playwright e2e, and Rust cargo checks/tests.",
-      "status": "verify now includes app typecheck; test source typecheck still tracked separately",
+      "status": "verify includes app typecheck + test typecheck + chunk + units + cargo; 2026-06-14 full review ran verify (green 19/19 units); typecheck gap fully mitigated",
       "paths": [
         "source/frontend/package.json",
         "source/package.json",
@@ -179,7 +180,7 @@
     },
     "issue__typecheck_gap": {
       "description": "ESLint ignored TS/TSX and Vite did not typecheck, allowing app type drift despite green verify.",
-      "status": "fixed for app source on 2026-06-13",
+      "status": "fixed for app source on 2026-06-13; 2026-06-14 review reconfirmed (typecheck in verify, no drift)",
       "last_seen": "2026-06-13",
       "paths": [
         "source/frontend/eslint.config.js",
@@ -194,7 +195,7 @@
     },
     "issue__desktop_smf_parser_width": {
       "description": "Playwright desktop SMF info simulation read animation count as u32 while runtime parser uses u8.",
-      "status": "fixed on 2026-06-13",
+      "status": "fixed on 2026-06-13; 2026-06-14 full review: still aligned (Rust u8 + TS loader + sim + cargo test fixture)",
       "last_seen": "2026-06-13",
       "paths": [
         "source/frontend/tests/smoke.spec.ts",
@@ -207,7 +208,7 @@
     },
     "issue__incomplete_binary_dedupe": {
       "description": "After 'BinaryReader bounds' / threeToSmf / poseEdits integrity changes, smfBinary.ts existed (with improved ensure/patch + bytesTo) but was untracked + not imported; smf.ts, useLoadModel.ts and tauri.ts retained full/partial duplicate bytesTo + (smf) entire old Binary* classes. Barrel did not surface the util. Docs over-claimed the dedupes.",
-      "status": "fixed 2026-06-13 in this review pass",
+      "status": "fixed 2026-06-13; 2026-06-14 review: dedupe discipline effective (grep confirmed single owner + consumers; no latent copies)",
       "last_seen": "2026-06-13",
       "paths": [
         "source/frontend/src/loaders/smfBinary.ts",
@@ -226,14 +227,15 @@
     },
     "subsystem__modularity_candidates": {
       "description": "High-line-count files that should be split only at safe, test-backed boundaries. smfBinary.ts is the focused home for binary (after dedupe).",
-      "status": "watch (dedupe of binary helpers to smfBinary completed 2026-06-13; P2 splits for smf/ThreeViewport still require expanded viewport coverage per prior subtask)",
+      "status": "watch (P2 1b/1c extracts complete + furthered 2026-06-14: weightPreview, smfRig, bonePicker (raycast + shared findBoneByName consolidating name lookups across viewport/hook/poseEdits) + DEFAULT polish; smfBinary owner; top files stable/focused; no forced deeper (coupled); monolith discipline + verify after each)",
       "paths": [
         "source/frontend/tests/smoke.spec.ts",
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/loaders/smfBinary.ts",
         "source/frontend/src/utils/weightPreview.ts",
-        "source/frontend/src/loaders/smfRig.ts"
+        "source/frontend/src/loaders/smfRig.ts",
+        "source/frontend/src/utils/bonePicker.ts"
       ],
       "split_candidates": [
         "SMF BinaryReader/BinaryWriter helper module.",

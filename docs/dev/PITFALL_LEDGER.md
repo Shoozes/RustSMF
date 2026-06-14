@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-13 (full review caught + fixed latent "incomplete binary helper dedupe after move" pitfall; added Q/A entry + prevention; prior mitigations still effective; see summary_bank issue__incomplete_binary_dedupe)
+Last reviewed: 2026-06-14 (full review caught + fixed latent "incomplete binary helper dedupe after move" pitfall; added Q/A entry + prevention; prior mitigations still effective; see summary_bank issue__incomplete_binary_dedupe). 2026-06-14 full repo review: all listed pitfalls' mitigations (typecheck gate, sim alignment, save bool, bounded errors, fidelity gates, refactor discipline) remain effective and current; fresh audit + greps + verify found no new pitfalls or regressions. Relevance checks passed for all entries.
 
 ### Q: What pitfall are we preventing?
 
