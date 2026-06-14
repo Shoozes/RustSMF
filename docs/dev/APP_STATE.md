@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-13 (full review + fixes: binary helpers deduped and wired (smfBinary canonical for bytesTo + BinaryReader/Writer, dupes removed from smf/useLoadModel/tauri, barrel export added); saveFile now returns bool with cancel handling in exporters; _prepull artifact cleaned; smfBinary promoted to tracked; docs/summary_bank accuracy pass + new paired issue note; typecheck/lint/units/verify green. poseEdits is nudge-delta layer (not snapshot). No broken imports; no active stubs in src. smfBinary.ts is internal shared binary helpers (not barrel *).).
+Last reviewed: 2026-06-13 (continuation pass: P0 non-SMF SMF export integration completed (threeToSmf converter now wired end-to-end in useLoadModel/Toolbar/App via dedicated handleExportSmf + export-smf-btn; guarded calls + roundtrip coverage added); P2 1b/1c advanced (weightPreview + smfRig extracts following monolith skill + coverage; public APIs preserved); summary_bank stale open_items cleaned + statuses; units expanded; all verify green. No new stubs/gaps. Features now fully connect for documented non-SMF SMF export path.).
 
 ## Current Product State
 

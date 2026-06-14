@@ -3,5 +3,6 @@
 
 export { SimpleOrbit } from './SimpleOrbit';
 export { disposeThreeObject } from './threeDisposal';
+export { restoreWeightPreview, applyWeightPreviewForBone } from './weightPreview';
 
 // Future: export makeSafeUrl, fileToDataUrl, errorToMessage, etc. as needed for loaders/viewport.

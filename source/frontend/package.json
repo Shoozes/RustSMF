@@ -10,7 +10,7 @@
     "check:entry-chunks": "node scripts/check-entry-chunks.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test:unit": "tsx --test src/loaders/coord.test.ts",
+    "test:unit": "tsx --test src/loaders/coord.test.ts src/loaders/threeToSmf.test.ts",
     "test:e2e": "playwright test",
     "tauri:dev": "cd ../src-tauri && tauri dev",
     "tauri:build": "cd ../src-tauri && tauri build",

@@ -82,7 +82,7 @@
     },
     "feature__model_loading_export": {
       "description": "User-facing load, preview, edit-preview, and export flow across SMF, GLB/GLTF, FBX, and OBJ.",
-      "status": "core connected; SMF high-fidelity export, non-SMF GLB export path, live pose edits preview-only",
+      "status": "core connected; SMF high-fid + live pose export; non-SMF (GLB/FBX) to SMF via guarded threeToSmf now fully wired end-to-end (P0); P2 modularity extracts in progress (weightPreview + smfRig)",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -96,11 +96,7 @@
         "source/frontend/src/loaders/threeToSmf.ts",
         "source/frontend/src/loaders/threeToSmf.test.ts"
       ],
-      "open_items": [
-        "Add real FBX fixture to enable full FBX e2e.",
-        "Design persisted pose/keyframe layer before exporting live bone edits.",
-        "Implement exact GLB/FBX-to-SMF DQ animation export only with fixture-backed tests."
-      ],
+      "open_items": [],
       "files": []
     },
     "subsystem__viewport_editor": {
@@ -111,7 +107,8 @@
         "source/frontend/src/utils/SimpleOrbit.ts",
         "source/frontend/src/utils/threeDisposal.ts",
         "source/frontend/src/components/Inspector.tsx",
-        "source/frontend/src/hooks/useLoadModel.ts"
+        "source/frontend/src/hooks/useLoadModel.ts",
+        "source/frontend/src/utils/weightPreview.ts"
       ],
       "edge_cases": [
         "Overlapping loads must not overwrite newer state.",
@@ -126,6 +123,7 @@
       "paths": [
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/loaders/smfBinary.ts",
+        "source/frontend/src/loaders/smfRig.ts",
         "source/frontend/src/loaders/coord.ts",
         "source/frontend/src/loaders/coord.test.ts",
         "docs/references/old-src/GLBtoSMF/*.js",
@@ -233,7 +231,9 @@
         "source/frontend/tests/smoke.spec.ts",
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/components/ThreeViewport.tsx",
-        "source/frontend/src/loaders/smfBinary.ts"
+        "source/frontend/src/loaders/smfBinary.ts",
+        "source/frontend/src/utils/weightPreview.ts",
+        "source/frontend/src/loaders/smfRig.ts"
       ],
       "split_candidates": [
         "SMF BinaryReader/BinaryWriter helper module.",

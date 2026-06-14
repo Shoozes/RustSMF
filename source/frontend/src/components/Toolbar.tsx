@@ -3,6 +3,7 @@ import React from 'react';
 interface ToolbarProps {
   onOpen: () => void;
   onExport: () => void;
+  onExportSmf?: () => void;
   onPing: () => void;
   isLoading: boolean;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -11,6 +12,7 @@ interface ToolbarProps {
 const Toolbar: React.FC<ToolbarProps> = ({
   onOpen,
   onExport,
+  onExportSmf,
   onPing,
   isLoading,
   onFileChange,
@@ -23,6 +25,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
       </button>
       <button data-testid="export-btn" onClick={onExport} disabled={isLoading}>
         Export
+      </button>
+      <button data-testid="export-smf-btn" onClick={onExportSmf} disabled={isLoading || !onExportSmf}>
+        Export as SMF
       </button>
       <button data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>
         Ping Rust

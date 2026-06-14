@@ -16,6 +16,7 @@ export default function App() {
     playback,
     handleOpen,
     handleExport,
+    handleExportSmf,
     handleFileInputChange,
     handleDrop,
     handleSelectBone,
@@ -43,6 +44,7 @@ export default function App() {
       <Toolbar
         onOpen={handleOpen}
         onExport={handleExport}
+        onExportSmf={handleExportSmf}
         onPing={pingRust}
         isLoading={ui.isLoading}
         onFileChange={handleFileInputChange}

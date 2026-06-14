@@ -7,6 +7,7 @@ import {
   dqFlipSign,
 } from './coord';
 import { bytesToArrayBuffer, BinaryReader, BinaryWriter } from './smfBinary';
+import { buildSmfNodeList } from './smfRig';
 
 /**
  * SMF binary loader (ported/adapted from docs/references/old-src/GLBtoSMF/importer.js)
@@ -361,59 +362,8 @@ export function buildThreeScene(imported: ImportedSmf) {
 export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
   const { meshes, textures, bones: importedBones, animations } = imported;
 
-  // Build nodeList for SMF rig/anim (nodeCount may include extra head nodes for disconnected bones).
-  // Model SMF nodes (from imported.bones with isBone/head flags + parents in node space) separately from Three bones.
-  // Track root (node 0 or p<=0), head (isBone=0), tail/bone (isBone=1), detached via parent links.
-  // If input has isBone=0 entries (from SMF import/roundtrip), preserve 1:1 for fidelity (no re-insertion).
-  // Otherwise (e.g. GLB constructed bones), expansion path can insert heads for disconnected (parent handling).
-  const nodeList: Array<{ boneIndex: number; parent: number; isBone: number; isHead: boolean; name: string }> = [];
-  const boneToNode = new Map<number, number>();
-  let nodeIndex = 0;
-
-  const hasPrebuiltHeads = importedBones.some(b => b.isBone === 0);
-  if (hasPrebuiltHeads) {
-    // SMF-sourced: bones array already encodes the full rig nodes (heads + bones); preserve structure/parents exactly.
-    importedBones.forEach((b, bi) => {
-      nodeList.push({
-        boneIndex: bi,
-        parent: b.parent,
-        isBone: b.isBone,
-        isHead: b.isBone === 0,
-        name: b.isBone ? `Bone_${bi}` : `Head_${bi}`
-      });
-      boneToNode.set(bi, nodeIndex);
-      nodeIndex++;
-    });
-  } else {
-    // Constructed (e.g. from GLB): input are real bones; build with possible head insertion for disconnected children.
-    importedBones.forEach((b, bi) => {
-      const connected = b.parent >= 0; // declared parent link; refine with live hierarchy if available in future
-      if (!connected && b.parent >= 0) {
-        nodeList.push({
-          boneIndex: -1,
-          parent: boneToNode.get(b.parent) ?? 0,
-          isBone: 0,
-          isHead: true,
-          name: `Head_${bi}`
-        });
-        nodeIndex++;
-      }
-      nodeList.push({
-        boneIndex: bi,
-        parent: connected ? (boneToNode.get(b.parent) ?? 0) : (nodeIndex - 1),
-        isBone: 1,
-        isHead: false,
-        name: `Bone_${bi}`
-      });
-      boneToNode.set(bi, nodeIndex);
-      nodeIndex++;
-    });
-  }
-
-  // Clamp parents (node 0 as root target for orphans)
-  nodeList.forEach((n) => {
-    if (n.parent < 0 || n.parent >= nodeList.length) n.parent = 0;
-  });
+  // Build nodeList via extracted rig helper (P2 1c modularity; safe boundary, preserves all export behavior + public API).
+  const { nodeList } = buildSmfNodeList(importedBones);
 
   const versionString = 'SMF_v12_by_Snidr_and_Bart';
   const headerSize = versionString.length + 1 + 5 * 4;

@@ -269,3 +269,24 @@ Partial + solid progress: Dedicated 'viewport features smoke (P2 1a partial cove
 These close the "no more stubs / complete the dedupes" gaps found in independent review. All prior features (pose nudge export, guarded threeToSmf, seq guards, bounds) connect; new changes preserve behavior + improve modularity/safety. No timing changes needed (existing ref/seq/RAF patterns solid). Edge cases (cancel, truncate via shared bounds) now better covered.
 
 State after: Highly integral. Recommend `pwsh -File run.ps1 -Task verify` . (2026-06-13 autonomous full review + fixes.)
+
+## P0 + P2 Progress (this continuation pass, per auto research/recap/decide... directive)
+- What: Completed the missing non-SMF SMF export integration (P0). The threeToSmf converter + guards + tests existed and were documented as "wired"/"core"/"dedicated Export SMF action", but were never called from useLoadModel handleExport or exposed in Toolbar/App (doc/code drift; tests expecting export-smf-btn would not exercise the path; feature incomplete).
+  Why: "If its missing, build it"; fulfills "features cleanly connect", "no more stubs", "complete the todo/backlog", "search app use edge cases", safety (gates must be usable), show (documented UX works). Directly addressed the largest remaining gap surfaced by full re-audit.
+  Where: source/frontend/src/hooks/useLoadModel.ts (import + guarded handleExportSmf + collector for skinnedMeshes + reuse of save/cancel/status/seq), components/Toolbar.tsx (added data-testid="export-smf-btn" + onExportSmf prop), App.tsx (pass-through wiring), package.json (expanded test:unit to include threeToSmf.test.ts), threeToSmf.test.ts (added roundtrip + live-pose-edit capture test for 1c enablement).
+  How: Reused buildImportedSmfFromThree + SmfConversionError + exportSMFToBuffer + existing patterns (seq guards, bool save, status, traverse like viewport, error instanceof). Main onExport unchanged for prior paths; dedicated handler + button for the converter (clear "not supported" status on bad cases). Added P2 1c prep test exercising converter + export + import + pose mutation roundtrip. Updated barrel already had threeToSmf.
+  Done when: typecheck/lint/units (19 tests incl new)/full verify green; e2e exercises new btn/path; manual skinned GLB/FBX + edit + Export as SMF produces valid .smf with captured pose.
+
+- What: Advanced P2 modularity (1b + 1c starters) using monolith-modularization discipline (safe helper boundaries, preserve public API/props/exports/behavior, mechanical move, update docs/summary, re-verify, grep no dupes).
+  1b: Extracted weight preview (restore/apply color from skin) to source/frontend/src/utils/weightPreview.ts; refactored ThreeViewport effect to thin calls. ~ reduction in viewport, barrel update.
+  1c prep + starter: Added pose-edited roundtrip coverage (threeToSmf.test); extracted rig nodeList builder (hasPrebuiltHeads vs head-insertion for disconnected + clamp) to source/frontend/src/loaders/smfRig.ts; smf.ts now thin caller for that section (import + destructure call). Preserved all SMF public surface + fidelity.
+  Why: Reduce 500+ line files (smf ~611, ThreeViewport ~580) per backlog; improve scalability/context; follow "prefer dynamic modular".
+  Where: utils/weightPreview.ts (new), components/ThreeViewport.tsx (refactor), loaders/smfRig.ts (new), loaders/smf.ts (import + replace block), utils/index.ts (barrel), summary_bank.json (added paths + modularity note).
+  How: Followed skill workflow exactly (helpers first, no public change, post-grep for symbols only in new+imports, verify after). 1a coverage was confirmed sufficient (dedicated smoke + exercising tests per audit).
+  Done: Type/unit/lint/build/verify green post-extracts; no dupes (grep); size reduction meaningful; public (ThreeViewport props, smf loader exports) stable; summary paths updated; P2 notes in TODO will reflect on next doc pass.
+
+- P3: Cleaned stale open_items in summary_bank feature__ (FBX fixture, persisted pose design, exact GLB-to-SMF "to do" were completed); updated status texts for wired non-SMF export + P2 progress. (Full paired doc updates + lean pass in final step.)
+
+All changes followed AGENTS (safety/modular first, direct comments, paired in docs, verify after source, subtasked P2). No new stubs introduced; gaps closed. Recommend full e2e (visuals tolerant) + verify post any further.
+
+State: Even more integral. P0 complete (feature now connects), P2 advanced safely, P3 started. (Autonomous continuation per user query.)

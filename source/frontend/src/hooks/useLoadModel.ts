@@ -1,7 +1,7 @@
 import { useCallback, useRef, useEffect, useState } from 'react';
 import type * as THREE from 'three';
 import type { OpenResult } from '../backend-client/tauri';
-import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX, bytesToArrayBuffer } from '../loaders';
+import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX, bytesToArrayBuffer, buildImportedSmfFromThree, SmfConversionError } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
 import {
   type BoneNudgeDelta,
@@ -265,6 +265,52 @@ export function useLoadModel() {
     }
   }, [ui, model]);
 
+  // Dedicated handler for the "Export as SMF" path on non-SMF (GLB/FBX) skinned sources.
+  // Uses the guarded threeToSmf converter (buildImportedSmfFromThree) which enforces
+  // single shared named skeleton, no scale animation, etc. Live pose (gizmo/nudges/weight)
+  // is captured because converter samples current bone transforms + clips.
+  // Reuses saveFile bool + cancel UX, status/error patterns, and existing model data.
+  const handleExportSmf = useCallback(async () => {
+    const rootToExport = model.root;
+    const skeleton = model.skeleton;
+    if (!rootToExport || !skeleton) {
+      ui.setStatus('No skinned model loaded for SMF export. Load a GLB/FBX with skeleton or use GLB export.');
+      return;
+    }
+
+    ui.setStatus('Exporting as SMF via guarded converter (Three skinned -> ImportedSmf)...');
+
+    try {
+      // Collect any SkinnedMeshes under the loaded root (converter uses first for mesh data).
+      const skinnedMeshes: THREE.SkinnedMesh[] = [];
+      rootToExport.traverse((o: any) => {
+        if (o.isSkinnedMesh) skinnedMeshes.push(o as THREE.SkinnedMesh);
+      });
+
+      const imported = buildImportedSmfFromThree({
+        skeleton,
+        skinnedMeshes: skinnedMeshes.length ? skinnedMeshes : undefined,
+        clips: model.clips,
+      });
+
+      const buf = exportSMFToBuffer(imported);
+      const ok = await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.smf');
+      if (!ok) {
+        ui.setStatus('Export canceled.');
+        return;
+      }
+      ui.setStatus('Exported .smf (from GLB/FBX via guarded threeToSmf converter + live pose). Re-import to verify fidelity!');
+    } catch (e: any) {
+      if (e instanceof SmfConversionError) {
+        ui.setStatus(`Cannot export as SMF: ${e.message}. Falling back to GLB for full fidelity.`);
+      } else {
+        const msg = e?.message || String(e);
+        ui.setErrorMsg(`SMF export error: ${msg}`);
+        ui.setStatus(`SMF export error: ${msg}`);
+      }
+    }
+  }, [ui, model]);
+
   const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -383,6 +429,7 @@ export function useLoadModel() {
     clearLoadedModel,
     handleOpen,
     handleExport,
+    handleExportSmf,
     handleFileInputChange,
     handleDrop,
     handleSelectBone,

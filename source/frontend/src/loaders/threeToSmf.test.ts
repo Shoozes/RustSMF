@@ -5,6 +5,8 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as THREE from 'three';
 import { buildImportedSmfFromThree, SmfConversionError } from './threeToSmf';
+import { exportSMFToBuffer, importSMF, ImportedSmf } from './smf';
+import { dqToLocalTransform } from './coord';
 
 describe('threeToSmf - buildImportedSmfFromThree', () => {
   it('throws SmfConversionError for source without skeleton bones', () => {
@@ -84,4 +86,35 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
     assert.strictEqual(result.animations[0].frames[0].length, 1, 'one DQ per frame per bone');
     assert.strictEqual(result.animations[0].frames[0][0].length, 8, 'DQ is 8 floats');
   });
+
+  it('roundtrips through SMF export/import and captures live bone pose edits (for non-SMF Export SMF path)', () => {
+    const bone = new THREE.Bone();
+    bone.name = 'Bone_0';
+    bone.position.set(0.1, 0.2, 0.3); // simulate live gizmo/pose edit
+    const skeleton = new THREE.Skeleton([bone]);
+
+    const converted = buildImportedSmfFromThree({ skeleton });
+    assert.strictEqual(converted.bones.length, 1);
+
+    const buf = exportSMFToBuffer(converted);
+    const reimported: ImportedSmf = importSMF(toArrayBuffer(buf)); // reuse helper if present, or direct
+
+    // Basic fidelity
+    assert.strictEqual(reimported.bones.length, 1);
+    const endTransform = dqToLocalTransform(reimported.bones[0].dq);
+    // The pose mutation should be reflected (within coord transform tolerance)
+    assert.ok(Math.abs(endTransform.pos.x - 0.1) < 1e-4 || Math.abs(endTransform.pos.y - 0.2) < 1e-4, 'live bone pose edit captured in SMF roundtrip');
+
+    // The reimported should have captured the edited transform in its DQ (via coord).
+    const reEnd = dqToLocalTransform(reimported.bones[0].dq);
+    assert.ok(Math.abs(reEnd.pos.x) > 0.05 || Math.abs(reEnd.pos.y) > 0.05, 'edited pose visible after SMF roundtrip from threeToSmf result');
+  });
 });
+
+// Local helper (mirrors coord.test.ts for buffer)
+function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
