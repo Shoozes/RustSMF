@@ -32,10 +32,16 @@ class BinaryReader {
     this.dv = new DataView(buffer);
   }
 
-  u8() { const v = this.dv.getUint8(this.off); this.off += 1; return v; }
-  u16() { const v = this.dv.getUint16(this.off, true); this.off += 2; return v; }
-  u32() { const v = this.dv.getUint32(this.off, true); this.off += 4; return v; }
-  f32() { const v = this.dv.getFloat32(this.off, true); this.off += 4; return v; }
+  private check(n: number) {
+    if (this.off + n > this.dv.byteLength) {
+      throw new Error(`Unexpected end of SMF binary at offset ${this.off} (need ${n} bytes, have ${this.dv.byteLength - this.off})`);
+    }
+  }
+
+  u8() { this.check(1); const v = this.dv.getUint8(this.off); this.off += 1; return v; }
+  u16() { this.check(2); const v = this.dv.getUint16(this.off, true); this.off += 2; return v; }
+  u32() { this.check(4); const v = this.dv.getUint32(this.off, true); this.off += 4; return v; }
+  f32() { this.check(4); const v = this.dv.getFloat32(this.off, true); this.off += 4; return v; }
 
   strZ() {
     let s = '';

@@ -19,6 +19,7 @@ export default function App() {
     handleFileInputChange,
     handleDrop,
     handleSelectBone,
+    onNudgeBone,
     setupKeyboard,
     togglePlay,
     changeClip,
@@ -116,6 +117,7 @@ export default function App() {
           onToggleWeightPreview={toggleWeightPreview}
           transformMode={transformMode}
           onSetTransformMode={setTransformMode}
+          onNudgeBone={onNudgeBone}
         />
       </div>
 

@@ -91,7 +91,9 @@
         "source/frontend/src/components/Timeline.tsx",
         "source/frontend/src/components/Outliner.tsx",
         "source/frontend/src/backend-client/tauri.ts",
-        "source/frontend/src/loaders/**/*"
+        "source/frontend/src/loaders/**/*",
+        "source/frontend/src/loaders/threeToSmf.ts",
+        "source/frontend/src/loaders/threeToSmf.test.ts"
       ],
       "open_items": [
         "Add real FBX fixture to enable full FBX e2e.",
@@ -125,7 +127,9 @@
         "source/frontend/src/loaders/coord.ts",
         "source/frontend/src/loaders/coord.test.ts",
         "docs/references/old-src/GLBtoSMF/*.js",
-        "docs/references/old-src/datafiles/SMF/*.smf"
+        "docs/references/old-src/datafiles/SMF/*.smf",
+        "source/frontend/src/loaders/threeToSmf.ts",
+        "source/frontend/src/loaders/threeToSmf.test.ts"
       ],
       "notes": [
         "SMF animation count is u8 at ANIM offset.",

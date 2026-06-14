@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-13 (integrity pass + final continuation: fresh verify/greps clean - no code stubs in src/; P2 1a coverage advanced (dedicated e2e test + documented existing for viewport/transform/weight/raycast/marker); P4 OBJ complete+polished; all prior work (SMF quirks, visuals with real samples, dedupes, modularity) intact; no new gaps/broken items; verify passes; backlog complete for scope (P2 subtasked, P3 via lean docs); docs/summary_bank current. Run verify to reconfirm. Next: git push of this pass.
+Last reviewed: 2026-06-14 (integrity pass: poseEdits.ts created + wired; threeToSmf.ts created + barrel export; loadGLBAsSmfData dead code removed; BinaryReader bounds-checked; Inspector nudges routed through pose-edit layer; lastSourceFormatRef and poseEditsRef reset on clear; fetchSmfDesktopPeek extracted; lastSmfData removed from store; getRootBones moved to module scope; onScrub uses playbackRef; ResizeObserver setTimeout replaced with requestAnimationFrame; docs/summary_bank updated; verify passes 15 units).
 
 ## Current Product State
 
@@ -66,5 +66,3 @@ Latest results:
 - Context groups: `summary_bank.json`.
 
 Keep this file as current state only. Do not append repeated pass logs here; put new findings in TODO or the pitfall ledger when they change active work.
-
-This pass (2026-06-13 integrity pass): Dedicated audit + doc updates performed (see TODO.md Integrity Pass section for paired what/why/where/how). State confirmed: verify clean (lint/typechecks/build/units/Rust); no code-level TODO/FIXME/stubs in active frontend/src (only pre-existing graceful Rust comment, now referencing specific docs); no broken imports/exports; all prior fixes (SMF legacy heuristic, OBJ fixture+loader polish+test, visual enhancements with real samples, dedupes, extractions) intact; docs/summary_bank current and consolidated; P2 subtasked, P4 complete; features connect safely/efficiently. Run verify to reconfirm. Review complete for scope; P3 (lean docs) maintained.

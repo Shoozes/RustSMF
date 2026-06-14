@@ -249,3 +249,32 @@ describe('smf export roundtrip (data-driven)', () => {
     assert.strictEqual(reimported.bones[3].isBone, 1);
   });
 });
+
+describe('smf.ts BinaryReader - bounds checking', () => {
+  it('throws actionable error on truncated SMF input (too short for version string)', () => {
+    // An empty buffer has no data at all; importSMF should throw a bounds error immediately
+    const empty = new ArrayBuffer(0);
+    assert.throws(
+      () => importSMF(empty),
+      (err: Error) => {
+        assert.ok(err.message.includes('Unexpected end of SMF binary'), `expected bounds error, got: ${err.message}`);
+        return true;
+      }
+    );
+  });
+
+  it('throws actionable error when truncated after valid version string', () => {
+    const version = 'SMF_v12_by_Snidr_and_Bart';
+    // Buffer with version string + null terminator but missing the 4 x u32 section offsets
+    const buf = new Uint8Array(version.length + 1); // version + null only
+    for (let i = 0; i < version.length; i++) buf[i] = version.charCodeAt(i);
+    buf[version.length] = 0; // null terminator
+    assert.throws(
+      () => importSMF(buf.buffer),
+      (err: Error) => {
+        assert.ok(err.message.includes('Unexpected end of SMF binary'), `expected bounds error, got: ${err.message}`);
+        return true;
+      }
+    );
+  });
+});

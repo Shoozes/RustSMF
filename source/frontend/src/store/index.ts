@@ -13,7 +13,6 @@ export interface LoadedModelState {
   root: THREE.Group | null;
   skeleton?: THREE.Skeleton;
   clips: THREE.AnimationClip[];
-  lastSmfData: any | null; // ImportedSmf for fidelity export
 }
 
 export interface PlaybackState {
@@ -61,20 +60,17 @@ export function useModelSlice(initial: Partial<LoadedModelState> = {}) {
   const [root, setRoot] = useState<THREE.Group | null>(initial.root ?? null);
   const [skeleton, setSkeleton] = useState<THREE.Skeleton | undefined>(initial.skeleton);
   const [clips, setClips] = useState<THREE.AnimationClip[]>(initial.clips ?? []);
-  const [lastSmfData, setLastSmfData] = useState<any>(initial.lastSmfData ?? null);
 
   const clear = useCallback(() => {
     setRoot(null);
     setSkeleton(undefined);
     setClips([]);
-    setLastSmfData(null);
   }, []);
 
   return {
     root, setRoot,
     skeleton, setSkeleton,
     clips, setClips,
-    lastSmfData, setLastSmfData,
     clear,
   };
 }
