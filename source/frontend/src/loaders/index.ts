@@ -8,8 +8,7 @@ export * from './fbx';
 export * from './obj';
 export * from './coord';
 export * from './threeToSmf';
-export { bytesToArrayBuffer } from './smfBinary';
+export { bytesToArrayBuffer, BinaryReader, BinaryWriter } from './smfBinary';
 
-// Note: coord.test.ts and smfBinary (BinaryReader/Writer impl details) are not fully re-exported here.
-// bytesToArrayBuffer is the shared util for safe Uint8Array->ArrayBuffer (used by loaders, hooks, tauri bridge).
-// Specific imports from './smfBinary' remain possible for advanced/low-level use.
+// bytesToArrayBuffer plus BinaryReader/BinaryWriter are exported here for direct consumers
+// and test helpers that need a single, shared low-level binary contract.

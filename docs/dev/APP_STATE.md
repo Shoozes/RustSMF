@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-14 (full repo/app integrity review pass: confirmed no broken imports/exports (typecheck+build+greps clean), no stubs/gaps in src (zero matches), timing/async guards solid (seq+refs+combined cmd), error paths actionable, edge coverage strong (bounds, rejects, pose roundtrips, cancel, u8, etc.); P0 wiring + P2 extracts complete and connected end-to-end; verify (19 units + cargo + build) green; features cleanly connect (safe gates, smooth UX, efficient modular). Only doc+summary currency updates (no source changes). See TODO for paired recap + P2/P3 notes. State highly integral for scalability.).
+Last reviewed: 2026-06-14 (integrity pass aligned docs with source, restored missing test-source typecheck, added native IPC e2e coverage, tightened harness exits, and kept modular boundaries stable).
 
 ## Current Product State
 
@@ -11,58 +11,56 @@ Core flow:
 - Render model roots in a self-contained Three.js viewport with orbit, wheel zoom, right-drag pan, reset, lighting, grid, axes, resize handling, and cleanup.
 - Drive animation through viewport-owned `AnimationMixer` state with timeline play/pause, scrub, speed, and clip selection.
 - Inspect skeletons, select bones from the hierarchy or viewport click, show a bone marker, use TransformControls, use quick nudges, and toggle selected-bone weight preview.
-- Export SMF sources through the high-fidelity SMF roundtrip path, including live position/rotation pose edits. Export skinned GLB/FBX-loaded roots to SMF through a guarded converter when supported, and use GLB export for static/material/scale cases.
-- Use Rust/Tauri commands for native open/save, binary read/write, and small SMF header/rig/anim/model validation/peek status on desktop paths.
+- Export SMF sources through the high-fidelity SMF roundtrip path, including live position/rotation pose edits.
+- Export compatible skinned GLB/FBX runtime roots to SMF through `threeToSmf`; use GLB export for static/material/scale cases.
+- Use Rust/Tauri commands for native open/save, binary read/write, and small SMF header/rig/anim/model validation/status peeks.
+- Viewport bone selection now ignores short drag/hold paths on the canvas, browser file-picker cancellation resolves, and GLB loader empty-skeleton skinned meshes have fallback binding when recoverable.
 
 ## Architecture
 
-- `source/frontend/src/App.tsx`: Thin shell wiring toolbar, viewport, inspector, timeline, outliner, drop zone, status, and error banner.
-- `source/frontend/src/hooks/useLoadModel.ts`: Load/export orchestration, source format tracking, Tauri lazy imports, stale-load guards, selected bone handling, pose edit persistence, transform mode, and weight preview state.
-- `source/frontend/src/hooks/poseEdits.ts`: Nudge delta types (BoneNudgeDelta/PoseEditMap), applyNudgeDelta/clone/applyPoseEditsToSmf + bone index helpers for live pos/rot edits that export for SMF.
-- `source/frontend/src/components/ThreeViewport.tsx`: Renderer, scene, camera, orbit, model attach/dispose, mixer, skeleton helper, raycast bone picking, marker, TransformControls, and weight preview.
-- `source/frontend/src/components/*`: Focused UI surfaces for toolbar, inspector, timeline, and outliner.
-- `source/frontend/src/loaders/*`: SMF binary import/export (smf.ts + internal smfBinary.ts for bytesToArrayBuffer/BinaryReader/Writer with bounds), guarded threeToSmf for skinned non-SMF->SMF, GLB/FBX/OBJ loading + GLB export, coord (swizzles + DQ math, single source of truth). smfBinary intentionally not * re-exported (impl detail; bytesTo via barrel for shared use).
-- `source/frontend/src/store`: Lightweight React state slices for model, playback, and UI.
-- `source/frontend/src/backend-client/tauri.ts`: Browser/Tauri bridge for dialog, save, binary read, invokes, and desktop fallback messages.
+- `source/frontend/src/App.tsx`: thin shell wiring toolbar, viewport, inspector, timeline, outliner, drop zone, status, and error banner.
+- `source/frontend/src/hooks/useLoadModel.ts`: load/export orchestration, source format tracking, Tauri lazy imports, stale-load guards, selected bone handling, pose edit persistence, transform mode, and weight preview state.
+- `source/frontend/src/hooks/poseEdits.ts`: nudge delta types and helpers for live SMF position/rotation edits.
+- `source/frontend/src/components/ThreeViewport.tsx`: renderer, scene, camera, orbit, model attach/dispose, mixer, skeleton helper, raycast bone picking, marker, TransformControls, and weight preview.
+- `source/frontend/src/loaders/*`: SMF import/export, bounded binary helpers, rig node-list helper, guarded Three-to-SMF conversion, GLB/FBX/OBJ loading/export, coordinate swizzles, and DQ math.
+- `source/frontend/src/backend-client/tauri.ts`: browser/Tauri bridge for dialog, save, binary read, invokes, and desktop fallback messages. `saveFile` returns `boolean` so cancel is explicit.
+- `source/frontend/src/store`: lightweight React state slices for model, playback, and UI.
 - `source/src-tauri/src/main.rs`: Tauri commands and Rust SMF header/section peeks with native tests.
 
 ## Verification
 
 Primary commands:
-- `pwsh -File run.ps1 -Task verify`: frontend lint, app typecheck, Vite build, chunk guard, unit tests, and `cargo check`.
-- `pwsh -File run.ps1 -Task test:e2e`: Playwright smoke and visual coverage.
-- `pwsh -File run.ps1 -Task desktop-smoke`: unbundled Tauri build and Rust native peek tests.
+- `pwsh -File run.ps1 -Task verify`: frontend lint, app typecheck, test-source typecheck, Vite build, chunk guard, unit tests, and `cargo check`.
+- `pwsh -File run.ps1 -Task test:e2e`: Playwright smoke, visual confirmation, and native IPC mock coverage.
+- `pwsh -File run.ps1 -Task desktop-smoke`: unbundled Tauri build, Rust native peek tests, and focused Playwright native IPC mock suite.
 
-Current verification improvements from this pass (including final sweep):
-- App source now has strict `tsc --noEmit` coverage in verify.
-- Test sources now have a separate strict `tsc --noEmit` gate in verify.
-- Typecheck caught and fixed previously hidden import/export and type contract drift.
-- `SimpleOrbit` event listeners now clean up on viewport unmount and can be disabled while TransformControls drags.
-- Async load path now guards stale overlapping model reads.
-- SMF binary parsing/export now has bounded read errors, invalid-DQ identity fallback, and zero-duration animation timing guards.
-- Skinned Three/GLB/FBX source to SMF conversion is fixture-backed and rejects unsupported fidelity-loss cases instead of silently dropping them.
-- Pose-edit helpers are split out of the load/export hook to keep hook logic focused.
-- Playwright desktop SMF info simulation now matches Rust `u8` animation-count behavior.
-- Playwright native IPC mock now covers Tauri open, read, desktop status, save, write, and cancel paths.
-- Full FBX e2e now runs against a self-authored `test.fbx` fixture.
-- Playwright visual smoke enhanced with real SMF samples (local + old-src datafiles/SMF/* for legacy coverage): tolerant byte-size default (for WebGL stability) + opt-in strict `toHaveScreenshot` for committed reference renders of key states (load + bones, export flows). Grok-executable; new snapshots added and inspected. Tests/README and helpers updated.
+Current verification coverage:
+- App source has strict `tsc --noEmit` coverage.
+- Test sources have a separate strict `tsc --noEmit` gate with Node/Playwright types.
+- Unit tests cover SMF coordinate/DQ math, binary bounds, roundtrips, rig node semantics, converter rejection paths, and pose-capture roundtrip.
+- Playwright smoke tests cover boot, real SMF load, viewport/bone/timeline flows, export UX, invalid-load UX, OBJ static parity, and FBX UI dispatch.
+- Playwright visual tests cover desktop/narrow shell layout, horizontal overflow, nonblank viewport rendering, and loaded SMF visual state. Strict screenshot snapshots are opt-in with `RUSTSMF_STRICT_VISUALS=1`; default e2e uses tolerant rendered-byte checks for WebGL stability.
+- Playwright native IPC tests cover mocked Tauri open/read/status, save/write, save cancel, and open cancel.
+- Rust tests cover native SMF parser width/offset behavior and desktop peek commands.
 
-Latest results:
-- `pwsh -File run.ps1 -Task verify`: passed (lint + typechecks + build + chunk + 17 units including SMF roundtrips/golden head-node + cargo).
-- `pwsh -File run.ps1 -Task test:e2e`: targeted SMF load + visual tests pass (real samples exercised; stricter snapshots generated/updated).
-- `pwsh -File run.ps1 -Task desktop-smoke`: passed unbundled Tauri build and 4 Rust native tests.
+Latest known results from this pass:
+- `pwsh -File run.ps1 -Task verify`: passed with lint, app typecheck, test-source typecheck, Vite build, chunk guard, 20 unit tests, and cargo check.
+- `pwsh -File run.ps1 -Task test:e2e`: passed with 14 tests passed and 1 skipped FBX fixture test.
+- `pwsh -File run.ps1 -Task desktop-smoke`: passed with unbundled Tauri build, 4 Rust native tests, and 2 Playwright native IPC tests.
 
 ## Current Limits
 
-- Native UI roundtrip automation is covered through deterministic Playwright Tauri IPC mocks plus Rust command tests; a real webview driver can still be evaluated later if true OS dialog automation is needed.
-- GLB/FBX-to-SMF animation DQ export is available for skinned models with one shared named skeleton and no scale animation. Static roots, textures/materials, morph tracks, object-level tracks, and scale animation still use GLB export for fidelity.
-- GLB (and GLTF) is the preferred "new and better" format for maximum fidelity and new development. SMF support is intentionally scoped to legacy recovery (old GameMaker .smf assets) and users who must continue targeting the old SMF binary pipeline. See docs/references/old-src/issues.md (Quirks Fact List + TS converter alignment section) for the authoritative format details that drive our roundtrip design.
+- Native UI roundtrip automation is covered through deterministic Playwright Tauri IPC mocks plus Rust command tests; true OS dialog automation remains a backlog decision.
+- Full fixture-backed FBX/skinned real-file coverage is still open because no default FBX fixture is present.
+- GLB/FBX-to-SMF conversion is available for skinned models with one shared named skeleton and no scale animation. Static roots, textures/materials, morph tracks, object-level tracks, and scale animation still use GLB export for fidelity.
+- GLB/GLTF remains the preferred format for maximum fidelity and new development. SMF support is scoped to legacy recovery and users who target the old SMF binary pipeline.
 - Live SMF position/rotation pose edits export; scale edits are blocked for SMF export because the current SMF DQ path has no scale channel.
 
 ## Context Docs
 
 - Active backlog: `docs/TODO.md`.
 - Regression prevention: `docs/dev/PITFALL_LEDGER.md`.
+- Test coverage map: `source/frontend/tests/README.md`.
 - Context groups: `summary_bank.json`.
 
-Keep this file as current state only. Do not append repeated pass logs here; put new findings in TODO or the pitfall ledger when they change active work.
+Keep this file as current state only. Put completed work and new findings in TODO or the pitfall ledger when they change active work.

@@ -13,10 +13,11 @@
     "tauri:build": "npm --workspace frontend run tauri:build",
     "lint": "npm --workspace frontend run lint",
     "typecheck": "npm --workspace frontend run typecheck",
+    "typecheck:test": "npm --workspace frontend run typecheck:test",
     "test:e2e": "npm --workspace frontend run test:e2e",
     "test:unit": "npm --workspace frontend run test:unit",
-    "verify": "npm run lint && npm run typecheck && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && cd src-tauri && cargo check",
-    "desktop:smoke": "npm --workspace frontend run tauri:build:smoke"
+    "verify": "npm run lint && npm run typecheck && npm run typecheck:test && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && cd src-tauri && cargo check",
+    "desktop:smoke": "pwsh -File ../run.ps1 -Task desktop-smoke"
   },
   "engines": {
     "node": ">=22"

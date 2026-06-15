@@ -2,7 +2,7 @@ import type { ImportedSmf } from './smf';
 
 /**
  * SMF rig node list builder (extracted for modularity, P2 1c).
- * Handles SMF-sourced (prebuilt heads, 1:1 preserve) vs GLB-constructed (insert heads for disconnected).
+ * Handles SMF-sourced (prebuilt heads, 1:1 preserve) vs GLB/FBX-constructed direct bone lists.
  * Used by exportSMFToBuffer for correct rig/anim serialization (parent-0, isBone/head flags).
  * Public exports from smf.ts unchanged.
  */
@@ -30,22 +30,13 @@ export function buildSmfNodeList(importedBones: ImportedSmf['bones']): {
       nodeIndex++;
     });
   } else {
-    // Constructed (e.g. from GLB): input are real bones; build with possible head insertion for disconnected children.
+    // Constructed (e.g. from GLB/FBX): input is only real bones plus actual parent indices.
+    // Detached head-node synthesis needs explicit source metadata, so keep direct nodes here.
     importedBones.forEach((b, bi) => {
-      const connected = b.parent >= 0; // declared parent link; refine with live hierarchy if available in future
-      if (!connected && b.parent >= 0) {
-        nodeList.push({
-          boneIndex: -1,
-          parent: boneToNode.get(b.parent) ?? 0,
-          isBone: 0,
-          isHead: true,
-          name: `Head_${bi}`
-        });
-        nodeIndex++;
-      }
+      const hasParent = b.parent >= 0;
       nodeList.push({
         boneIndex: bi,
-        parent: connected ? (boneToNode.get(b.parent) ?? 0) : (nodeIndex - 1),
+        parent: hasParent ? (boneToNode.get(b.parent) ?? 0) : 0,
         isBone: 1,
         isHead: false,
         name: `Bone_${bi}`

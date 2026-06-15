@@ -1,6 +1,50 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-14 (full review caught + fixed latent "incomplete binary helper dedupe after move" pitfall; added Q/A entry + prevention; prior mitigations still effective; see summary_bank issue__incomplete_binary_dedupe). 2026-06-14 full repo review: all listed pitfalls' mitigations (typecheck gate, sim alignment, save bool, bounded errors, fidelity gates, refactor discipline) remain effective and current; fresh audit + greps + verify found no new pitfalls or regressions. Relevance checks passed for all entries.
+Last reviewed: 2026-06-14 (integrity pass caught stale progress-doc overclaims around test-source typecheck and native IPC coverage; restored the missing gates/spec and added this prevention record).
+
+### Q: What pitfall are we preventing?
+
+**What:** PowerShell test wrappers can report success even when npm/Playwright fails.
+
+**Why it happened:** PowerShell functions return everything written to the success stream. `Invoke-FrontendNpm` emitted npm output plus a boolean, so `if (-not (Invoke-FrontendNpm ...))` evaluated the non-empty output array as truthy even when `$LASTEXITCODE` was nonzero.
+
+**Where:** `run.ps1` `Invoke-FrontendNpm` and `test:e2e`; caught when full Playwright initially failed but `pwsh -File run.ps1 -Task test:e2e` returned exit code 0.
+
+**How to catch it:** Run a known-failing npm script through the wrapper and inspect the process exit code, not just console text. Keep helper output on the host stream and store `$LASTEXITCODE` before returning a boolean.
+
+**Solutions tried:**
+1. `42/100` Return `$LASTEXITCODE -eq 0` after invoking npm directly, result: npm output leaked into the function return and masked failures.
+2. `92/100` Pipe npm output to `Write-Host`, capture `$LASTEXITCODE`, and make `test:e2e` exit on false, result: wrapper status now matches direct Playwright status.
+
+**Current solution:** `Invoke-FrontendNpm` writes command output to host and returns only a boolean; `test:e2e` exits nonzero when the helper returns false.
+
+**Effectiveness:** `92/100`, durable. The wrapper now propagates pass/fail correctly for npm tasks that use it.
+
+**Relevance check:** Current. Future run-script helpers can repeat this PowerShell success-stream mistake.
+
+**Next prevention step:** When adding wrapper helpers around native commands, test at least one failing path and inspect the shell exit code.
+
+### Q: What pitfall are we preventing?
+
+**What:** Progress docs can claim a gate, fixture, or coverage path exists after planned work, while the repo does not actually contain the file or script.
+
+**Why it happened:** Long pass-history sections were appended over time, and later reviews trusted those claims instead of checking referenced files, scripts, and test execution.
+
+**Where:** `docs/TODO.md`, `docs/dev/APP_STATE.md`, `summary_bank.json`, `source/frontend/package.json`, missing `source/frontend/tsconfig.test.json`, missing `source/frontend/tests/native.spec.ts`, and absent default FBX fixture coverage.
+
+**How to catch it:** For every documented gate or fixture, run `rg` for the referenced file/script, run the command directly, and confirm skipped tests are intentional backlog items rather than completed coverage.
+
+**Solutions tried:**
+1. `45/100` Keep appending pass recaps, result: important coverage claims became hard to verify and some were stale.
+2. `90/100` Add missing `typecheck:test`, `tsconfig.test.json`, direct Node types, and `native.spec.ts`; then rewrite TODO/APP_STATE into current state plus active backlog, result: docs now match runnable gates and remaining FBX fixture work is explicit.
+
+**Current solution:** `run.ps1 -Task verify` runs app and test typechecks; `tests/native.spec.ts` covers mocked Tauri open/read/save/cancel; TODO tracks missing fixture-backed FBX/skinned real-file coverage as active work.
+
+**Effectiveness:** `90/100`, durable. The fix adds executable gates and removes duplicated progress logs, but fixture-backed FBX coverage still remains open.
+
+**Relevance check:** Current. Integrity passes and feature docs will continue to reference gates and fixtures.
+
+**Next prevention step:** Before marking coverage complete, require file existence checks plus a fresh command result in TODO or APP_STATE.
 
 ### Q: What pitfall are we preventing?
 

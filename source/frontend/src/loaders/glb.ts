@@ -19,6 +19,16 @@ export interface LoadedModel {
   mixer: THREE.AnimationMixer;
 }
 
+function collectSkeletonBones(root: THREE.Object3D): THREE.Bone[] {
+  const bones: THREE.Bone[] = [];
+  root.traverse((node: THREE.Object3D) => {
+    if ((node as THREE.Bone).isBone) {
+      bones.push(node as THREE.Bone);
+    }
+  });
+  return bones;
+}
+
 export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<LoadedModel> {
   const loader = new GLTFLoader();
 
@@ -37,6 +47,7 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
   // Collect skinned meshes
   const skinnedMeshes: THREE.SkinnedMesh[] = [];
   const allClips: THREE.AnimationClip[] = gltf.animations || [];
+  const sceneBones = collectSkeletonBones(scene);
 
   scene.traverse((obj: any) => {
     if (obj.isSkinnedMesh) {
@@ -54,9 +65,12 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
       }
 
       skinnedMeshes.push(obj);
-      // Make sure skeleton is bound
-      if (obj.skeleton && !obj.skeleton.bones.length) {
-        // rare, but rebind if needed
+      // Some GLB/GLTF paths can produce skinned meshes with an empty bone list.
+      // Build a fallback local skeleton so skinning and animation pipelines can still proceed.
+      if (!obj.skeleton || !obj.skeleton.bones.length) {
+        if (sceneBones.length > 0) {
+          obj.bind(new THREE.Skeleton(sceneBones), obj.bindMatrix);
+        }
       }
     }
   });

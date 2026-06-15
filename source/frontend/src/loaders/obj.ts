@@ -33,16 +33,16 @@ export async function loadOBJ(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
 
   root.traverse((obj: any) => {
     if (obj.isMesh) {
-      const geo = obj.geometry;
-      if (!geo.attributes.tangent) {
-        geo.computeTangents?.();
-      }
+      const geo = obj.geometry as THREE.BufferGeometry;
       if (!geo.attributes.uv) {
-        const count = geo.attributes.position.count;
+        const count = geo.attributes.position?.count || 0;
         geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
       }
       if (!geo.attributes.normal) {
         geo.computeVertexNormals();
+      }
+      if (!geo.attributes.tangent && geo.index && geo.attributes.position && geo.attributes.normal && geo.attributes.uv) {
+        geo.computeTangents?.();
       }
 
       // OBJ meshes are rarely skinned, but collect if so

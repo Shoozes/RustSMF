@@ -18,16 +18,17 @@ export function findClosestBone(
 
   let closest: THREE.Bone | null = null;
   let minDist = Infinity;
+  const worldPos = new THREE.Vector3();
 
-  skeleton.bones.forEach((bone: any) => {
-    if (!bone) return;
-    const pos = bone.getWorldPosition(new THREE.Vector3());
-    const dist = raycaster.ray.distanceToPoint(pos);
+  for (const bone of skeleton.bones) {
+    if (!bone) continue;
+    bone.getWorldPosition(worldPos);
+    const dist = raycaster.ray.distanceToPoint(worldPos);
     if (dist < minDist && dist < maxDist) {
       minDist = dist;
       closest = bone;
     }
-  });
+  }
 
   return closest;
 }

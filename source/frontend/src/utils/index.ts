@@ -5,5 +5,3 @@ export { SimpleOrbit } from './SimpleOrbit';
 export { disposeThreeObject } from './threeDisposal';
 export { restoreWeightPreview, applyWeightPreviewForBone } from './weightPreview';
 export { findClosestBone, DEFAULT_MAX_BONE_PICK_DIST, findBoneByName } from './bonePicker';
-
-// Future: export makeSafeUrl, fileToDataUrl, errorToMessage, etc. as needed for loaders/viewport.

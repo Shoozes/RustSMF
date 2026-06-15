@@ -11,3 +11,8 @@ Prioritize correctness and readability over cleverness.
 TypeScript React in the front
 Rust in the backend/main source
 
+## Git Workflow
+
+Work locally on `main` only unless the user explicitly requests a different branch.
+
+Do not push automatically. A push means the work is considered reviewed; the user may push manually, or explicitly request a push.

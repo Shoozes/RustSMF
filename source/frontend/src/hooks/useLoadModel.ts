@@ -34,10 +34,10 @@ export function useLoadModel() {
   // Pose edits recorded from nudge buttons and gizmo; applied to SMF at export time
   const poseEditsRef = useRef<PoseEditMap>({});
 
-  // Weight preview toggle for selected bone (Cycle 3 rigging polish follow-up)
+  // Selected-bone weight preview toggle.
   const [showWeightPreview, setShowWeightPreview] = useState(false);
 
-  // Transform mode for gizmo (Cycle 3: small UI buttons for modes)
+  // Transform mode for the gizmo; Inspector buttons select translate/rotate/scale.
   const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
 
   const loadSeqRef = useRef(0);

@@ -23,7 +23,7 @@ import {
 // - Rust #[test] in src-tauri/src/main.rs covers real std::fs SMF header/rig/anim/model peeks.
 // - run.ps1 desktop-smoke runs unbundled Tauri build, cargo tests, and the native IPC Playwright suite.
 // - Extended beforeEach/listeners + real-sample screenshot asserts (light + toHave) for bone selection / export flows.
-// - FBX export automation: UI dispatch + full load/export path using the self-authored test.fbx fixture. FBX parity complete in code (see fbx.ts, useLoadModel isFBXSource path, status).
+// - FBX UI dispatch is covered here; fixture-backed full FBX/skinned real-file coverage is tracked in docs/TODO.md.
 // Keep browser e2e primary + fast; native.spec.ts and Rust tests cover desktop-specific binary/IPC/status behavior.
 
 test.describe('RustSMF basic shell and model flow (Chromium)', () => {
@@ -216,7 +216,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await page.getByTestId('export-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Nothing to export/i);
     await page.getByTestId('export-smf-btn').click();
-    await expect(page.getByTestId('status-text')).toContainText(/Nothing to export as SMF/i);
+    await expect(page.getByTestId('status-text')).toContainText(/No skinned model loaded|Nothing to export as SMF/i);
 
     // Drop zone hint is present (for drag-drop UX)
     await expect(page.locator('text=/Drop .* here/')).toBeAttached();

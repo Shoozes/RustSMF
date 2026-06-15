@@ -47,15 +47,17 @@
   "groups": {
     "docs__state_backlog": {
       "description": "Current app state, active paired backlog, and durable regression-prevention notes. Keep concise; do not append repeated pass logs.",
-      "status": "current after 2026-06-14 full integrity review (clean; docs+summary currency only; no new findings)",
+      "status": "current after 2026-06-14 integrity pass (test-source typecheck restored, native IPC and visual specs added, broad TODO items broken into phase-based subtasks)",
       "paths": [
+        "README.md",
         "docs/TODO.md",
         "docs/dev/APP_STATE.md",
         "docs/dev/PITFALL_LEDGER.md",
+        "source/frontend/tests/README.md",
         "AGENTS.md"
       ],
       "notes": [
-        "TODO entries use priority plus what/why/where/when/how and done criteria.",
+        "TODO entries use priority plus what/why/where/how, phase-based subtasks, and done criteria.",
         "APP_STATE is current-state only.",
         "Pitfalls capture regressions or hidden verification gaps."
       ],
@@ -72,17 +74,19 @@
         ".agents/workflows/*.md",
         ".agents/skills/*/SKILL.md",
         "scripts/README.md",
+        "source/frontend/tsconfig.test.json",
         "summary_bank.json"
       ],
       "notes": [
-        "Use `pwsh -File run.ps1 -Task verify` for the canonical local health check.",
+        "Use `pwsh -File run.ps1 -Task verify` for the canonical local health check; it must exit nonzero on failed gates.",
+        "Use `pwsh -File run.ps1 -Task desktop-smoke` for unbundled Tauri build, Rust peeks, and native IPC mock coverage.",
         "Avoid `summary_bank.json --auto-add` unless intentionally refreshing broad generated file lists; prefer narrow paths."
       ],
       "files": []
     },
     "feature__model_loading_export": {
       "description": "User-facing load, preview, edit-preview, and export flow across SMF, GLB/GLTF, FBX, and OBJ.",
-      "status": "core connected; SMF high-fid + live pose export; non-SMF (GLB/FBX) to SMF via guarded threeToSmf fully wired end-to-end (P0 complete); P2 modularity extracts complete (weightPreview + smfRig + prior pose/three/smfBinary); 2026-06-14 review: all paths connected, verify green, no stubs/imports issues",
+      "status": "core connected; SMF high-fid + live pose export; guarded non-SMF skinned SMF export wired; active backlog tracks missing fixture-backed FBX/skinned real-file coverage",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -91,17 +95,19 @@
         "source/frontend/src/components/Timeline.tsx",
         "source/frontend/src/components/Outliner.tsx",
         "source/frontend/src/backend-client/tauri.ts",
-        "source/frontend/src/loaders/**/*",
+        "source/frontend/src/loaders",
         "source/frontend/src/loaders/smfBinary.ts",
         "source/frontend/src/loaders/threeToSmf.ts",
         "source/frontend/src/loaders/threeToSmf.test.ts"
       ],
-      "open_items": [],
+      "open_items": [
+        "Add a small valid FBX or skinned GLB fixture so full non-SMF real-file load/export coverage runs without skip."
+      ],
       "files": []
     },
     "subsystem__viewport_editor": {
       "description": "Three.js viewport, orbit controls, model attach/dispose, animation mixer, skeleton helper, raycast bone selection, TransformControls, and weight preview.",
-      "status": "modular and typechecked; 2026-06-14 review + bonePicker extract (raycast picker helper + DEFAULT const for flexibility) confirmed ref-decoupled timing, drag gating, weight extract; P2 1b advanced (multiple safe extracts); no timing issues; public props stable; bonePicker now in paths",
+      "status": "modular and typechecked; 2026-06-14 review + bonePicker extract (raycast picker helper + DEFAULT const for flexibility) confirmed ref-decoupled timing and drag filtering; pointerdown/pointerup selection timing remains explicit now; P2 1b advanced (multiple safe extracts); public props stable; bonePicker now in paths",
       "paths": [
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/utils/SimpleOrbit.ts",
@@ -119,8 +125,8 @@
       "files": []
     },
     "subsystem__smf_format_and_fidelity": {
-      "description": "SMF binary parsing/export, coordinate swizzles, dual-quaternion math, roundtrip fidelity, and old reference format material. Internal binary helpers (bytes + bounded R/W) live in smfBinary.ts (shared, barrel exposes only bytesToArrayBuffer util).",
-      "status": "SMF source roundtrip verified; non-SMF exact SMF export wired (P0); 2026-06-14 review: smfBinary canonical (bounds everywhere), smfRig extract done, no dupes, fidelity gates + tests strong; full review clean",
+      "description": "SMF binary parsing/export, coordinate swizzles, dual-quaternion math, roundtrip fidelity, and old reference format material. Internal binary helpers (bytes + bounded R/W) live in smfBinary.ts (shared, barrel exposes bytesToArrayBuffer plus BinaryReader/BinaryWriter).",
+      "status": "SMF source roundtrip verified; non-SMF exact SMF export wired; smfBinary canonical; smfRig preserves explicit SMF head nodes and keeps constructed GLB/FBX skeleton node lists direct unless future metadata proves disconnected head synthesis is needed",
       "paths": [
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/loaders/smfBinary.ts",
@@ -134,16 +140,18 @@
       ],
       "notes": [
         "SMF animation count is u8 at ANIM offset.",
-        "SMF source export uses loaded ImportedSmf data; live edits are not persisted yet."
+        "SMF source export uses loaded ImportedSmf data and applies live position/rotation pose edits before export."
       ],
       "files": []
     },
     "subsystem__tauri_bridge_and_rust_peeks": {
       "description": "Tauri native dialog/save/read commands, browser fallbacks, Rust SMF header/section peeks, and desktop status messages.",
-      "status": "native peeks and fallback strings covered; full native UI roundtrip remains tracked (open_items); 2026-06-14 review: Rust/TS u8+offsets aligned via shared parse helper + tests; combined info cmd for efficiency",
+      "status": "native peeks and fallback strings covered; Playwright native IPC mock spec now covers open/read/save/write/cancel; true OS-dialog automation remains tracked as optional",
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
+        "source/frontend/tests/native.spec.ts",
+        "source/frontend/tests/helpers/smoke-helpers.ts",
         "source/src-tauri/src/main.rs",
         "source/src-tauri/Cargo.toml",
         "source/src-tauri/capabilities/default.json",
@@ -151,21 +159,27 @@
         "run.ps1"
       ],
       "open_items": [
-        "Evaluate tauri-driver or equivalent for full native webview open/save roundtrips.",
+        "Evaluate tauri-driver or equivalent only if true OS-dialog open/save roundtrips become necessary.",
         "Keep Rust, TS loader, and Playwright desktop simulation aligned for parser widths and offsets."
       ],
       "files": []
     },
     "tests__quality": {
-      "description": "Automated quality gates: lint, app typecheck, Vite build, chunk guard, unit roundtrips, Playwright e2e, and Rust cargo checks/tests.",
-      "status": "verify includes app typecheck + test typecheck + chunk + units + cargo; 2026-06-14 full review ran verify (green 19/19 units); typecheck gap fully mitigated",
+      "description": "Automated quality gates: lint, app typecheck, test typecheck, Vite build, chunk guard, unit roundtrips, Playwright e2e, native IPC mocks, and Rust cargo checks/tests.",
+      "status": "2026-06-14 verify passed with app typecheck + test typecheck + chunk + 20 unit tests + cargo; full e2e passed 14/15 with FBX fixture skip; visual spec covers desktop/narrow shell and loaded SMF state; desktop-smoke passed with Tauri build, 4 Rust tests, and 2 native IPC Playwright tests",
       "paths": [
         "source/frontend/package.json",
         "source/package.json",
         "source/frontend/tsconfig.json",
+        "source/frontend/tsconfig.test.json",
         "source/frontend/tests/smoke.spec.ts",
+        "source/frontend/tests/visual.spec.ts",
+        "source/frontend/tests/native.spec.ts",
+        "source/frontend/tests/helpers/smoke-helpers.ts",
+        "source/frontend/tests/README.md",
         "source/frontend/playwright.config.ts",
         "source/frontend/src/loaders/coord.test.ts",
+        "source/frontend/src/loaders/threeToSmf.test.ts",
         "source/frontend/src/loaders/smfBinary.ts",
         "source/frontend/scripts/check-entry-chunks.mjs",
         "source/frontend/eslint.config.js",
@@ -178,9 +192,22 @@
       ],
       "files": []
     },
+    "issue__test_wrapper_false_success": {
+      "description": "PowerShell npm wrapper leaked command output into a boolean return, allowing run.ps1 test:e2e to print npm failure while returning exit code 0.",
+      "status": "fixed 2026-06-14; wrapper output is written to host and test:e2e exits nonzero on failed npm status",
+      "last_seen": "2026-06-14",
+      "paths": [
+        "run.ps1",
+        "docs/dev/PITFALL_LEDGER.md",
+        "docs/TODO.md"
+      ],
+      "current_solution": "Invoke-FrontendNpm captures LASTEXITCODE after writing npm output to host; test:e2e branches on the boolean return and exits 1 on failure.",
+      "next_prevention": "For new native-command wrappers, validate both passing and failing exit-code behavior.",
+      "files": []
+    },
     "issue__typecheck_gap": {
       "description": "ESLint ignored TS/TSX and Vite did not typecheck, allowing app type drift despite green verify.",
-      "status": "fixed for app source on 2026-06-13; 2026-06-14 review reconfirmed (typecheck in verify, no drift)",
+      "status": "fixed for app source on 2026-06-13; test-source gate restored on 2026-06-14; verify now runs both",
       "last_seen": "2026-06-13",
       "paths": [
         "source/frontend/eslint.config.js",
@@ -189,8 +216,26 @@
         "run.ps1",
         "docs/dev/PITFALL_LEDGER.md"
       ],
-      "current_solution": "Run `npm run typecheck` and include it in verify.",
-      "next_prevention": "Add separate test-source typecheck with Node/Playwright types.",
+      "current_solution": "Run app `typecheck` and `typecheck:test`; both are included in `run.ps1 -Task verify` and `source/package.json` verify.",
+      "next_prevention": "Keep app and test tsconfigs separate; do not mark a type gate done without running it.",
+      "files": []
+    },
+    "issue__doc_coverage_overclaim": {
+      "description": "Progress docs claimed test-source typecheck/native IPC coverage and some fixture coverage that was not present in the repo.",
+      "status": "fixed for typecheck/native IPC on 2026-06-14; FBX/skinned real-file fixture remains active backlog",
+      "last_seen": "2026-06-14",
+      "paths": [
+        "docs/TODO.md",
+        "docs/dev/APP_STATE.md",
+        "docs/dev/PITFALL_LEDGER.md",
+        "summary_bank.json",
+        "source/frontend/tsconfig.test.json",
+        "source/frontend/tests/native.spec.ts",
+        "source/frontend/tests/README.md",
+        "source/frontend/tests/smoke.spec.ts"
+      ],
+      "current_solution": "Docs are concise current-state/backlog docs; missing gates were added and runnable; remaining fixture gap is explicit.",
+      "next_prevention": "Before marking coverage complete, verify referenced files exist and run the documented command.",
       "files": []
     },
     "issue__desktop_smf_parser_width": {
@@ -221,7 +266,7 @@
         "docs/dev/APP_STATE.md",
         "summary_bank.json"
       ],
-      "current_solution": "smfBinary is now the canonical (exported bytesTo via barrel; smf imports Reader/Writer; consumers replaced locals; smfBinary tracked). Improved bounds now active on export path too. saveFile bool fixed in same sweep.",
+      "current_solution": "smfBinary is now the canonical owner, and bytesToArrayBuffer + BinaryReader/BinaryWriter are re-exported from loader index. Consumers use the shared API; bounds checks are active on export too. saveFile bool is fixed in the same sweep.",
       "next_prevention": "On any refactor that moves helpers (esp. between loaders/* and bridges), immediately update all direct consumers + barrel + run full typecheck + grep for duplicate fn/class names. Treat untracked critical src files as P0 during review.",
       "files": []
     },

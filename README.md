@@ -12,7 +12,7 @@ Core: high-fidelity SMF roundtrip (import/export with coord/DQ), guarded skinned
 
 ## Quick commands (from repo root)
 pwsh -File run.ps1 -Task verify        # lint + app typecheck + test typecheck + build + chunk guard + unit + cargo check
-pwsh -File run.ps1 -Task test:e2e      # Playwright (smoke + native IPC mocks)
+pwsh -File run.ps1 -Task test:e2e      # Playwright (smoke + visual + native IPC mocks)
 pwsh -File run.ps1 -Task desktop-smoke # unbundled tauri build + Rust native peek tests (4 tests in main.rs)
 
 See run.ps1 help, source/frontend/package.json, source/package.json (workspace), source/src-tauri for details.
@@ -40,4 +40,4 @@ Philosophy (AGENTS.md): Safety, courtesy, show, efficiency. Dynamic/modular over
 
 All features connect through guarded loaders + seq-guarded async load (loadSeq/fileReadSeq + isCurrentLoad checks) + ref-decoupled timing (playback, orbit enable on drag, RAF reports) + clear error/status UX + fidelity gates that fail explicitly rather than drop data.
 
-Run verify after changes. Update state docs + summary_bank only on scope/status shifts (keep lean). Full integrity review 2026-06-14 confirmed clean connections, no issues in active code.
+Run verify after changes. Update state docs + summary_bank only on scope/status shifts (keep lean). The 2026-06-14 integrity pass restored missing test-source typecheck/native IPC gates and moved stale progress history into concise backlog and pitfall records.

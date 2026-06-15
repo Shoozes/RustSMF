@@ -33,8 +33,9 @@ function Invoke-FrontendNpm([string[]]$NpmArgs) {
     }
     Push-Location $FrontendDir
     try {
-        & npm @NpmArgs
-        return $LASTEXITCODE -eq 0
+        & npm @NpmArgs 2>&1 | ForEach-Object { Write-Host $_ }
+        $exitCode = $LASTEXITCODE
+        return $exitCode -eq 0
     } finally {
         Pop-Location
     }
@@ -105,6 +106,8 @@ switch -Exact ($Task.ToLowerInvariant()) {
             if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "lint failed" }
             & npm run typecheck 2>&1 | Out-String | Write-Host
             if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "typecheck failed" }
+            & npm run typecheck:test 2>&1 | Out-String | Write-Host
+            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "test typecheck failed" }
             & npm run build 2>&1 | Out-String | Write-Host
             if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "build failed" }
             & node scripts/check-entry-chunks.mjs 2>&1 | Out-Null
@@ -119,11 +122,16 @@ switch -Exact ($Task.ToLowerInvariant()) {
             if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "cargo failed" }
             Pop-Location
         }
-        if ($ok) { Write-Ok "[VERIFY] Passed." } else { Write-Warn "[VERIFY] Some checks failed." }
+        if ($ok) {
+            Write-Ok "[VERIFY] Passed."
+        } else {
+            Write-Warn "[VERIFY] Some checks failed."
+            exit 1
+        }
     }
     "test:e2e" {
         Write-Info "[E2E] Running Playwright..."
-        Invoke-FrontendNpm @("run", "test:e2e")
+        if (-not (Invoke-FrontendNpm @("run", "test:e2e"))) { exit 1 }
     }
     "desktop-smoke" {
         Write-Info "[SMOKE] Unbundled Tauri build + native Rust peek validation..."
@@ -154,10 +162,21 @@ switch -Exact ($Task.ToLowerInvariant()) {
             if ($cargoOutput -match 'Rust desktop peek smoke on') {
                 Write-Ok "Rust desktop peek smoke println executed (sample used for real binary read + parse)."
             }
-            Write-Ok "[SMOKE] Unbundled build + Rust native peek tests complete (4 tests: main peek, validate, header/invalid, anim-count width). smoke.spec.ts JS sim + real-sample bone/export screenshot asserts + extended listeners now cover peek/validate/status strings too. FBX export wired (exportFBX delegates to GLB container + Tauri native saveFile for desktop FBX loads; status 'Exported .glb (from FBX source...)'). See TODO.md (desktop e2e + FBX subtask) + the local real .smf for full tauri-dev manual validation of peeks + UI (bone tree, export incl FBX, native I/O)."
             Pop-Location
+            if (Test-Path $FrontendDir) {
+                Write-Info "[SMOKE] Running Playwright native IPC mock suite..."
+                Push-Location $FrontendDir
+                try {
+                    & npm run test:e2e -- tests/native.spec.ts
+                    if ($LASTEXITCODE -ne 0) { throw "Playwright native IPC mock suite failed" }
+                } finally {
+                    Pop-Location
+                }
+            }
+            Write-Ok "[SMOKE] Unbundled build, Rust native peek tests, and Playwright native IPC mock suite complete."
         } else {
             Write-Warn "src-tauri missing."
+            exit 1
         }
     }
     default {

@@ -115,6 +115,7 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
 // + Real sample cycle using reference .smf files (fs in node test env).
 // E2E in smoke.spec.ts for visuals + full UI flows.
 import { exportSMFToBuffer, importSMF, ImportedSmf } from './smf';
+import { bytesToArrayBuffer } from './smfBinary';
 import fs from 'fs';
 
 const SMF_DIR = path.resolve(__dirname, '../../../docs/references/old-src/datafiles/SMF');
@@ -151,7 +152,7 @@ describe('smf export roundtrip (data-driven)', () => {
     };
 
     const buf = exportSMFToBuffer(minimal);
-    const reimported = importSMF(buf.buffer);
+    const reimported = importSMF(bytesToArrayBuffer(buf));
 
     assert.strictEqual(reimported.meshes.length, 1);
     assert.strictEqual(reimported.bones.length, 1);
@@ -183,12 +184,12 @@ describe('smf export roundtrip (data-driven)', () => {
     if (!sampleFile) return;
 
     const raw = fs.readFileSync(sampleFile);
-    // Node Buffer/Uint8Array -> ArrayBuffer safe for the loader (BinaryReader DataView)
-    const ab = new Uint8Array(raw).buffer;
+    // Node Buffer/Uint8Array -> real ArrayBuffer safe for the loader.
+    const ab = bytesToArrayBuffer(raw);
 
     const imported = importSMF(ab);
     const exportedBuf = exportSMFToBuffer(imported);
-    const reimported = importSMF(exportedBuf.buffer);
+    const reimported = importSMF(bytesToArrayBuffer(exportedBuf));
 
     assert.strictEqual(reimported.meshes.length, imported.meshes.length, 'mesh count drift');
     assert.strictEqual(reimported.bones.length, imported.bones.length, 'bone count drift');
@@ -236,7 +237,7 @@ describe('smf export roundtrip (data-driven)', () => {
     };
 
     const buf = exportSMFToBuffer(fixture);
-    const reimported = importSMF(buf.buffer);
+    const reimported = importSMF(bytesToArrayBuffer(buf));
 
     assert.strictEqual(reimported.bones.length, 4, 'node count (incl head) must roundtrip');
     assert.strictEqual(reimported.bones[0].parent, 0);

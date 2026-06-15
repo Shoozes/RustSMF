@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { buildImportedSmfFromThree, SmfConversionError } from './threeToSmf';
 import { exportSMFToBuffer, importSMF, ImportedSmf } from './smf';
 import { dqToLocalTransform } from './coord';
+import { buildSmfNodeList } from './smfRig';
 
 describe('threeToSmf - buildImportedSmfFromThree', () => {
   it('throws SmfConversionError for source without skeleton bones', () => {
@@ -64,6 +65,25 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
     assert.strictEqual(result.bones.length, 2);
     assert.strictEqual(result.bones[0].parent, -1, 'root has no parent');
     assert.strictEqual(result.bones[1].parent, 0, 'child parent is index 0');
+  });
+
+  it('keeps constructed skeleton node lists direct unless head nodes are explicit', () => {
+    const dq = new Float32Array(8);
+    dq[3] = 1;
+
+    const { nodeList } = buildSmfNodeList([
+      { index: 0, parent: -1, isBone: 1, dq, axis: [0, 1, 0] },
+      { index: 1, parent: 0, isBone: 1, dq, axis: [0, 1, 0] },
+    ]);
+
+    assert.strictEqual(nodeList.length, 2, 'constructed skeleton has one SMF node per real bone');
+    assert.deepStrictEqual(
+      nodeList.map(n => ({ boneIndex: n.boneIndex, parent: n.parent, isBone: n.isBone, isHead: n.isHead })),
+      [
+        { boneIndex: 0, parent: 0, isBone: 1, isHead: false },
+        { boneIndex: 1, parent: 0, isBone: 1, isHead: false },
+      ]
+    );
   });
 
   it('produces an animation with correct frame count from clip tracks', () => {

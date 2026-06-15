@@ -104,3 +104,48 @@ button:active {
   color: #64748b;
   margin-top: 4px;
 }
+
+@media (max-width: 800px) {
+  .toolbar {
+    height: auto;
+    min-height: 48px;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  .toolbar .ml-auto {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .main-area {
+    flex-direction: column;
+    overflow: auto;
+  }
+
+  .sidebar,
+  .inspector {
+    width: auto;
+    max-height: 132px;
+    border-left: 0;
+    border-right: 0;
+  }
+
+  .sidebar {
+    border-bottom: 1px solid #334155;
+  }
+
+  .inspector {
+    border-top: 1px solid #334155;
+  }
+
+  .viewport-container {
+    min-height: 360px;
+  }
+
+  .timeline {
+    height: auto;
+    min-height: 92px;
+  }
+}

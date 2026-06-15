@@ -1,5 +1,5 @@
 // Thin Tauri bridge with browser fallback.
-// Real SMF/GLB/FBX file I/O and native dialogs/save will use this.
+// Real SMF/GLB/FBX file I/O and native dialogs/save route through this.
 // openFile: tauri dialog or browser input.
 // saveFile: native Tauri (dialog + write_file_binary) or browser download.
 // readBinaryFile: for desktop binary loads when only path is available.
@@ -11,7 +11,7 @@ import { bytesToArrayBuffer } from '../loaders'
 export interface OpenResult {
   path?: string
   name?: string
-  data?: Uint8Array // for small files or future binary bridge
+  data?: Uint8Array // browser-read bytes or test/native-injected bytes
 }
 
 function isTauriEnv(): boolean {
@@ -31,7 +31,7 @@ export async function openFile(): Promise<OpenResult | null> {
       })
       if (!selected) return null
       const path = typeof selected === 'string' ? selected : (selected as any).path || String(selected)
-      // Later: also read bytes via fs plugin or custom command for large models
+      // Desktop returns a path; the load flow calls readBinaryFile when bytes are needed.
       return { path, name: path.split(/[\\/]/).pop() }
     } catch (e) {
       console.warn('[tauri] dialog open failed, falling back', e)
@@ -43,16 +43,53 @@ export async function openFile(): Promise<OpenResult | null> {
     const input = document.createElement('input')
     input.type = 'file'
     input.accept = '.smf,.glb,.gltf,.fbx,.obj'
-    input.onchange = async () => {
-      const file = input.files?.[0]
-      if (!file) return resolve(null)
-      // For browser we can read as ArrayBuffer immediately (good for GLTFLoader etc)
-      const buf = await file.arrayBuffer()
-      resolve({
-        name: file.name,
-        data: new Uint8Array(buf)
-      })
+    input.style.display = 'none'
+    input.multiple = false
+
+    let settled = false
+
+    const finalize = (result: OpenResult | null) => {
+      if (settled) return
+      settled = true
+      window.removeEventListener('focus', onWindowFocus)
+      input.removeEventListener('change', onChange)
+      ;(input as any).onchange = null
+      ;(input as any).oncancel = null
+      if (input.parentElement) input.parentElement.removeChild(input)
+      resolve(result)
     }
+
+    const onChange = async () => {
+      const file = input.files?.[0]
+      if (!file) {
+        finalize(null)
+        return
+      }
+      try {
+        const buf = await file.arrayBuffer()
+        finalize({
+          name: file.name,
+          data: new Uint8Array(buf)
+        })
+      } catch (e) {
+        console.warn('[tauri] failed to read file from browser input', e)
+        finalize(null)
+      }
+    }
+
+    const onCancel = () => finalize(null)
+    const onWindowFocus = () => {
+      window.setTimeout(() => {
+        if (!settled && (!input.files || input.files.length === 0)) {
+          finalize(null)
+        }
+      }, 0)
+    }
+
+    input.onchange = onChange
+    ;(input as any).oncancel = onCancel
+    window.addEventListener('focus', onWindowFocus)
+    document.body.appendChild(input)
     input.click()
   })
 }
@@ -85,7 +122,7 @@ export async function saveFile(data: Uint8Array | Blob, suggestedName: string): 
   return true
 }
 
-// Example future command (will be used once Rust side has parse_smf etc)
+// Shared Tauri command wrapper.
 export async function invokeCommand<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   const isTauri = isTauriEnv()
   if (!isTauri) {

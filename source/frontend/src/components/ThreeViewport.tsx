@@ -53,6 +53,13 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const frameRef = useRef<number | null>(null);
   const resizeObsRef = useRef<ResizeObserver | null>(null);
   const clockRef = useRef(new THREE.Clock());
+  const boneWorldPosRef = useRef(new THREE.Vector3());
+  const pointerDownRef = useRef<{
+    x: number;
+    y: number;
+    time: number;
+    button: number;
+  } | null>(null);
 
   // TransformControls for selected bone (Cycle 3 editor polish). Attached to the live THREE.Bone when selectedBoneName changes.
   // Change events mutate the bone in place (position/rot/scale); works with existing marker + Inspector controls + RAF.
@@ -132,10 +139,27 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     };
     window.addEventListener('keydown', onKey);
 
-    // Raycast-based bone selection on canvas click (non-drag clicks).
+    // Pointer-based bone selection on the canvas.
     // Complements list selection in Inspector. Uses bone world positions + ray distance.
-    // Threshold in world units; works for typical rigged models. No scene mods.
-    const onCanvasClick = (event: MouseEvent) => {
+    // Ignore drag/long-press paths to avoid accidental selection during orbit/transform interaction.
+    const onCanvasPointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      pointerDownRef.current = {
+        x: event.clientX,
+        y: event.clientY,
+        time: performance.now(),
+        button: event.button,
+      };
+    };
+
+    const onCanvasPointerUp = (event: PointerEvent) => {
+      const down = pointerDownRef.current;
+      pointerDownRef.current = null;
+      if (!down || down.button !== 0 || event.button !== 0) return;
+      const elapsed = performance.now() - down.time;
+      const movedPx = Math.hypot(event.clientX - down.x, event.clientY - down.y);
+      if (movedPx > 6 || elapsed > 350) return;
+
       const cb = onSelectBoneRef.current;
       const skel = skeletonRefForPick.current;
       const cam = cameraRef.current;
@@ -152,7 +176,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         cb(closest.name);
       }
     };
-    canvas.addEventListener('click', onCanvasClick);
+    canvas.addEventListener('pointerdown', onCanvasPointerDown);
+    canvas.addEventListener('pointerup', onCanvasPointerUp);
 
     const animate = () => {
       const mixer = mixerRef.current;
@@ -178,9 +203,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (hl && skel && sel) {
         const bone = findBoneByName(skel, sel);
         if (bone) {
-          const wp = new THREE.Vector3();
-          bone.getWorldPosition(wp);
-          hl.position.copy(wp);
+          bone.getWorldPosition(boneWorldPosRef.current);
+          hl.position.copy(boneWorldPosRef.current);
         }
       }
 
@@ -206,7 +230,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
       resizeObsRef.current?.disconnect();
       window.removeEventListener('keydown', onKey);
-      canvas.removeEventListener('click', onCanvasClick);
+      canvas.removeEventListener('pointerdown', onCanvasPointerDown);
+      canvas.removeEventListener('pointerup', onCanvasPointerUp);
       detachOrbit();
       if (boneHighlightRef.current) {
         scene.remove(boneHighlightRef.current);
@@ -321,7 +346,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     group.position.copy(wp);
   }, [selectedBoneName, skeleton]);
 
-  // Weight preview viz for selected bone (Cycle 3 rigging polish follow-up).
+  // Weight preview visualization for the selected bone.
   // Delegates to extracted pure helpers in utils/weightPreview.ts (modularity, P2 1b).
   // Preserves exact prior behavior, backup/restore, color ramp, non-destructive.
   useEffect(() => {
@@ -341,7 +366,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     }
   }, [transformMode]);
 
-  // Cycle 3: Transform gizmo for selected bone (basic rigging polish).
+  // Transform gizmo for the selected bone.
   // Reuses the selectedBoneName + skeleton already synced via refs/effects + raycast/list selection.
   // Attaches TransformControls (mode controlled by prop from Inspector buttons or default translate; rotate/scale via 3D handles) to the bone Object3D.
   // On change: bone matrices updated; existing boneHighlight marker (in RAF) and Inspector controls reflect live.

@@ -1,6 +1,6 @@
 // File: src/main.rs
 // RustSMF Tauri entry. Minimal shell for the Three.js frontend.
-// Provides native file open (dialog) and future binary SMF/GLB I/O commands.
+// Provides native file dialogs plus binary SMF/GLB I/O commands.
 
 use tauri::command;
 use tauri_plugin_dialog::DialogExt;
@@ -70,7 +70,7 @@ fn greet(name: &str) -> String {
 
 #[command]
 async fn read_file_text(path: String) -> Result<String, String> {
-    // Simple text read example (for future small metadata or debug)
+    // Small text read helper for metadata/debug paths; model loads use read_file_binary.
     std::fs::read_to_string(&path).map_err(|e| e.to_string())
 }
 
