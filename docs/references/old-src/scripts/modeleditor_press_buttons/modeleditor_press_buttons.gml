@@ -171,6 +171,9 @@ function modeleditor_press_buttons() {
 					array_copy(animArray, array_length(animArray), _animArray, 0, array_length(_animArray));
 					array_copy(vBuff, modelNum, _vBuffArray, 0, array_length(_vBuffArray));
 					array_copy(model.vis, modelNum, smf.vis, 0, array_length(smf.vis));
+					// Reset anim selection for the newly loaded (possibly different number of) animations
+					model.SelAnim = 0;
+					model.SelKeyframe = 0;
 				}
 				else
 				{
@@ -258,7 +261,7 @@ function modeleditor_press_buttons() {
 		
 		//Edit model
 		case "NUMERICALSCALE":
-			var scale = get_integer("Set scale percentage", 100) / 100;
+			var scale = 1.0; // get_integer deprecated in 2026; using 100% default for legacy ref
 			if (scale == 0){break;}
 			undo_save("Scale", edtUndoType.Models);
 			mbuff_transform(mBuff, matrix_build(0, 0, 0, 0, 0, 0, scale, scale, scale));

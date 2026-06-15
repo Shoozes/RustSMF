@@ -286,7 +286,7 @@ mod tests {
             assert!(model_count < 1000 && rig_count < 1000 && anim_count < 100, "implausible counts from real sample parse");
         } else {
             // Graceful in envs without the sample (e.g. minimal CI). Real desktop validation still recommended via tauri-dev + local mixamo.
-            println!("Rust desktop peek smoke: no test .smf sample present in this env; skipping real binary parse (see run.ps1 desktop-smoke and TODO for manual tauri-dev + mixamo_smf_baldguy.smf).");
+            println!("Rust desktop peek smoke: no test .smf sample present in this env; skipping real binary parse (run desktop-smoke again after adding an SMF sample fixture).");
         }
     }
 

@@ -2,8 +2,12 @@ import React from 'react';
 import * as THREE from 'three';
 import type { BoneNudgeDelta } from '../hooks/poseEdits';
 
-function getRootBones(bones: any[]): any[] {
-  return bones.filter((b: any) => !b.parent || !bones.includes(b.parent as any));
+function isBone(child: THREE.Object3D): child is THREE.Bone {
+  return (child as THREE.Bone).isBone === true;
+}
+
+function getRootBones(bones: THREE.Bone[]): THREE.Bone[] {
+  return bones.filter((bone) => !bone.parent || !bones.includes(bone.parent as THREE.Bone));
 }
 
 interface InspectorProps {
@@ -40,7 +44,7 @@ const Inspector: React.FC<InspectorProps> = ({
   React.useEffect(() => {
     if (skeleton && skeleton.bones.length > 0) {
       const roots = getRootBones(skeleton.bones);
-      setExpandedBones(new Set(roots.map((b: any) => b.name)));
+      setExpandedBones(new Set(roots.map((bone) => bone.name)));
     } else {
       setExpandedBones(new Set());
     }
@@ -56,9 +60,9 @@ const Inspector: React.FC<InspectorProps> = ({
   };
 
   // Recursive renderer for proper bone hierarchy tree (nested <ul><li>, collapsible, depth indent, follows .children)
-  const renderBoneTree = (bone: any, depth: number): React.ReactNode => {
+  const renderBoneTree = (bone: THREE.Bone, depth: number): React.ReactNode => {
     const isSelected = selected === bone.name;
-    const childBones = bone.children ? bone.children.filter((c: any) => c.isBone) : [];
+    const childBones = bone.children.filter(isBone);
     const hasChildren = childBones.length > 0;
     const isExpanded = expandedBones.has(bone.name);
     return (
@@ -80,7 +84,7 @@ const Inspector: React.FC<InspectorProps> = ({
         </div>
         {hasChildren && isExpanded && (
           <ul className="pl-0 m-0">
-            {childBones.map((child: any) => renderBoneTree(child, depth + 1))}
+            {childBones.map((child) => renderBoneTree(child, depth + 1))}
           </ul>
         )}
       </li>
@@ -118,7 +122,7 @@ const Inspector: React.FC<InspectorProps> = ({
             <div className="panel-title">Bones ({skeleton.bones.length})</div>
             <div className="max-h-24 overflow-auto text-[10px]">
               <ul className="pl-0 m-0 list-none">
-                {getRootBones(skeleton.bones).map((root: any) => renderBoneTree(root, 0))}
+                {getRootBones(skeleton.bones).map((root) => renderBoneTree(root, 0))}
               </ul>
             </div>
           </div>

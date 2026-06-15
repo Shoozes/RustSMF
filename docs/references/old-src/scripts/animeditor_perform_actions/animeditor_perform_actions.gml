@@ -20,7 +20,7 @@ function animeditor_perform_actions() {
 	var rig = model.rig;
 	if selAnim < array_length(animArray)
 	{
-		animation = animArray[selAnim];;
+		animation = animArray[selAnim];
 	}
 
 	if (rig.boneNum == 0){exit;}

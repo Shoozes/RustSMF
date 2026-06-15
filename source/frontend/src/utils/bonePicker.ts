@@ -4,7 +4,7 @@ import * as THREE from 'three';
 export const DEFAULT_MAX_BONE_PICK_DIST = 1.5;
 
 /**
- * Pure raycast helper for closest bone selection (extracted for modularity, P2 viewport).
+ * Pure raycast helper for closest bone selection.
  * Complements Inspector list selection. Uses world positions + ray distance.
  * No scene mutations. Mechanical extract from ThreeViewport onCanvasClick; behavior preserved.
  * Use DEFAULT_MAX_BONE_PICK_DIST for the tuned default or pass custom for flexibility.

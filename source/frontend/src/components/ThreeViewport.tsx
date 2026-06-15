@@ -9,7 +9,7 @@ import { TransformControls } from 'three/examples/jsm/controls/TransformControls
 // Self-contained ThreeViewport.
 // Owns: renderer, scene (base lights+grid+axes), camera, SimpleOrbit controls, RAF loop, model attach,
 // SkeletonHelper, AnimationMixer + action management, time reporting.
-// Receives declarative props from App (or future store) for the loaded model and playback intent.
+// Receives declarative props from App for the loaded model and playback intent.
 // No dead code or duplication with parent. All imperative three isolated here.
 
 interface ThreeViewportProps {
@@ -349,7 +349,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   }, [selectedBoneName, skeleton]);
 
   // Weight preview visualization for the selected bone.
-  // Delegates to extracted pure helpers in utils/weightPreview.ts (modularity, P2 1b).
+  // Delegates to extracted pure helpers in utils/weightPreview.ts.
   // Preserves exact prior behavior, backup/restore, color ramp, non-destructive.
   useEffect(() => {
     if (!weightPreviewEnabled || !selectedBoneName || !skeleton) {

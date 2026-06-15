@@ -1,7 +1,7 @@
 import type { ImportedSmf } from './smf';
 
 /**
- * SMF rig node list builder (extracted for modularity, P2 1c).
+ * SMF rig node list builder.
  * Handles SMF-sourced (prebuilt heads, 1:1 preserve) vs GLB/FBX-constructed direct bone lists.
  * Used by exportSMFToBuffer for correct rig/anim serialization (parent-0, isBone/head flags).
  * Public exports from smf.ts unchanged.

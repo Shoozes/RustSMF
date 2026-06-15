@@ -6,13 +6,13 @@ function smf_rig() constructor
 	bindMap = ds_list_create();
 	boneNum = 0;
 	nodeNum = 0;
-	
+
 	static destroy = function()
 	{
 		ds_list_destroy(nodeList);
 		ds_list_destroy(bindMap);
 	}
-	static clear = function() 
+	static clear = function()
 	{
 		ds_list_clear(nodeList);
 		ds_list_clear(bindMap);
@@ -32,7 +32,7 @@ function smf_rig() constructor
 			node[@ eAnimNode.LockedPos] = sample_get_node_position(self, i, sample);
 		}
 	}
-	static transform = function(DQ, xScale, yScale, zScale) 
+	static transform = function(DQ, xScale, yScale, zScale)
 	{
 		nodeNum = ds_list_size(nodeList);
 		for (var i = 0; i < nodeNum; i ++)
@@ -44,7 +44,7 @@ function smf_rig() constructor
 			update_node(i);
 		}
 	}
-	
+
 	/// @func node_create(pos, parent, isBone)
 	static node_create = function(pos, parent, isBone)
 	{
@@ -82,7 +82,7 @@ function smf_rig() constructor
 		update_bindmap();
 		return nodeInd;
 	}
-	
+
 	/// @func node_insert(nodeInd)
 	static node_insert = function(nodeInd)
 	{
@@ -121,7 +121,7 @@ function smf_rig() constructor
 				node[@ eAnimNode.Parent] ++;
 			}
 		}
-		
+
 		//Update node, child and grandchild
 		update_bindmap();
 		update_node(nodeInd);
@@ -143,9 +143,9 @@ function smf_rig() constructor
 		}
 		return nodeInd;
 	}
-	
+
 	/// @func node_get_dq(nodeInd)
-	static node_get_dq = function(nodeInd) 
+	static node_get_dq = function(nodeInd)
 	{
 		var node = nodeList[| nodeInd];
 		if is_undefined(node){
@@ -153,9 +153,9 @@ function smf_rig() constructor
 			return false;}
 		return node[eAnimNode.WorldDQ];
 	}
-	
+
 	/// @func node_delete(nodeInd)
-	static node_delete = function(nodeInd) 
+	static node_delete = function(nodeInd)
 	{
 		//Exit if the node index doesn't make sense
 		if (nodeInd < 0){
@@ -171,7 +171,7 @@ function smf_rig() constructor
 		if nodeInd >= nodeNum{
 			smf_debug_message("ERROR in script node_delete: Node " + string(nodeInd) + " does not exist in rig");
 			return false;}
-	
+
 		//Delete node from list
 		ds_list_delete(nodeList, nodeInd);
 		nodeNum --;
@@ -215,7 +215,7 @@ function smf_rig() constructor
 
 		return true;
 	}
-	
+
 	/// @func node_move(nodeInd, px, py, pz)
 	static node_move = function(nodeInd, px, py, pz)
 	{
@@ -239,7 +239,7 @@ function smf_rig() constructor
 			}
 		}
 	}
-	
+
 	/// @func node_rotate(nodeInd, radians)
 	static node_rotate = function(nodeInd, radians)
 	{
@@ -258,29 +258,29 @@ function smf_rig() constructor
 			}
 		}
 	}
-	
+
 	/// @func node_get_locked(nodeInd)
 	static node_get_locked = function(nodeInd)
 	{
 		var node = nodeList[| nodeInd];
 		return node[eAnimNode.Locked];
 	}
-	
+
 	/// @func node_set_parent(nodeInd, parent)
-	static node_set_parent = function(nodeInd, parent) 
-	{	/*	This script can potentially mess up your rig structure. There are checks in place 
+	static node_set_parent = function(nodeInd, parent)
+	{	/*	This script can potentially mess up your rig structure. There are checks in place
 			to avoid endless loops and such, but it may still mess up a lot. Use with care!*/
 
 		//Exit if we're trying to change the parent of the first node
 		if (nodeInd == 0){
 			smf_debug_message("ERROR in script node_set_parent: Cannot change the parent of the first node");
 			return false;}
-	
+
 		//Exit if the node index doesn't make sense
 		if (nodeInd < 0){
 			smf_debug_message("ERROR in script node_set_parent: Trying to edit a nodeIndex < 0");
 			return false;}
-			
+
 		//Exit if the node doesn't exist
 		var node = nodeList[| nodeInd];
 		if !is_array(node){
@@ -297,15 +297,15 @@ function smf_rig() constructor
 
 		return true;
 	}
-	
+
 	/// @func node_set_bone(nodeInd, enable)
-	static node_set_bone = function(nodeInd, enable) 
+	static node_set_bone = function(nodeInd, enable)
 	{
 		//Exit if we're trying to enable bone for the first node
 		if (nodeInd == 0){
 			smf_debug_message("ERROR in script node_set_bone: Cannot make the first node in the hierarchy represent a bone");
 			return false;}
-	
+
 		//Exit if the node index doesn't make sense
 		if nodeInd < 0{
 			smf_debug_message("ERROR in script node_set_bone: Invalid nodeIndex " + string(nodeInd));
@@ -325,10 +325,10 @@ function smf_rig() constructor
 		{
 			update_node(nodeInd);
 		}
-		update_bindmap(nodeInd);
+		update_bindmap();
 		return true;
 	}
-	
+
 	/// @func node_get_bone(nodeInd)
 	static node_get_bone = function(nodeInd)
 	{
@@ -340,7 +340,7 @@ function smf_rig() constructor
 	}
 
 	/// @func update_node(nodeInd)
-	static update_node = function(nodeInd) 
+	static update_node = function(nodeInd)
 	{	/*	Updates a node's orientation in relation to its parent. The following needs to be correct:
 				WorldDQ
 				IsBone
@@ -351,46 +351,62 @@ function smf_rig() constructor
 		var nodePos = smf_dq_get_translation(nodeDQ);
 
 		//Find parent node's position
-		var parentNode = nodeList[| node[eAnimNode.Parent]];
-		var parentPos = smf_dq_get_translation(parentNode[eAnimNode.WorldDQ]);
+		var parentIdx = node[eAnimNode.Parent];
+		var parentNode = (parentIdx >= 0 && parentIdx < ds_list_size(nodeList)) ? nodeList[| parentIdx] : undefined;
+		if (!is_array(parentNode)) {
+			// Broken rig data, root with bad parent, or forward-ref during load: treat as world origin
+			parentNode = node;
+		}
+		var parentPos = is_array(parentNode) && is_array(parentNode[eAnimNode.WorldDQ]) ? smf_dq_get_translation(parentNode[eAnimNode.WorldDQ]) : [0, 0, 0];
 		var boneVx = nodePos[0] - parentPos[0];
 		var boneVy = nodePos[1] - parentPos[1];
 		var boneVz = nodePos[2] - parentPos[2];
+		var boneLenSq = boneVx * boneVx + boneVy * boneVy + boneVz * boneVz;
 
 		//Create the node's new orientation
 		if (node[eAnimNode.IsBone])
 		{
-			node[@ eAnimNode.Length] = sqrt(boneVx * boneVx + boneVy * boneVy + boneVz * boneVz);
-			var nodeUp = smf_quat_get_up(nodeDQ);
-			if (boneVx == 0 && boneVy == 0 && boneVz == 0)
+			node[@ eAnimNode.Length] = (boneLenSq > 0 ? sqrt(boneLenSq) : 0);
+			if (boneLenSq > 0)
 			{
-				smf_debug_message("Node " + string(nodeInd) + " has no up vector. DQ: " + string(nodeDQ));
+				var nodeUp = smf_quat_get_up(nodeDQ);
+				var nodeM = smf_mat_create(nodePos[0], nodePos[1], nodePos[2], boneVx, boneVy, boneVz, nodeUp[0], nodeUp[1], nodeUp[2], 1, 1, 1);
+				smf_dq_normalize(smf_dq_create_from_matrix(nodeM, nodeDQ));
+
+				//Update primary axis
+				var gIdx = is_array(parentNode) ? parentNode[eAnimNode.Parent] : 0;
+				var gNode = (gIdx >= 0 && gIdx < ds_list_size(nodeList)) ? nodeList[| gIdx] : undefined;
+				if (!is_array(gNode)) gNode = node;
+				var gPos = is_array(gNode) && is_array(gNode[eAnimNode.WorldDQ]) ? smf_dq_get_translation(gNode[eAnimNode.WorldDQ]) : [0, 0, 0];
+				var upAxisX = boneVx;
+				var upAxisY = boneVy;
+				var upAxisZ = boneVz;
+				var pAxisX = nodePos[0] - gPos[0];
+				var pAxisY = nodePos[1] - gPos[1];
+				var pAxisZ = nodePos[2] - gPos[2];
+				var denom = dot_product_3d(pAxisX, pAxisY, pAxisZ, pAxisX, pAxisY, pAxisZ);
+				var dp = (denom != 0 ? dot_product_3d(upAxisX, upAxisY, upAxisZ, pAxisX, pAxisY, pAxisZ) / denom : 0);
+				upAxisX -= pAxisX * dp;
+				upAxisY -= pAxisY * dp;
+				upAxisZ -= pAxisZ * dp;
+				var l = dot_product_3d(upAxisX, upAxisY, upAxisZ, pAxisX, pAxisY, pAxisZ);
+				if (l == 0 || is_nan(l))
+				{
+					node[@ eAnimNode.PrimaryAxis] = [0, 0, 1];
+				}
+				else
+				{
+					l = 1 / sqrt(l);
+					node[@ eAnimNode.PrimaryAxis] = [upAxisX * l, upAxisY * l, upAxisZ * l];
+				}
 			}
-			var nodeM = smf_mat_create(nodePos[0], nodePos[1], nodePos[2], boneVx, boneVy, boneVz, nodeUp[0], nodeUp[1], nodeUp[2], 1, 1, 1);
-			smf_dq_normalize(smf_dq_create_from_matrix(nodeM, nodeDQ));
-	
-			//Update primary axis
-			var gNode = nodeList[| parentNode[eAnimNode.Parent]];
-			var gPos = smf_dq_get_translation(gNode[eAnimNode.WorldDQ]);
-			var upAxisX = boneVx;
-			var upAxisY = boneVy;
-			var upAxisZ = boneVz;
-			var pAxisX = nodePos[0] - gPos[0];
-			var pAxisY = nodePos[1] - gPos[1];
-			var pAxisZ = nodePos[2] - gPos[2];
-			var dp = dot_product_3d(upAxisX, upAxisY, upAxisZ, pAxisX, pAxisY, pAxisZ) / dot_product_3d(pAxisX, pAxisY, pAxisZ, pAxisX, pAxisY, pAxisZ);
-			upAxisX -= pAxisX * dp;
-			upAxisY -= pAxisY * dp;
-			upAxisZ -= pAxisZ * dp;
-			var l = dot_product_3d(upAxisX, upAxisY, upAxisZ, pAxisX, pAxisY, pAxisZ);
-			if (l == 0 || is_nan(l))
+			else if (!is_array(node[eAnimNode.PrimaryAxis]))
 			{
 				node[@ eAnimNode.PrimaryAxis] = [0, 0, 1];
 			}
-			else
+			if (boneLenSq == 0)
 			{
-				l = 1 / sqrt(l);
-				node[@ eAnimNode.PrimaryAxis] = [upAxisX * l, upAxisY * l, upAxisZ * l];
+				smf_debug_message("Node " + string(nodeInd) + " has zero bone length (degenerate bone).");
 			}
 		}
 		else if !is_array(node[eAnimNode.PrimaryAxis])
@@ -399,12 +415,13 @@ function smf_rig() constructor
 		}
 		//Save node info
 		node[@ eAnimNode.WorldDQConjugate] = smf_dq_get_conjugate(nodeDQ, array_create(8));
-		node[@ eAnimNode.LocalDQ] = smf_dq_multiply(parentNode[eAnimNode.WorldDQConjugate], nodeDQ, array_create(8));
+		var pConj = (is_array(parentNode) && is_array(parentNode[eAnimNode.WorldDQConjugate])) ? parentNode[eAnimNode.WorldDQConjugate] : array_create(8);
+		node[@ eAnimNode.LocalDQ] = smf_dq_multiply(pConj, nodeDQ, array_create(8));
 		node[@ eAnimNode.LocalDQConjugate] = smf_dq_get_conjugate(node[eAnimNode.LocalDQ], array_create(8));
 	}
-	
+
 	/// @func update_bindmap()
-	static update_bindmap = function() 
+	static update_bindmap = function()
 	{	/*	This script must be used after adding or removing nodes in the rig.
 			It keeps the sample mapping list updated so that nodes that aren't attached
 			to their parents aren't included in the sample.
@@ -420,6 +437,14 @@ function smf_rig() constructor
 		for (var i = 0; i < nodeNum; i ++)
 		{
 			var node = nodeList[| i];
+			if (!is_array(node)) {
+				// Stale entry from previous load or bad rig data (e.g. Parent index out of range due to format mismatch in older .smf)
+				node = array_create(eAnimNode.Num, 0);
+				node[@ eAnimNode.Parent] = 0;
+				node[@ eAnimNode.IsBone] = false;
+				node[@ eAnimNode.WorldDQ] = array_create(8, 0);
+				nodeList[| i] = node;
+			}
 			if node[eAnimNode.IsBone]
 			{
 				bindMap[| i] = sampleBoneInd;
@@ -429,7 +454,7 @@ function smf_rig() constructor
 			{
 				bindMap[| i] = -1;
 			}
-	
+
 			//Loop through all ancestors and add this node to their descendant arrays
 			node[@ eAnimNode.Children] = [];
 			node[@ eAnimNode.Descendants] = [];
@@ -437,12 +462,20 @@ function smf_rig() constructor
 			var ancestorNode = nodeList[| ancestor];
 			while (ancestor > 0)
 			{
-				ancestor = ancestorNode[eAnimNode.Parent];
+				ancestor = is_array(ancestorNode) ? ancestorNode[eAnimNode.Parent] : 0;
+				if (ancestor <= 0 || ancestor >= nodeNum) break;
 				ancestorNode = nodeList[| ancestor];
+				if (!is_array(ancestorNode)) break;
+				if (!is_array(ancestorNode[eAnimNode.Descendants])) {
+					ancestorNode[@ eAnimNode.Descendants] = [];
+				}
 				descendants = ancestorNode[eAnimNode.Descendants];
 				descendants[@ array_length(descendants)] = i;
 				if (ancestor == node[eAnimNode.Parent])
 				{
+					if (!is_array(ancestorNode[eAnimNode.Children])) {
+						ancestorNode[@ eAnimNode.Children] = [];
+					}
 					children = ancestorNode[eAnimNode.Children];
 					children[@ array_length(children)] = i;
 				}
@@ -453,16 +486,16 @@ function smf_rig() constructor
 }
 
 //Compatibility scripts
-function rig_delete(rig) 
+function rig_delete(rig)
 {
 	rig.destroy();
 	delete rig;
 }
-function rig_clear(rig) 
+function rig_clear(rig)
 {
 	return rig.clear();
 }
-function rig_get_node_number(rig) 
+function rig_get_node_number(rig)
 {
 	return rig.get_node_number();
 }
@@ -470,11 +503,11 @@ function rig_lock_positions(rig, sample)
 {
 	return rig.lock_positions(sample);
 }
-function rig_transform(rig, DQ, xScale, yScale, zScale) 
+function rig_transform(rig, DQ, xScale, yScale, zScale)
 {
 	return rig.transform(DQ, xScale, yScale, zScale);
 }
-function _anim_rig_update_node(rig, nodeInd) 
+function _anim_rig_update_node(rig, nodeInd)
 {
 	return rig.update_node(nodeInd);
 }
@@ -486,7 +519,7 @@ function rig_insert_node(rig, nodeInd)
 {
 	return rig.node_insert(nodeInd);
 }
-function rig_delete_node(rig, nodeInd) 
+function rig_delete_node(rig, nodeInd)
 {
 	return rig.node_delete(nodeInd);
 }
@@ -506,7 +539,7 @@ function rig_node_get_dq(rig, nodeInd)
 {
 	return rig.node_get_dq(nodeInd);
 }
-function rig_node_set_bone(rig, nodeInd, enable) 
+function rig_node_set_bone(rig, nodeInd, enable)
 {
 	return rig.node_set_bone(nodeInd, enable);
 }
@@ -514,15 +547,15 @@ function rig_node_get_locked(rig, nodeInd)
 {
 	return rig.node_get_locked(nodeInd);
 }
-function _anim_rig_update_bindmap(rig) 
+function _anim_rig_update_bindmap(rig)
 {
 	return rig.update_bindmap();
 }
-function rig_node_set_parent(rig, nodeInd, parent) 
+function rig_node_set_parent(rig, nodeInd, parent)
 {
 	return rig.node_set_parent(nodeInd, parent);
 }
-function rig_write_to_buffer(saveBuff, rig) 
+function rig_write_to_buffer(saveBuff, rig)
 {
 	//Write header
 	buffer_write(saveBuff, buffer_string, "Rig");
@@ -539,7 +572,7 @@ function rig_write_to_buffer(saveBuff, rig)
 	for (var i = 0; i < nodeNum; i ++)
 	{
 		var node = nodeList[| i];
-	
+
 		//Write node properties
 		buffer_write(saveBuff, buffer_string, node[eAnimNode.Name]);
 		buffer_write(saveBuff, buffer_bool, node[eAnimNode.IsBone]);
@@ -549,7 +582,7 @@ function rig_write_to_buffer(saveBuff, rig)
 		buffer_write(saveBuff, buffer_f32, pAxis[0]);
 		buffer_write(saveBuff, buffer_f32, pAxis[1]);
 		buffer_write(saveBuff, buffer_f32, pAxis[2]);
-	
+
 		//Write node world orientation
 		var worldDQ = node[eAnimNode.WorldDQ];
 		for (var j = 0; j < 8; j ++)
@@ -558,7 +591,7 @@ function rig_write_to_buffer(saveBuff, rig)
 		}
 	}
 }
-function rig_read_from_buffer(loadBuff) 
+function rig_read_from_buffer(loadBuff)
 {
 	var rig = new smf_rig();
 	var nodeList = rig.nodeList;
@@ -571,22 +604,23 @@ function rig_read_from_buffer(loadBuff)
 		exit;
 	}
 
-	//Read rig	
+	//Read rig
 	var nodeNum = buffer_read(loadBuff, buffer_u16);
 	for (var i = 0; i < nodeNum; i ++)
 	{
 		var node = array_create(eAnimNode.Num, 0);
 		nodeList[| i] = node;
-	
+
 		//Read node properties
 		node[@ eAnimNode.Name] = buffer_read(loadBuff, buffer_string);
 		node[@ eAnimNode.IsBone] = buffer_read(loadBuff, buffer_bool);
-		node[@ eAnimNode.Parent] = buffer_read(loadBuff, buffer_u16);
+		var p = buffer_read(loadBuff, buffer_u16);
+		node[@ eAnimNode.Parent] = (p >= 0 && p < nodeNum) ? p : 0;
 		node[@ eAnimNode.Locked] = buffer_read(loadBuff, buffer_u8);
 		var pAxisX = buffer_read(loadBuff, buffer_f32);
 		var pAxisY = buffer_read(loadBuff, buffer_f32);
 		var pAxisZ = buffer_read(loadBuff, buffer_f32);
-	
+
 		//Read node world orientation
 		var worldDQ = array_create(8);
 		for (var j = 0; j < 8; j ++)
@@ -594,10 +628,12 @@ function rig_read_from_buffer(loadBuff)
 			worldDQ[j] = buffer_read(loadBuff, buffer_f32);
 		}
 		node[@ eAnimNode.WorldDQ] = worldDQ;
-	
-		//Add node to node list
-		_anim_rig_update_node(rig, i);
 		node[@ eAnimNode.PrimaryAxis] = [pAxisX, pAxisY, pAxisZ];
+	}
+	// Second pass updates after full population (defensive vs parent index ordering)
+	for (var i = 0; i < nodeNum; i ++)
+	{
+		_anim_rig_update_node(rig, i);
 	}
 	_anim_rig_update_bindmap(rig);
 	return rig;

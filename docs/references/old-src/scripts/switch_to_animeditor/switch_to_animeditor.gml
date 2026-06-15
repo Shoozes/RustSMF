@@ -18,6 +18,8 @@ function switch_to_animeditor() {
 	}
 	var animArray = model.animations;
 	var animNum = array_length(animArray);
+	model.SelAnim = clamp( (is_undefined(model.SelAnim) ? 0 : model.SelAnim) , 0, max(0, animNum-1) );
+	model.SelKeyframe = clamp( (is_undefined(model.SelKeyframe) ? 0 : model.SelKeyframe) , 0, 0 );
 	if (model.SelKeyframe < 0)
 	{
 		model.Sample = sample_create_bind(model.rig);

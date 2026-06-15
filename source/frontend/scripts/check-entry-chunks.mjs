@@ -9,9 +9,11 @@ try {
   if (html.includes('three-vendor')) {
     console.log('OK: three-vendor chunk split detected');
   } else {
-    console.warn('WARN: three vendor not split - check vite.config');
+    console.error('ERROR: three vendor chunk split missing - check vite.config');
+    process.exit(1);
   }
   console.log('Entry chunk check passed (basic)');
-} catch {
-  console.log('Entry chunk check skipped (no dist yet)');
+} catch (error) {
+  console.error(`ERROR: entry chunk check failed: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
 }

@@ -139,7 +139,8 @@ function smf_anim(_name) constructor
 				for (var i = 0; i < nodeNum; i ++)
 				{
 					//Find local change in orientation
-					array_copy(tempDQ, 0, keyframeA[i], 0, 8);
+					var A = keyframeA[i];
+					array_copy(tempDQ, 0, A, 0, 8);
 			
 					//Find local and then world orientation of the node
 					node = nodeList[| i];
@@ -165,8 +166,12 @@ function smf_anim(_name) constructor
 					//Find interpolated local change in orientation
 					var A = keyframeA[i];
 					var B = keyframeB[i];
-					//if (smf_quat_dot(A, B) < 0){smf_dq_negate(A);}
-					smf_dq_lerp(A, B, keyframeArray[2], tempDQ);
+					var dqA = array_create(8);
+					var dqB = array_create(8);
+					array_copy(dqA, 0, A, 0, 8);
+					array_copy(dqB, 0, B, 0, 8);
+					if (smf_quat_dot(dqA, dqB) < 0) smf_dq_negate(dqA);
+					smf_dq_lerp(dqA, dqB, keyframeArray[2], tempDQ);
 					smf_dq_normalize(tempDQ);
 					
 					//Find local and then world orientation of the node
@@ -195,11 +200,17 @@ function smf_anim(_name) constructor
 					var A = keyframeA[i];
 					var B = keyframeB[i];
 					var C = keyframeC[i];
-					//if (smf_quat_dot(A, B) < 0){smf_dq_negate(A);}
-					//if (smf_quat_dot(B, C) < 0){smf_dq_negate(C);}
+					var dqA = array_create(8);
+					var dqB = array_create(8);
+					var dqC = array_create(8);
+					array_copy(dqA, 0, A, 0, 8);
+					array_copy(dqB, 0, B, 0, 8);
+					array_copy(dqC, 0, C, 0, 8);
+					if (smf_quat_dot(dqA, dqB) < 0) smf_dq_negate(dqA);
+					if (smf_quat_dot(dqB, dqC) < 0) smf_dq_negate(dqC);
 			
 					//Find interpolated local change in orientation
-					smf_dq_quadratic_interpolate(A, B, C, keyframeArray[3], tempDQ);
+					smf_dq_quadratic_interpolate(dqA, dqB, dqC, keyframeArray[3], tempDQ);
 					smf_dq_normalize(tempDQ);
 			
 					//Find local and then world orientation of the node
@@ -815,6 +826,10 @@ function anim_set_sample_frame_multiplier(anim, frameMultiplier)
 
 function anim_write_to_buffer(saveBuff, anim)
 {
+	if (!is_struct(anim) || !variable_struct_exists(anim, "keyframeGrid") || !ds_exists(anim.keyframeGrid, ds_type_grid)) {
+		show_debug_message("WARNING: anim_write_to_buffer received invalid or uninitialized anim (no keyframeGrid); skipping to prevent crash.");
+		return;
+	}
 	var keyframeGrid = anim.keyframeGrid;
 	var keyframeNum = ds_grid_height(keyframeGrid);
 	var nodeNum = anim.nodeNum;

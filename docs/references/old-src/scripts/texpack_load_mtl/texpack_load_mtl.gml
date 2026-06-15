@@ -13,13 +13,18 @@ function texpack_load_mtl(argument0, argument1) {
 	var fname = argument0;
 	var mtlNames = argument1;
 
-	var file = file_text_open_read(fname);
-	if file < 0
+	var file = -1;
+	if (file_exists(fname))
 	{
-		show_debug_message("ERROR in script texpack_load_mtl: Failed to load mtl file " + string(fname));
+		file = file_text_open_read(fname);
+	}
+	if (file < 0)
+	{
+		// Missing mtl is common for reference/demo assets that ship only .obj; do not spam "ERROR"
+		show_debug_message("texpack_load_mtl: mtl file not found (expected for some demo assets): " + string(fname));
 		return [];
 	}
-	show_debug_message("Script texpack_load_mtl: Loading mtl file " + string(fname));
+	// show_debug_message("texpack_load_mtl: Loading mtl file " + string(fname)); // noisy, enable only for debug
 
 	var path = filename_path(fname);
 

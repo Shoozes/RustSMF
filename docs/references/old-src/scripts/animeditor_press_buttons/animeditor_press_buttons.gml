@@ -59,7 +59,7 @@ function animeditor_press_buttons() {
 			//Duplicate animation
 			undo_save("Duplicate animation", edtUndoType.Animation);
 			animation = animArray[ind];
-			var name = get_string("Duplicate animation: Set the name of the new animation", animation.name + "_2");
+			var name = animation.name + "_2"; // get_string deprecated in 2026; using generated default for legacy ref
 			if (name == ""){exit;}
 			model.SelAnim = animNum;
 			animArray[@ model.SelAnim] = anim_duplicate(animation);
@@ -110,7 +110,7 @@ function animeditor_press_buttons() {
 		{
 			//Rename animation
 			var oldName = animation.name;
-			var newName = get_string("Give this animation a new name", oldName);
+			var newName = oldName + "_renamed"; // get_string deprecated in 2026; using suffixed default for legacy ref
 			if newName == ""{exit;}
 			animation.name = newName;
 			buttons_update();
@@ -173,7 +173,7 @@ function animeditor_press_buttons() {
 		case "ANIMATIONSPEED": 
 			if (animation < 0){break;} 
 			var oldTime = animation.playTime;
-			var newTime = get_integer("Set animation time (in milliseconds)", oldTime); 
+			var newTime = oldTime; // get_integer deprecated in 2026; keeping current value for legacy ref
 			if newTime <= 0{break;}
 			animation.playTime = newTime;
 			break;
@@ -203,7 +203,7 @@ function animeditor_press_buttons() {
 	
 		case "NEWANIM":
 			var animNum = array_length(animArray);
-			var name = get_string("Name of new animation", "anim" + string(animNum));
+			var name = "anim" + string(animNum); // get_string deprecated in 2026; using generated default for legacy ref
 			if (name == ""){break;}
 			undo_save("New animation", edtUndoType.Animation);
 			animArray[@ animNum] = anim_create(name);

@@ -7,7 +7,7 @@ var str = "SMF demo 2: Interpolating between animations:\n" +
 	"Press E to enable sample interpolation.\n" +
 	"Interpolation: " + (global.enableInterpolation ? "Enabled" : "Disabled") + "\n" + 
 	"Controls: Mouse, WASD, Shift, Space\n" +
-	"Press 1 through 6 to switch rooms";;
+	"Press 1 through 6 to switch rooms";
 
 draw_set_colour(c_black);
 draw_set_alpha(0.3);

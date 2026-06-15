@@ -26,14 +26,14 @@ if global.editMode == eTab.Animation
 	edtAnimPlayTime = 0;
 	if selKeyframe >= 0
 	{
-		var animInd = animArray[selAnim];;
+		var animInd = animArray[selAnim];
 		var keyframeGrid = animInd.keyframeGrid;
 		var keyframeTime = keyframeGrid[# 0, selKeyframe]
 		edtAnimPlayTime = keyframeTime;
 	}
 	if !edtAnimPlay
 	{
-		var animInd = animArray[selAnim];;
+		var animInd = animArray[selAnim];
 		var keyframeGrid = animInd.keyframeGrid;
 		var keyframeTime = keyframeGrid[# 0, selKeyframe]
 		model.Sample = anim_generate_sample(rig, animArray[selAnim], keyframeTime, eAnimInterpolation.Keyframe);

@@ -6,13 +6,15 @@ Core: high-fidelity SMF roundtrip (import/export with coord/DQ), guarded skinned
 
 ## State and work
 - Current app state: docs/dev/APP_STATE.md
-- Active backlog + completed (paired what/why/where/how + done criteria): docs/TODO.md
+- Active backlog + recent completed integrity work (paired what/why/where/how + done criteria): docs/TODO.md
 - Regression prevention and verification gaps: docs/dev/PITFALL_LEDGER.md
 - Context groups for files/folders/features/issues: summary_bank.json (narrow paths, intent-based; validate with python -m json.tool after edits)
 
 ## Quick commands (from repo root)
+.\run.bat                              # launch desktop app (same default as run.ps1)
+pwsh -File run.ps1                     # launch desktop app
 pwsh -File run.ps1 -Task verify        # lint + app typecheck + test typecheck + build + chunk guard + unit + cargo check
-pwsh -File run.ps1 -Task test:e2e      # Playwright (smoke + visual + native IPC mocks)
+pwsh -File run.ps1 -Task test:e2e      # Playwright via build+preview (smoke + visual + native IPC mocks)
 pwsh -File run.ps1 -Task desktop-smoke # unbundled tauri build + Rust native peek tests (4 tests in main.rs)
 
 See run.ps1 help, source/frontend/package.json, source/package.json (workspace), source/src-tauri for details.
@@ -26,12 +28,13 @@ See run.ps1 help, source/frontend/package.json, source/package.json (workspace),
 - backend-client/tauri.ts: bridge (native dialog/read/write + browser fallbacks); save returns bool for cancel distinction
 - store/: lightweight slice hooks (no extra deps)
 - src-tauri/src/main.rs: Tauri commands + shared parse_smf_header_info + native tests exercising same logic as TS/Rust peeks
-- Tests: unit (DQ/roundtrip/guard edges in loaders/*.test.ts), e2e smoke (real fixtures + UI), native.spec (deterministic IPC mocks for open/read/save/cancel + desktop status sims aligned to u8 anim count)
+- Tests: unit (DQ/roundtrip/guard edges in loaders/*.test.ts), e2e smoke (real fixtures + static FBX + generated skinned GLB + UI), native.spec (deterministic IPC mocks for open/read/save/cancel + desktop status sims aligned to u8 anim count)
 
 ## Known limits (intentional)
 - SMF export from edited pose or converted skinned: pos/rot only (no scale channel in DQ path). Scale edits block SMF export with status.
 - Non-SMF SMF export only for single shared named skeleton skinned, pos/quat bone tracks (no scale anim, no static, no multi-skel). Else GLB.
 - FBX export uses GLB container (no official FBXExporter without new deps).
+- FBX load/export dispatch uses a self-authored static ASCII fixture; skinned non-SMF export fidelity is covered by the generated skinned GLB fixture.
 - OBJ: load/preview parity only (static focus); export via GLB.
 - Native automation: deterministic Playwright Tauri IPC mocks + Rust cmd tests (real OS dialogs optional later via tauri-driver if needed).
 - Desktop peeks: small header/rig/anim/model validation for .smf status (real FS in Rust; complements full TS loader).
@@ -40,4 +43,4 @@ Philosophy (AGENTS.md): Safety, courtesy, show, efficiency. Dynamic/modular over
 
 All features connect through guarded loaders + seq-guarded async load (loadSeq/fileReadSeq + isCurrentLoad checks) + ref-decoupled timing (playback, orbit enable on drag, RAF reports) + clear error/status UX + fidelity gates that fail explicitly rather than drop data.
 
-Run verify after changes. Update state docs + summary_bank only on scope/status shifts (keep lean). The 2026-06-14 integrity pass restored missing test-source typecheck/native IPC gates and moved stale progress history into concise backlog and pitfall records.
+Run verify after changes. Update state docs + summary_bank only on scope/status shifts (keep lean). Work locally on `main`; temp branches are scratch only. Push only when explicitly requested, and push/sync `main` unless another branch is explicitly named. The 2026-06-15 integrity pass fixed launcher defaults, cleared the Vite/esbuild audit, moved e2e to production preview, restored execute-plan old-src reference docs/screenshots, recovered GameMaker `.gml`/`.yy`/`SMF.yyp` source metadata from the local auto-stash, and consolidated stale progress history into current backlog and pitfall records.

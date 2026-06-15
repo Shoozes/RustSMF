@@ -10,6 +10,7 @@ import {
   pausePlaybackIfRunning,
   setupBrowserDiagnostics,
 } from './helpers/smoke-helpers';
+import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 
 // Basic smoke tests for the RustSMF shell + model loading.
 // These exercise the core Three.js viewport, loaders, timeline, and export paths.
@@ -23,7 +24,7 @@ import {
 // - Rust #[test] in src-tauri/src/main.rs covers real std::fs SMF header/rig/anim/model peeks.
 // - run.ps1 desktop-smoke runs unbundled Tauri build, cargo tests, and the native IPC Playwright suite.
 // - Extended beforeEach/listeners + real-sample screenshot asserts (light + toHave) for bone selection / export flows.
-// - FBX UI dispatch is covered here; fixture-backed full FBX/skinned real-file coverage is tracked in docs/TODO.md.
+// - FBX UI dispatch is covered here; generated skinned GLB covers non-SMF skinned load/export fidelity.
 // Keep browser e2e primary + fast; native.spec.ts and Rust tests cover desktop-specific binary/IPC/status behavior.
 
 test.describe('RustSMF basic shell and model flow (Chromium)', () => {
@@ -368,7 +369,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
   });
 
   // FBX UI parity coverage: format accept/drop hint/export control presence.
-  // Full fixture-backed FBX load/export coverage runs in the next test.
+  // Fixture-backed FBX coverage below exercises the loader/export dispatch; generated skinned GLB covers skinned non-SMF fidelity.
   test('FBX import happy path coverage (UI + load dispatch)', async ({ page }) => {
     await page.goto('/');
 
@@ -379,20 +380,15 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     // Drop hint mentions FBX
     await expect(page.locator('text=/Drop .* here/')).toContainText(/fbx/i);
 
-    // Export dispatch is covered by the fixture-backed FBX test; this keeps the UI support check isolated.
+    // Export dispatch is covered by the fixture-backed FBX and generated skinned GLB tests; this keeps the UI support check isolated.
     const exportBtn = page.getByTestId('export-btn');
     await expect(exportBtn).toBeVisible();
 
-    // The full fixture-backed FBX load+export path runs in the next test.
+    // Full FBX parsing runs when the self-authored local fixture is present.
   });
 
-  // FBX import happy path (full load if sample) - per test scenarios #13 and desktop e2e priority
-  // Exercises loadFBX + "Loaded FBX" status, bone select/transform, exportFBX (wired; produces .glb container with full skin/anim fidelity via GLTF equivalent, no new deps).
-  // Re-import as .glb works. UI coverage in previous test; this for full when sample present (the export click asserts tolerate .glb from FBX path).
-  // Native save behavior for FBX-loaded roots uses the same saveFile path covered by native.spec.ts.
-
-  test('FBX import happy path (full load if sample)', async ({ page }) => {
-    test.skip(!SAMPLE_FBX, 'No .fbx test model available (local or old-src reference; see FBX UI test for current coverage). Full roundtrip automation (load+bone+exportFBX status) is implemented and will run when sample present.');
+  test('FBX import happy path (self-authored static fixture)', async ({ page }) => {
+    test.skip(!SAMPLE_FBX, 'No .fbx test model available. Default repo fixture is source/frontend/tests/test.fbx.');
 
     await page.goto('/');
 
@@ -401,14 +397,37 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/Loaded FBX|bones|clips/i);
+    await expect(page.getByTestId('three-canvas')).toBeVisible();
 
-    // Bone select, transforms/gizmo (functional), export (same as SMF)
+    const exportBtn = page.getByTestId('export-btn');
+    await exportBtn.click();
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb/i, { timeout: 5000 });
+
+    await page.getByTestId('export-smf-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(
+      /No skinned model loaded for SMF export|Cannot export as SMF|Exported \.smf/i,
+      { timeout: 5000 }
+    );
+  });
+
+  test('generated skinned GLB load and SMF/GLB export path', async ({ page }) => {
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(await createSkinnedGlbFixtureInput());
+
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture\.glb|bones: 2|clips: 1/i);
+
     const inspector = page.getByTestId('inspector');
-    const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /./ }).nth(0);
-    if (await anyBoneEntry.count() > 0) {
-      await anyBoneEntry.click({ force: true }).catch(() => {});
-      await page.waitForTimeout(60);
-    }
+    await expect(inspector).toContainText(/Bones \(2\)/i);
+    await expect(inspector).toContainText(/FixtureRoot|FixtureTip/i);
+    await expect(page.getByTestId('timeline')).toBeVisible();
+
+    const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /FixtureRoot|FixtureTip/ }).first();
+    await anyBoneEntry.click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
+
     const xBtn = inspector.getByTestId('transform-x-btn');
     if (await xBtn.count() > 0) {
       await xBtn.click({ force: true }).catch(() => {});
@@ -416,16 +435,26 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     }
     await expect(page.getByTestId('three-canvas')).toBeVisible();
 
+    const exportSmfBtn = page.getByTestId('export-smf-btn');
+    await exportSmfBtn.click();
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf \(from GLB\/FBX/i, { timeout: 5000 });
+
     const exportBtn = page.getByTestId('export-btn');
     await exportBtn.click();
-    await expect(page.getByTestId('status-text')).toContainText(/Exported \.(smf|glb)/i, { timeout: 5000 });
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb/i, { timeout: 5000 });
+
+    await expectRenderedScreenshot(page.getByTestId('viewport-container'));
+
+    const errors = getBrowserErrors(page);
+    const criticalErrors = errors.filter((e: string) => e.includes('ERROR'));
+    expect(criticalErrors.length).toBe(0);
   });
 
   // OBJ static load parity (per P4 and edge case search).
   // Exercises loadOBJ (static mesh, no skeleton) + status + outliner/inspector (no bones list) + render.
   // Export uses GLB path (intentional limit). Complements SMF/FBX fixture coverage.
   test('OBJ static load parity (full load if sample)', async ({ page }) => {
-    test.skip(!SAMPLE_OBJ || !SAMPLE_OBJ.endsWith('.obj'), 'No .obj test model available (local test.obj or future). Full static load coverage (status + no skeleton + render) will run when sample present.');
+    test.skip(!SAMPLE_OBJ || !SAMPLE_OBJ.endsWith('.obj'), 'No .obj test model available in this checkout. Default repo fixture is source/frontend/tests/test.obj.');
 
     await page.goto('/');
 
@@ -457,10 +486,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     // await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000, { strict: true, name: 'obj-static-parity' });
   });
 
-  // Partial progress on P2 1a: viewport coverage (transform drag/weight preview/bone selection).
-  // Existing smoke tests already exercise: canvas visibility, weight-preview-btn, transform-x-btn, mode buttons, raycast click, bone list in inspector, marker.
-  // Added explicit assertions here for SMF load state to document coverage before any extract.
-  test('viewport features smoke (P2 1a partial coverage)', async ({ page }) => {
+  // Viewport coverage for transform controls, weight preview, bone selection, and SMF load state.
+  test('viewport features smoke', async ({ page }) => {
     test.skip(!SAMPLE_SMF, 'No .smf test model available');
     await page.goto('/');
     const input = page.getByTestId('model-file-input');

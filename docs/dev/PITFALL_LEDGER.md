@@ -1,6 +1,51 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-15 (full repo review: added JSX text interpolation pitfall; noted bone highlight disposal gap and type-safety gaps in findBoneByName/lastSmfDataRef).
+Last reviewed: 2026-06-15 (integrity pass: launcher default/local Tauri CLI, Vite 8 e2e preview server, chunk guard fail-closed, stale open guard, SMF visual tearing fixed, execute-plan branch work plus old-src auto-stash reconciled locally).
+
+### Q: What pitfall are we preventing?
+
+**What:** SMF models can parse successfully with no console errors while the visible mesh is torn apart.
+
+**Why it happened:** The Three loader treated SMF rig DQs as local bone transforms even though the old GameMaker loader stores bind-pose `WorldDQ`, and animation frames are per-node world poses that must be converted to local parent space. Render geometry also used raw byte weights whose sums can be below 1, while the old dual-quaternion shader normalized blended DQs.
+
+**Where:** `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/coord.test.ts`, `source/frontend/tests/mixamo_smf_baldguy.smf`, old-src reference screenshots in `docs/references/old-src/screenshots/`.
+
+**How to catch it:** Load `source/frontend/tests/mixamo_smf_baldguy.smf` visually and run `npm --workspace frontend run test:unit`; the bind-pose CPU skinning regression asserts vertices do not drift apart.
+
+**Solutions tried:**
+1. `45/100` Rely on parser success and screenshot byte-size checks, result: torn meshes still counted as rendered.
+2. `94/100` Build Three bones from SMF world bind matrices, compute inverse bind matrices from real world transforms, convert animation frame world poses to local parent space, normalize render-side weights, and add the CPU bind-pose regression, result: the sample renders as a coherent low-poly character and tests catch recurrence.
+
+**Current solution:** `buildThreeScene` derives local transforms from stored world DQs, uses world inverse binds, converts animation tracks through parent world matrices, and normalizes skin weights for Three rendering while leaving imported SMF data intact for export.
+
+**Effectiveness:** `94/100`, durable. It is verified by unit tests, visual screenshots, and the old source semantics.
+
+**Relevance check:** Current. This is a core model-load path and can regress when SMF rig/animation conversion changes.
+
+**Next prevention step:** Add a stricter visual heuristic for loaded SMF bounding boxes or skeleton/mesh coherence if screenshot snapshots become part of the default gate.
+
+### Q: What pitfall are we preventing?
+
+**What:** Work can remain stranded on temp/review branches or auto-stashes, then docs can make the wrong source of truth look authoritative.
+
+**Why it happened:** Execute-plan refs contained old-src docs/screenshots/proof artifacts and source review fixes, but the newer old-src GameMaker `.gml`/`.yy`/`SMF.yyp` state lived in `stash@{0}` from an auto-stash before pull. A branch-only audit made docs claim GML/YY hash verification against the execute-plan tip even though that branch did not contain the recovered GML work.
+
+**Where:** remote `origin/execute-plan/*` refs, `stash@{0}`, `AGENTS.md`, `docs/references/old-src/*`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/*`.
+
+**How to catch it:** Run `git branch --all --verbose --no-abbrev`, inspect `git log main..branch`, diff branch-only files, and also run `git stash list` plus `git stash show --name-status` before deleting branches or stash entries. Confirm needed work is present on local `main`.
+
+**Solutions tried:**
+1. `55/100` Leave branch work as branch-only context, result: main missed old-src screenshots/docs and export-path review fixes.
+2. `70/100` Reconcile branch-only artifacts and fixes onto local `main` while assuming old-src GML/YY lived in the execute-plan tip, result: docs preserved screenshots but misidentified the backing source for the GameMaker source edits.
+3. `96/100` Keep execute-plan docs/screenshots/proof artifacts and `options/reddit` metadata, restore tracked old-src `.gml`/`.yy`/`SMF.yyp` paths from `stash@{0}`, apply whitespace-only cleanup where needed before commit, document push semantics in `AGENTS.md`, keep generated reports/test-results out of source, and confirm the old-src GameMaker project manually after recovery, result: temp branches and the auto-stash each have a clear role and the recovered GML was user-tested.
+
+**Current solution:** Work locally on `main`; temp branches are scratch/review only; explicit `push to git` means push/sync `main` only unless the user names another branch. Do not drop `stash@{0}` until the recovered old-src `.gml`/`.yy`/`SMF.yyp` state is committed or separately archived, and account for expected execute-plan-only metadata or whitespace-only cleanup if comparing against the stash.
+
+**Effectiveness:** `96/100`, durable once committed. The workflow rule is documented, branch cleanup can be validated with git diffs, stash cleanup now has an explicit guard, and the restored old-src GameMaker state was manually verified by loading/testing it.
+
+**Relevance check:** Current. The repo had execute-plan refs and an auto-stash with different useful old-src work.
+
+**Next prevention step:** After verification, delete local temp branches only once their unique work is represented on `main`; do not delete remote branches or stash entries without an explicit cleanup request and a current diff check.
 
 ### Q: What pitfall are we preventing?
 
@@ -51,21 +96,22 @@ Last reviewed: 2026-06-15 (full repo review: added JSX text interpolation pitfal
 
 **Why it happened:** Long pass-history sections were appended over time, and later reviews trusted those claims instead of checking referenced files, scripts, and test execution.
 
-**Where:** `docs/TODO.md`, `docs/dev/APP_STATE.md`, `summary_bank.json`, `source/frontend/package.json`, missing `source/frontend/tsconfig.test.json`, missing `source/frontend/tests/native.spec.ts`, and absent default FBX fixture coverage.
+**Where:** `docs/TODO.md`, `docs/dev/APP_STATE.md`, `summary_bank.json`, `source/frontend/package.json`, missing `source/frontend/tsconfig.test.json`, missing `source/frontend/tests/native.spec.ts`, and previously absent default skinned non-SMF fixture coverage.
 
 **How to catch it:** For every documented gate or fixture, run `rg` for the referenced file/script, run the command directly, and confirm skipped tests are intentional backlog items rather than completed coverage.
 
 **Solutions tried:**
 1. `45/100` Keep appending pass recaps, result: important coverage claims became hard to verify and some were stale.
-2. `90/100` Add missing `typecheck:test`, `tsconfig.test.json`, direct Node types, and `native.spec.ts`; then rewrite TODO/APP_STATE into current state plus active backlog, result: docs now match runnable gates and remaining FBX fixture work is explicit.
+2. `90/100` Add missing `typecheck:test`, `tsconfig.test.json`, direct Node types, and `native.spec.ts`; then rewrite TODO/APP_STATE into current state plus active backlog, result: docs matched runnable gates and remaining fixture work became explicit.
+3. `95/100` Add generated self-authored skinned GLB fixture coverage and remove the sample-dependent FBX skip, result: default e2e now covers non-SMF skinned load, guarded SMF export, and GLB export without external asset assumptions.
 
-**Current solution:** `run.ps1 -Task verify` runs app and test typechecks; `tests/native.spec.ts` covers mocked Tauri open/read/save/cancel; TODO tracks missing fixture-backed FBX/skinned real-file coverage as active work.
+**Current solution:** `run.ps1 -Task verify` runs app and test typechecks; `tests/native.spec.ts` covers mocked Tauri open/read/save/cancel; `tests/helpers/skinned-glb-fixture.ts` provides default non-SMF skinned fixture coverage.
 
-**Effectiveness:** `90/100`, durable. The fix adds executable gates and removes duplicated progress logs, but fixture-backed FBX coverage still remains open.
+**Effectiveness:** `95/100`, durable. The fix adds executable gates, removes duplicated progress logs, and closes the default skinned fixture skip with generated self-authored data.
 
 **Relevance check:** Current. Integrity passes and feature docs will continue to reference gates and fixtures.
 
-**Next prevention step:** Before marking coverage complete, require file existence checks plus a fresh command result in TODO or APP_STATE.
+**Next prevention step:** Before marking coverage complete, require file existence checks or generated-fixture source checks plus a fresh command result in TODO or APP_STATE.
 
 ### Q: What pitfall are we preventing?
 
@@ -199,3 +245,93 @@ Last reviewed: 2026-06-15 (full repo review: added JSX text interpolation pitfal
 **Relevance check:** Current (and future P2 splits of smf/ThreeViewport will re-apply same discipline).
 
 **Next prevention step:** Consider a small CONTRIBUTING or AGENTS note, or pre-commit grep guard for known helper names. Use monolith-modularization skill explicitly on >400 line files before extract.
+
+### Q: What pitfall are we preventing?
+
+**What:** Project launchers can look healthy while not actually starting the app for the default user path.
+
+**Why it happened:** `run.ps1` defaulted to help text, `run.bat` assumed `pwsh` was available, and the Tauri path could depend on a globally installed CLI instead of the repo-local npm dependency.
+
+**Where:** `run.ps1`, `run.bat`, `README.md`, `source/frontend/package.json`.
+
+**How to catch it:** Run the exact user-facing commands with no extra task arguments: `.\run.bat` and `pwsh -File run.ps1`. Confirm Vite starts and the Tauri desktop app process launches, not only that help text prints.
+
+**Solutions tried:**
+1. `55/100` Keep launch instructions as explicit tasks only, result: documented commands worked but the user-facing default failed the "run this project" expectation.
+2. `94/100` Make no-arg `run.ps1` start desktop dev, make `run.bat` fall back to Windows PowerShell, and invoke the local npm Tauri CLI, result: default launchers run the app without global CLI assumptions.
+
+**Current solution:** `run.ps1` defaults to Tauri dev, `run.bat` uses `pwsh` when present and `powershell` otherwise, and Tauri commands route through local npm scripts.
+
+**Effectiveness:** `94/100`, durable for local Windows launch. It still depends on repo dependencies being installed.
+
+**Relevance check:** Current. Launcher behavior is the first user-visible health check.
+
+**Next prevention step:** After changing run scripts or package scripts, run both default launchers, not only `-Task verify`.
+
+### Q: What pitfall are we preventing?
+
+**What:** Vite dev-server HMR websocket failures can masquerade as Playwright app regressions.
+
+**Why it happened:** After the Vite 8 upgrade, the dev server could emit `ws error: RangeError: Max payload size exceeded` during parallel WebGL/file-flow tests. Affected pages reloaded to initial state, so assertions failed even though the built app behavior was valid.
+
+**Where:** `source/frontend/playwright.config.ts`, `source/frontend/tests/README.md`, `run.ps1 -Task test:e2e`.
+
+**How to catch it:** Run the full e2e suite after dependency or server changes. Look for websocket max-payload errors, status text resetting to the initial viewport-ready state, and failures clustered after file-load flows.
+
+**Solutions tried:**
+1. `45/100` Cap Playwright workers while still using `vite dev`, result: failures persisted.
+2. `50/100` Disable Vite HMR while still using `vite dev`, result: failures persisted.
+3. `93/100` Build first and serve tests with `vite preview`, result: full e2e passed and later generated skinned GLB coverage removed the old FBX/skinned fixture skip.
+
+**Current solution:** Playwright webServer runs `npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort`, does not reuse an existing server, and caps local workers at 4.
+
+**Effectiveness:** `93/100`, durable for current e2e coverage. It adds a build step to e2e runtime but removes dev-server HMR noise from product-flow tests.
+
+**Relevance check:** Current. Any future Vite/Playwright server change should retest the full suite.
+
+**Next prevention step:** Keep e2e on production preview unless a replacement passes the full suite and does not reintroduce websocket/page-reset symptoms.
+
+### Q: What pitfall are we preventing?
+
+**What:** Verification scripts can pass while an expected production chunk split is missing.
+
+**Why it happened:** `check-entry-chunks.mjs` printed a warning and exited 0 when `three-vendor` was absent, and also skipped with a success exit when `dist` could not be read.
+
+**Where:** `source/frontend/scripts/check-entry-chunks.mjs`, `run.ps1 -Task verify`, `source/package.json` verify script.
+
+**How to catch it:** Temporarily remove or rename the built `dist/index.html` or the Vite manual chunk config, then run `node scripts/check-entry-chunks.mjs` and verify the process exits nonzero.
+
+**Solutions tried:**
+1. `58/100` Warn but continue, result: humans could miss the warning and automated gates stayed green.
+2. `92/100` Emit errors and `process.exit(1)` on missing split or missing dist, result: `verify` now fails closed.
+
+**Current solution:** The chunk check exits 1 when the production build artifact cannot be inspected or the expected `three-vendor` split is absent.
+
+**Effectiveness:** `92/100`, durable for this check. It intentionally treats a missing build as a verification failure.
+
+**Relevance check:** Current. Three.js bundle splitting is a performance and startup integrity concern.
+
+**Next prevention step:** Keep guard scripts fail-closed unless a skipped state is explicitly part of the command contract.
+
+### Q: What pitfall are we preventing?
+
+**What:** Stale file-open or browser file/drop read results can overwrite newer load state.
+
+**Why it happened:** `handleOpen` awaited the dialog result without its own sequence guard. Browser file-input/drop reads checked freshness only on success; an older read rejection could still set error/status after a newer read began.
+
+**Where:** `source/frontend/src/hooks/useLoadModel.ts`.
+
+**How to catch it:** Mock two overlapping `openFile()` or browser read promises in a focused hook/component test or native IPC flow, resolve/reject the older one last, and assert it does not mutate status or load the old file.
+
+**Solutions tried:**
+1. `70/100` Rely on `loadSeqRef` inside `loadModel`, result: stale loads were guarded but stale dialog status/error paths were not.
+2. `88/100` Add `openSeqRef` around `openFile()` success and error handling, result: stale dialog results return before mutating state.
+3. `90/100` Add read-sequence checks to browser file-input/drop catch paths, result: stale read failures return before mutating error/status.
+
+**Current solution:** `handleOpen` increments `openSeqRef`; browser file-input/drop reads increment `fileReadSeqRef`; success and catch paths check the captured sequence before setting status, error, or loading.
+
+**Effectiveness:** `90/100`, durable for the current async boundaries. A future focused async race test would raise confidence further.
+
+**Relevance check:** Current. Open dialogs and fallback file inputs are user-facing async boundaries.
+
+**Next prevention step:** Add a focused overlapping-open/read test if open/load orchestration changes again.

@@ -40,13 +40,6 @@ function getGmlFiles(): string[] {
   return gmlFilesCache;
 }
 
-let fbxFilesCache: string[] | null = null;
-function getFbxFiles(): string[] {
-  if (fbxFilesCache) return fbxFilesCache;
-  fbxFilesCache = [];
-  return fbxFilesCache;
-}
-
 export let SAMPLE_SMF: string | null = null;
 if (fs.existsSync(LOCAL_TEST_SMF)) {
   SAMPLE_SMF = LOCAL_TEST_SMF;
@@ -65,8 +58,6 @@ export const BAD_INPUT_FOR_ERROR_TEST = (BAD_GML && fs.existsSync(BAD_GML))
 export let SAMPLE_FBX: string | null = null;
 if (fs.existsSync(LOCAL_TEST_FBX)) {
   SAMPLE_FBX = LOCAL_TEST_FBX;
-} else if (getFbxFiles().length > 0) {
-  SAMPLE_FBX = path.join(SMF_DIR, getFbxFiles()[0]);
 }
 
 const LOCAL_TEST_OBJ = path.resolve(__dirname, '../test.obj');

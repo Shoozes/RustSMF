@@ -25,7 +25,7 @@ function animeditor_modify_timeline() {
 	var rig = model.rig;
 	if selAnim < array_length(animArray)
 	{
-		animation = animArray[selAnim];;
+		animation = animArray[selAnim];
 	}
 
 	if (animation < 0){exit;}

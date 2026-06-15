@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import {
   smfVecToThree,
-  dqToLocalTransform,
   dqNegate,
   dqNormalize,
   dqFlipSign,
+  dqToMatrix,
+  smfMatrixToThree,
+  decomposeMatrix,
 } from './coord';
 import { bytesToArrayBuffer, BinaryReader, BinaryWriter } from './smfBinary';
 import { buildSmfNodeList } from './smfRig';
@@ -205,6 +207,66 @@ export function importSMF(buffer: ArrayBuffer): ImportedSmf {
   return { meshes, textures, bones, animations };
 }
 
+function isValidParent(parent: number, index: number, count: number): boolean {
+  return parent >= 0 && parent < count && parent !== index;
+}
+
+function dqToThreeMatrix(dq: Float32Buffer): THREE.Matrix4 {
+  const smfMatrix = dqToMatrix(dq);
+  const threeMatrix = smfMatrixToThree(smfMatrix);
+  return new THREE.Matrix4().fromArray(threeMatrix);
+}
+
+function makeLocalMatrix(
+  worldMatrix: THREE.Matrix4,
+  parentWorldMatrix: THREE.Matrix4 | null
+): THREE.Matrix4 {
+  if (!parentWorldMatrix) {
+    return worldMatrix.clone();
+  }
+  return parentWorldMatrix.clone().invert().multiply(worldMatrix);
+}
+
+function applyMatrixTransform(target: THREE.Object3D, matrix: THREE.Matrix4) {
+  const { pos, quat, scale } = decomposeMatrix(matrix);
+  target.position.copy(pos);
+  target.quaternion.copy(quat);
+  target.scale.copy(scale);
+}
+
+function normalizeQuatHemisphere(
+  quat: THREE.Quaternion,
+  prev: THREE.Quaternion | null
+): THREE.Quaternion {
+  if (prev && quat.dot(prev) < 0) {
+    quat.set(-quat.x, -quat.y, -quat.z, -quat.w);
+  }
+  return quat;
+}
+
+function normalizeSkinWeightsForThree(weights: Float32Buffer): Float32Array {
+  const normalized = new Float32Array(weights.length);
+  for (let i = 0; i < weights.length; i += 4) {
+    const w0 = weights[i] ?? 0;
+    const w1 = weights[i + 1] ?? 0;
+    const w2 = weights[i + 2] ?? 0;
+    const w3 = weights[i + 3] ?? 0;
+    const sum = w0 + w1 + w2 + w3;
+    if (sum > 0) {
+      normalized[i] = w0 / sum;
+      normalized[i + 1] = w1 / sum;
+      normalized[i + 2] = w2 / sum;
+      normalized[i + 3] = w3 / sum;
+    } else {
+      normalized[i] = 1;
+      normalized[i + 1] = 0;
+      normalized[i + 2] = 0;
+      normalized[i + 3] = 0;
+    }
+  }
+  return normalized;
+}
+
 // Build real Three.js objects from imported SMF data.
 // This is the key function that turns raw SMF into SkinnedMesh + Skeleton + AnimationClips.
 export function buildThreeScene(imported: ImportedSmf) {
@@ -212,40 +274,36 @@ export function buildThreeScene(imported: ImportedSmf) {
   sceneRoot.name = 'SMF_Root';
 
   const threeBones: THREE.Bone[] = [];
-  const boneInverses: THREE.Matrix4[] = [];
   const worldMats: THREE.Matrix4[] = [];
+  const nodeCount = imported.bones.length;
 
-  // Build bones from DQ rig data (apply coord transform)
+  // SMF rig DQs are stored as bind-pose world transforms. Three needs local
+  // transforms in the object hierarchy, plus inverse bind matrices in world space.
   imported.bones.forEach((b, i) => {
     const bone = new THREE.Bone();
     bone.name = `Bone_${i}`;
-
-    // Convert DQ -> local transform in Y-up
-    const { pos, quat } = dqToLocalTransform(b.dq);
-    bone.position.copy(pos);
-    bone.quaternion.copy(quat);
-
     threeBones.push(bone);
-    worldMats.push(new THREE.Matrix4().compose(pos, quat, new THREE.Vector3(1,1,1)));
+    worldMats.push(dqToThreeMatrix(b.dq));
   });
 
-  // Hierarchy + inverses. Support node 0 as real root + parent-0 semantics for children of root.
-  // Heads (isBone=0) are modeled as extra nodes in the SMF rig list (parallel to threeBones for now).
+  // Parent before decomposing: local matrix = inverse(parent world) * node world.
   imported.bones.forEach((b, i) => {
-    if (b.parent >= 0 && b.parent < threeBones.length && b.parent !== i) {
+    const parentWorld = isValidParent(b.parent, i, nodeCount) ? worldMats[b.parent] : null;
+    applyMatrixTransform(threeBones[i], makeLocalMatrix(worldMats[i], parentWorld));
+    if (isValidParent(b.parent, i, nodeCount)) {
       threeBones[b.parent].add(threeBones[i]);
     }
-    const inv = worldMats[i].clone().invert();
-    boneInverses.push(inv);
   });
-
-  const skeleton = new THREE.Skeleton(threeBones, boneInverses);
 
   // Add roots: node 0 (self p=0) is root; children with p=0 attach via hierarchy above; treat <=0 or invalid parent as root.
   threeBones.filter((_bone, i) => {
     const p = imported.bones[i].parent;
-    return p < 0 || p === i || p >= threeBones.length || !threeBones[p];
+    return !isValidParent(p, i, nodeCount);
   }).forEach(root => sceneRoot.add(root));
+
+  sceneRoot.updateMatrixWorld(true);
+  const boneInverses = threeBones.map(bone => bone.matrixWorld.clone().invert());
+  const skeleton = new THREE.Skeleton(threeBones, boneInverses);
 
   // Textures
   const threeTextures = imported.textures.map(t => {
@@ -280,7 +338,7 @@ export function buildThreeScene(imported: ImportedSmf) {
       skinIndicesNew[k] = boneRemap[m.skinIndices[k]] ?? 0;
     }
     geometry.setAttribute('skinIndex', new THREE.BufferAttribute(skinIndicesNew, 4));
-    geometry.setAttribute('skinWeight', new THREE.BufferAttribute(m.skinWeights, 4));
+    geometry.setAttribute('skinWeight', new THREE.BufferAttribute(normalizeSkinWeightsForThree(m.skinWeights), 4));
 
     const material = new THREE.MeshStandardMaterial({
       map: m.texIdx >= 0 ? threeTextures[m.texIdx] : null,
@@ -301,20 +359,25 @@ export function buildThreeScene(imported: ImportedSmf) {
 
   imported.animations.forEach((a) => {
     const tracks: (THREE.VectorKeyframeTrack | THREE.QuaternionKeyframeTrack)[] = [];
+    const frameWorldMats = a.frames.map(frame => frame.map(dqToThreeMatrix));
 
     for (let n = 0; n < a.nodeCount; n++) {
       const boneName = threeBones[n]?.name || `Bone_${n}`;
       const posValues = new Float32Array(a.times.length * 3);
       const quatValues = new Float32Array(a.times.length * 4);
+      let prevQuat: THREE.Quaternion | null = null;
 
-      let prevDQ: Float32Array | null = null;
-
-      a.frames.forEach((frame, f) => {
-        let dq = frame[n];
-        dq = dqFlipSign(dqNegate(dqNormalize(dq)), prevDQ); // continuity
-        prevDQ = dq;
-
-        const { pos, quat } = dqToLocalTransform(dq);
+      a.frames.forEach((_frame, f) => {
+        const frameMatrices = frameWorldMats[f] ?? [];
+        const worldMatrix = frameMatrices[n] ?? worldMats[n];
+        const parent = imported.bones[n]?.parent ?? -1;
+        const parentWorld = isValidParent(parent, n, frameMatrices.length)
+          ? frameMatrices[parent]
+          : null;
+        const localMatrix = makeLocalMatrix(worldMatrix, parentWorld);
+        const { pos, quat } = decomposeMatrix(localMatrix);
+        normalizeQuatHemisphere(quat, prevQuat);
+        prevQuat = quat.clone();
 
         posValues[f*3+0] = pos.x;
         posValues[f*3+1] = pos.y;
@@ -362,7 +425,7 @@ export function buildThreeScene(imported: ImportedSmf) {
 export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
   const { meshes, textures, bones: importedBones, animations } = imported;
 
-  // Build nodeList via extracted rig helper (P2 1c modularity; safe boundary, preserves all export behavior + public API).
+  // Build nodeList via the extracted rig helper while preserving export behavior and public API.
   const { nodeList } = buildSmfNodeList(importedBones);
 
   const versionString = 'SMF_v12_by_Snidr_and_Bart';
@@ -507,8 +570,10 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
 
     const prevDQs: (Float32Array | null)[] = new Array(nodeList.length).fill(null);
 
+    const duration = Number.isFinite(a.duration) && a.duration > 0 ? a.duration : 0;
     a.times.forEach((t, fi) => {
-      aW.f32(t / a.duration);
+      const normalizedTime = duration > 0 && Number.isFinite(t) ? t / duration : 0;
+      aW.f32(normalizedTime);
 
       const frameDqs = a.frames[fi] || [];
 

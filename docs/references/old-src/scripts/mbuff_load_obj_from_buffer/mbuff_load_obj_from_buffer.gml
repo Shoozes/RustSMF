@@ -6,11 +6,13 @@ function mbuff_load_obj_from_buffer(buffer, path = "", load_textures = true) {
 	/*
 		Loads an OBJ file and returns an array containing the following:
 		[mBuff, texPack]
-	
+
 		Script created by TheSnidr, 2019
 		www.thesnidr.com
 	*/
 	var contents = buffer_read(buffer, buffer_text);
+	contents = string_replace_all(contents, "\r\n", "\n");
+	contents = string_replace_all(contents, "\r", "\n");
 	var lines = string_split(contents, "\n");
 	var num = array_length(lines);
 
@@ -28,31 +30,60 @@ function mbuff_load_obj_from_buffer(buffer, path = "", load_textures = true) {
 	var V_num = 0;
 	var N_num = 0;
 	var T_num = 0;
-	
+
+	// Helper to resolve OBJ index (positive 1-based or negative relative) to 0-based array index
+	var __resolve_idx = function(_idx_str, _count) {
+		var _idx = real(_idx_str);
+		if (_idx < 0) {
+			_idx = _count + _idx;
+		} else {
+			_idx -= 1;
+		}
+		return _idx;
+	};
+
 	//Read .obj as text
 	for (var i = 0; i < num; ++i)
 	{
-		//Remove the newline from the end of the string
-		var this_line = string_delete(lines[i], string_length(lines[i]), 1);
-		
-		//Continue if the string is empty
+		var this_line = string_trim(lines[i]);
 		if (this_line == "") continue;
-		
+
+		// Collapse multiple spaces (string_split on " " does not auto-collapse)
+		var _prev = "";
+		while (string_count(this_line, "  ") > 0 && this_line != _prev) {
+			_prev = this_line;
+			this_line = string_replace_all(this_line, "  ", " ");
+		}
+
 		var tokens = string_split(this_line, " ");
+		// Filter empty tokens from any edge/double-space cases
+		var clean = [];
+		for (var k = 0; k < array_length(tokens); ++k) {
+			if (tokens[k] != "") array_push(clean, tokens[k]);
+		}
+		tokens = clean;
+		if (array_length(tokens) == 0) continue;
+
 		//Different types of information in the .obj starts with different headers
 		switch tokens[0]
 		{
 			//Load vertex positions
 			case "v":
-				V[V_num ++] = [real(tokens[1]), real(tokens[2]), real(tokens[3])];
+				if (array_length(tokens) >= 4) {
+					V[V_num ++] = [real(tokens[1]), real(tokens[2]), real(tokens[3])];
+				}
 				break;
 			//Load normals
 			case "vn":
-				N[N_num ++] = [real(tokens[1]), real(tokens[2]), real(tokens[3])];
+				if (array_length(tokens) >= 4) {
+					N[N_num ++] = [real(tokens[1]), real(tokens[2]), real(tokens[3])];
+				}
 				break;
 			//Load texture coordinates
 			case "vt":
-				T[T_num ++] = [real(tokens[1]), real(tokens[2])];
+				if (array_length(tokens) >= 3) {
+					T[T_num ++] = [real(tokens[1]), real(tokens[2])];
+				}
 				break;
 			//Load faces
 			case "f":
@@ -63,25 +94,25 @@ function mbuff_load_obj_from_buffer(buffer, path = "", load_textures = true) {
 					var indices = string_split(info, "/");
 					var slashnum = string_count("/", info);
 					var doubleslashnum = string_count("//", info);
-					
+
 					if (slashnum == 2 && doubleslashnum == 0)
-					{	//If the vertex contains a position, texture coordinate and normal
-						face_verts[j] = [real(indices[0]) - 1, real(indices[2]) - 1, real(indices[1]) - 1];
+					{	//If the vertex contains a position, texture coordinate and normal (v/t/n)
+						face_verts[j] = [__resolve_idx(indices[0], V_num), __resolve_idx(indices[2], N_num), __resolve_idx(indices[1], T_num)];
 					}
 					else if (slashnum == 1)
-					{	//If the vertex contains a position and a texture coordinate
-						face_verts[j] = [real(indices[0]) - 1, 0, real(indices[1]) - 1];
+					{	//If the vertex contains a position and a texture coordinate (v/t)
+						face_verts[j] = [__resolve_idx(indices[0], V_num), 0, __resolve_idx(indices[1], T_num)];
 					}
 					else if (slashnum == 0)
 					{	//If the vertex only contains a position
-						face_verts[j] = [real(indices[0]) - 1, 0, 0];
+						face_verts[j] = [__resolve_idx(indices[0], V_num), 0, 0];
 					}
 					else if (doubleslashnum == 1)
-					{	//If the vertex contains a position and normal
-						face_verts[j] = [real(indices[0]) - 1, real(indices[2]) - 1, 0];
+					{	//If the vertex contains a position and normal (v//n)
+						face_verts[j] = [__resolve_idx(indices[0], V_num), __resolve_idx(indices[2], N_num), 0];
 					}
 				}
-				
+
 				//Add vertices in a triangle fan
 				var F = submodels[mtlind];
 				for (var j = 0; j <= vert_num - 3; ++j)
@@ -93,18 +124,20 @@ function mbuff_load_obj_from_buffer(buffer, path = "", load_textures = true) {
 				break;
 			//Load name of MTL library
 			case "mtllib":
-				mtlFname = tokens[1];
+				if (array_length(tokens) >= 2) mtlFname = tokens[1];
 				break;
 			//Load material name
 			case "usemtl":
-				usemtl = tokens[1];
-				mtlind = array_get_index(materials, usemtl);
-				if (mtlind < 0)
-				{
-					mtlind = array_length(materials);
-					materials[mtlind] = usemtl;
-					submodels[mtlind] = array_create(num);
-					faces[mtlind] = 0;
+				if (array_length(tokens) >= 2) {
+					usemtl = tokens[1];
+					mtlind = array_get_index(materials, usemtl);
+					if (mtlind < 0)
+					{
+						mtlind = array_length(materials);
+						materials[mtlind] = usemtl;
+						submodels[mtlind] = array_create(num);
+						faces[mtlind] = 0;
+					}
 				}
 				break;
 		}
@@ -123,24 +156,24 @@ function mbuff_load_obj_from_buffer(buffer, path = "", load_textures = true) {
 		for (var f = 0; f < vertNum; f ++)
 		{
 			vnt = F[f];
-		
+
 			//Add the vertex to the model buffer
 			v = V[vnt[0]];
 			buffer_write(mBuff[m], buffer_f32, v[0]);
 			buffer_write(mBuff[m], buffer_f32, v[2]);
 			buffer_write(mBuff[m], buffer_f32, v[1]);
-		
+
 			//Vertex normal
 			n = N[vnt[1]];
 			buffer_write(mBuff[m], buffer_f32, n[0]);
 			buffer_write(mBuff[m], buffer_f32, n[2]);
 			buffer_write(mBuff[m], buffer_f32, n[1]);
-		
+
 			//Vertex UVs
 			t = T[vnt[2]];
 			buffer_write(mBuff[m], buffer_f32, t[0]);
 			buffer_write(mBuff[m], buffer_f32, 1-t[1]);
-			
+
 			//Auxiliary attributes
 			buffer_write(mBuff[m], buffer_u32, c_white); //Colour, white by default
 			buffer_write(mBuff[m], buffer_u32, 0); //Bone indices
@@ -150,10 +183,13 @@ function mbuff_load_obj_from_buffer(buffer, path = "", load_textures = true) {
 
 	//Load MTL file
 	var texPack = [];
-	if load_textures
+	if load_textures && mtlFname != ""
 	{
 		var mtlPath = filename_path(path) + filename_name(mtlFname);
-		texPack = texpack_load_mtl(mtlPath, materials);
+		if (file_exists(mtlPath))
+		{
+			texPack = texpack_load_mtl(mtlPath, materials);
+		}
 	}
 
 	//Return array containing the mBuff array, the name of the mtl file and the names of the materials of the submodels
@@ -186,7 +222,7 @@ function mbuff_load_obj_from_buffer(buffer, path = "", load_textures = true) {
 		}
 		file = string_delete(file, 1, pos);
 		str = string_replace_all(str,"  "," ");
-		
+
 		//Different types of information in the .obj starts with different headers
 		switch string_copy(str, 1, 2)
 		{
@@ -241,27 +277,27 @@ function mbuff_load_obj_from_buffer(buffer, path = "", load_textures = true) {
 		for (var f = 0; f < vertNum; f ++)
 		{
 			vnt = F[| f];
-		
+
 			//Add the vertex to the model buffer
 			v = V[| vnt[0]];
 			if !is_array(v){v = [0, 0, 0];}
 			buffer_write(mBuff[m], buffer_f32, v[0]);
 			buffer_write(mBuff[m], buffer_f32, v[2]);
 			buffer_write(mBuff[m], buffer_f32, v[1]);
-		
+
 			//Vertex normal
 			n = N[| vnt[1]];
 			if !is_array(n){n = [0, 0, 1];}
 			buffer_write(mBuff[m], buffer_f32, n[0]);
 			buffer_write(mBuff[m], buffer_f32, n[2]);
 			buffer_write(mBuff[m], buffer_f32, n[1]);
-		
+
 			//Vertex UVs
 			t = T[| vnt[2]];
 			if !is_array(t){t = [.5, .5];}
 			buffer_write(mBuff[m], buffer_f32, t[0]);
 			buffer_write(mBuff[m], buffer_f32, 1-t[1]);
-			
+
 			//Auxiliary attributes
 			buffer_write(mBuff[m], buffer_u32, c_white); //Colour, white by default
 			buffer_write(mBuff[m], buffer_u32, 0); //Bone indices

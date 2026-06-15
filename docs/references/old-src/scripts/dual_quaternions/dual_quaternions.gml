@@ -146,7 +146,20 @@ function smf_dq_multiply(R, S, targetDQ = array_create(8))
 function smf_dq_normalize(DQ, targetDQ = DQ)
 {
 	var q0 = DQ[0], q1 = DQ[1], q2 = DQ[2], q3 = DQ[3], q4 = DQ[4], q5 = DQ[5], q6 = DQ[6], q7 = DQ[7];
-	var l = 1 / sqrt(q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3);
+	var rlen2 = q0 * q0 + q1 * q1 + q2 * q2 + q3 * q3;
+	if (rlen2 <= 0.0 || is_nan(rlen2)) {
+		// invalid or zero-length rotation quat (can happen with degenerate/partial load data or bad exports); set identity dual quat to avoid NaN crash
+		targetDQ[@ 0] = 0;
+		targetDQ[@ 1] = 0;
+		targetDQ[@ 2] = 0;
+		targetDQ[@ 3] = 1;
+		targetDQ[@ 4] = 0;
+		targetDQ[@ 5] = 0;
+		targetDQ[@ 6] = 0;
+		targetDQ[@ 7] = 0;
+		return targetDQ;
+	}
+	var l = 1 / sqrt(rlen2);
 	targetDQ[@ 0] = q0 * l
 	targetDQ[@ 1] = q1 * l
 	targetDQ[@ 2] = q2 * l

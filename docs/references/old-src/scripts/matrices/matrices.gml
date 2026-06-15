@@ -4,14 +4,17 @@ function smf_mat_create(x, y, z, toX, toY, toZ, upX, upY, upZ, xScale, yScale, z
 	if (l > 0)
 	{
 		l = 1 / l;
+		toX *= l;
+		toY *= l;
+		toZ *= l;
 	}
 	else
 	{
 		show_debug_message("ERROR in script smf_mat_create: Supplied zero-length vector for to-vector.");
+		// Fallback: use default forward +Z, up +Y at the position
+		toX = 0; toY = 0; toZ = 1;
+		upX = 0; upY = 1; upZ = 0;
 	}
-	toX *= l;
-	toY *= l;
-	toZ *= l;
 
 	//Orthogonalize up-vector to to-vector
 	var dot = upX * toX + upY * toY + upZ * toZ;
@@ -24,15 +27,22 @@ function smf_mat_create(x, y, z, toX, toY, toZ, upX, upY, upZ, xScale, yScale, z
 	if (l > 0)
 	{
 		l = 1 / l;
+		upX *= l;
+		upY *= l;
+		upZ *= l;
 	}
 	else
 	{
 		show_debug_message("ERROR in script smf_mat_create: Supplied zero-length vector for up-vector, or the up- and to-vectors are parallel.");
+		// pick a non-parallel up
+		if (abs(toX) > abs(toY)) {
+			upX = -toY; upY = toX; upZ = 0;
+		} else {
+			upX = 0; upY = -toZ; upZ = toY;
+		}
+		l = 1 / sqrt(upX*upX + upY*upY + upZ*upZ);
+		upX *= l; upY *= l; upZ *= l;
 	}
-		
-	upX *= l;
-	upY *= l;
-	upZ *= l;
 
 	//Create side vector
 	var siX, siY, siZ;

@@ -1,4 +1,12 @@
 @echo off
-REM Thin wrapper. Prefer pwsh run.ps1 -Task <name>
-pwsh -File "%~dp0run.ps1" %*
-if %ERRORLEVEL% neq 0 exit /b %ERRORLEVEL%
+setlocal
+set "RUN_PS1=%~dp0run.ps1"
+
+where pwsh >nul 2>nul
+if %ERRORLEVEL% equ 0 (
+  pwsh -NoProfile -ExecutionPolicy Bypass -File "%RUN_PS1%" %*
+) else (
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%RUN_PS1%" %*
+)
+
+exit /b %ERRORLEVEL%

@@ -78,13 +78,13 @@ function smf_cast_ray_sphere(sx, sy, sz, r, x1, y1, z1, x2, y2, z2, doublesided 
 	//u is the remaining distance from this plane to the surface of the sphere, times the length of dV
 	var u = t * t + v * (r * r - d);
 
-	//If u is less than 0, there is no intersection
-	if (u < 0)
+	//If u is less than 0 or NaN (from bad node pos due to prior load/NaN data), no intersection
+	if (is_nan(u) || u < 0)
 	{
 		return -1;
 	}
 	
-	u = sqrt(max(u, 0));
+	u = sqrt(u);
 	if (t < u)
 	{
 		if (!doublesided)

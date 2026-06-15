@@ -16,3 +16,7 @@ Rust in the backend/main source
 Work locally on `main` only unless the user explicitly requests a different branch.
 
 Do not push automatically. A push means the work is considered reviewed; the user may push manually, or explicitly request a push.
+
+Temporary branches are acceptable only as local scratch/review surfaces. Before final handoff, gather needed work back onto local `main` and clean temporary local branches when they are no longer needed.
+
+When the user explicitly requests `push to git` or runs an approved push script, treat that as push/sync from `main` only. Do not push temp branches unless the user explicitly names that branch.

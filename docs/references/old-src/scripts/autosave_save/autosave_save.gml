@@ -5,20 +5,21 @@ function autosave_save(argument0) {
 	edtAutosaveAvailable = false;
 
 	var model = -1;
+	var mBuff, vBuff, vis, texPack, wire, selList, selNode, animArray, selAnim, selKeyframe, rig;
 	if (edtSMFSel >= 0)
 	{
 		model = edtSMFArray[edtSMFSel];
-		var mBuff = model.mBuff;
-		var vBuff = model.vBuff;
-		var vis = model.vis;
-		var texPack = model.texPack;
-		var wire = model.Wire;
-		var selList = model.SelModelList;
-		var selNode = model.SelNode;
-		var animArray = model.animations;
-		var selAnim = model.SelAnim;
-		var selKeyframe = model.SelKeyframe;
-		var rig = model.rig;
+		mBuff = model.mBuff;
+		vBuff = model.vBuff;
+		vis = model.vis;
+		texPack = model.texPack;
+		wire = model.Wire;
+		selList = model.SelModelList;
+		selNode = model.SelNode;
+		animArray = model.animations;
+		selAnim = model.SelAnim;
+		selKeyframe = model.SelKeyframe;
+		rig = model.rig;
 	}
 	else
 	{

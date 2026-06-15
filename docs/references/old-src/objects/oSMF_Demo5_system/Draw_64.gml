@@ -7,7 +7,7 @@ var str = "SMF demo 5: More real-time sample editing:\n" +
 	"The chassis and each wheel are mapped to their own bones, which can be rotated at will.\n" +
 	"FPS is locked to 60 in order to simplify the car physics.\n" +
 	"Controls: Mouse, WASD\n" +
-	"Press 1 through 6 to switch rooms";;
+	"Press 1 through 6 to switch rooms";
 
 draw_set_colour(c_black);
 draw_set_alpha(0.3);

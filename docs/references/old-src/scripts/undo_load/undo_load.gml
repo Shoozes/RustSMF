@@ -80,7 +80,7 @@ function undo_load(argument0) {
 			rigeditor_update_skeleton();
 			if (global.editMode == eTab.Animation)
 			{
-				var animInd = animArray[selAnim];;
+				var animInd = animArray[selAnim];
 				var keyframeGrid = animInd.keyframeGrid;
 				var keyframeTime = keyframeGrid[# 0, model.SelKeyframe];
 				model.Sample = anim_generate_sample(rig, animArray[selAnim], keyframeTime, eAnimInterpolation.Keyframe);
@@ -124,7 +124,7 @@ function undo_load(argument0) {
 			model.SelKeyframe = min(model.SelKeyframe, anim_get_keyframe_num(animArray[selAnim]) - 1);
 			if (global.editMode == eTab.Animation)
 			{
-				var animInd = animArray[selAnim];;
+				var animInd = animArray[selAnim];
 				var keyframeGrid = animInd.keyframeGrid;
 				var keyframeTime = keyframeGrid[# 0, model.SelKeyframe];
 				model.Sample = anim_generate_sample(rig, animArray[selAnim], keyframeTime, eAnimInterpolation.Keyframe);
@@ -185,7 +185,7 @@ function undo_load(argument0) {
 				model.SelKeyframe = min(model.SelKeyframe, anim_get_keyframe_num(animArray[selAnim]) - 1);
 				if global.editMode == eTab.Animation
 				{
-					var animInd = animArray[selAnim];;
+					var animInd = animArray[selAnim];
 					var keyframeGrid = animInd.keyframeGrid;
 					var keyframeTime = keyframeGrid[# 0, model.SelKeyframe];
 					model.Sample = anim_generate_sample(rig, animArray[selAnim], keyframeTime, eAnimInterpolation.Keyframe);

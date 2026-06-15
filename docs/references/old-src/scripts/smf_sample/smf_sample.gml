@@ -82,7 +82,7 @@ function sample_lerp(S1, S2, amount, S = array_create(array_length(S1)))
 		var u0 = D1[0], u1 = D1[1], u2 = D1[2], u3 = D1[3], u4 = D1[4], u5 = D1[5], u6 = D1[6], u7 = D1[7];
 		if (s < 0){
 			for (var i = 0; i < 8; i ++){
-				T[i] *= -1;;
+				T[i] *= -1;
 			}
 		}
 		var D2 = smf_dq_multiply(T, smf_dq_get_conjugate(S2));

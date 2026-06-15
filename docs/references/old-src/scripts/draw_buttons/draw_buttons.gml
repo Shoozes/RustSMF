@@ -22,7 +22,7 @@ function draw_buttons() {
 		var rig = model.rig;
 		if selAnim < array_length(animArray)
 		{
-			animation = animArray[selAnim];;
+			animation = animArray[selAnim];
 		}
 	}
 

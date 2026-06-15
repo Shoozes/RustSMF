@@ -1,5 +1,5 @@
 // Barrel for loaders (SMF/GLB/FBX/coord).
-// Promotes modularity and cleaner imports for consumers (e.g. hook, tests, future utils).
+// Promotes modularity and cleaner imports for hooks, tests, and shared utilities.
 // Re-exports main public API; keeps specific imports possible for tree-shaking.
 
 export * from './smf';

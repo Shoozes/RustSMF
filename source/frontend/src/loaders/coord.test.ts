@@ -3,6 +3,7 @@
 
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
+import * as THREE from 'three';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import path from 'path';
@@ -114,11 +115,50 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
 // Unit: data-driven roundtrip on minimal (no DOM deps).
 // + Real sample cycle using reference .smf files (fs in node test env).
 // E2E in smoke.spec.ts for visuals + full UI flows.
-import { exportSMFToBuffer, importSMF, ImportedSmf } from './smf';
+import { exportSMFToBuffer, importSMF, buildThreeScene, ImportedSmf } from './smf';
 import { bytesToArrayBuffer } from './smfBinary';
 import fs from 'fs';
 
 const SMF_DIR = path.resolve(__dirname, '../../../docs/references/old-src/datafiles/SMF');
+
+function installImageTestPolyfill() {
+  const g = globalThis as any;
+  if (!g.Image) {
+    g.Image = class {
+      src = '';
+      width = 1;
+      height = 1;
+    };
+  }
+  if (!g.document) {
+    g.document = {
+      createElement(tag: string) {
+        if (tag !== 'canvas') {
+          throw new Error(`Unsupported test element: ${tag}`);
+        }
+        return {
+          width: 1,
+          height: 1,
+          getContext() {
+            return {
+              createImageData(width: number, height: number) {
+                return { data: new Uint8ClampedArray(width * height * 4) };
+              },
+              putImageData() {},
+              drawImage() {},
+              getImageData(_sx = 0, _sy = 0, width = 1, height = 1) {
+                return { data: new Uint8ClampedArray(width * height * 4) };
+              },
+            };
+          },
+          toDataURL() {
+            return 'data:image/png;base64,';
+          },
+        };
+      },
+    };
+  }
+}
 
 describe('smf export roundtrip (data-driven)', () => {
   it('minimal ImportedSmf export -> reimport preserves structure', () => {
@@ -169,6 +209,33 @@ describe('smf export roundtrip (data-driven)', () => {
     for (let i = 0; i < origPos.length; i++) {
       assert.ok(Math.abs(origPos[i] - rePos[i]) < 1e-5, `pos[${i}] drift too large`);
     }
+  });
+
+  it('zero-duration SMF animation export writes finite normalized frame times', () => {
+    const dq = new Float32Array([0,0,0,1,0,0,0,0]);
+    const fixture: ImportedSmf = {
+      meshes: [],
+      textures: [],
+      bones: [{ index: 0, parent: 0, isBone: 1, dq, axis: [0,1,0] }],
+      animations: [{
+        name: 'zero',
+        duration: 0,
+        times: [0],
+        frames: [[dq]],
+        nodeCount: 1,
+        loop: 0,
+        interpolation: 1,
+        sampleFrameMultiplier: 1,
+        lockedBones: []
+      }]
+    };
+
+    const reimported = importSMF(bytesToArrayBuffer(exportSMFToBuffer(fixture)));
+
+    assert.strictEqual(reimported.animations.length, 1);
+    assert.strictEqual(reimported.animations[0].times.length, 1);
+    assert.strictEqual(reimported.animations[0].times[0], 0);
+    assert.ok(Number.isFinite(reimported.animations[0].times[0]));
   });
 
   it('real sample SMF roundtrip (import -> exportToBuffer -> reimport) preserves counts and data fidelity', () => {
@@ -248,6 +315,34 @@ describe('smf export roundtrip (data-driven)', () => {
     assert.strictEqual(reimported.bones[2].parent, 0);
     assert.strictEqual(reimported.bones[3].parent, 2, 'disconnected child parent to head preserved');
     assert.strictEqual(reimported.bones[3].isBone, 1);
+  });
+
+  it('real SMF bind pose skinning is stable and does not tear vertices apart', () => {
+    const sampleFile = path.resolve(__dirname, '../../tests/mixamo_smf_baldguy.smf');
+    if (!fs.existsSync(sampleFile)) return;
+    installImageTestPolyfill();
+
+    const imported = importSMF(bytesToArrayBuffer(fs.readFileSync(sampleFile)));
+    const loaded = buildThreeScene(imported);
+    loaded.root.updateMatrixWorld(true);
+
+    let checked = 0;
+    for (const mesh of loaded.skinnedMeshes) {
+      const position = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+      if (!position || position.count === 0) continue;
+
+      mesh.skeleton.update();
+      for (let i = 0; i < position.count; i++) {
+        const original = new THREE.Vector3().fromBufferAttribute(position, i);
+        const skinned = original.clone();
+        mesh.applyBoneTransform(i, skinned);
+        const drift = skinned.distanceTo(original);
+        assert.ok(Number.isFinite(drift), `vertex ${i} produced non-finite skinning drift`);
+        assert.ok(drift < 1e-3, `vertex ${i} bind-pose drift too large: ${drift}`);
+        checked++;
+      }
+    }
+    assert.ok(checked > 0, 'expected real SMF sample to contain skinned vertices');
   });
 });
 

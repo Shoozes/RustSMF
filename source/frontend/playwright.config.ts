@@ -11,7 +11,7 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: process.env.CI ? 1 : 4,
   reporter: [
     ['html', { outputFolder: 'playwright-report' }],
     ['list']
@@ -29,9 +29,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev',
+    command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort',
     url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     stdout: 'ignore',
     stderr: 'pipe',
   },

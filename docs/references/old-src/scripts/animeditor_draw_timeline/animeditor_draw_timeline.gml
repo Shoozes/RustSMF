@@ -45,7 +45,7 @@ function animeditor_draw_timeline() {
 	{
 		exit;
 	}
-	var animation = animArray[selAnim];;
+	var animation = animArray[selAnim];
 	var keyframeGrid = animation.keyframeGrid;
 	var keyframeNum = ds_grid_height(keyframeGrid);
 		

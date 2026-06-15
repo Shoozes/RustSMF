@@ -81,7 +81,7 @@ else
 //Animate the model
 if (global.editMode == eTab.Animation && edtAnimPlay && is_struct(model))
 {
-	var animInd = animArray[selAnim];;
+	var animInd = animArray[selAnim];
 	edtAnimPlayTime = frac(edtAnimPlayTime + 1000 / (animInd.playTime * game_get_speed(gamespeed_fps)));
 	if !is_array(model.SampleStrip)
 	{

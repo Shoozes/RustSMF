@@ -2,7 +2,7 @@
   "$GMProject":"v1",
   "%Name":"SMF",
   "AudioGroups":[
-    {"$GMAudioGroup":"","%Name":"audiogroup_default","name":"audiogroup_default","resourceType":"GMAudioGroup","resourceVersion":"2.0","targets":-1,},
+    {"$GMAudioGroup":"v1","%Name":"audiogroup_default","exportDir":"","name":"audiogroup_default","resourceType":"GMAudioGroup","resourceVersion":"2.0","targets":-1,},
   ],
   "configs":{
     "children":[],
@@ -76,7 +76,7 @@
   "isEcma":false,
   "LibraryEmitters":[],
   "MetaData":{
-    "IDEVersion":"2024.13.0.190",
+    "IDEVersion":"2026.0.0.16",
   },
   "name":"SMF",
   "resources":[
@@ -334,8 +334,8 @@
   "resourceType":"GMProject",
   "resourceVersion":"2.0",
   "RoomOrderNodes":[
-    {"roomId":{"name":"rmSMF_Demo1","path":"rooms/rmSMF_Demo1/rmSMF_Demo1.yy",},},
     {"roomId":{"name":"rm_anim_editor","path":"rooms/rm_anim_editor/rm_anim_editor.yy",},},
+    {"roomId":{"name":"rmSMF_Demo1","path":"rooms/rmSMF_Demo1/rmSMF_Demo1.yy",},},
     {"roomId":{"name":"rmSMF_Demo6","path":"rooms/rmSMF_Demo6/rmSMF_Demo6.yy",},},
     {"roomId":{"name":"rmSMF_Demo2","path":"rooms/rmSMF_Demo2/rmSMF_Demo2.yy",},},
     {"roomId":{"name":"rmSMF_Demo3","path":"rooms/rmSMF_Demo3/rmSMF_Demo3.yy",},},

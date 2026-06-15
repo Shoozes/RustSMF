@@ -17,14 +17,14 @@ global._SMFAsyncModel = -1;
 global._SMFAsyncText = "";
 #macro SMFAsyncDebug true
 #macro SMFDebugEnable false
-	
+
 enum eAnimInterpolation{
 	Keyframe, Linear, Quadratic}
-		
+
 enum eAnimNode{
 	Name, WorldDQ, LocalDQ, WorldDQConjugate, LocalDQConjugate, Parent, Children, Descendants, IsBone, Length, PrimaryAxis, Locked, LockedPos, Num}
 
-function smf_model_load(path) 
+function smf_model_load(path)
 {
 	if !file_exists(path){return -1;}
 	var ext = string_lower(filename_ext(path));
@@ -34,7 +34,7 @@ function smf_model_load(path)
 	}
 	if (ext == ".smf")
 	{
-		var loadBuff = buffer_load(path); 
+		var loadBuff = buffer_load(path);
 		var model = smf_model_load_from_buffer(loadBuff, path);
 		buffer_delete(loadBuff);
 
@@ -44,12 +44,12 @@ function smf_model_load(path)
 	return -1;
 }
 
-function smf_model_get_animation(model, name) 
+function smf_model_get_animation(model, name)
 {
 	return model.get_animation(name);
 }
 
-function smf_model_load_from_buffer(loadBuff, path = "", targetModel = new smf_model()) 
+function smf_model_load_from_buffer(loadBuff, path = "", targetModel = new smf_model())
 {
 	if (path != "")
 	{
@@ -84,7 +84,7 @@ function smf_model_load_from_buffer(loadBuff, path = "", targetModel = new smf_m
 		smf_debug_message("smf_model_load_from_buffer: The given buffer does not contain a valid SMF model");
 		return -1;
 	}
-	
+
 	//Load buffer positions
 	var texPos = buffer_read(loadBuff, buffer_u32);
 	var modPos = buffer_read(loadBuff, buffer_u32);
@@ -154,20 +154,27 @@ function smf_model_load_from_buffer(loadBuff, path = "", targetModel = new smf_m
 		vertex_freeze(vBuff);
 		model.mBuff[m] = mBuff;
 		model.vBuff[m] = vBuff;
-		
+
 		var matName = buffer_read(loadBuff, buffer_string);
 		var texName = buffer_read(loadBuff, buffer_string);
 		model.texPack[m] = texMap[? texName] ?? -1;
 		model.vis[m] = buffer_read(loadBuff, buffer_u8);
 	}
 	ds_map_destroy(texMap);
-	
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//Load rig
+	// This is the canonical modern path (v12 and all non-Dwarf v11 loads).
+	// Always u32 nodeCount, u32 parent, u8 isBone, (no locked for v12 here), 3f axis, full negate,
+	// trust stored WorldDQ, manual derive only (no update_node overwrite).
+	// Legacy handling for known old demo assets (Dwarf etc.) is isolated by explicit filename check
+	// inside the v11 path in Utility.gml — it never affects this code or modern user models.
 	buffer_seek(loadBuff, buffer_seek_start, rigPos);
 	var nodeNum = buffer_read(loadBuff, buffer_u32);
 	if (nodeNum > 0)
 	{
+		model.rig = new smf_rig();
+		// First pass: populate all node arrays (parents may be forward refs or any order)
 		for (var i = 0; i < nodeNum; i ++)
 		{
 			//Load the node as a dual quaternion
@@ -176,67 +183,96 @@ function smf_model_load_from_buffer(loadBuff, path = "", targetModel = new smf_m
 			{
 				Q[j] = buffer_read(loadBuff, buffer_f32);
 			}
-			
+			// Match JS importer flip (used by GLBtoSMF converter)
+			for (var j = 0; j < 8; j ++) Q[j] = -Q[j];
+
 			//Create a node
 			var node = array_create(eAnimNode.Num, 0);
 			node[@ eAnimNode.WorldDQ] = Q;
-			node[@ eAnimNode.Parent] = buffer_read(loadBuff, buffer_u32);
+			var p = buffer_read(loadBuff, buffer_u32);
+			node[@ eAnimNode.Parent] = (p >= 0 && p < nodeNum) ? p : 0;
 			node[@ eAnimNode.IsBone] = buffer_read(loadBuff, buffer_u8);
-			
+
 			//Load primary axis, which is used for IK. If no primary axis is stored, SMF will do an educated guess when needed.
 			var px = buffer_read(loadBuff, buffer_f32);
 			var py = buffer_read(loadBuff, buffer_f32);
 			var pz = buffer_read(loadBuff, buffer_f32);
 			node[@ eAnimNode.PrimaryAxis] = (px == 0 && py == 0 && pz == 0) ? undefined : [px, py, pz];
-			
-			//Add node to rig
+
+			//Add node to rig (guarantees slot is array before any update_node)
 			model.rig.nodeList[| i] = node;
-			model.rig.update_node(i);
 		}
-		
+
+		// Derive Local/Conjugates/Length from file's WorldDQs (trust stored orientations from file; do not re-derive/overwrite World rot via update_node, as that can produce bad DQs or pointing bones for data from converters/old formats)
+		for (var i = 0; i < nodeNum; i ++)
+		{
+			var node = model.rig.nodeList[| i];
+			var nodeDQ = node[eAnimNode.WorldDQ];
+			var nodePos = smf_dq_get_translation(nodeDQ);
+			var pIdx = node[eAnimNode.Parent];
+			var pNode = (pIdx >= 0 && pIdx < nodeNum) ? model.rig.nodeList[| pIdx] : node;
+			var pPos = is_array(pNode) && is_array(pNode[eAnimNode.WorldDQ]) ? smf_dq_get_translation(pNode[eAnimNode.WorldDQ]) : [0, 0, 0];
+			var bvX = nodePos[0] - pPos[0];
+			var bvY = nodePos[1] - pPos[1];
+			var bvZ = nodePos[2] - pPos[2];
+			var bl = bvX*bvX + bvY*bvY + bvZ*bvZ;
+			node[@ eAnimNode.Length] = (bl > 0 ? sqrt(bl) : 0);
+			node[@ eAnimNode.WorldDQConjugate] = smf_dq_get_conjugate(nodeDQ, array_create(8));
+			var pConj = (is_array(pNode) && is_array(pNode[eAnimNode.WorldDQConjugate])) ? pNode[eAnimNode.WorldDQConjugate] : array_create(8);
+			node[@ eAnimNode.LocalDQ] = smf_dq_multiply(pConj, nodeDQ, array_create(8));
+			node[@ eAnimNode.LocalDQConjugate] = smf_dq_get_conjugate(node[eAnimNode.LocalDQ], array_create(8));
+			if (!is_array(node[eAnimNode.PrimaryAxis])) node[@ eAnimNode.PrimaryAxis] = [0, 0, 1];
+		}
+
 		//Update the rig's bind map, for mapping bones to nodes
 		model.rig.update_bindmap();
 	}
-	
+
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//Load animation
 	buffer_seek(loadBuff, buffer_seek_start, aniPos);
-	var animNum = buffer_read(loadBuff, buffer_u8);
+	var animNum = (buffer_tell(loadBuff) + 1 <= buffer_get_size(loadBuff)) ? buffer_read(loadBuff, buffer_u8) : 0;
 	var nodeList = model.rig.nodeList;
 	var poseDQ = array_create(nodeNum);
-	model.animations = array_create(animNum);
-	model.sampleStrips = array_create(animNum);
-	
+	model.animations = [];
+	model.sampleStrips = [];
+
 	//Loop through all the animations
 	for (var a = 0; a < animNum; a ++)
 	{
+		if (buffer_tell(loadBuff) + 1 > buffer_get_size(loadBuff)) break;
 		//Read animation settings
 		var animName = buffer_read(loadBuff, buffer_string);
 		var anim = new smf_anim(animName);
+		if (buffer_tell(loadBuff) + 1 + 4 + 1 + 1 > buffer_get_size(loadBuff)) break;
 		anim.loop = buffer_read(loadBuff, buffer_u8);
 		anim.playTime = buffer_read(loadBuff, buffer_f32);
 		anim.interpolation = buffer_read(loadBuff, buffer_u8);
 		anim.sampleFrameMultiplier = buffer_read(loadBuff, buffer_u8);
 		anim.nodeNum = nodeNum;
 		anim.update_playspeed();
-		model.animMap[? animName] = a;
-		model.animations[a] = anim;
-		
+		model.animMap[? animName] = array_length(model.animations);
+		array_push(model.animations, anim);
+
 		//Read locked bones for this animation
-		var lockedBonesNum = buffer_read(loadBuff, buffer_u16);
+		var lockedBonesNum = (buffer_tell(loadBuff) + 2 <= buffer_get_size(loadBuff)) ? buffer_read(loadBuff, buffer_u16) : 0;
 		for (var i = 0; i < lockedBonesNum; i ++)
 		{
+			if (buffer_tell(loadBuff) + 2 > buffer_get_size(loadBuff)) break;
 			anim.lockedBonesList[| i] = buffer_read(loadBuff, buffer_u16);
 		}
-		
+
 		//Loop through the keyframes of this animation
-		var frameNum = buffer_read(loadBuff, buffer_u32);
+		var frameNum = (buffer_tell(loadBuff) + 4 <= buffer_get_size(loadBuff)) ? buffer_read(loadBuff, buffer_u32) : 0;
 		for (var f = 0; f < frameNum; f ++)
 		{
+			if (buffer_tell(loadBuff) + 4 > buffer_get_size(loadBuff)) {
+				break;
+			}
 			var frameTime = buffer_read(loadBuff, buffer_f32);
 			var keyframeInd = anim.keyframe_add(frameTime);
 			var keyframe = anim.keyframeGrid[# 1, keyframeInd];
-			
+
 			//Loop through the nodes of the rig
 			for (var i = 0; i < nodeNum; i ++)
 			{
@@ -245,28 +281,50 @@ function smf_model_load_from_buffer(loadBuff, path = "", targetModel = new smf_m
 				for (var l = 0; l < 8; l ++)
 				{
 					//Read the dual quaternion of this node
-					poseDQ[i][l] = buffer_read(loadBuff, buffer_f32);
+					if (buffer_tell(loadBuff) + 4 > buffer_get_size(loadBuff)) {
+						poseDQ[i][l] = 0;
+					} else {
+						poseDQ[i][l] = buffer_read(loadBuff, buffer_f32);
+					}
 				}
-				
+				// Match JS importer (GLBtoSMF) which negates the 8 components
+				for (var l = 0; l < 8; l ++) poseDQ[i][l] = -poseDQ[i][l];
+
 				if (i == 0)
 				{
 					//The first node's keyframe DQ stores change in worldspace orientation
 					keyframe[@ 0] = smf_dq_multiply(node[eAnimNode.WorldDQConjugate], poseDQ[i], array_create(8));
 					continue;
 				}
-				
+
 				//The keyframe stores change in local orientation from bind to current keyframe
-				var poseLocalDQ = smf_dq_multiply(smf_dq_get_conjugate(poseDQ[node[eAnimNode.Parent]], array_create(8)), poseDQ[i], array_create(8));
+				var p = node[eAnimNode.Parent];
+				if (p < 0 || p >= nodeNum) p = 0;
+				var poseLocalDQ = smf_dq_multiply(smf_dq_get_conjugate(poseDQ[p], array_create(8)), poseDQ[i], array_create(8));
 				keyframe[@ i] = smf_dq_multiply(node[eAnimNode.LocalDQConjugate], poseLocalDQ, array_create(8));
 			}
 		}
+	}
+
+	// Trim trailing undefineds/holes left by early breaks when anim data was shorter than expected (old SMF format or version skew)
+	var _loaded = 0;
+	for (var _aa = 0; _aa < array_length(model.animations); _aa++) {
+		if (is_struct(model.animations[_aa])) _loaded = _aa + 1; else break;
+	}
+	array_resize(model.animations, _loaded);
+
+	// Generate sampleStrips for each animation (required by smf_instance for demo models and old usage;
+	// new code may create on demand, but old .smf demos expect them pre-populated at load time)
+	model.sampleStrips = [];
+	for (var _aa = 0; _aa < array_length(model.animations); _aa ++) {
+		array_push(model.sampleStrips, new smf_samplestrip(model.rig, model.animations[_aa]));
 	}
 
 	smf_debug_message("Successfully loaded SMF model " + string(path) + ", containing " + string(modelNum) + " models and " + string(texNum) + " textures");
 	return model;
 }
 
-function smf_model_load_obj(path) 
+function smf_model_load_obj(path)
 {
 	if (!file_exists(path)){return -1;}
 	var model = new smf_model();
@@ -281,7 +339,7 @@ function smf_model_load_obj(path)
 }
 
 /// @func smf_model_submit(model, [sample]
-function smf_model_submit() 
+function smf_model_submit()
 {
 	var model = argument[0];
 	if (argument_count == 1)
@@ -293,7 +351,7 @@ function smf_model_submit()
 		model.submit(argument[1]);
 	}
 }
-function smf_model_destroy(model, deleteTextures) 
+function smf_model_destroy(model, deleteTextures)
 {
 	model.destroy(deleteTextures);
 	delete model;
@@ -306,7 +364,7 @@ function smf_model_partition_rig(model, bonesPerPart, extraBones)
 {
 	model.partition_rig(bonesPerPart, extraBones);
 }
-function smf_model_save(model, path, incTex) 
+function smf_model_save(model, path, incTex)
 {
 	var mBuff = model.mBuff;
 	var texPack = model.texPack;
@@ -331,7 +389,7 @@ function smf_model_save(model, path, incTex)
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	//Write textures
-	
+
 	//GPU Settings
 	gpu_push_state();
 	gpu_set_zwriteenable(false);
@@ -363,7 +421,7 @@ function smf_model_save(model, path, incTex)
 			surface_reset_target();
 			buffer_resize(texBuff, w * h * 4);
 			buffer_get_surface(texBuff, s, 0);
-		
+
 			buffer_write(saveBuff, buffer_u16, w);
 			buffer_write(saveBuff, buffer_u16, h);
 			buffer_copy(texBuff, 0, w * h * 4, saveBuff, buffer_tell(saveBuff));
@@ -405,7 +463,7 @@ function smf_model_save(model, path, incTex)
 		buffer_seek(saveBuff, buffer_seek_relative, size);
 		buffer_write(saveBuff, buffer_string, "Default");
 		buffer_write(saveBuff, buffer_string, string(texPack[m]));
-		
+
 		//Write whether or not this model is visible
 		buffer_write(saveBuff, buffer_u8, vis[m]);
 	}
@@ -423,7 +481,7 @@ function smf_model_save(model, path, incTex)
 	}
 	buffer_write(saveBuff, buffer_u32, nodeNum);
 	var M = array_create(16);
-	
+
 	//Write node hierarchy
 	for (var i = 0; i < nodeNum; i ++)
 	{
@@ -435,7 +493,7 @@ function smf_model_save(model, path, incTex)
 		}
 		buffer_write(saveBuff, buffer_u32, node[eAnimNode.Parent]);
 		buffer_write(saveBuff, buffer_u8, node[eAnimNode.IsBone]);
-		
+
 		//Write primary axis
 		var pAxis = node[eAnimNode.PrimaryAxis];
 		if (is_array(pAxis))
@@ -466,7 +524,7 @@ function smf_model_save(model, path, incTex)
 		buffer_write(saveBuff, buffer_f32, anim.playTime);
 		buffer_write(saveBuff, buffer_u8, anim.interpolation);
 		buffer_write(saveBuff, buffer_u8, anim.sampleFrameMultiplier);
-		
+
 		//Write locked bones for this animation
 		var lockedBonesNum = ds_list_size(anim.lockedBonesList);
 		buffer_write(saveBuff, buffer_u16, lockedBonesNum);
@@ -474,7 +532,7 @@ function smf_model_save(model, path, incTex)
 		{
 			buffer_write(saveBuff, buffer_u16, anim.lockedBonesList[| i]);
 		}
-		
+
 		var keyframeGrid = anim.keyframeGrid;
 		frameNum = ds_grid_height(keyframeGrid);
 		buffer_write(saveBuff, buffer_u32, frameNum);
@@ -492,7 +550,7 @@ function smf_model_save(model, path, incTex)
 			}
 		}
 	}
-	
+
 	buffer_save(saveBuff, path);
 	buffer_delete(saveBuff);
 }
@@ -501,7 +559,7 @@ function smf_model_save(model, path, incTex)
 function smf_model_load_async(fname)
 {
 	var model = new smf_model();
-	
+
 	if (global._SMFAsyncHandle < 0)
 	{
 		_smf_async_start([fname, model]);
@@ -509,14 +567,14 @@ function smf_model_load_async(fname)
 	else
 	{
 		ds_queue_enqueue(global._SMFAsyncQueue, [fname, model]);
-		
+
 		global._SMFAsyncText = "SMF Async Loading: Enqueued model \"" + fname + "\"";
 		if (SMFAsyncDebug)
 		{
 			smf_debug_message(global._SMFAsyncText);
 		}
 	}
-	
+
 	return model;
 }
 
@@ -568,7 +626,7 @@ function smf_async_update()
 			}
 			smf_model_load_from_buffer(global._SMFAsyncBuffer, global._SMFAsyncModel[0], global._SMFAsyncModel[1]);
 		}
-		
+
 		if (!ds_queue_empty(global._SMFAsyncQueue))
 		{
 			_smf_async_start(ds_queue_dequeue(global._SMFAsyncQueue));
