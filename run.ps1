@@ -28,7 +28,7 @@ function Stop-StaleDevStack {
 
 function Invoke-FrontendNpm([string[]]$NpmArgs) {
     if (-not (Test-Path -LiteralPath $FrontendDir)) {
-        Write-Warn "source/frontend not present yet. See docs/TODO.md and docs/dev/APP_STATE.md for current state."
+        Write-Warn "source/frontend not present yet. See docs/dev/TODO.md and docs/dev/APP_STATE.md for current state."
         return $false
     }
     Push-Location $FrontendDir
@@ -43,7 +43,7 @@ function Invoke-FrontendNpm([string[]]$NpmArgs) {
 
 function Invoke-SourceNpm([string[]]$NpmArgs) {
     if (-not (Test-Path -LiteralPath $SourceDir)) {
-        Write-Warn "source not present yet. See docs/TODO.md and docs/dev/APP_STATE.md for current state."
+        Write-Warn "source not present yet. See docs/dev/TODO.md and docs/dev/APP_STATE.md for current state."
         return $false
     }
     Push-Location $SourceDir
@@ -91,8 +91,10 @@ switch -Exact ($Task.ToLowerInvariant()) {
         if (-not (Invoke-SourceNpm @("run", "tauri:build"))) { exit 1 }
     }
     "verify" {
-        Write-Info "[VERIFY] Lint + build + checks..."
+        Write-Info "[VERIFY] Lint + build + docs/context checks..."
         $ok = $true
+        & python scripts/verify-context-bank.py 2>&1 | Out-String | Write-Host
+        if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "context bank validation failed" }
         if (Test-Path $FrontendDir) {
             Push-Location $FrontendDir
             & npm run lint 2>&1 | Out-String | Write-Host
@@ -198,7 +200,7 @@ Examples:
   .\run.bat
   .\run.ps1 -Task verify
 
-See docs/TODO.md, docs/dev/APP_STATE.md and summary_bank.json for state, commands, gaps. Source/frontend and src-tauri fully populated (modular hook+components+loaders+Rust peeks).
+See docs/dev/TODO.md, docs/dev/APP_STATE.md and summary_bank.json for state, commands, gaps. Source/frontend and src-tauri fully populated (modular hook+components+loaders+Rust peeks).
 "@
     }
 }

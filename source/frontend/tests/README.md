@@ -51,7 +51,7 @@ Update or remove a test when:
 - The fixture is no longer representative of supported behavior.
 - A strict snapshot fails from acceptable WebGL variance; convert to tolerant visual confirmation unless exact pixels are the intended contract.
 
-When adding a test, document the covered risk in this README or `docs/TODO.md` if it is tied to an active backlog item.
+When adding a test, document the covered risk in this README or `docs/dev/TODO.md` if it is tied to an active backlog item.
 
 Run from the repo root:
 

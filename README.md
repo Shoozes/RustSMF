@@ -6,9 +6,9 @@ Core: high-fidelity SMF roundtrip (import/export with coord/DQ), guarded skinned
 
 ## State and work
 - Current app state: docs/dev/APP_STATE.md
-- Active backlog + recent completed integrity work (paired what/why/where/how + done criteria): docs/TODO.md
+- Active backlog + recent completed integrity work (paired what/why/where/how + done criteria): docs/dev/TODO.md
 - Regression prevention and verification gaps: docs/dev/PITFALL_LEDGER.md
-- Context groups for files/folders/features/issues: summary_bank.json (narrow paths, intent-based; validate with python -m json.tool after edits)
+- Context groups for files/folders/features/issues: summary_bank.json (narrow paths, intent-based; validate with `python scripts/verify-context-bank.py` after edits)
 
 ## Quick commands (from repo root)
 .\run.bat                              # launch desktop app (same default as run.ps1)

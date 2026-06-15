@@ -8,7 +8,7 @@
     "secretsDir": ".tools/.secrets",
     "tokenFile": "gt.txt"
   },
-  "_note": "Dev controller button layout. Groups become tabs. .tools/ and generators are for human devs + LLM skills only — keep context lean by using summary_bank.json + _gen_struct.py / get-context.ps1 instead of broad reads of old-src, node_modules, or .tools internals. See plan.md and .agents/ for the SMF-to-Tauri+Three.js conversion directions.",
+  "_note": "Dev controller button layout. Groups become tabs. .tools/ and generators are for human devs + LLM skills only — keep context lean by using summary_bank.json + _gen_struct.py / get-context.ps1 instead of broad reads of old-src, node_modules, or .tools internals. See docs/dev/APP_STATE.md, docs/dev/TODO.md, docs/dev/PITFALL_LEDGER.md, and .agents/ for current conversion directions.",
   "window": {
     "title": "RustSMF  //  Unified Controller",
     "width": 780,

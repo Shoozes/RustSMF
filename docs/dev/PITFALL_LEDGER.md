@@ -4,6 +4,28 @@ Last reviewed: 2026-06-15 (integrity pass: launcher default/local Tauri CLI, Vit
 
 ### Q: What pitfall are we preventing?
 
+**What:** Context docs can move while README, run scripts, agent instructions, and `summary_bank.json` keep pointing at deleted or nonexistent planning paths.
+
+**Why it happened:** The backlog moved from `docs/TODO.md` to `docs/dev/TODO.md`, and old local agent/tool instructions still referenced `plan.md`, but there was no automated summary-bank path guard to catch stale explicit paths.
+
+**Where:** `README.md`, `run.ps1`, `docs/dev/APP_STATE.md`, `source/frontend/tests/README.md`, `.agents/*`, `.tools/project.json`, `summary_bank.json`, `scripts/verify-context-bank.py`.
+
+**How to catch it:** Run `rg -n "docs/TODO\.md|plan\.md"` for current-path drift and `python scripts/verify-context-bank.py` for context-bank JSON/path validation.
+
+**Solutions tried:**
+1. `55/100` Move the TODO file without a verifier, result: current docs and context groups could drift.
+2. `93/100` Add docs indexes/policy, redirect active references to `docs/dev/TODO.md`, update local agent/tool guidance to durable docs, and wire `scripts/verify-context-bank.py` into `verify`, result: stale current context paths fail locally.
+
+**Current solution:** `docs/dev/TODO.md` is the active backlog; `docs/dev/APP_STATE.md`, `docs/dev/PITFALL_LEDGER.md`, and `summary_bank.json` are the durable state/context surfaces; `run.ps1 -Task verify` runs the context-bank verifier before frontend/Rust gates.
+
+**Effectiveness:** `93/100`, durable. It converts a docs-drift class into an executable check and keeps historical references separated from active links.
+
+**Relevance check:** Current. This repo intentionally keeps multiple docs and local skills, so path drift is likely during future consolidation.
+
+**Next prevention step:** Keep active docs under `docs/dev/`; if a doc moves, update `summary_bank.json` in the same change and run the verifier.
+
+### Q: What pitfall are we preventing?
+
 **What:** SMF models can parse successfully with no console errors while the visible mesh is torn apart.
 
 **Why it happened:** The Three loader treated SMF rig DQs as local bone transforms even though the old GameMaker loader stores bind-pose `WorldDQ`, and animation frames are per-node world poses that must be converted to local parent space. Render geometry also used raw byte weights whose sums can be below 1, while the old dual-quaternion shader normalized blended DQs.

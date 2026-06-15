@@ -47,13 +47,17 @@
   },
   "groups": {
     "docs__state_backlog": {
-      "description": "Current app state, active paired backlog, and durable regression-prevention notes. Keep concise; do not append repeated pass logs.",
-      "status": "current after 2026-06-15 integrity pass (launcher defaults fixed, Vite/esbuild audit clean, e2e served from production preview, strict SMF visual baselines refreshed, generated reports untracked, async open guard and fail-closed chunk guard added, SMF visual tearing fixed, execute-plan old-src reference docs/screenshots restored, old-src GameMaker GML/YY/SMF.yyp source metadata recovered from local auto-stash, generated skinned GLB/static FBX coverage added, TODO consolidated)",
+      "description": "Current app state, active paired backlog, docs policy, and durable regression-prevention notes. Keep concise; do not append repeated pass logs.",
+      "status": "current after 2026-06-15 integrity/doc pass (docs flattened under docs/dev, docs/dev/TODO.md is the active backlog, context-bank verifier added to run.ps1 verify, stale plan.md references removed, launcher defaults fixed, Vite/esbuild audit clean, e2e served from production preview, strict SMF visual baselines refreshed, generated reports untracked, async open guard and fail-closed chunk guard added, SMF visual tearing fixed, old-src references restored)",
       "paths": [
         "README.md",
-        "docs/TODO.md",
+        "docs/README.md",
+        "docs/dev/README.md",
+        "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
         "docs/dev/PITFALL_LEDGER.md",
+        "docs/research-inbox/README.md",
+        "docs/research-inbox/archived/README.md",
         "source/frontend/tests/README.md",
         "AGENTS.md",
         "docs/references/old-src/screenshots/README.md",
@@ -71,7 +75,7 @@
     },
     "subsystem__harness_and_context": {
       "description": "Run scripts, agent workflows, context-bank generation, and repo helper tooling.",
-      "status": "2026-06-15: no-arg run.bat/run.ps1 launches desktop app; run.bat falls back to Windows PowerShell; Tauri uses local npm CLI; Playwright e2e uses build+preview; strict SMF visual checks have explicit run/update tasks; generated Playwright reports are ignored/untracked; npm audit is clean; AGENTS documents local-main-only and main-only push semantics.",
+      "status": "2026-06-15: no-arg run.bat/run.ps1 launches desktop app; run.bat falls back to Windows PowerShell; Tauri uses local npm CLI; Playwright e2e uses build+preview; strict SMF visual checks have explicit run/update tasks; context-bank path verifier is included in verify; generated Playwright reports are ignored/untracked; npm audit is clean; AGENTS documents local-main-only and main-only push semantics.",
       "paths": [
         "run.ps1",
         "run.bat",
@@ -86,6 +90,7 @@
         ".agents/workflows/*.md",
         ".agents/skills/*/SKILL.md",
         "scripts/README.md",
+        "scripts/verify-context-bank.py",
         "source/frontend/tsconfig.test.json",
         "summary_bank.json",
         "AGENTS.md"
@@ -125,7 +130,7 @@
       "description": "Planned modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, optional quad/ortho precision views, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
       "status": "backlog/design current 2026-06-15; old layout analyzed and translated into actionable workspace requirements, not yet implemented",
       "paths": [
-        "docs/TODO.md",
+        "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
         "docs/references/old-src/screenshots/README.md",
         "docs/references/old-src/screenshots/*.png",
@@ -146,7 +151,7 @@
     },
     "subsystem__viewport_editor": {
       "description": "Three.js viewport, orbit controls, model attach/dispose, animation mixer, skeleton helper, raycast bone selection, TransformControls, and weight preview.",
-      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed; viewport drag filtering, ref-decoupled timing, disposal helpers, and bonePicker remain current. Planned modernization adds optional quad/ortho workspaces and larger bone handles/labels.",
+      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed; viewport drag filtering, context-aware R reset vs TransformControls mode shortcuts, ref-decoupled timing, disposal helpers, and bonePicker remain current. Planned modernization adds optional quad/ortho workspaces and larger bone handles/labels.",
       "paths": [
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/utils/SimpleOrbit.ts",
@@ -215,7 +220,7 @@
     },
     "tests__quality": {
       "description": "Automated quality gates: lint, app typecheck, test typecheck, Vite build, chunk guard, unit roundtrips, Playwright e2e, native IPC mocks, and Rust cargo checks/tests.",
-      "status": "2026-06-15: npm audit clean; verify passed with app/test typechecks, Vite build, fail-closed chunk guard, 22 unit tests, and cargo check after zero-duration SMF export regression; strict SMF visual snapshots refreshed and pass through test:visual-strict; full e2e passed 16/16 after latest focused fixes; run.bat verify passed through the batch wrapper; desktop-smoke passed with unbundled Tauri build, 4 Rust tests, and 2 native IPC Playwright tests.",
+      "status": "2026-06-15: npm audit clean; verify includes context-bank validation, app/test typechecks, Vite build, fail-closed chunk guard, unit tests, and cargo check; strict SMF visual snapshots are maintained through test:visual-strict; e2e uses production preview and covers smoke, visual, generated skinned GLB, static FBX, OBJ, and native IPC flows.",
       "paths": [
         "source/frontend/package.json",
         "source/package.json",
@@ -234,16 +239,44 @@
         "source/frontend/src/loaders/threeToSmf.test.ts",
         "source/frontend/src/loaders/smfBinary.ts",
         "source/frontend/scripts/check-entry-chunks.mjs",
+        "scripts/verify-context-bank.py",
         "source/frontend/eslint.config.js",
         "run.ps1"
       ],
       "commands": [
+        "python scripts/verify-context-bank.py",
         "npm audit --omit=optional",
         "pwsh -File run.ps1 -Task verify",
         "pwsh -File run.ps1 -Task test:e2e",
         "pwsh -File run.ps1 -Task test:visual-strict",
         "pwsh -File run.ps1 -Task desktop-smoke"
       ],
+      "files": []
+    },
+    "issue__docs_context_path_drift": {
+      "description": "Backlog/docs moved under docs/dev while README, run.ps1, tests README, agent instructions, tool notes, and summary_bank.json still referenced deleted docs/TODO.md or nonexistent plan.md.",
+      "status": "fixed 2026-06-15; docs are indexed, active backlog path is docs/dev/TODO.md, research inbox policy is explicit, local agent/tool instructions point at current durable docs, and verify runs a context-bank path guard",
+      "last_seen": "2026-06-15",
+      "paths": [
+        "README.md",
+        "run.ps1",
+        "docs/README.md",
+        "docs/dev/README.md",
+        "docs/dev/TODO.md",
+        "docs/dev/APP_STATE.md",
+        "docs/research-inbox/README.md",
+        "docs/research-inbox/archived/README.md",
+        "source/frontend/tests/README.md",
+        ".agents/copilot-instructions.md",
+        ".agents/instructions/frontend.instructions.md",
+        ".agents/instructions/backend.instructions.md",
+        ".agents/skills/summary_bank_json/SKILL.md",
+        ".tools/project.json",
+        "scripts/verify-context-bank.py",
+        "summary_bank.json"
+      ],
+      "current_solution": "Current docs point at docs/dev/TODO.md; historical pitfall text can still mention old docs/TODO.md as a past failure. The verifier fails stale explicit summary-bank paths and missing glob prefixes.",
+      "next_prevention": "Run `python scripts/verify-context-bank.py` after doc moves and keep active docs in docs/dev rather than adding new progress files.",
       "files": []
     },
     "issue__test_wrapper_false_success": {
@@ -253,7 +286,7 @@
       "paths": [
         "run.ps1",
         "docs/dev/PITFALL_LEDGER.md",
-        "docs/TODO.md"
+        "docs/dev/TODO.md"
       ],
       "current_solution": "Invoke-FrontendNpm captures LASTEXITCODE after writing npm output to host; test:e2e branches on the boolean return and exits 1 on failure.",
       "next_prevention": "For new native-command wrappers, validate both passing and failing exit-code behavior.",
@@ -279,7 +312,7 @@
       "status": "fixed for typecheck/native IPC on 2026-06-14; default skinned non-SMF fixture gap fixed on 2026-06-15 with generated skinned GLB coverage",
       "last_seen": "2026-06-14",
       "paths": [
-        "docs/TODO.md",
+        "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
         "docs/dev/PITFALL_LEDGER.md",
         "summary_bank.json",
@@ -301,7 +334,7 @@
         "source/frontend/tests/helpers/skinned-glb-fixture.ts",
         "source/frontend/tests/smoke.spec.ts",
         "source/frontend/tests/README.md",
-        "docs/TODO.md",
+        "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md"
       ],
       "current_solution": "Generate a tiny two-bone animated GLB in Playwright's Node context and pass it to the hidden file input as `generated-skinned-fixture.glb`.",
@@ -317,7 +350,7 @@
         "run.bat",
         "README.md",
         "source/frontend/package.json",
-        "docs/TODO.md",
+        "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
         "docs/dev/PITFALL_LEDGER.md"
       ],
@@ -334,7 +367,7 @@
         "source/frontend/tests/README.md",
         "source/frontend/package.json",
         "source/package-lock.json",
-        "docs/TODO.md",
+        "docs/dev/TODO.md",
         "docs/dev/PITFALL_LEDGER.md"
       ],
       "current_solution": "webServer command is `npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort`; reuseExistingServer is false and local workers are capped at 4.",
@@ -461,7 +494,7 @@
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/loaders/index.ts",
         "source/frontend/src/loaders/coord.test.ts",
-        "docs/TODO.md",
+        "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
         "summary_bank.json"
       ],
@@ -471,7 +504,7 @@
     },
     "subsystem__modularity_candidates": {
       "description": "High-line-count files that should be split only at safe, test-backed boundaries. smfBinary.ts is the focused home for binary (after dedupe).",
-      "status": "watch; 2026-06-15 ranking excluding generated/reference files: smf.ts 535, ThreeViewport.tsx 462, useLoadModel.ts 423, tests/smoke.spec.ts 411, main.rs 346. No forced split; extract only at test-backed helper boundaries. Future quad/ortho work should create focused workspace/viewport modules instead of growing ThreeViewport indefinitely.",
+      "status": "watch; 2026-06-15 ranking excluding generated/reference files: smf.ts 535, ThreeViewport.tsx 462, useLoadModel.ts 423, tests/smoke.spec.ts 414, main.rs 346. No forced split; extract only at test-backed helper boundaries. Future quad/ortho work should create focused workspace/viewport modules instead of growing ThreeViewport indefinitely.",
       "paths": [
         "source/frontend/tests/smoke.spec.ts",
         "source/frontend/src/loaders/smf.ts",
@@ -500,7 +533,7 @@
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/tsconfig.json",
-        "docs/TODO.md"
+        "docs/dev/TODO.md"
       ],
       "current_solution": "Clip duration uses JSX expression `{(c.duration).toFixed(2)}`. findBoneByName returns THREE.Bone | undefined. lastSmfDataRef typed as ImportedSmf | null. Inspector imports BoneNudgeDelta. Bone highlight group disposed via disposeThreeObject. isScaleEdit removed. Focus cancel debounce raised to 150ms. tsconfig uses ignoreDeprecations.",
       "next_prevention": "In JSX text nodes, always wrap dynamic values in {}. Return concrete types from shared helpers. Prefer imported shared types over inline duplicates.",

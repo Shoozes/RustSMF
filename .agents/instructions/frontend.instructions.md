@@ -7,14 +7,14 @@ applyTo: "source/frontend/index.html,source/frontend/src/**/*.{ts,tsx,js,jsx},so
 Stack and style:
 - TypeScript + React (TSX for components) + Vite as the build/dev tool. Tailwind + PostCSS for styling (match TulpaWeaver patterns for clean UI).
 - Three.js (core + addons) for all 3D: Scene, SkinnedMesh, Skeleton, AnimationMixer, GLTFLoader, (later) FBXLoader, OrbitControls or drei equivalents, BufferGeometry/BufferAttribute for imported data.
-- Tauri v2 bridge via @tauri-apps/api (core invoke + plugins for dialog/fs). Keep a thin `source/frontend/backend-client/tauri.ts` (or files.ts) layer with graceful fallback when not running under Tauri (browser File/Blob paths).
+- Tauri v2 bridge via @tauri-apps/api (core invoke + plugins for dialog/fs). Keep a thin `source/frontend/src/backend-client/tauri.ts` layer with graceful fallback when not running under Tauri (browser File/Blob paths).
 - Vite config must chunk large vendors (especially three) to keep initial loads reasonable. Include COOP/COEP headers if using workers or advanced three features.
 - Keep the app independently runnable in browser (`vite` / `vite preview`) with drag-drop file + download for SMF/GLB. Tauri is the enhanced offline desktop shell.
 
 Core boundaries and ownership:
 - Frontend owns: viewport (one primary three canvas + RAF-driven mixer), loaders (SMF/GLB/FBX), exporters, coordinate transforms, scene graph (meshes + bones), animation clips/timeline/scrub/play, outliner, inspector, store (split slices for model / anim state / ui selection), UI panels/modals.
 - Never put Three.js rendering, skinning, or animation sampling inside Rust/Tauri commands.
-- All SMF <-> Three.js conversion (pos/nor/uv/tan/skin, DQ rig/anim, textures via canvas, head/tail node handling, winding, scale strip, sign flips) **must** go through a single well-tested `source/frontend/src/utils/coord.ts` (port from docs/references/old-src/GLBtoSMF/smf_dq_math.js + importer/exporter logic). Document the Y-up vs Z-up + handedness rule in a header comment.
+- All SMF <-> Three.js conversion (pos/nor/uv/tan/skin, DQ rig/anim, head/tail node handling, winding, scale strip, sign flips) **must** go through the tested loader helpers, especially `source/frontend/src/loaders/coord.ts` and `source/frontend/src/loaders/smf.ts`. Document the Y-up vs Z-up + handedness rule near conversion helpers.
 - Start loader/exporter implementations by directly adapting (then cleaning + typing) the reference:
   - `docs/references/old-src/GLBtoSMF/importer.js` + `unpacker.js` + `ModelLoader.js` (GLB/SMF -> structured + three data)
   - `docs/references/old-src/GLBtoSMF/exporter.js` + `packer.js` (three -> SMF/GLB; note the known exporter limitations around bone connections/rotations)
@@ -25,7 +25,7 @@ Core boundaries and ownership:
 - Backend client: only thin async wrappers around tauri invoke or web equivalents. Example commands to support early: open_file, save_file, read_binary (Uint8Array friendly).
 
 SMF / 3D specifics and pitfalls (must follow):
-- Vertex format is 44 bytes fixed (see plan.md). BinaryReader via DataView (LE).
+- Vertex format is 44 bytes fixed. `source/frontend/src/loaders/smfBinary.ts` owns bounded DataView readers/writers.
 - Dual quats require exact negate on import, negate+normalize+flip_sign (with prev per-node tracking) on export for continuity — missing this is the #1 cause of animation pops.
 - Hierarchy remapping, bone index remap (only isBone nodes?), head node insertion for non-connected cases, and world/local matrix decomposition are mandatory for correct rig + skinning. Test against reference GLBtoSMF output.
 - Always provide fallbacks for missing normals/tangents/uvs (compute or default) exactly as the reference unpacker does.
@@ -38,11 +38,11 @@ Verification (run these after relevant changes):
 - In source/frontend/: `npm run lint`, `npm run build`, `npm run test:unit` (if tests), `npm run test:e2e` (Playwright — exercise file load, viewport render, play/scrub, export; capture screenshots of key states).
 - Run the full `.\run.ps1 -Task verify` (or manual equivalent) when available.
 - For any 3D/visual change: launch web dev or tauri dev, load at least one real model from docs/references/old-src/datafiles/SMF/ or a generated skinned GLB, inspect skeleton + deformation, take before/after screenshots, assert no console errors and correct data roundtrip.
-- Update summary_bank.json (new groups or paths) and the root plan.md when adding loaders, panels, or store slices.
+- Update `summary_bank.json` when adding loaders, panels, store slices, tests, or issue context. Update `docs/dev/TODO.md` for active work and `docs/dev/APP_STATE.md` when current behavior changes.
 - Use the monolith-modularization skill proactively on any file > ~500 LOC that mixes concerns (e.g. huge loader + UI).
 
 Browser vs Desktop:
 - The Vite app is the source of truth and must work without Tauri (use feature detection or dynamic import for @tauri-apps/*).
 - Tauri enhances with native dialogs, direct binary paths, better perf for very large assets, and packaging.
 
-See root plan.md for the full conversion subtasks, TulpaWeaver-inspired directory layout (components/, store/, loaders/, backend-client/, tests/), and exact SMF binary + quirk details.
+Use `docs/dev/APP_STATE.md`, `docs/dev/TODO.md`, `docs/dev/PITFALL_LEDGER.md`, and `summary_bank.json` for current behavior, active subtasks, failure modes, and focused context.

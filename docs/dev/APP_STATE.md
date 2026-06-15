@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-15 (launcher defaults fixed, Vite 8 audit clean, Playwright e2e served from production preview, strict SMF visual baselines refreshed, generated reports untracked, async open guard added, chunk guard fail-closed, old-src editor references restored).
+Last reviewed: 2026-06-15 (docs flattened under `docs/dev`, context-bank path verifier added to `verify`, stale `docs/TODO.md` and `plan.md` references redirected, launcher defaults fixed, Vite 8 audit clean, Playwright e2e served from production preview, strict SMF visual baselines refreshed, generated reports untracked, async open guard added, chunk guard fail-closed, old-src editor references restored).
 
 ## Current Product State
 
@@ -38,6 +38,7 @@ Core flow:
 
 Primary commands:
 - `pwsh -File run.ps1 -Task verify`: frontend lint, app typecheck, test-source typecheck, Vite build, chunk guard, unit tests, and `cargo check`.
+- `python scripts/verify-context-bank.py`: summary-bank JSON/path guard. This also runs inside `verify`.
 - `pwsh -File run.ps1 -Task test:e2e`: Playwright smoke, visual confirmation, and native IPC mock coverage. The web server is `npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort`, not Vite dev.
 - `pwsh -File run.ps1 -Task test:visual-strict`: opt-in strict SMF screenshot baseline check for the key load/export visual states.
 - `pwsh -File run.ps1 -Task test:visual-update`: refreshes those strict SMF screenshot baselines after intentional renderer/framing changes.
@@ -56,12 +57,13 @@ Current verification coverage:
 - `check-entry-chunks.mjs` now fails `verify` if the Vite build output is missing or the `three-vendor` split is absent.
 
 Last verified local results:
+- `python scripts/verify-context-bank.py`: passed with `summary_bank.json OK (0 warnings)`.
+- `pwsh -File run.ps1 -Task verify`: passed after the docs/context pass with context-bank validation, lint, app typecheck, test typecheck, Vite 8 build, chunk guard, 22 unit tests, and cargo check.
+- `pwsh -File run.ps1 -Task test:e2e`: passed after the docs/context pass with 16 tests and 0 skipped.
 - `npm audit --omit=optional`: passed with `found 0 vulnerabilities`.
-- `pwsh -File run.ps1 -Task verify`: passed with lint, app typecheck, test typecheck, Vite 8 build, chunk guard, 22 unit tests, and cargo check.
 - `pwsh -File run.ps1 -Task test:visual-strict`: passed after refreshing coherent SMF load/export snapshots.
 - `npm --workspace frontend run typecheck:test`: passed.
 - `npm --workspace frontend run test:unit`: passed with 22 unit tests.
-- `pwsh -File run.ps1 -Task test:e2e`: passed with 16 tests and 0 skipped.
 - `cmd /c run.bat verify`: passed through the batch wrapper with the same verify gate.
 - `pwsh -File run.ps1 -Task desktop-smoke`: passed with unbundled Tauri build, 4 Rust native tests, and 2 Playwright native IPC tests.
 
@@ -76,7 +78,8 @@ Last verified local results:
 
 ## Context Docs
 
-- Active backlog: `docs/TODO.md`.
+- Docs index and policy: `docs/README.md`, `docs/dev/README.md`, `docs/research-inbox/README.md`.
+- Active backlog: `docs/dev/TODO.md`.
 - Regression prevention: `docs/dev/PITFALL_LEDGER.md`.
 - Test coverage map: `source/frontend/tests/README.md`.
 - Context groups: `summary_bank.json`.

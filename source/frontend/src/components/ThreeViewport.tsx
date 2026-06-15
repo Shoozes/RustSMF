@@ -122,11 +122,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     updateCamera();
     const detachOrbit = orbit.attach(canvas, updateCamera);
 
-    // Internal key handler for view reset (R) + Cycle 3 gizmo modes (T=translate, R=rotate, S=scale when bone selected/gizmo attached).
-    // Modes take precedence on 'r' for editor UX when active. Space handled by App.
+    // Internal key handler for view reset (R) + gizmo modes (T=translate, R=rotate, S=scale when a bone is selected).
+    // Mode keys take precedence only while TransformControls has an active target. Space is handled by App.
     const onKey = (e: KeyboardEvent) => {
       const tc = transformControlsRef.current;
-      if (tc) {
+      if (tc && transformTargetRef.current) {
         const k = e.key.toLowerCase();
         if (k === 't') { tc.setMode('translate'); if (onSetTransformMode) onSetTransformMode('translate'); return; }
         if (k === 'r') { tc.setMode('rotate'); if (onSetTransformMode) onSetTransformMode('rotate'); return; }

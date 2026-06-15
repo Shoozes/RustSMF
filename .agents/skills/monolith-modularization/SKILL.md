@@ -1,6 +1,6 @@
 ---
 name: monolith-modularization
-description: Find, rank, and safely split monolithic code files into focused modules during integrity passes, scalability reviews, context-bank cleanup, grep/summary-bank organization, or requests to reduce large-file context pressure. Use when Codex needs to identify high-line-count files, decide whether a split is justified, preserve public imports/exports, update docs/TODO/summary_bank.json, and verify behavior after modularization.
+description: Find, rank, and safely split monolithic code files into focused modules during integrity passes, scalability reviews, context-bank cleanup, grep/summary-bank organization, or requests to reduce large-file context pressure. Use when Codex needs to identify high-line-count files, decide whether a split is justified, preserve public imports/exports, update docs/dev/TODO.md and summary_bank.json, and verify behavior after modularization.
 ---
 
 # Monolith Modularization

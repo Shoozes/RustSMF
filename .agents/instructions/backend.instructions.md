@@ -7,7 +7,7 @@ applyTo: "source/src-tauri/src/**/*.rs,source/backend/**/*.rs,scripts/**/*.py,*.
 Role of Rust (Tauri side):
 - `source/src-tauri/src/` (and any `source/backend/` crates) owns the native desktop shell: file dialogs (tauri-plugin-dialog), binary FS operations for model files (SMF/GLB/FBX), and optional high-fidelity SMF parser/serializer.
 - Prefer small, focused #[tauri::command] functions that return Result<T, String> for easy JS bridging.
-- Use byteorder / nom / binread-style or manual little-endian readers for SMF (see plan.md + docs/references/old-src/GLBtoSMF/importer.js for exact header/chunk/44-byte-vertex/DQ layout). gltf crate is encouraged for GLB validation paths.
+- Use byteorder / nom / binread-style or manual little-endian readers for SMF (see `docs/dev/APP_STATE.md`, `docs/dev/TODO.md`, `docs/dev/PITFALL_LEDGER.md`, and `docs/references/old-src/GLBtoSMF/importer.js` for current scope and exact header/chunk/44-byte-vertex/DQ layout). gltf crate is a candidate only when a concrete GLB validation path is adopted and verified.
 - Always sanitize/validate user paths (no parent traversal, canonicalize on Windows UNC \\?\ handling — see TulpaWeaver src/main.rs example).
 - Tauri commands are the bridge for native open/save; frontend owns all Three.js rendering, animation, and UI.
 
