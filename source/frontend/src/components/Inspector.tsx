@@ -1,5 +1,6 @@
 import React from 'react';
 import * as THREE from 'three';
+import type { BoneNudgeDelta } from '../hooks/poseEdits';
 
 function getRootBones(bones: any[]): any[] {
   return bones.filter((b: any) => !b.parent || !bones.includes(b.parent as any));
@@ -16,7 +17,7 @@ interface InspectorProps {
   onToggleWeightPreview?: () => void;
   transformMode?: 'translate' | 'rotate' | 'scale';
   onSetTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => void;
-  onNudgeBone?: (boneName: string, delta: { x?: number; y?: number; rotZ?: number; reset?: boolean }) => void;
+  onNudgeBone?: (boneName: string, delta: BoneNudgeDelta) => void;
 }
 
 const Inspector: React.FC<InspectorProps> = ({
@@ -107,7 +108,7 @@ const Inspector: React.FC<InspectorProps> = ({
                 }`}
                 onClick={() => onChangeClip(c)}
               >
-                {c.name || `clip_${idx}`} (${(c.duration || 0).toFixed(2)}s)
+                {c.name || `clip_${idx}`} ({(c.duration || 0).toFixed(2)}s)
               </div>
             ))}
           </div>

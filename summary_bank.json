@@ -288,6 +288,24 @@
         "Playwright fixture and desktop-simulation helpers."
       ],
       "files": []
+    },
+    "issue__inspector_clip_duration_and_type_safety": {
+      "description": "Inspector clip duration displayed literal `${}` text (JSX text vs expression bug). Related type safety gaps: findBoneByName returned any, lastSmfDataRef typed as any, onNudgeBone delta type was inline duplicate, isScaleEdit was dead-code stub.",
+      "status": "fixed 2026-06-15; all typecheck/lint/unit gates green",
+      "last_seen": "2026-06-15",
+      "paths": [
+        "source/frontend/src/components/Inspector.tsx",
+        "source/frontend/src/utils/bonePicker.ts",
+        "source/frontend/src/hooks/useLoadModel.ts",
+        "source/frontend/src/hooks/poseEdits.ts",
+        "source/frontend/src/components/ThreeViewport.tsx",
+        "source/frontend/src/backend-client/tauri.ts",
+        "source/frontend/tsconfig.json",
+        "docs/TODO.md"
+      ],
+      "current_solution": "Clip duration uses JSX expression `{(c.duration).toFixed(2)}`. findBoneByName returns THREE.Bone | undefined. lastSmfDataRef typed as ImportedSmf | null. Inspector imports BoneNudgeDelta. Bone highlight group disposed via disposeThreeObject. isScaleEdit removed. Focus cancel debounce raised to 150ms. tsconfig uses ignoreDeprecations.",
+      "next_prevention": "In JSX text nodes, always wrap dynamic values in {}. Return concrete types from shared helpers. Prefer imported shared types over inline duplicates.",
+      "files": []
     }
   },
   "exclusions": {

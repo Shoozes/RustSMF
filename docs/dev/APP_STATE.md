@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-14 (integrity pass aligned docs with source, restored missing test-source typecheck, added native IPC e2e coverage, tightened harness exits, and kept modular boundaries stable).
+Last reviewed: 2026-06-15 (full repo review: fixed Inspector clip duration display bug, bone highlight GPU leak, type safety gaps in hook/utils/component, dead-code stub removal, browser open debounce, and tsconfig deprecation).
 
 ## Current Product State
 

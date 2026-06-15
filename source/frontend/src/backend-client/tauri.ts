@@ -83,7 +83,7 @@ export async function openFile(): Promise<OpenResult | null> {
         if (!settled && (!input.files || input.files.length === 0)) {
           finalize(null)
         }
-      }, 0)
+      }, 150)
     }
 
     input.onchange = onChange

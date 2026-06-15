@@ -1,6 +1,27 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-14 (integrity pass caught stale progress-doc overclaims around test-source typecheck and native IPC coverage; restored the missing gates/spec and added this prevention record).
+Last reviewed: 2026-06-15 (full repo review: added JSX text interpolation pitfall; noted bone highlight disposal gap and type-safety gaps in findBoneByName/lastSmfDataRef).
+
+### Q: What pitfall are we preventing?
+
+**What:** JSX text nodes do not interpolate `${}` template syntax — wrapping in `{}` is required.
+
+**Why it happened:** The clip duration in the Inspector was written as `(${(c.duration || 0).toFixed(2)}s)` inside a JSX text node. In JSX, `${}` outside of a JS expression block `{}` is rendered as literal characters, not as a template expression.
+
+**Where:** `source/frontend/src/components/Inspector.tsx` clip list item label.
+
+**How to catch it:** Typecheck does not flag this (it is valid JSX text), lint does not flag it, and unit tests did not cover the rendered clip label string. Manual visual inspection or a targeted Playwright assertion on the clip item text would catch it.
+
+**Solutions tried:**
+1. `92/100` Changed JSX text `(${...}s)` to a JSX expression `({(c.duration || 0).toFixed(2)}s)`, result: clip label now shows the real duration value like `walk (1.23s)`.
+
+**Current solution:** All dynamic values in JSX are inside `{}` expression blocks.
+
+**Effectiveness:** `92/100`, durable. The fix is minimal and the root cause is a JavaScript/JSX syntax distinction that is easy to repeat.
+
+**Relevance check:** Current. Any JSX-heavy component can repeat this mistake.
+
+**Next prevention step:** When writing JSX with dynamic text mixed with static text, always wrap computed parts in `{}`. Consider a Playwright assertion for at least one clip item label format to catch future regressions.
 
 ### Q: What pitfall are we preventing?
 

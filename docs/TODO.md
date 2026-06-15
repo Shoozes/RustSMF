@@ -1,12 +1,60 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-14 (repo integrity pass: restored test-source typecheck, added native IPC mock e2e coverage, fixed test buffer copying, tightened run.ps1 failure exits, consolidated docs/context groups, broke active backlog into phase-based subtasks, and clarified source-comment follow-ups).
+Last reviewed: 2026-06-15 (full repo review: fixed Inspector clip duration display bug, tightened type safety across hook/utils/components, removed dead-code stub, added bone highlight GPU disposal, silenced tsconfig deprecation, updated docs).
 
 ## Current Focus
 
 Keep the app show-ready and scalable: source gates should fail loudly, feature coverage should match docs, context docs should stay lean, and every open item should say what/why/where/how.
 
 ## Completed This Pass
+
+- What: Fixed clip duration display in Inspector (rendered literal `${}` text instead of value).
+  Why: JSX text nodes do not interpolate `${}` template syntax; the duration was displaying as the raw source string `(${(c.duration || 0).toFixed(2)}s)` in the UI.
+  Where: `source/frontend/src/components/Inspector.tsx` line showing clip list items.
+  How: Changed JSX text `(${...}s)` to a JSX expression `({(c.duration || 0).toFixed(2)}s)` so the value is evaluated.
+  Done when: `typecheck` passes and the clip panel shows e.g. `walk (1.23s)`.
+
+- What: Fixed bone highlight group not disposing GPU resources on removal.
+  Why: `scene.remove(group)` detaches from the scene graph but does not free geometry or material GPU memory; the sphere and axes helper were leaking on every bone selection change.
+  Where: `source/frontend/src/components/ThreeViewport.tsx` bone highlight marker effect and setup cleanup.
+  How: Added `disposeThreeObject(boneHighlightRef.current)` before nulling the ref in both removal paths.
+  Done when: `typecheck` passes and bone selection cycling does not accumulate GPU allocations.
+
+- What: Tightened return type of `findBoneByName` from `any | undefined` to `THREE.Bone | undefined`.
+  Why: The `any` return type defeated TypeScript checks on all callers (viewport, hook, poseEdits), allowing silent type errors when accessing bone properties.
+  Where: `source/frontend/src/utils/bonePicker.ts`.
+  How: Changed return annotation and `find` callback type to `THREE.Bone`.
+  Done when: `typecheck` passes with strict checks on all call sites.
+
+- What: Typed `lastSmfDataRef` with `ImportedSmf | null` instead of `any`.
+  Why: The untyped ref allowed silent misuse of the ref in `handleExport` without type-checking the SMF data contract.
+  Where: `source/frontend/src/hooks/useLoadModel.ts`.
+  How: Added `import type { ImportedSmf }` and changed `useRef<any>` to `useRef<ImportedSmf | null>`.
+  Done when: `typecheck` passes with the ref fully typed.
+
+- What: Replaced inline `onNudgeBone` delta type in Inspector with imported `BoneNudgeDelta`.
+  Why: The inline type duplicated the canonical definition in `poseEdits.ts`, risking silent divergence if `BoneNudgeDelta` gains new fields.
+  Where: `source/frontend/src/components/Inspector.tsx`.
+  How: Added `import type { BoneNudgeDelta }` and replaced the inline object literal type with the named import.
+  Done when: `typecheck` passes with the shared type enforced at the component boundary.
+
+- What: Removed `isScaleEdit` dead-code stub from `poseEdits.ts`.
+  Why: The function always returned `false`, was never imported or called anywhere, and added confusion about whether scale edits were partially supported.
+  Where: `source/frontend/src/hooks/poseEdits.ts`.
+  How: Deleted the function and its comment; the scale-edit limitation is documented in Known Intentional Limits and the PITFALL_LEDGER.
+  Done when: `typecheck` and `noUnusedParameters` pass; grep finds no remaining references.
+
+- What: Increased browser file-picker cancel debounce from 0 ms to 150 ms.
+  Why: `setTimeout(0)` fires before the file dialog fully opens on some OS/browser combinations, causing the open operation to resolve `null` (cancel) before the user could interact.
+  Where: `source/frontend/src/backend-client/tauri.ts` `onWindowFocus` cancel handler.
+  How: Changed `setTimeout(..., 0)` to `setTimeout(..., 150)` so the focus event is checked after typical dialog-open latency.
+  Done when: Browser file picker does not spuriously cancel on first open attempt.
+
+- What: Silenced `baseUrl` deprecation warning in tsconfig.
+  Why: TypeScript 6+ treats `baseUrl` as a deprecated option (TS5101) and the system `tsc` emitted a hard error when project node_modules were absent, breaking the typecheck gate outside the project install.
+  Where: `source/frontend/tsconfig.json`.
+  How: Added `"ignoreDeprecations": "5.0"` to acknowledge the deprecated option while staying on the current TypeScript.
+  Done when: `typecheck` passes with no TS5101 warning regardless of system TypeScript version.
 
 - What: Added the missing test-source typecheck gate.
   Why: Docs and the pitfall ledger said test typechecking existed, but the repo had no `tsconfig.test.json`, no `typecheck:test` script, and no direct Node types.
