@@ -1,10 +1,10 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-15 (integrity pass continued: execute-plan branch work reconciled locally on main, old-src screenshots/reference notes restored from execute-plan refs, old-src GameMaker source/metadata recovered from the local auto-stash, SMF visual tearing fixed, generated skinned GLB and static FBX fixtures covered).
+Last reviewed: 2026-06-15 (integrity pass continued: strict SMF visual baselines refreshed, generated Playwright reports untracked, old-src editor layout mapped into modernization backlog, modularity ranking refreshed, docs/summary bank kept current).
 
 ## Current Focus
 
-Keep the app show-ready and scalable: launchers run the app by default, verification fails loudly, e2e uses production preview, and docs describe current state instead of pass history.
+Keep the app show-ready and scalable: launchers run the app by default, verification fails loudly, e2e uses production preview, strict visual baselines are maintained intentionally, and docs describe current state instead of pass history.
 
 ## Recent Completed Integrity Changes
 
@@ -68,6 +68,18 @@ Keep the app show-ready and scalable: launchers run the app by default, verifica
   How: Treated SMF rig DQs as world bind transforms, derived local bone matrices, computed true inverse bind matrices, converted animation frame world poses to local parent space, and normalized render-side skin weights while preserving imported data for export.
   Done when: CPU bind-pose skinning regression passes, visual screenshots show a coherent model, and full verify/e2e pass.
 
+- What: Refreshed strict SMF visual baselines and made strict visual maintenance explicit.
+  Why: The optional strict snapshots still showed the old torn SMF render even after the loader fix; default tolerant byte-size screenshots do not catch stale committed baselines.
+  Where: `source/frontend/tests/smoke.spec.ts-snapshots/`, `source/frontend/scripts/run-strict-visuals.mjs`, `source/frontend/package.json`, `source/package.json`, `run.ps1`, `source/frontend/tests/README.md`.
+  How: Added `test:visual-strict` and `test:visual-update`, regenerated the SMF load/export snapshots from the current coherent render, and documented when strict snapshots should be checked or updated.
+  Done when: `pwsh -File run.ps1 -Task test:visual-strict` passes and the committed SMF snapshots show a coherent low-poly character.
+
+- What: Removed generated Playwright report artifacts from Git tracking.
+  Why: `playwright-report/index.html` and `test-results/.last-run.json` are machine-generated diagnostics already ignored by `.gitignore`; tracking them makes every e2e run dirty the worktree.
+  Where: `source/frontend/playwright-report/`, `source/frontend/test-results/`, `.gitignore`, `source/frontend/tests/README.md`.
+  How: Removed the tracked generated files from the index while leaving the ignore rules in place and documenting that reports/results should not be committed.
+  Done when: e2e runs can generate local reports/results without creating tracked modifications.
+
 - What: Guarded zero-duration SMF animation export.
   Why: Exporting an animation with duration `0` could write non-finite normalized frame times, contradicting the documented malformed-input guard behavior.
   Where: `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/coord.test.ts`.
@@ -87,48 +99,60 @@ Keep the app show-ready and scalable: launchers run the app by default, verifica
   Done when: current direct-node behavior is documented and future disconnected support requires explicit metadata before implementation.
 
 - What: Re-ranked modularity candidates and deferred forced splits.
-  Why: The largest files are under 500 lines and still have coupled responsibilities; moving lines without a clearer boundary would add churn.
+  Why: Only `smf.ts` is slightly above 500 lines and the next candidates have coupled responsibilities; moving lines without a clearer boundary would add churn.
   Where: `source/frontend/src/loaders/smf.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/smoke.spec.ts`, `source/src-tauri/src/main.rs`.
   How: Recorded the watch list in `summary_bank.json` and kept future splits tied to test-backed helper boundaries.
   Done when: the current pass leaves behavior stable and future extraction targets are explicit.
 
 ## Active Backlog
 
-No P0/P1 implementation backlog remains from this pass.
+No P0/P1 integrity backlog remains from this pass.
 
 Watch items:
 
-1. Old-src source recovery anchor.
-   What: Keep the recovered old-src GameMaker source state anchored until it is committed or separately archived.
-   Why: The execute-plan refs do not contain the recovered `.gml`/`.yy`/`SMF.yyp` source edits; dropping the auto-stash before commit would remove the easiest recovery source.
-   Where: `docs/references/old-src/**/*.gml`, `docs/references/old-src/**/*.yy`, `docs/references/old-src/SMF.yyp`.
-   How: Before cleaning stash entries, verify the recovered old-src source state is committed or otherwise saved, and account for any expected differences such as execute-plan-only metadata or whitespace-only cleanup.
+1. Modern editor workspace design.
+   What: Recreate the current software as a modern, flexible editor while preserving the old editor's strongest ergonomics: optional quad/ortho view, large clickable bone glyphs, numeric/name labels, endpoint handles, contextual mode tools, and clear skinning state.
+   Why: The old GameMaker UI made rigging/skinning easier through split ortho panes and oversized bones, while the current React/Three app has a cleaner stack but weaker precision-edit affordances.
+   Where: `source/frontend/src/components/ThreeViewport.tsx`, future viewport/workspace components, `source/frontend/src/components/Inspector.tsx`, `docs/references/old-src/screenshots/`.
+   How: Design a workspace shell with `Model`, `Rig`, `Skin`, `Animate`, and `Export` modes; keep single perspective as the default view; add optional quad view for rig/skin precision; implement screen-space bone handles/labels before expanding authoring tools.
 
-2. Optional OS-dialog automation.
+2. SMF compatibility boundary.
+   What: Keep SMF import/export as backwards compatibility while making GLB/GLTF the preferred modern authoring/export format for features SMF cannot represent.
+   Why: SMF lacks bone names, scale channels, materials, morphs, and some editor intent; hiding that would create fidelity loss in the modern tool.
+   Where: `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/threeToSmf.ts`, `source/frontend/src/hooks/useLoadModel.ts`, docs and export UX copy.
+   How: Keep explicit rejection/status messages for unsupported SMF conversions, expose format limitations in UI/docs, and add compatibility tests only when expanding SMF behavior.
+
+3. Strict visual snapshot maintenance.
+   What: Run strict SMF snapshot checks when renderer, camera framing, skeleton display, skinning visualization, or SMF loader math changes.
+   Why: Tolerant byte-size screenshots prove rendering is nonblank but do not prove committed visual baselines still represent the intended product state.
+   Where: `source/frontend/tests/smoke.spec.ts-snapshots/`, `source/frontend/scripts/run-strict-visuals.mjs`, `run.ps1`.
+   How: Use `pwsh -File run.ps1 -Task test:visual-strict` for checks and `pwsh -File run.ps1 -Task test:visual-update` only when intentionally refreshing baselines.
+
+4. Optional OS-dialog automation.
    What: Add tauri-driver or equivalent only if a dialog-only bug appears, CI requires real native dialog coverage, or release validation needs an automated OS-dialog path.
    Why: Deterministic IPC mocks and Rust command tests currently cover the native behavior without OS-dialog flake.
    Where: `run.ps1`, `source/frontend/tests/native.spec.ts`, `source/src-tauri/src/main.rs`.
    How: Prototype outside required `verify`, require three clean local runs, then document prerequisites before promoting.
 
-3. Constructed-rig disconnected metadata.
+5. Constructed-rig disconnected metadata.
    What: Add disconnected head-node synthesis only if future non-SMF import data carries explicit disconnected-parent metadata.
    Why: Current parent indices alone cannot safely distinguish direct hierarchy from intended disconnected SMF head nodes.
    Where: `source/frontend/src/loaders/smfRig.ts`, `source/frontend/src/loaders/threeToSmf.ts`.
    How: Extend converter metadata and unit coverage before changing node-list output.
 
-4. Modularity watch.
+6. Modularity watch.
    What: Extract helpers only at clear, test-backed boundaries.
    Why: Current largest files are manageable; blind splits would reduce clarity.
    Where: `source/frontend/src/loaders/smf.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/smoke.spec.ts`, `source/src-tauri/src/main.rs`.
    How: Re-run line-count ranking before any split, preserve public imports/status strings/test IDs, update barrels and `summary_bank.json`, and grep for duplicate helpers.
 
-5. Async stale-result regression tests.
+7. Async stale-result regression tests.
    What: Add a focused test for overlapping browser file-input/drop read failures if load orchestration changes again.
    Why: Sequence guards now cover success and error paths, but the stale read-error branch is not isolated by a dedicated hook test.
    Where: `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/native.spec.ts` or a future hook-level test harness.
    How: Mock two reads, resolve the newer one first, reject the older one last, and assert the older rejection does not set error/status.
 
-6. Context docs.
+8. Context docs.
    What: Keep current-state docs, pitfall ledger, and `summary_bank.json` lean.
    Why: Repeated progress logs and broad generated file lists slow future reviews and can create false confidence.
    Where: `docs/TODO.md`, `docs/dev/APP_STATE.md`, `docs/dev/PITFALL_LEDGER.md`, `summary_bank.json`, README files.
@@ -147,11 +171,13 @@ Watch items:
 
 - `pwsh -File run.ps1 -Task verify`: lint, app typecheck, test typecheck, Vite build, chunk guard, unit tests, and cargo check.
 - `pwsh -File run.ps1 -Task test:e2e`: Playwright browser smoke, visual confirmation, generated skinned GLB coverage, and native IPC tests served from production preview.
+- `pwsh -File run.ps1 -Task test:visual-strict`: opt-in strict SMF screenshot baselines for the key load/export visual states.
 - `pwsh -File run.ps1 -Task desktop-smoke`: unbundled Tauri build, Rust native peek tests, and focused Playwright native IPC mock suite.
 
 Last verified local results:
 - `npm audit --omit=optional`: passed with `found 0 vulnerabilities`.
 - `pwsh -File run.ps1 -Task verify`: passed with lint, app typecheck, test typecheck, Vite 8 build, chunk guard, 22 unit tests, and cargo check.
+- `pwsh -File run.ps1 -Task test:visual-strict`: passed after refreshing coherent SMF load/export snapshots.
 - `npm --workspace frontend run typecheck:test`: passed.
 - `npm --workspace frontend run test:unit`: passed with 22 unit tests.
 - `pwsh -File run.ps1 -Task test:e2e`: passed with 16 tests and 0 skipped.

@@ -121,6 +121,9 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     // Cycle 1: lightweight screenshot assert for bone flow (real sample + selection/collapse/raycast exercised)
     // Keeps CI green without mandatory snapshot updates while providing visual state coverage for bone/export prep.
     // Use strict visual for this core load + bone state when we want a committed reference render.
+    await pausePlaybackIfRunning(page);
+    await page.getByTestId('timeline').locator('button').filter({ hasText: /Reset/i }).first().click({ force: true });
+    await page.waitForTimeout(120);
     await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000, { strict: true, name: 'loaded-smf-bone-flow' });
   });
 

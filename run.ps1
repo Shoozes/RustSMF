@@ -126,6 +126,14 @@ switch -Exact ($Task.ToLowerInvariant()) {
         Write-Info "[E2E] Running Playwright..."
         if (-not (Invoke-FrontendNpm @("run", "test:e2e"))) { exit 1 }
     }
+    "test:visual-strict" {
+        Write-Info "[VISUAL] Running strict SMF visual snapshot checks..."
+        if (-not (Invoke-FrontendNpm @("run", "test:visual-strict"))) { exit 1 }
+    }
+    "test:visual-update" {
+        Write-Info "[VISUAL] Updating strict SMF visual snapshots..."
+        if (-not (Invoke-FrontendNpm @("run", "test:visual-update"))) { exit 1 }
+    }
     "desktop-smoke" {
         Write-Info "[SMOKE] Unbundled Tauri build + native Rust peek validation..."
         if (Test-Path $SrcTauriDir) {
@@ -181,6 +189,8 @@ Tasks (used by .tools/project.json):
   compile       - production desktop build
   verify        - lint/typecheck/build/chunk/unit/cargo checks
   test:e2e      - Playwright
+  test:visual-strict - opt-in strict SMF visual snapshot checks
+  test:visual-update - refresh opt-in strict SMF visual snapshots
   desktop-smoke - unbundled tauri build + basic check
 
 Examples:

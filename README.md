@@ -15,6 +15,7 @@ Core: high-fidelity SMF roundtrip (import/export with coord/DQ), guarded skinned
 pwsh -File run.ps1                     # launch desktop app
 pwsh -File run.ps1 -Task verify        # lint + app typecheck + test typecheck + build + chunk guard + unit + cargo check
 pwsh -File run.ps1 -Task test:e2e      # Playwright via build+preview (smoke + visual + native IPC mocks)
+pwsh -File run.ps1 -Task test:visual-strict # opt-in strict SMF screenshot baselines
 pwsh -File run.ps1 -Task desktop-smoke # unbundled tauri build + Rust native peek tests (4 tests in main.rs)
 
 See run.ps1 help, source/frontend/package.json, source/package.json (workspace), source/src-tauri for details.
@@ -28,7 +29,7 @@ See run.ps1 help, source/frontend/package.json, source/package.json (workspace),
 - backend-client/tauri.ts: bridge (native dialog/read/write + browser fallbacks); save returns bool for cancel distinction
 - store/: lightweight slice hooks (no extra deps)
 - src-tauri/src/main.rs: Tauri commands + shared parse_smf_header_info + native tests exercising same logic as TS/Rust peeks
-- Tests: unit (DQ/roundtrip/guard edges in loaders/*.test.ts), e2e smoke (real fixtures + static FBX + generated skinned GLB + UI), native.spec (deterministic IPC mocks for open/read/save/cancel + desktop status sims aligned to u8 anim count)
+- Tests: unit (DQ/roundtrip/guard edges in loaders/*.test.ts), e2e smoke (real fixtures + static FBX + generated skinned GLB + UI), opt-in strict SMF visual snapshots, native.spec (deterministic IPC mocks for open/read/save/cancel + desktop status sims aligned to u8 anim count)
 
 ## Known limits (intentional)
 - SMF export from edited pose or converted skinned: pos/rot only (no scale channel in DQ path). Scale edits block SMF export with status.
@@ -38,6 +39,7 @@ See run.ps1 help, source/frontend/package.json, source/package.json (workspace),
 - OBJ: load/preview parity only (static focus); export via GLB.
 - Native automation: deterministic Playwright Tauri IPC mocks + Rust cmd tests (real OS dialogs optional later via tauri-driver if needed).
 - Desktop peeks: small header/rig/anim/model validation for .smf status (real FS in Rust; complements full TS loader).
+- Planned editor modernization: keep GLB/GLTF as the preferred modern format, preserve SMF for backwards compatibility, and use old-src screenshots to guide optional quad/ortho workspaces with larger bone handles/labels for rigging and skinning.
 
 Philosophy (AGENTS.md): Safety, courtesy, show, efficiency. Dynamic/modular over hard-coding. Direct minimal comments. Correctness/readability first. TS React front, Rust backend.
 

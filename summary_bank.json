@@ -3,6 +3,7 @@
     "groups": [
       "docs__state_backlog",
       "feature__model_loading_export",
+      "feature__modern_editor_workspaces",
       "tests__quality"
     ],
     "tree": true,
@@ -47,7 +48,7 @@
   "groups": {
     "docs__state_backlog": {
       "description": "Current app state, active paired backlog, and durable regression-prevention notes. Keep concise; do not append repeated pass logs.",
-      "status": "current after 2026-06-15 integrity pass (launcher defaults fixed, Vite/esbuild audit clean, e2e served from production preview, async open guard and fail-closed chunk guard added, SMF visual tearing fixed, execute-plan old-src reference docs/screenshots restored, old-src GameMaker GML/YY/SMF.yyp source metadata recovered from local auto-stash, generated skinned GLB/static FBX coverage added, TODO consolidated)",
+      "status": "current after 2026-06-15 integrity pass (launcher defaults fixed, Vite/esbuild audit clean, e2e served from production preview, strict SMF visual baselines refreshed, generated reports untracked, async open guard and fail-closed chunk guard added, SMF visual tearing fixed, execute-plan old-src reference docs/screenshots restored, old-src GameMaker GML/YY/SMF.yyp source metadata recovered from local auto-stash, generated skinned GLB/static FBX coverage added, TODO consolidated)",
       "paths": [
         "README.md",
         "docs/TODO.md",
@@ -70,7 +71,7 @@
     },
     "subsystem__harness_and_context": {
       "description": "Run scripts, agent workflows, context-bank generation, and repo helper tooling.",
-      "status": "2026-06-15: no-arg run.bat/run.ps1 launches desktop app; run.bat falls back to Windows PowerShell; Tauri uses local npm CLI; Playwright e2e uses build+preview; npm audit is clean; AGENTS documents local-main-only and main-only push semantics.",
+      "status": "2026-06-15: no-arg run.bat/run.ps1 launches desktop app; run.bat falls back to Windows PowerShell; Tauri uses local npm CLI; Playwright e2e uses build+preview; strict SMF visual checks have explicit run/update tasks; generated Playwright reports are ignored/untracked; npm audit is clean; AGENTS documents local-main-only and main-only push semantics.",
       "paths": [
         "run.ps1",
         "run.bat",
@@ -78,6 +79,7 @@
         "source/package.json",
         "source/frontend/package.json",
         "source/frontend/playwright.config.ts",
+        "source/frontend/scripts/run-strict-visuals.mjs",
         ".tools/*.ps1",
         ".tools/*.py",
         ".tools/project.json",
@@ -91,6 +93,7 @@
       "notes": [
         "Use `pwsh -File run.ps1 -Task verify` for the canonical local health check; it must exit nonzero on failed gates.",
         "Use `pwsh -File run.ps1 -Task desktop-smoke` for unbundled Tauri build, Rust peeks, and native IPC mock coverage.",
+        "Use `pwsh -File run.ps1 -Task test:visual-strict` only for opt-in strict SMF screenshot baselines; use `test:visual-update` only for intentional snapshot refreshes.",
         "Use no-arg `pwsh -File run.ps1` or `run.bat` for default desktop launch.",
         "Avoid `summary_bank.json --auto-add` unless intentionally refreshing broad generated file lists; prefer narrow paths.",
         "Temp branches are scratch only; reconcile needed work back to local main before handoff. Do not push temp branches unless explicitly named."
@@ -118,9 +121,32 @@
       ],
       "files": []
     },
+    "feature__modern_editor_workspaces": {
+      "description": "Planned modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, optional quad/ortho precision views, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
+      "status": "backlog/design current 2026-06-15; old layout analyzed and translated into actionable workspace requirements, not yet implemented",
+      "paths": [
+        "docs/TODO.md",
+        "docs/dev/APP_STATE.md",
+        "docs/references/old-src/screenshots/README.md",
+        "docs/references/old-src/screenshots/*.png",
+        "source/frontend/src/App.tsx",
+        "source/frontend/src/components/ThreeViewport.tsx",
+        "source/frontend/src/components/Inspector.tsx",
+        "source/frontend/src/components/Timeline.tsx",
+        "source/frontend/src/components/Outliner.tsx",
+        "source/frontend/src/hooks/useLoadModel.ts"
+      ],
+      "requirements": [
+        "Default to a polished single perspective viewport, with optional quad view for rigging/skinning precision.",
+        "Rig and skin modes need larger screen-space bone glyphs, labels, endpoint handles, hover/selected states, and adjustable hit radius.",
+        "Mode tabs should expose Model, Rig, Skin, Animate, and Export workflows without recreating GameMaker chrome.",
+        "GLB/GLTF remains the preferred modern fidelity path; SMF remains a compatibility format with explicit limits."
+      ],
+      "files": []
+    },
     "subsystem__viewport_editor": {
       "description": "Three.js viewport, orbit controls, model attach/dispose, animation mixer, skeleton helper, raycast bone selection, TransformControls, and weight preview.",
-      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed; viewport drag filtering, ref-decoupled timing, disposal helpers, and bonePicker remain current.",
+      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed; viewport drag filtering, ref-decoupled timing, disposal helpers, and bonePicker remain current. Planned modernization adds optional quad/ortho workspaces and larger bone handles/labels.",
       "paths": [
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/utils/SimpleOrbit.ts",
@@ -189,7 +215,7 @@
     },
     "tests__quality": {
       "description": "Automated quality gates: lint, app typecheck, test typecheck, Vite build, chunk guard, unit roundtrips, Playwright e2e, native IPC mocks, and Rust cargo checks/tests.",
-      "status": "2026-06-15: npm audit clean; verify passed with app/test typechecks, Vite build, fail-closed chunk guard, 22 unit tests, and cargo check after zero-duration SMF export regression; full e2e passed 16/16 after latest focused fixes; run.bat verify passed through the batch wrapper; desktop-smoke passed with unbundled Tauri build, 4 Rust tests, and 2 native IPC Playwright tests.",
+      "status": "2026-06-15: npm audit clean; verify passed with app/test typechecks, Vite build, fail-closed chunk guard, 22 unit tests, and cargo check after zero-duration SMF export regression; strict SMF visual snapshots refreshed and pass through test:visual-strict; full e2e passed 16/16 after latest focused fixes; run.bat verify passed through the batch wrapper; desktop-smoke passed with unbundled Tauri build, 4 Rust tests, and 2 native IPC Playwright tests.",
       "paths": [
         "source/frontend/package.json",
         "source/package.json",
@@ -203,6 +229,7 @@
         "source/frontend/tests/helpers/smoke-helpers.ts",
         "source/frontend/tests/README.md",
         "source/frontend/playwright.config.ts",
+        "source/frontend/scripts/run-strict-visuals.mjs",
         "source/frontend/src/loaders/coord.test.ts",
         "source/frontend/src/loaders/threeToSmf.test.ts",
         "source/frontend/src/loaders/smfBinary.ts",
@@ -214,6 +241,7 @@
         "npm audit --omit=optional",
         "pwsh -File run.ps1 -Task verify",
         "pwsh -File run.ps1 -Task test:e2e",
+        "pwsh -File run.ps1 -Task test:visual-strict",
         "pwsh -File run.ps1 -Task desktop-smoke"
       ],
       "files": []
@@ -356,6 +384,24 @@
       "next_prevention": "Keep the real-sample bind-pose skinning regression and visual check around any SMF rig/animation changes.",
       "files": []
     },
+    "issue__stale_strict_visual_baselines": {
+      "description": "Optional strict SMF screenshots can stay stale after renderer fixes, and tracked Playwright report/test-result artifacts can dirty source after each run.",
+      "status": "fixed locally 2026-06-15; strict SMF snapshot check/update tasks added, coherent SMF load/export baselines regenerated, and generated report/result files removed from tracking",
+      "last_seen": "2026-06-15",
+      "paths": [
+        "source/frontend/tests/smoke.spec.ts-snapshots/loaded-smf-bone-flow-chromium-win32.png",
+        "source/frontend/tests/smoke.spec.ts-snapshots/export-flow-smf-chromium-win32.png",
+        "source/frontend/scripts/run-strict-visuals.mjs",
+        "source/frontend/package.json",
+        "source/package.json",
+        "run.ps1",
+        "source/frontend/tests/README.md",
+        ".gitignore"
+      ],
+      "current_solution": "`test:visual-strict` runs the key SMF strict snapshot subset with RUSTSMF_STRICT_VISUALS=1; `test:visual-update` refreshes baselines intentionally; generated `playwright-report/` and `test-results/` files are ignored and untracked.",
+      "next_prevention": "When renderer or bone-overlay work changes the intended viewport, run strict visual checks and inspect the PNGs before committing.",
+      "files": []
+    },
     "issue__branch_work_reconciliation": {
       "description": "Execute-plan refs and the local auto-stash contained different useful work that was not represented on main.",
       "status": "fixed locally 2026-06-15; execute-plan old-src docs/screenshots/proof artifacts and reddit option metadata restored, old-src GML/YY/SMF.yyp source metadata recovered from stash@{0} with whitespace-only cleanup where needed, old-src GameMaker state user-tested after recovery, SMF export/test fixes ported, and local temp branches cleaned after verification",
@@ -425,7 +471,7 @@
     },
     "subsystem__modularity_candidates": {
       "description": "High-line-count files that should be split only at safe, test-backed boundaries. smfBinary.ts is the focused home for binary (after dedupe).",
-      "status": "watch; 2026-06-15 ranking excluding generated/reference files: smf.ts 535, ThreeViewport.tsx 462, useLoadModel.ts 423, tests/smoke.spec.ts 411, main.rs 346. No forced split; extract only at test-backed helper boundaries.",
+      "status": "watch; 2026-06-15 ranking excluding generated/reference files: smf.ts 535, ThreeViewport.tsx 462, useLoadModel.ts 423, tests/smoke.spec.ts 411, main.rs 346. No forced split; extract only at test-backed helper boundaries. Future quad/ortho work should create focused workspace/viewport modules instead of growing ThreeViewport indefinitely.",
       "paths": [
         "source/frontend/tests/smoke.spec.ts",
         "source/frontend/src/loaders/smf.ts",

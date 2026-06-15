@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-15 (launcher defaults fixed, Vite 8 audit clean, Playwright e2e served from production preview, async open guard added, chunk guard fail-closed, generated skinned GLB coverage added, execute-plan old-src reference docs/screenshots restored locally, old-src GameMaker source/metadata recovered from local auto-stash).
+Last reviewed: 2026-06-15 (launcher defaults fixed, Vite 8 audit clean, Playwright e2e served from production preview, strict SMF visual baselines refreshed, generated reports untracked, async open guard added, chunk guard fail-closed, old-src editor references restored).
 
 ## Current Product State
 
@@ -18,6 +18,7 @@ Core flow:
 - Cover basic FBX parsing/export dispatch with a self-authored static ASCII FBX fixture.
 - Use Rust/Tauri commands for native open/save, binary read/write, and small SMF header/rig/anim/model validation/status peeks.
 - Ignore stale file-open and browser file/drop read results when a newer operation has started.
+- Planned modernization keeps the current React/Tauri/Three stack, uses GLB/GLTF as the preferred modern fidelity format, preserves SMF for backwards compatibility, and uses the old GameMaker screenshots to guide optional quad/ortho workspaces with larger bone handles/labels for rigging and skinning.
 
 ## Architecture
 
@@ -38,6 +39,8 @@ Core flow:
 Primary commands:
 - `pwsh -File run.ps1 -Task verify`: frontend lint, app typecheck, test-source typecheck, Vite build, chunk guard, unit tests, and `cargo check`.
 - `pwsh -File run.ps1 -Task test:e2e`: Playwright smoke, visual confirmation, and native IPC mock coverage. The web server is `npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort`, not Vite dev.
+- `pwsh -File run.ps1 -Task test:visual-strict`: opt-in strict SMF screenshot baseline check for the key load/export visual states.
+- `pwsh -File run.ps1 -Task test:visual-update`: refreshes those strict SMF screenshot baselines after intentional renderer/framing changes.
 - `pwsh -File run.ps1 -Task desktop-smoke`: unbundled Tauri build, Rust native peek tests, and focused Playwright native IPC mock suite.
 - `npm audit --omit=optional`: current dependency audit gate for installed npm packages.
 
@@ -47,6 +50,7 @@ Current verification coverage:
 - Unit tests cover SMF coordinate/DQ math, binary bounds, roundtrips, rig node semantics, converter rejection paths, and pose-capture roundtrip.
 - Playwright smoke tests cover boot, real SMF load, viewport/bone/timeline flows, export UX, invalid-load UX, OBJ static parity, FBX static fixture load/export, and generated skinned GLB load plus SMF/GLB export.
 - Playwright visual tests cover desktop/narrow shell layout, horizontal overflow, nonblank viewport rendering, and loaded SMF visual state. Strict screenshot snapshots are opt-in with `RUSTSMF_STRICT_VISUALS=1`.
+- `test:visual-strict` wraps the strict SMF snapshot subset and keeps generated `playwright-report/` and `test-results/` artifacts out of Git.
 - Playwright native IPC tests cover mocked Tauri open/read/status, save/write, save cancel, and open cancel.
 - Rust tests cover native SMF parser width/offset behavior and desktop peek commands.
 - `check-entry-chunks.mjs` now fails `verify` if the Vite build output is missing or the `three-vendor` split is absent.
@@ -54,6 +58,7 @@ Current verification coverage:
 Last verified local results:
 - `npm audit --omit=optional`: passed with `found 0 vulnerabilities`.
 - `pwsh -File run.ps1 -Task verify`: passed with lint, app typecheck, test typecheck, Vite 8 build, chunk guard, 22 unit tests, and cargo check.
+- `pwsh -File run.ps1 -Task test:visual-strict`: passed after refreshing coherent SMF load/export snapshots.
 - `npm --workspace frontend run typecheck:test`: passed.
 - `npm --workspace frontend run test:unit`: passed with 22 unit tests.
 - `pwsh -File run.ps1 -Task test:e2e`: passed with 16 tests and 0 skipped.
@@ -67,6 +72,7 @@ Last verified local results:
 - GLB/FBX-to-SMF conversion is available for skinned models with one shared named skeleton and no scale animation. Static roots, textures/materials, morph tracks, object-level tracks, and scale animation still use GLB export for fidelity.
 - GLB/GLTF remains the preferred format for maximum fidelity and new development. SMF support is scoped to legacy recovery and users who target the old SMF binary pipeline.
 - Live SMF position/rotation pose edits export; scale edits are blocked for SMF export because the current SMF DQ path has no scale channel.
+- Quad/ortho split views, oversized screen-space bone handles, endpoint handles, and full skin-weight paint authoring are planned modernization work, not current implementation.
 
 ## Context Docs
 

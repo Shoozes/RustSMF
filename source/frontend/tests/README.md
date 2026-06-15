@@ -8,7 +8,7 @@ Current coverage:
 - `tests/visual.spec.ts`: Browser Playwright visual confirmations for desktop/narrow shell layout, horizontal overflow, nonblank viewport rendering, and loaded SMF visual state.
 - `tests/native.spec.ts`: Deterministic Tauri IPC mock coverage for native open/read/status, save/write, and cancel behavior.
 
-Set `RUSTSMF_STRICT_VISUALS=1` when intentionally enforcing or updating Playwright screenshot snapshots. Default e2e uses tolerant rendered-byte checks to avoid machine-specific WebGL drift.
+Use `pwsh -File ../../run.ps1 -Task test:visual-strict` from `source/frontend` or `pwsh -File run.ps1 -Task test:visual-strict` from the repo root when intentionally enforcing committed SMF screenshot snapshots. Use `pwsh -File run.ps1 -Task test:visual-update` only when a renderer change intentionally updates those baselines. Default e2e uses tolerant rendered-byte checks to avoid machine-specific WebGL drift.
 
 Playwright e2e is served from a production build through `vite preview`, not `vite dev`. Vite dev-server HMR websocket failures after the Vite 8 upgrade could reload pages during parallel WebGL/file-flow tests and create false failures, so `source/frontend/playwright.config.ts` builds first and starts preview on `127.0.0.1:5173`.
 
@@ -17,7 +17,7 @@ Playwright e2e is served from a production build through `vite preview`, not `vi
 What:
 - Use Playwright specs in `source/frontend/tests/` for user-visible browser behavior.
 - Use `expectRenderedScreenshot()` for tolerant visual confirmation by default, not committed pixel snapshots.
-- Use `RUSTSMF_STRICT_VISUALS=1` only when deliberately maintaining screenshot baselines.
+- Use `test:visual-strict` / `test:visual-update` only when deliberately maintaining screenshot baselines.
 
 Why:
 - Visual tests should prove the app is not blank, the viewport renders meaningful pixels, core controls remain visible, and responsive layout does not introduce horizontal overflow.
@@ -36,6 +36,7 @@ How:
 - Assert DOM state first, then capture a rendered screenshot on the smallest surface that proves the visual behavior.
 - Check console/page errors through `setupBrowserDiagnostics()` and `getBrowserErrors()`.
 - Keep tests deterministic: prefer local fixtures, explicit viewport sizes, and tolerant rendered-byte screenshots unless strict snapshots are intentionally updated.
+- Do not commit `playwright-report/` or `test-results/`; they are generated diagnostics and are ignored.
 - Run `npm --workspace frontend run typecheck:test` after editing tests and `pwsh -File run.ps1 -Task test:e2e` before marking coverage current.
 - Keep the Playwright web server on `build && preview` unless a replacement is proven against the full e2e suite.
 
@@ -57,6 +58,7 @@ Run from the repo root:
 ```powershell
 pwsh -File run.ps1 -Task verify
 pwsh -File run.ps1 -Task test:e2e
+pwsh -File run.ps1 -Task test:visual-strict
 ```
 
 Use `npm --workspace frontend run typecheck:test` after editing tests or Playwright helpers.

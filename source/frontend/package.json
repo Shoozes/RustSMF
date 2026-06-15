@@ -13,6 +13,8 @@
     "lint": "eslint .",
     "test:unit": "tsx --test src/loaders/coord.test.ts src/loaders/threeToSmf.test.ts",
     "test:e2e": "playwright test",
+    "test:visual-strict": "node scripts/run-strict-visuals.mjs",
+    "test:visual-update": "node scripts/run-strict-visuals.mjs --update-snapshots",
     "tauri:dev": "cd ../src-tauri && tauri dev",
     "tauri:build": "cd ../src-tauri && tauri build",
     "tauri:build:smoke": "cd ../src-tauri && tauri build --no-bundle",

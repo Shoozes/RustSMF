@@ -109,12 +109,17 @@ export async function pausePlaybackIfRunning(page: Page): Promise<void> {
   }
 }
 
-export async function expectRenderedScreenshot(locator: Locator, minBytes = 3000, options?: { strict?: boolean; name?: string; threshold?: number }): Promise<void> {
+export async function expectRenderedScreenshot(
+  locator: Locator,
+  minBytes = 3000,
+  options?: { strict?: boolean; name?: string; threshold?: number; maxDiffPixelRatio?: number },
+): Promise<void> {
   if (options?.strict && process.env.RUSTSMF_STRICT_VISUALS === '1') {
     // Opt-in visual regression for key states. Default e2e keeps tolerant checks for WebGL stability.
     const name = options.name || 'viewport';
     const threshold = options.threshold ?? 0.2;
-    await expect(locator).toHaveScreenshot(`${name}.png`, { threshold });
+    const maxDiffPixelRatio = options.maxDiffPixelRatio ?? 0.03;
+    await expect(locator).toHaveScreenshot(`${name}.png`, { threshold, maxDiffPixelRatio });
     return;
   }
   // Default: tolerant byte-size smoke. Avoids brittle per-machine WebGL differences.

@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 
 /**
  * Playwright config for RustSMF frontend e2e (Chrome-focused).
- * Runs against Vite dev server.
+ * Runs against a production Vite preview server.
  * Screenshots on failure for visual checks of viewport, timeline, loaded models.
  * See tests/ for specs.
  */

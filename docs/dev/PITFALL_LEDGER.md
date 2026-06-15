@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-15 (integrity pass: launcher default/local Tauri CLI, Vite 8 e2e preview server, chunk guard fail-closed, stale open guard, SMF visual tearing fixed, execute-plan branch work plus old-src auto-stash reconciled locally).
+Last reviewed: 2026-06-15 (integrity pass: launcher default/local Tauri CLI, Vite 8 e2e preview server, strict SMF visual baselines refreshed, generated reports untracked, chunk guard fail-closed, stale open guard, SMF visual tearing fixed, execute-plan branch work plus old-src auto-stash reconciled locally).
 
 ### Q: What pitfall are we preventing?
 
@@ -23,6 +23,28 @@ Last reviewed: 2026-06-15 (integrity pass: launcher default/local Tauri CLI, Vit
 **Relevance check:** Current. This is a core model-load path and can regress when SMF rig/animation conversion changes.
 
 **Next prevention step:** Add a stricter visual heuristic for loaded SMF bounding boxes or skeleton/mesh coherence if screenshot snapshots become part of the default gate.
+
+### Q: What pitfall are we preventing?
+
+**What:** Optional strict visual snapshots can preserve a stale broken render after the actual loader has been fixed, and generated Playwright reports can dirty the repo after every run if tracked.
+
+**Why it happened:** Default e2e uses tolerant screenshot byte-size checks for WebGL stability, so stale committed strict baselines were not exercised by normal `verify`. Separately, `playwright-report/index.html` and `test-results/.last-run.json` were tracked despite ignore rules.
+
+**Where:** `source/frontend/tests/smoke.spec.ts-snapshots/`, `source/frontend/scripts/run-strict-visuals.mjs`, `source/frontend/package.json`, `source/package.json`, `run.ps1`, `source/frontend/playwright-report/`, `source/frontend/test-results/`.
+
+**How to catch it:** Run `pwsh -File run.ps1 -Task test:visual-strict` after SMF renderer, camera, skeleton, or visual snapshot changes; inspect the resulting PNGs; run `git status --short` after e2e and confirm reports/results do not appear as tracked modifications.
+
+**Solutions tried:**
+1. `45/100` Rely on tolerant screenshot byte-size checks, result: old torn SMF snapshots stayed committed while default tests passed.
+2. `93/100` Add explicit strict visual check/update tasks, refresh coherent SMF load/export baselines, and untrack generated Playwright report files, result: visual baselines are intentional and e2e diagnostics no longer churn source.
+
+**Current solution:** Use `test:visual-strict` for opt-in SMF baseline enforcement and `test:visual-update` only for intentional baseline refreshes. `playwright-report/` and `test-results/` remain ignored and untracked.
+
+**Effectiveness:** `93/100`, durable. It gives visual baseline maintenance a named command without making default e2e brittle.
+
+**Relevance check:** Current. SMF visual fidelity and future quad/bone-overlay work will keep changing renderer output.
+
+**Next prevention step:** Add tighter semantic visual heuristics once quad/ortho view or large bone handles are implemented, so default e2e can catch obvious coherence failures without exact pixel matching.
 
 ### Q: What pitfall are we preventing?
 

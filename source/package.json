@@ -15,6 +15,8 @@
     "typecheck": "npm --workspace frontend run typecheck",
     "typecheck:test": "npm --workspace frontend run typecheck:test",
     "test:e2e": "npm --workspace frontend run test:e2e",
+    "test:visual-strict": "npm --workspace frontend run test:visual-strict",
+    "test:visual-update": "npm --workspace frontend run test:visual-update",
     "test:unit": "npm --workspace frontend run test:unit",
     "verify": "npm run lint && npm run typecheck && npm run typecheck:test && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && cd src-tauri && cargo check",
     "desktop:smoke": "pwsh -File ../run.ps1 -Task desktop-smoke"
