@@ -235,6 +235,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       detachOrbit();
       if (boneHighlightRef.current) {
         scene.remove(boneHighlightRef.current);
+        disposeThreeObject(boneHighlightRef.current);
         boneHighlightRef.current = null;
       }
       renderer.dispose();
@@ -319,6 +320,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // remove old marker
     if (boneHighlightRef.current) {
       scene.remove(boneHighlightRef.current);
+      disposeThreeObject(boneHighlightRef.current);
       boneHighlightRef.current = null;
     }
     if (!selectedBoneName || !skeleton) return;

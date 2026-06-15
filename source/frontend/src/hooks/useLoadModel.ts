@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect, useState } from 'react';
 import type * as THREE from 'three';
 import type { OpenResult } from '../backend-client/tauri';
 import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX, bytesToArrayBuffer, buildImportedSmfFromThree, SmfConversionError } from '../loaders';
+import type { ImportedSmf } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
 import {
   type BoneNudgeDelta,
@@ -26,7 +27,7 @@ export function useLoadModel() {
   useEffect(() => { playbackRef.current = playback }, [playback]);
 
   // Keep raw ImportedSmf for high-fidelity SMF export roundtrips
-  const lastSmfDataRef = useRef<any>(null);
+  const lastSmfDataRef = useRef<ImportedSmf | null>(null);
 
   // Track original source format for context-aware export (SMF has fidelity path; FBX gets its own exportFBX entry)
   const lastSourceFormatRef = useRef<string>(''); // 'smf' | 'fbx' | 'glb' | 'obj'

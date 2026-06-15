@@ -45,12 +45,6 @@ export function clonePoseEditMap(map: PoseEditMap): PoseEditMap {
   return out;
 }
 
-// Scale edits are not supported in the SMF DQ path (no scale channel).
-// This guard is always false until a scale delta type is added.
-export function isScaleEdit(_delta: BoneNudgeDelta): boolean {
-  return false;
-}
-
 // Map a Three.js bone name to its index in the SMF bones array.
 // SMF bones built by buildThreeScene are named "Bone_N" where N is the index.
 // Returns -1 if the name does not match or is out of range.

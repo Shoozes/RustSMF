@@ -38,7 +38,7 @@ export function findClosestBone(
  * Used across viewport (marker, transform, raycast follow), hook (selection), poseEdits.
  * Returns the first matching bone or undefined. Preserves existing any[] style for compatibility.
  */
-export function findBoneByName(skeleton: THREE.Skeleton | null | undefined, name: string): any | undefined {
+export function findBoneByName(skeleton: THREE.Skeleton | null | undefined, name: string): THREE.Bone | undefined {
   if (!skeleton?.bones?.length || !name) return undefined;
-  return skeleton.bones.find((b: any) => b.name === name);
+  return skeleton.bones.find((b: THREE.Bone) => b.name === name);
 }
