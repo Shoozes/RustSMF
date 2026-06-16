@@ -75,7 +75,7 @@
     },
     "subsystem__harness_and_context": {
       "description": "Run scripts, agent workflows, context-bank generation, and repo helper tooling.",
-      "status": "2026-06-15: no-arg run.bat/run.ps1 launches desktop app; run.bat falls back to Windows PowerShell; Tauri uses local npm CLI; Playwright e2e uses build+preview; strict SMF visual checks have explicit run/update tasks; context-bank path verifier is included in verify; generated Playwright reports are ignored/untracked; npm audit is clean; AGENTS documents local-main-only and main-only push semantics.",
+      "status": "2026-06-15: no-arg run.bat/run.ps1 launches desktop app; run.bat falls back to Windows PowerShell; Tauri uses local npm CLI; Playwright e2e uses build+preview; strict SMF visual checks have explicit run/update tasks; context-bank path verifier is included in verify; generated Playwright reports are ignored/untracked; npm audit is clean; AGENTS documents local-main-only and main-only push semantics. + 2026-06-16 child-process safety hardening (mjs wrapper for beforeDevCommand + run.ps1 JobObject/Stop-ProcessTree/Stop-DevServers/traps/stale entry sweeps guarantee no rogue node/Vite servers on cmd window close, Tauri app close, or interrupt; see dedicated subsystem__dev_process_lifecycle + issue__rogue_node_servers).",
       "paths": [
         "run.ps1",
         "run.bat",
@@ -84,6 +84,8 @@
         "source/frontend/package.json",
         "source/frontend/playwright.config.ts",
         "source/frontend/scripts/run-strict-visuals.mjs",
+        "source/frontend/scripts/start-vite-dev.mjs",
+        "source/src-tauri/tauri.conf.json",
         ".tools/*.ps1",
         ".tools/*.py",
         ".tools/project.json",
