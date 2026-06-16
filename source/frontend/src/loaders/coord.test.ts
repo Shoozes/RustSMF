@@ -116,7 +116,12 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
 // + Real sample cycle using reference .smf files (fs in node test env).
 // E2E in smoke.spec.ts for visuals + full UI flows.
 import { exportSMFToBuffer, importSMF, buildThreeScene, ImportedSmf } from './smf';
+import { buildRigHierarchy } from './smfRig';
+import { makeBoneLabel } from '../utils/boneLabels';
+import { makeBoneHighlightMarker, updateHighlightPosition } from '../utils/boneHighlight';
+import { createSeqGuard } from '../utils/seqGuard';
 import { bytesToArrayBuffer } from './smfBinary';
+import { smfBoneNameToIndex } from '../hooks/poseEdits';
 import fs from 'fs';
 
 const SMF_DIR = path.resolve(__dirname, '../../../docs/references/old-src/datafiles/SMF');
@@ -140,7 +145,8 @@ function installImageTestPolyfill() {
           width: 1,
           height: 1,
           getContext() {
-            return {
+            // Rich 2d ctx stub supporting: SMF texture path (imageData) + makeBoneLabel (text/rect/scale/baseline/DPR)
+            const ctx: any = {
               createImageData(width: number, height: number) {
                 return { data: new Uint8ClampedArray(width * height * 4) };
               },
@@ -149,7 +155,16 @@ function installImageTestPolyfill() {
               getImageData(_sx = 0, _sy = 0, width = 1, height = 1) {
                 return { data: new Uint8ClampedArray(width * height * 4) };
               },
+              scale() {},
+              fillRect() {},
+              fillText(_t: string) {},
             };
+            // Writable style props assigned in makeBoneLabel
+            ctx.fillStyle = '';
+            ctx.font = '';
+            ctx.textAlign = '';
+            ctx.textBaseline = '';
+            return ctx;
           },
           toDataURL() {
             return 'data:image/png;base64,';
@@ -315,6 +330,283 @@ describe('smf export roundtrip (data-driven)', () => {
     assert.strictEqual(reimported.bones[2].parent, 0);
     assert.strictEqual(reimported.bones[3].parent, 2, 'disconnected child parent to head preserved');
     assert.strictEqual(reimported.bones[3].isBone, 1);
+
+    // Hierarchy reconstruction (post-fix): buildThreeScene must skip heads for skeleton + parent links.
+    // real bones attach direct to nearest is-bone ancestor; skeleton has only deform bones (correct order).
+    const loaded = buildThreeScene(fixture);
+    const skelBones = loaded.skeleton.bones;
+    assert.strictEqual(skelBones.length, 3, 'skeleton excludes head dummies');
+    const headChild = skelBones.find((b: any) => b.userData && b.userData.index === 3);
+    assert.ok(headChild, 'node3 real bone present in skeleton');
+    assert.ok(headChild.parent, 'head-child must have parent');
+    assert.strictEqual((headChild.parent?.name || '').includes('head'), false, 'parent must not be a head');
+    assert.ok((headChild.parent?.name || '').includes('SMF_Node_0'), 'skips head to attach under real ancestor');
+
+    // Edge coverage: all skel bones use SMF_Node names (no heads), parents are reals or none, names roundtrip safe.
+    skelBones.forEach((b: any) => {
+      assert.ok(b.name.startsWith('SMF_Node_'), 'SMF_Node_ prefix on all deform bones');
+      assert.ok(!b.name.includes('_head'), 'heads excluded from skeleton');
+      const p = b.parent as any;
+      if (p && p.isBone) {
+        assert.ok(p.userData?.isBone === true, 'effective parent must be a real bone (head chains skipped)');
+      }
+    });
+    const r0 = skelBones.find((b: any) => b.userData?.index === 0);
+    assert.ok(r0);
+    assert.ok(!r0.parent || !skelBones.includes(r0.parent as any), 'root bone has no skel parent');
+  });
+
+  it('buildRigHierarchy directly skips isBone=0 heads, produces only deform bones in skeleton, correct SMF_Node names + userData, and proper parent links via root', () => {
+    const baseDq = new Float32Array([0,0,0,1,0,0,0,0]);
+    const baseAxis = [0,1,0];
+    const rigFixture: ImportedSmf = {
+      meshes: [],
+      textures: [],
+      bones: [
+        { index: 0, parent: 0, isBone: 1, dq: baseDq, axis: baseAxis }, // root real
+        { index: 1, parent: 0, isBone: 1, dq: baseDq, axis: baseAxis }, // direct child
+        { index: 2, parent: 0, isBone: 0, dq: baseDq, axis: baseAxis }, // head
+        { index: 3, parent: 2, isBone: 1, dq: baseDq, axis: baseAxis }, // child via head
+        { index: 4, parent: 3, isBone: 1, dq: baseDq, axis: baseAxis }  // deeper via real (but will skip if any head)
+      ],
+      animations: []
+    };
+    const root = new THREE.Group();
+    const { skeleton, allNodes } = buildRigHierarchy(rigFixture, root);
+
+    assert.strictEqual(skeleton.bones.length, 4, 'skeleton must contain only isBone=1 (deform) bones');
+    assert.strictEqual(allNodes.length, 4, 'allNodes should match deform count');
+
+    // Names and userData
+    skeleton.bones.forEach((b: any) => {
+      assert.ok(b.name.startsWith('SMF_Node_'), 'uses polished SMF_Node_ name');
+      assert.ok(!b.name.includes('_head'), 'dummies excluded from names in skeleton');
+      assert.ok(b.userData && typeof b.userData.index === 'number', 'userData.index present');
+      assert.strictEqual(b.userData.isBone, true, 'userData.isBone true for skel entries');
+    });
+
+    // Hierarchy: node3 (via head 2) should parent to node0 (skip head); node4 to node3
+    const b3 = skeleton.bones.find((b: any) => b.userData.index === 3);
+    const b4 = skeleton.bones.find((b: any) => b.userData.index === 4);
+    assert.ok(b3 && b3.parent, 'b3 has parent');
+    assert.ok(b3.parent.name.includes('SMF_Node_0'), 'head chain skipped: b3 parents directly to root real');
+    assert.ok(b4 && b4.parent && b4.parent.name.includes('SMF_Node_3'), 'direct real parent preserved for b4');
+
+    // Roots: only b0 should be direct under the passed root (others attached via .add)
+    const directChildren = root.children.filter((c: any) => c instanceof THREE.Bone);
+    assert.strictEqual(directChildren.length, 1, 'only true roots attached directly to provided root Group');
+    assert.ok(directChildren[0].name.includes('SMF_Node_0'));
+
+    // SkeletonHelper would see clean tree (no heads) - implicit by parent checks above
+  });
+
+  it('makeBoneLabel util produces reusable Group with Axes + name Sprite (modular extraction for labels feature)', () => {
+    installImageTestPolyfill(); // node env needs canvas/document polyfill for label creation
+    const g = globalThis as any;
+    let lastFillText = '';
+    let restored = false;
+    const origCreate = (g.document && g.document.createElement) ? g.document.createElement.bind(g.document) : null;
+    if (origCreate) {
+      g.document.createElement = (tag: string) => {
+        if (tag === 'canvas') {
+          const canvas = {
+            width: 256,
+            height: 48,
+            getContext: () => {
+              const ctx: any = {
+                createImageData(w: number, h: number) { return { data: new Uint8ClampedArray(w * h * 4) }; },
+                putImageData() {},
+                drawImage() {},
+                getImageData() { return { data: new Uint8ClampedArray(4) }; },
+                scale() {},
+                fillRect() {},
+                fillText(t: string) { lastFillText = t; },
+              };
+              ctx.fillStyle = '';
+              ctx.font = '';
+              ctx.textAlign = '';
+              ctx.textBaseline = '';
+              return ctx;
+            },
+          };
+          return canvas;
+        }
+        return origCreate(tag);
+      };
+    }
+    try {
+      const label = makeBoneLabel('SMF_Node_42');
+      assert.ok(label instanceof THREE.Group, 'returns Group');
+      assert.ok(label.children.length >= 2, 'contains AxesHelper + Sprite');
+      const hasAxes = label.children.some((c: any) => c instanceof THREE.AxesHelper);
+      const hasSprite = label.children.some((c: any) => c instanceof THREE.Sprite);
+      assert.ok(hasAxes, 'has visual marker AxesHelper');
+      assert.ok(hasSprite, 'has canvas name Sprite');
+      assert.ok((label as any).userData?.isBoneLabel, 'marked for disposal/selection');
+      // test truncation polish for long names (branch in makeBoneLabel)
+      makeBoneLabel('SMF_Node_VeryLongName12345');
+      assert.ok(lastFillText.includes('...'), 'long name truncated in fillText for polish');
+    } finally {
+      if (origCreate && !restored) {
+        g.document.createElement = origCreate;
+        restored = true;
+      }
+    }
+  });
+
+  it('makeBoneHighlightMarker util produces reusable Group with sphere + axes (modular extraction for selection feedback)', () => {
+    installImageTestPolyfill();
+    const marker = makeBoneHighlightMarker();
+    assert.ok(marker instanceof THREE.Group, 'returns Group');
+    assert.ok(marker.children.length >= 2, 'contains sphere Mesh + AxesHelper');
+    const hasMesh = marker.children.some((c: any) => c instanceof THREE.Mesh);
+    const hasAxes = marker.children.some((c: any) => c instanceof THREE.AxesHelper);
+    assert.ok(hasMesh, 'has red sphere Mesh');
+    assert.ok(hasAxes, 'has axes for orientation');
+  });
+
+  it('updateHighlightPosition util updates group pos to bone world pos (modular extract)', () => {
+    installImageTestPolyfill();
+    const marker = makeBoneHighlightMarker();
+    const bone = new THREE.Bone();
+    bone.position.set(1, 2, 3);
+    updateHighlightPosition(marker, bone);
+    assert.ok(marker.position.x === 1 && marker.position.y === 2 && marker.position.z === 3, 'position updated');
+  });
+
+  it('createSeqGuard utility for async stale prevention (advances item 3 test coverage + modularity)', () => {
+    const guard = createSeqGuard();
+    const s1 = guard.next();
+    assert.ok(guard.isCurrent(s1), 'first seq current');
+    const s2 = guard.next();
+    assert.ok(guard.isCurrent(s2), 'second seq current');
+    assert.ok(!guard.isCurrent(s1), 'old seq not current');
+    guard.reset();
+    const s3 = guard.next();
+    assert.ok(guard.isCurrent(s3), 'after reset current');
+  });
+
+  // Focused pure simulation for item 3: overlapping reads where old one errors last.
+  // Uses only the extracted guard (no RTL dep). Verifies stale error/rejection paths do not mutate.
+  it('seq guards ignore stale error on older file/drop read (simulates overlapping open/read failure without mutating status/error)', async () => {
+    const guard = createSeqGuard();
+    const mutations: string[] = [];
+
+    const fakeSetError = (msg: string) => { mutations.push(`error:${msg}`); };
+    const fakeSetStatus = (s: string) => { mutations.push(`status:${s}`); };
+
+    // Simulate two concurrent "reads" (like handleFileInputChange + handleDrop or browser + open).
+    // Newer one (seq2) succeeds quickly; older (seq1) "rejects" later.
+    const seq1 = guard.next();
+    const oldRead = new Promise<string>((_, reject) => setTimeout(() => reject(new Error('old read failed')), 5));
+
+    const seq2 = guard.next();
+    const newRead = Promise.resolve('new data');
+
+    // Attach handlers exactly as in useLoadModel catch paths (check isCurrent before mutate)
+    oldRead.catch((e: any) => {
+      if (guard.isCurrent(seq1)) {
+        fakeSetError(`stale-should-not: ${e.message}`);
+        fakeSetStatus('stale-should-not');
+      } else {
+        // correctly ignored
+        mutations.push('old-stale-ignored');
+      }
+    });
+
+    newRead.then((data) => {
+      if (guard.isCurrent(seq2)) {
+        fakeSetStatus(`loaded:${data}`);
+      }
+    });
+
+    await Promise.allSettled([oldRead, newRead]);
+
+    // Assert: only new success mutated; old error was ignored (no "stale-should-not")
+    assert.ok(mutations.includes('old-stale-ignored'), 'old rejection was treated as stale');
+    assert.ok(mutations.some(m => m.startsWith('status:loaded:')), 'newer success did mutate');
+    assert.ok(!mutations.some(m => m.includes('stale-should-not')), 'stale error did not mutate error/status');
+  });
+
+  // Additional coverage for recent bone hierarchy + name roundtrip safety (regex update in poseEdits)
+  it('smfBoneNameToIndex supports SMF_Node_N (and _head suffix for dummies) after hierarchy name changes', () => {
+    const bones: any[] = [
+      { index: 0, parent: 0, isBone: 1, dq: new Float32Array(8), axis: [0,1,0] },
+      { index: 1, parent: 0, isBone: 0, dq: new Float32Array(8), axis: [0,1,0] }, // head
+      { index: 2, parent: 0, isBone: 1, dq: new Float32Array(8), axis: [0,1,0] },
+    ];
+    assert.strictEqual(smfBoneNameToIndex(bones, 'SMF_Node_0'), 0);
+    assert.strictEqual(smfBoneNameToIndex(bones, 'SMF_Node_2'), 2);
+    // suffix safety (the key regex update removing trailing $ for head dummies + future)
+    assert.strictEqual(smfBoneNameToIndex(bones, 'SMF_Node_1_head'), 1);
+    assert.strictEqual(smfBoneNameToIndex(bones, 'Bone_0'), -1); // old name style rejected
+    assert.strictEqual(smfBoneNameToIndex(bones, 'SMF_Node_99'), -1); // oob
+  });
+
+  // More hierarchy edges for recent buildRigHierarchy (root head, zero bones)
+  it('buildRigHierarchy root-head + zero-deform edges produce correct empty-or-rooted skel + no crossed attaches', () => {
+    const baseDq = new Float32Array([0,0,0,1,0,0,0,0]);
+    const baseAxis = [0,1,0];
+    // Case 1: root is head (isBone=0), then real children should attach directly to scene root
+    const rootHeadFixture: ImportedSmf = {
+      meshes: [], textures: [], animations: [],
+      bones: [
+        { index: 0, parent: 0, isBone: 0, dq: baseDq, axis: baseAxis }, // root head dummy
+        { index: 1, parent: 0, isBone: 1, dq: baseDq, axis: baseAxis }, // real under head
+        { index: 2, parent: 1, isBone: 1, dq: baseDq, axis: baseAxis },
+      ],
+    };
+    const r1 = new THREE.Group();
+    const { skeleton: sk1, allNodes: nodes1 } = buildRigHierarchy(rootHeadFixture, r1);
+    assert.strictEqual(sk1.bones.length, 2, 'only deform bones');
+    assert.strictEqual(nodes1.length, 2);
+    const real0 = sk1.bones.find((b: any) => b.userData.index === 1);
+    assert.ok(real0 && !real0.parent, 'first real under root-head attaches directly to provided root Group');
+    assert.strictEqual(r1.children.filter((c: any) => c instanceof THREE.Bone).length, 1);
+
+    // Case 2: zero bones (all heads or empty) -> empty skel, no crash, allNodes empty
+    const zeroFixture: ImportedSmf = { meshes: [], textures: [], animations: [], bones: [
+      { index: 0, parent: 0, isBone: 0, dq: baseDq, axis: baseAxis },
+    ] };
+    const r2 = new THREE.Group();
+    const { skeleton: sk2, allNodes: nodes2 } = buildRigHierarchy(zeroFixture, r2);
+    assert.strictEqual(sk2.bones.length, 0);
+    assert.strictEqual(nodes2.length, 0);
+    assert.strictEqual(r2.children.length, 0, 'nothing attached for zero deform');
+  });
+
+  it('updateHighlightPosition correctly resolves world position for parented bones (hierarchy awareness for RAF/selection marker)', () => {
+    installImageTestPolyfill();
+    const parentBone = new THREE.Bone();
+    parentBone.name = 'SMF_Node_0';
+    parentBone.position.set(5, 0, 0);
+    const childBone = new THREE.Bone();
+    childBone.name = 'SMF_Node_1';
+    childBone.position.set(0, 3, 0);
+    parentBone.add(childBone);
+    // Ensure world matrices are current (as Three does in real attach/anim)
+    parentBone.updateMatrixWorld(true);
+    const marker = makeBoneHighlightMarker();
+    updateHighlightPosition(marker, childBone);
+    // World of child should be (5,3,0)
+    assert.ok(Math.abs(marker.position.x - 5) < 1e-6 && Math.abs(marker.position.y - 3) < 1e-6 && Math.abs(marker.position.z) < 1e-6,
+      `expected world pos ~[5,3,0] got [${marker.position.x},${marker.position.y},${marker.position.z}]`);
+  });
+
+  it('makeBoneLabel canvas DPR scaling (recent quality polish for labels toggle)', () => {
+    installImageTestPolyfill();
+    const g = globalThis as any;
+    const origWindow = g.window;
+    // Simulate high-DPI (exercises the Math.min(...,2) + scale + width*dpr path)
+    g.window = { devicePixelRatio: 2 };
+    try {
+      const label = makeBoneLabel('DPR_Test');
+      assert.ok(label instanceof THREE.Group);
+      assert.ok((label as any).userData?.isBoneLabel);
+      // The internal canvas (256*2 x 48*2) + scale(2,2) + fillText happens without throw; truncation not needed here
+    } finally {
+      g.window = origWindow;
+    }
   });
 
   it('real SMF bind pose skinning is stable and does not tear vertices apart', () => {

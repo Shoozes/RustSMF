@@ -31,6 +31,10 @@ export default function App() {
     toggleWeightPreview,
     transformMode,
     setTransformMode,
+    showBoneLabels,
+    toggleBoneLabels,
+    editorMode,
+    setEditorMode,
   } = useLoadModel();
 
   // Setup keyboard once
@@ -48,6 +52,8 @@ export default function App() {
         onPing={pingRust}
         isLoading={ui.isLoading}
         onFileChange={handleFileInputChange}
+        editorMode={editorMode}
+        setEditorMode={setEditorMode}
       />
 
       {/* Simple pure error banner (no extra deps) - always in DOM even when not shown (for e2e), hidden via style when no error */}
@@ -94,6 +100,8 @@ export default function App() {
             weightPreviewEnabled={showWeightPreview}
             transformMode={transformMode}
             onSetTransformMode={setTransformMode}
+            boneLabelsEnabled={showBoneLabels}
+            editorMode={editorMode}
           />
           {/* Simple pure loading overlay (no deps) */}
           {ui.isLoading && (
@@ -120,6 +128,9 @@ export default function App() {
           transformMode={transformMode}
           onSetTransformMode={setTransformMode}
           onNudgeBone={onNudgeBone}
+          showBoneLabels={showBoneLabels}
+          onToggleBoneLabels={toggleBoneLabels}
+          editorMode={editorMode}
         />
       </div>
 

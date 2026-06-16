@@ -9,7 +9,7 @@ import {
   decomposeMatrix,
 } from './coord';
 import { bytesToArrayBuffer, BinaryReader, BinaryWriter } from './smfBinary';
-import { buildSmfNodeList } from './smfRig';
+import { buildSmfNodeList, buildRigHierarchy } from './smfRig';
 
 /**
  * SMF binary loader (ported/adapted from docs/references/old-src/GLBtoSMF/importer.js)
@@ -227,13 +227,6 @@ function makeLocalMatrix(
   return parentWorldMatrix.clone().invert().multiply(worldMatrix);
 }
 
-function applyMatrixTransform(target: THREE.Object3D, matrix: THREE.Matrix4) {
-  const { pos, quat, scale } = decomposeMatrix(matrix);
-  target.position.copy(pos);
-  target.quaternion.copy(quat);
-  target.scale.copy(scale);
-}
-
 function normalizeQuatHemisphere(
   quat: THREE.Quaternion,
   prev: THREE.Quaternion | null
@@ -273,37 +266,11 @@ export function buildThreeScene(imported: ImportedSmf) {
   const sceneRoot = new THREE.Group();
   sceneRoot.name = 'SMF_Root';
 
-  const threeBones: THREE.Bone[] = [];
-  const worldMats: THREE.Matrix4[] = [];
-  const nodeCount = imported.bones.length;
+  // Hierarchy builder resolves flat nodes + head dummies (isBone=0) into correct direct real-bone tree.
+  // Skeleton only gets deform bones in skin order; names use SMF_Node_N (roundtrip safe).
+  const { skeleton } = buildRigHierarchy(imported, sceneRoot);
 
-  // SMF rig DQs are stored as bind-pose world transforms. Three needs local
-  // transforms in the object hierarchy, plus inverse bind matrices in world space.
-  imported.bones.forEach((b, i) => {
-    const bone = new THREE.Bone();
-    bone.name = `Bone_${i}`;
-    threeBones.push(bone);
-    worldMats.push(dqToThreeMatrix(b.dq));
-  });
-
-  // Parent before decomposing: local matrix = inverse(parent world) * node world.
-  imported.bones.forEach((b, i) => {
-    const parentWorld = isValidParent(b.parent, i, nodeCount) ? worldMats[b.parent] : null;
-    applyMatrixTransform(threeBones[i], makeLocalMatrix(worldMats[i], parentWorld));
-    if (isValidParent(b.parent, i, nodeCount)) {
-      threeBones[b.parent].add(threeBones[i]);
-    }
-  });
-
-  // Add roots: node 0 (self p=0) is root; children with p=0 attach via hierarchy above; treat <=0 or invalid parent as root.
-  threeBones.filter((_bone, i) => {
-    const p = imported.bones[i].parent;
-    return !isValidParent(p, i, nodeCount);
-  }).forEach(root => sceneRoot.add(root));
-
-  sceneRoot.updateMatrixWorld(true);
-  const boneInverses = threeBones.map(bone => bone.matrixWorld.clone().invert());
-  const skeleton = new THREE.Skeleton(threeBones, boneInverses);
+  const worldMats: THREE.Matrix4[] = imported.bones.map((b) => dqToThreeMatrix(b.dq));
 
   // Textures
   const threeTextures = imported.textures.map(t => {
@@ -313,16 +280,8 @@ export function buildThreeScene(imported: ImportedSmf) {
     return tex;
   });
 
-  // Skin remap (SMF node indices -> three bone indices)
-  const boneRemap: number[] = [];
-  let sampleInd = 0;
-  imported.bones.forEach((b, nodeInd) => {
-    if (b.isBone) {
-      boneRemap[sampleInd] = nodeInd;
-      sampleInd++;
-    }
-  });
-
+  // Skin remap: SMF stores sequential indices into deform bones (order of isBone=1 in flat list).
+  // buildRigHierarchy produces skeleton.bones in exactly that order, so direct copy.
   const skinnedMeshes: THREE.SkinnedMesh[] = [];
 
   imported.meshes.forEach((m) => {
@@ -332,11 +291,7 @@ export function buildThreeScene(imported: ImportedSmf) {
     geometry.setAttribute('uv', new THREE.BufferAttribute(m.uvs, 2));
     geometry.setAttribute('tangent', new THREE.BufferAttribute(m.tangents, 4));
 
-    // Remap skin indices
-    const skinIndicesNew = new Uint16Array(m.skinIndices.length);
-    for (let k = 0; k < m.skinIndices.length; k++) {
-      skinIndicesNew[k] = boneRemap[m.skinIndices[k]] ?? 0;
-    }
+    const skinIndicesNew = new Uint16Array(m.skinIndices);
     geometry.setAttribute('skinIndex', new THREE.BufferAttribute(skinIndicesNew, 4));
     geometry.setAttribute('skinWeight', new THREE.BufferAttribute(normalizeSkinWeightsForThree(m.skinWeights), 4));
 
@@ -362,7 +317,8 @@ export function buildThreeScene(imported: ImportedSmf) {
     const frameWorldMats = a.frames.map(frame => frame.map(dqToThreeMatrix));
 
     for (let n = 0; n < a.nodeCount; n++) {
-      const boneName = threeBones[n]?.name || `Bone_${n}`;
+      const isB = imported.bones[n]?.isBone ?? 1;
+      const boneName = `SMF_Node_${n}${isB === 1 ? '' : '_head'}`;
       const posValues = new Float32Array(a.times.length * 3);
       const quatValues = new Float32Array(a.times.length * 4);
       let prevQuat: THREE.Quaternion | null = null;
@@ -408,6 +364,7 @@ export function buildThreeScene(imported: ImportedSmf) {
     skinnedMeshes,
     clips,
     mixer,
+    allBonesForDebug: skeleton.bones, // hierarchy uses correct direct reals only (heads skipped)
   };
 }
 

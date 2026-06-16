@@ -1,8 +1,8 @@
 # Frontend Tests
 
 Current coverage:
-- `src/loaders/*.test.ts`: Node unit tests for SMF coordinate/DQ math, binary bounds, roundtrips, and guarded Three-to-SMF conversion.
-- `tests/smoke.spec.ts`: Browser Playwright smoke coverage for app boot, real SMF load, viewport/animation/bone flows, export UI, invalid-load UX, FBX UI dispatch, and OBJ static load parity.
+- `src/loaders/*.test.ts`: Node unit tests for SMF coordinate/DQ math, binary bounds, roundtrips, guarded Three-to-SMF conversion, and (post 2026-06-15) SMF rig hierarchy (head-dummy skip, parent resolution, deform-only skel, SMF_Node names, golden fixture asserts on tree; direct `buildRigHierarchy` unit test with multi-head chain cases; makeBoneLabel + makeBoneHighlightMarker + updateHighlightPosition util tests with polyfill; labels truncation + canvas quality polish branch; createSeqGuard for async stale + modularity). Async load guards in useLoadModel covered by e2e smoke multi-load scenarios (no isolated hook unit to avoid extra deps). 2026-06-15 full review: canvas 2d polyfill hardened. Added related tests (this cycle): smfBoneNameToIndex (SMF_Node_N + _head suffix safety for pose/regex); buildRigHierarchy root-head + zero-bones edges; updateHighlightPosition with parented bone world pos (hierarchy for RAF marker); makeBoneLabel DPR/devicePixelRatio scaling; threeToSmf rig node list coverage; pure seq guard simulation for stale read-error rejection (newer succeeds, old error ignored, no mutation) - advances item 3 focused coverage. All targeted + typecheck clean; threeToSmf 7/7. e2e smoke exercises labels-toggle wiring + multi-load seq guards.
+- `tests/smoke.spec.ts`: Browser Playwright smoke coverage for app boot, real SMF load, viewport/animation/bone flows, export UI, invalid-load UX, FBX UI dispatch, and OBJ static load parity. Added editor-mode-select exercise (toggle rig/view post-load) for new modern editor foundation + mode edges (no crash on change during bone state).
 - `tests/helpers/skinned-glb-fixture.ts`: Generated self-authored skinned GLB fixture for non-SMF skinned load, guarded SMF export, and GLB export coverage.
 - `tests/test.fbx`: Self-authored static ASCII FBX fixture for FBX loader and GLB-export dispatch coverage.
 - `tests/visual.spec.ts`: Browser Playwright visual confirmations for desktop/narrow shell layout, horizontal overflow, nonblank viewport rendering, and loaded SMF visual state.
@@ -52,6 +52,14 @@ Update or remove a test when:
 - A strict snapshot fails from acceptable WebGL variance; convert to tolerant visual confirmation unless exact pixels are the intended contract.
 
 When adding a test, document the covered risk in this README or `docs/dev/TODO.md` if it is tied to an active backlog item.
+
+Recent additions (this review): e2e mode select interaction expanded (exercises new editorMode state flow + combinations with labels toggle and bone picker/selection after mode change to 'rig'; reset to 'view'; verifies no crash, status updates, canvas stable). Risk covered: mode UI edges + interactions for scalability of workspaces.
+
+Practical commands for recent work (bone hierarchy, labels/highlight makers, seqGuard, name index/regex):
+- Targeted: `cd source/frontend; npx tsx --test --test-name-pattern="smfBoneNameToIndex|root-head|resolves world position|DPR scaling|buildRigHierarchy directly|createSeqGuard|makeBoneLabel util|makeBoneHighlightMarker" src/loaders/coord.test.ts`
+- Full relevant units (slower due to real SMF skin regression test + canvas polyfills): `cd source; npm --workspace frontend run test:unit`
+- Type safety for tests: `cd source; npm --workspace frontend run typecheck:test`
+- Full repo gate (includes the above + lint/build/chunk/cargo; units can take >5min in some envs): `pwsh -File run.ps1 -Task verify`
 
 Run from the repo root:
 

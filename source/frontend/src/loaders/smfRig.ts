@@ -1,4 +1,6 @@
+import * as THREE from 'three';
 import type { ImportedSmf } from './smf';
+import { dqToMatrix, smfMatrixToThree, decomposeMatrix } from './coord';
 
 /**
  * SMF rig node list builder.
@@ -6,6 +8,24 @@ import type { ImportedSmf } from './smf';
  * Used by exportSMFToBuffer for correct rig/anim serialization (parent-0, isBone/head flags).
  * Public exports from smf.ts unchanged.
  */
+
+function dqToThreeMatrix(dq: Float32Array): THREE.Matrix4 {
+  const smfMatrix = dqToMatrix(dq);
+  const threeMatrix = smfMatrixToThree(smfMatrix);
+  return new THREE.Matrix4().fromArray(threeMatrix);
+}
+
+function makeLocalMatrix(world: THREE.Matrix4, parentWorld: THREE.Matrix4 | null): THREE.Matrix4 {
+  if (!parentWorld) return world.clone();
+  return parentWorld.clone().invert().multiply(world);
+}
+
+function applyMatrixTransform(obj: THREE.Object3D, m: THREE.Matrix4) {
+  const { pos, quat, scale } = decomposeMatrix(m);
+  obj.position.copy(pos);
+  obj.quaternion.copy(quat);
+  obj.scale.copy(scale);
+}
 
 export function buildSmfNodeList(importedBones: ImportedSmf['bones']): {
   nodeList: Array<{ boneIndex: number; parent: number; isBone: number; isHead: boolean; name: string }>;
@@ -52,4 +72,62 @@ export function buildSmfNodeList(importedBones: ImportedSmf['bones']): {
   });
 
   return { nodeList, boneToNode };
+}
+
+// Build Three Bone hierarchy from flat SMF nodes (heads=isBone:0 are dummies for disconnected subrigs).
+// Skips heads when resolving .parent/.add and skeleton.bones (deform only).
+// Names: SMF_Node_N for bones, SMF_Node_N_head for dummies (roundtrip safe via updated regex).
+// Locals computed vs effective is-bone ancestor using world DQs for correct bind + no crossed viz.
+export function buildRigHierarchy(imported: ImportedSmf, root: THREE.Group) {
+  const nodeMap = new Map<number, THREE.Bone>();
+  const bones: THREE.Bone[] = [];
+  const nodeCount = imported.bones.length;
+  const worldMats: THREE.Matrix4[] = imported.bones.map((b) => dqToThreeMatrix(b.dq));
+
+  imported.bones.forEach((nodeData, idx) => {
+    if (nodeData.isBone !== 1) return;
+    const bone = new THREE.Bone();
+    bone.name = `SMF_Node_${idx}`;
+    bone.userData = { index: idx, isBone: true, originalParent: nodeData.parent };
+    const myWorld = worldMats[idx];
+    let pIdx = nodeData.parent;
+    let effWorld: THREE.Matrix4 | null = null;
+    while (pIdx !== idx && pIdx >= 0 && pIdx < nodeCount) {
+      if (imported.bones[pIdx].isBone === 1) {
+        effWorld = worldMats[pIdx];
+        break;
+      }
+      pIdx = imported.bones[pIdx].parent;
+    }
+    const localM = makeLocalMatrix(myWorld, effWorld);
+    applyMatrixTransform(bone, localM);
+    bone.updateMatrix();
+    nodeMap.set(idx, bone);
+    bones.push(bone);
+  });
+
+  // Resolve parents skipping heads (core fix for spurious SkeletonHelper + inspector nesting)
+  imported.bones.forEach((nodeData, idx) => {
+    if (nodeData.isBone !== 1) return;
+    const bone = nodeMap.get(idx)!;
+    let pIdx = nodeData.parent;
+    let parentBone: THREE.Bone | null = null;
+    while (pIdx !== idx && pIdx >= 0 && pIdx < nodeCount) {
+      const candidate = nodeMap.get(pIdx);
+      if (candidate) {
+        parentBone = candidate;
+        break;
+      }
+      pIdx = imported.bones[pIdx].parent;
+    }
+    if (parentBone) {
+      parentBone.add(bone);
+    } else {
+      root.add(bone);
+    }
+  });
+
+  const skeleton = new THREE.Skeleton(bones);
+  skeleton.calculateInverses();
+  return { skeleton, allNodes: Array.from(nodeMap.values()) };
 }

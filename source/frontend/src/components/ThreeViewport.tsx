@@ -4,6 +4,8 @@ import { SimpleOrbit } from '../utils/SimpleOrbit';
 import { disposeThreeObject } from '../utils/threeDisposal';
 import { restoreWeightPreview, applyWeightPreviewForBone } from '../utils/weightPreview';
 import { findClosestBone, DEFAULT_MAX_BONE_PICK_DIST, findBoneByName } from '../utils/bonePicker';
+import { useBoneLabels } from '../utils/useBoneLabels';
+import { makeBoneHighlightMarker, updateHighlightPosition } from '../utils/boneHighlight';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
 // Self-contained ThreeViewport.
@@ -26,6 +28,8 @@ interface ThreeViewportProps {
   weightPreviewEnabled?: boolean;
   transformMode?: 'translate' | 'rotate' | 'scale';
   onSetTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => void;
+  boneLabelsEnabled?: boolean;
+  editorMode?: 'view' | 'rig' | 'skin' | 'animate' | 'export';
 }
 
 // SimpleOrbit imported from ../utils/SimpleOrbit (filled modularity dir, single source of truth)
@@ -44,6 +48,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   weightPreviewEnabled = false,
   transformMode = 'translate',
   onSetTransformMode,
+  boneLabelsEnabled = false,
+  editorMode = 'view',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -53,7 +59,6 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const frameRef = useRef<number | null>(null);
   const resizeObsRef = useRef<ResizeObserver | null>(null);
   const clockRef = useRef(new THREE.Clock());
-  const boneWorldPosRef = useRef(new THREE.Vector3());
   const pointerDownRef = useRef<{
     x: number;
     y: number;
@@ -196,15 +201,14 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         attachedModelRef.current.updateMatrixWorld(true);
       }
 
-      // keep bone highlight marker following the (possibly animated) selected bone
+      // keep bone highlight marker following the (possibly animated) selected bone (use extracted util for modularity)
       const hl = boneHighlightRef.current;
       const skel = skeletonRefForPick.current;
       const sel = selectedBoneNameRef.current;
       if (hl && skel && sel) {
         const bone = findBoneByName(skel, sel);
         if (bone) {
-          bone.getWorldPosition(boneWorldPosRef.current);
-          hl.position.copy(boneWorldPosRef.current);
+          updateHighlightPosition(hl, bone);
         }
       }
 
@@ -310,6 +314,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   // Sync selected bone name ref (for animate loop + highlight without stale closures)
   useEffect(() => { selectedBoneNameRef.current = selectedBoneName; }, [selectedBoneName]);
 
+  // Bone labels management (extracted hook for modularity)
+  useBoneLabels(boneLabelsEnabled, skeleton);
+
   // Bone selection 3D highlight marker (small sphere+axes that follows the selected bone's world position).
   // Provides visual editor feedback (clickable list or raycast selection now "lights up" in viewport).
   // Reuses existing skeleton/bone refs; cheap, no skin affect.
@@ -331,21 +338,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       return;
     }
 
-    const group = new THREE.Group();
-    const sphere = new THREE.Mesh(
-      new THREE.SphereGeometry(0.08),
-      new THREE.MeshBasicMaterial({ color: 0xff4444, depthTest: false, transparent: true, opacity: 0.85 })
-    );
-    group.add(sphere);
-    const axes = new THREE.AxesHelper(0.25);
-    (axes.material as any).depthTest = false;
-    group.add(axes);
+    const group = makeBoneHighlightMarker();
     scene.add(group);
     boneHighlightRef.current = group;
 
-    const wp = new THREE.Vector3();
-    bone.getWorldPosition(wp);
-    group.position.copy(wp);
+    updateHighlightPosition(group, bone); // use extracted util
   }, [selectedBoneName, skeleton]);
 
   // Weight preview visualization for the selected bone.
@@ -489,7 +486,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // SkeletonHelper for rig viz (use provided skeleton if any)
     if (skeleton) {
       const helper = new THREE.SkeletonHelper(root);
-      (helper.material as THREE.LineBasicMaterial).linewidth = 2;
+      (helper.material as THREE.LineBasicMaterial).linewidth = 2.5;
       scene.add(helper);
       skeletonHelperRef.current = helper;
     }

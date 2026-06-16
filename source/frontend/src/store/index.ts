@@ -28,6 +28,7 @@ export interface UiState {
   selected: string;
   isLoading: boolean;
   errorMsg: string;
+  editorMode: 'view' | 'rig' | 'skin' | 'animate' | 'export';
 }
 
 export function usePlaybackSlice(initial: Partial<PlaybackState> = {}) {
@@ -80,6 +81,7 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
   const [selected, setSelected] = useState<string>(initial.selected ?? 'Scene');
   const [isLoading, setIsLoading] = useState<boolean>(initial.isLoading ?? false);
   const [errorMsg, setErrorMsg] = useState<string>(initial.errorMsg ?? '');
+  const [editorMode, setEditorMode] = useState<'view' | 'rig' | 'skin' | 'animate' | 'export'>(initial.editorMode ?? 'view');
 
   const clearError = useCallback(() => setErrorMsg(''), []);
 
@@ -88,6 +90,7 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
     selected, setSelected,
     isLoading, setIsLoading,
     errorMsg, setErrorMsg,
+    editorMode, setEditorMode,
     clearError,
   };
 }

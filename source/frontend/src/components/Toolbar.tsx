@@ -7,6 +7,8 @@ interface ToolbarProps {
   onPing: () => void;
   isLoading: boolean;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  editorMode: 'view' | 'rig' | 'skin' | 'animate' | 'export';
+  setEditorMode: (mode: 'view' | 'rig' | 'skin' | 'animate' | 'export') => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -16,6 +18,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onPing,
   isLoading,
   onFileChange,
+  editorMode,
+  setEditorMode,
 }) => {
   return (
     <div className="toolbar">
@@ -32,6 +36,21 @@ const Toolbar: React.FC<ToolbarProps> = ({
       <button data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>
         Ping Rust
       </button>
+      {/* Basic editor mode toggle (small step for #1 modern workspaces; data + UI, future modes will affect viz/tools) */}
+      <select
+        data-testid="editor-mode-select"
+        value={editorMode}
+        onChange={(e) => setEditorMode(e.target.value as any)}
+        disabled={isLoading}
+        className="text-xs bg-slate-800 border border-slate-700 px-1 py-0.5 rounded"
+        title="Editor mode (foundation for quad/mode-specific tools)"
+      >
+        <option value="view">View</option>
+        <option value="rig">Rig</option>
+        <option value="skin">Skin</option>
+        <option value="animate">Animate</option>
+        <option value="export">Export</option>
+      </select>
       {/* Persistent hidden file input for reliable e2e file simulation (Playwright setInputFiles) */}
       <input
         type="file"

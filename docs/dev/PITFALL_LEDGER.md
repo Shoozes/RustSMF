@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-15 (integrity pass: launcher default/local Tauri CLI, Vite 8 e2e preview server, strict SMF visual baselines refreshed, generated reports untracked, chunk guard fail-closed, stale open guard, SMF visual tearing fixed, execute-plan branch work plus old-src auto-stash reconciled locally).
+Last reviewed: 2026-06-15 (full repo review + gate run: added+fixed test-polyfill pitfall for canvas 2d in labels (post-extract clobber/incomplete ctx + type any); no other new regressions; all prior (launcher, Vite e2e, chunk, open stale, SMF tearing, bone hierarchy, docs drift) still current. No new durable pitfalls beyond test-env maintenance).
 
 ### Q: What pitfall are we preventing?
 
@@ -292,6 +292,20 @@ Last reviewed: 2026-06-15 (integrity pass: launcher default/local Tauri CLI, Vit
 
 ### Q: What pitfall are we preventing?
 
+**What:** SMF flat node lists + explicit isBone=0 head dummies (for disconnected rig parts per spec) could load with clean skin/bind-pose/anim but produce crossed/wired bones in editor viz (SkeletonHelper lines from head-top to hand etc), broken nesting in Inspector tree, and picker/selection misalign (while world->local DQ math hid it for mesh).
+**Why it happened:** buildThreeScene created THREE.Bone for every node (heads included), attached via direct b.parent indices (no skip logic), populated full mixed list into Skeleton + boneInverses; skin remap assigned sparse node ids (coincided with slots); anim/pose used names; no dedicated hierarchy builder or golden asserts on parent skipping.
+**Where:** `source/frontend/src/loaders/smf.ts` (old bone loop + threeBones + attach + skel ctor + remap + name gen), `source/frontend/src/loaders/smfRig.ts` (export only), poseEdits regex, ThreeViewport (helper on root + findBoneByName on skel), Inspector (getRoot + recursive children filter), coord.test golden fixture (heads present but only export/roundtrip tested), mixamo sample (14 heads, 24 deform, skins 0-22 seq).
+**How to catch it:** Load rig with heads (mixamo or golden fixture); inspect SkeletonHelper lines + Inspector bone tree depths/names + raycast select; run unit bind skin + new hierarchy asserts; `rg` for Bone_ name or direct parent attach.
+**Solutions tried:**
+1. Direct attach + mixed skel (original), result: skin ok by compensation, editor broken for any head-using rig.
+2. 100/100 Added buildRigHierarchy (nodeMap only reals, worldMats collect, effective ancestor walk for local calc + skip attach, deform-only skel + calculateInverses, SMF_Node names + userData), direct skin copy, explicit names in anim, regex update, golden parent asserts, linewidth + stub labels; result: clean real-bone tree for viz while bind/anim/export identical.
+**Current solution:** Dedicated builder in smfRig; called from buildThreeScene; only isBone=1 in skel and direct real parents; names prefixed for readability + regex safety; userData carries original for debug.
+**Effectiveness:** High (verified by unit + visual); converts latent viz/semantic bug into explicit, testable, non-breaking component.
+**Relevance check:** Current. Any future SMF rig changes (more head synth, glb->smf heads) or editor viz work will touch this.
+**Next prevention step:** Keep/extend hierarchy unit cases (deep chains, root heads) near smfRig/smf; before changing bone parent logic re-run golden + mixamo visual + skin drift test; document head semantics in smf subsystem notes.
+
+### Q: What pitfall are we preventing?
+
 **What:** Project launchers can look healthy while not actually starting the app for the default user path.
 
 **Why it happened:** `run.ps1` defaulted to help text, `run.bat` assumed `pwsh` was available, and the Tauri path could depend on a globally installed CLI instead of the repo-local npm dependency.
@@ -334,6 +348,28 @@ Last reviewed: 2026-06-15 (integrity pass: launcher default/local Tauri CLI, Vit
 **Relevance check:** Current. Any future Vite/Playwright server change should retest the full suite.
 
 **Next prevention step:** Keep e2e on production preview unless a replacement passes the full suite and does not reintroduce websocket/page-reset symptoms.
+
+### Q: What pitfall are we preventing?
+
+**What:** Node/DOM polyfills for canvas 2d (used by SMF texture decode in import + extracted canvas-sprite label makers) can be partial or mutually clobbering after modularity extracts, causing silent test failures or typecheck breaks only on full gate runs.
+
+**Why it happened:** makeBoneLabel (and future 2d viz) + importSMF both execute document.createElement('canvas').getContext('2d') + assign/use fill*/scale/textBaseline/createImageData; tests mutated global document in install + per-it overrides without full coverage of props/methods or restore, and no types on mock fns.
+
+**Where:** `source/frontend/src/loaders/coord.test.ts` (polyfills + label its), `source/frontend/src/utils/boneLabels.ts` (and any future 2d canvas code), coord.test imports of the makers + SMF sample load it.
+
+**How to catch it:** Run `npm --workspace frontend run typecheck:test` + `npm --workspace frontend run test:unit` (or targeted name pattern for labels/hierarchy) + full `pwsh -File run.ps1 -Task verify` after any canvas-using util extract or change; inspect for "createImageData is not a function" or TS7006 implicit in mocks.
+
+**Solutions tried:**
+1. `60/100` Minimal imageData-only global + ad-hoc override per label it (no restore, incomplete styles/scale/textBaseline), result: later tests (SMF texture) or type gates broke after bone labels extract.
+2. `95/100` Single rich shared install mock (imageData + fillRect/fillText/scale + textBaseline + writable styles + explicit param types); capture its patch temporarily + restore in finally; base always capable, verified slice + type, result: gates green and resilient to order.
+
+**Current solution:** installImageTestPolyfill now always emits capable 2d ctx stub; label capture its use non-destructive override + restore; any new 2d canvas helper must add to this shared mock and run the unit/type slice.
+
+**Effectiveness:** `95/100`, durable for test-only canvas paths. Prevents latent breakage when 2d features (labels, future overlays) are extracted or polished.
+
+**Relevance check:** Current. Modularity extracts + canvas for labels/glyphs + SMF tex will recur for viz work or quad.
+
+**Next prevention step:** When adding canvas 2d code (or new utils/ tests touching document.createElement canvas), extend the shared polyfill first, add explicit types to mock fns, and include a "labels-or-2d" + "real-smf-sample" test slice in PR verification. Document the polyfill contract in the test file header.
 
 ### Q: What pitfall are we preventing?
 

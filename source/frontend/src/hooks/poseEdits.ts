@@ -46,10 +46,10 @@ export function clonePoseEditMap(map: PoseEditMap): PoseEditMap {
 }
 
 // Map a Three.js bone name to its index in the SMF bones array.
-// SMF bones built by buildThreeScene are named "Bone_N" where N is the index.
-// Returns -1 if the name does not match or is out of range.
+// Names now SMF_Node_N (or _head for dummies). Regex tightened for new builder while
+// preserving index roundtrip for pose edits + export. Heads not selectable via skel.
 export function smfBoneNameToIndex(bones: ImportedSmf['bones'], boneName: string): number {
-  const match = /^Bone_(\d+)$/.exec(boneName);
+  const match = /^SMF_Node_(\d+)/.exec(boneName);
   if (!match) return -1;
   const idx = parseInt(match[1], 10);
   if (idx < 0 || idx >= bones.length) return -1;

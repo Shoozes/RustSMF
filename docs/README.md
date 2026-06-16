@@ -5,7 +5,7 @@ This folder is intentionally flat at the top level. Use the narrowest durable do
 ## Main Docs
 
 - `docs/dev/APP_STATE.md`: current product, architecture, limits, and last verified commands.
-- `docs/dev/TODO.md`: active backlog and compact integrity findings with what, why, where, and how.
+- `docs/dev/TODO.md`: active backlog and compact integrity findings (paired what/why/where/how + done criteria).
 - `docs/dev/PITFALL_LEDGER.md`: durable regression-prevention records in Q&A form.
 - `docs/dev/README.md`: developer doc policy and verification map.
 - `docs/user/README.md`: user-facing app behavior and format limits.

@@ -48,7 +48,7 @@
   "groups": {
     "docs__state_backlog": {
       "description": "Current app state, active paired backlog, docs policy, and durable regression-prevention notes. Keep concise; do not append repeated pass logs.",
-      "status": "current after 2026-06-15 integrity/doc pass (docs flattened under docs/dev, docs/dev/TODO.md is the active backlog, context-bank verifier added to run.ps1 verify, stale plan.md references removed, launcher defaults fixed, Vite/esbuild audit clean, e2e served from production preview, strict SMF visual baselines refreshed, generated reports untracked, async open guard and fail-closed chunk guard added, SMF visual tearing fixed, old-src references restored)",
+      "status": "current after 2026-06-15 integrity/doc pass + SMF bone hierarchy fix (docs flattened under docs/dev, docs/dev/TODO.md is the active backlog, context-bank verifier added to run.ps1 verify, stale plan.md references removed, launcher defaults fixed, Vite/esbuild audit clean, e2e served from production preview, strict SMF visual baselines refreshed, generated reports untracked, async open guard and fail-closed chunk guard added, SMF visual tearing fixed, old-src references restored, SMF rig hierarchy reconstruction (head dummies skip via buildRigHierarchy), SMF_Node_N names + userData for roundtrip, direct real-bone attaches, test asserts, Inspector labels stub + linewidth)",
       "paths": [
         "README.md",
         "docs/README.md",
@@ -107,7 +107,7 @@
     },
     "feature__model_loading_export": {
       "description": "User-facing load, preview, edit-preview, and export flow across SMF, GLB/GLTF, FBX, and OBJ.",
-      "status": "core connected; SMF high-fid + live pose export; dedicated Export as SMF preserves SMF-source fidelity; guarded non-SMF skinned SMF export wired and covered by generated skinned GLB e2e; static FBX fixture covers basic parser/export dispatch; overlapping open results guarded",
+      "status": "core connected; SMF high-fid + live pose export; dedicated Export as SMF preserves SMF-source fidelity; guarded non-SMF skinned SMF export wired and covered by generated skinned GLB e2e; static FBX fixture covers basic parser/export dispatch; overlapping open results guarded; 2026-06-15: SMF rig hierarchy now correctly skips isBone=0 head dummies for editor tree (SkeletonHelper, Inspector recursion, picker) via parent index walk + effective-local calc + deform-only Skeleton; SMF_Node_N/_head names + userData; skin/anim/export/bind fidelity unchanged (world DQ math + compressed skin indices preserved); golden + unit coverage added",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -122,13 +122,15 @@
         "source/frontend/src/loaders/threeToSmf.test.ts",
         "source/frontend/tests/helpers/skinned-glb-fixture.ts",
         "source/frontend/tests/test.fbx",
-        "source/frontend/tests/smoke.spec.ts"
+        "source/frontend/tests/smoke.spec.ts",
+        "source/frontend/src/loaders/smfRig.ts",
+        "source/frontend/src/loaders/coord.test.ts"
       ],
       "files": []
     },
     "feature__modern_editor_workspaces": {
       "description": "Planned modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, optional quad/ortho precision views, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
-      "status": "backlog/design current 2026-06-15; old layout analyzed and translated into actionable workspace requirements, not yet implemented",
+      "status": "2026-06-15: 1.3 editorMode foundation built + detailed breakdown of 1.2+ quad/modes into small 1.4-1.8 subtasks (quad toggle, larger glyphs/handles, mode defaults, tabs, ortho prep). Incremental, testable steps defined in TODO. See TODO #1 for full subtasks + done criteria.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
@@ -137,8 +139,8 @@
         "source/frontend/src/App.tsx",
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/components/Inspector.tsx",
-        "source/frontend/src/components/Timeline.tsx",
-        "source/frontend/src/components/Outliner.tsx",
+        "source/frontend/src/components/Toolbar.tsx",
+        "source/frontend/src/store/index.ts",
         "source/frontend/src/hooks/useLoadModel.ts"
       ],
       "requirements": [
@@ -151,7 +153,7 @@
     },
     "subsystem__viewport_editor": {
       "description": "Three.js viewport, orbit controls, model attach/dispose, animation mixer, skeleton helper, raycast bone selection, TransformControls, and weight preview.",
-      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed; viewport drag filtering, context-aware R reset vs TransformControls mode shortcuts, ref-decoupled timing, disposal helpers, and bonePicker remain current. Planned modernization adds optional quad/ortho workspaces and larger bone handles/labels.",
+      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed; viewport drag filtering, context-aware R reset vs TransformControls mode shortcuts, ref-decoupled timing, disposal helpers, and bonePicker remain current. Labels: toggleable per-bone (small AxesHelper marker + canvas name sprite attached to bone, off default, full dispose/traverse) via extracted boneLabels.ts + useBoneLabels hook (further modularity, viewport cleaned). Planned modernization adds optional quad/ortho workspaces and larger bone handles/labels.",
       "paths": [
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/utils/SimpleOrbit.ts",
@@ -159,7 +161,14 @@
         "source/frontend/src/components/Inspector.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/utils/weightPreview.ts",
-        "source/frontend/src/utils/bonePicker.ts"
+        "source/frontend/src/utils/bonePicker.ts",
+        "source/frontend/src/utils/boneLabels.ts",
+        "source/frontend/src/utils/useBoneLabels.ts",
+        "source/frontend/src/utils/boneHighlight.ts",
+        "source/frontend/src/utils/seqGuard.ts"
+      ],
+      "notes": [
+        "updateHighlightPosition extracted for RAF use in viewport (modularity + testability); labels canvas polish (DPR scale, textBaseline, truncation for quality/readability). 2026-06-15 review: test polyfill for canvas labels hardened (coord.test) to support extract + SMF tex paths without clobber."
       ],
       "edge_cases": [
         "Overlapping loads must not overwrite newer state.",
@@ -170,7 +179,7 @@
     },
     "subsystem__smf_format_and_fidelity": {
       "description": "SMF binary parsing/export, coordinate swizzles, dual-quaternion math, roundtrip fidelity, and old reference format material. Internal binary helpers (bytes + bounded R/W) live in smfBinary.ts (shared, barrel exposes bytesToArrayBuffer plus BinaryReader/BinaryWriter).",
-      "status": "SMF source roundtrip and visual coherence verified; SMF loader treats rig DQs as world bind transforms with true inverse binds and local animation tracks; SMF export guards zero-duration animation normalized times; non-SMF exact SMF export wired and covered by generated skinned GLB e2e; smfBinary canonical; smfRig preserves explicit SMF head nodes and intentionally keeps constructed GLB/FBX skeleton node lists direct unless future explicit metadata proves disconnected head synthesis is needed",
+      "status": "SMF source roundtrip and visual coherence verified; SMF loader treats rig DQs as world bind transforms with true inverse binds and local animation tracks; SMF export guards zero-duration animation normalized times; non-SMF exact SMF export wired and covered by generated skinned GLB e2e; smfBinary canonical; smfRig preserves explicit SMF head nodes (for export) + now provides buildRigHierarchy for Three: skips heads on attach/skel for clean editor bones while using effective is-bone ancestor for locals (bind/anim skin correct); constructed lists stay direct; names SMF_Node for roundtrips",
       "paths": [
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/loaders/smfBinary.ts",
@@ -220,7 +229,7 @@
     },
     "tests__quality": {
       "description": "Automated quality gates: lint, app typecheck, test typecheck, Vite build, chunk guard, unit roundtrips, Playwright e2e, native IPC mocks, and Rust cargo checks/tests.",
-      "status": "2026-06-15: npm audit clean; verify includes context-bank validation, app/test typechecks, Vite build, fail-closed chunk guard, unit tests, and cargo check; strict SMF visual snapshots are maintained through test:visual-strict; e2e uses production preview and covers smoke, visual, generated skinned GLB, static FBX, OBJ, and native IPC flows.",
+      "status": "2026-06-15 full review + test addition: gates clean (typecheck:test, targeted units); new related tests added+passing for recent work (smfBoneNameToIndex regex/suffix, buildRigHierarchy root-head+zero-bones edges, parented updateHighlight world pos, label DPR scaling); threeToSmf 7/7 (rig export); polyfill stable; e2e smoke covers labels toggle + seq guards via multi-load. Context 0w. No issues to address in audit (passes, no regressions).",
       "paths": [
         "source/frontend/package.json",
         "source/package.json",
@@ -504,7 +513,7 @@
     },
     "subsystem__modularity_candidates": {
       "description": "High-line-count files that should be split only at safe, test-backed boundaries. smfBinary.ts is the focused home for binary (after dedupe).",
-      "status": "watch; 2026-06-15 ranking excluding generated/reference files: smf.ts 535, ThreeViewport.tsx 462, useLoadModel.ts 423, tests/smoke.spec.ts 414, main.rs 346. No forced split; extract only at test-backed helper boundaries. Future quad/ortho work should create focused workspace/viewport modules instead of growing ThreeViewport indefinitely.",
+      "status": "watch; 2026-06-15 full review (post-extracts): top still smf.ts/ThreeViewport/useLoadModel (~stable); labels/seqGuard/bone* extracts + tests hold. No forced split (monolith heuristic). Polyfill test hardening for canvas labels noted in TODO/pitfall. Future quad/ortho: create focused modules, do not grow viewport.",
       "paths": [
         "source/frontend/tests/smoke.spec.ts",
         "source/frontend/src/loaders/smf.ts",

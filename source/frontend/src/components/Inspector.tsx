@@ -22,6 +22,9 @@ interface InspectorProps {
   transformMode?: 'translate' | 'rotate' | 'scale';
   onSetTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => void;
   onNudgeBone?: (boneName: string, delta: BoneNudgeDelta) => void;
+  showBoneLabels?: boolean;
+  onToggleBoneLabels?: () => void;
+  editorMode?: 'view' | 'rig' | 'skin' | 'animate' | 'export';
 }
 
 const Inspector: React.FC<InspectorProps> = ({
@@ -36,6 +39,9 @@ const Inspector: React.FC<InspectorProps> = ({
   transformMode = 'translate',
   onSetTransformMode,
   onNudgeBone,
+  showBoneLabels = false,
+  onToggleBoneLabels,
+  editorMode = 'view',
 }) => {
   // State for collapsible bone hierarchy (starts with top-level roots expanded for usability)
   const [expandedBones, setExpandedBones] = React.useState<Set<string>>(new Set());
@@ -120,6 +126,13 @@ const Inspector: React.FC<InspectorProps> = ({
         {skeleton && skeleton.bones.length > 0 && (
           <div className="mt-3">
             <div className="panel-title">Bones ({skeleton.bones.length})</div>
+            <button
+              data-testid="labels-toggle-btn"
+              className="text-[9px] px-1 py-0 bg-slate-700 hover:bg-slate-600 mb-1"
+              onClick={() => onToggleBoneLabels && onToggleBoneLabels()}
+            >
+              {showBoneLabels ? 'Hide' : 'Show'} labels (off by default for perf)
+            </button>
             <div className="max-h-24 overflow-auto text-[10px]">
               <ul className="pl-0 m-0 list-none">
                 {getRootBones(skeleton.bones).map((root) => renderBoneTree(root, 0))}

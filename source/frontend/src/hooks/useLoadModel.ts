@@ -12,6 +12,7 @@ import {
   applyPoseEditsToSmf,
 } from './poseEdits';
 import { findBoneByName } from '../utils/bonePicker';
+import { createSeqGuard } from '../utils/seqGuard';
 
 /**
  * Custom hook to encapsulate model loading logic, error handling, and related handlers.
@@ -41,9 +42,16 @@ export function useLoadModel() {
   // Transform mode for the gizmo; Inspector buttons select translate/rotate/scale.
   const [transformMode, setTransformMode] = useState<'translate' | 'rotate' | 'scale'>('translate');
 
-  const loadSeqRef = useRef(0);
-  const openSeqRef = useRef(0);
-  const fileReadSeqRef = useRef(0);
+  // Bone labels toggle (3D name sprites in viewport for debug/selection aid). Off by default for perf.
+  const [showBoneLabels, setShowBoneLabels] = useState(false);
+
+  // Editor mode for future workspaces (model/rig/skin/animate/export). Starts in view; clear resets.
+  // Small step toward modern editor (#1): data flow + basic toggle, no quad/visual changes yet.
+
+  // Use extracted seq guards for stale async prevention (modularity + testability for item 3)
+  const loadSeqGuard = createSeqGuard();
+  const openSeqGuard = createSeqGuard();
+  const fileReadSeqGuard = createSeqGuard();
 
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
@@ -52,8 +60,10 @@ export function useLoadModel() {
     model.clear();
     ui.setSelected('Scene');
     ui.clearError();
+    ui.setEditorMode('view');
     setShowWeightPreview(false);
     setTransformMode('translate');
+    setShowBoneLabels(false);
     const pb = playbackRef.current;
     pb.setIsPlaying(false);
     pb.setCurrentTime(0);
@@ -63,8 +73,8 @@ export function useLoadModel() {
   }, [model, ui, playbackRef]);
 
   const loadModel = useCallback(async (res: OpenResult) => {
-    const loadSeq = ++loadSeqRef.current;
-    const isCurrentLoad = () => loadSeqRef.current === loadSeq;
+    const loadSeq = loadSeqGuard.next();
+    const isCurrentLoad = () => loadSeqGuard.isCurrent(loadSeq);
     clearLoadedModel();
     ui.setIsLoading(true);
     ui.clearError();
@@ -86,9 +96,16 @@ export function useLoadModel() {
       else if (name.endsWith('.obj')) lastSourceFormatRef.current = 'obj';
 
       // Extract shared Tauri SMF desktop peek to avoid duplicated async branches
+      type DesktopTauri = {
+        getSmfDesktopInfo: (path: string) => Promise<string>;
+        peekSmfModelBasic: (path: string) => Promise<string>;
+        readBinaryFile: (path: string) => Promise<Uint8Array>;
+        openFile: () => Promise<OpenResult | null>;
+        saveFile: (buf: ArrayBuffer, name?: string) => Promise<boolean>;
+      };
       const fetchSmfDesktopPeek = async (
         path: string,
-        tauriClient: any
+        tauriClient: DesktopTauri
       ): Promise<{ rustPeekMsg: string; rustValidated: boolean }> => {
         try {
           const info = await tauriClient.getSmfDesktopInfo(path);
@@ -113,10 +130,10 @@ export function useLoadModel() {
 
       // Single dynamic import for all Tauri client fns when on desktop .smf path.
       // Reduces redundancy (multiple awaits), improves timing (one module load), centralizes.
-      let tauri: any = null;
+      let tauri: DesktopTauri | null = null;
       if (!data && res.path) {
         if (name.endsWith('.smf')) {
-          tauri = await import('../backend-client/tauri');
+          tauri = await import('../backend-client/tauri') as DesktopTauri;
           const peek = await fetchSmfDesktopPeek(res.path, tauri);
           if (!isCurrentLoad()) return;
           if (!peek.rustValidated && peek.rustPeekMsg) return; // already set error above
@@ -124,11 +141,11 @@ export function useLoadModel() {
           rustPeekMsg = peek.rustPeekMsg;
         }
         ui.setStatus('Reading binary from desktop path...');
-        if (!tauri) tauri = await import('../backend-client/tauri');
+        if (!tauri) tauri = await import('../backend-client/tauri') as DesktopTauri;
         data = await tauri.readBinaryFile(res.path);
         if (!isCurrentLoad()) return;
       } else if (name.endsWith('.smf') && res.path) {
-        tauri = await import('../backend-client/tauri');
+        tauri = await import('../backend-client/tauri') as DesktopTauri;
         const peek = await fetchSmfDesktopPeek(res.path, tauri);
         if (!isCurrentLoad()) return;
         if (!peek.rustValidated && peek.rustPeekMsg) return; // already set error above
@@ -199,18 +216,18 @@ export function useLoadModel() {
   }, [ui, model, playbackRef, clearLoadedModel]);
 
   const handleOpen = useCallback(async () => {
-    const openSeq = ++openSeqRef.current;
+    const openSeq = openSeqGuard.next();
     ui.setStatus('Opening file picker (.smf/.glb/.fbx/.obj supported)...');
     try {
       const res: OpenResult | null = await (await import('../backend-client/tauri')).openFile();
-      if (openSeq !== openSeqRef.current) return;
+      if (!openSeqGuard.isCurrent(openSeq)) return;
       if (!res) {
         ui.setStatus('No file selected.');
         return;
       }
       await loadModel(res);
     } catch (e: any) {
-      if (openSeq !== openSeqRef.current) return;
+      if (!openSeqGuard.isCurrent(openSeq)) return;
       const msg = e?.message || String(e);
       ui.setErrorMsg(`Open error: ${msg}`);
       ui.setStatus(`Open error: ${msg}`);
@@ -338,14 +355,14 @@ export function useLoadModel() {
   const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const readSeq = ++fileReadSeqRef.current;
+    const readSeq = fileReadSeqGuard.next();
     ui.setStatus('Loading selected file...');
     try {
       const buf = await file.arrayBuffer();
-      if (readSeq !== fileReadSeqRef.current) return;
+      if (!fileReadSeqGuard.isCurrent(readSeq)) return;
       await loadModel({ name: file.name, data: new Uint8Array(buf) });
     } catch (err: any) {
-      if (readSeq !== fileReadSeqRef.current) return;
+      if (!fileReadSeqGuard.isCurrent(readSeq)) return;
       const m = err?.message || String(err);
       ui.setErrorMsg(`File load error: ${m}`);
       ui.setStatus(`File load error: ${m}`);
@@ -378,6 +395,10 @@ export function useLoadModel() {
     setTransformMode(mode);
   }, []);
 
+  const toggleBoneLabels = useCallback(() => {
+    setShowBoneLabels(v => !v);
+  }, []);
+
   const changeClip = useCallback((clip: THREE.AnimationClip) => {
     playback.selectClip(clip.name || 'clip', clip.duration);
   }, [playback]);
@@ -401,14 +422,14 @@ export function useLoadModel() {
 
   // Extracted for modularity: drop handler (mirrors handleFileInputChange but for DataTransfer)
   const handleDrop = useCallback(async (file: File) => {
-    const readSeq = ++fileReadSeqRef.current;
+    const readSeq = fileReadSeqGuard.next();
     ui.setStatus('Loading dropped file...');
     try {
       const buf = await file.arrayBuffer();
-      if (readSeq !== fileReadSeqRef.current) return;
+      if (!fileReadSeqGuard.isCurrent(readSeq)) return;
       await loadModel({ name: file.name, data: new Uint8Array(buf) });
     } catch (err: any) {
-      if (readSeq !== fileReadSeqRef.current) return;
+      if (!fileReadSeqGuard.isCurrent(readSeq)) return;
       const m = err?.message || String(err);
       ui.setErrorMsg(`Drop load error: ${m}`);
       ui.setStatus(`Drop load error: ${m}`);
@@ -470,5 +491,9 @@ export function useLoadModel() {
     toggleWeightPreview,
     transformMode,
     setTransformMode: setTransformModeHandler,
+    showBoneLabels,
+    toggleBoneLabels,
+    editorMode: ui.editorMode,
+    setEditorMode: ui.setEditorMode,
   };
 }

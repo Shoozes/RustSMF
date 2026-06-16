@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-15 (docs flattened under `docs/dev`, context-bank path verifier added to `verify`, stale `docs/TODO.md` and `plan.md` references redirected, launcher defaults fixed, Vite 8 audit clean, Playwright e2e served from production preview, strict SMF visual baselines refreshed, generated reports untracked, async open guard added, chunk guard fail-closed, old-src editor references restored).
+Last reviewed: 2026-06-15 (full review + tests for recent work (editorMode 1.3 + hierarchy/extracts/stale sim); broke down #1 modern editor 1.2+ into small subtasks 1.4-1.8 (quad toggle, larger glyphs, mode defaults, tabs, ortho prep) with done criteria; updated APP_STATE/TODO/summary_bank/tests/README; all gates (typecheck, context, targeted units) clean; no loose ends/stubs/broken imports; explicit push requested. All work on main. Prior passes consolidated).
 
 ## Current Product State
 
@@ -18,7 +18,7 @@ Core flow:
 - Cover basic FBX parsing/export dispatch with a self-authored static ASCII FBX fixture.
 - Use Rust/Tauri commands for native open/save, binary read/write, and small SMF header/rig/anim/model validation/status peeks.
 - Ignore stale file-open and browser file/drop read results when a newer operation has started.
-- Planned modernization keeps the current React/Tauri/Three stack, uses GLB/GLTF as the preferred modern fidelity format, preserves SMF for backwards compatibility, and uses the old GameMaker screenshots to guide optional quad/ortho workspaces with larger bone handles/labels for rigging and skinning.
+- Planned modernization keeps the current React/Tauri/Three stack, uses GLB/GLTF as the preferred modern fidelity format, preserves SMF for backwards compatibility, and uses the old GameMaker screenshots to guide optional quad/ortho workspaces with larger bone handles/labels for rigging and skinning. Active breakdown in TODO #1: editorMode foundation (1.3) built; 1.4-1.8 subtasks defined for incremental quad, glyphs, mode behaviors, tabs (see subtasks for scope/done criteria).
 
 ## Architecture
 
@@ -27,7 +27,7 @@ Core flow:
 - `source/frontend/src/hooks/poseEdits.ts`: nudge delta types and helpers for live SMF position/rotation edits.
 - `source/frontend/src/components/ThreeViewport.tsx`: renderer, scene, camera, orbit, model attach/dispose, mixer, skeleton helper, raycast bone picking, marker, TransformControls, and weight preview.
 - `source/frontend/src/components/Inspector.tsx`: typed skeleton tree, clip list, selection controls, transform mode controls, and nudge controls.
-- `source/frontend/src/loaders/*`: SMF import/export, bounded binary helpers, rig node-list helper, guarded Three-to-SMF conversion, GLB/FBX/OBJ loading/export, coordinate swizzles, and DQ math.
+- `source/frontend/src/loaders/*`: SMF import/export (buildThreeScene now delegates rig to buildRigHierarchy for flat nodes + isBone=0 head dummies: effective-parent walk skips heads for direct real-bone .add() + deform-only Skeleton; bind locals use ancestor world for correct matrixWorld; names `SMF_Node_N` (+ `_head` for dummies) + userData; skin remap direct on compressed is-bone seq), bounded binary helpers, rig node-list helper (export), guarded Three-to-SMF conversion, GLB/FBX/OBJ loading/export, coordinate swizzles, and DQ math. SMF rig tree now produces clean SkeletonHelper/Inspector/picker for rigs with disconnected parts (skin/anim/export fidelity preserved via world DQ + compose).
 - `source/frontend/src/backend-client/tauri.ts`: browser/Tauri bridge for dialog, save, binary read, invokes, and desktop fallback messages. `saveFile` returns `boolean` so cancel is explicit.
 - `source/frontend/tests/helpers/skinned-glb-fixture.ts`: generated self-authored skinned GLB fixture for default non-SMF skinned e2e coverage.
 - `source/frontend/src/store`: lightweight React state slices for model, playback, and UI.
