@@ -53,7 +53,10 @@ Update or remove a test when:
 
 When adding a test, document the covered risk in this README or `docs/dev/TODO.md` if it is tied to an active backlog item.
 
-Recent additions (this review): e2e mode select interaction expanded (exercises new editorMode state flow + combinations with labels toggle and bone picker/selection after mode change to 'rig'; reset to 'view'; verifies no crash, status updates, canvas stable). Risk covered: mode UI edges + interactions for scalability of workspaces.
+Recent additions:
+- 2026-06-16: SMF root-head/self-parent regression coverage now proves the real `mixamo_smf_baldguy.smf` fixture loads without hanging, bind-pose skinning remains stable, and skipped head dummy nodes do not emit missing-target animation warnings. Run the targeted SMF unit slice plus `npm --workspace frontend run test:e2e -- tests/smoke.spec.ts -g "can load a real SMF sample"` after hierarchy changes.
+- 2026-06-16 (launcher process safety): dev server lifetime / no-rogue-on-close covered by harness (run.ps1 Job+tree+scans+stale + mjs wrapper). Manual verification: `pwsh -File run.ps1`; load; close cmd X or Tauri window; confirm no node listening on 5173 (`Get-NetTCPConnection -LocalPort 5173` or tasklist); re-launch clean. Risk: orphan processes post-close (fixed layered; see PITFALL + summary_bank subsystem__dev_process_lifecycle). E2e uses preview (playwright-managed).
+- Prior: e2e mode select interaction expanded (exercises new editorMode state flow + combinations with labels toggle and bone picker/selection after mode change to 'rig'; reset to 'view'; verifies no crash, status updates, canvas stable). Risk covered: mode UI edges + interactions for scalability of workspaces.
 
 Practical commands for recent work (bone hierarchy, labels/highlight makers, seqGuard, name index/regex):
 - Targeted: `cd source/frontend; npx tsx --test --test-name-pattern="smfBoneNameToIndex|root-head|resolves world position|DPR scaling|buildRigHierarchy directly|createSeqGuard|makeBoneLabel util|makeBoneHighlightMarker" src/loaders/coord.test.ts`

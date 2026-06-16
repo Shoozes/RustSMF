@@ -48,10 +48,10 @@ export function useLoadModel() {
   // Editor mode for future workspaces (model/rig/skin/animate/export). Starts in view; clear resets.
   // Small step toward modern editor (#1): data flow + basic toggle, no quad/visual changes yet.
 
-  // Use extracted seq guards for stale async prevention (modularity + testability for item 3)
-  const loadSeqGuard = createSeqGuard();
-  const openSeqGuard = createSeqGuard();
-  const fileReadSeqGuard = createSeqGuard();
+  // Stable seq guards prevent stale async results across React re-renders.
+  const loadSeqGuardRef = useRef(createSeqGuard());
+  const openSeqGuardRef = useRef(createSeqGuard());
+  const fileReadSeqGuardRef = useRef(createSeqGuard());
 
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
@@ -73,6 +73,7 @@ export function useLoadModel() {
   }, [model, ui, playbackRef]);
 
   const loadModel = useCallback(async (res: OpenResult) => {
+    const loadSeqGuard = loadSeqGuardRef.current;
     const loadSeq = loadSeqGuard.next();
     const isCurrentLoad = () => loadSeqGuard.isCurrent(loadSeq);
     clearLoadedModel();
@@ -101,7 +102,7 @@ export function useLoadModel() {
         peekSmfModelBasic: (path: string) => Promise<string>;
         readBinaryFile: (path: string) => Promise<Uint8Array>;
         openFile: () => Promise<OpenResult | null>;
-        saveFile: (buf: ArrayBuffer, name?: string) => Promise<boolean>;
+        saveFile: (data: Uint8Array | Blob, name: string) => Promise<boolean>;
       };
       const fetchSmfDesktopPeek = async (
         path: string,
@@ -121,7 +122,9 @@ export function useLoadModel() {
             const m = await tauriClient.peekSmfModelBasic(path);
             if (!isCurrentLoad()) return { rustPeekMsg: msg, rustValidated: true };
             msg = `${msg} | ${m}`;
-          } catch {}
+          } catch {
+            /* ignore individual peek failure; accumulate what we have */
+          }
           return { rustPeekMsg: msg, rustValidated: true };
         } catch {
           return { rustPeekMsg: '', rustValidated: false };
@@ -216,6 +219,7 @@ export function useLoadModel() {
   }, [ui, model, playbackRef, clearLoadedModel]);
 
   const handleOpen = useCallback(async () => {
+    const openSeqGuard = openSeqGuardRef.current;
     const openSeq = openSeqGuard.next();
     ui.setStatus('Opening file picker (.smf/.glb/.fbx/.obj supported)...');
     try {
@@ -355,6 +359,7 @@ export function useLoadModel() {
   const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const fileReadSeqGuard = fileReadSeqGuardRef.current;
     const readSeq = fileReadSeqGuard.next();
     ui.setStatus('Loading selected file...');
     try {
@@ -422,6 +427,7 @@ export function useLoadModel() {
 
   // Extracted for modularity: drop handler (mirrors handleFileInputChange but for DataTransfer)
   const handleDrop = useCallback(async (file: File) => {
+    const fileReadSeqGuard = fileReadSeqGuardRef.current;
     const readSeq = fileReadSeqGuard.next();
     ui.setStatus('Loading dropped file...');
     try {

@@ -33,7 +33,9 @@ function getGmlFiles(): string[] {
         if (fs.statSync(full).isDirectory()) findGml(full);
         else if (item.endsWith('.gml')) gmls.push(full);
       }
-    } catch {}
+    } catch {
+      /* best-effort GML search; ignore missing or permission issues for test fixtures */
+    }
   }
   if (fs.existsSync(BAD_GML_DIR_SEARCH)) findGml(BAD_GML_DIR_SEARCH);
   gmlFilesCache = gmls;

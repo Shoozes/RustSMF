@@ -1,6 +1,7 @@
 import React from 'react';
 import * as THREE from 'three';
 import type { BoneNudgeDelta } from '../hooks/poseEdits';
+import type { EditorMode } from '../store';
 
 function isBone(child: THREE.Object3D): child is THREE.Bone {
   return (child as THREE.Bone).isBone === true;
@@ -24,7 +25,7 @@ interface InspectorProps {
   onNudgeBone?: (boneName: string, delta: BoneNudgeDelta) => void;
   showBoneLabels?: boolean;
   onToggleBoneLabels?: () => void;
-  editorMode?: 'view' | 'rig' | 'skin' | 'animate' | 'export';
+  editorMode?: EditorMode;
 }
 
 const Inspector: React.FC<InspectorProps> = ({
@@ -97,7 +98,7 @@ const Inspector: React.FC<InspectorProps> = ({
     );
   };
   return (
-    <div data-testid="inspector" className="inspector">
+    <div data-testid="inspector" className="inspector" data-editor-mode={editorMode}>
       <div className="panel-title">Inspector</div>
       <div className="text-xs">
         <div className="mb-1 text-slate-400">Selected</div>

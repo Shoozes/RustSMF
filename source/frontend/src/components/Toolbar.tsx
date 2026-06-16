@@ -1,4 +1,5 @@
 import React from 'react';
+import type { EditorMode } from '../store';
 
 interface ToolbarProps {
   onOpen: () => void;
@@ -7,8 +8,8 @@ interface ToolbarProps {
   onPing: () => void;
   isLoading: boolean;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  editorMode: 'view' | 'rig' | 'skin' | 'animate' | 'export';
-  setEditorMode: (mode: 'view' | 'rig' | 'skin' | 'animate' | 'export') => void;
+  editorMode: EditorMode;
+  setEditorMode: (mode: EditorMode) => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -40,7 +41,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
       <select
         data-testid="editor-mode-select"
         value={editorMode}
-        onChange={(e) => setEditorMode(e.target.value as any)}
+        onChange={(e) => setEditorMode(e.target.value as EditorMode)}
         disabled={isLoading}
         className="text-xs bg-slate-800 border border-slate-700 px-1 py-0.5 rounded"
         title="Editor mode (foundation for quad/mode-specific tools)"

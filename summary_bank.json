@@ -48,7 +48,7 @@
   "groups": {
     "docs__state_backlog": {
       "description": "Current app state, active paired backlog, docs policy, and durable regression-prevention notes. Keep concise; do not append repeated pass logs.",
-      "status": "current after 2026-06-15 integrity/doc pass + SMF bone hierarchy fix (docs flattened under docs/dev, docs/dev/TODO.md is the active backlog, context-bank verifier added to run.ps1 verify, stale plan.md references removed, launcher defaults fixed, Vite/esbuild audit clean, e2e served from production preview, strict SMF visual baselines refreshed, generated reports untracked, async open guard and fail-closed chunk guard added, SMF visual tearing fixed, old-src references restored, SMF rig hierarchy reconstruction (head dummies skip via buildRigHierarchy), SMF_Node_N names + userData for roundtrip, direct real-bone attaches, test asserts, Inspector labels stub + linewidth)",
+      "status": "current after 2026-06-16 SMF load-hang integrity pass (docs flattened under docs/dev, docs/dev/TODO.md is the active backlog, context-bank verifier in run.ps1 verify, launcher defaults fixed, e2e served from production preview, strict SMF visual baselines intentional, generated reports untracked, async open/read guards stable, SMF visual tearing fixed, old-src references restored, SMF rig hierarchy reconstruction cycle-safe for head dummies, SMF_Node_N names + userData for roundtrip, direct real-bone attaches, labels/highlight utilities tested)",
       "paths": [
         "README.md",
         "docs/README.md",
@@ -107,7 +107,7 @@
     },
     "feature__model_loading_export": {
       "description": "User-facing load, preview, edit-preview, and export flow across SMF, GLB/GLTF, FBX, and OBJ.",
-      "status": "core connected; SMF high-fid + live pose export; dedicated Export as SMF preserves SMF-source fidelity; guarded non-SMF skinned SMF export wired and covered by generated skinned GLB e2e; static FBX fixture covers basic parser/export dispatch; overlapping open results guarded; 2026-06-15: SMF rig hierarchy now correctly skips isBone=0 head dummies for editor tree (SkeletonHelper, Inspector recursion, picker) via parent index walk + effective-local calc + deform-only Skeleton; SMF_Node_N/_head names + userData; skin/anim/export/bind fidelity unchanged (world DQ math + compressed skin indices preserved); golden + unit coverage added",
+      "status": "core connected; SMF high-fid + live pose export; dedicated Export as SMF preserves SMF-source fidelity; guarded non-SMF skinned SMF export wired and covered by generated skinned GLB e2e; static FBX fixture covers basic parser/export dispatch; overlapping open results guarded with stable seq refs; 2026-06-16: SMF head-dummy hierarchy walk is cycle-safe for self-parent root heads, inverse binds refresh world matrices before calculateInverses, and animation tracks skip non-scene heads so real .smf load clears without missing-target warnings",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -179,7 +179,7 @@
     },
     "subsystem__smf_format_and_fidelity": {
       "description": "SMF binary parsing/export, coordinate swizzles, dual-quaternion math, roundtrip fidelity, and old reference format material. Internal binary helpers (bytes + bounded R/W) live in smfBinary.ts (shared, barrel exposes bytesToArrayBuffer plus BinaryReader/BinaryWriter).",
-      "status": "SMF source roundtrip and visual coherence verified; SMF loader treats rig DQs as world bind transforms with true inverse binds and local animation tracks; SMF export guards zero-duration animation normalized times; non-SMF exact SMF export wired and covered by generated skinned GLB e2e; smfBinary canonical; smfRig preserves explicit SMF head nodes (for export) + now provides buildRigHierarchy for Three: skips heads on attach/skel for clean editor bones while using effective is-bone ancestor for locals (bind/anim skin correct); constructed lists stay direct; names SMF_Node for roundtrips",
+      "status": "SMF source roundtrip and visual coherence verified; SMF loader treats rig DQs as world bind transforms with true inverse binds and local animation tracks; SMF export guards zero-duration animation normalized times; non-SMF exact SMF export wired and covered by generated skinned GLB e2e; smfBinary canonical; smfRig preserves explicit SMF head nodes for export and provides buildRigHierarchy for Three: skips heads on attach/skel with cycle-safe effective is-bone ancestor lookup, updates world matrices before inverse binds, and keeps animation tracks on real scene bones only; constructed lists stay direct; names SMF_Node for roundtrips",
       "paths": [
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/loaders/smfBinary.ts",
@@ -227,9 +227,54 @@
       ],
       "files": []
     },
+    "subsystem__dev_process_lifecycle": {
+      "description": "Launcher (run.ps1/run.bat), beforeDev wrapper (start-vite-dev.mjs for tauri dev server), Tauri conf, process safety (Job objects, recursive tree kills, parent-pid poll, port+cmdline stale sweeps, signals/finally/traps), and related dev server lifetime (playwright preview separate).",
+      "status": "2026-06-16: layered Windows safety implemented + clean (New-KillOnCloseJob for X-close even if finally skipped; Start-Process ownership + finally for dev/tauri-dev; Stop-ProcessTree + Stop-DevServers (5173 node + 'vite|start-vite-dev|tauri' cmdline) + Stop-Stale on entry; trap + PowerShell.Exiting; mjs wrapper for beforeDev with SIGs/'exit'/killViteTree/taskkill /T + win32 parent poll + delay). tauri.conf beforeDev now points at mjs. Green on cargo/context/typechecks/verify. Gaps noted (non-Win, direct tauri/npm dev outside launcher, broader sweeps).",
+      "paths": [
+        "run.ps1",
+        "run.bat",
+        "source/frontend/scripts/start-vite-dev.mjs",
+        "source/src-tauri/tauri.conf.json",
+        "source/frontend/package.json",
+        "source/package.json",
+        "source/frontend/playwright.config.ts",
+        "runtime-data/README.md",
+        "docs/dev/PITFALL_LEDGER.md",
+        "docs/dev/APP_STATE.md",
+        "docs/dev/TODO.md",
+        "scripts/verify-context-bank.py",
+        "source/src-tauri/src/main.rs"
+      ],
+      "notes": [
+        "Primary coverage for close-cmd-window (Job), close-tauri-app (mjs poll+tree), Ctrl+C, next-launch-clean (stale entry sweeps). Redundant layers on Win. See issue__rogue_node_servers and plan for hardenings (cross-plat tree kill, direct-launch docs).",
+        "Playwright webServer uses preview (playwright-managed, reuse:false); separate from persistent dev server."
+      ],
+      "files": []
+    },
+    "issue__rogue_node_servers": {
+      "description": "Rogue node/vite (or tauri-cli) dev servers left listening after close cmd/pwsh window (X), close Tauri app, Ctrl+C, or hard kill when using tauri dev (beforeDevCommand spawn) or direct npm/vite.",
+      "status": "fixed 2026-06-16 via layered launcher (run.ps1 Job+tree+scans+finally+trap+stale) + beforeDev wrapper (mjs signals+killViteTree+taskkill/T+parent poll). Prior related: issue__launcher_default_local_tauri. Checks (typecheck/cargo/context/verify) clean post-implementation. Windows-primary; gaps for non-Win + direct launches outside run.ps1.",
+      "last_seen": "2026-06-16",
+      "paths": [
+        "run.ps1",
+        "run.bat",
+        "source/frontend/scripts/start-vite-dev.mjs",
+        "source/src-tauri/tauri.conf.json",
+        "source/frontend/package.json",
+        "docs/dev/PITFALL_LEDGER.md",
+        "docs/dev/APP_STATE.md",
+        "docs/dev/TODO.md",
+        "summary_bank.json",
+        "runtime-data/vite-dev.out.log",
+        "runtime-data/vite-dev.err.log"
+      ],
+      "current_solution": "Stop-StaleDevStack (port 5173 node + cmdline sweeps) on dev entry + finally/trap; New-KillOnCloseJob (auto child add); recursive Stop-ProcessTree; mjs killViteTree (SIGTERM + win taskkill /T + parent poll every ~1.8s + exit handler). Tauri CLI term of beforeDev child triggers mjs. Entry sweep prevents 'port in use' on re-launch.",
+      "next_prevention": "Add cross-plat tree kill (pkill/kill fallback in mjs + ps1 equiv); document 'use run.ps1 for full orphan protection' (direct tauri dev has only mjs); consider lightweight launcher safety note in desktop-smoke or tests/README; re-run context verifier + manual X-close + re-launch test after changes.",
+      "files": []
+    },
     "tests__quality": {
       "description": "Automated quality gates: lint, app typecheck, test typecheck, Vite build, chunk guard, unit roundtrips, Playwright e2e, native IPC mocks, and Rust cargo checks/tests.",
-      "status": "2026-06-15 full review + test addition: gates clean (typecheck:test, targeted units); new related tests added+passing for recent work (smfBoneNameToIndex regex/suffix, buildRigHierarchy root-head+zero-bones edges, parented updateHighlight world pos, label DPR scaling); threeToSmf 7/7 (rig export); polyfill stable; e2e smoke covers labels toggle + seq guards via multi-load. Context 0w. No issues to address in audit (passes, no regressions).",
+      "status": "2026-06-16: full verify clean after SMF load-hang fix (context 0 warnings, lint, app/test typecheck, Vite build, chunk guard, 32 unit tests, cargo check). Targeted SMF Playwright load and native IPC mock tests passed. Unit coverage includes root-head/self-parent, bind-pose skinning, seqGuard, labels/highlight, threeToSmf 7/7.",
       "paths": [
         "source/frontend/package.json",
         "source/package.json",
@@ -424,6 +469,26 @@
       ],
       "current_solution": "Derive local bone transforms from stored SMF world bind matrices, compute true inverse bind matrices, convert animation frame world poses to local parent tracks, and normalize skin weights for Three rendering while preserving imported SMF export data.",
       "next_prevention": "Keep the real-sample bind-pose skinning regression and visual check around any SMF rig/animation changes.",
+      "files": []
+    },
+    "issue__smf_head_parent_load_hang": {
+      "description": "Real SMF files can use self-parented isBone=0 head dummies; an unguarded head-skip walk can spin during buildThreeScene and leave the UI loading indefinitely.",
+      "status": "fixed 2026-06-16; effective-parent lookup tracks visited nodes, inverse binds calculate after world-matrix refresh, animation tracks target real scene bones only, app typecheck restored, real SMF smoke/native/browser checks passed",
+      "last_seen": "2026-06-16",
+      "paths": [
+        "source/frontend/src/loaders/smfRig.ts",
+        "source/frontend/src/loaders/smf.ts",
+        "source/frontend/src/loaders/coord.test.ts",
+        "source/frontend/src/hooks/useLoadModel.ts",
+        "source/frontend/tests/mixamo_smf_baldguy.smf",
+        "source/frontend/tests/smoke.spec.ts",
+        "source/frontend/tests/native.spec.ts",
+        "docs/dev/TODO.md",
+        "docs/dev/PITFALL_LEDGER.md",
+        "docs/dev/APP_STATE.md"
+      ],
+      "current_solution": "Use `findEffectiveBoneParentIndex` for hierarchy and animation local-parent resolution; keep seq guards stable with refs; verify with unit, targeted SMF Playwright, native IPC mock, Browser shell, and full `verify`.",
+      "next_prevention": "Before changing SMF parent walking or animation track targeting, run the root-head unit slice and targeted real SMF Playwright load.",
       "files": []
     },
     "issue__stale_strict_visual_baselines": {

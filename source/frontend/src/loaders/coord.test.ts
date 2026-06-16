@@ -561,7 +561,7 @@ describe('smf export roundtrip (data-driven)', () => {
     assert.strictEqual(sk1.bones.length, 2, 'only deform bones');
     assert.strictEqual(nodes1.length, 2);
     const real0 = sk1.bones.find((b: any) => b.userData.index === 1);
-    assert.ok(real0 && !real0.parent, 'first real under root-head attaches directly to provided root Group');
+    assert.ok(real0 && real0.parent === r1, 'first real under root-head attaches directly to provided root Group');
     assert.strictEqual(r1.children.filter((c: any) => c instanceof THREE.Bone).length, 1);
 
     // Case 2: zero bones (all heads or empty) -> empty skel, no crash, allNodes empty

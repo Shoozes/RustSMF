@@ -9,7 +9,7 @@ import {
   decomposeMatrix,
 } from './coord';
 import { bytesToArrayBuffer, BinaryReader, BinaryWriter } from './smfBinary';
-import { buildSmfNodeList, buildRigHierarchy } from './smfRig';
+import { buildSmfNodeList, buildRigHierarchy, findEffectiveBoneParentIndex } from './smfRig';
 
 /**
  * SMF binary loader (ported/adapted from docs/references/old-src/GLBtoSMF/importer.js)
@@ -318,7 +318,9 @@ export function buildThreeScene(imported: ImportedSmf) {
 
     for (let n = 0; n < a.nodeCount; n++) {
       const isB = imported.bones[n]?.isBone ?? 1;
-      const boneName = `SMF_Node_${n}${isB === 1 ? '' : '_head'}`;
+      if (isB !== 1) continue;
+
+      const boneName = `SMF_Node_${n}`;
       const posValues = new Float32Array(a.times.length * 3);
       const quatValues = new Float32Array(a.times.length * 4);
       let prevQuat: THREE.Quaternion | null = null;
@@ -327,8 +329,9 @@ export function buildThreeScene(imported: ImportedSmf) {
         const frameMatrices = frameWorldMats[f] ?? [];
         const worldMatrix = frameMatrices[n] ?? worldMats[n];
         const parent = imported.bones[n]?.parent ?? -1;
-        const parentWorld = isValidParent(parent, n, frameMatrices.length)
-          ? frameMatrices[parent]
+        const effectiveParent = findEffectiveBoneParentIndex(imported.bones, parent, n);
+        const parentWorld = effectiveParent !== null && isValidParent(effectiveParent, n, frameMatrices.length)
+          ? frameMatrices[effectiveParent]
           : null;
         const localMatrix = makeLocalMatrix(worldMatrix, parentWorld);
         const { pos, quat } = decomposeMatrix(localMatrix);

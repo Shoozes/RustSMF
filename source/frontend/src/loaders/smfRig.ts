@@ -27,6 +27,25 @@ function applyMatrixTransform(obj: THREE.Object3D, m: THREE.Matrix4) {
   obj.scale.copy(scale);
 }
 
+export function findEffectiveBoneParentIndex(
+  bones: ImportedSmf['bones'],
+  startParent: number,
+  selfIndex: number
+): number | null {
+  const visited = new Set<number>();
+  let pIdx = startParent;
+
+  while (pIdx !== selfIndex && pIdx >= 0 && pIdx < bones.length && !visited.has(pIdx)) {
+    visited.add(pIdx);
+    if (bones[pIdx].isBone === 1) {
+      return pIdx;
+    }
+    pIdx = bones[pIdx].parent;
+  }
+
+  return null;
+}
+
 export function buildSmfNodeList(importedBones: ImportedSmf['bones']): {
   nodeList: Array<{ boneIndex: number; parent: number; isBone: number; isHead: boolean; name: string }>;
   boneToNode: Map<number, number>;
@@ -81,7 +100,6 @@ export function buildSmfNodeList(importedBones: ImportedSmf['bones']): {
 export function buildRigHierarchy(imported: ImportedSmf, root: THREE.Group) {
   const nodeMap = new Map<number, THREE.Bone>();
   const bones: THREE.Bone[] = [];
-  const nodeCount = imported.bones.length;
   const worldMats: THREE.Matrix4[] = imported.bones.map((b) => dqToThreeMatrix(b.dq));
 
   imported.bones.forEach((nodeData, idx) => {
@@ -90,15 +108,8 @@ export function buildRigHierarchy(imported: ImportedSmf, root: THREE.Group) {
     bone.name = `SMF_Node_${idx}`;
     bone.userData = { index: idx, isBone: true, originalParent: nodeData.parent };
     const myWorld = worldMats[idx];
-    let pIdx = nodeData.parent;
-    let effWorld: THREE.Matrix4 | null = null;
-    while (pIdx !== idx && pIdx >= 0 && pIdx < nodeCount) {
-      if (imported.bones[pIdx].isBone === 1) {
-        effWorld = worldMats[pIdx];
-        break;
-      }
-      pIdx = imported.bones[pIdx].parent;
-    }
+    const effectiveParent = findEffectiveBoneParentIndex(imported.bones, nodeData.parent, idx);
+    const effWorld = effectiveParent === null ? null : worldMats[effectiveParent];
     const localM = makeLocalMatrix(myWorld, effWorld);
     applyMatrixTransform(bone, localM);
     bone.updateMatrix();
@@ -110,16 +121,8 @@ export function buildRigHierarchy(imported: ImportedSmf, root: THREE.Group) {
   imported.bones.forEach((nodeData, idx) => {
     if (nodeData.isBone !== 1) return;
     const bone = nodeMap.get(idx)!;
-    let pIdx = nodeData.parent;
-    let parentBone: THREE.Bone | null = null;
-    while (pIdx !== idx && pIdx >= 0 && pIdx < nodeCount) {
-      const candidate = nodeMap.get(pIdx);
-      if (candidate) {
-        parentBone = candidate;
-        break;
-      }
-      pIdx = imported.bones[pIdx].parent;
-    }
+    const effectiveParent = findEffectiveBoneParentIndex(imported.bones, nodeData.parent, idx);
+    const parentBone = effectiveParent === null ? null : nodeMap.get(effectiveParent) ?? null;
     if (parentBone) {
       parentBone.add(bone);
     } else {
@@ -127,6 +130,7 @@ export function buildRigHierarchy(imported: ImportedSmf, root: THREE.Group) {
     }
   });
 
+  root.updateMatrixWorld(true);
   const skeleton = new THREE.Skeleton(bones);
   skeleton.calculateInverses();
   return { skeleton, allNodes: Array.from(nodeMap.values()) };

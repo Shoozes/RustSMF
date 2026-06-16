@@ -20,10 +20,117 @@ function Ensure-Dirs {
     New-Item -ItemType Directory -Force -Path (Join-Path $RepoRoot "runtime-data") | Out-Null
 }
 
+function Stop-ProcessTree([int]$ProcessId) {
+    if (-not $ProcessId -or $ProcessId -le 0) { return }
+    try {
+        $children = Get-CimInstance Win32_Process -Filter "ParentProcessId=$ProcessId" -ErrorAction SilentlyContinue
+        foreach ($child in $children) {
+            Stop-ProcessTree -ProcessId $child.ProcessId
+        }
+    } catch {}
+    Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
+}
+
+function Stop-DevServers {
+    # 1. Exact port owner (5173 is our dev/preview port)
+    try {
+        $conns = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue
+        foreach ($c in $conns) {
+            $p = Get-Process -Id $c.OwningProcess -ErrorAction SilentlyContinue
+            if ($p -and ($p.ProcessName -eq 'node' -or $p.ProcessName -eq 'node.exe')) {
+                Write-Warn "  Killing node (pid $($p.Id)) listening on :5173"
+                Stop-ProcessTree $p.Id
+            }
+        }
+    } catch {}
+
+    # 2. Any node whose command line mentions vite or our managed wrapper
+    try {
+        $procs = Get-CimInstance Win32_Process -Filter "Name='node.exe' OR Name='node'" -ErrorAction SilentlyContinue |
+            Where-Object { $_.CommandLine -match 'vite' -or $_.CommandLine -match 'start-vite-dev' }
+        foreach ($n in $procs) {
+            Write-Warn "  Killing node (pid $($n.ProcessId)) (vite dev / wrapper)"
+            Stop-ProcessTree $n.ProcessId
+        }
+    } catch {}
+
+    # 3. Extra sweep for tauri-cli node processes that may be lingering from outer shell close
+    try {
+        Get-Process -Name node -ErrorAction SilentlyContinue | ForEach-Object {
+            $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine
+            if ($cmd -and ($cmd -match 'tauri' -or $cmd -match 'start-vite-dev')) {
+                Write-Warn "  Killing node (pid $($_.Id)) (tauri cli / dev manager)"
+                Stop-ProcessTree $_.Id
+            }
+        }
+    } catch {}
+}
+
 function Stop-StaleDevStack {
     if (Test-Path -LiteralPath $DevStackStatePath) {
         try { Remove-Item -LiteralPath $DevStackStatePath -Force -ErrorAction SilentlyContinue } catch {}
     }
+    Stop-DevServers
+}
+
+# Windows Job Object so that closing the cmd/pwsh window (X button) kills the entire dev subtree
+# even without the finally block running. Child processes created by a job member are auto-added to the job.
+function New-KillOnCloseJob {
+    $src = @'
+using System;
+using System.Runtime.InteropServices;
+public static class Job {
+    [DllImport("kernel32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr CreateJobObject(IntPtr a, string lpName);
+    [DllImport("kernel32.dll")]
+    private static extern bool SetInformationJobObject(IntPtr hJob, int infoType, IntPtr lpInfo, uint cb);
+    [DllImport("kernel32.dll")]
+    private static extern bool AssignProcessToJobObject(IntPtr hJob, IntPtr hProcess);
+    [StructLayout(LayoutKind.Sequential)]
+    private struct BasicLimit {
+        public long PerProcessUserTimeLimit;
+        public long PerJobUserTimeLimit;
+        public uint LimitFlags;
+        public UIntPtr MinWS;
+        public UIntPtr MaxWS;
+        public uint ActiveProcessLimit;
+        public long Affinity;
+        public uint Priority;
+        public uint Scheduling;
+    }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct IoCounters { public ulong a, b, c, d, e, f, g, h, i; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct ExtendedLimit {
+        public BasicLimit Basic;
+        public IoCounters Io;
+        public UIntPtr ProcessMem;
+        public UIntPtr JobMem;
+        public UIntPtr PeakProc;
+        public UIntPtr PeakJob;
+    }
+    private const int JobObjectExtendedLimitInformation = 9;
+    private const uint JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000;
+    public static IntPtr Create() {
+        IntPtr h = CreateJobObject(IntPtr.Zero, null);
+        if (h == IntPtr.Zero) return IntPtr.Zero;
+        ExtendedLimit el = new ExtendedLimit();
+        el.Basic.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+        int sz = Marshal.SizeOf(typeof(ExtendedLimit));
+        IntPtr p = Marshal.AllocHGlobal(sz);
+        Marshal.StructureToPtr(el, p, false);
+        bool ok = SetInformationJobObject(h, JobObjectExtendedLimitInformation, p, (uint)sz);
+        Marshal.FreeHGlobal(p);
+        return ok ? h : IntPtr.Zero;
+    }
+    public static bool Assign(IntPtr job, IntPtr procHandle) {
+        if (job == IntPtr.Zero || procHandle == IntPtr.Zero) return false;
+        return AssignProcessToJobObject(job, procHandle);
+    }
+}
+'@
+    Add-Type -TypeDefinition $src -PassThru | Out-Null
+    return [Job]::Create()
 }
 
 function Invoke-FrontendNpm([string[]]$NpmArgs) {
@@ -56,6 +163,16 @@ function Invoke-SourceNpm([string[]]$NpmArgs) {
     }
 }
 
+# Global safety nets: always attempt to reap dev servers on Ctrl+C / terminating errors / normal pwsh exit.
+# (Job object above provides the hard guarantee for window X close of the launcher.)
+trap {
+    Stop-DevServers
+    break
+}
+try {
+    Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action { Stop-DevServers } -ErrorAction SilentlyContinue | Out-Null
+} catch {}
+
 switch -Exact ($Task.ToLowerInvariant()) {
     "setup" {
         Write-Info "[SETUP] Installing frontend deps + Playwright..."
@@ -78,12 +195,50 @@ switch -Exact ($Task.ToLowerInvariant()) {
     "dev" {
         Write-Info "[DEV] Starting Vite frontend at http://localhost:5173 (browser Three.js editor)..."
         Stop-StaleDevStack
-        if (-not (Invoke-FrontendNpm @("run", "dev"))) { exit 1 }
+
+        # Launch under our control so we can tie lifetime (cmd window close, Ctrl+C, script exit)
+        $launch = "& { Set-Location -LiteralPath '$FrontendDir'; & npm run dev }"
+        $proc = Start-Process -FilePath 'pwsh' -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $launch) `
+            -NoNewWindow -PassThru -WorkingDirectory $RepoRoot
+        $job = New-KillOnCloseJob
+        if ($job -ne [IntPtr]::Zero -and $proc.Handle -ne [IntPtr]::Zero) {
+            try { [Job]::Assign($job, $proc.Handle) | Out-Null } catch {}
+        }
+        try {
+            $proc.WaitForExit()
+            $global:LASTEXITCODE = $proc.ExitCode
+            $ok = $proc.ExitCode -eq 0
+            if (-not $ok) { exit 1 }
+        } finally {
+            if (-not $proc.HasExited) { try { $proc.Kill($true) } catch {} }
+            Stop-ProcessTree $proc.Id
+            Stop-DevServers
+        }
     }
     "tauri-dev" {
         Write-Info "[TAURI-DEV] Starting Tauri desktop shell..."
         Stop-StaleDevStack
-        if (-not (Invoke-SourceNpm @("run", "tauri:dev"))) { exit 1 }
+
+        # Launch under our control (the npm -> tauri cli -> our start-vite-dev.mjs wrapper).
+        # The wrapper + job + explicit tree kill guarantee no rogue node servers remain
+        # when the cmd/pwsh window is closed or the script is interrupted.
+        $launch = "& { Set-Location -LiteralPath '$SourceDir'; & npm run tauri:dev }"
+        $proc = Start-Process -FilePath 'pwsh' -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $launch) `
+            -NoNewWindow -PassThru -WorkingDirectory $RepoRoot
+        $job = New-KillOnCloseJob
+        if ($job -ne [IntPtr]::Zero -and $proc.Handle -ne [IntPtr]::Zero) {
+            try { [Job]::Assign($job, $proc.Handle) | Out-Null } catch {}
+        }
+        try {
+            $proc.WaitForExit()
+            $global:LASTEXITCODE = $proc.ExitCode
+            $ok = $proc.ExitCode -eq 0
+            if (-not $ok) { exit 1 }
+        } finally {
+            if (-not $proc.HasExited) { try { $proc.Kill($true) } catch {} }
+            Stop-ProcessTree $proc.Id
+            Stop-DevServers
+        }
     }
     "compile" {
         Write-Info "[COMPILE] Building Tauri desktop package..."
@@ -194,6 +349,8 @@ Tasks (used by .tools/project.json):
   test:visual-strict - opt-in strict SMF visual snapshot checks
   test:visual-update - refresh opt-in strict SMF visual snapshots
   desktop-smoke - unbundled tauri build + basic check
+
+Launcher safety: run.ps1 (and run.bat) provide full orphan protection for dev servers (Job object for cmd X-close, tree kills, port/cmdline sweeps on entry, finally/traps). Direct 'tauri dev' (or npm run tauri:dev from source) has only the mjs wrapper (signals + poll + tree kill on its child). Prefer the launcher for clean close/re-launch on Windows.
 
 Examples:
   .\run.ps1

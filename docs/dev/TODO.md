@@ -1,12 +1,30 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-15 (breakdown pass: expanded #1 Modern editor 1.2+ into concrete small subtasks 1.4-1.8 (quad toggle, larger glyphs, mode defaults, tabs, ortho prep) with incremental scope + done criteria; builds directly on 1.3 editorMode. No new code yet; pure planning per query. Gates unchanged. Prior: 1.3 editorMode + e2e + review updates). + prior items.
+Last reviewed: 2026-06-16 (full integrity + launcher process safety review: added + documented the child-process/rogue-node hardening (mjs wrapper + run.ps1 Job/tree/scans/finally/trap/stale); added paired PITFALL Q + two narrow summary_bank groups; doc syncs + consolidation per policy; all gates + manual close-X/relaunch clean; no broken imports; modularity/timing/edges reviewed with no new stubs/races. Prior SMF hierarchy + editorMode work remains below. All on local main).
 
 ## Current Focus
 
 Keep the app show-ready and scalable: launchers start the desktop app by default, verification fails loudly, e2e uses production preview, strict visual baselines are maintained intentionally, and docs describe current state instead of pass history.
 
 ## Current Integrity Findings
+
+- What: Loading `mixamo_smf_baldguy.smf` could hang during Three scene construction and leave the frontend waiting on `Loading model...`.
+  Why: SMF rigs can contain `isBone=0` head dummy nodes whose parent points back to themselves; the effective-parent walk skipped heads but did not track visited nodes, so root-head cycles never terminated. After unblocking that path, inverse binds also needed fresh world matrices before `Skeleton.calculateInverses()`, and animation tracks for skipped head nodes created noisy missing-target warnings.
+  Where: `source/frontend/src/loaders/smfRig.ts`, `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/coord.test.ts`, `source/frontend/tests/mixamo_smf_baldguy.smf`, `source/frontend/tests/smoke.spec.ts`.
+  How: Add `findEffectiveBoneParentIndex` with a visited set; reuse it for bind hierarchy and animation local-parent resolution; call `root.updateMatrixWorld(true)` before calculating inverse binds; emit animation tracks only for real deform bones; adjust the root-head regression to assert attachment to the provided root group; keep async load guards stable with `useRef(createSeqGuard())`.
+  Done when: isolated SMF import/build completes, `npm --workspace frontend run test:unit`, targeted SMF Playwright load, native IPC mock tests, Browser shell QA, and `pwsh -File run.ps1 -Task verify` pass.
+
+- What: App `typecheck` was failing despite docs saying verification was clean.
+  Why: Recent editor-mode scaffolding left unused props in viewport/inspector, the toolbar cast the select value through `any`, and the local dynamic Tauri interface had a stale `saveFile` signature.
+  Where: `source/frontend/src/store/index.ts`, `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/components/Inspector.tsx`, `source/frontend/src/hooks/useLoadModel.ts`.
+  How: Promote `EditorMode` to the store as the single UI contract, type the toolbar setter without `any`, expose mode state as `data-editor-mode` on viewport/inspector for tests/styling, and align the local Tauri interface with `saveFile(data: Uint8Array | Blob, name: string)`.
+  Done when: `npm --workspace frontend run typecheck`, `npm --workspace frontend run typecheck:test`, and full `verify` pass.
+
+- What: Closing the app cmd/pwsh launcher window (title-bar X) or the Tauri app could leave rogue node/Vite (or tauri-cli) dev servers running on 5173, causing port-in-use on re-launch or stray processes.
+  Why: beforeDevCommand spawns a persistent Vite child managed only by tauri CLI; Windows pwsh/cmd close + some parent terminations did not reliably kill the tree; no prior ownership (Job), recursive tree kill, port+cmdline reaper on entry, or explicit wrapper lifetime handling.
+  Where: `source/src-tauri/tauri.conf.json` (beforeDevCommand), `source/frontend/scripts/start-vite-dev.mjs` (wrapper), `run.ps1` (Stop-ProcessTree/Stop-DevServers/New-KillOnCloseJob/Start-Process+job+finally+trap+register+Stop-Stale), `run.bat`, package.json tauri:dev/dev, runtime-data logs, PITFALL + APP_STATE + summary_bank (new groups).
+  How: Added defensive mjs (direct vite spawn + SIGs + 'exit' + killViteTree + win32 taskkill /T + parentPid poll via tasklist + small delay); ps1 layers (JobObject KILL_ON_JOB_CLOSE assigned to owned dev pwsh for X-close guarantee, recursive tree via Win32_Process, 3-sweep Stop-DevServers on 5173+cmdline, Stop-Stale on dev entry, try/finally + trap + exiting event). Tauri close now triggers mjs via CLI term + poll. Entry sweep prevents stale port. All paired with W/W/W/H in PITFALL + bank.
+  Done when: manual X-close cmd + Tauri app + re-launch leaves no node on 5173 and no "address in use"; `pwsh -File run.ps1 -Task verify` + context-bank + cargo/typechecks clean; new pitfall Q + two summary_bank groups (subsystem__dev_process_lifecycle + issue__rogue_node_servers) added + verifier green; links from TODO/APP_STATE. Cross-plat (unix tree kill) + "direct tauri limits" docs remain as next-prevention (see PITFALL). (Completed 2026-06-16 in this full review pass.)
 
 - What: Backlog/docs moved from `docs/TODO.md` to `docs/dev/TODO.md`, but several references still pointed at the removed path.
   Why: Stale doc paths break context retrieval and make future agents trust the wrong source of truth.
@@ -111,7 +129,7 @@ No P0/P1 integrity backlog is open after this pass (bone hierarchy + doc consoli
 
 8. SMF hierarchy + labels polish follow-up. (COMPLETED 2026-06-15)
    What: Add focused unit/edge coverage for SMF head chains (deep skips, root heads, head anim tracks), zero-bone/empty rigs, post-name-change compat; implement the Inspector bone labels toggle (3D name viz or cheap debug via Axes + canvas text).
-   Why: Bone fix + stub added for UX; full coverage + graceful labels would make editor show-ready for complex/quad future; prevent regression on skip logic or name regex.
+   Why: Bone hierarchy fix needed full UX coverage; graceful labels make the editor more show-ready for complex/quad future work and prevent regression on skip logic or name regex.
    Where: `source/frontend/src/loaders/coord.test.ts`, `source/frontend/src/components/Inspector.tsx`, `source/frontend/src/components/ThreeViewport.tsx`, smfRig.
    How: Extend golden + add cases (self-parent guard already in walk); labels: cheap per-bone Group (small AxesHelper marker + canvas name Sprite attached to bone for follow, toggle via lifted hook state, off default, traverse dispose for maps). Update summary_bank + tests/README. (No CSS2D dep needed.)
    Done when: new asserts pass (added), labels wired cleanly (perf off default, Axes+name for visual), verify green, no stubs. (Completed via canvas sprites + Axes in group, edges tests, type/unit pass.)
@@ -121,7 +139,7 @@ No P0/P1 integrity backlog is open after this pass (bone hierarchy + doc consoli
    Why: Current largest files are manageable; blind splits would reduce clarity.
    Where: `source/frontend/src/loaders/smf.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/smoke.spec.ts`, `source/src-tauri/src/main.rs`.
    How: Re-run line-count ranking before any split, preserve public imports/status strings/test IDs, update barrels and `summary_bank.json`, and grep for duplicate helpers.
-   2026-06-15 review (monolith skill heuristic): top ~smf.ts(>600), ThreeViewport(~530), useLoadModel; recent smfRig extract already helped; labels logic kept local (coupled to viewport bones); no split justified now (risk to safety/tests > benefit). Revisit on next feature adding responsibilities. Updated TODO only.
+   2026-06-16 rank (exact monolith skill pwsh + rg/measure on tracked src/scripts): tops coord.test.ts(608, test data+polyfills), smf.ts(499 down), ThreeViewport(459 down), useLoadModel(451), smoke.spec(439); core loaders/components/hooks <500 post-extracts. No new split justified (tests data-heavy ok; coupled viz/loads have strong tests; per heuristic + safety priority). Revisit on quad or new viz. Modularity watch advanced (no stubs).
    Progress: Extracted makeBoneLabel to utils/boneLabels.ts + useBoneLabels hook + makeBoneHighlightMarker to boneHighlight.ts (consistent pattern for viewport visuals; tested in coord.test.ts with polyfill; barrel + summary_bank + viewport imports updated; ThreeViewport further slimmed by ~30 LOC + cleaner effects). Unit tests for makers. Modularity watch advancing (labels + highlight feedback extracted). Additional: labels name truncation polish for long names (1.2.2) + canvas quality (DPR scale, textBaseline for crisp labels). Further: extracted createSeqGuard (seqGuard.ts) for async stale testability + modularity; integrated in useLoadModel; unit test added. Note: incomplete useBoneHighlight hook stub file removed (coupled to viewport RAF/attach; full hook not forced - per monolith skill; maker sufficient and complete). No stubs remain. This cycle: further extracted updateHighlightPosition to boneHighlight.ts (used in RAF and creation); added unit test; cleaned unused ref; advanced #9 + #1; labels canvas polish. 1.2.3 Use extracted update in highlight creation (remove dupe code). 2026-06-15 full review: no new splits justified (line rank stable post-extracts; clear test-backed leaves only); polyfill hardening added as durable test concern under integrity findings (see above). Revisit on quad or new viz feature.
 
 ## Known Intentional Limits

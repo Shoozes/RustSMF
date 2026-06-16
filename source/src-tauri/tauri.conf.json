@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "identifier": "com.shoozes.rustsmf",
   "build": {
-    "beforeDevCommand": "npm --prefix ./frontend run dev",
+    "beforeDevCommand": "node ../frontend/scripts/start-vite-dev.mjs",
     "devUrl": "http://localhost:5173",
     "beforeBuildCommand": "npm --prefix ./frontend run build",
     "frontendDist": "../frontend/dist",

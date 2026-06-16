@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-15 (full review + tests for recent work (editorMode 1.3 + hierarchy/extracts/stale sim); broke down #1 modern editor 1.2+ into small subtasks 1.4-1.8 (quad toggle, larger glyphs, mode defaults, tabs, ortho prep) with done criteria; updated APP_STATE/TODO/summary_bank/tests/README; all gates (typecheck, context, targeted units) clean; no loose ends/stubs/broken imports; explicit push requested. All work on main. Prior passes consolidated).
+Last reviewed: 2026-06-16 (full integrity + launcher process safety review + wrap-up: documented the child-process / rogue-node-server hardening (run.ps1 Job+tree+scans+finally+trap+stale + start-vite-dev.mjs wrapper for beforeDev + tauri.conf update); added paired pitfall + two narrow summary_bank groups (subsystem__dev_process_lifecycle + issue__rogue_node_servers); cross-plat tree kill in mjs + direct-launch docs + tests/README sharpen + fresh modularity LOC rank (no new splits justified); error catching comments; all gates clean; manual close-X/relaunch clean (no rogues on 5173). All work on local main. Explicit user request to push to git after wrap-up verification.
 
 ## Current Product State
 
@@ -27,12 +27,13 @@ Core flow:
 - `source/frontend/src/hooks/poseEdits.ts`: nudge delta types and helpers for live SMF position/rotation edits.
 - `source/frontend/src/components/ThreeViewport.tsx`: renderer, scene, camera, orbit, model attach/dispose, mixer, skeleton helper, raycast bone picking, marker, TransformControls, and weight preview.
 - `source/frontend/src/components/Inspector.tsx`: typed skeleton tree, clip list, selection controls, transform mode controls, and nudge controls.
-- `source/frontend/src/loaders/*`: SMF import/export (buildThreeScene now delegates rig to buildRigHierarchy for flat nodes + isBone=0 head dummies: effective-parent walk skips heads for direct real-bone .add() + deform-only Skeleton; bind locals use ancestor world for correct matrixWorld; names `SMF_Node_N` (+ `_head` for dummies) + userData; skin remap direct on compressed is-bone seq), bounded binary helpers, rig node-list helper (export), guarded Three-to-SMF conversion, GLB/FBX/OBJ loading/export, coordinate swizzles, and DQ math. SMF rig tree now produces clean SkeletonHelper/Inspector/picker for rigs with disconnected parts (skin/anim/export fidelity preserved via world DQ + compose).
+- `source/frontend/src/loaders/*`: SMF import/export (buildThreeScene delegates rig to buildRigHierarchy for flat nodes + isBone=0 head dummies: cycle-safe effective-parent walk skips heads for direct real-bone .add() + deform-only Skeleton; bind locals use nearest real ancestor world for correct matrixWorld; inverse binds are calculated after world matrices update; animation tracks are emitted only for real scene bones; names `SMF_Node_N` + userData; skin remap direct on compressed is-bone seq), bounded binary helpers, rig node-list helper (export), guarded Three-to-SMF conversion, GLB/FBX/OBJ loading/export, coordinate swizzles, and DQ math. SMF rig tree now produces clean SkeletonHelper/Inspector/picker for rigs with disconnected parts (skin/anim/export fidelity preserved via world DQ + compose).
 - `source/frontend/src/backend-client/tauri.ts`: browser/Tauri bridge for dialog, save, binary read, invokes, and desktop fallback messages. `saveFile` returns `boolean` so cancel is explicit.
 - `source/frontend/tests/helpers/skinned-glb-fixture.ts`: generated self-authored skinned GLB fixture for default non-SMF skinned e2e coverage.
 - `source/frontend/src/store`: lightweight React state slices for model, playback, and UI.
 - `source/src-tauri/src/main.rs`: Tauri commands and Rust SMF header/section peeks with native tests.
 - `source/backend`: reserved boundary only; no current backend service is required.
+- Launchers + dev server lifecycle (`run.ps1` / `run.bat` default, `source/frontend/scripts/start-vite-dev.mjs` beforeDev wrapper, `source/src-tauri/tauri.conf.json`): safe child process handling (Windows JobObject KILL_ON_JOB_CLOSE + recursive tree kill + port 5173 + cmdline sweeps + entry stale reaper + signals + finally/traps + parent poll) so closing the cmd window or Tauri app does not leave rogue node/Vite servers. Tauri CLI term of beforeDev triggers mjs cleanup; launcher owns the outer tree. (See PITFALL for the pre-fix rogue class and summary_bank subsystem__dev_process_lifecycle.)
 
 ## Verification
 
@@ -44,6 +45,7 @@ Primary commands:
 - `pwsh -File run.ps1 -Task test:visual-update`: refreshes those strict SMF screenshot baselines after intentional renderer/framing changes.
 - `pwsh -File run.ps1 -Task desktop-smoke`: unbundled Tauri build, Rust native peek tests, and focused Playwright native IPC mock suite.
 - `npm audit --omit=optional`: current dependency audit gate for installed npm packages.
+- Launcher safety is exercised by manual close-X + re-launch (no rogue node on 5173) + `Stop-DevServers` / port sweeps on entry + full verify (which runs context-bank). See PITFALL + summary_bank for the durable record. (Cross-plat tree-kill and direct-launch documentation remain as active next-prevention per PITFALL.)
 
 Current verification coverage:
 - App source has strict `tsc --noEmit` coverage.
@@ -58,12 +60,15 @@ Current verification coverage:
 
 Last verified local results:
 - `python scripts/verify-context-bank.py`: passed with `summary_bank.json OK (0 warnings)`.
-- `pwsh -File run.ps1 -Task verify`: passed after the docs/context pass with context-bank validation, lint, app typecheck, test typecheck, Vite 8 build, chunk guard, 22 unit tests, and cargo check.
+- `pwsh -File run.ps1 -Task verify`: passed on 2026-06-16 after the SMF load-hang fix (context-bank validation, lint, app typecheck, test typecheck, Vite build, chunk guard, 32 unit tests, and cargo check).
+- `npm --workspace frontend run test:e2e -- tests/smoke.spec.ts -g "can load a real SMF sample"`: passed on 2026-06-16 with no SMF head-track warnings.
+- `npm --workspace frontend run test:e2e -- tests/native.spec.ts`: passed on 2026-06-16 (2 tests).
+- Browser QA on `http://127.0.0.1:5173`: app shell loaded with no console warnings/errors; mode select updated viewport/inspector mode state. Regular Playwright file-flow proof loaded `mixamo_smf_baldguy.smf` with status `Loaded: mixamo_smf_baldguy.smf | bones: 24 | clips: 12 | verts: 132`.
 - `pwsh -File run.ps1 -Task test:e2e`: passed after the docs/context pass with 16 tests and 0 skipped.
 - `npm audit --omit=optional`: passed with `found 0 vulnerabilities`.
 - `pwsh -File run.ps1 -Task test:visual-strict`: passed after refreshing coherent SMF load/export snapshots.
 - `npm --workspace frontend run typecheck:test`: passed.
-- `npm --workspace frontend run test:unit`: passed with 22 unit tests.
+- `npm --workspace frontend run test:unit`: passed with 32 unit tests.
 - `cmd /c run.bat verify`: passed through the batch wrapper with the same verify gate.
 - `pwsh -File run.ps1 -Task desktop-smoke`: passed with unbundled Tauri build, 4 Rust native tests, and 2 Playwright native IPC tests.
 
@@ -75,6 +80,7 @@ Last verified local results:
 - GLB/GLTF remains the preferred format for maximum fidelity and new development. SMF support is scoped to legacy recovery and users who target the old SMF binary pipeline.
 - Live SMF position/rotation pose edits export; scale edits are blocked for SMF export because the current SMF DQ path has no scale channel.
 - Quad/ortho split views, oversized screen-space bone handles, endpoint handles, and full skin-weight paint authoring are planned modernization work, not current implementation.
+- Launcher process safety (no rogue node servers on close) is Windows-primary via run.ps1 + mjs layers (Job/tree/scans/poll). Direct `tauri dev` or non-Windows have reduced coverage (mjs signals + poll only); documented with next-prevention steps.
 
 ## Context Docs
 

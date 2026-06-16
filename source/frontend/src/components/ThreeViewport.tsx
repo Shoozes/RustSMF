@@ -6,6 +6,7 @@ import { restoreWeightPreview, applyWeightPreviewForBone } from '../utils/weight
 import { findClosestBone, DEFAULT_MAX_BONE_PICK_DIST, findBoneByName } from '../utils/bonePicker';
 import { useBoneLabels } from '../utils/useBoneLabels';
 import { makeBoneHighlightMarker, updateHighlightPosition } from '../utils/boneHighlight';
+import type { EditorMode } from '../store';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
 // Self-contained ThreeViewport.
@@ -29,7 +30,7 @@ interface ThreeViewportProps {
   transformMode?: 'translate' | 'rotate' | 'scale';
   onSetTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => void;
   boneLabelsEnabled?: boolean;
-  editorMode?: 'view' | 'rig' | 'skin' | 'animate' | 'export';
+  editorMode?: EditorMode;
 }
 
 // SimpleOrbit imported from ../utils/SimpleOrbit (filled modularity dir, single source of truth)
@@ -512,7 +513,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     };
   }, [root, skeleton, clips]);  // <-- ONLY model data; playback handled by other effects to prevent re-attach loops on every tick
 
-  return <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} data-testid="three-canvas" />;
+  return <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} data-testid="three-canvas" data-editor-mode={editorMode} />;
 };
 
 export default ThreeViewport;

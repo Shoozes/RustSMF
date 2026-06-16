@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-15 (full repo review + gate run: added+fixed test-polyfill pitfall for canvas 2d in labels (post-extract clobber/incomplete ctx + type any); no other new regressions; all prior (launcher, Vite e2e, chunk, open stale, SMF tearing, bone hierarchy, docs drift) still current. No new durable pitfalls beyond test-env maintenance).
+Last reviewed: 2026-06-16 (updated SMF head-dummy pitfall after reported `.smf` load hang: effective-parent walks now detect self-parent/cycles, inverse binds are calculated after world-matrix update, and head dummy animation tracks are skipped).
 
 ### Q: What pitfall are we preventing?
 
@@ -292,17 +292,18 @@ Last reviewed: 2026-06-15 (full repo review + gate run: added+fixed test-polyfil
 
 ### Q: What pitfall are we preventing?
 
-**What:** SMF flat node lists + explicit isBone=0 head dummies (for disconnected rig parts per spec) could load with clean skin/bind-pose/anim but produce crossed/wired bones in editor viz (SkeletonHelper lines from head-top to hand etc), broken nesting in Inspector tree, and picker/selection misalign (while world->local DQ math hid it for mesh).
-**Why it happened:** buildThreeScene created THREE.Bone for every node (heads included), attached via direct b.parent indices (no skip logic), populated full mixed list into Skeleton + boneInverses; skin remap assigned sparse node ids (coincided with slots); anim/pose used names; no dedicated hierarchy builder or golden asserts on parent skipping.
+**What:** SMF flat node lists + explicit `isBone=0` head dummies can either produce crossed editor bones or hang the loader when a skipped head node self-parents.
+**Why it happened:** The original hierarchy path created `THREE.Bone` for every node and attached by direct parent index. The first head-skip fix added effective-parent walking, but root head dummies in real SMF files can parent to themselves; without a visited set, the walk never terminated. Once that was fixed, inverse bind matrices still needed fresh world matrices before `Skeleton.calculateInverses()`, and animation tracks for skipped head nodes emitted missing-target warnings because those dummies are not scene objects.
 **Where:** `source/frontend/src/loaders/smf.ts` (old bone loop + threeBones + attach + skel ctor + remap + name gen), `source/frontend/src/loaders/smfRig.ts` (export only), poseEdits regex, ThreeViewport (helper on root + findBoneByName on skel), Inspector (getRoot + recursive children filter), coord.test golden fixture (heads present but only export/roundtrip tested), mixamo sample (14 heads, 24 deform, skins 0-22 seq).
-**How to catch it:** Load rig with heads (mixamo or golden fixture); inspect SkeletonHelper lines + Inspector bone tree depths/names + raycast select; run unit bind skin + new hierarchy asserts; `rg` for Bone_ name or direct parent attach.
+**How to catch it:** Load `source/frontend/tests/mixamo_smf_baldguy.smf` through the UI and assert the loading overlay clears; run the root-head unit regression plus the real bind-pose skinning test; watch Playwright console output for `THREE.PropertyBinding: No target node found` head-track warnings.
 **Solutions tried:**
 1. Direct attach + mixed skel (original), result: skin ok by compensation, editor broken for any head-using rig.
-2. 100/100 Added buildRigHierarchy (nodeMap only reals, worldMats collect, effective ancestor walk for local calc + skip attach, deform-only skel + calculateInverses, SMF_Node names + userData), direct skin copy, explicit names in anim, regex update, golden parent asserts, linewidth + stub labels; result: clean real-bone tree for viz while bind/anim/export identical.
-**Current solution:** Dedicated builder in smfRig; called from buildThreeScene; only isBone=1 in skel and direct real parents; names prefixed for readability + regex safety; userData carries original for debug.
-**Effectiveness:** High (verified by unit + visual); converts latent viz/semantic bug into explicit, testable, non-breaking component.
+2. Effective ancestor walk without cycle detection (2026-06-15), result: crossed bones fixed but root-head self-parent files could spin forever.
+3. `96/100` Add `findEffectiveBoneParentIndex` with visited-set cycle guard, reuse it for hierarchy and animation local-parent resolution, update root world matrices before inverse binds, and skip non-scene head animation tracks; result: real SMF load completes, bind-pose test passes, and smoke test has no head-track warnings.
+**Current solution:** Dedicated builder in `smfRig`; called from `buildThreeScene`; only `isBone=1` nodes enter the skeleton and scene hierarchy; effective parents skip heads with cycle protection; names are prefixed for readability + regex safety; userData carries original indices; animation clips target only scene bones.
+**Effectiveness:** `96/100`, durable. It is verified by the real `.smf` fixture, root-head regression, bind-pose skinning invariant, Playwright SMF load, native IPC mock, and full `verify`.
 **Relevance check:** Current. Any future SMF rig changes (more head synth, glb->smf heads) or editor viz work will touch this.
-**Next prevention step:** Keep/extend hierarchy unit cases (deep chains, root heads) near smfRig/smf; before changing bone parent logic re-run golden + mixamo visual + skin drift test; document head semantics in smf subsystem notes.
+**Next prevention step:** Keep root-head/self-parent and real-sample load tests near any SMF hierarchy change; before changing bone parent logic, rerun targeted units plus `npm --workspace frontend run test:e2e -- tests/smoke.spec.ts -g "can load a real SMF sample"`.
 
 ### Q: What pitfall are we preventing?
 
@@ -415,3 +416,26 @@ Last reviewed: 2026-06-15 (full repo review + gate run: added+fixed test-polyfil
 **Relevance check:** Current. Open dialogs and fallback file inputs are user-facing async boundaries.
 
 **Next prevention step:** Add a focused overlapping-open/read test if open/load orchestration changes again.
+
+### Q: What pitfall are we preventing?
+
+**What:** Rogue Node.js / Vite dev servers (and intermediate tauri-cli parent processes) left listening on 5173 (or holding resources) after the cmd/pwsh launcher window is closed via its title-bar X button, or after the Tauri desktop app window is closed, or on hard Ctrl+C / parent kill. Subsequent launcher runs then hit "address in use" or leave stray node processes.
+
+**Why it happened:** `tauri dev` (via beforeDevCommand in tauri.conf.json) spawns a long-lived child (`npm run dev` → Vite) that outlives the Tauri Rust process and the outer CLI in many Windows console-close scenarios; no process-group ownership, recursive tree kill, port/cmdline reaper on entry, or explicit child lifetime tie in the launcher (run.ps1 direct & npm or run.bat delegation). Tauri CLI child mgmt alone was insufficient for X-close of the visible pwsh or direct manual `tauri dev`.
+
+**Where:** `source/src-tauri/tauri.conf.json` (beforeDevCommand), `source/frontend/scripts/start-vite-dev.mjs` (the managed wrapper), `run.ps1` (Stop-ProcessTree, Stop-DevServers sweeps, New-KillOnCloseJob, Start-Process + job assign + try/finally + trap + PowerShell.Exiting + Stop-StaleDevStack), `run.bat` (delegates), `source/frontend/package.json` + `source/package.json` (tauri:dev/dev scripts), runtime-data/*.log (prior sessions), `docs/dev/PITFALL_LEDGER.md` / `APP_STATE.md` / `TODO.md` / `summary_bank.json` (pre-fix references to launcher gaps).
+
+**How to catch it:** Manual reproduction: `pwsh -File run.ps1` (or `run.bat`); load a model; X-close the cmd window or Tauri app; `Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue` or `tasklist | findstr /i node`; confirm zero relevant node; re-launch and verify clean port + no "address in use". Automated: `pwsh -File run.ps1 -Task desktop-smoke` (or verify) + explicit post-run port sweep; extend native.spec or a harness test comment with simulated close + recheck. Watch runtime-data logs for prior "dev" lifecycle without clean exit.
+
+**Solutions tried:**
+1. `40/100` Rely on Tauri CLI's internal beforeDev child handling + OS console semantics, result: orphans survived cmd X-close and some tauri window closes; next launch often required manual taskkill.
+2. `65/100` Add simple finally { Stop-Process ... } around & npm in run.ps1, result: helped Ctrl+C but not title-bar X (pwsh abrupt term) and not the full grandchild tree reliably.
+3. `93/100` Multi-layer defense (Windows JobObject with KILL_ON_JOB_CLOSE assigned to owned Start-Process pwsh for the dev subtree + recursive Stop-ProcessTree via Win32_Process + three-sweep Stop-DevServers (exact 5173 node owners + cmdline 'vite|start-vite-dev|tauri') + Stop-Stale on every dev entry + trap + PowerShell.Exiting register + mjs wrapper for the tauri-close path (SIGTERM/'exit'/taskkill /T + parentPid poll + delay)), result: X-close, tauri-close, Ctrl+C, and re-launch all clean; redundant but low-cost and effective on primary Windows launcher path.
+
+**Current solution:** The 3rd (layered) solution above. run.ps1 owns the long-running dev tasks via Start-Process + Job + finally/tree/stale; the mjs (now the beforeDevCommand) guarantees its direct Vite child is reaped on tauri CLI term (signals + poll + tree kill). Entry sweep + port check makes re-launch robust. (See subsystem__dev_process_lifecycle and issue__rogue_node_servers in summary_bank.json for paths + notes.)
+
+**Effectiveness:** `93/100`, durable. Verified by construction (checks: cargo/context/typecheck/verify all green post-change), manual X-close + re-launch scenarios (no rogue node, port free), and the prior orphan class being the exact motivator. Low runtime cost (scans only on dev entry or explicit close paths; poll is 1.8s win32-only in mjs).
+
+**Relevance check:** Current. The launcher (run.ps1 default via run.bat) + tauri dev is the primary dev UX and Windows-focused; future cross-plat or direct-launch users will hit reduced coverage.
+
+**Next prevention step:** Add unix pkill/kill fallback inside mjs killViteTree (and equiv comment in ps1 sweeps); add explicit "prefer run.ps1 for full protection; direct tauri dev only has mjs" note in run.ps1 help, package.json, APP_STATE limits, and bank; consider a lightweight port-sweep assertion or note inside desktop-smoke; re-verify after cross-plat changes and keep the entry in PITFALL + bank. Link this pitfall from the process safety item in TODO.md.
