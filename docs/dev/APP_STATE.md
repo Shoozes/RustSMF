@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-18 (main integrity and modernization state now includes endpoint-like precision markers and hover telemetry with endpoint drag lifecycle verification in single + quad layouts. Hover contrast polish is complete; remaining modernization focus is ortho-pane consistency and optional skinning-tool expansion. Prior entries from 2026-06-16 process/context/loader hardening remain current.)
+Last reviewed: 2026-06-18
 
 ## Current Product State
 
@@ -10,6 +10,8 @@ Core flow:
 - Launch from `.\run.bat` or `pwsh -File run.ps1`; no-argument launch opens the numbered menu. Choose option 2, or run `.\run.bat 2` / `pwsh -File run.ps1 -Task run`, to start the desktop app when dependencies are already installed.
 - Load `.smf`, `.glb`, `.gltf`, `.fbx`, and `.obj` through browser input, drag/drop, or Tauri native dialog.
 - Render model roots in a self-contained Three.js viewport with orbit, wheel zoom, right-drag pan, reset, lighting, grid, axes, resize handling, and cleanup.
+- Viewport layout controls are model-aware: with no model loaded, layout is forced to single-view (`data-viewport-layout="single"`); single/quad layout controls become active after a model is loaded.
+- Mode/workspace switching is continuity-checked in normal and medium viewports; very narrow layouts have one remaining deterministic-UI gap where mode tab reactivity can vary by browser sizing. This is tracked as an active P2 in the todo backlog.
 - Launcher contract (current):
   - `run.bat` / `run.ps1` are the canonical Windows workflow and carry full orphan-prevention coverage.
   - `run.ps1 -Task run` (same as launcher option 2) is the default app launch path after setup.
@@ -23,6 +25,8 @@ Core flow:
 - Cover basic FBX parsing/export dispatch with a self-authored static ASCII FBX fixture.
 - Use Rust/Tauri commands for native open/save, binary read/write, and small SMF header/rig/anim/model validation/status peeks.
 - Ignore stale file-open and browser file/drop read results when a newer operation has started.
+- Keep editor mode + viewport layout transitions on the same shared model/viewport root; selected bone and scrub/timeline state are preserved across those transitions and now covered by smoke assertions.
+- Model/load/export async failures in `useLoadModel` now normalize unknown error values through a single helper and remove brittle `any` traversal casts for skinned mesh extraction/clip reads.
 - Planned modernization keeps the current React/Tauri/Three stack, uses GLB/GLTF as the preferred modern fidelity format, preserves SMF for backwards compatibility, and uses the old GameMaker screenshots to guide optional quad/ortho workspaces with larger bone handles/labels for rigging and skinning. Endpoint drag constraints and pane-aware timing have been validated in e2e (single + quad).
 
 ## Architecture
@@ -30,6 +34,8 @@ Core flow:
 - `source/frontend/src/App.tsx`: thin shell wiring toolbar, viewport, inspector, timeline, outliner, drop zone, status, and error banner.
 - `source/frontend/src/hooks/useLoadModel.ts`: load/export orchestration, source format tracking, Tauri lazy imports, load/open stale guards, selected bone handling, pose edit persistence, transform mode, and weight preview state.
 - `source/frontend/src/hooks/useLoadModel.ts`: loader path now resolves a typed `TauriClient` contract (`../backend-client/tauri`) and uses a shared typed `LoadedModelResult`, reducing `any` usage across load/export/peek branches.
+- `source/frontend/src/hooks/useLoadModel.ts`: in-flight export/save guard (`isBusy`) now serializes export actions during async save/write.
+- `source/frontend/tests/native.spec.ts`: added Playwright native IPC race coverage for delayed native saves to prove single-flight export behavior and status-button recovery under rapid click.
 - `source/frontend/src/hooks/poseEdits.ts`: nudge delta types and helpers for live SMF position/rotation edits.
 - `source/frontend/src/components/ThreeViewport.tsx`: renderer, scene, camera, orbit, model attach/dispose, mixer, skeleton helper, raycast bone picking, marker, TransformControls, and weight preview.
 - `source/frontend/src/components/Inspector.tsx`: typed skeleton tree, clip list, selection controls, transform mode controls, and nudge controls.
@@ -37,6 +43,7 @@ Core flow:
 - `source/frontend/src/loaders/*`: SMF import/export (buildThreeScene delegates rig to buildRigHierarchy for flat nodes + isBone=0 head dummies: cycle-safe effective-parent walk skips heads for direct real-bone .add() + deform-only Skeleton; bind locals use nearest real ancestor world for correct matrixWorld; inverse binds are calculated after world matrices update; animation tracks are emitted only for real scene bones; names `SMF_Node_N` + userData; skin remap direct on compressed is-bone seq), bounded binary helpers, rig node-list helper (export), guarded Three-to-SMF conversion, GLB/FBX/OBJ loading/export, coordinate swizzles, and DQ math. SMF rig tree now produces clean SkeletonHelper/Inspector/picker for rigs with disconnected parts (skin/anim/export fidelity preserved via world DQ + compose).
 - `source/frontend/src/backend-client/tauri.ts`: `TauriClient` interface now centralizes shared desktop bridge function contracts for load/export/peek calls, and `useLoadModel.ts` consumes it directly.
 - `source/frontend/src/backend-client/tauri.ts`: browser/Tauri bridge for dialog, save, binary read, invokes, and desktop fallback messages. `saveFile` returns `boolean` so cancel is explicit.
+- `source/frontend/src/utils/modelFormat.ts`: canonical format extension parser + shared extension constants for open/load/tauri filters.
 - `source/frontend/tests/helpers/skinned-glb-fixture.ts`: generated self-authored skinned GLB fixture for default non-SMF skinned e2e coverage.
 - `source/frontend/src/store`: lightweight React state slices for model, playback, and UI.
 - `source/src-tauri/src/main.rs`: Tauri commands and Rust SMF header/section peeks with native tests.
@@ -45,47 +52,17 @@ Core flow:
 
 ## Verification
 
-Primary commands:
-- `pwsh -File run.ps1 -Task verify`: frontend lint, app typecheck, test-source typecheck, Vite build, chunk guard, unit tests, and `cargo check`.
-- `python scripts/verify-context-bank.py`: summary-bank JSON/path guard. This also runs inside `verify`.
-- `pwsh -File run.ps1 -Task test:e2e`: Playwright smoke, visual confirmation, and native IPC mock coverage. The web server is `npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort`, not Vite dev.
-- `pwsh -File run.ps1 -Task test:visual-strict`: opt-in strict SMF screenshot baseline check for the key load/export visual states.
-- `pwsh -File run.ps1 -Task test:visual-update`: refreshes those strict SMF screenshot baselines after intentional renderer/framing changes.
-- `pwsh -File run.ps1 -Task desktop-smoke`: unbundled Tauri build, Rust native peek tests, and focused Playwright native IPC mock suite.
-- `npm audit --omit=optional`: current dependency audit gate for installed npm packages.
-- Launcher safety is exercised by manual close-X + re-launch (no rogue node on 5173) + `Stop-DevServers` / port sweeps on entry + full verify (which runs context-bank). See PITFALL + summary_bank for the durable record.
-- Frontend internals health (deep static analysis): modularity good post-extracts (smf.ts ~586 LOC, ThreeViewport ~520, useLoadModel ~504 core; largest test coord.test ~669 from golden coverage + polyfills); barrels clean (loaders/index, utils/index); no broken imports/exports; seq guards + ref-decoupled RAF/ useEffects + explicit cleanups (threeDisposal, label/highlight traverse, transform unmount) robust with no obvious races; error handling guarded with SmfConversionError + status UX (some pragmatic 'any' casts in Three/TAURI/DOM paths noted as low-pri watch for future typed guards); edges well covered (real SMF mixamo, generated skinned GLB, head-dummy hierarchy, rapid ops via guards, invalid/zero-bone, cancel, Windows paths via tauri, mode switch, export-during-pose). Tests match claims (units 32+, e2e smoke+visual+native, strict opt-in). Recommend targeted slices on future rig/anim + e2e assertions for editorMode data + labels if visual regresses. (Launcher wrapper mjs has no direct runtime impact; improves dev server lifetime UX.)
-
-Current verification coverage:
-- App source has strict `tsc --noEmit` coverage.
-- Test sources have a separate strict `tsc --noEmit` gate with Node/Playwright types.
-- Unit tests cover SMF coordinate/DQ math, binary bounds, roundtrips, rig node semantics, converter rejection paths, and pose-capture roundtrip.
-- Playwright smoke tests cover boot, real SMF load, viewport/bone/timeline flows, export UX, invalid-load UX, OBJ static parity, FBX static fixture load/export, and generated skinned GLB load plus SMF/GLB export.
-- Playwright visual tests cover desktop/narrow shell layout, horizontal overflow, nonblank viewport rendering, and loaded SMF visual state. Strict screenshot snapshots are opt-in with `RUSTSMF_STRICT_VISUALS=1`.
-- `test:visual-strict` wraps the strict SMF snapshot subset and keeps generated `playwright-report/` and `test-results/` artifacts out of Git.
-- Playwright native IPC tests cover mocked Tauri open/read/status, save/write, save cancel, and open cancel.
-- Playwright native IPC tests now also verify `get_smf_desktop_info` is called with the selected open path and that status text includes parsed version/model/rig/anim contract values.
-- Rust tests cover native SMF parser width/offset behavior and desktop peek commands.
-- `check-entry-chunks.mjs` now fails `verify` if the Vite build output is missing or the `three-vendor` split is absent.
-
-Last verified local results:
-- `pwsh -File run.ps1 -Task verify`: passed on 2026-06-18 after viewport layout modularization and endpoint telemetry test hardening (context-bank validation, lint, app/test typecheck, Vite build, chunk guard, 34 unit tests, and cargo check).
-- `pwsh -File run.ps1 -Task test:e2e`: passed on 2026-06-18 with 18 Playwright tests, including single/quad viewport layout and endpoint drag lifecycle coverage.
-- `pwsh -File run.ps1 -Task test:visual-strict`: passed on 2026-06-18 with 2 strict SMF snapshot checks after viewport/camera/handle work.
-- `pwsh -File run.ps1 -Task desktop-smoke`: passed on 2026-06-18 with unbundled Tauri build, 5 Rust native tests, and 2 Playwright native IPC tests.
-- `python scripts/verify-context-bank.py` and `python -m json.tool summary_bank.json > $null`: passed on 2026-06-18 with `summary_bank.json OK (0 warnings)`.
-- `python scripts/verify-context-bank.py`: passed with `summary_bank.json OK (0 warnings)`.
-- `pwsh -File run.ps1 -Task verify`: passed on 2026-06-16 after the SMF load-hang fix (context-bank validation, lint, app typecheck, test typecheck, Vite build, chunk guard, 32 unit tests, and cargo check).
-- `npm --workspace frontend run test:e2e -- tests/smoke.spec.ts -g "can load a real SMF sample"`: passed on 2026-06-16 with no SMF head-track warnings.
-- `npm --workspace frontend run test:e2e -- tests/native.spec.ts`: passed on 2026-06-16 (2 tests).
-- Browser QA on `http://127.0.0.1:5173`: app shell loaded with no console warnings/errors; mode select updated viewport/inspector mode state. Regular Playwright file-flow proof loaded `mixamo_smf_baldguy.smf` with status `Loaded: mixamo_smf_baldguy.smf | bones: 24 | clips: 12 | verts: 132`.
-- `pwsh -File run.ps1 -Task test:e2e`: passed after the docs/context pass with 16 tests and 0 skipped.
-- `npm audit --omit=optional`: passed with `found 0 vulnerabilities`.
-- `pwsh -File run.ps1 -Task test:visual-strict`: passed after refreshing coherent SMF load/export snapshots.
-- `npm --workspace frontend run typecheck:test`: passed.
-- `npm --workspace frontend run test:unit`: passed with 32 unit tests.
-- `cmd /c run.bat verify`: passed through the batch wrapper with the same verify gate.
-- `pwsh -File run.ps1 -Task desktop-smoke`: passed with unbundled Tauri build, 4 Rust native tests, and 2 Playwright native IPC tests.
+- Primary commands:
+  - `pwsh -File run.ps1 -Task verify`
+  - `pwsh -File run.ps1 -Task test:e2e`
+    - `test:e2e` runs optional GenEye smoke first when discoverable (`-GenEyeRoot` / `GENEYE_ROOT`), then falls back to browser Playwright if GenEye is unavailable, slow, or fails.
+  - `pwsh -File run.ps1 -Task test:visual-strict` (opt-in)
+  - `pwsh -File run.ps1 -Task test:visual-update` (intentional baseline refresh only)
+  - `pwsh -File run.ps1 -Task desktop-smoke`
+  - `python scripts/verify-context-bank.py`
+  - `npm audit --omit=optional`
+- E2E web-server path: `npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort` (not Vite dev).
+- Last successful command set (core): verify, test:e2e, test:visual-strict, desktop-smoke, and context-bank checks on 2026-06-18.
 
 ## Current Limits
 
