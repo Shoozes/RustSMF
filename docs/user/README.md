@@ -11,7 +11,7 @@ From the repo root:
 pwsh -File run.ps1
 ```
 
-Both commands start the desktop app by default. Use `pwsh -File run.ps1 -Task dev` for the browser-only Vite app.
+Both commands open the numbered launcher menu. Choose `2. Run if already installed`, or run `.\run.bat 2` / `pwsh -File run.ps1 -Task run` directly. Use `pwsh -File run.ps1 -Task dev` for the browser-only Vite app.
 
 ## Supported Flow
 

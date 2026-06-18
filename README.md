@@ -11,8 +11,9 @@ Core: high-fidelity SMF roundtrip (import/export with coord/DQ), guarded skinned
 - Context groups for files/folders/features/issues: summary_bank.json (narrow paths, intent-based; validate with `python scripts/verify-context-bank.py` after edits)
 
 ## Quick commands (from repo root)
-.\run.bat                              # launch desktop app (same default as run.ps1)
-pwsh -File run.ps1                     # launch desktop app
+.\run.bat                              # open numbered launcher menu
+.\run.bat 2                            # run desktop app if already installed
+pwsh -File run.ps1 -Task run           # run desktop app if already installed
 pwsh -File run.ps1 -Task verify        # lint + app typecheck + test typecheck + build + chunk guard + unit + cargo check
 pwsh -File run.ps1 -Task test:e2e      # Playwright via build+preview (smoke + visual + native IPC mocks)
 pwsh -File run.ps1 -Task test:visual-strict # opt-in strict SMF screenshot baselines

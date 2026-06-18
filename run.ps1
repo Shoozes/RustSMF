@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$Task = "tauri-dev"
+    [string]$Task = "menu"
 )
 
 $ErrorActionPreference = "Stop"
@@ -9,6 +9,10 @@ $SourceDir = Join-Path $RepoRoot "source"
 $FrontendDir = Join-Path $SourceDir "frontend"
 $SrcTauriDir = Join-Path $SourceDir "src-tauri"
 $DevStackStatePath = Join-Path $RepoRoot "runtime-data\dev-stack.json"
+$PowerShellExe = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
+if (-not $PowerShellExe) {
+    $PowerShellExe = (Get-Command powershell -ErrorAction Stop).Source
+}
 
 Set-Location -LiteralPath $RepoRoot
 
@@ -71,6 +75,66 @@ function Stop-StaleDevStack {
         try { Remove-Item -LiteralPath $DevStackStatePath -Force -ErrorAction SilentlyContinue } catch {}
     }
     Stop-DevServers
+}
+
+function Invoke-Clean {
+    Write-Info "[CLEAN] Stopping dev servers and removing generated build artifacts..."
+    Stop-StaleDevStack
+
+    $paths = @(
+        (Join-Path $FrontendDir "dist"),
+        (Join-Path $FrontendDir "playwright-report"),
+        (Join-Path $FrontendDir "test-results")
+    )
+    foreach ($path in $paths) {
+        if (Test-Path -LiteralPath $path) {
+            Write-Warn "  Removing $path"
+            Remove-Item -LiteralPath $path -Recurse -Force
+        }
+    }
+
+    if (Test-Path -LiteralPath $SrcTauriDir) {
+        Push-Location $SrcTauriDir
+        try {
+            & cargo clean
+            if ($LASTEXITCODE -ne 0) { throw "cargo clean failed" }
+        } finally {
+            Pop-Location
+        }
+    }
+
+    Write-Ok "[CLEAN] Complete."
+}
+
+function Show-RunMenu {
+    Write-Host ""
+    Write-Host "RustSMF launcher"
+    Write-Host ""
+    Write-Host "1. Fetch/Setup"
+    Write-Host "2. Run if already installed"
+    Write-Host "3. Compile"
+    Write-Host "4. Clean"
+    Write-Host "5. Verify"
+    Write-Host "6. Browser dev only"
+    Write-Host "7. Help"
+    Write-Host "0. Exit"
+    Write-Host ""
+
+    $choice = Read-Host "Select an option"
+    switch ($choice.Trim()) {
+        "1" { return "setup" }
+        "2" { return "tauri-dev" }
+        "3" { return "compile" }
+        "4" { return "clean" }
+        "5" { return "verify" }
+        "6" { return "dev" }
+        "7" { return "help" }
+        "0" { return "exit" }
+        default {
+            Write-Warn "Unknown option: $choice"
+            return "menu"
+        }
+    }
 }
 
 # Windows Job Object so that closing the cmd/pwsh window (X button) kills the entire dev subtree
@@ -173,7 +237,30 @@ try {
     Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action { Stop-DevServers } -ErrorAction SilentlyContinue | Out-Null
 } catch {}
 
-switch -Exact ($Task.ToLowerInvariant()) {
+while ($Task.ToLowerInvariant() -eq "menu") {
+    $Task = Show-RunMenu
+}
+
+$NormalizedTask = switch -Exact ($Task.ToLowerInvariant()) {
+    "1" { "setup" }
+    "fetch" { "setup" }
+    "fetch/setup" { "setup" }
+    "2" { "tauri-dev" }
+    "run" { "tauri-dev" }
+    "3" { "compile" }
+    "build" { "compile" }
+    "4" { "clean" }
+    "5" { "verify" }
+    "6" { "dev" }
+    "7" { "help" }
+    "0" { "exit" }
+    default { $Task.ToLowerInvariant() }
+}
+
+switch -Exact ($NormalizedTask) {
+    "exit" {
+        Write-Info "Exiting."
+    }
     "setup" {
         Write-Info "[SETUP] Installing frontend deps + Playwright..."
         Ensure-Dirs
@@ -198,7 +285,7 @@ switch -Exact ($Task.ToLowerInvariant()) {
 
         # Launch under our control so we can tie lifetime (cmd window close, Ctrl+C, script exit)
         $launch = "& { Set-Location -LiteralPath '$FrontendDir'; & npm run dev }"
-        $proc = Start-Process -FilePath 'pwsh' -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $launch) `
+        $proc = Start-Process -FilePath $PowerShellExe -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $launch) `
             -NoNewWindow -PassThru -WorkingDirectory $RepoRoot
         $job = New-KillOnCloseJob
         if ($job -ne [IntPtr]::Zero -and $proc.Handle -ne [IntPtr]::Zero) {
@@ -223,7 +310,7 @@ switch -Exact ($Task.ToLowerInvariant()) {
         # The wrapper + job + explicit tree kill guarantee no rogue node servers remain
         # when the cmd/pwsh window is closed or the script is interrupted.
         $launch = "& { Set-Location -LiteralPath '$SourceDir'; & npm run tauri:dev }"
-        $proc = Start-Process -FilePath 'pwsh' -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $launch) `
+        $proc = Start-Process -FilePath $PowerShellExe -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $launch) `
             -NoNewWindow -PassThru -WorkingDirectory $RepoRoot
         $job = New-KillOnCloseJob
         if ($job -ne [IntPtr]::Zero -and $proc.Handle -ne [IntPtr]::Zero) {
@@ -244,6 +331,9 @@ switch -Exact ($Task.ToLowerInvariant()) {
         Write-Info "[COMPILE] Building Tauri desktop package..."
         if (-not (Invoke-FrontendNpm @("run", "build"))) { exit 1 }
         if (-not (Invoke-SourceNpm @("run", "tauri:build"))) { exit 1 }
+    }
+    "clean" {
+        Invoke-Clean
     }
     "verify" {
         Write-Info "[VERIFY] Lint + build + docs/context checks..."
@@ -337,13 +427,25 @@ switch -Exact ($Task.ToLowerInvariant()) {
         Write-Host @"
 RustSMF run.ps1 (minimal harness launcher)
 
-Default: starts the Tauri desktop app. Use -Task help to print this help.
+Default: opens a simple numbered menu. Use -Task help to print this help.
 
-Tasks (used by .tools/project.json):
+Menu:
+  1. Fetch/Setup
+  2. Run if already installed
+  3. Compile
+  4. Clean
+  5. Verify
+  6. Browser dev only
+  7. Help
+  0. Exit
+
+Tasks:
+  menu          - show the numbered menu
   setup         - npm + playwright + cargo check
-  dev           - Vite web dev (frontend)
-  tauri-dev     - Tauri desktop dev
+  run           - Tauri desktop dev (same as tauri-dev)
+  dev           - Vite web dev (frontend only)
   compile       - production desktop build
+  clean         - stop dev servers and remove generated build artifacts
   verify        - lint/typecheck/build/chunk/unit/cargo checks
   test:e2e      - Playwright
   test:visual-strict - opt-in strict SMF visual snapshot checks
@@ -355,6 +457,8 @@ Launcher safety: run.ps1 (and run.bat) provide full orphan protection for dev se
 Examples:
   .\run.ps1
   .\run.bat
+  .\run.bat 2
+  .\run.ps1 -Task run
   .\run.ps1 -Task verify
 
 See docs/dev/TODO.md, docs/dev/APP_STATE.md and summary_bank.json for state, commands, gaps. Source/frontend and src-tauri fully populated (modular hook+components+loaders+Rust peeks).
