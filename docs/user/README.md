@@ -23,6 +23,8 @@ Both commands open the numbered launcher menu. Choose `2. Run if already install
 
 - Open `.smf`, `.glb`, `.gltf`, `.fbx`, or `.obj` by native dialog, file input, or drag/drop.
 - Orbit, pan, zoom, reset view, scrub animation, select bones, use TransformControls, and preview selected-bone weights.
+- Switch between single and quad viewport layouts after a model loads; quad view shows Top, 3D, Front, and Side panes with visible dividers.
+- Toggle model-safe wireframe display for viewport inspection without changing source materials or export data.
 - Export loaded SMF sources through the high-fidelity SMF path with supported live position/rotation pose edits.
 - Export compatible skinned GLB/FBX runtime roots to SMF when they have one shared named skeleton and supported position/quaternion bone tracks.
 - Export static or higher-fidelity modern assets through GLB.
@@ -33,5 +35,6 @@ Both commands open the numbered launcher menu. Choose `2. Run if already install
 - SMF is preserved for compatibility. The current SMF export path does not encode scale edits, materials, morphs, or multiple skeletons.
 - FBX import is supported through Three.js. Export from FBX writes a GLB container unless a future true-FBX writer is adopted.
 - OBJ support is load/preview focused; use GLB export for saved output.
+- Skin-weight paint authoring and animation keyframe authoring are planned editor features; current skin and animation surfaces are preview/playback/edit-affordance focused.
 
 For developer state, backlog, and verification results, see `docs/dev/APP_STATE.md` and `docs/dev/TODO.md`.

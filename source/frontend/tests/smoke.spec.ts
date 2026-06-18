@@ -176,8 +176,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const canvas = page.getByTestId('three-canvas');
     await expect(canvas).toBeVisible();
     await expect(canvas).toHaveAttribute('data-viewport-layout', 'single');
+    await expect(canvas).toHaveAttribute('data-wireframe-enabled', 'false');
     await expect(page.getByTestId('viewport-layout-single')).toBeDisabled();
     await expect(page.getByTestId('viewport-layout-quad')).toBeDisabled();
+    await expect(page.getByTestId('viewport-wireframe-toggle')).toBeDisabled();
 
     // Timeline and outliner present
     await expect(page.getByTestId('timeline')).toBeVisible();
@@ -215,6 +217,16 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     // Canvas still there (Three.js kept rendering)
     await expect(page.getByTestId('three-canvas')).toBeVisible();
+    const wireframeBtn = page.getByTestId('viewport-wireframe-toggle');
+    const canvas = page.getByTestId('three-canvas');
+    await expect(wireframeBtn).toBeEnabled();
+    await expect(wireframeBtn).toHaveAttribute('aria-pressed', 'false');
+    await wireframeBtn.click();
+    await expect(wireframeBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(canvas).toHaveAttribute('data-wireframe-enabled', 'true');
+    await expectRenderedScreenshot(page.getByTestId('viewport-container'), 2500);
+    await wireframeBtn.click();
+    await expect(canvas).toHaveAttribute('data-wireframe-enabled', 'false');
 
     // Exercise bone list selection (simulates user picking bone in inspector for coverage)
     // Also verifies collapsible hierarchy tree (nested ul/li with +/- toggles) using the real local model
@@ -290,7 +302,6 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('export-workspace-panel')).toBeHidden();
 
     // Exercise 3D viewport click (exercises raycast bone pick handler + orbit compat; no crash expected)
-    const canvas = page.getByTestId('three-canvas');
     await canvas.click({ position: { x: 60, y: 60 } });
     await page.waitForTimeout(80);
     await expect(canvas).toBeVisible();
@@ -332,6 +343,11 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await setViewportLayout(page, 'quad');
     await expect(page.getByTestId('viewport-container')).toBeVisible();
+    await expect(page.getByTestId('quad-pane-overlay')).toBeVisible();
+    await expect(page.getByTestId('quad-pane-label-top')).toContainText('Top');
+    await expect(page.getByTestId('quad-pane-label-3d')).toContainText('3D');
+    await expect(page.getByTestId('quad-pane-label-front')).toContainText('Front');
+    await expect(page.getByTestId('quad-pane-label-side')).toContainText('Side');
     await expectRenderedScreenshot(page.getByTestId('viewport-container'), 2500);
 
     // Quad mode is now wired for deterministic per-pane interaction: each panel is clickable and should not
@@ -354,6 +370,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await setViewportLayout(page, 'single');
     await expect(page.getByTestId('viewport-container')).toBeVisible();
+    await expect(page.getByTestId('quad-pane-overlay')).toBeHidden();
     await expectRenderedScreenshot(page.getByTestId('viewport-container'), 2500);
   });
 

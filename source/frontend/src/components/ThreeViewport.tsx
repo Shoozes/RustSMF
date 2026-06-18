@@ -55,6 +55,7 @@ interface ThreeViewportProps {
   boneLabelsEnabled?: boolean;
   editorMode?: EditorMode;
   viewportLayout?: ViewportLayout;
+  wireframeEnabled?: boolean;
 }
 
 // SimpleOrbit imported from ../utils/SimpleOrbit (filled modularity dir, single source of truth)
@@ -76,6 +77,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   boneLabelsEnabled = false,
   editorMode = 'view',
   viewportLayout = 'single',
+  wireframeEnabled = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -87,6 +89,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const resizeObsRef = useRef<ResizeObserver | null>(null);
   const viewportRef = useRef<ViewportSpec[]>([]);
   const layoutRef = useRef<ViewportLayout>('single');
+  const wireframeEnabledRef = useRef(false);
+  const wireframeMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
   const boundsRef = useRef<ModelBounds>(DEFAULT_VIEWPORT_BOUNDS);
   const canvasSizeRef = useRef({ width: 800, height: 600 });
   const clockRef = useRef(new THREE.Clock());
@@ -269,6 +273,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(0x0b1120);
     sceneRef.current = scene;
+    wireframeMaterialRef.current = new THREE.MeshBasicMaterial({
+      color: 0xdbeafe,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.9,
+    });
 
     const hemi = new THREE.HemisphereLight(0xbfd4ff, 0x080820, 0.6);
     scene.add(hemi);
@@ -563,19 +573,18 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         }];
 
       const isQuad = layoutRef.current === 'quad';
+      const previousOverride = scene.overrideMaterial;
+      scene.overrideMaterial = wireframeEnabledRef.current ? wireframeMaterialRef.current : null;
       renderer.setScissorTest(isQuad);
-      specs.forEach((spec, index) => {
+      specs.forEach((spec) => {
         renderer.setViewport(spec.x, spec.y, spec.width, spec.height);
         if (isQuad) {
           renderer.setScissor(spec.x, spec.y, spec.width, spec.height);
         }
-        if (index === 0) {
-          renderer.clear();
-        } else {
-          renderer.clearDepth();
-        }
+        renderer.clear(true, true, true);
         renderer.render(scene, spec.camera === cameraRef.current ? camera : spec.camera);
       });
+      scene.overrideMaterial = previousOverride;
       if (!isQuad) {
         renderer.setScissorTest(false);
       }
@@ -624,6 +633,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         disposeThreeObject(boneHighlightRef.current);
         boneHighlightRef.current = null;
       }
+      wireframeMaterialRef.current?.dispose();
+      wireframeMaterialRef.current = null;
       renderer.dispose();
     };
     // Note: intentionally no deps on playback props; RAF always runs, control via effects below.
@@ -633,6 +644,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => {
     applyViewportLayout(viewportLayout);
   }, [viewportLayout]);
+
+  useEffect(() => {
+    wireframeEnabledRef.current = wireframeEnabled;
+  }, [wireframeEnabled]);
 
   // React to playbackSpeed changes (apply to current action)
   useEffect(() => {
@@ -952,13 +967,26 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   }, [root, skeleton, clips]);  // <-- ONLY model data; playback handled by other effects to prevent re-attach loops on every tick
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{ width: '100%', height: '100%' }}
-      data-testid="three-canvas"
-      data-editor-mode={editorMode}
-      data-viewport-layout={viewportLayout}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        style={{ width: '100%', height: '100%' }}
+        data-testid="three-canvas"
+        data-editor-mode={editorMode}
+        data-viewport-layout={viewportLayout}
+        data-wireframe-enabled={wireframeEnabled ? 'true' : 'false'}
+      />
+      {viewportLayout === 'quad' && (
+        <div className="quad-pane-overlay" data-testid="quad-pane-overlay" aria-hidden="true">
+          <div className="quad-pane-line quad-pane-line-v" />
+          <div className="quad-pane-line quad-pane-line-h" />
+          <span className="quad-pane-label quad-pane-label-top-left" data-testid="quad-pane-label-top">Top</span>
+          <span className="quad-pane-label quad-pane-label-top-right" data-testid="quad-pane-label-3d">3D</span>
+          <span className="quad-pane-label quad-pane-label-bottom-left" data-testid="quad-pane-label-front">Front</span>
+          <span className="quad-pane-label quad-pane-label-bottom-right" data-testid="quad-pane-label-side">Side</span>
+        </div>
+      )}
+    </>
   );
 };
 

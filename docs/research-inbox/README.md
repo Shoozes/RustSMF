@@ -18,7 +18,7 @@ Each active note should start with:
 ## Ingestion Rules
 
 - Current behavior goes to `docs/dev/APP_STATE.md`.
-- Forward work goes to `docs/dev/TODO.md` with what, why, where, and how.
+- Forward work goes to `docs/dev/TODO.md` with what, why, where, when, how, subtasks, and acceptance.
 - Repeated hazards go to `docs/dev/PITFALL_LEDGER.md`.
 - File-group routing goes to `summary_bank.json`.
 - Test or verifier claims should become executable checks where practical.

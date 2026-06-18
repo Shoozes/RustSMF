@@ -34,6 +34,7 @@ export interface UiState {
   errorMsg: string;
   editorMode: EditorMode;
   viewportLayout: ViewportLayout;
+  wireframeEnabled: boolean;
 }
 
 export function usePlaybackSlice(initial: Partial<PlaybackState> = {}) {
@@ -88,6 +89,7 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
   const [errorMsg, setErrorMsg] = useState<string>(initial.errorMsg ?? '');
   const [editorMode, setEditorMode] = useState<EditorMode>(initial.editorMode ?? 'view');
   const [viewportLayout, setViewportLayout] = useState<ViewportLayout>(initial.viewportLayout ?? 'single');
+  const [wireframeEnabled, setWireframeEnabled] = useState<boolean>(initial.wireframeEnabled ?? false);
 
   const clearError = useCallback(() => setErrorMsg(''), []);
 
@@ -98,6 +100,7 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
     errorMsg, setErrorMsg,
     editorMode, setEditorMode,
     viewportLayout, setViewportLayout,
+    wireframeEnabled, setWireframeEnabled,
     clearError,
   };
 }

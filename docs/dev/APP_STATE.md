@@ -9,8 +9,8 @@ RustSMF is a Tauri + React + Three.js desktop/web model tool for SMF, GLB/GLTF, 
 Core flow:
 - Launch from `.\run.bat` or `pwsh -File run.ps1`; no-argument launch opens the numbered menu. Choose option 2, or run `.\run.bat 2` / `pwsh -File run.ps1 -Task run`, to start the desktop app when dependencies are already installed.
 - Load `.smf`, `.glb`, `.gltf`, `.fbx`, and `.obj` through browser input, drag/drop, or Tauri native dialog.
-- Render model roots in a self-contained Three.js viewport with orbit, wheel zoom, right-drag pan, reset, lighting, grid, axes, resize handling, and cleanup.
-- Viewport layout controls are model-aware: with no model loaded, layout is forced to single-view (`data-viewport-layout="single"`); single/quad layout controls become active after a model is loaded.
+- Render model roots in a self-contained Three.js viewport with orbit, wheel zoom, right-drag pan, reset, lighting, grid, axes, model-safe wireframe render override, resize handling, and cleanup.
+- Viewport layout controls are model-aware: with no model loaded, layout is forced to single-view (`data-viewport-layout="single"`); single/quad layout controls become active after a model is loaded. Quad view is visually explicit with pane dividers and Top/3D/Front/Side labels.
 - Mode/workspace switching is continuity-checked in normal, medium, and constrained-width viewports; narrow layouts put mode tabs on a scrollable row, and layout switching remains disabled until a model is loaded.
 - Launcher contract (current):
   - `run.bat` / `run.ps1` are the canonical Windows workflow and carry full orphan-prevention coverage.
@@ -18,7 +18,7 @@ Core flow:
   - `run.ps1 -Task test:e2e` uses GenEye as an optional advisory Playwright subagent when discoverable, but RustSMF remains able to run browser-only e2e with `-NoGenEye`, `RUSTSMF_NO_GENEYE=1`, or no GenEye checkout/runtime.
   - Direct `npm run dev` / `npm run tauri:dev` flows remain available but intentionally have reduced non-canonical lifecycle guarantees.
 - Drive animation through viewport-owned `AnimationMixer` state with timeline play/pause, scrub, speed, and clip selection.
-- Inspect skeletons, select bones from the hierarchy or viewport click, show a bone marker, use TransformControls, use quick nudges, and toggle selected-bone weight preview.
+- Inspect skeletons, select bones from the hierarchy or viewport click, show a bone marker, use TransformControls, use quick nudges, and toggle selected-bone weight preview. Weight preview is tested as visualization only; full additive/subtractive skin-weight paint authoring is not implemented yet.
 - Move selected bone endpoint markers in precision modes with camera-plane constrained drag (no model swap, no control conflict), and endpoint-drag lifecycle assertions are covered by e2e smoke in single and quad modes.
 - Export SMF sources through the high-fidelity SMF roundtrip path, including live position/rotation pose edits.
 - Export compatible skinned GLB/FBX runtime roots to SMF through `threeToSmf`; use GLB export for static/material/scale cases.
@@ -29,7 +29,7 @@ Core flow:
 - Keep editor mode + viewport layout transitions on the same shared model/viewport root; selected bone and scrub/timeline state are preserved across those transitions and now covered by smoke assertions.
 - Keep constrained-width workspace tabs deterministic after model load; the 360px smoke path clicks Model/Rig/Skin/Animate/Export without forced clicks and verifies selected bone plus scrub continuity.
 - Model/load/export async failures in `useLoadModel` now normalize unknown error values through a single helper and remove brittle `any` traversal casts for skinned mesh extraction/clip reads.
-- Planned modernization keeps the current React/Tauri/Three stack, uses GLB/GLTF as the preferred modern fidelity format, preserves SMF for backwards compatibility, and uses the old GameMaker screenshots to guide optional quad/ortho workspaces with larger bone handles/labels for rigging and skinning. Endpoint drag constraints and pane-aware timing have been validated in e2e (single + quad).
+- Modernization keeps the current React/Tauri/Three stack, uses GLB/GLTF as the preferred modern fidelity format, and preserves SMF for backwards compatibility. Old GameMaker screenshots/scripts now guide the remaining authoring parity work: real skin paint, keyframe authoring, display/settings shelves, and deeper ortho-pane editing controls. Quad layout, pane labels/dividers, model-safe wireframe display, endpoint handles, and pane-aware timing are current preview/editor affordances covered by e2e checks.
 
 ## Architecture
 
@@ -39,7 +39,7 @@ Core flow:
 - `source/frontend/src/hooks/useLoadModel.ts`: in-flight export/save guard (`isExportingRef` + export seq guard) serializes export actions during async save/write and blocks stale completions.
 - `source/frontend/tests/native.spec.ts`: added Playwright native IPC race coverage for delayed native saves to prove single-flight export behavior and status-button recovery under rapid click.
 - `source/frontend/src/hooks/poseEdits.ts`: nudge delta types and helpers for live SMF position/rotation edits.
-- `source/frontend/src/components/ThreeViewport.tsx`: renderer, scene, camera, orbit, model attach/dispose, mixer, skeleton helper, raycast bone picking, marker, TransformControls, and weight preview.
+- `source/frontend/src/components/ThreeViewport.tsx`: renderer, scene, camera, orbit, model attach/dispose, mixer, skeleton helper, raycast bone picking, marker, TransformControls, model-safe wireframe render override, and weight preview.
 - `source/frontend/src/components/Inspector.tsx`: typed skeleton tree, clip list, selection controls, transform mode controls, and nudge controls.
 - `source/frontend/src/utils/viewportLayout.ts`: shared single/quad viewport pane math, ortho camera framing, and pointer coordinate conversion helpers used by `ThreeViewport.tsx`.
 - `source/frontend/src/loaders/*`: SMF import/export (buildThreeScene delegates rig to buildRigHierarchy for flat nodes + isBone=0 head dummies: cycle-safe effective-parent walk skips heads for direct real-bone .add() + deform-only Skeleton; bind locals use nearest real ancestor world for correct matrixWorld; inverse binds are calculated after world matrices update; animation tracks are emitted only for real scene bones; names `SMF_Node_N` + userData; skin remap direct on compressed is-bone seq), bounded binary helpers, rig node-list helper (export), guarded Three-to-SMF conversion, GLB/FBX/OBJ loading/export, coordinate swizzles, and DQ math. SMF rig tree now produces clean SkeletonHelper/Inspector/picker for rigs with disconnected parts (skin/anim/export fidelity preserved via world DQ + compose).
@@ -73,7 +73,7 @@ Core flow:
 - GLB/FBX-to-SMF conversion is available for skinned models with one shared named skeleton and no scale animation. Static roots, textures/materials, morph tracks, object-level tracks, and scale animation still use GLB export for fidelity.
 - GLB/GLTF remains the preferred format for maximum fidelity and new development. SMF support is scoped to legacy recovery and users who target the old SMF binary pipeline.
 - Live SMF position/rotation pose edits export; scale edits are blocked for SMF export because the current SMF DQ path has no scale channel.
-- Quad layout, ortho camera panes, oversized screen-space bone handles, and endpoint drag interactions are implemented at a preview/editor-affordance level and covered by focused e2e checks. Full skin-weight paint authoring and deeper ortho-pane editing parity remain planned.
+- Quad layout, ortho camera panes, visible pane labels/dividers, model-safe wireframe display, oversized screen-space bone handles, and endpoint drag interactions are implemented at a preview/editor-affordance level and covered by focused e2e checks. Full skin-weight paint authoring, texture/grid/node-visibility shelves, keyframe authoring, and deeper ortho-pane editing parity remain planned.
 - Launcher process safety (no rogue node servers on close) is Windows-primary via run.ps1 + mjs layers (Job/tree/scans/poll). Direct `tauri dev` or non-Windows have reduced coverage (mjs signals + polls + child-tree cleanup where supported); behavior is documented explicitly in launcher docs.
 
 ## Context Docs

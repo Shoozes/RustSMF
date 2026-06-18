@@ -66,7 +66,7 @@
         "docs/references/old-src/GML-short-skills.md"
       ],
       "notes": [
-        "TODO entries use what/why/where/how and done criteria for active concerns plus recent completed integrity work.",
+        "TODO entries use what/why/where/when/how, subtasks, and done criteria for active concerns plus recent completed integrity work.",
         "APP_STATE is current-state only.",
         "Pitfalls capture regressions or hidden verification gaps.",
         "Completed work is summarized once; avoid re-adding long pass logs."
@@ -135,8 +135,8 @@
       "files": []
     },
     "feature__modern_editor_workspaces": {
-      "description": "Planned modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, optional quad/ortho precision views, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
-      "status": "Editor workspace shell and quad/shared layout are active; constrained-width mode tabs now use a scrollable toolbar row and deterministic post-load smoke coverage; remaining work is parity and ergonomics in ortho panes, bone affordances, and deeper precision controls while preserving shared model root continuity.",
+      "description": "Modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, active single/quad viewport layout, model-safe wireframe display, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
+      "status": "Editor workspace shell and quad/shared layout are active; constrained-width mode tabs now use a scrollable toolbar row and deterministic post-load smoke coverage; quad view now has visible pane dividers/labels plus e2e overlay assertions; model-safe wireframe display is implemented and smoke-tested. Remaining work is old-editor parity for real skin-weight paint authoring, animation keyframe authoring, viewport settings shelves, ortho panes, bone affordances, and deeper precision controls while preserving shared model root continuity.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
@@ -155,16 +155,48 @@
         "source/frontend/src/utils/viewportLayout.ts"
       ],
       "requirements": [
-        "Default to a polished single perspective viewport, with optional quad view for rigging/skinning precision.",
+        "Default to a polished single perspective viewport, with optional quad view and model-safe wireframe display for rigging/skinning precision.",
         "Rig and skin modes need larger screen-space bone glyphs, labels, endpoint handles, hover/selected states, and adjustable hit radius.",
         "Mode tabs should expose Model, Rig, Skin, Animate, and Export workflows without recreating GameMaker chrome.",
         "GLB/GLTF remains the preferred modern fidelity path; SMF remains a compatibility format with explicit limits."
       ],
       "files": []
     },
+    "workflow__old_editor_parity_source_map": {
+      "description": "Focused old GameMaker reference map for adapting RustSMF workspaces, display toggles, skin paint, animation keyframes, and viewport precision behavior without recreating old chrome verbatim.",
+      "status": "active backlog; current RustSMF has single/quad layout, pane labels/dividers, model-safe wireframe display, endpoint handles, and playback/pose-edit affordances. Remaining mapped work is real skin-weight paint, editable animation keyframes, display/settings shelves, and deeper ortho-pane interaction parity.",
+      "paths": [
+        "docs/dev/TODO.md",
+        "docs/dev/APP_STATE.md",
+        "docs/references/old-src/screenshots/README.md",
+        "docs/references/old-src/screenshots/*.png",
+        "docs/references/Old SMF Documentation v1.pdf",
+        "docs/references/old-src/issues.md",
+        "docs/references/old-src/SMF.yyp",
+        "docs/references/old-src/objects/oAnimEditSystem/Create_0.gml",
+        "docs/references/old-src/objects/oAnimEditSystem/Draw_0.gml",
+        "docs/references/old-src/objects/oAnimEditSystem/Step_0.gml",
+        "docs/references/old-src/scripts/common_add_buttons/common_add_buttons.gml",
+        "docs/references/old-src/scripts/views_init/views_init.gml",
+        "docs/references/old-src/scripts/draw_model/draw_model.gml",
+        "docs/references/old-src/scripts/editor_draw_grid/editor_draw_grid.gml",
+        "docs/references/old-src/scripts/modeleditor_update_wireframe/modeleditor_update_wireframe.gml",
+        "docs/references/old-src/scripts/skineditor_*/*.gml",
+        "docs/references/old-src/scripts/animeditor_*/*.gml",
+        "docs/references/old-src/scripts/rigeditor_*/*.gml",
+        "docs/references/old-src/scripts/smf_anim/smf_anim.gml",
+        "docs/references/old-src/scripts/smf_rig/smf_rig.gml",
+        "docs/references/old-src/scripts/Utility/Utility.gml"
+      ],
+      "notes": [
+        "Keep display-only toggles separate from data-mutating commands.",
+        "Use old scripts/screenshots to identify behavior and constraints, not to duplicate the GameMaker UI frame one-for-one."
+      ],
+      "files": []
+    },
     "subsystem__viewport_editor": {
-      "description": "Three.js viewport, orbit controls, model attach/dispose, animation mixer, skeleton helper, raycast bone selection, TransformControls, and weight preview.",
-      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed; viewport drag filtering, context-aware R reset vs TransformControls mode shortcuts, ref-decoupled timing, disposal helpers, and bonePicker remain current. Labels: toggleable per-bone (small AxesHelper marker + canvas name sprite attached to bone, off default, full dispose/traverse) via extracted boneLabels.ts + useBoneLabels hook. Added endpoint-like marker handles, precision hover marker, hover dataset telemetry, and endpoint drag constraints in ref-driven pointer handlers. Endpoint drag verification is now exercised in smoke tests for single and quad layouts.",
+      "description": "Three.js viewport, orbit controls, model attach/dispose, animation mixer, skeleton helper, raycast bone selection, TransformControls, model-safe wireframe display, and weight preview.",
+      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed; viewport drag filtering, context-aware R reset vs TransformControls mode shortcuts, ref-decoupled timing, disposal helpers, and bonePicker remain current. Labels: toggleable per-bone (small AxesHelper marker + canvas name sprite attached to bone, off default, full dispose/traverse) via extracted boneLabels.ts + useBoneLabels hook. Added endpoint-like marker handles, precision hover marker, hover dataset telemetry, endpoint drag constraints, and a render-only wireframe override that does not mutate export materials. Quad mode now has explicit pane dividers/labels and per-pane clearing; endpoint drag, wireframe state, and visible quad-overlay verification are exercised in smoke tests.",
       "paths": [
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/utils/SimpleOrbit.ts",
@@ -208,8 +240,10 @@
         "docs/references/old-src/GML-2026.md",
         "docs/references/old-src/GML-short-skills.md",
         "docs/references/old-src/SMF.yyp",
-        "docs/references/old-src/**/*.gml",
-        "docs/references/old-src/**/*.yy",
+        "docs/references/old-src/scripts/Utility/Utility.gml",
+        "docs/references/old-src/scripts/smf_anim/smf_anim.gml",
+        "docs/references/old-src/scripts/smf_rig/smf_rig.gml",
+        "docs/references/old-src/scripts/editor_load_rig_and_animation_from_buffer/editor_load_rig_and_animation_from_buffer.gml",
         "source/frontend/src/loaders/threeToSmf.ts",
         "source/frontend/src/loaders/threeToSmf.test.ts"
       ],
@@ -585,8 +619,10 @@
         "docs/references/old-src/issues.md",
         "docs/references/old-src/GML-2026.md",
         "docs/references/old-src/SMF.yyp",
-        "docs/references/old-src/**/*.gml",
-        "docs/references/old-src/**/*.yy",
+        "docs/references/old-src/SMF.resource_order",
+        "docs/references/old-src/objects/oAnimEditSystem/*.gml",
+        "docs/references/old-src/scripts/Utility/Utility.gml",
+        "docs/references/old-src/scripts/smf_anim/smf_anim.gml",
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/tests/test.fbx",
         "source/frontend/tests/smoke.spec.ts"

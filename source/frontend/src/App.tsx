@@ -166,6 +166,8 @@ export default function App() {
         setEditorMode={setEditorMode}
         viewportLayout={viewportLayout}
         setViewportLayout={setViewportLayout}
+        wireframeEnabled={ui.wireframeEnabled}
+        setWireframeEnabled={ui.setWireframeEnabled}
       />
 
       {/* Simple pure error banner (no extra deps) - always in DOM even when not shown (for e2e), hidden via style when no error */}
@@ -215,6 +217,7 @@ export default function App() {
             boneLabelsEnabled={shouldShowBoneLabels}
             editorMode={editorMode}
             viewportLayout={viewportLayout}
+            wireframeEnabled={ui.wireframeEnabled}
           />
           {/* Simple pure loading overlay (no deps) */}
           {ui.isLoading && (

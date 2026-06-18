@@ -94,7 +94,7 @@ Animation [4] tab.
 
 ## Key Takeaways for Comparison to Current RustSMF
 - Original: Tabbed modal workflow (Model → Rig → Skin → Animate) inside a single 4-quadrant viewport. Heavy use of left "tool shelf" lists + right submodel palette. Direct node numbering and ortho-constrained creation. Yellow in-app annotations for teaching.
-- Modern RustSMF (current): Single unified ThreeViewport (no quad split), React-based Toolbar + Outliner (scene/bones) + Inspector (selection + bone nudges + weight preview toggle + T/R/S modes) + Timeline (scrub/play/speed/clips). Pose edits are live (TransformControls + quick nudges) and persist for SMF export. No modal tabs; all tools available contextually. Bone visualization uses SkeletonHelper + selectable highlight sphere/axes instead of numbered sticks.
+- Modern RustSMF (current): Unified ThreeViewport with single/quad layout modes, React-based Toolbar + Outliner (scene/bones) + Inspector (selection + bone nudges + weight preview toggle + T/R/S modes) + Timeline (scrub/play/speed/clips). Pose edits are live (TransformControls + quick nudges) and persist for SMF export. Mode tabs expose Model/Rig/Skin/Animate/Export workspaces without recreating the old GameMaker chrome. Bone visualization uses SkeletonHelper + selectable highlight sphere/axes/labels instead of numbered sticks.
 - Fidelity goals preserved: Both deal with SMF rig (bones + DQs), skin weights, and animation. The screenshots prove the original supported submodels, multi-view ortho editing, explicit bone end-point creation, and per-bone weight painting phases.
 - These images (plus the GLBtoSMF visual proof) help validate that the new loaders (smf.ts, threeToSmf.ts, coord.ts) and UI (ThreeViewport + Inspector pose tools) target the same core concepts.
 

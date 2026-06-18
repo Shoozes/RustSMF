@@ -5,7 +5,7 @@ Keep developer docs concise and evidence-based. This repo has one current-state 
 ## Durable Homes
 
 - `APP_STATE.md`: what the app currently does, architecture ownership, limits, and verified commands.
-- `TODO.md`: active work only. Each concern should state what, why, where, how, and done criteria when applicable.
+- `TODO.md`: active work only. Each concern should state what, why, where, when, how, subtasks, and done criteria when applicable.
 - `PITFALL_LEDGER.md`: repeated or high-risk failures, written as prevention records rather than progress history.
 - `../../summary_bank.json`: context groups for features, subsystems, and issue clusters.
 - `../../source/frontend/tests/README.md`: frontend test policy and Playwright coverage map.

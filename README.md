@@ -6,7 +6,7 @@ Core: high-fidelity SMF roundtrip (import/export with coord/DQ), guarded skinned
 
 ## State and work
 - Current app state: docs/dev/APP_STATE.md
-- Active backlog + recent completed integrity work (paired what/why/where/how + done criteria): docs/dev/TODO.md
+- Active backlog + recent completed integrity work (paired what/why/where/when/how, subtasks, and done criteria): docs/dev/TODO.md
 - Regression prevention and verification gaps: docs/dev/PITFALL_LEDGER.md
 - Context groups for files/folders/features/issues: summary_bank.json (narrow paths, intent-based; validate with `python scripts/verify-context-bank.py` after edits)
 
@@ -48,7 +48,7 @@ See run.ps1 help, source/frontend/package.json, source/package.json (workspace),
 - OBJ: load/preview parity only (static focus); export via GLB.
 - Native automation: deterministic Playwright Tauri IPC mocks + Rust cmd tests (real OS dialogs optional later via tauri-driver if needed).
 - Desktop peeks: small header/rig/anim/model validation for .smf status (real FS in Rust; complements full TS loader).
-- Planned editor modernization: keep GLB/GLTF as the preferred modern format, preserve SMF for backwards compatibility, and use old-src screenshots to guide optional quad/ortho workspaces with larger bone handles/labels for rigging and skinning.
+- Editor modernization: quad layout, pane labels/dividers, model-safe wireframe display, endpoint handles, and basic ortho/perspective panes are current preview/editor affordances. Remaining old-editor parity work is real skin-weight paint authoring, keyframe authoring, settings shelves, and deeper ortho-pane editing controls.
 
 Philosophy (AGENTS.md): Safety, courtesy, show, efficiency. Dynamic/modular over hard-coding. Direct minimal comments. Correctness/readability first. TS React front, Rust backend.
 

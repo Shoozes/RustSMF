@@ -14,6 +14,8 @@ interface ToolbarProps {
   setEditorMode: (mode: EditorMode) => void;
   viewportLayout: ViewportLayout;
   setViewportLayout: (layout: ViewportLayout) => void;
+  wireframeEnabled: boolean;
+  setWireframeEnabled: (enabled: boolean) => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -28,6 +30,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
   setEditorMode,
   viewportLayout,
   setViewportLayout,
+  wireframeEnabled,
+  setWireframeEnabled,
 }) => {
   const modes: EditorMode[] = ['view', 'rig', 'skin', 'animate', 'export'];
   const modeLabels: Record<EditorMode, string> = {
@@ -120,6 +124,17 @@ const Toolbar: React.FC<ToolbarProps> = ({
           Quad
         </button>
       </div>
+      <button
+        type="button"
+        data-testid="viewport-wireframe-toggle"
+        className={`layout-btn ${wireframeEnabled ? 'layout-btn-active' : ''}`}
+        onClick={() => setWireframeEnabled(!wireframeEnabled)}
+        disabled={isLoading || !hasModel}
+        aria-pressed={wireframeEnabled}
+        title="Toggle viewport wireframe"
+      >
+        Wireframe
+      </button>
       {/* Persistent hidden file input for reliable e2e file simulation (Playwright setInputFiles) */}
       <input
         type="file"
