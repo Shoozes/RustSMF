@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 import type { ImportedSmf } from './smf';
 import { threeVecToSmf, threeMatrixToSmf, dqCreateFromMatrix, dqNegate } from './coord';
+import {
+  makeDiagnosticReport,
+  pushDiagnostic,
+  type SmfDiagnostic,
+  type SmfDiagnosticReport,
+} from './smfDiagnostics';
 
 /**
  * Converts Three.js skinned scene data to an ImportedSmf structure for SMF export.
@@ -19,9 +25,84 @@ export class SmfConversionError extends Error {
 }
 
 export interface SmfConversionSource {
-  skeleton: THREE.Skeleton;
+  skeleton?: THREE.Skeleton | null;
   skinnedMeshes?: THREE.SkinnedMesh[];
   clips?: THREE.AnimationClip[];
+}
+
+export function collectSkinnedMeshes(root: THREE.Object3D): THREE.SkinnedMesh[] {
+  const skinnedMeshes: THREE.SkinnedMesh[] = [];
+  root.traverse((object) => {
+    if (object instanceof THREE.SkinnedMesh) {
+      skinnedMeshes.push(object);
+    }
+  });
+  return skinnedMeshes;
+}
+
+export function inspectThreeToSmfSource(src: SmfConversionSource): SmfDiagnosticReport {
+  const diagnostics: SmfDiagnostic[] = [];
+  const { skeleton, skinnedMeshes = [], clips = [] } = src;
+
+  if (!skeleton || skeleton.bones.length === 0) {
+    pushDiagnostic(
+      diagnostics,
+      'error',
+      'SMF_NO_SKINNED_SKELETON',
+      'SMF export requires a skinned skeleton. Static models should stay GLB.',
+    );
+  }
+
+  for (const clip of clips) {
+    for (const track of clip.tracks) {
+      if (/\.scale(\.|$)/.test(track.name)) {
+        pushDiagnostic(
+          diagnostics,
+          'error',
+          'SMF_SCALE_ANIMATION',
+          `Clip "${clip.name}" has unsupported scale track "${track.name}".`,
+          track.name,
+        );
+      }
+    }
+  }
+
+  for (const mesh of skinnedMeshes) {
+    const geo = mesh.geometry;
+    const meshName = mesh.name || 'mesh';
+
+    if (!geo.attributes.uv) {
+      pushDiagnostic(
+        diagnostics,
+        'warning',
+        'SMF_MISSING_UV',
+        `${meshName} has no UVs. Export will use empty UV data.`,
+        meshName,
+      );
+    }
+
+    if (!geo.attributes.normal) {
+      pushDiagnostic(
+        diagnostics,
+        'warning',
+        'SMF_MISSING_NORMALS',
+        `${meshName} has no normals. Lighting may be wrong after export.`,
+        meshName,
+      );
+    }
+
+    if (!geo.attributes.skinIndex || !geo.attributes.skinWeight) {
+      pushDiagnostic(
+        diagnostics,
+        'error',
+        'SMF_MISSING_SKIN_ATTRIBUTES',
+        `${meshName} has no skinIndex/skinWeight attributes.`,
+        meshName,
+      );
+    }
+  }
+
+  return makeDiagnosticReport(diagnostics);
 }
 
 // Convert a Three.js bone's current local matrix to SMF-space DQ (negated storage convention).
@@ -52,28 +133,27 @@ function sampleTrackComponent(
 
 export function buildImportedSmfFromThree(src: SmfConversionSource): ImportedSmf {
   const { skeleton, skinnedMeshes = [], clips = [] } = src;
+  const report = inspectThreeToSmfSource(src);
 
-  if (!skeleton || skeleton.bones.length === 0) {
+  const firstError = report.diagnostics.find((item) => item.level === 'error');
+  if (firstError) {
+    throw new SmfConversionError(
+      firstError.code === 'SMF_NO_SKINNED_SKELETON'
+        ? 'SMF conversion requires a skinned skeleton; static roots without bones should use GLB export'
+        : firstError.message
+    );
+  }
+  const exportSkeleton = skeleton;
+  if (!exportSkeleton) {
     throw new SmfConversionError(
       'SMF conversion requires a skinned skeleton; static roots without bones should use GLB export'
     );
   }
 
-  // Reject scale animation (SMF DQ path has no scale channel)
-  for (const clip of clips) {
-    for (const track of clip.tracks) {
-      if (/\.scale(\.|$)/.test(track.name)) {
-        throw new SmfConversionError(
-          `Clip "${clip.name}" has scale track "${track.name}"; SMF export does not support scale animation`
-        );
-      }
-    }
-  }
-
   // Build SMF bones from skeleton using current local transforms
-  const bones: ImportedSmf['bones'] = skeleton.bones.map((b, i) => {
+  const bones: ImportedSmf['bones'] = exportSkeleton.bones.map((b, i) => {
     const parentBone = b.parent instanceof THREE.Bone ? b.parent : null;
-    const parentIdx = parentBone ? skeleton.bones.indexOf(parentBone) : -1;
+    const parentIdx = parentBone ? exportSkeleton.bones.indexOf(parentBone) : -1;
     return {
       index: i,
       parent: parentIdx,
@@ -160,7 +240,7 @@ export function buildImportedSmfFromThree(src: SmfConversionSource): ImportedSmf
     }
 
     const frames: Float32Array[][] = times.map(t =>
-      skeleton.bones.map(bone => {
+      exportSkeleton.bones.map(bone => {
         const qtimes = boneQuatTimes.get(bone.name);
         const qvals = boneQuatValues.get(bone.name);
         const ptimes = bonePosTime.get(bone.name);
@@ -186,7 +266,7 @@ export function buildImportedSmfFromThree(src: SmfConversionSource): ImportedSmf
       duration: clip.duration,
       times,
       frames,
-      nodeCount: skeleton.bones.length,
+      nodeCount: exportSkeleton.bones.length,
       loop: 1,
       interpolation: 1,
       sampleFrameMultiplier: 1,

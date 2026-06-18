@@ -4,12 +4,61 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as THREE from 'three';
-import { buildImportedSmfFromThree, SmfConversionError } from './threeToSmf';
+import { buildImportedSmfFromThree, inspectThreeToSmfSource, SmfConversionError } from './threeToSmf';
 import { exportSMFToBuffer, importSMF, ImportedSmf } from './smf';
 import { dqToLocalTransform } from './coord';
 import { buildSmfNodeList } from './smfRig';
+import { compareSmfRoundtrip, summarizeImportedSmf } from './smfDiagnostics';
 
 describe('threeToSmf - buildImportedSmfFromThree', () => {
+  const makeSkeleton = () => {
+    const bone = new THREE.Bone();
+    bone.name = 'Bone_0';
+    return new THREE.Skeleton([bone]);
+  };
+
+  const makeSkinnedMesh = (options: {
+    normal?: boolean;
+    uv?: boolean;
+    skin?: boolean;
+  } = {}) => {
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute([
+      0, 0, 0,
+      1, 0, 0,
+      0, 1, 0,
+    ], 3));
+    if (options.normal) {
+      geometry.setAttribute('normal', new THREE.Float32BufferAttribute([
+        0, 0, 1,
+        0, 0, 1,
+        0, 0, 1,
+      ], 3));
+    }
+    if (options.uv) {
+      geometry.setAttribute('uv', new THREE.Float32BufferAttribute([
+        0, 0,
+        1, 0,
+        0, 1,
+      ], 2));
+    }
+    if (options.skin) {
+      geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute([
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+        0, 0, 0, 0,
+      ], 4));
+      geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute([
+        1, 0, 0, 0,
+        1, 0, 0, 0,
+        1, 0, 0, 0,
+      ], 4));
+    }
+    const mesh = new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial());
+    mesh.name = 'DiagnosticMesh';
+    return mesh;
+  };
+
   it('throws SmfConversionError for source without skeleton bones', () => {
     const emptySkeleton = new THREE.Skeleton([], []);
     assert.throws(
@@ -20,6 +69,12 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
         return true;
       }
     );
+  });
+
+  it('reports diagnostic error for source without skeleton bones', () => {
+    const report = inspectThreeToSmfSource({ skeleton: null });
+    assert.strictEqual(report.canExportSmf, false);
+    assert.ok(report.diagnostics.some((item) => item.code === 'SMF_NO_SKINNED_SKELETON'));
   });
 
   it('throws SmfConversionError when a clip has scale tracks', () => {
@@ -36,6 +91,37 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
         return true;
       }
     );
+  });
+
+  it('reports diagnostic error for unsupported scale animation tracks', () => {
+    const skeleton = makeSkeleton();
+    const scaleTrack = new THREE.VectorKeyframeTrack('Bone_0.scale', [0, 1], [1, 1, 1, 2, 2, 2]);
+    const clip = new THREE.AnimationClip('ScaleClip', 1, [scaleTrack]);
+    const report = inspectThreeToSmfSource({ skeleton, clips: [clip] });
+
+    assert.strictEqual(report.canExportSmf, false);
+    assert.ok(report.diagnostics.some((item) => item.code === 'SMF_SCALE_ANIMATION'));
+  });
+
+  it('reports warnings for missing UVs and normals without blocking export', () => {
+    const report = inspectThreeToSmfSource({
+      skeleton: makeSkeleton(),
+      skinnedMeshes: [makeSkinnedMesh({ skin: true })],
+    });
+
+    assert.strictEqual(report.canExportSmf, true);
+    assert.ok(report.diagnostics.some((item) => item.code === 'SMF_MISSING_UV'));
+    assert.ok(report.diagnostics.some((item) => item.code === 'SMF_MISSING_NORMALS'));
+  });
+
+  it('reports diagnostic error when skinned export mesh lacks skin attributes', () => {
+    const report = inspectThreeToSmfSource({
+      skeleton: makeSkeleton(),
+      skinnedMeshes: [makeSkinnedMesh({ normal: true, uv: true })],
+    });
+
+    assert.strictEqual(report.canExportSmf, false);
+    assert.ok(report.diagnostics.some((item) => item.code === 'SMF_MISSING_SKIN_ATTRIBUTES'));
   });
 
   it('converts a minimal single-bone skeleton to ImportedSmf shape', () => {
@@ -128,6 +214,32 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
     // The reimported should have captured the edited transform in its DQ (via coord).
     const reEnd = dqToLocalTransform(reimported.bones[0].dq);
     assert.ok(Math.abs(reEnd.pos.x) > 0.05 || Math.abs(reEnd.pos.y) > 0.05, 'edited pose visible after SMF roundtrip from threeToSmf result');
+  });
+
+  it('summarizes and compares SMF roundtrip structure', () => {
+    const bone = new THREE.Bone();
+    bone.name = 'Bone_0';
+    const skeleton = new THREE.Skeleton([bone]);
+    const converted = buildImportedSmfFromThree({ skeleton });
+    const reimported = importSMF(toArrayBuffer(exportSMFToBuffer(converted)));
+
+    const summary = summarizeImportedSmf(converted);
+    assert.deepStrictEqual(
+      {
+        meshes: summary.meshes,
+        bones: summary.bones,
+        animations: summary.animations,
+      },
+      {
+        meshes: 0,
+        bones: 1,
+        animations: 0,
+      }
+    );
+
+    const report = compareSmfRoundtrip(converted, reimported);
+    assert.strictEqual(report.ok, true);
+    assert.ok(report.messages[0].includes('matched'));
   });
 });
 

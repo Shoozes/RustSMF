@@ -119,6 +119,7 @@ import { exportSMFToBuffer, importSMF, buildThreeScene, ImportedSmf } from './sm
 import { buildRigHierarchy } from './smfRig';
 import { makeBoneLabel } from '../utils/boneLabels';
 import { makeBoneHighlightMarker, makeBoneHoverMarker, updateHighlightPosition } from '../utils/boneHighlight';
+import { ModernSkeletonHelper, findBoneNameFromSkeletonHelperHit } from '../utils/modernSkeletonHelper';
 import { createSeqGuard } from '../utils/seqGuard';
 import { refreshOrthoCameras, refreshViewportSpecs } from '../utils/viewportLayout';
 import { bytesToArrayBuffer } from './smfBinary';
@@ -642,6 +643,39 @@ describe('smf export roundtrip (data-driven)', () => {
     } finally {
       g.window = origWindow;
     }
+  });
+
+  it('ModernSkeletonHelper builds larger clickable rig helper parts with bone metadata', () => {
+    const root = new THREE.Group();
+    const parentBone = new THREE.Bone();
+    parentBone.name = 'SMF_Node_0';
+    const childBone = new THREE.Bone();
+    childBone.name = 'SMF_Node_1';
+    childBone.position.set(0, 1, 0);
+    parentBone.add(childBone);
+    root.add(parentBone);
+    root.updateMatrixWorld(true);
+
+    const helper = new ModernSkeletonHelper(root);
+    helper.updateMatrixWorld(true);
+
+    const helperParts: THREE.Object3D[] = [];
+    helper.traverse((object) => {
+      if (object.userData?.isModernSkeletonHelperPart && object.userData?.boneName) {
+        helperParts.push(object);
+      }
+    });
+
+    assert.ok(helperParts.length >= 2, 'creates joint and bone helper parts');
+    assert.ok(helperParts.some((object) => object.userData.boneName === 'SMF_Node_0'));
+    assert.ok(helperParts.some((object) => object.userData.boneName === 'SMF_Node_1'));
+
+    const childPart = helperParts.find((object) => object.userData.boneName === 'SMF_Node_1');
+    assert.ok(childPart, 'child helper part exists for direct hit mapping');
+    const mappedName = findBoneNameFromSkeletonHelperHit({ object: childPart } as THREE.Intersection);
+    assert.strictEqual(mappedName, 'SMF_Node_1');
+
+    helper.dispose();
   });
 
   it('real SMF bind pose skinning is stable and does not tear vertices apart', () => {

@@ -589,7 +589,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await page.getByTestId('export-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Nothing to export/i);
     await page.getByTestId('export-smf-btn').click();
-    await expect(page.getByTestId('status-text')).toContainText(/No skinned model loaded|Nothing to export as SMF/i);
+    await expect(page.getByTestId('status-text')).toContainText(/No model loaded for SMF export|Nothing to export as SMF/i);
 
     // Drop zone hint is present (for drag-drop UX)
     await expect(page.locator('text=/Drop .* here/')).toBeAttached();
@@ -777,7 +777,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await page.getByTestId('export-smf-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(
-      /No skinned model loaded for SMF export|Cannot export as SMF|Exported \.smf/i,
+      /SMF export blocked: SMF_NO_SKINNED_SKELETON|Cannot export as SMF|Exported \.smf/i,
       { timeout: 5000 }
     );
   });
@@ -795,6 +795,21 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(inspector).toContainText(/Bones \(2\)/i);
     await expect(inspector).toContainText(/FixtureRoot|FixtureTip/i);
     await expect(page.getByTestId('timeline')).toBeVisible();
+
+    await page.getByTestId('mode-tab-export').click({ force: true });
+    const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
+    await expect(diagnosticsPanel).toBeVisible();
+    await expect(diagnosticsPanel).toHaveAttribute('data-smf-can-export', 'true');
+    await expect(diagnosticsPanel).toContainText(/SMF diagnostics: ready/i);
+    await page.getByTestId('smf-roundtrip-check-btn').click();
+    const roundtripResult = page.getByTestId('smf-roundtrip-result');
+    await expect(roundtripResult).toBeVisible({ timeout: 5000 });
+    await expect(roundtripResult).toHaveAttribute('data-smf-roundtrip-ok', 'true');
+    await expect(roundtripResult).toContainText(/Roundtrip passed/i);
+    await expect(page.getByTestId('status-text')).toContainText(/SMF roundtrip check passed/i, { timeout: 5000 });
+    await page.getByTestId('save-smf-report-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Saved SMF diagnostic report/i, { timeout: 5000 });
+    await page.getByTestId('mode-tab-view').click({ force: true });
 
     const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /FixtureRoot|FixtureTip/ }).first();
     await anyBoneEntry.click({ force: true });

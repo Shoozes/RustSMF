@@ -29,7 +29,7 @@ export async function loadOBJ(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
   root.name = 'OBJ_Root';
 
   const skinnedMeshes: THREE.SkinnedMesh[] = [];
-  const allClips: THREE.AnimationClip[] = (obj as any).animations || [];
+  const allClips: THREE.AnimationClip[] = (obj as any).animations || []; // FBX/OBJ loader populates on the loaded group object; safe narrow read here only.
 
   root.traverse((obj: any) => {
     if (obj.isMesh) {
@@ -58,7 +58,6 @@ export async function loadOBJ(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
   }
 
   const mixer = new THREE.AnimationMixer(root);
-  (root as any).animations = allClips;
 
   return {
     root,

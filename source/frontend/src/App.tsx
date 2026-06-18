@@ -74,6 +74,8 @@ export default function App() {
     handleOpen,
     handleExport,
     handleExportSmf,
+    handleRunSmfRoundtripCheck,
+    handleSaveSmfDiagnosticReport,
     handleFileInputChange,
     handleDrop,
     handleSelectBone,
@@ -90,6 +92,8 @@ export default function App() {
     setTransformMode,
     showBoneLabels,
     toggleBoneLabels,
+    smfDiagnosticReport,
+    smfRoundtripReport,
     editorMode,
     setEditorMode,
     viewportLayout,
@@ -134,6 +138,10 @@ export default function App() {
           sourceFormat={sourceFormat}
           hasSkeleton={hasSkinnedModel}
           editorMode={editorMode}
+          smfDiagnosticReport={smfDiagnosticReport}
+          smfRoundtripReport={smfRoundtripReport}
+          onRunSmfRoundtripCheck={handleRunSmfRoundtripCheck}
+          onSaveSmfDiagnosticReport={handleSaveSmfDiagnosticReport}
         />
       );
     }

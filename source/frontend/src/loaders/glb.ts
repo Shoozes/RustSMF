@@ -92,8 +92,6 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
   root.add(scene); // keep original hierarchy for now
 
   const mixer = new THREE.AnimationMixer(root);
-  // clips are already on gltf; attach for convenience
-  (root as any).animations = allClips;
 
   return {
     root,

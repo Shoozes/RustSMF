@@ -1,8 +1,8 @@
-import { useCallback, useRef, useEffect, useState } from 'react';
+import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import type * as THREE from 'three';
 import type { OpenResult, SmfDesktopInfo, TauriClient } from '../backend-client/tauri';
-import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX, bytesToArrayBuffer, buildImportedSmfFromThree, SmfConversionError } from '../loaders';
-import type { ImportedSmf } from '../loaders';
+import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX, bytesToArrayBuffer, buildImportedSmfFromThree, SmfConversionError, collectSkinnedMeshes, compareSmfRoundtrip, inspectThreeToSmfSource, makeDiagnosticReport } from '../loaders';
+import type { ImportedSmf, SmfDiagnosticReport, SmfRoundtripReport } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
 import {
   type BoneNudgeDelta,
@@ -21,9 +21,13 @@ type LoadedModelResult =
   | Awaited<ReturnType<typeof loadFBX>>
   | Awaited<ReturnType<typeof loadOBJ>>;
 
+const tauriClientRef = useRef<TauriClient | null>(null);
 const getTauriClient = async (): Promise<TauriClient> => {
-  const client = await import('../backend-client/tauri');
-  return client as unknown as TauriClient;
+  if (tauriClientRef.current) return tauriClientRef.current;
+  const clientMod = await import('../backend-client/tauri');
+  const client = clientMod as unknown as TauriClient;
+  tauriClientRef.current = client;
+  return client;
 };
 
 /**
@@ -58,6 +62,7 @@ export function useLoadModel() {
   const [showBoneLabels, setShowBoneLabels] = useState(false);
 
   const [sourceFormat, setSourceFormat] = useState('');
+  const [smfRoundtripReport, setSmfRoundtripReport] = useState<SmfRoundtripReport | null>(null);
 
   // Editor mode is used by workspace composition and workspace-profile visibility.
   // Stable seq guards prevent stale async results across React re-renders.
@@ -66,6 +71,46 @@ export function useLoadModel() {
   const fileReadSeqGuardRef = useRef(createSeqGuard());
   const exportSeqGuardRef = useRef(createSeqGuard());
   const isExportingRef = useRef(false);
+
+  const smfDiagnosticReport = useMemo<SmfDiagnosticReport>(() => {
+    if (!model.root) {
+      return makeDiagnosticReport([
+        {
+          level: 'info',
+          code: 'SMF_NO_MODEL_LOADED',
+          message: 'Load a model to inspect SMF export compatibility.',
+        },
+      ]);
+    }
+
+    if (lastSmfDataRef.current || sourceFormat === 'smf') {
+      return makeDiagnosticReport([
+        {
+          level: 'info',
+          code: 'SMF_SOURCE_FIDELITY_PATH',
+          message: 'Loaded SMF sources use the imported-data fidelity export path.',
+        },
+      ]);
+    }
+
+    const report = inspectThreeToSmfSource({
+      skeleton: model.skeleton ?? null,
+      skinnedMeshes: collectSkinnedMeshes(model.root),
+      clips: model.clips,
+    });
+
+    if (report.diagnostics.length > 0) {
+      return report;
+    }
+
+    return makeDiagnosticReport([
+      {
+        level: 'info',
+        code: 'SMF_READY',
+        message: 'No blocking SMF compatibility issues detected for the current skinned model.',
+      },
+    ]);
+  }, [model.root, model.skeleton, model.clips, sourceFormat]);
 
   const withExportBusy = useCallback(async (actionLabel: string, action: () => Promise<void>) => {
     if (isExportingRef.current) {
@@ -97,6 +142,7 @@ export function useLoadModel() {
     lastSourceFormatRef.current = '';
     setSourceFormat('');
     poseEditsRef.current = {};
+    setSmfRoundtripReport(null);
     model.clear();
     ui.setSelected('Scene');
     ui.clearError();
@@ -213,8 +259,8 @@ export function useLoadModel() {
 
       if (!isCurrentLoad()) return;
 
-      const root = loaded.root as THREE.Group;
-      const availableClips = loaded.clips || (root as any).animations || [];
+      const root = loaded.root;
+      const availableClips = loaded.clips || [];
 
       model.setRoot(root);
       model.setSkeleton(loaded.skeleton);
@@ -346,6 +392,103 @@ export function useLoadModel() {
     });
   }, [ui, model, withExportBusy]);
 
+  const buildCurrentSmfExportCandidate = useCallback((): ImportedSmf | null => {
+    const smfData = lastSmfDataRef.current;
+    const skeleton = model.skeleton;
+
+    if (smfData) {
+      return skeleton
+        ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
+        : smfData;
+    }
+
+    const rootToExport = model.root;
+    if (!rootToExport) {
+      return null;
+    }
+
+    const skinnedMeshes = collectSkinnedMeshes(rootToExport);
+    const diagnostics = inspectThreeToSmfSource({
+      skeleton: skeleton ?? null,
+      skinnedMeshes,
+      clips: model.clips,
+    });
+    const blockingDiagnostic = diagnostics.diagnostics.find((item) => item.level === 'error');
+    if (blockingDiagnostic) {
+      const detail = blockingDiagnostic.target ? ` (${blockingDiagnostic.target})` : '';
+      throw new SmfConversionError(`${blockingDiagnostic.code}: ${blockingDiagnostic.message}${detail}`);
+    }
+
+    return buildImportedSmfFromThree({
+      skeleton,
+      skinnedMeshes,
+      clips: model.clips,
+    });
+  }, [model.clips, model.root, model.skeleton]);
+
+  const handleRunSmfRoundtripCheck = useCallback(async () => {
+    await withExportBusy('SMF roundtrip check', async () => {
+      try {
+        setSmfRoundtripReport(null);
+        ui.clearError();
+        ui.setStatus('Running SMF roundtrip check...');
+
+        const candidate = buildCurrentSmfExportCandidate();
+        if (!candidate) {
+          ui.setStatus('No model loaded for SMF roundtrip check.');
+          return;
+        }
+
+        const buf = exportSMFToBuffer(candidate);
+        const reimported = importSMF(bytesToArrayBuffer(buf));
+        const report = compareSmfRoundtrip(candidate, reimported);
+        setSmfRoundtripReport(report);
+
+        if (report.ok) {
+          ui.setStatus('SMF roundtrip check passed: export summary matches reimport.');
+        } else {
+          ui.setErrorMsg(`SMF roundtrip mismatch: ${report.messages.join('; ')}`);
+          ui.setStatus(`SMF roundtrip mismatch: ${report.messages.join('; ')}`);
+        }
+      } catch (e: any) {
+        if (e instanceof SmfConversionError) {
+          ui.setErrorMsg(`SMF roundtrip blocked: ${e.message}`);
+          ui.setStatus(`SMF roundtrip blocked: ${e.message}`);
+          return;
+        }
+        const msg = e?.message || String(e);
+        ui.setErrorMsg(`SMF roundtrip check error: ${msg}`);
+        ui.setStatus(`SMF roundtrip check error: ${msg}`);
+      }
+    });
+  }, [buildCurrentSmfExportCandidate, ui, withExportBusy]);
+
+  const handleSaveSmfDiagnosticReport = useCallback(async () => {
+    await withExportBusy('Save SMF diagnostic report', async () => {
+      try {
+        const payload = {
+          sourceFormat: sourceFormat || 'unknown',
+          hasModel: !!model.root,
+          hasSkeleton: !!model.skeleton && model.skeleton.bones.length > 0,
+          diagnostics: smfDiagnosticReport,
+          roundtrip: smfRoundtripReport,
+        };
+        const json = JSON.stringify(payload, null, 2);
+        const data = new TextEncoder().encode(json);
+        const ok = await (await getTauriClient()).saveFile(data, 'rustsmf-smf-report.json');
+        if (!ok) {
+          ui.setStatus('SMF diagnostic report save canceled.');
+          return;
+        }
+        ui.setStatus('Saved SMF diagnostic report.');
+      } catch (e: any) {
+        const msg = e?.message || String(e);
+        ui.setErrorMsg(`Save SMF diagnostic report error: ${msg}`);
+        ui.setStatus(`Save SMF diagnostic report error: ${msg}`);
+      }
+    });
+  }, [model.root, model.skeleton, smfDiagnosticReport, smfRoundtripReport, sourceFormat, ui, withExportBusy]);
+
   // Dedicated "Export as SMF" handler. SMF sources use the imported-data fidelity path;
   // non-SMF skinned sources use the guarded Three-to-SMF converter.
   const handleExportSmf = useCallback(async () => {
@@ -370,24 +513,18 @@ export function useLoadModel() {
           return;
         }
 
-        if (!rootToExport || !skeleton) {
-          ui.setStatus('No skinned model loaded for SMF export. Load a GLB/FBX with skeleton or use GLB export.');
+        if (!rootToExport) {
+          ui.setStatus('No model loaded for SMF export. Load a skinned GLB/FBX with skeleton or use GLB export.');
           return;
         }
 
         ui.setStatus('Exporting as SMF via guarded converter (Three skinned -> ImportedSmf)...');
 
-        // Collect any SkinnedMeshes under the loaded root (converter uses first for mesh data).
-        const skinnedMeshes: THREE.SkinnedMesh[] = [];
-        rootToExport.traverse((o: any) => {
-          if (o.isSkinnedMesh) skinnedMeshes.push(o as THREE.SkinnedMesh);
-        });
-
-        const imported = buildImportedSmfFromThree({
-          skeleton,
-          skinnedMeshes: skinnedMeshes.length ? skinnedMeshes : undefined,
-          clips: model.clips,
-        });
+        const imported = buildCurrentSmfExportCandidate();
+        if (!imported) {
+          ui.setStatus('No model loaded for SMF export. Load a skinned GLB/FBX with skeleton or use GLB export.');
+          return;
+        }
 
         const buf = exportSMFToBuffer(imported);
         const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
@@ -398,7 +535,8 @@ export function useLoadModel() {
         ui.setStatus('Exported .smf (from GLB/FBX via guarded threeToSmf converter + live pose). Re-import to verify fidelity!');
       } catch (e: any) {
         if (e instanceof SmfConversionError) {
-          ui.setStatus(`Cannot export as SMF: ${e.message}. Falling back to GLB for full fidelity.`);
+          ui.setErrorMsg(`SMF export blocked: ${e.message}`);
+          ui.setStatus(`SMF export blocked: ${e.message}`);
           return;
         }
         const msg = e?.message || String(e);
@@ -406,7 +544,7 @@ export function useLoadModel() {
         ui.setStatus(`SMF export error: ${msg}`);
       }
     });
-  }, [ui, model, withExportBusy]);
+  }, [ui, model.root, withExportBusy, buildCurrentSmfExportCandidate]);
   const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -534,6 +672,8 @@ export function useLoadModel() {
     handleOpen,
     handleExport,
     handleExportSmf,
+    handleRunSmfRoundtripCheck,
+    handleSaveSmfDiagnosticReport,
     handleFileInputChange,
     handleDrop,
     handleSelectBone,
@@ -550,6 +690,8 @@ export function useLoadModel() {
     setTransformMode: setTransformModeHandler,
     showBoneLabels,
     toggleBoneLabels,
+    smfDiagnosticReport,
+    smfRoundtripReport,
     sourceFormat,
     viewportLayout: ui.viewportLayout,
     setViewportLayout: ui.setViewportLayout,

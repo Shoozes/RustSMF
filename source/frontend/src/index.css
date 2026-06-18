@@ -237,6 +237,106 @@ button:active {
   letter-spacing: 0.5px;
 }
 
+.smf-diagnostics {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #334155;
+}
+
+.smf-roundtrip {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #334155;
+}
+
+.smf-roundtrip button {
+  margin-top: 6px;
+  width: 100%;
+}
+
+.smf-roundtrip-result {
+  margin-top: 8px;
+  padding: 6px;
+  border-radius: 4px;
+  background: #0f172a;
+  border: 1px solid #334155;
+}
+
+.smf-roundtrip-ok {
+  border-color: #0f766e;
+}
+
+.smf-roundtrip-fail {
+  border-color: #b91c1c;
+}
+
+.smf-roundtrip-status {
+  color: #e2e8f0;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.smf-roundtrip-summary {
+  margin-top: 3px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.smf-diagnostics-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.smf-diagnostics-summary {
+  margin-top: 2px;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.smf-diagnostics-list {
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+
+.smf-diagnostic {
+  display: grid;
+  gap: 2px;
+  padding: 5px;
+  border-radius: 4px;
+  background: #0f172a;
+  border-left: 3px solid #64748b;
+  color: #cbd5e1;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+.smf-diagnostic-info {
+  border-left-color: #38bdf8;
+}
+
+.smf-diagnostic-warning {
+  border-left-color: #f59e0b;
+}
+
+.smf-diagnostic-error {
+  border-left-color: #ef4444;
+}
+
+.smf-diagnostic-code {
+  font-weight: 700;
+  color: #e2e8f0;
+  overflow-wrap: anywhere;
+}
+
+.smf-diagnostic-target {
+  color: #94a3b8;
+  overflow-wrap: anywhere;
+}
+
 .y-up-note {
   font-size: 10px;
   color: #64748b;

@@ -42,8 +42,14 @@ export interface TauriClient {
   getSmfDesktopInfo: (path: string) => Promise<SmfDesktopInfo>;
 }
 
+interface TauriWindow extends Window {
+  __TAURI__?: unknown;
+  __TAURI_INTERNALS__?: unknown;
+}
+
 function isTauriEnv(): boolean {
-  return !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
+  const w = window as unknown as TauriWindow;
+  return !!(w.__TAURI__ || w.__TAURI_INTERNALS__);
 }
 
 export async function openFile(): Promise<OpenResult | null> {
@@ -58,7 +64,7 @@ export async function openFile(): Promise<OpenResult | null> {
         ]
       })
       if (!selected) return null
-      const path = typeof selected === 'string' ? selected : (selected as any).path || String(selected)
+      const path = typeof selected === 'string' ? selected : (selected && typeof selected === 'object' && 'path' in selected ? String((selected as { path?: unknown }).path) : String(selected));
       // Desktop returns a path; the load flow calls readBinaryFile when bytes are needed.
       return { path, name: path.split(/[\\/]/).pop() }
     } catch (e) {
@@ -81,8 +87,9 @@ export async function openFile(): Promise<OpenResult | null> {
       settled = true
       window.removeEventListener('focus', onWindowFocus)
       input.removeEventListener('change', onChange)
-      ;(input as any).onchange = null
-      ;(input as any).oncancel = null
+      const inp = input as any;
+      inp.onchange = null;
+      inp.oncancel = null;
       if (input.parentElement) input.parentElement.removeChild(input)
       resolve(result)
     }

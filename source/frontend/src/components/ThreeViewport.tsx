@@ -13,6 +13,11 @@ import {
   makeBoneHoverMarker,
 } from '../utils/boneHighlight';
 import {
+  ModernSkeletonHelper,
+  findBoneNameFromSkeletonHelperHit,
+  type DisposableSkeletonHelper,
+} from '../utils/modernSkeletonHelper';
+import {
   DEFAULT_VIEWPORT_BOUNDS,
   getMouseForViewport,
   getViewportAt as findViewportAt,
@@ -115,7 +120,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
   const currentActionRef = useRef<THREE.AnimationAction | null>(null);
   const attachedModelRef = useRef<THREE.Object3D | null>(null);
-  const skeletonHelperRef = useRef<THREE.SkeletonHelper | null>(null);
+  const skeletonHelperRef = useRef<DisposableSkeletonHelper | null>(null);
 
   // For raycast bone picking (3D click-to-select complementing Inspector list)
   const raycasterRef = useRef(new THREE.Raycaster());
@@ -210,6 +215,14 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const mouse = getMouseForViewport(event.clientX, event.clientY, selectedPick.viewport, rect);
     mouseRef.current.copy(mouse);
     raycasterRef.current.setFromCamera(mouseRef.current, selectedPick.camera);
+    const helper = skeletonHelperRef.current;
+    if (helper) {
+      const helperHits = raycasterRef.current.intersectObject(helper, true);
+      for (const hit of helperHits) {
+        const hitBoneName = findBoneNameFromSkeletonHelperHit(hit);
+        if (hitBoneName) return hitBoneName;
+      }
+    }
     const closest = findClosestBone(raycasterRef.current, skel, maxDist);
     return closest?.name ?? null;
   };
@@ -937,10 +950,13 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       cameraRef.current.lookAt(orbit.target);
     }
 
-    // SkeletonHelper for rig viz (use provided skeleton if any)
+    // Modern skeleton helper for larger, old-editor-like rig visualization and direct helper hit picking.
     if (skeleton) {
-      const helper = new THREE.SkeletonHelper(root);
-      (helper.material as THREE.LineBasicMaterial).linewidth = 2.5;
+      const helper = new ModernSkeletonHelper(root, {
+        boneThickness: 0.065,
+        jointRadius: 0.09,
+        depthTest: false,
+      });
       scene.add(helper);
       skeletonHelperRef.current = helper;
     }

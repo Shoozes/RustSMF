@@ -8,6 +8,8 @@ export { findClosestBone, DEFAULT_MAX_BONE_PICK_DIST, findBoneByName } from './b
 export { makeBoneLabel } from './boneLabels';
 export { useBoneLabels, useBoneLabelsWithScale } from './useBoneLabels';
 export { makeBoneHighlightMarker, makeBoneHoverMarker, updateHighlightPosition, makeBoneEndpointHandle, updateEndpointHandle } from './boneHighlight';
+export { ModernSkeletonHelper, findBoneNameFromSkeletonHelperHit } from './modernSkeletonHelper';
+export type { DisposableSkeletonHelper, ModernSkeletonHelperOptions } from './modernSkeletonHelper';
 export {
   DEFAULT_VIEWPORT_BOUNDS,
   getMouseForViewport,

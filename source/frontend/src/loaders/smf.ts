@@ -367,9 +367,6 @@ export function buildThreeScene(imported: ImportedSmf): BuiltThreeSmfScene {
 
   const mixer = new THREE.AnimationMixer(sceneRoot);
 
-  // Attach clips to root for convenience
-  (sceneRoot as any).animations = clips;
-
   return {
     root: sceneRoot,
     skeleton,

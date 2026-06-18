@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-18 (updated GenEye advisory e2e pitfall: RustSMF now wraps its own Playwright command with GenEye when available, while keeping browser-only e2e independent).
+Last reviewed: 2026-06-18 (full repo/app review pass; research-inbox cleared; interop casts/timing improved; no new recurring pitfalls; verify green).
 
 ### Q: What pitfall are we preventing?
 

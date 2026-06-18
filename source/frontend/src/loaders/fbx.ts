@@ -56,7 +56,6 @@ export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoa
   }
 
   const mixer = new THREE.AnimationMixer(root);
-  (root as any).animations = allClips;
 
   return {
     root,

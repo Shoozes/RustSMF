@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-18
+Last reviewed: 2026-06-18 (full review pass + interop/timing polish + test re-audit + doc consolidation)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -109,6 +109,57 @@ Each active item should answer:
   - Add Playwright coverage for insert -> scrub -> update -> export status.
 - Acceptance: A user can create or edit a selected-bone pos/rot keyframe, scrub to it, see it on the timeline, and export supported edited animation data without silent loss.
 
+### P1: Expand export cockpit reports beyond first roundtrip check
+
+- What: Extend the current Export workspace diagnostics, in-memory roundtrip check, and saved report into a fuller compatibility cockpit with richer comparisons.
+- Why: SMF export is the product boundary; users should know exactly why export is safe, warning-only, or blocked before committing files.
+- Where: `source/frontend/src/components/ExportPanel.tsx`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/loaders/smfDiagnostics.ts`, `source/frontend/src/loaders/smf.ts`, `source/frontend/tests`.
+- When: After first-pass diagnostics and count-based roundtrip check are stable; before claiming release-level SMF compatibility UX.
+- How:
+  - Keep `smfDiagnostics.ts` as the structured report owner.
+  - Continue exporting to memory and reimporting before optional save.
+  - Expand comparisons from summary counts into bounds, first-frame pose sanity, and targeted mismatch details.
+  - Keep GLB export unchanged for full-fidelity paths.
+- Subtasks:
+  - Add bounds and first-frame pose sanity checks to the existing "Run SMF Check" action.
+  - Add blocked-export and warning-only diagnostics result cases to the Export workspace e2e coverage.
+  - Add report serialization tests if the report payload grows beyond the current diagnostics/roundtrip JSON shape.
+- Acceptance: Export workspace can distinguish count, bounds, and pose mismatches without relying only on status text.
+
+### P2: Implement rig editing and validation
+
+- What: Add real rig editing commands: rename, create, delete, reparent, detach/connect, mirror/reset helpers, and hierarchy validation.
+- Why: SMF rigs are node-based, disconnected/head nodes matter, and rig edits can invalidate skin weights or animation tracks if not validated.
+- Where: `source/frontend/src/loaders/smfRig.ts`, `source/frontend/src/components/Inspector.tsx`, `source/frontend/src/components/RigPanel.tsx`, `source/frontend/src/hooks/rigEdits.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/tests`.
+- When: After skin edit state or alongside animation authoring only when validation/undo boundaries are explicit.
+- How:
+  - Keep rig edits in a non-destructive edit layer before export.
+  - Rebuild or patch the Three skeleton through tested helpers.
+  - Validate cycles, orphan bones, self-parent roots, missing bind targets, and skin indices pointing at deleted bones.
+- Subtasks:
+  - Add a RigPanel for rename/reparent/create/delete commands.
+  - Add pure validators for cycles, orphaned nodes, and invalid skin references.
+  - Add detach/head-node compatibility controls only after old-source source-map review.
+  - Add unit tests for hierarchy validation and e2e for create child -> transform -> export/reimport.
+- Acceptance: Rig edits cannot create cyclic or silently invalid SMF output, and unsupported cases produce actionable diagnostics.
+
+### P2: Add texture and material compatibility diagnostics
+
+- What: Add material/texture inspection for SMF export: texture source, resolution, power-of-two status, one-texture-per-mesh constraints, and split/block guidance.
+- Why: GLB can preserve richer material graphs, while SMF compatibility needs explicit texture limits and clear user choices.
+- Where: `source/frontend/src/components/ExportPanel.tsx`, `source/frontend/src/components/TexturePanel.tsx`, `source/frontend/src/loaders/smfDiagnostics.ts`, `source/frontend/src/loaders/threeToSmf.ts`, `source/frontend/src/utils/textureCompat.ts`, `source/frontend/tests`.
+- When: After export diagnostics and before broad release packaging or material-heavy sample validation.
+- How:
+  - Extend diagnostics with material/texture warnings and errors.
+  - Keep GLB export untouched.
+  - Only add split-by-material export after diagnostics identify stable mesh/material ids.
+- Subtasks:
+  - Add power-of-two texture helper tests.
+  - Detect multiple material slots on SMF-target meshes.
+  - Show texture names/resolution/source in a compact panel.
+  - Decide whether unsupported material layouts block SMF export or require split/export action.
+- Acceptance: Material-heavy models produce clear SMF compatibility guidance, and GLB remains the recommended full-fidelity path.
+
 ### P1: Finish precision-editor parity in quad/ortho workflows
 
 - What: Close remaining orthographic/pane affordance gaps for rigging/skinning precision.
@@ -124,6 +175,7 @@ Each active item should answer:
   - Add fast single-to-quad-to-single switching tests around selected bone, hover state, endpoint telemetry, and scrub time.
   - Add visual checks that quad labels/dividers do not overlap tool overlays at narrow widths.
   - Decide whether ortho panes should support all bone selection/edit actions or a deliberate subset.
+- Recent progress: Larger old-editor-like diamond/joint skeleton helpers are implemented through `modernSkeletonHelper.ts`, with helper mesh hit mapping before the distance-picker fallback.
 - Acceptance: Rapid layout/mode switching in single and quad states never drops bone selection, scrub continuity, endpoint-hover state, or pane labels in e2e.
 
 ### P2: Adapt old viewport/settings shelf controls
@@ -190,11 +242,46 @@ Each active item should answer:
   - Wrap TransformControls attach/add interop in one local helper with a comment that explains the Three.js type skew.
   - Keep test-only casts separate from production cleanup scope.
 - Subtasks:
-  - Replace Tauri dialog selected-path casts with a typed parser and unit or native mock coverage.
-  - Replace repeated loader root animation casts with a shared typed helper.
+  - Replace Tauri dialog selected-path casts with a typed parser and unit or native mock coverage. (2026-06-18 review: added TauriWindow interface + get path helper + isTauriEnv typed.)
+  - Replace repeated loader root animation casts with a shared typed helper. (2026-06-18: removed legacy (root as any).animations = attaches in glb/fbx/smf/obj + (root as any) fallback in useLoadModel; rely on returned .clips consistently.)
   - Re-audit `ThreeViewport.tsx` casts after any TransformControls or endpoint drag refactor.
   - Add a grep check or review note so new production `as any` casts are justified at boundary points.
 - Acceptance: Frontend typecheck and test typecheck pass, and production `as any` use is either eliminated or isolated in named bridge/library boundary helpers.
+- Recent: 2026-06-18 review pass + opportunistic tighten: Tauri window/selected guarded, loader clips contract direct, tauri client cached for repeated call timing. Remaining boundary casts (TransformControls, three materials/userData, test polyfills, obj read anims) are documented.
+
+### P2: Promote Rust SMF parser core beyond peeks
+
+- What: Move Rust SMF handling from desktop peek helpers toward a small canonical parser module that returns structured header and section summaries.
+- Why: The desktop app already uses Rust for file IO/status peeks; a focused parser core improves error quality and future native confidence without porting the full Three visual loader at once.
+- Where: `source/src-tauri/src/main.rs`, `source/src-tauri/src/smf_core.rs`, `source/src-tauri/Cargo.toml`, `source/frontend/src/backend-client/tauri.ts`, `source/frontend/tests/native.spec.ts`.
+- When: After export diagnostics are stable and before packaging the app as a serious desktop compatibility tool.
+- How:
+  - First move header parsing and offset bounds into `smf_core.rs`.
+  - Keep TS loader as the visual/Three owner.
+  - Add Rust unit tests for malformed offset, missing null, non-SMF header, and valid sample.
+- Subtasks:
+  - Extract current Rust parse helpers into `smf_core.rs`.
+  - Return a typed `SmfParsedSummary` from desktop info commands.
+  - Keep Playwright native mocks aligned with Rust field widths and offsets.
+  - Defer full parse/export port until parity tests are stronger.
+- Acceptance: Rust parser core rejects malformed headers with bounded errors and existing desktop status behavior stays compatible.
+
+### P3: Workerize heavy SMF import/export and large-file progress
+
+- What: Move heavy SMF import/export work off the UI thread and add progress states for large files.
+- Why: Current async guards prevent stale commits, but large parsing/export can still block responsiveness as authoring data grows.
+- Where: `source/frontend/src/workers/modelWorker.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/loaders/*`, `source/frontend/tests`.
+- When: After diagnostics and edit-layer shapes stabilize enough to avoid moving unstable contracts into a worker boundary.
+- How:
+  - Start with SMF import/export using transferable `ArrayBuffer`.
+  - Keep desktop/native read/write paths unchanged.
+  - Add progress/status messages without changing model state semantics.
+- Subtasks:
+  - Add worker wrapper for `importSMF` and `exportSMFToBuffer`.
+  - Transfer buffers instead of copying.
+  - Add generated large-sample tests or a bounded stress fixture if feasible.
+  - Keep stale-operation seq guards active across worker responses.
+- Acceptance: Large SMF work does not block the UI thread, and stale worker results cannot overwrite newer model state.
 
 ### P2: Maintain launch/task-guard completeness
 

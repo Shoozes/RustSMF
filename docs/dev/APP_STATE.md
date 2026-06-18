@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-18
+Last reviewed: 2026-06-18 (full repo integrity pass: research-inbox cleared, interop casts reduced + tauri client cached for timing, docs/summary audit, verify + units + cargo clean).
 
 ## Current Product State
 
@@ -18,10 +18,11 @@ Core flow:
   - `run.ps1 -Task test:e2e` uses GenEye as an optional advisory Playwright subagent when discoverable, but RustSMF remains able to run browser-only e2e with `-NoGenEye`, `RUSTSMF_NO_GENEYE=1`, or no GenEye checkout/runtime.
   - Direct `npm run dev` / `npm run tauri:dev` flows remain available but intentionally have reduced non-canonical lifecycle guarantees.
 - Drive animation through viewport-owned `AnimationMixer` state with timeline play/pause, scrub, speed, and clip selection.
-- Inspect skeletons, select bones from the hierarchy or viewport click, show a bone marker, use TransformControls, use quick nudges, and toggle selected-bone weight preview. Weight preview is tested as visualization only; full additive/subtractive skin-weight paint authoring is not implemented yet.
+- Inspect skeletons, select bones from the hierarchy or viewport click, show larger diamond/joint skeleton helpers, show a selected-bone marker, use TransformControls, use quick nudges, and toggle selected-bone weight preview. Weight preview is tested as visualization only; full additive/subtractive skin-weight paint authoring is not implemented yet.
 - Move selected bone endpoint markers in precision modes with camera-plane constrained drag (no model swap, no control conflict), and endpoint-drag lifecycle assertions are covered by e2e smoke in single and quad modes.
 - Export SMF sources through the high-fidelity SMF roundtrip path, including live position/rotation pose edits.
 - Export compatible skinned GLB/FBX runtime roots to SMF through `threeToSmf`; use GLB export for static/material/scale cases.
+- Run structured SMF compatibility diagnostics before non-SMF SMF export. The Export workspace reports ready/blocked state, diagnostic error/warning counts, and specific issues such as missing skeletons, unsupported scale tracks, missing UVs/normals, or missing skin attributes. The Export workspace can also run an in-memory SMF roundtrip check that exports, reimports, compares summary counts, and reports pass/mismatch without opening a save dialog, then save the diagnostics/roundtrip report through the existing save bridge.
 - Cover default non-SMF skinned load/export e2e with a generated self-authored skinned GLB fixture.
 - Cover basic FBX parsing/export dispatch with a self-authored static ASCII FBX fixture.
 - Use Rust/Tauri commands for native open/save, binary read/write, and small SMF header/rig/anim/model validation/status peeks. Desktop open is format-aware: all path-backed non-SMF models now route through `readBinaryFile`, while `.smf` still performs `get_smf_desktop_info` validation before parse.
@@ -39,10 +40,12 @@ Core flow:
 - `source/frontend/src/hooks/useLoadModel.ts`: in-flight export/save guard (`isExportingRef` + export seq guard) serializes export actions during async save/write and blocks stale completions.
 - `source/frontend/tests/native.spec.ts`: added Playwright native IPC race coverage for delayed native saves to prove single-flight export behavior and status-button recovery under rapid click.
 - `source/frontend/src/hooks/poseEdits.ts`: nudge delta types and helpers for live SMF position/rotation edits.
-- `source/frontend/src/components/ThreeViewport.tsx`: renderer, scene, camera, orbit, model attach/dispose, mixer, skeleton helper, raycast bone picking, marker, TransformControls, model-safe wireframe render override, and weight preview.
+- `source/frontend/src/components/ThreeViewport.tsx`: renderer, scene, camera, orbit, model attach/dispose, mixer, modern skeleton helper, helper-mesh/raycast bone picking, marker, TransformControls, model-safe wireframe render override, and weight preview.
+- `source/frontend/src/utils/modernSkeletonHelper.ts`: typed port of the useful old helper idea, drawing larger diamond bone spans and joint markers with bone metadata for direct helper-hit selection.
 - `source/frontend/src/components/Inspector.tsx`: typed skeleton tree, clip list, selection controls, transform mode controls, and nudge controls.
+- `source/frontend/src/components/ExportPanel.tsx`: source-format and skeleton summary, structured SMF diagnostics for export preflight, in-memory SMF roundtrip check, and diagnostic report save control.
 - `source/frontend/src/utils/viewportLayout.ts`: shared single/quad viewport pane math, ortho camera framing, and pointer coordinate conversion helpers used by `ThreeViewport.tsx`.
-- `source/frontend/src/loaders/*`: SMF import/export (buildThreeScene delegates rig to buildRigHierarchy for flat nodes + isBone=0 head dummies: cycle-safe effective-parent walk skips heads for direct real-bone .add() + deform-only Skeleton; bind locals use nearest real ancestor world for correct matrixWorld; inverse binds are calculated after world matrices update; animation tracks are emitted only for real scene bones; names `SMF_Node_N` + userData; skin remap direct on compressed is-bone seq), bounded binary helpers, rig node-list helper (export), guarded Three-to-SMF conversion, GLB/FBX/OBJ loading/export, coordinate swizzles, and DQ math. SMF rig tree now produces clean SkeletonHelper/Inspector/picker for rigs with disconnected parts (skin/anim/export fidelity preserved via world DQ + compose).
+- `source/frontend/src/loaders/*`: SMF import/export (buildThreeScene delegates rig to buildRigHierarchy for flat nodes + isBone=0 head dummies: cycle-safe effective-parent walk skips heads for direct real-bone .add() + deform-only Skeleton; bind locals use nearest real ancestor world for correct matrixWorld; inverse binds are calculated after world matrices update; animation tracks are emitted only for real scene bones; names `SMF_Node_N` + userData; skin remap direct on compressed is-bone seq), bounded binary helpers, rig node-list helper (export), structured SMF diagnostics, guarded Three-to-SMF conversion, GLB/FBX/OBJ loading/export, coordinate swizzles, and DQ math. SMF rig tree now produces clean SkeletonHelper/Inspector/picker for rigs with disconnected parts (skin/anim/export fidelity preserved via world DQ + compose).
 - `source/frontend/src/backend-client/tauri.ts`: `TauriClient` interface now centralizes shared desktop bridge function contracts for load/export/peek calls, and `useLoadModel.ts` consumes it directly.
 - `source/frontend/src/backend-client/tauri.ts`: browser/Tauri bridge for dialog, save, binary read, invokes, and desktop fallback messages. `saveFile` returns `boolean` so cancel is explicit.
 - `source/frontend/src/utils/modelFormat.ts`: canonical format extension parser + shared extension constants for open/load/tauri filters.
@@ -70,10 +73,10 @@ Core flow:
 
 - Native UI roundtrip automation is covered through deterministic Playwright Tauri IPC mocks plus Rust command tests; true OS dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it.
 - Default non-SMF skinned coverage uses a generated skinned GLB fixture. FBX coverage uses a self-authored static ASCII FBX fixture for basic parser/export dispatch; skinned FBX fidelity still needs a dedicated redistributable skinned FBX asset if that path becomes important.
-- GLB/FBX-to-SMF conversion is available for skinned models with one shared named skeleton and no scale animation. Static roots, textures/materials, morph tracks, object-level tracks, and scale animation still use GLB export for fidelity.
+- GLB/FBX-to-SMF conversion is available for skinned models with one shared named skeleton and no scale animation. Static roots, textures/materials, morph tracks, object-level tracks, and scale animation still use GLB export for fidelity. SMF diagnostics now block known impossible exports before save, surface warnings for compatibility risks that do not block, and provide a count-based in-memory roundtrip check.
 - GLB/GLTF remains the preferred format for maximum fidelity and new development. SMF support is scoped to legacy recovery and users who target the old SMF binary pipeline.
 - Live SMF position/rotation pose edits export; scale edits are blocked for SMF export because the current SMF DQ path has no scale channel.
-- Quad layout, ortho camera panes, visible pane labels/dividers, model-safe wireframe display, oversized screen-space bone handles, and endpoint drag interactions are implemented at a preview/editor-affordance level and covered by focused e2e checks. Full skin-weight paint authoring, texture/grid/node-visibility shelves, keyframe authoring, and deeper ortho-pane editing parity remain planned.
+- Quad layout, ortho camera panes, visible pane labels/dividers, model-safe wireframe display, larger diamond/joint rig helpers, oversized selected-bone endpoint handles, and endpoint drag interactions are implemented at a preview/editor-affordance level and covered by focused e2e checks. Full skin-weight paint authoring, texture/grid/node-visibility shelves, keyframe authoring, and deeper ortho-pane editing parity remain planned.
 - Launcher process safety (no rogue node servers on close) is Windows-primary via run.ps1 + mjs layers (Job/tree/scans/poll). Direct `tauri dev` or non-Windows have reduced coverage (mjs signals + polls + child-tree cleanup where supported); behavior is documented explicitly in launcher docs.
 
 ## Context Docs
