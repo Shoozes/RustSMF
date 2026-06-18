@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import fs from 'fs';
 import {
   BAD_INPUT_FOR_ERROR_TEST,
@@ -11,6 +11,127 @@ import {
   setupBrowserDiagnostics,
 } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
+
+const parseSelectedBone = (statusText: string | null): string => {
+  const match = /Selected:\s*([^\|\n]+)/.exec(statusText ?? '');
+  return match?.[1]?.trim() ?? '';
+};
+
+type RelativePoint = { x: number; y: number };
+
+const dragEndpointHandle = async (
+  page: Page,
+  selectedBone: string,
+  points?: RelativePoint[],
+): Promise<boolean> => {
+  const canvas = page.getByTestId('three-canvas');
+  const box = await canvas.boundingBox();
+  if (!box) return false;
+
+  const waitForNoActiveEndpointDrag = async (): Promise<void> => {
+    await page.waitForFunction(
+      () => {
+        const el = document.querySelector<HTMLElement>('[data-testid="three-canvas"]');
+        return el?.dataset.endpointDrag !== 'active';
+      },
+      undefined,
+      { timeout: 1200 },
+    );
+    await page.waitForTimeout(20);
+  };
+
+  await waitForNoActiveEndpointDrag();
+
+  const endpointX = Number(await canvas.getAttribute('data-endpoint-x'));
+  const endpointY = Number(await canvas.getAttribute('data-endpoint-y'));
+  if (Number.isFinite(endpointX) && Number.isFinite(endpointY)) {
+    await page.mouse.move(endpointX, endpointY);
+    await page.waitForTimeout(25);
+    await page.mouse.down({ button: 'left' });
+    await page.mouse.move(endpointX + 12, endpointY + 12);
+    await page.waitForTimeout(40);
+    const active = await canvas.getAttribute('data-endpoint-drag');
+    await page.mouse.up({ button: 'left' });
+    await page.waitForTimeout(30);
+    if (active === 'active') {
+      await waitForNoActiveEndpointDrag();
+      return true;
+    }
+  }
+
+  const targets = points ?? [
+    { x: 10, y: 10 },
+    { x: 10, y: 30 },
+    { x: 10, y: 50 },
+    { x: 10, y: 70 },
+    { x: 10, y: 90 },
+    { x: 30, y: 10 },
+    { x: 30, y: 30 },
+    { x: 30, y: 50 },
+    { x: 30, y: 70 },
+    { x: 30, y: 90 },
+    { x: 50, y: 10 },
+    { x: 50, y: 30 },
+    { x: 50, y: 50 },
+    { x: 50, y: 70 },
+    { x: 50, y: 90 },
+    { x: 70, y: 10 },
+    { x: 70, y: 30 },
+    { x: 70, y: 50 },
+    { x: 70, y: 70 },
+    { x: 70, y: 90 },
+    { x: 90, y: 10 },
+    { x: 90, y: 30 },
+    { x: 90, y: 50 },
+    { x: 90, y: 70 },
+    { x: 90, y: 90 },
+  ];
+
+  for (const target of targets) {
+    const x = Math.round(box.x + (box.width * target.x) / 100);
+    const y = Math.round(box.y + (box.height * target.y) / 100);
+
+    await page.mouse.move(x, y);
+    await page.waitForTimeout(25);
+    const hoveredBone = await canvas.getAttribute('data-hovered-bone');
+    if (hoveredBone && hoveredBone !== selectedBone) {
+      continue;
+    }
+
+    await page.mouse.move(x + 2, y + 2);
+    await page.mouse.down({ button: 'left' });
+    await page.mouse.move(x + 12, y + 12);
+    await page.waitForTimeout(40);
+    const active = await canvas.getAttribute('data-endpoint-drag');
+    await page.mouse.up({ button: 'left' });
+    await page.waitForTimeout(30);
+
+    if (active === 'active') {
+      await waitForNoActiveEndpointDrag();
+      return true;
+    }
+  }
+
+  return false;
+};
+
+const setViewportLayout = async (page: Page, layout: 'single' | 'quad'): Promise<void> => {
+  const canvas = page.getByTestId('three-canvas');
+  const singleBtn = page.getByTestId('viewport-layout-single');
+  const quadBtn = page.getByTestId('viewport-layout-quad');
+
+  if (layout === 'quad') {
+    await quadBtn.click({ force: true });
+    await expect(canvas).toHaveAttribute('data-viewport-layout', 'quad');
+    await expect(quadBtn).toHaveAttribute('aria-pressed', 'true');
+  } else {
+    await singleBtn.click({ force: true });
+    await expect(canvas).toHaveAttribute('data-viewport-layout', 'single');
+    await expect(quadBtn).toHaveAttribute('aria-pressed', 'false');
+  }
+
+  await page.waitForTimeout(120);
+};
 
 // Basic smoke tests for the RustSMF shell + model loading.
 // These exercise the core Three.js viewport, loaders, timeline, and export paths.
@@ -113,23 +234,49 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await expect(page.getByTestId('three-canvas')).toBeVisible();
 
-    // Editor mode select (new foundation for modern workspaces #1): presence + change exercises state flow from Toolbar through hook/store. Sharpens mode edge coverage.
+    // Editor mode tabs (new foundation for modern workspaces #1): presence + change exercises state flow from Toolbar through hook/store.
     // Test interactions with other recent features (labels toggle, bone pick) post mode change; verify no breakage or state corruption.
-    const modeSelect = page.getByTestId('editor-mode-select');
-    await expect(modeSelect).toBeVisible();
-    await modeSelect.selectOption('rig').catch(() => {});
+    const rigTab = page.getByTestId('mode-tab-rig');
+    const viewTab = page.getByTestId('mode-tab-view');
+    const skinTab = page.getByTestId('mode-tab-skin');
+    const animateTab = page.getByTestId('mode-tab-animate');
+    const exportTab = page.getByTestId('mode-tab-export');
+    await expect(rigTab).toBeVisible();
+    await rigTab.click({ force: true });
     await page.waitForTimeout(30);
     // Interact with labels and bone selection while in 'rig' mode (edge: mode + labels + picker)
     const labelsBtn2 = inspector.getByTestId('labels-toggle-btn');
     await labelsBtn2.click({ force: true }).catch(() => {});
     await page.waitForTimeout(30);
     const pickCanvas = page.getByTestId('three-canvas');
+    await pickCanvas.hover({ position: { x: 170, y: 120 } });
+    await page.waitForTimeout(40);
+    const hovered = await pickCanvas.getAttribute('data-hovered-bone');
+    if (hovered) {
+      expect(hovered).toContain('SMF_Node_');
+    }
     await pickCanvas.click({ position: { x: 70, y: 70 } });
     await page.waitForTimeout(50);
     await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
     // Reset mode
-    await modeSelect.selectOption('view').catch(() => {});
+    await viewTab.click({ force: true });
     await expect(page.getByTestId('three-canvas')).toBeVisible();
+
+    // Workspace surfaces are mode-native and composable with Inspector.
+    await skinTab.click({ force: true });
+    await page.waitForTimeout(20);
+    await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+    await animateTab.click({ force: true });
+    await page.waitForTimeout(20);
+    await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
+    await exportTab.click({ force: true });
+    await page.waitForTimeout(20);
+    await expect(page.getByTestId('export-workspace-panel')).toBeVisible();
+    await viewTab.click({ force: true });
+    await page.waitForTimeout(20);
+    await expect(page.getByTestId('skin-workspace-panel')).toBeHidden();
+    await expect(page.getByTestId('animate-workspace-panel')).toBeHidden();
+    await expect(page.getByTestId('export-workspace-panel')).toBeHidden();
 
     // Exercise 3D viewport click (exercises raycast bone pick handler + orbit compat; no crash expected)
     const canvas = page.getByTestId('three-canvas');
@@ -153,6 +300,87 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await page.getByTestId('timeline').locator('button').filter({ hasText: /Reset/i }).first().click({ force: true });
     await page.waitForTimeout(120);
     await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000, { strict: true, name: 'loaded-smf-bone-flow' });
+  });
+
+  test('viewport layout toggle works in single/quad modes', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
+
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(SAMPLE_SMF!);
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('three-canvas')).toBeVisible();
+
+    const singleBtn = page.getByTestId('viewport-layout-single');
+    const quadBtn = page.getByTestId('viewport-layout-quad');
+    await expect(singleBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(quadBtn).toHaveAttribute('aria-pressed', 'false');
+
+    await setViewportLayout(page, 'quad');
+    await expect(page.getByTestId('viewport-container')).toBeVisible();
+    await expectRenderedScreenshot(page.getByTestId('viewport-container'), 2500);
+
+    // Quad mode is now wired for deterministic per-pane interaction: each panel is clickable and should not
+    // throw selection errors while raycast/orbit filters route the active pane behavior.
+    const canvas = page.getByTestId('three-canvas');
+    const box = await canvas.boundingBox();
+    if (box) {
+      const points = [
+        { x: box.x + box.width * 0.25, y: box.y + box.height * 0.25 },
+        { x: box.x + box.width * 0.75, y: box.y + box.height * 0.25 },
+        { x: box.x + box.width * 0.25, y: box.y + box.height * 0.75 },
+        { x: box.x + box.width * 0.75, y: box.y + box.height * 0.75 },
+      ];
+      for (const p of points) {
+        await page.mouse.click(p.x, p.y);
+        await page.waitForTimeout(40);
+      }
+      await expect(canvas).toBeVisible();
+    }
+
+    await setViewportLayout(page, 'single');
+    await expect(page.getByTestId('viewport-container')).toBeVisible();
+    await expectRenderedScreenshot(page.getByTestId('viewport-container'), 2500);
+  });
+
+  test('endpoint drag works in rig mode across single and quad layouts', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
+
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(SAMPLE_SMF!);
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips|verts/i);
+
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    await expect(page.getByTestId('three-canvas')).toBeVisible();
+
+    const inspector = page.getByTestId('inspector');
+    const boneEntry = inspector
+      .locator('li > div')
+      .filter({ hasText: /SMF_Node_\d+/ })
+      .first();
+    await expect(boneEntry).toBeVisible({ timeout: 8000 });
+    await boneEntry.click({ force: true });
+    await page.waitForTimeout(80);
+
+    const statusText = await page.getByTestId('status-text').textContent();
+    const selectedBone = parseSelectedBone(statusText);
+    expect(selectedBone).toBeTruthy();
+    await page.waitForTimeout(180);
+
+    const singleCanvas = page.getByTestId('three-canvas');
+    const singleDrag = await dragEndpointHandle(page, selectedBone);
+    expect(singleDrag).toBe(true);
+
+    await setViewportLayout(page, 'quad');
+    const quadDragOk = await dragEndpointHandle(page, selectedBone);
+    expect(quadDragOk).toBe(true);
+
+    await setViewportLayout(page, 'single');
+    await expect(singleCanvas).not.toHaveAttribute('data-endpoint-drag', 'active');
   });
 
   test('export flow and basic visuals (smoke for roundtrip prep)', async ({ page }) => {

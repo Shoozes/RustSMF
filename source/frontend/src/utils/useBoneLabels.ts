@@ -10,6 +10,14 @@ import { disposeThreeObject } from './threeDisposal';
  * Call unconditionally in component; internally no-ops when !enabled.
  */
 export function useBoneLabels(boneLabelsEnabled: boolean, skeleton?: THREE.Skeleton) {
+  return useBoneLabelsWithScale(boneLabelsEnabled, skeleton, 1);
+}
+
+export function useBoneLabelsWithScale(
+  boneLabelsEnabled: boolean,
+  skeleton: THREE.Skeleton | undefined,
+  scale: number
+) {
   const boneLabelsRef = useRef<THREE.Object3D[]>([]);
 
   useEffect(() => {
@@ -28,9 +36,10 @@ export function useBoneLabels(boneLabelsEnabled: boolean, skeleton?: THREE.Skele
 
     if (!boneLabelsEnabled || !skeleton) return;
 
-    const created: THREE.Object3D[] = [];
+      const markerScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+      const created: THREE.Object3D[] = [];
     skeleton.bones.forEach((bone) => {
-      const label = makeBoneLabel(bone.name);
+      const label = makeBoneLabel(bone.name, { scale: markerScale });
       bone.add(label);
       created.push(label);
     });
@@ -49,5 +58,5 @@ export function useBoneLabels(boneLabelsEnabled: boolean, skeleton?: THREE.Skele
         disposeThreeObject(label);
       });
     };
-  }, [boneLabelsEnabled, skeleton]);
+  }, [boneLabelsEnabled, skeleton, scale]);
 }

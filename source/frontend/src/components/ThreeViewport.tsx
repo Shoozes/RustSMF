@@ -4,10 +4,33 @@ import { SimpleOrbit } from '../utils/SimpleOrbit';
 import { disposeThreeObject } from '../utils/threeDisposal';
 import { restoreWeightPreview, applyWeightPreviewForBone } from '../utils/weightPreview';
 import { findClosestBone, DEFAULT_MAX_BONE_PICK_DIST, findBoneByName } from '../utils/bonePicker';
-import { useBoneLabels } from '../utils/useBoneLabels';
-import { makeBoneHighlightMarker, updateHighlightPosition } from '../utils/boneHighlight';
-import type { EditorMode } from '../store';
+import { useBoneLabelsWithScale } from '../utils/useBoneLabels';
+import {
+  makeBoneHighlightMarker,
+  updateHighlightPosition,
+  makeBoneEndpointHandle,
+  updateEndpointHandle,
+  makeBoneHoverMarker,
+} from '../utils/boneHighlight';
+import {
+  DEFAULT_VIEWPORT_BOUNDS,
+  getMouseForViewport,
+  getViewportAt as findViewportAt,
+  refreshOrthoCameras as updateOrthoCameras,
+  refreshViewportSpecs as buildViewportSpecs,
+  type ModelBounds,
+  type ViewportSpec,
+} from '../utils/viewportLayout';
+import type { EditorMode, ViewportLayout } from '../store';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
+
+type EndpointDragState = {
+  boneName: string;
+  bone: THREE.Bone;
+  plane: THREE.Plane;
+  localOffset: THREE.Vector3;
+  parentInverse: THREE.Matrix4;
+};
 
 // Self-contained ThreeViewport.
 // Owns: renderer, scene (base lights+grid+axes), camera, SimpleOrbit controls, RAF loop, model attach,
@@ -31,6 +54,7 @@ interface ThreeViewportProps {
   onSetTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => void;
   boneLabelsEnabled?: boolean;
   editorMode?: EditorMode;
+  viewportLayout?: ViewportLayout;
 }
 
 // SimpleOrbit imported from ../utils/SimpleOrbit (filled modularity dir, single source of truth)
@@ -51,14 +75,20 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   onSetTransformMode,
   boneLabelsEnabled = false,
   editorMode = 'view',
+  viewportLayout = 'single',
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
   const sceneRef = useRef<THREE.Scene | null>(null);
   const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+  const orthoCameraRefs = useRef<THREE.OrthographicCamera[]>([]);
   const orbitRef = useRef(new SimpleOrbit());
   const frameRef = useRef<number | null>(null);
   const resizeObsRef = useRef<ResizeObserver | null>(null);
+  const viewportRef = useRef<ViewportSpec[]>([]);
+  const layoutRef = useRef<ViewportLayout>('single');
+  const boundsRef = useRef<ModelBounds>(DEFAULT_VIEWPORT_BOUNDS);
+  const canvasSizeRef = useRef({ width: 800, height: 600 });
   const clockRef = useRef(new THREE.Clock());
   const pointerDownRef = useRef<{
     x: number;
@@ -66,11 +96,16 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     time: number;
     button: number;
   } | null>(null);
+  const pickDistanceRef = useRef(DEFAULT_MAX_BONE_PICK_DIST);
+  const cursorModeRef = useRef<string>('default');
+  const isPrecisionModeRef = useRef(false);
+  const endpointDragRef = useRef<EndpointDragState | null>(null);
 
   // TransformControls for selected bone (Cycle 3 editor polish). Attached to the live THREE.Bone when selectedBoneName changes.
   // Change events mutate the bone in place (position/rot/scale); works with existing marker + Inspector controls + RAF.
   const transformControlsRef = useRef<TransformControls | null>(null);
   const transformTargetRef = useRef<THREE.Bone | null>(null);
+  const isTransformControlsPausedForEndpointRef = useRef(false);
 
   // Local mixer + action owned here (viewport is the source of truth for three playback)
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
@@ -87,9 +122,139 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   // For selected bone 3D highlight marker (visual feedback when list or raycast selects a bone)
   const selectedBoneNameRef = useRef(selectedBoneName);
   const boneHighlightRef = useRef<THREE.Object3D | null>(null);
+  const boneEndpointHandleRef = useRef<THREE.Object3D | null>(null);
+  const boneHoverMarkerRef = useRef<THREE.Object3D | null>(null);
+  const hoveredBoneNameRef = useRef<string | null>(null);
 
   // Ref for onTimeUpdate to decouple RAF reporting from setup effect deps (timing/robustness: avoids re-init of scene/RAF if fn identity ever shifts; mirrors bone pick ref pattern)
   const onTimeUpdateRef = useRef(onTimeUpdate);
+
+  const applyViewportLayout = (nextLayout: ViewportLayout) => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+    viewportRef.current = buildViewportSpecs(
+      canvasSizeRef.current.width,
+      canvasSizeRef.current.height,
+      nextLayout,
+      boundsRef.current,
+      camera,
+      orthoCameraRefs.current,
+    );
+    layoutRef.current = nextLayout;
+    updateOrthoCameras(orthoCameraRefs.current, boundsRef.current);
+  };
+
+  const getViewportAt = (x: number, y: number, requirePicking = false): ViewportSpec | null => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    return findViewportAt(viewportRef.current, rect, x, y, requirePicking);
+  };
+
+  const isInPickingViewport = (x: number, y: number): boolean => !!getViewportAt(x, y, true);
+
+  const isInOrbitViewport = (x: number, y: number): boolean => {
+    const spec = getViewportAt(x, y, true);
+    return !!spec && spec.role === 'perspective';
+  };
+
+  const pickViewportCamera = (x: number, y: number): { camera: THREE.Camera; viewport: ViewportSpec } | null => {
+    const match = getViewportAt(x, y, true);
+    if (!match) return null;
+
+    return {
+      camera: match.camera,
+      viewport: match,
+    };
+  };
+
+  const writeEndpointScreenTelemetry = (bone: THREE.Bone): void => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const viewport = viewportRef.current.find((spec) => spec.role === 'perspective') ?? viewportRef.current[0];
+    if (!viewport) return;
+
+    const worldPos = new THREE.Vector3();
+    bone.getWorldPosition(worldPos);
+    const projected = worldPos.clone().project(viewport.camera);
+    if (!Number.isFinite(projected.x) || !Number.isFinite(projected.y) || Math.abs(projected.z) > 1) {
+      delete canvas.dataset.endpointX;
+      delete canvas.dataset.endpointY;
+      return;
+    }
+
+    const localX = viewport.x + ((projected.x + 1) / 2) * viewport.width;
+    const localYFromBottom = viewport.y + ((projected.y + 1) / 2) * viewport.height;
+    canvas.dataset.endpointX = String(Math.round(rect.left + localX));
+    canvas.dataset.endpointY = String(Math.round(rect.top + (rect.height - localYFromBottom)));
+  };
+
+  const isPrecisionMode = editorMode === 'rig' || editorMode === 'skin';
+  const bonePickDist = isPrecisionMode ? 2.5 : DEFAULT_MAX_BONE_PICK_DIST;
+  const boneLabelScale = isPrecisionMode ? 1.8 : 1;
+  pickDistanceRef.current = bonePickDist;
+  isPrecisionModeRef.current = isPrecisionMode;
+
+  const pickBoneName = (
+    event: Pick<PointerEvent, 'clientX' | 'clientY'>,
+    maxDist = bonePickDist,
+  ): string | null => {
+    const skel = skeletonRefForPick.current;
+    const selectedPick = pickViewportCamera(event.clientX, event.clientY);
+    if (!selectedPick || !skel || !canvasRef.current) return null;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouse = getMouseForViewport(event.clientX, event.clientY, selectedPick.viewport, rect);
+    mouseRef.current.copy(mouse);
+    raycasterRef.current.setFromCamera(mouseRef.current, selectedPick.camera);
+    const closest = findClosestBone(raycasterRef.current, skel, maxDist);
+    return closest?.name ?? null;
+  };
+
+  const pauseTransformControlsForEndpointDrag = () => {
+    const tc = transformControlsRef.current;
+    if (!tc || isTransformControlsPausedForEndpointRef.current) return;
+    isTransformControlsPausedForEndpointRef.current = true;
+    tc.enabled = false;
+    (tc as unknown as THREE.Object3D).visible = false;
+    tc.detach();
+  };
+
+  const restoreTransformControlsAfterEndpointDrag = () => {
+    const tc = transformControlsRef.current;
+    if (!tc || !isTransformControlsPausedForEndpointRef.current) return;
+    tc.enabled = true;
+    (tc as unknown as THREE.Object3D).visible = true;
+    if (transformTargetRef.current) {
+      tc.attach(transformTargetRef.current);
+    }
+    isTransformControlsPausedForEndpointRef.current = false;
+  };
+
+  const updateDragFromEndpoint = (event: PointerEvent, state: EndpointDragState, viewport: ViewportSpec): boolean => {
+    const skel = skeletonRefForPick.current;
+    const raycaster = raycasterRef.current;
+    const canvas = canvasRef.current;
+    if (!canvas || !state) return false;
+
+    const rect = canvas.getBoundingClientRect();
+    const mouse = getMouseForViewport(event.clientX, event.clientY, viewport, rect);
+    raycaster.setFromCamera(mouse, viewport.camera);
+
+    const hit = raycaster.ray.intersectPlane(state.plane, new THREE.Vector3());
+    if (!hit) return false;
+
+    const boneWorld = hit.sub(state.localOffset);
+    const parentInv = state.parentInverse;
+    const localPos = boneWorld.applyMatrix4(parentInv);
+    state.bone.position.copy(localPos);
+    state.bone.updateMatrix();
+    state.bone.updateMatrixWorld(true);
+
+    if (skel) {
+      skel.update();
+    }
+    return true;
+  };
 
   // One-time base scene + renderer + orbit + RAF + resize + internal R key reset
   useEffect(() => {
@@ -119,6 +284,14 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
     cameraRef.current = camera;
 
+    const frontCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+    const sideCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+    const topCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 1000);
+    frontCam.up = new THREE.Vector3(0, 1, 0);
+    sideCam.up = new THREE.Vector3(0, 1, 0);
+    topCam.up = new THREE.Vector3(0, 0, -1);
+    orthoCameraRefs.current = [frontCam, sideCam, topCam];
+
     const orbit = orbitRef.current;
     const updateCamera = () => {
       camera.position.copy(orbit.getPosition());
@@ -126,7 +299,14 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       camera.updateMatrixWorld();
     };
     updateCamera();
-    const detachOrbit = orbit.attach(canvas, updateCamera);
+    const detachOrbit = orbit.attach(
+      canvas,
+      updateCamera,
+      (x, y, button = 0) => {
+        if (button !== 0 && button !== 2) return false;
+        return isInOrbitViewport(x, y);
+      },
+    );
 
     // Internal key handler for view reset (R) + gizmo modes (T=translate, R=rotate, S=scale when a bone is selected).
     // Mode keys take precedence only while TransformControls has an active target. Space is handled by App.
@@ -148,8 +328,91 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // Pointer-based bone selection on the canvas.
     // Complements list selection in Inspector. Uses bone world positions + ray distance.
     // Ignore drag/long-press paths to avoid accidental selection during orbit/transform interaction.
+    const startEndpointDrag = (event: PointerEvent): boolean => {
+      if (!isPrecisionModeRef.current) return false;
+
+      const selected = selectedBoneNameRef.current;
+      if (!selected) return false;
+
+      const skel = skeletonRefForPick.current;
+      const bone = skel ? findBoneByName(skel, selected) : null;
+      if (!bone) return false;
+
+      const handle = boneEndpointHandleRef.current;
+      if (!handle) return false;
+
+      const pick = pickViewportCamera(event.clientX, event.clientY);
+      if (!pick || !canvasRef.current) return false;
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouse = getMouseForViewport(event.clientX, event.clientY, pick.viewport, rect);
+      raycasterRef.current.setFromCamera(mouse, pick.camera);
+
+      const hits = raycasterRef.current.intersectObject(handle, true);
+      const camera = pick.camera;
+      let hit = hits[0]?.point.clone();
+      if (!hit) {
+        const fallbackBone = pickBoneName(event, 120);
+        if (fallbackBone !== selected) {
+          return false;
+        }
+        const boneWorld = new THREE.Vector3();
+        bone.getWorldPosition(boneWorld);
+        const fallbackPlane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+          new THREE.Vector3().copy(camera.getWorldDirection(new THREE.Vector3())),
+          boneWorld,
+        );
+        const hitFromPlane = raycasterRef.current.ray.intersectPlane(fallbackPlane, new THREE.Vector3());
+        if (!hitFromPlane) return false;
+        hit = hitFromPlane;
+      }
+
+      const camDir = new THREE.Vector3();
+      pick.camera.getWorldDirection(camDir);
+      const parentInverse = bone.parent
+        ? bone.parent.matrixWorld.clone().invert()
+        : new THREE.Matrix4();
+
+      const boneWorld = new THREE.Vector3();
+      bone.getWorldPosition(boneWorld);
+
+      endpointDragRef.current = {
+        boneName: selected,
+        bone,
+        plane: new THREE.Plane().setFromNormalAndCoplanarPoint(camDir, hit),
+        localOffset: new THREE.Vector3().subVectors(hit, boneWorld),
+        parentInverse,
+      };
+      pauseTransformControlsForEndpointDrag();
+      orbitRef.current.enabled = false;
+      canvas.style.cursor = 'grabbing';
+      cursorModeRef.current = 'grabbing';
+      canvas.dataset.endpointDrag = 'active';
+      return true;
+    };
+
+    const endEndpointDrag = () => {
+      if (endpointDragRef.current) {
+        endpointDragRef.current = null;
+      }
+      restoreTransformControlsAfterEndpointDrag();
+      orbitRef.current.enabled = true;
+      if (canvas.dataset.endpointDrag) {
+        delete canvas.dataset.endpointDrag;
+      }
+      canvas.style.cursor = 'default';
+      cursorModeRef.current = 'default';
+      hoveredBoneNameRef.current = null;
+      canvas.dataset.hoveredBone = '';
+    };
+
     const onCanvasPointerDown = (event: PointerEvent) => {
       if (event.button !== 0) return;
+      if (!isInPickingViewport(event.clientX, event.clientY)) return;
+      if (startEndpointDrag(event)) {
+        pointerDownRef.current = null;
+        return;
+      }
       pointerDownRef.current = {
         x: event.clientX,
         y: event.clientY,
@@ -159,31 +422,82 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     };
 
     const onCanvasPointerUp = (event: PointerEvent) => {
+      if (endpointDragRef.current) {
+        endEndpointDrag();
+        pointerDownRef.current = null;
+        return;
+      }
+
       const down = pointerDownRef.current;
       pointerDownRef.current = null;
       if (!down || down.button !== 0 || event.button !== 0) return;
       const elapsed = performance.now() - down.time;
       const movedPx = Math.hypot(event.clientX - down.x, event.clientY - down.y);
       if (movedPx > 6 || elapsed > 350) return;
+      if (!isInPickingViewport(event.clientX, event.clientY)) return;
 
       const cb = onSelectBoneRef.current;
-      const skel = skeletonRefForPick.current;
-      const cam = cameraRef.current;
-      if (!cb || !skel || !cam || !sceneRef.current) return;
-      const canvasEl = canvasRef.current;
-      if (!canvasEl) return;
-      const rect = canvasEl.getBoundingClientRect();
-      mouseRef.current.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      mouseRef.current.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-      raycasterRef.current.setFromCamera(mouseRef.current, cam);
-      const maxDist = DEFAULT_MAX_BONE_PICK_DIST; // from bonePicker (tuned for typical model scale)
-      const closest = findClosestBone(raycasterRef.current, skel, maxDist);
-      if (closest && closest.name) {
-        cb(closest.name);
+      if (!cb) return;
+      const closestName = pickBoneName(event, pickDistanceRef.current);
+      if (closestName) {
+        cb(closestName);
+      }
+    };
+
+    const onWindowPointerUp = () => {
+      if (endpointDragRef.current) {
+        endEndpointDrag();
+      }
+      pointerDownRef.current = null;
+    };
+
+    const onWindowPointerCancel = () => {
+      if (endpointDragRef.current) {
+        endEndpointDrag();
+      }
+      pointerDownRef.current = null;
+    };
+
+    const onCanvasPointerMove = (event: PointerEvent) => {
+      if (endpointDragRef.current) {
+        const dragState = endpointDragRef.current;
+        const dragPick = pickViewportCamera(event.clientX, event.clientY);
+        if (!dragPick) {
+          endEndpointDrag();
+          return;
+        }
+        const moved = updateDragFromEndpoint(event, dragState, dragPick.viewport);
+        if (moved) {
+          hoveredBoneNameRef.current = dragState.boneName;
+          canvas.dataset.hoveredBone = dragState.boneName;
+        }
+        return;
+      }
+      if (!isInPickingViewport(event.clientX, event.clientY)) {
+        if (cursorModeRef.current !== 'default') {
+          canvas.style.cursor = 'default';
+          cursorModeRef.current = 'default';
+        }
+        hoveredBoneNameRef.current = null;
+        canvas.dataset.hoveredBone = '';
+        return;
+      }
+
+      const hoverDistance = isPrecisionModeRef.current ? pickDistanceRef.current * 4 : pickDistanceRef.current * 1.8;
+      const closestName = pickBoneName(event, hoverDistance);
+      hoveredBoneNameRef.current = closestName;
+      canvas.dataset.hoveredBone = closestName || '';
+      const nextCursor = closestName ? 'pointer' : 'default';
+      if (cursorModeRef.current !== nextCursor) {
+        canvas.style.cursor = nextCursor;
+        cursorModeRef.current = nextCursor;
       }
     };
     canvas.addEventListener('pointerdown', onCanvasPointerDown);
     canvas.addEventListener('pointerup', onCanvasPointerUp);
+    canvas.addEventListener('pointermove', onCanvasPointerMove);
+    window.addEventListener('pointerup', onWindowPointerUp);
+    window.addEventListener('pointercancel', onWindowPointerCancel);
 
     const animate = () => {
       const mixer = mixerRef.current;
@@ -212,8 +526,59 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
           updateHighlightPosition(hl, bone);
         }
       }
+      const endpoint = boneEndpointHandleRef.current;
+      if (endpoint && skel && sel) {
+        const bone = findBoneByName(skel, sel);
+        if (bone) {
+          updateEndpointHandle(endpoint, bone, boneLabelScale);
+          writeEndpointScreenTelemetry(bone);
+        }
+      }
+      const hoverMarker = boneHoverMarkerRef.current;
+      if (hoverMarker && skel) {
+        const hoveredName = hoveredBoneNameRef.current;
+        if (hoveredName && hoveredName !== sel) {
+          const hoveredBone = findBoneByName(skel, hoveredName);
+          if (hoveredBone) {
+            updateHighlightPosition(hoverMarker, hoveredBone);
+            hoverMarker.visible = true;
+          } else {
+            hoverMarker.visible = false;
+          }
+        } else {
+          hoverMarker.visible = false;
+        }
+      }
 
-      renderer.render(scene, camera);
+      const specs = viewportRef.current.length
+        ? viewportRef.current
+        : [{
+          camera,
+          x: 0,
+          y: 0,
+          width: canvasSizeRef.current.width,
+          height: canvasSizeRef.current.height,
+          isPickingCamera: true,
+          role: 'perspective',
+        }];
+
+      const isQuad = layoutRef.current === 'quad';
+      renderer.setScissorTest(isQuad);
+      specs.forEach((spec, index) => {
+        renderer.setViewport(spec.x, spec.y, spec.width, spec.height);
+        if (isQuad) {
+          renderer.setScissor(spec.x, spec.y, spec.width, spec.height);
+        }
+        if (index === 0) {
+          renderer.clear();
+        } else {
+          renderer.clearDepth();
+        }
+        renderer.render(scene, spec.camera === cameraRef.current ? camera : spec.camera);
+      });
+      if (!isQuad) {
+        renderer.setScissorTest(false);
+      }
       frameRef.current = requestAnimationFrame(animate);
     };
     frameRef.current = requestAnimationFrame(animate);
@@ -225,6 +590,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      const specs = buildViewportSpecs(w, h, layoutRef.current, boundsRef.current, camera, orthoCameraRefs.current);
+      updateOrthoCameras(orthoCameraRefs.current, boundsRef.current);
+      viewportRef.current = specs;
+      canvasSizeRef.current = { width: w, height: h };
     };
     const ro = new ResizeObserver(onResize);
     ro.observe(container);
@@ -237,7 +606,19 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       window.removeEventListener('keydown', onKey);
       canvas.removeEventListener('pointerdown', onCanvasPointerDown);
       canvas.removeEventListener('pointerup', onCanvasPointerUp);
+      canvas.removeEventListener('pointermove', onCanvasPointerMove);
+      window.removeEventListener('pointerup', onWindowPointerUp);
+      window.removeEventListener('pointercancel', onWindowPointerCancel);
+      if (endpointDragRef.current) {
+        orbitRef.current.enabled = true;
+        endpointDragRef.current = null;
+      }
+      restoreTransformControlsAfterEndpointDrag();
       detachOrbit();
+      canvas.style.cursor = 'default';
+      cursorModeRef.current = 'default';
+      delete canvas.dataset.endpointX;
+      delete canvas.dataset.endpointY;
       if (boneHighlightRef.current) {
         scene.remove(boneHighlightRef.current);
         disposeThreeObject(boneHighlightRef.current);
@@ -248,6 +629,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // Note: intentionally no deps on playback props; RAF always runs, control via effects below.
     // onTimeUpdate (and onSelectBone/skeleton) kept via refs to avoid re-creating renderer/scene/RAF/ listeners on every parent render.
   }, []);
+
+  useEffect(() => {
+    applyViewportLayout(viewportLayout);
+  }, [viewportLayout]);
 
   // React to playbackSpeed changes (apply to current action)
   useEffect(() => {
@@ -298,6 +683,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   // Unmount cleanup for TransformControls (detach + remove from scene + dispose)
   useEffect(() => {
     return () => {
+      restoreTransformControlsAfterEndpointDrag();
       const tc = transformControlsRef.current;
       const scene = sceneRef.current;
       if (tc) {
@@ -307,6 +693,16 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         transformControlsRef.current = null;
         transformTargetRef.current = null;
       }
+      if (scene) {
+        [boneHighlightRef.current, boneEndpointHandleRef.current, boneHoverMarkerRef.current].forEach(marker => {
+          if (!marker) return;
+          scene.remove(marker);
+          disposeThreeObject(marker);
+        });
+      }
+      boneHighlightRef.current = null;
+      boneEndpointHandleRef.current = null;
+      boneHoverMarkerRef.current = null;
     };
   }, []);
   // Sync onTimeUpdate ref (for stable RAF time reporting without setup effect re-runs)
@@ -316,7 +712,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => { selectedBoneNameRef.current = selectedBoneName; }, [selectedBoneName]);
 
   // Bone labels management (extracted hook for modularity)
-  useBoneLabels(boneLabelsEnabled, skeleton);
+  const markerScale = isPrecisionMode ? 2 : 1;
+  useBoneLabelsWithScale(boneLabelsEnabled, skeleton, boneLabelScale);
 
   // Bone selection 3D highlight marker (small sphere+axes that follows the selected bone's world position).
   // Provides visual editor feedback (clickable list or raycast selection now "lights up" in viewport).
@@ -325,26 +722,62 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const scene = sceneRef.current;
     if (!scene) return;
 
-    // remove old marker
+    const detachMarker = (marker: THREE.Object3D | null) => {
+      if (!marker) return;
+      scene.remove(marker);
+      disposeThreeObject(marker);
+    };
+
+    // remove old markers/handles
+    detachMarker(boneHighlightRef.current);
     if (boneHighlightRef.current) {
-      scene.remove(boneHighlightRef.current);
-      disposeThreeObject(boneHighlightRef.current);
       boneHighlightRef.current = null;
     }
-    if (!selectedBoneName || !skeleton) return;
-
-    const bone = findBoneByName(skeleton, selectedBoneName);
-    if (!bone) {
-      transformTargetRef.current = null;
+    detachMarker(boneEndpointHandleRef.current);
+    if (boneEndpointHandleRef.current) {
+      boneEndpointHandleRef.current = null;
+    }
+    detachMarker(boneHoverMarkerRef.current);
+    if (boneHoverMarkerRef.current) {
+      boneHoverMarkerRef.current = null;
+    }
+    hoveredBoneNameRef.current = null;
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.dataset.hoveredBone = '';
+      delete canvas.dataset.endpointX;
+      delete canvas.dataset.endpointY;
+    }
+    if (!skeleton) {
       return;
     }
 
-    const group = makeBoneHighlightMarker();
-    scene.add(group);
-    boneHighlightRef.current = group;
+    if (selectedBoneName) {
+      const bone = findBoneByName(skeleton, selectedBoneName);
+      if (bone) {
+        const group = makeBoneHighlightMarker(markerScale);
+        scene.add(group);
+        boneHighlightRef.current = group;
+        // Keep endpoint-style handles in precision modes to make exact picking easier.
+        if (isPrecisionMode) {
+          const handle = makeBoneEndpointHandle(markerScale);
+          updateEndpointHandle(handle, bone, markerScale);
+          scene.add(handle);
+          boneEndpointHandleRef.current = handle;
+        }
 
-    updateHighlightPosition(group, bone); // use extracted util
-  }, [selectedBoneName, skeleton]);
+        updateHighlightPosition(group, bone); // use extracted util
+      } else {
+        transformTargetRef.current = null;
+      }
+    }
+
+    // Keep a shared hover marker for visual contrast/affordance.
+    const hoverMarker = makeBoneHoverMarker(isPrecisionMode ? markerScale : Math.max(markerScale * 0.7, 0.6));
+    hoverMarker.visible = false;
+    scene.add(hoverMarker);
+    boneHoverMarkerRef.current = hoverMarker;
+  }, [selectedBoneName, skeleton, markerScale, isPrecisionMode]);
 
   // Weight preview visualization for the selected bone.
   // Delegates to extracted pure helpers in utils/weightPreview.ts.
@@ -460,7 +893,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     }
 
     if (!root) {
-      // cleared
+      boundsRef.current = DEFAULT_VIEWPORT_BOUNDS;
+      applyViewportLayout(viewportLayout);
       return;
     }
 
@@ -474,9 +908,13 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
+    const modelBounds = { center, maxDim };
+    boundsRef.current = modelBounds;
+    updateOrthoCameras(orthoCameraRefs.current, modelBounds);
+    applyViewportLayout(viewportLayout);
     const orbit = orbitRef.current;
-    orbit.target.copy(center);
-    orbit.distance = maxDim * 0.85 + 2;
+    orbit.target.copy(modelBounds.center);
+    orbit.distance = modelBounds.maxDim * 0.85 + 2;
     orbit.yaw = 0.6;
     orbit.pitch = 0.35;
     if (cameraRef.current) {
@@ -513,7 +951,15 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     };
   }, [root, skeleton, clips]);  // <-- ONLY model data; playback handled by other effects to prevent re-attach loops on every tick
 
-  return <canvas ref={canvasRef} style={{ width: '100%', height: '100%' }} data-testid="three-canvas" data-editor-mode={editorMode} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ width: '100%', height: '100%' }}
+      data-testid="three-canvas"
+      data-editor-mode={editorMode}
+      data-viewport-layout={viewportLayout}
+    />
+  );
 };
 
 export default ThreeViewport;

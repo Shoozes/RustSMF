@@ -69,6 +69,20 @@ if (fs.existsSync(LOCAL_TEST_OBJ)) {
 }
 // No broad fallback to non-.obj files; old-src typically has no .obj. If needed later, extend getObjFiles similar to smf/fbx.
 
+export interface SmfDesktopInfo {
+  valid: boolean;
+  version: string;
+  size: number;
+  off_tex: number;
+  off_model: number;
+  off_rig: number;
+  off_anim: number;
+  model_count?: number;
+  rig_bone_count?: number;
+  anim_clip_count?: number;
+  error?: string;
+}
+
 
 export function simulateSmfHeaderParse(bytes: Uint8Array): { version: string; size: number; offTex: number; offModel: number; offRig: number; offAnim: number } | { error: string } {
   if (!bytes || bytes.length === 0) return { error: 'empty file' };
@@ -87,13 +101,37 @@ export function simulateSmfHeaderParse(bytes: Uint8Array): { version: string; si
   return { version, size: bytes.length, offTex, offModel, offRig, offAnim };
 }
 
-export function simulateGetSmfDesktopInfo(bytes: Uint8Array): string {
+export function simulateGetSmfDesktopInfo(bytes: Uint8Array): SmfDesktopInfo {
   const p = simulateSmfHeaderParse(bytes);
-  if ('error' in p) return p.error;
-  const valid = p.version.startsWith('SMF_v') ? 'valid SMF' : 'invalid';
+  if ('error' in p) {
+    return {
+      valid: false,
+      version: '',
+      size: bytes.length,
+      off_tex: 0,
+      off_model: 0,
+      off_rig: 0,
+      off_anim: 0,
+      error: p.error,
+    };
+  }
+
+  const valid = p.version.startsWith('SMF_v');
   const rigCount = (p.offRig + 4 <= bytes.length) ? (bytes[p.offRig] | (bytes[p.offRig + 1] << 8) | (bytes[p.offRig + 2] << 16) | (bytes[p.offRig + 3] << 24)) >>> 0 : 0;
   const animCount = (p.offAnim + 1 <= bytes.length) ? bytes[p.offAnim] : 0;
-  return `${valid} | rig ~${rigCount} | anim ~${animCount} (offsets t${p.offTex} m${p.offModel} r${p.offRig} a${p.offAnim})`;
+  return {
+    valid,
+    version: p.version,
+    size: p.size,
+    off_tex: p.offTex,
+    off_model: p.offModel,
+    off_rig: p.offRig,
+    off_anim: p.offAnim,
+    model_count: (p.offModel + 1 <= bytes.length) ? bytes[p.offModel] : undefined,
+    rig_bone_count: rigCount,
+    anim_clip_count: animCount,
+    error: valid ? undefined : `not SMF header (starts with '${p.version.slice(0, 20)}')`,
+  };
 }
 
 export function simulateValidateSmf(bytes: Uint8Array): string {
@@ -187,8 +225,7 @@ export interface TauriMockInit {
   openPath: string;
   savePath: string;
   sampleBytes: number[];
-  desktopInfo: string;
-  modelInfo: string;
+  desktopInfo: SmfDesktopInfo;
   cancelOpen?: boolean;
   cancelSave?: boolean;
   failWrite?: boolean;
@@ -241,8 +278,6 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
             return state.sampleBytes;
           case 'get_smf_desktop_info':
             return state.desktopInfo;
-          case 'peek_smf_model_basic':
-            return state.modelInfo;
           case 'write_file_binary': {
             if (state.failWrite) throw new Error('mock write failed');
             const data = Array.isArray(args?.data) ? args.data as number[] : [];

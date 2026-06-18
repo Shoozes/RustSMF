@@ -1,6 +1,6 @@
 import { useCallback, useRef, useEffect, useState } from 'react';
 import type * as THREE from 'three';
-import type { OpenResult } from '../backend-client/tauri';
+import type { OpenResult, SmfDesktopInfo, TauriClient } from '../backend-client/tauri';
 import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX, bytesToArrayBuffer, buildImportedSmfFromThree, SmfConversionError } from '../loaders';
 import type { ImportedSmf } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
@@ -13,6 +13,17 @@ import {
 } from './poseEdits';
 import { findBoneByName } from '../utils/bonePicker';
 import { createSeqGuard } from '../utils/seqGuard';
+
+type LoadedModelResult =
+  | Awaited<ReturnType<typeof buildSmfScene>>
+  | Awaited<ReturnType<typeof loadGLB>>
+  | Awaited<ReturnType<typeof loadFBX>>
+  | Awaited<ReturnType<typeof loadOBJ>>;
+
+const getTauriClient = async (): Promise<TauriClient> => {
+  const client = await import('../backend-client/tauri');
+  return client as unknown as TauriClient;
+};
 
 /**
  * Custom hook to encapsulate model loading logic, error handling, and related handlers.
@@ -45,9 +56,9 @@ export function useLoadModel() {
   // Bone labels toggle (3D name sprites in viewport for debug/selection aid). Off by default for perf.
   const [showBoneLabels, setShowBoneLabels] = useState(false);
 
-  // Editor mode for future workspaces (model/rig/skin/animate/export). Starts in view; clear resets.
-  // Small step toward modern editor (#1): data flow + basic toggle, no quad/visual changes yet.
+  const [sourceFormat, setSourceFormat] = useState('');
 
+  // Editor mode is used by workspace composition and workspace-profile visibility.
   // Stable seq guards prevent stale async results across React re-renders.
   const loadSeqGuardRef = useRef(createSeqGuard());
   const openSeqGuardRef = useRef(createSeqGuard());
@@ -56,11 +67,13 @@ export function useLoadModel() {
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
     lastSourceFormatRef.current = '';
+    setSourceFormat('');
     poseEditsRef.current = {};
     model.clear();
     ui.setSelected('Scene');
     ui.clearError();
     ui.setEditorMode('view');
+    ui.setViewportLayout('single');
     setShowWeightPreview(false);
     setTransformMode('translate');
     setShowBoneLabels(false);
@@ -72,17 +85,31 @@ export function useLoadModel() {
     pb.setPlaybackSpeed(1);
   }, [model, ui, playbackRef]);
 
+  const formatSmfDesktopInfo = useCallback((info: SmfDesktopInfo) => {
+    if (!info.valid) {
+      const reason = info.error ? `: ${info.error}` : '';
+      return `Invalid SMF (Rust)${reason}`;
+    }
+
+    const parts = [`valid SMF (${info.version})`, `size ${info.size}`];
+    if (typeof info.model_count === 'number') parts.push(`model ~${info.model_count}`);
+    if (typeof info.rig_bone_count === 'number') parts.push(`rig ~${info.rig_bone_count}`);
+    if (typeof info.anim_clip_count === 'number') parts.push(`anim ~${info.anim_clip_count}`);
+    parts.push(`offsets t${info.off_tex} m${info.off_model} r${info.off_rig} a${info.off_anim}`);
+    return parts.join(' | ');
+  }, []);
+
   const loadModel = useCallback(async (res: OpenResult) => {
     const loadSeqGuard = loadSeqGuardRef.current;
     const loadSeq = loadSeqGuard.next();
     const isCurrentLoad = () => loadSeqGuard.isCurrent(loadSeq);
     clearLoadedModel();
-    ui.setIsLoading(true);
+      ui.setIsLoading(true);
     ui.clearError();
     ui.setStatus('Loading model...');
 
     try {
-      let loaded: any;
+      let loaded: LoadedModelResult;
       const name = (res.name || res.path || '').toLowerCase();
 
       let data: Uint8Array | undefined = res.data;
@@ -90,42 +117,34 @@ export function useLoadModel() {
       let rustPeekMsg = '';
       let rustValidated = false;
 
-      // Record source format for export decision (FBX path etc.)
-      if (name.endsWith('.smf')) lastSourceFormatRef.current = 'smf';
-      else if (name.endsWith('.fbx')) lastSourceFormatRef.current = 'fbx';
-      else if (name.endsWith('.glb') || name.endsWith('.gltf')) lastSourceFormatRef.current = 'glb';
-      else if (name.endsWith('.obj')) lastSourceFormatRef.current = 'obj';
+      // Record source format for export decision and mode surfaces (FBX path etc.).
+      const detectedSourceFormat = name.endsWith('.smf')
+        ? 'smf'
+        : name.endsWith('.fbx')
+          ? 'fbx'
+          : name.endsWith('.glb') || name.endsWith('.gltf')
+            ? 'glb'
+            : name.endsWith('.obj')
+              ? 'obj'
+              : '';
+      lastSourceFormatRef.current = detectedSourceFormat;
+      setSourceFormat(detectedSourceFormat);
 
-      // Extract shared Tauri SMF desktop peek to avoid duplicated async branches
-      type DesktopTauri = {
-        getSmfDesktopInfo: (path: string) => Promise<string>;
-        peekSmfModelBasic: (path: string) => Promise<string>;
-        readBinaryFile: (path: string) => Promise<Uint8Array>;
-        openFile: () => Promise<OpenResult | null>;
-        saveFile: (data: Uint8Array | Blob, name: string) => Promise<boolean>;
-      };
-      const fetchSmfDesktopPeek = async (
+      const fetchSmfDesktopInfo = async (
         path: string,
-        tauriClient: DesktopTauri
+        tauriClient: TauriClient
       ): Promise<{ rustPeekMsg: string; rustValidated: boolean }> => {
         try {
           const info = await tauriClient.getSmfDesktopInfo(path);
           if (!isCurrentLoad()) return { rustPeekMsg: '', rustValidated: false };
-          if (info.includes('invalid')) {
-            ui.setErrorMsg(`Invalid SMF (Rust): ${info}`);
-            ui.setStatus(info);
+          if (!info.valid) {
+            const msg = formatSmfDesktopInfo(info);
+            ui.setErrorMsg(msg);
+            ui.setStatus(msg);
             ui.setIsLoading(false);
-            return { rustPeekMsg: info, rustValidated: false };
+            return { rustPeekMsg: msg, rustValidated: false };
           }
-          let msg = info;
-          try {
-            const m = await tauriClient.peekSmfModelBasic(path);
-            if (!isCurrentLoad()) return { rustPeekMsg: msg, rustValidated: true };
-            msg = `${msg} | ${m}`;
-          } catch {
-            /* ignore individual peek failure; accumulate what we have */
-          }
-          return { rustPeekMsg: msg, rustValidated: true };
+          return { rustPeekMsg: formatSmfDesktopInfo(info), rustValidated: true };
         } catch {
           return { rustPeekMsg: '', rustValidated: false };
         }
@@ -133,23 +152,23 @@ export function useLoadModel() {
 
       // Single dynamic import for all Tauri client fns when on desktop .smf path.
       // Reduces redundancy (multiple awaits), improves timing (one module load), centralizes.
-      let tauri: DesktopTauri | null = null;
+      let tauri: TauriClient | null = null;
       if (!data && res.path) {
         if (name.endsWith('.smf')) {
-          tauri = await import('../backend-client/tauri') as DesktopTauri;
-          const peek = await fetchSmfDesktopPeek(res.path, tauri);
+          tauri = await getTauriClient();
+          const peek = await fetchSmfDesktopInfo(res.path, tauri);
           if (!isCurrentLoad()) return;
           if (!peek.rustValidated && peek.rustPeekMsg) return; // already set error above
           rustValidated = peek.rustValidated;
           rustPeekMsg = peek.rustPeekMsg;
         }
         ui.setStatus('Reading binary from desktop path...');
-        if (!tauri) tauri = await import('../backend-client/tauri') as DesktopTauri;
+        if (!tauri) tauri = await getTauriClient();
         data = await tauri.readBinaryFile(res.path);
         if (!isCurrentLoad()) return;
       } else if (name.endsWith('.smf') && res.path) {
-        tauri = await import('../backend-client/tauri') as DesktopTauri;
-        const peek = await fetchSmfDesktopPeek(res.path, tauri);
+        tauri = await getTauriClient();
+        const peek = await fetchSmfDesktopInfo(res.path, tauri);
         if (!isCurrentLoad()) return;
         if (!peek.rustValidated && peek.rustPeekMsg) return; // already set error above
         rustValidated = peek.rustValidated;
@@ -216,14 +235,14 @@ export function useLoadModel() {
     } finally {
       if (isCurrentLoad()) ui.setIsLoading(false);
     }
-  }, [ui, model, playbackRef, clearLoadedModel]);
+  }, [ui, model, playbackRef, clearLoadedModel, formatSmfDesktopInfo]);
 
   const handleOpen = useCallback(async () => {
     const openSeqGuard = openSeqGuardRef.current;
     const openSeq = openSeqGuard.next();
     ui.setStatus('Opening file picker (.smf/.glb/.fbx/.obj supported)...');
     try {
-      const res: OpenResult | null = await (await import('../backend-client/tauri')).openFile();
+      const res: OpenResult | null = await (await getTauriClient()).openFile();
       if (!openSeqGuard.isCurrent(openSeq)) return;
       if (!res) {
         ui.setStatus('No file selected.');
@@ -248,7 +267,7 @@ export function useLoadModel() {
           ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
           : smfData;
         const buf = exportSMFToBuffer(dataToExport);
-        const ok = await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.smf');
+        const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
         if (!ok) { ui.setStatus('Export canceled.'); return; }
         ui.setStatus('Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!');
         return;
@@ -270,7 +289,7 @@ export function useLoadModel() {
       ui.setStatus('Exporting FBX-loaded model (via GLTF container for full skin/anim fidelity; no new deps)...');
       try {
         const buf = await exportFBX(rootToExport, model.clips);
-        const ok = await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.glb');
+        const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.glb');
         if (!ok) { ui.setStatus('Export canceled.'); return; }
         ui.setStatus('Exported .glb (from FBX source via GLTF equivalent). Re-import as .glb works; for true .fbx use DCC or save-as-SMF first.');
         return;
@@ -282,7 +301,7 @@ export function useLoadModel() {
     ui.setStatus('Exporting current model as GLB...');
     try {
       const buf = await exportGLB(rootToExport, model.clips);
-      const ok = await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.glb');
+      const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.glb');
       if (!ok) { ui.setStatus('Export canceled.'); return; }
       ui.setStatus('Exported .glb (animations included when present).');
     } catch (e: any) {
@@ -306,7 +325,7 @@ export function useLoadModel() {
           ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
           : smfData;
         const buf = exportSMFToBuffer(dataToExport);
-        const ok = await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.smf');
+        const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
         if (!ok) {
           ui.setStatus('Export canceled.');
           return;
@@ -339,7 +358,7 @@ export function useLoadModel() {
       });
 
       const buf = exportSMFToBuffer(imported);
-      const ok = await (await import('../backend-client/tauri')).saveFile(buf, 'exported_model.smf');
+      const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
       if (!ok) {
         ui.setStatus('Export canceled.');
         return;
@@ -418,7 +437,7 @@ export function useLoadModel() {
 
   const pingRust = useCallback(async () => {
     try {
-      const msg = await (await import('../backend-client/tauri')).invokeCommand<string>('greet', { name: 'RustSMF' });
+      const msg = await (await getTauriClient()).invokeCommand<string>('greet', { name: 'RustSMF' });
       ui.setStatus(msg + ' (real tauri invoke)');
     } catch (e: any) {
       ui.setStatus('Ping only works in Tauri desktop shell: ' + (e?.message || e));
@@ -499,6 +518,9 @@ export function useLoadModel() {
     setTransformMode: setTransformModeHandler,
     showBoneLabels,
     toggleBoneLabels,
+    sourceFormat,
+    viewportLayout: ui.viewportLayout,
+    setViewportLayout: ui.setViewportLayout,
     editorMode: ui.editorMode,
     setEditorMode: ui.setEditorMode,
   };

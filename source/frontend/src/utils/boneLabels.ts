@@ -1,17 +1,22 @@
 import * as THREE from 'three';
 
+interface BoneLabelOptions {
+  scale?: number;
+}
+
 /**
  * Creates a per-bone label Group containing a small AxesHelper (visual marker/glyph)
  * and a canvas-based name Sprite. Cheap, no extra deps, follows bone transforms when
  * attached as child. Used by ThreeViewport for the optional labels toggle.
  * Off-by-default for perf; caller manages attach/dispose.
  */
-export function makeBoneLabel(text: string): THREE.Group {
+export function makeBoneLabel(text: string, options: BoneLabelOptions = {}): THREE.Group {
+  const scale = Math.max(0.25, options.scale ?? 1);
   const group = new THREE.Group();
   (group as any).userData = { isBoneLabel: true };
 
   // Small AxesHelper for visual bone marker/glyph (advances editor affordances)
-  const axes = new THREE.AxesHelper(0.08);
+  const axes = new THREE.AxesHelper(0.08 * scale);
   (axes.material as any).depthTest = false;
   (axes.material as any).transparent = true;
   group.add(axes);
@@ -25,7 +30,7 @@ export function makeBoneLabel(text: string): THREE.Group {
   ctx.fillStyle = 'rgba(0,0,0,0.75)';
   ctx.fillRect(0, 0, 256, 48);
   ctx.fillStyle = '#a5b4fc';
-  ctx.font = 'bold 20px monospace';
+  ctx.font = `bold ${Math.round(20 * scale)}px monospace`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   const displayText = text.length > 12 ? text.substring(0, 9) + '...' : text; // polish for long names
@@ -33,10 +38,10 @@ export function makeBoneLabel(text: string): THREE.Group {
   const tex = new THREE.CanvasTexture(canvas);
   const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
   const spr = new THREE.Sprite(mat);
-  spr.scale.set(0.6, 0.11, 1);
-  spr.position.set(0, 0.18, 0); // above the axes
+  spr.scale.set(0.6 * scale, 0.11 * scale, 1);
+  spr.position.set(0, 0.18 * scale, 0); // above the axes
   group.add(spr);
 
-  group.position.set(0, 0.05, 0);
+  group.position.set(0, 0.05 * scale, 0);
   return group;
 }

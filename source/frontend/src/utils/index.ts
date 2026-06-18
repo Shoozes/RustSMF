@@ -6,6 +6,14 @@ export { disposeThreeObject } from './threeDisposal';
 export { restoreWeightPreview, applyWeightPreviewForBone } from './weightPreview';
 export { findClosestBone, DEFAULT_MAX_BONE_PICK_DIST, findBoneByName } from './bonePicker';
 export { makeBoneLabel } from './boneLabels';
-export { useBoneLabels } from './useBoneLabels';
-export { makeBoneHighlightMarker, updateHighlightPosition } from './boneHighlight';
+export { useBoneLabels, useBoneLabelsWithScale } from './useBoneLabels';
+export { makeBoneHighlightMarker, makeBoneHoverMarker, updateHighlightPosition, makeBoneEndpointHandle, updateEndpointHandle } from './boneHighlight';
+export {
+  DEFAULT_VIEWPORT_BOUNDS,
+  getMouseForViewport,
+  getViewportAt,
+  refreshOrthoCameras,
+  refreshViewportSpecs,
+} from './viewportLayout';
+export type { ModelBounds, ViewportSpec, ViewportRole } from './viewportLayout';
 export { createSeqGuard } from './seqGuard';

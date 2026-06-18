@@ -1,5 +1,5 @@
 import React from 'react';
-import type { EditorMode } from '../store';
+import type { EditorMode, ViewportLayout } from '../store';
 
 interface ToolbarProps {
   onOpen: () => void;
@@ -10,6 +10,8 @@ interface ToolbarProps {
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   editorMode: EditorMode;
   setEditorMode: (mode: EditorMode) => void;
+  viewportLayout: ViewportLayout;
+  setViewportLayout: (layout: ViewportLayout) => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -21,7 +23,18 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onFileChange,
   editorMode,
   setEditorMode,
+  viewportLayout,
+  setViewportLayout,
 }) => {
+  const modes: EditorMode[] = ['view', 'rig', 'skin', 'animate', 'export'];
+  const modeLabels: Record<EditorMode, string> = {
+    view: 'Model',
+    rig: 'Rig',
+    skin: 'Skin',
+    animate: 'Animate',
+    export: 'Export',
+  };
+
   return (
     <div className="toolbar">
       <div className="font-semibold tracking-wide">RustSMF</div>
@@ -37,21 +50,73 @@ const Toolbar: React.FC<ToolbarProps> = ({
       <button data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>
         Ping Rust
       </button>
-      {/* Basic editor mode toggle (small step for #1 modern workspaces; data + UI, future modes will affect viz/tools) */}
+      <div
+        role="tablist"
+        aria-label="Editor workspace mode"
+        className="mode-tablist"
+      >
+        {modes.map((mode) => {
+          const label = modeLabels[mode];
+          const selected = editorMode === mode;
+          return (
+            <button
+              key={mode}
+              role="tab"
+              aria-selected={selected}
+              data-testid={`mode-tab-${mode}`}
+              className={`mode-tab ${selected ? 'mode-tab-active' : ''}`}
+              onClick={() => setEditorMode(mode)}
+              disabled={isLoading}
+              type="button"
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      {/* Keep select for existing selectors and accessibility fallback paths. */}
       <select
         data-testid="editor-mode-select"
         value={editorMode}
         onChange={(e) => setEditorMode(e.target.value as EditorMode)}
         disabled={isLoading}
-        className="text-xs bg-slate-800 border border-slate-700 px-1 py-0.5 rounded"
+        className="sr-only"
         title="Editor mode (foundation for quad/mode-specific tools)"
       >
-        <option value="view">View</option>
-        <option value="rig">Rig</option>
-        <option value="skin">Skin</option>
-        <option value="animate">Animate</option>
-        <option value="export">Export</option>
+        {modes.map((mode) => (
+          <option key={mode} value={mode}>
+            {modeLabels[mode]}
+          </option>
+        ))}
       </select>
+      <div
+        role="group"
+        aria-label="Viewport layout"
+        className="layout-switch"
+      >
+        <button
+          type="button"
+          role="button"
+          data-testid="viewport-layout-single"
+          className={`layout-btn ${viewportLayout === 'single' ? 'layout-btn-active' : ''}`}
+          onClick={() => setViewportLayout('single')}
+          disabled={isLoading}
+          aria-pressed={viewportLayout === 'single'}
+        >
+          Single
+        </button>
+        <button
+          type="button"
+          role="button"
+          data-testid="viewport-layout-quad"
+          className={`layout-btn ${viewportLayout === 'quad' ? 'layout-btn-active' : ''}`}
+          onClick={() => setViewportLayout('quad')}
+          disabled={isLoading}
+          aria-pressed={viewportLayout === 'quad'}
+        >
+          Quad
+        </button>
+      </div>
       {/* Persistent hidden file input for reliable e2e file simulation (Playwright setInputFiles) */}
       <input
         type="file"

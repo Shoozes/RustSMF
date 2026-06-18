@@ -48,7 +48,7 @@
   "groups": {
     "docs__state_backlog": {
       "description": "Current app state, active paired backlog, docs policy, and durable regression-prevention notes. Keep concise; do not append repeated pass logs.",
-      "status": "current after 2026-06-16 SMF load-hang integrity pass (docs flattened under docs/dev, docs/dev/TODO.md is the active backlog, context-bank verifier in run.ps1 verify, launcher defaults fixed, e2e served from production preview, strict SMF visual baselines intentional, generated reports untracked, async open/read guards stable, SMF visual tearing fixed, old-src references restored, SMF rig hierarchy reconstruction cycle-safe for head dummies, SMF_Node_N names + userData for roundtrip, direct real-bone attaches, labels/highlight utilities tested)",
+      "status": "current after 2026-06-18 integrity pass (docs flattened under docs/dev, docs/dev/TODO.md is the active backlog, context-bank verifier in run.ps1 verify, launcher defaults documented, e2e served from production preview, strict SMF visual baselines intentional, async guards stable, SMF rig hierarchy cycle-safe, modern workspace/quad/endpoint drag state documented, viewport layout math extracted)",
       "paths": [
         "README.md",
         "docs/README.md",
@@ -132,18 +132,22 @@
     },
     "feature__modern_editor_workspaces": {
       "description": "Planned modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, optional quad/ortho precision views, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
-      "status": "2026-06-15: 1.3 editorMode foundation built + detailed breakdown of 1.2+ quad/modes into small 1.4-1.8 subtasks (quad toggle, larger glyphs/handles, mode defaults, tabs, ortho prep). Incremental, testable steps defined in TODO. See TODO #1 for full subtasks + done criteria.",
+      "status": "2026-06-18: editorMode workspace composition is active; single↔quad shared-layout behavior is stable with deterministic framing; Model/Rig/Skin/Animate/Export workspace surfaces are wired; endpoint-like marker handles and hover telemetry are implemented with endpoint drag now interactive via viewport plane-locked pointer input. Endpoint drag verification is now covered by smoke assertions in single and quad layouts.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
         "docs/references/old-src/screenshots/README.md",
         "docs/references/old-src/screenshots/*.png",
         "source/frontend/src/App.tsx",
+        "source/frontend/src/components/SkinPanel.tsx",
+        "source/frontend/src/components/AnimatePanel.tsx",
+        "source/frontend/src/components/ExportPanel.tsx",
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/components/Inspector.tsx",
         "source/frontend/src/components/Toolbar.tsx",
         "source/frontend/src/store/index.ts",
-        "source/frontend/src/hooks/useLoadModel.ts"
+        "source/frontend/src/hooks/useLoadModel.ts",
+        "source/frontend/src/utils/viewportLayout.ts"
       ],
       "requirements": [
         "Default to a polished single perspective viewport, with optional quad view for rigging/skinning precision.",
@@ -155,7 +159,7 @@
     },
     "subsystem__viewport_editor": {
       "description": "Three.js viewport, orbit controls, model attach/dispose, animation mixer, skeleton helper, raycast bone selection, TransformControls, and weight preview.",
-      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed; viewport drag filtering, context-aware R reset vs TransformControls mode shortcuts, ref-decoupled timing, disposal helpers, and bonePicker remain current. Labels: toggleable per-bone (small AxesHelper marker + canvas name sprite attached to bone, off default, full dispose/traverse) via extracted boneLabels.ts + useBoneLabels hook (further modularity, viewport cleaned). Planned modernization adds optional quad/ortho workspaces and larger bone handles/labels.",
+      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed; viewport drag filtering, context-aware R reset vs TransformControls mode shortcuts, ref-decoupled timing, disposal helpers, and bonePicker remain current. Labels: toggleable per-bone (small AxesHelper marker + canvas name sprite attached to bone, off default, full dispose/traverse) via extracted boneLabels.ts + useBoneLabels hook. Added endpoint-like marker handles, precision hover marker, hover dataset telemetry, and endpoint drag constraints in ref-driven pointer handlers. Endpoint drag verification is now exercised in smoke tests for single and quad layouts.",
       "paths": [
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/utils/SimpleOrbit.ts",
@@ -167,10 +171,11 @@
         "source/frontend/src/utils/boneLabels.ts",
         "source/frontend/src/utils/useBoneLabels.ts",
         "source/frontend/src/utils/boneHighlight.ts",
-        "source/frontend/src/utils/seqGuard.ts"
+        "source/frontend/src/utils/seqGuard.ts",
+        "source/frontend/src/utils/viewportLayout.ts"
       ],
       "notes": [
-        "updateHighlightPosition extracted for RAF use in viewport (modularity + testability); labels canvas polish (DPR scale, textBaseline, truncation for quality/readability). 2026-06-15 review: test polyfill for canvas labels hardened (coord.test) to support extract + SMF tex paths without clobber."
+        "updateHighlightPosition extracted for RAF use in viewport (modularity + testability); labels canvas polish (DPR scale, textBaseline, truncation for quality/readability). 2026-06-18: viewport pane math extracted to utils/viewportLayout.ts after ThreeViewport grew to 930 LOC with quad/endpoint work."
       ],
       "edge_cases": [
         "Overlapping loads must not overwrite newer state.",
@@ -211,7 +216,7 @@
     },
     "subsystem__tauri_bridge_and_rust_peeks": {
       "description": "Tauri native dialog/save/read commands, browser fallbacks, Rust SMF header/section peeks, and desktop status messages.",
-      "status": "native peeks and fallback strings covered; Playwright native IPC mock spec covers open/read/save/write/cancel; true OS-dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it",
+      "status": "native peeks and fallback strings covered; `TauriClient` contract is now centralized in `source/frontend/src/backend-client/tauri.ts`; `useLoadModel.ts` uses typed bridge and loader contracts for fewer runtime/typing mismatches; Playwright native IPC mock spec covers open/read/save/write/cancel and now validates `get_smf_desktop_info` command args plus version/offset/count contract presence in status text; true OS-dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it",
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -231,7 +236,7 @@
     },
     "subsystem__dev_process_lifecycle": {
       "description": "Launcher (run.ps1/run.bat), beforeDev wrapper (start-vite-dev.mjs for tauri dev server), Tauri conf, process safety (Job objects, recursive tree kills, parent-pid poll, port+cmdline stale sweeps, signals/finally/traps), and related dev server lifetime (playwright preview separate).",
-      "status": "2026-06-16: layered Windows safety implemented + clean (New-KillOnCloseJob for X-close even if finally skipped; Start-Process ownership + finally for dev/tauri-dev; Stop-ProcessTree + Stop-DevServers (5173 node + 'vite|start-vite-dev|tauri' cmdline) + Stop-Stale on entry; trap + PowerShell.Exiting; mjs wrapper for beforeDev with SIGs/'exit'/killViteTree/taskkill /T + win32 parent poll + delay). tauri.conf beforeDev now points at mjs. Green on cargo/context/typechecks/verify. Gaps noted (non-Win, direct tauri/npm dev outside launcher, broader sweeps).",
+      "status": "2026-06-16: layered Windows safety implemented + clean (New-KillOnCloseJob for X-close even if finally skipped; Start-Process ownership + finally for dev/tauri-dev; Stop-ProcessTree + Stop-DevServers (5173 node + 'vite|start-vite-dev|tauri' cmdline) + Stop-Stale on entry; trap + PowerShell.Exiting; mjs wrapper for beforeDev with SIGS/'exit'/killViteTree/taskkill /T + win32 parent poll + delay). tauri.conf beforeDev still points at mjs. 2026-06-18 added unix fallback handling in wrapper (`pkill`/`kill`) and kept direct-launch caveat docs explicit. Green on cargo/context/typechecks/verify.",
       "paths": [
         "run.ps1",
         "run.bat",
@@ -248,14 +253,31 @@
         "source/src-tauri/src/main.rs"
       ],
       "notes": [
-        "Primary coverage for close-cmd-window (Job), close-tauri-app (mjs poll+tree), Ctrl+C, next-launch-clean (stale entry sweeps). Redundant layers on Win. See issue__rogue_node_servers and plan for hardenings (cross-plat tree kill, direct-launch docs).",
+        "Primary coverage for close-cmd-window (Job), close-tauri-app (mjs poll+tree), Ctrl+C, next-launch-clean (stale entry sweeps). Redundant layers on Win. See issue__rogue_node_servers and issue__launcher_contract_matrix.",
         "Playwright webServer uses preview (playwright-managed, reuse:false); separate from persistent dev server."
       ],
       "files": []
     },
+    "issue__launcher_contract_matrix": {
+      "description": "The default launcher behavior and process-safety guarantees differ between Windows menu flow and direct/non-Windows launch flows, which can cause onboarding ambiguity.",
+      "status": "done 2026-06-18",
+      "last_seen": "2026-06-18",
+      "paths": [
+        "README.md",
+        "docs/user/README.md",
+        "run.ps1",
+        "run.bat",
+        "docs/dev/TODO.md",
+        "docs/dev/APP_STATE.md",
+        "docs/dev/PITFALL_LEDGER.md"
+      ],
+      "current_solution": "Windows-protected launcher path is canonical and documented; README/docs/user/APP_STATE now carry the matrix, and run.ps1 help contains explicit direct-launch caveats. No broader launcher rework has been promoted yet.",
+      "next_prevention": "Keep contract statements aligned across README/docs/user/APP_STATE and verify no stale mention of outdated launcher guarantees appears during future doc edits.",
+      "files": []
+    },
     "issue__rogue_node_servers": {
       "description": "Rogue node/vite (or tauri-cli) dev servers left listening after close cmd/pwsh window (X), close Tauri app, Ctrl+C, or hard kill when using tauri dev (beforeDevCommand spawn) or direct npm/vite.",
-      "status": "fixed 2026-06-16 via layered launcher (run.ps1 Job+tree+scans+finally+trap+stale) + beforeDev wrapper (mjs signals+killViteTree+taskkill/T+parent poll). Prior related: issue__launcher_default_local_tauri. Checks (typecheck/cargo/context/verify) clean post-implementation. Windows-primary; gaps for non-Win + direct launches outside run.ps1.",
+      "status": "fixed 2026-06-16 via layered launcher (run.ps1 Job+tree+scans+finally+trap+stale) + beforeDev wrapper (mjs signals+killViteTree+taskkill /T+parent poll). Prior related: issue__launcher_default_local_tauri. Status includes unix fallback in wrapper (`pkill`/`kill`) for non-Windows environments. Checks (typecheck/cargo/context/verify) clean post-implementation.",
       "last_seen": "2026-06-16",
       "paths": [
         "run.ps1",
@@ -271,7 +293,7 @@
         "runtime-data/vite-dev.err.log"
       ],
       "current_solution": "Stop-StaleDevStack (port 5173 node + cmdline sweeps) on dev entry + finally/trap; New-KillOnCloseJob (auto child add); recursive Stop-ProcessTree; mjs killViteTree (SIGTERM + win taskkill /T + parent poll every ~1.8s + exit handler). Tauri CLI term of beforeDev child triggers mjs. Entry sweep prevents 'port in use' on re-launch.",
-      "next_prevention": "Add cross-plat tree kill (pkill/kill fallback in mjs + ps1 equiv); document 'use run.ps1 for full orphan protection' (direct tauri dev has only mjs); consider lightweight launcher safety note in desktop-smoke or tests/README; re-run context verifier + manual X-close + re-launch test after changes.",
+      "next_prevention": "Keep direct non-canonical launch paths documented as reduced-coverage, and re-run manual close/relaunch checks after any launcher or script-layer edits.",
       "files": []
     },
     "tests__quality": {
@@ -580,11 +602,12 @@
     },
     "subsystem__modularity_candidates": {
       "description": "High-line-count files that should be split only at safe, test-backed boundaries. smfBinary.ts is the focused home for binary (after dedupe).",
-      "status": "watch; 2026-06-15 full review (post-extracts): top still smf.ts/ThreeViewport/useLoadModel (~stable); labels/seqGuard/bone* extracts + tests hold. No forced split (monolith heuristic). Polyfill test hardening for canvas labels noted in TODO/pitfall. Future quad/ortho: create focused modules, do not grow viewport.",
+      "status": "watch; 2026-06-18 rank: ThreeViewport.tsx(930), smoke.spec.ts(619), coord.test.ts(618), smf.ts(507), useLoadModel.ts(469), main.rs(433). Pure quad/ortho pane math was extracted to utils/viewportLayout.ts; keep future camera/layout helpers out of ThreeViewport unless tightly coupled to live render state.",
       "paths": [
         "source/frontend/tests/smoke.spec.ts",
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/components/ThreeViewport.tsx",
+        "source/frontend/src/utils/viewportLayout.ts",
         "source/frontend/src/loaders/smfBinary.ts",
         "source/frontend/src/utils/weightPreview.ts",
         "source/frontend/src/loaders/smfRig.ts",

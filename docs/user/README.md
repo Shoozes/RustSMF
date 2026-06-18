@@ -13,6 +13,12 @@ pwsh -File run.ps1
 
 Both commands open the numbered launcher menu. Choose `2. Run if already installed`, or run `.\run.bat 2` / `pwsh -File run.ps1 -Task run` directly. Use `pwsh -File run.ps1 -Task dev` for the browser-only Vite app.
 
+## Launcher contract
+
+- Windows canonical path: `run.bat` / `run.ps1` provide close-safe process handling for normal workflows.
+- Direct launches (`run.ps1 -Task dev`, `npm run dev`, `npm run tauri:dev`) are supported for ad-hoc use but do not provide the same Windows orphan-prevention guarantees.
+- For new tasks, prefer launcher paths first; then switch to direct runs only if intentionally required.
+
 ## Supported Flow
 
 - Open `.smf`, `.glb`, `.gltf`, `.fbx`, or `.obj` by native dialog, file input, or drag/drop.

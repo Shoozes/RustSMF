@@ -118,8 +118,9 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
 import { exportSMFToBuffer, importSMF, buildThreeScene, ImportedSmf } from './smf';
 import { buildRigHierarchy } from './smfRig';
 import { makeBoneLabel } from '../utils/boneLabels';
-import { makeBoneHighlightMarker, updateHighlightPosition } from '../utils/boneHighlight';
+import { makeBoneHighlightMarker, makeBoneHoverMarker, updateHighlightPosition } from '../utils/boneHighlight';
 import { createSeqGuard } from '../utils/seqGuard';
+import { refreshOrthoCameras, refreshViewportSpecs } from '../utils/viewportLayout';
 import { bytesToArrayBuffer } from './smfBinary';
 import { smfBoneNameToIndex } from '../hooks/poseEdits';
 import fs from 'fs';
@@ -463,6 +464,40 @@ describe('smf export roundtrip (data-driven)', () => {
     const hasAxes = marker.children.some((c: any) => c instanceof THREE.AxesHelper);
     assert.ok(hasMesh, 'has red sphere Mesh');
     assert.ok(hasAxes, 'has axes for orientation');
+  });
+
+  it('makeBoneHoverMarker util uses stronger visual style than selection marker', () => {
+    installImageTestPolyfill();
+    const marker = makeBoneHoverMarker();
+    assert.ok(marker instanceof THREE.Group, 'returns Group');
+    const hoverMesh = marker.children.find((c) => c instanceof THREE.Mesh) as THREE.Mesh | undefined;
+    assert.ok(hoverMesh, 'has Mesh child for contrast marker');
+    const hoverMat = hoverMesh.material as THREE.MeshBasicMaterial;
+    assert.strictEqual(hoverMat.transparent, true, 'hover marker is transparent');
+    assert.ok(hoverMat.opacity >= 0.9, 'hover marker opacity is high');
+  });
+
+  it('viewport layout util builds single and quad viewport specs', () => {
+    const perspective = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+    const orthoCameras = [
+      new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100),
+      new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100),
+      new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100),
+    ];
+    const bounds = { center: new THREE.Vector3(1, 2, 3), maxDim: 4 };
+
+    const single = refreshViewportSpecs(800, 600, 'single', bounds, perspective, orthoCameras);
+    assert.strictEqual(single.length, 1);
+    assert.strictEqual(single[0].role, 'perspective');
+    assert.strictEqual(single[0].width, 800);
+    assert.strictEqual(single[0].height, 600);
+
+    refreshOrthoCameras(orthoCameras, bounds);
+    const quad = refreshViewportSpecs(800, 600, 'quad', bounds, perspective, orthoCameras);
+    assert.deepStrictEqual(quad.map((spec) => spec.role), ['front', 'side', 'top', 'perspective']);
+    assert.ok(quad.every((spec) => spec.width === 400 && spec.height === 300), 'quad panes split canvas into quarters');
+    assert.notStrictEqual(orthoCameras[0].position.z, 0, 'front camera is framed away from center');
+    assert.notStrictEqual(orthoCameras[2].position.y, 0, 'top camera is framed away from center');
   });
 
   it('updateHighlightPosition util updates group pos to bone world pos (modular extract)', () => {

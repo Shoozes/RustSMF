@@ -19,6 +19,12 @@ pwsh -File run.ps1 -Task test:e2e      # Playwright via build+preview (smoke + v
 pwsh -File run.ps1 -Task test:visual-strict # opt-in strict SMF screenshot baselines
 pwsh -File run.ps1 -Task desktop-smoke # unbundled tauri build + Rust native peek tests (4 tests in main.rs)
 
+## Launcher contract matrix (current)
+
+- Windows desktop flow (preferred): `run.bat` / `run.ps1 -Task run` / `run.ps1` menu option `2` -> full process safety (JobObject child tree tie, stale entry sweep, terminal close cleanup).
+- Direct Vite/Tauri launches (`npm run dev`, `npm run tauri:dev`, or equivalent) -> faster ad-hoc access, but fewer lifecycle protections than launcher.
+- Use launcher defaults for normal onboarding, verification, and close/relaunch confidence.
+
 See run.ps1 help, source/frontend/package.json, source/package.json (workspace), source/src-tauri for details.
 
 ## Architecture highlights (modular)

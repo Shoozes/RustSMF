@@ -24,6 +24,7 @@ export interface PlaybackState {
 }
 
 export type EditorMode = 'view' | 'rig' | 'skin' | 'animate' | 'export';
+export type ViewportLayout = 'single' | 'quad';
 
 export interface UiState {
   status: string;
@@ -31,6 +32,7 @@ export interface UiState {
   isLoading: boolean;
   errorMsg: string;
   editorMode: EditorMode;
+  viewportLayout: ViewportLayout;
 }
 
 export function usePlaybackSlice(initial: Partial<PlaybackState> = {}) {
@@ -84,6 +86,7 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
   const [isLoading, setIsLoading] = useState<boolean>(initial.isLoading ?? false);
   const [errorMsg, setErrorMsg] = useState<string>(initial.errorMsg ?? '');
   const [editorMode, setEditorMode] = useState<EditorMode>(initial.editorMode ?? 'view');
+  const [viewportLayout, setViewportLayout] = useState<ViewportLayout>(initial.viewportLayout ?? 'single');
 
   const clearError = useCallback(() => setErrorMsg(''), []);
 
@@ -93,6 +96,7 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
     isLoading, setIsLoading,
     errorMsg, setErrorMsg,
     editorMode, setEditorMode,
+    viewportLayout, setViewportLayout,
     clearError,
   };
 }

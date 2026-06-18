@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+type OrbitEventFilter = (x: number, y: number, button?: number) => boolean;
+
 /**
  * SimpleOrbit: self-contained orbit controls (yaw/pitch/distance) extracted for reuse.
  * Used by ThreeViewport. No React, pure event + math.
@@ -17,9 +19,13 @@ export class SimpleOrbit {
   private lastX = 0;
   private lastY = 0;
 
-  attach(canvas: HTMLCanvasElement, onChange: () => void): () => void {
+  attach(
+    canvas: HTMLCanvasElement,
+    onChange: () => void,
+    shouldHandle: OrbitEventFilter = () => true,
+  ): () => void {
     const onDown = (e: MouseEvent) => {
-      if (!this.enabled) return;
+      if (!this.enabled || !shouldHandle(e.clientX, e.clientY, e.button)) return;
       this.dragging = true;
       this.dragButton = e.button;
       this.lastX = e.clientX;
@@ -27,7 +33,7 @@ export class SimpleOrbit {
     };
     const onUp = () => { this.dragging = false; };
     const onMove = (e: MouseEvent) => {
-      if (!this.enabled || !this.dragging) return;
+      if (!this.enabled || !this.dragging || !shouldHandle(e.clientX, e.clientY, this.dragButton)) return;
       const dx = e.clientX - this.lastX;
       const dy = e.clientY - this.lastY;
       if (this.dragButton === 2) {
@@ -47,7 +53,7 @@ export class SimpleOrbit {
       onChange();
     };
     const onWheel = (e: WheelEvent) => {
-      if (!this.enabled) return;
+      if (!this.enabled || !shouldHandle(e.clientX, e.clientY)) return;
       e.preventDefault();
       this.distance = Math.max(1.2, Math.min(18, this.distance + e.deltaY * 0.003));
       onChange();
@@ -62,22 +68,27 @@ export class SimpleOrbit {
     // Touch support (basic)
     const onTouchStart = (e: TouchEvent) => {
       if (!this.enabled) return;
-      if (e.touches.length === 1) {
-        this.dragging = true;
-        this.dragButton = 0;
-        this.lastX = e.touches[0].clientX;
-        this.lastY = e.touches[0].clientY;
-      }
+      if (e.touches.length !== 1) return;
+      const tx = e.touches[0].clientX;
+      const ty = e.touches[0].clientY;
+      if (!shouldHandle(tx, ty, 0)) return;
+      this.dragging = true;
+      this.dragButton = 0;
+      this.lastX = tx;
+      this.lastY = ty;
     };
     const onTouchEnd = () => { this.dragging = false; };
     const onTouchMove = (e: TouchEvent) => {
       if (!this.enabled || !this.dragging || e.touches.length !== 1) return;
+      const tx = e.touches[0].clientX;
+      const ty = e.touches[0].clientY;
+      if (!shouldHandle(tx, ty, 0)) return;
       const dx = e.touches[0].clientX - this.lastX;
       const dy = e.touches[0].clientY - this.lastY;
       this.yaw -= dx * 0.004;
       this.pitch = Math.max(-1.4, Math.min(1.4, this.pitch - dy * 0.004));
-      this.lastX = e.touches[0].clientX;
-      this.lastY = e.touches[0].clientY;
+      this.lastX = tx;
+      this.lastY = ty;
       onChange();
     };
     canvas.addEventListener('touchstart', onTouchStart);

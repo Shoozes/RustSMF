@@ -5,6 +5,22 @@
 use tauri::command;
 use tauri_plugin_dialog::DialogExt;
 use std::path::PathBuf;
+use serde::Serialize;
+
+#[derive(Serialize)]
+struct SmfDesktopInfo {
+    valid: bool,
+    version: String,
+    size: usize,
+    off_tex: usize,
+    off_model: usize,
+    off_rig: usize,
+    off_anim: usize,
+    model_count: Option<u32>,
+    rig_bone_count: Option<u32>,
+    anim_clip_count: Option<u32>,
+    error: Option<String>,
+}
 
 fn sanitize_path(path: PathBuf) -> String {
     let path_str = path.to_string_lossy().to_string();
@@ -49,6 +65,60 @@ fn parse_smf_header_info(bytes: &[u8]) -> Result<(String, usize, usize, usize, u
         return Err("section offsets invalid or anim short".to_string());
     }
     Ok((s, bytes.len(), off_tex, off_model, off_rig, off_anim))
+}
+
+fn build_smf_desktop_info(bytes: &[u8]) -> SmfDesktopInfo {
+    let parsed = parse_smf_header_info(bytes);
+    match parsed {
+        Ok((version, size, off_tex, off_model, off_rig, off_anim)) => {
+            let model_count = if off_model + 1 <= bytes.len() {
+                Some(bytes[off_model] as u32)
+            } else {
+                None
+            };
+            let rig_bone_count = if off_rig + 4 <= bytes.len() {
+                Some(u32::from_le_bytes([
+                    bytes[off_rig],
+                    bytes[off_rig + 1],
+                    bytes[off_rig + 2],
+                    bytes[off_rig + 3],
+                ]))
+            } else {
+                None
+            };
+            let anim_clip_count = if off_anim + 1 <= bytes.len() {
+                Some(bytes[off_anim] as u32)
+            } else {
+                None
+            };
+            SmfDesktopInfo {
+                valid: true,
+                version,
+                size,
+                off_tex,
+                off_model,
+                off_rig,
+                off_anim,
+                model_count,
+                rig_bone_count,
+                anim_clip_count,
+                error: None,
+            }
+        }
+        Err(error) => SmfDesktopInfo {
+            valid: false,
+            version: String::new(),
+            size: bytes.len(),
+            off_tex: 0,
+            off_model: 0,
+            off_rig: 0,
+            off_anim: 0,
+            model_count: None,
+            rig_bone_count: None,
+            anim_clip_count: None,
+            error: Some(error),
+        },
+    }
 }
 
 #[command]
@@ -181,22 +251,13 @@ async fn peek_smf_model_basic(path: String) -> Result<String, String> {
     }
 }
 
-// Polish for timing/async: combined desktop info cmd to reduce multiple FS calls and awaits in load for .smf desktop.
-// Does validate + peek + rig + anim in one pass, returns combined string for status.
-// Real, small desktop summary command.
+// Polish for timing/async: one desktop metadata command to reduce multiple IPC
+// round-trips and avoid duplicated FS reads in .smf desktop load.
+// Real, small structured summary command for frontend status formatting.
 #[command]
-async fn get_smf_desktop_info(path: String) -> Result<String, String> {
+async fn get_smf_desktop_info(path: String) -> Result<SmfDesktopInfo, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
-    match parse_smf_header_info(&bytes) {
-        Ok((s, _, off_tex, off_model, off_rig, off_anim)) => {
-            let valid = if s.starts_with("SMF_v") { "valid SMF" } else { "invalid" };
-            let rig_count = if off_rig + 4 <= bytes.len() { u32::from_le_bytes([bytes[off_rig], bytes[off_rig+1], bytes[off_rig+2], bytes[off_rig+3]]) } else { 0 };
-            // anim u8 (exact match to TS: animCount = reader.u8() after v12 locked etc)
-            let anim_count = if off_anim + 1 <= bytes.len() { bytes[off_anim] as u32 } else { 0 };
-            Ok(format!("{} | rig ~{} | anim ~{} (offsets t{} m{} r{} a{})", valid, rig_count, anim_count, off_tex, off_model, off_rig, off_anim))
-        }
-        Err(msg) => Ok(msg),
-    }
+    Ok(build_smf_desktop_info(&bytes))
 }
 
 fn main() {
@@ -255,16 +316,13 @@ mod tests {
             off += 4;
             let off_anim = u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
 
-            // Validate header string like the commands do
-            let mut s = String::new();
-            let mut tmp_off = 0;
-            while tmp_off < bytes.len() && bytes[tmp_off] != 0 {
-                s.push(bytes[tmp_off] as char);
-                tmp_off += 1;
-            }
-            assert!(s.starts_with("SMF_v"), "expected SMF header in real sample, got: {}", s);
+            let desktop_info = super::build_smf_desktop_info(&bytes);
+            assert!(desktop_info.valid, "Expected valid info for SMF sample, got: {:?}", desktop_info.error);
+            assert!(desktop_info.version.starts_with("SMF_v"), "expected SMF header in real sample, got: {}", desktop_info.version);
 
             // Basic count reads (rig/anim like the peek basics) - cast u32 offsets to usize for indexing
+            assert_eq!(desktop_info.off_rig, off_rig as usize);
+            assert_eq!(desktop_info.off_anim, off_anim as usize);
             let rig_count = if (off_rig as usize) + 4 <= bytes.len() {
                 u32::from_le_bytes([bytes[off_rig as usize], bytes[(off_rig as usize) + 1], bytes[(off_rig as usize) + 2], bytes[(off_rig as usize) + 3]])
             } else {
@@ -288,6 +346,41 @@ mod tests {
             // Graceful in envs without the sample (e.g. minimal CI). Real desktop validation still recommended via tauri-dev + local mixamo.
             println!("Rust desktop peek smoke: no test .smf sample present in this env; skipping real binary parse (run desktop-smoke again after adding an SMF sample fixture).");
         }
+    }
+
+    #[test]
+    fn test_get_smf_desktop_info_struct_shape() {
+        let mut bad_version = b"NOTSMF\0".to_vec();
+        bad_version.extend_from_slice(&[0; 32]);
+        let info = super::build_smf_desktop_info(&bad_version);
+        assert_eq!(info.valid, false);
+        assert_eq!(info.error.as_deref(), Some("unsupported version: NOTSMF"));
+
+        let mut bytes = b"SMF_v12_by_Snidr_and_Bart\0".to_vec();
+        let off_tex: u32 = 42;
+        let off_model: u32 = 44;
+        let off_rig: u32 = 48;
+        let off_anim: u32 = 52;
+        bytes.extend_from_slice(&off_tex.to_le_bytes());
+        bytes.extend_from_slice(&off_model.to_le_bytes());
+        bytes.extend_from_slice(&off_rig.to_le_bytes());
+        bytes.extend_from_slice(&off_anim.to_le_bytes());
+        while bytes.len() <= 56 {
+            bytes.push(0);
+        }
+        // u8 counts in model/rig/anim positions
+        bytes[off_model as usize] = 1;
+        bytes[off_rig as usize] = 2;
+        bytes[off_rig as usize + 1] = 0;
+        bytes[off_rig as usize + 2] = 0;
+        bytes[off_rig as usize + 3] = 0;
+        bytes[off_anim as usize] = 3;
+
+        let info = super::build_smf_desktop_info(&bytes);
+        assert!(info.valid);
+        assert_eq!(info.model_count, Some(1));
+        assert_eq!(info.rig_bone_count, Some(2));
+        assert_eq!(info.anim_clip_count, Some(3));
     }
 
     #[test]

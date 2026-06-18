@@ -1,12 +1,20 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-18 (targeted backlog check: confirmed current editor modes are dropdown/state scaffolding only; true old-style mode tabs plus 4-pane ortho/perspective viewport are still missing and now called out explicitly under Active Backlog #1 with references). Prior 2026-06-16 full integrity + launcher process safety review: added + documented the child-process/rogue-node hardening (mjs wrapper + run.ps1 Job/tree/scans/finally/trap/stale); added paired PITFALL Q + two narrow summary_bank groups; doc syncs + consolidation per policy; all gates + manual close-X/relaunch clean; no broken imports; modularity/timing/edges reviewed with no new stubs/races. Prior SMF hierarchy + editorMode work remains below. All on local main.
+Last reviewed: 2026-06-18 (targeted backlog check: editor mode routing now drives workspace composition and dedicated Skin/Animate/Export panels are in-app; single↔quad shared-layout behavior is stable with deterministic framing; endpoint-like precision markers and drag interactions are now implemented. Endpoint drag verification now covers single and quad layouts in e2e. Pane-aware hit timing gaps were reduced and validated). Prior 2026-06-16 full integrity + launcher process safety review added child-process hardening (mjs wrapper + run.ps1 Job/tree/scans/finally/trap/stale), paired PITFALL/Q/summary_bank updates, and doc/path gate safety.
 
 ## Current Focus
 
-Keep the app show-ready and scalable: launchers start the desktop app by default, verification fails loudly, e2e uses production preview, strict visual baselines are maintained intentionally, and docs describe current state instead of pass history.
+Keep the app show-ready and scalable: launchers are documented with safe defaults, verification fails loudly, e2e uses production preview, strict visual baselines are maintained intentionally, and docs describe current state instead of pass history.
 
-## Current Integrity Findings
+## Open Edge-Case Tasks (what/why/where/how)
+
+1. What: Keep quad/ortho layout logic from expanding `ThreeViewport.tsx` further.
+   Why: `ThreeViewport.tsx` grew to the largest repo file after shared-scene quad rendering and endpoint drag landed; more camera/pane work will be easier to review if layout math stays modular.
+   Where: `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/viewportLayout.ts`, `source/frontend/tests/smoke.spec.ts`, `summary_bank.json`.
+   How: Keep pure viewport pane math in `viewportLayout.ts`; extract only leaf helpers with stable tests before moving coupled pointer/render state; run typecheck/e2e slices after each split.
+   Done: Current viewport layout math is extracted and exported; future ortho-pane behavior changes do not require adding more layout geometry code back into `ThreeViewport.tsx`.
+
+## Completed Integrity Findings (historical, for reference only)
 
 - What: Loading `mixamo_smf_baldguy.smf` could hang during Three scene construction and leave the frontend waiting on `Loading model...`.
   Why: SMF rigs can contain `isBone=0` head dummy nodes whose parent points back to themselves; the effective-parent walk skipped heads but did not track visited nodes, so root-head cycles never terminated. After unblocking that path, inverse binds also needed fresh world matrices before `Skeleton.calculateInverses()`, and animation tracks for skipped head nodes created noisy missing-target warnings.
@@ -24,7 +32,7 @@ Keep the app show-ready and scalable: launchers start the desktop app by default
   Why: beforeDevCommand spawns a persistent Vite child managed only by tauri CLI; Windows pwsh/cmd close + some parent terminations did not reliably kill the tree; no prior ownership (Job), recursive tree kill, port+cmdline reaper on entry, or explicit wrapper lifetime handling.
   Where: `source/src-tauri/tauri.conf.json` (beforeDevCommand), `source/frontend/scripts/start-vite-dev.mjs` (wrapper), `run.ps1` (Stop-ProcessTree/Stop-DevServers/New-KillOnCloseJob/Start-Process+job+finally+trap+register+Stop-Stale), `run.bat`, package.json tauri:dev/dev, runtime-data logs, PITFALL + APP_STATE + summary_bank (new groups).
   How: Added defensive mjs (direct vite spawn + SIGs + 'exit' + killViteTree + win32 taskkill /T + parentPid poll via tasklist + small delay); ps1 layers (JobObject KILL_ON_JOB_CLOSE assigned to owned dev pwsh for X-close guarantee, recursive tree via Win32_Process, 3-sweep Stop-DevServers on 5173+cmdline, Stop-Stale on dev entry, try/finally + trap + exiting event). Tauri close now triggers mjs via CLI term + poll. Entry sweep prevents stale port. All paired with W/W/W/H in PITFALL + bank.
-  Done when: manual X-close cmd + Tauri app + re-launch leaves no node on 5173 and no "address in use"; `pwsh -File run.ps1 -Task verify` + context-bank + cargo/typechecks clean; new pitfall Q + two summary_bank groups (subsystem__dev_process_lifecycle + issue__rogue_node_servers) added + verifier green; links from TODO/APP_STATE. Cross-plat (unix tree kill) + "direct tauri limits" docs remain as next-prevention (see PITFALL). (Completed 2026-06-16 in this full review pass.)
+  Done when: manual X-close cmd + Tauri app + re-launch leaves no node on 5173 and no "address in use"; `pwsh -File run.ps1 -Task verify` + context-bank + cargo/typechecks clean; new pitfall Q + two summary_bank groups (subsystem__dev_process_lifecycle + issue__rogue_node_servers) added + verifier green; links from TODO/APP_STATE. (Completed 2026-06-16 in this full review pass.)
 
 - What: Backlog/docs moved from `docs/TODO.md` to `docs/dev/TODO.md`, but several references still pointed at the removed path.
   Why: Stale doc paths break context retrieval and make future agents trust the wrong source of truth.
@@ -69,14 +77,120 @@ Keep the app show-ready and scalable: launchers start the desktop app by default
 
 ## Active Backlog
 
-No P0/P1 integrity backlog is open after this pass (bone hierarchy + doc consolidation included in 2026-06-15 work).
+### Snapshot-aligned backlog (what/why/where/how/done)
 
-1. Modern editor workspace design.
+1. Baseline lock before backlog work
+   - What: Record clean verification gates before starting any new feature edit.
+   - Why: Existing regressions were mostly introduced when validation and docs drift got out of sync.
+   - Where: `run.ps1`, `source/package.json`, `source/frontend/package.json`, `scripts/verify-context-bank.py`, `source/frontend/tests/*`, `source/src-tauri`.
+   - How: Run `python scripts/verify-context-bank.py`, `pwsh -File run.ps1 -Task verify`, `pwsh -File run.ps1 -Task test:e2e`, `pwsh -File run.ps1 -Task test:visual-strict`, `pwsh -File run.ps1 -Task desktop-smoke`.
+   - Done: Gate commands are green and failures are fixed before editing editor UX.
+
+1.5. Consolidate loader/bridge contracts to reduce type drift
+   - What: Replace inline desktop-client shape casts and loader `any` with shared typed contracts.
+   - Why: Repeated import casts and untyped load results hide edge-case type failures during mode changes and async timing transitions.
+   - Where: `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/loaders/smf.ts`.
+   - How: Export/consume `TauriClient` in tauri bridge, type `buildThreeScene` return as `BuiltThreeSmfScene`, and use a shared `LoadedModelResult` alias inside the load hook.
+   - Done: `any` was removed from `loadModel` payload path, shared contract imports are used for all Tauri helper calls, and `sourceFormat`/viewport/layout reset behavior stays unchanged.
+
+2. Finish workspace mode routing
+   - What: Make `editorMode` drive workspace composition (`Model`, `Rig`, `Skin`, `Animate`, `Export`) instead of only state storage.
+   - Why: Mode state exists and needed to control what tools/panels are visible next.
+   - Where: `source/frontend/src/store/index.ts`, `source/frontend/src/App.tsx`, `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/components/Inspector.tsx`.
+   - How: Add a workspace config by mode and pass derived props to viewport/inspector panels.
+   - Done: Done. Mode tabs are now primary UI; view/rig/skin/animate/export now change visible timeline/inspector surfaces, labels defaults, and mode state propagation without reloading the model.
+
+3. Finish ortho precision behavior
+  - What: Add single ↔ quad layout with perspective + three orthographic panes sharing one scene/model.
+  - Why: Rigging and skinning need precision views; shared scene state prevents duplicate model state bugs.
+  - Where: `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/App.tsx`, new `source/frontend/src/components/ViewportLayout.tsx` (or equivalent).
+  - How: Render multiple camera rectangles from one renderer and use scissor/viewport per pane.
+  - Status: single/quad layout toggle is implemented with shared scene/model state, deterministic framing, and shared scene picking across panes. Dedicated Skin/Animate/Export mode surfaces are now added; endpoint drag behavior and pane-aware hit tuning are implemented and under focused follow-up verification.
+
+4. Upgrade bone handles, labels, hover, and picking
+   - What: Improve bone interaction clarity and hit targets.
+   - Why: Editor feels debug-like and is still sensitive in precision workflows.
+   - Where: `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/bonePicker.ts`, `source/frontend/src/utils/boneLabels.ts`, `source/frontend/src/utils/useBoneLabels.ts`, `source/frontend/src/utils/boneHighlight.ts`.
+   - How: Add mode-configured handle sizing, hover/selected states, camera-distance scale, and scoped cleanup for listeners/objects.
+   - Done: Endpoint-like marker handles, selected/hover markers, and hover dataset telemetry are now implemented, including precision mode scale and larger hit distance.
+
+5. Add endpoint drag verification coverage
+   - What: Add focused Playwright assertions for precision handle drag and pane-aware hit timing.
+   - Why: Endpoint drag is now interactive and should be regression-covered before wider editor workflow growth.
+   - Where: `source/frontend/tests/smoke.spec.ts` or a dedicated interaction spec, `source/frontend/src/components/ThreeViewport.tsx`.
+   - How: Add a rig-mode drag helper that starts from the endpoint marker, moves pointer in quad and single layouts, then asserts selected bone remains stable, hover telemetry updates, and endpoint marker follows.
+   - Done: Added in `source/frontend/tests/smoke.spec.ts` and validates drag lifecycle in single + quad layouts.
+
+6. Build real Skin workspace
+   - What: Create dedicated Skin panel with skinnability messaging, selected bone status, and explicit preview controls.
+   - Why: Weight preview exists but is not a clear mode-native workflow.
+   - Where: `source/frontend/src/components/SkinPanel.tsx`, `source/frontend/src/components/Inspector.tsx`, `source/frontend/src/utils/weightPreview.ts`, `source/frontend/src/components/ThreeViewport.tsx`.
+   - How: Move/merge skin controls into mode panel and keep preview non-destructive.
+   - Done: Skin panel exists and is shown in Skin mode with selected bone context + preview toggle.
+
+7. Build real Animate workspace
+   - What: Move clip playback and timeline controls into Animate-specific panel state.
+   - Why: Existing timeline competes with rig/skin/export flows.
+   - Where: `source/frontend/src/components/AnimatePanel.tsx`, `source/frontend/src/components/Timeline.tsx`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/store/index.ts`.
+   - How: Keep playback state stable; only compact/secondary controls in other modes.
+   - Done: Animate panel exists and is shown in Animate mode with clip list and playback-time state.
+
+8. Build explicit Export workspace with SMF limits
+   - What: Make source format, export path, and SMF compatibility limits visible before saving.
+   - Why: Export safety depends on clear source/fidelity expectations.
+   - Where: `source/frontend/src/components/ExportPanel.tsx`, `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/loaders/threeToSmf.ts`.
+   - How: Surface SMF fidelity path vs guarded conversion path in the UI; report `SmfConversionError` early.
+   - Done: Export panel exists and is shown in Export mode with source format and SMF compatibility constraints explicit.
+
+9. Preserve SMF fidelity
+   - What: Avoid casual changes to SMF loader/export code without coverage.
+   - Why: Existing SMF rig/animation path is stable but fragile.
+   - Where: `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/smfRig.ts`, `source/frontend/src/loaders/coord.ts`, `source/frontend/tests/mixamo_smf_baldguy.smf`.
+   - How: Any rig/anim/coord change adds unit tests first and targeted real-sample Playwright checks.
+   - Done: No regressions in real SMF sample load/bind-pose and export roundtrip.
+
+10. Harden Rust native peeks with structured results
+   - What: Move native parser peeks to typed payloads and parser-width-safe module boundaries.
+   - Why: Fragile status-string formatting weakens host/front-end contract quality.
+   - Where: `source/src-tauri/src/main.rs` (or `source/src-tauri/src/smf.rs`), `source/frontend/src/backend-client/tauri.ts`.
+   - How: Return typed `SmfDesktopInfo` (valid/version/sizes/offsets/counts), update tests, and keep formatting on frontend.
+   - Done: Frontend consumes typed desktop metadata; IPC tests validate parse width and error cases, and `source/frontend/tests/native.spec.ts` now asserts structured `get_smf_desktop_info` command path argument plus version/offset/count contract visibility in status text.
+
+11. Decide true OS-dialog automation
+   - What: Keep IPC mock coverage by default; document the deferral unless release needs real dialog automation.
+   - Why: This was previously deferred explicitly and should remain explicit.
+   - Where: `source/frontend/tests/native.spec.ts`, `source/frontend/src/backend-client/tauri.ts`, `run.ps1`.
+   - How: Add a clear TODO decision line and one opt-in path only if required.
+   - Done: Coverage intent is explicit and not overclaimed.
+
+12. Close dev-process gaps
+   - What: Keep Windows launcher hardening and explicitly document remaining cross-platform/direct-launch limits.
+   - Why: Safety is strongest through `run.ps1`; direct launch paths remain less protected.
+   - Where: `run.ps1`, `run.bat`, `source/frontend/scripts/start-vite-dev.mjs`, `README.md`, `source/frontend/tests/README.md`.
+   - How: Document limits and relaunch checks in docs and optional checks.
+   - Done: No hidden behavior assumptions for non-canonical launch paths.
+
+13. Keep context/doc hygiene aligned
+   - What: Keep backlog/docs/summary-bank synchronized after each active-work change.
+   - Why: Silent drift caused stale references and duplicated pass logs.
+   - Where: `docs/dev/TODO.md`, `docs/dev/APP_STATE.md`, `docs/dev/PITFALL_LEDGER.md`, `summary_bank.json`.
+   - How: Record only active backlog in TODO, current-state in APP_STATE, durable regressions in PITFALL_LEDGER, and keep `summary_bank.json` paths validated.
+   - Done: `python scripts/verify-context-bank.py` passes after any doc-path or backlog edits.
+
+P0-P3 board from the snapshot:
+- P0 Baseline and gates clean.
+- P1 Workspace routing, quad/ortho, bone editor UX.
+- P2 Skin/Animate/Export mode surfaces.
+- P3 Native peek typing, OS-dialog decision, and launcher-cadence alignment.
+
+No P0/P1 integrity defects are currently unresolved; active backlog remains on P1-P3 execution.
+
+1. Modern editor workspace design (historical design note; active ownership now in items 2-12).
    What: Recreate the current software as a modern, flexible editor while preserving the old editor's strongest ergonomics: true mode tabs/workspaces (`Model`, `Rig`, `Skin`, `Animate`, `Export`), optional 4-pane quad view with orthographic front/side/top plus perspective/main view, large clickable bone glyphs, numeric/name labels, endpoint handles, contextual mode tools, and clear skinning state.
    Why: The old GameMaker UI made rigging/skinning easier through split ortho panes and oversized bones, while the current React/Three app has a cleaner stack but weaker precision-edit affordances.
    Where: `source/frontend/src/store/index.ts` (`EditorMode`), `source/frontend/src/hooks/useLoadModel.ts` (mode state wiring), `source/frontend/src/components/Toolbar.tsx` (current dropdown scaffold), `source/frontend/src/components/ThreeViewport.tsx` (single-canvas single-perspective viewport today), future `WorkspaceBar` / viewport-layout components, `source/frontend/src/components/Inspector.tsx`, `source/frontend/tests/smoke.spec.ts`, `source/frontend/tests/visual.spec.ts`, and `docs/references/old-src/screenshots/`.
    How: Replace or augment the current dropdown with accessible tab/segmented controls, map each tab to mode-specific panels and defaults, then split viewport work into a layout layer that can choose single perspective or 2x2 quad. Keep single perspective as the default; add shared scene/model state with per-pane cameras, using `PerspectiveCamera` for the main pane and `OrthographicCamera` for front/side/top panes. Preserve selection, labels, weight preview, TransformControls, timeline playback, and export behavior across both layouts before adding deeper authoring tools.
-   Current gap confirmed 2026-06-18: `EditorMode` exists and the toolbar exposes View/Rig/Skin/Animate/Export as a `<select>`, but the modes do not yet produce true tabbed workspaces or mode-specific tool surfaces. `ThreeViewport` still owns one `<canvas>`, one `PerspectiveCamera`, one `SimpleOrbit`, and no `OrthographicCamera` / quad layout path.
+   Current gap confirmed 2026-06-18: `EditorMode` mode-workspace wiring, visible tabs, and Skin/Animate/Export mode panels are in place, with single↔quad already implemented in a shared scene/model flow. Endpoint-like markers, hover contrast, and endpoint drag lifecycle coverage are present; remaining work focuses on deeper ortho-pane consistency and optional skinning-tool authoring.
    Related references:
    - `docs/references/old-src/screenshots/README.md`: top mode switcher, 2x2 central viewport, ortho creation constraints, skin/animation workflow notes, and current-vs-modern comparison.
    - `docs/references/old-src/screenshots/smf_editor_front.png`: baseline empty 4-pane grid/axes layout.
@@ -88,9 +202,9 @@ No P0/P1 integrity backlog is open after this pass (bone hierarchy + doc consoli
    - 1.1 Name labels + small bone visual markers: COMPLETED (toggleable per-bone: small AxesHelper + floating canvas name sprite, cheap, attached to bones, off default, wired from Inspector via hook state; advances "labels" + "glyphs" for future quad/rig mode). See ThreeViewport labels effect + Inspector button.
    - 1.2.1 Extract highlight/selection marker creation to util (done: makeBoneHighlightMarker in boneHighlight.ts for modularity, consistent with labels extracts; tested; viewport effect cleaned).
    - 1.2.2 Polish bone labels for long names (truncate with ... for readability/perf; branch covered in unit test) + canvas quality (DPR scale, textBaseline for crisp labels). 1.2.3 Use extracted updateHighlightPosition in creation (remove duplicate world pos code).
-   - 1.3 Basic editorMode state + wiring + minimal UI toggle (this pass): added 'view'|'rig'|'skin'|'animate'|'export' to UiState/useUiSlice, exposed via useLoadModel (with clear reset), wired to Toolbar (visible <select> control), Viewport+Inspector (props ready). Small complete foundation for mode-specific workspaces per old GM inspiration; no quad yet, no behavior change outside state. (Built 2026-06-15 auto pass.)
-   - 1.4 True mode tabs / workspace bar: replace the temporary mode `<select>` with visible tabs or a segmented `WorkspaceBar` for Model/Rig/Skin/Animate/Export while keeping keyboard/accessibility and existing `EditorMode` state. Done when: clickable tabs change mode, the active mode is visible, e2e can assert mode switches, layout does not jump, and existing load/select/export flows still pass.
-   - 1.5 Basic quad/single view toggle: add a viewport layout controller for optional 2x2 split layout (CSS grid or multiple render viewports sharing model/selection state). Default single. First pass may stay perspective in every pane if needed, but must establish the layout boundary cleanly. Done when: toggle via mode or button switches layout without breaking orbit/labels/selection; typecheck + smoke e2e green.
+  - 1.3 Basic editorMode state + wiring + mode-workspace bar (complete): added 'view'|'rig'|'skin'|'animate'|'export' to UiState/useUiSlice, exposed via useLoadModel (with clear reset), wired to Toolbar with visible tabs + Viewport/Inspector mode propagation. Small complete foundation for mode-specific workspaces per old GM inspiration; no quad yet. (Built 2026-06-15 auto pass.)
+  - 1.4 Mode/workspace composition: `workspace` profile now gates inspector/timeline surfaces and default label behavior in `App.tsx` for Model/Rig/Skin/Animate/Export. Done when new dedicated mode panels remain additive and behavior stays stable.
+  - 1.5 Basic quad/single view toggle: complete. Shared scene/model and shared selection/pick state now drive single↔quad switching through one model root and stable camera/layout handoff. Layout math is isolated in `source/frontend/src/utils/viewportLayout.ts` to prevent the viewport component from absorbing every camera concern. Done when: toggle via mode/button switches layout without breaking orbit/labels/selection; typecheck + smoke e2e green.
    - 1.6 Ortho precision panes: extend the quad toggle with `OrthographicCamera` panes for front/side/top plus one perspective/main pane, matching the old screenshot intent. Done when: quad mode shows four nonblank views, cameras frame the same loaded model, resize is stable, and selection/hit tests work in at least the main pane before expanding to every pane.
    - 1.7 Larger bone glyphs/handles in rig/skin modes: scale up existing makeBoneLabel / makeBoneHighlightMarker / Axes (e.g. 2x-3x size when editorMode==='rig' or 'skin'), add simple endpoint spheres or hit areas for future dragging. Build on current small markers. Done when: visual size increases in rig mode (verifiable in e2e or manual), no perf regression, labels still readable.
    - 1.8 Mode-specific default behaviors (non-breaking): e.g. auto-enable boneLabels in 'rig'/'skin' (user can still toggle), different default transformMode or highlight size per mode. Wire via useLoadModel effect on editorMode. Done when: mode change auto-adjusts one behavior (e.g. labels on in rig), existing manual controls unaffected, tests pass.
@@ -147,7 +261,7 @@ No P0/P1 integrity backlog is open after this pass (bone hierarchy + doc consoli
    Why: Current largest files are manageable; blind splits would reduce clarity.
    Where: `source/frontend/src/loaders/smf.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/smoke.spec.ts`, `source/src-tauri/src/main.rs`.
    How: Re-run line-count ranking before any split, preserve public imports/status strings/test IDs, update barrels and `summary_bank.json`, and grep for duplicate helpers.
-   2026-06-16 rank (exact monolith skill pwsh + rg/measure on tracked src/scripts): tops coord.test.ts(608, test data+polyfills), smf.ts(499 down), ThreeViewport(459 down), useLoadModel(451), smoke.spec(439); core loaders/components/hooks <500 post-extracts. Deep frontend static analysis (subagent) confirms: barrels clean, no broken imports, seq guards + ref-decoupled RAF + cleanups robust (no races), 'any' pragmatic (watch), edges covered. No new split justified (tests data-heavy ok; coupled viz/loads have strong tests; per heuristic + safety priority). Revisit on quad or new viz. Modularity watch advanced (no stubs). Add targeted unit slices + e2e editorMode/labels assertions on future changes (per analysis).
+   2026-06-18 rank (tracked source/scripts): ThreeViewport.tsx(930), smoke.spec.ts(619), coord.test.ts(618), smf.ts(507), useLoadModel.ts(469), main.rs(433). Quad/endpoint work made ThreeViewport the clear next modularity risk; pure viewport layout math has been extracted to `utils/viewportLayout.ts` while coupled pointer/render state stays in the component. Add targeted unit slices + e2e editorMode/labels/assertions on future changes.
    Progress: Extracted makeBoneLabel to utils/boneLabels.ts + useBoneLabels hook + makeBoneHighlightMarker to boneHighlight.ts (consistent pattern for viewport visuals; tested in coord.test.ts with polyfill; barrel + summary_bank + viewport imports updated; ThreeViewport further slimmed by ~30 LOC + cleaner effects). Unit tests for makers. Modularity watch advancing (labels + highlight feedback extracted). Additional: labels name truncation polish for long names (1.2.2) + canvas quality (DPR scale, textBaseline for crisp labels). Further: extracted createSeqGuard (seqGuard.ts) for async stale testability + modularity; integrated in useLoadModel; unit test added. Note: incomplete useBoneHighlight hook stub file removed (coupled to viewport RAF/attach; full hook not forced - per monolith skill; maker sufficient and complete). No stubs remain. This cycle: further extracted updateHighlightPosition to boneHighlight.ts (used in RAF and creation); added unit test; cleaned unused ref; advanced #9 + #1; labels canvas polish. 1.2.3 Use extracted update in highlight creation (remove dupe code). 2026-06-15 full review: no new splits justified (line rank stable post-extracts; clear test-backed leaves only); polyfill hardening added as durable test concern under integrity findings (see above). Revisit on quad or new viz feature.
 
 ## Known Intentional Limits

@@ -25,6 +25,9 @@ interface InspectorProps {
   onNudgeBone?: (boneName: string, delta: BoneNudgeDelta) => void;
   showBoneLabels?: boolean;
   onToggleBoneLabels?: () => void;
+  showClipList?: boolean;
+  showBonePanel?: boolean;
+  showTransformControls?: boolean;
   editorMode?: EditorMode;
 }
 
@@ -42,6 +45,9 @@ const Inspector: React.FC<InspectorProps> = ({
   onNudgeBone,
   showBoneLabels = false,
   onToggleBoneLabels,
+  showClipList = true,
+  showBonePanel = true,
+  showTransformControls = true,
   editorMode = 'view',
 }) => {
   // State for collapsible bone hierarchy (starts with top-level roots expanded for usability)
@@ -107,7 +113,7 @@ const Inspector: React.FC<InspectorProps> = ({
           Real SkinnedMesh + Skeleton + clips loaded here.<br />
           Timeline below drives the AnimationMixer.
         </div>
-        {clips.length > 0 && (
+        {showClipList && clips.length > 0 && (
           <div className="mt-3">
             <div className="panel-title">Clips</div>
             {clips.map((c, idx) => (
@@ -124,16 +130,18 @@ const Inspector: React.FC<InspectorProps> = ({
             ))}
           </div>
         )}
-        {skeleton && skeleton.bones.length > 0 && (
+        {showBonePanel && skeleton && skeleton.bones.length > 0 && (
           <div className="mt-3">
             <div className="panel-title">Bones ({skeleton.bones.length})</div>
-            <button
-              data-testid="labels-toggle-btn"
-              className="text-[9px] px-1 py-0 bg-slate-700 hover:bg-slate-600 mb-1"
-              onClick={() => onToggleBoneLabels && onToggleBoneLabels()}
-            >
-              {showBoneLabels ? 'Hide' : 'Show'} labels (off by default for perf)
-            </button>
+            {onToggleBoneLabels && (
+              <button
+                data-testid="labels-toggle-btn"
+                className="text-[9px] px-1 py-0 bg-slate-700 hover:bg-slate-600 mb-1"
+                onClick={() => onToggleBoneLabels()}
+              >
+                {showBoneLabels ? 'Hide' : 'Show'} labels (off by default for perf)
+              </button>
+            )}
             <div className="max-h-24 overflow-auto text-[10px]">
               <ul className="pl-0 m-0 list-none">
                 {getRootBones(skeleton.bones).map((root) => renderBoneTree(root, 0))}
@@ -144,7 +152,7 @@ const Inspector: React.FC<InspectorProps> = ({
 
         {/* Bone transform controls (Cycle 3: 3D TransformControls gizmo in viewport + quick nudges + mode buttons.
             3D marker provides visual feedback. Nudge buttons feed the pose-edit layer; edits are captured at SMF export time. */}
-        {selected && selected !== 'Scene' && (
+        {showTransformControls && selected && selected !== 'Scene' && (
           <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
             <div>Transform for: <span className="font-mono text-amber-300">{selected}</span> (gizmo active in viewport)</div>
             <button data-testid="transform-x-btn" className="mr-1 mt-0.5 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {

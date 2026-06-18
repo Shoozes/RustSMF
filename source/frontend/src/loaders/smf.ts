@@ -260,9 +260,18 @@ function normalizeSkinWeightsForThree(weights: Float32Buffer): Float32Array {
   return normalized;
 }
 
+export interface BuiltThreeSmfScene {
+  root: THREE.Group;
+  skeleton: THREE.Skeleton;
+  skinnedMeshes: THREE.SkinnedMesh[];
+  clips: THREE.AnimationClip[];
+  mixer: THREE.AnimationMixer;
+  allBonesForDebug: THREE.Bone[];
+}
+
 // Build real Three.js objects from imported SMF data.
 // This is the key function that turns raw SMF into SkinnedMesh + Skeleton + AnimationClips.
-export function buildThreeScene(imported: ImportedSmf) {
+export function buildThreeScene(imported: ImportedSmf): BuiltThreeSmfScene {
   const sceneRoot = new THREE.Group();
   sceneRoot.name = 'SMF_Root';
 

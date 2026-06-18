@@ -14,6 +14,33 @@ export interface OpenResult {
   data?: Uint8Array // browser-read bytes or test/native-injected bytes
 }
 
+export interface SmfDesktopInfo {
+  valid: boolean
+  version: string
+  size: number
+  off_tex: number
+  off_model: number
+  off_rig: number
+  off_anim: number
+  model_count?: number
+  rig_bone_count?: number
+  anim_clip_count?: number
+  error?: string
+}
+
+export interface TauriClient {
+  openFile: () => Promise<OpenResult | null>;
+  saveFile: (data: Uint8Array | Blob, suggestedName: string) => Promise<boolean>;
+  readBinaryFile: (path: string) => Promise<Uint8Array>;
+  invokeCommand: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
+  peekSmfHeader: (path: string) => Promise<string>;
+  validateSmf: (path: string) => Promise<string>;
+  peekSmfRigBasic: (path: string) => Promise<string>;
+  peekSmfAnimBasic: (path: string) => Promise<string>;
+  peekSmfModelBasic: (path: string) => Promise<string>;
+  getSmfDesktopInfo: (path: string) => Promise<SmfDesktopInfo>;
+}
+
 function isTauriEnv(): boolean {
   return !!(window as any).__TAURI__ || !!(window as any).__TAURI_INTERNALS__
 }
@@ -185,10 +212,19 @@ export async function peekSmfModelBasic(path: string): Promise<string> {
   return invokeCommand<string>('peek_smf_model_basic', { path })
 }
 
-export async function getSmfDesktopInfo(path: string): Promise<string> {
+export async function getSmfDesktopInfo(path: string): Promise<SmfDesktopInfo> {
   const isTauri = isTauriEnv()
   if (!isTauri) {
-    return 'getSmfDesktopInfo only in Tauri desktop'
+    return {
+      valid: false,
+      version: '',
+      size: 0,
+      off_tex: 0,
+      off_model: 0,
+      off_rig: 0,
+      off_anim: 0,
+      error: 'getSmfDesktopInfo only in Tauri desktop',
+    }
   }
-  return invokeCommand<string>('get_smf_desktop_info', { path })
+  return invokeCommand<SmfDesktopInfo>('get_smf_desktop_info', { path })
 }

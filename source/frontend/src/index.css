@@ -27,6 +27,55 @@ html, body, #root {
   font-size: 13px;
 }
 
+.mode-tablist {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 2px;
+  background: #0f172a;
+}
+
+.mode-tab {
+  height: 28px;
+  min-width: 58px;
+  padding: 0 8px;
+  font-size: 11px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+}
+
+.mode-tab-active {
+  background: #334155;
+}
+
+.layout-switch {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 2px;
+  background: #0f172a;
+  margin-left: auto;
+}
+
+.layout-btn {
+  height: 28px;
+  min-width: 58px;
+  padding: 0 8px;
+  font-size: 11px;
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
+}
+
+.layout-btn-active {
+  background: #334155;
+}
+
 .main-area {
   flex: 1;
   display: flex;
@@ -60,6 +109,28 @@ html, body, #root {
   padding: 8px;
   font-size: 12px;
   overflow: auto;
+}
+
+.inspector-stack {
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #1e293b;
+  border-left: 1px solid #334155;
+  padding: 8px;
+  overflow: auto;
+}
+
+.inspector-stack .inspector {
+  width: auto;
+  border-left: 0;
+  border-bottom: 1px solid #334155;
+  box-sizing: border-box;
+}
+
+.inspector-stack .inspector:last-child {
+  border-bottom: 0;
 }
 
 .timeline {
@@ -138,6 +209,16 @@ button:active {
 
   .inspector {
     border-top: 1px solid #334155;
+  }
+
+  .inspector-stack {
+    width: auto;
+    border-left: 0;
+    border-right: 0;
+  }
+
+  .inspector-stack .inspector {
+    border-bottom: 0;
   }
 
   .viewport-container {
