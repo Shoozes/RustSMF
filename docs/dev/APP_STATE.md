@@ -15,6 +15,7 @@ Core flow:
 - Launcher contract (current):
   - `run.bat` / `run.ps1` are the canonical Windows workflow and carry full orphan-prevention coverage.
   - `run.ps1 -Task run` (same as launcher option 2) is the default app launch path after setup.
+  - `run.ps1 -Task test:e2e` uses GenEye as an optional advisory Playwright subagent when discoverable, but RustSMF remains able to run browser-only e2e with `-NoGenEye`, `RUSTSMF_NO_GENEYE=1`, or no GenEye checkout/runtime.
   - Direct `npm run dev` / `npm run tauri:dev` flows remain available but intentionally have reduced non-canonical lifecycle guarantees.
 - Drive animation through viewport-owned `AnimationMixer` state with timeline play/pause, scrub, speed, and clip selection.
 - Inspect skeletons, select bones from the hierarchy or viewport click, show a bone marker, use TransformControls, use quick nudges, and toggle selected-bone weight preview.
@@ -55,7 +56,7 @@ Core flow:
 - Primary commands:
   - `pwsh -File run.ps1 -Task verify`
   - `pwsh -File run.ps1 -Task test:e2e`
-    - `test:e2e` runs optional GenEye smoke first when discoverable (`-GenEyeRoot` / `GENEYE_ROOT`), then falls back to browser Playwright if GenEye is unavailable, slow, or fails.
+    - `test:e2e` passes RustSMF's Playwright command to GenEye `playwright-full -AllowGenEyeFailure -Group geneye-watch-fixture` when GenEye is discoverable (`-GenEyeRoot`, `GENEYE_ROOT`, `GENEYE_RUN_BAT`, or local Three-Sisters path). Evidence is ignored under `runtime-data\geneye-playwright-runs\`; RustSMF app evidence is the GenEye `project_tests` block plus discovered RustSMF Playwright artifacts, while the built-in GenEye scenario only proves advisory plumbing. Use `-NoGenEye` or `RUSTSMF_NO_GENEYE=1` for browser-only e2e. If GenEye is unavailable or fails before project-test evidence exists, the launcher runs browser-only Playwright. RustSMF project-test failures stay authoritative.
   - `pwsh -File run.ps1 -Task test:visual-strict` (opt-in)
   - `pwsh -File run.ps1 -Task test:visual-update` (intentional baseline refresh only)
   - `pwsh -File run.ps1 -Task desktop-smoke`

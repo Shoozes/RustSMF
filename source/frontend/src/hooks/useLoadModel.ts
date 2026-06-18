@@ -13,6 +13,7 @@ import {
 } from './poseEdits';
 import { findBoneByName } from '../utils/bonePicker';
 import { createSeqGuard } from '../utils/seqGuard';
+import { detectModelFormat, supportedModelFormatsLabel, type ModelSourceFormat } from '../utils/modelFormat';
 
 type LoadedModelResult =
   | Awaited<ReturnType<typeof buildSmfScene>>
@@ -42,7 +43,7 @@ export function useLoadModel() {
   const lastSmfDataRef = useRef<ImportedSmf | null>(null);
 
   // Track original source format for context-aware export (SMF has fidelity path; FBX gets its own exportFBX entry)
-  const lastSourceFormatRef = useRef<string>(''); // 'smf' | 'fbx' | 'glb' | 'obj'
+  const lastSourceFormatRef = useRef<ModelSourceFormat | ''>('');
 
   // Pose edits recorded from nudge buttons and gizmo; applied to SMF at export time
   const poseEditsRef = useRef<PoseEditMap>({});
@@ -104,13 +105,13 @@ export function useLoadModel() {
     const loadSeq = loadSeqGuard.next();
     const isCurrentLoad = () => loadSeqGuard.isCurrent(loadSeq);
     clearLoadedModel();
-      ui.setIsLoading(true);
+    ui.setIsLoading(true);
     ui.clearError();
     ui.setStatus('Loading model...');
 
     try {
       let loaded: LoadedModelResult;
-      const name = (res.name || res.path || '').toLowerCase();
+      const name = res.name || res.path || '';
 
       let data: Uint8Array | undefined = res.data;
 
@@ -118,15 +119,10 @@ export function useLoadModel() {
       let rustValidated = false;
 
       // Record source format for export decision and mode surfaces (FBX path etc.).
-      const detectedSourceFormat = name.endsWith('.smf')
-        ? 'smf'
-        : name.endsWith('.fbx')
-          ? 'fbx'
-          : name.endsWith('.glb') || name.endsWith('.gltf')
-            ? 'glb'
-            : name.endsWith('.obj')
-              ? 'obj'
-              : '';
+      const detectedSourceFormat = detectModelFormat(name);
+      if (!detectedSourceFormat) {
+        throw new Error(`Unsupported model format. Supported formats: ${supportedModelFormatsLabel()}`);
+      }
       lastSourceFormatRef.current = detectedSourceFormat;
       setSourceFormat(detectedSourceFormat);
 
@@ -154,7 +150,7 @@ export function useLoadModel() {
       // Reduces redundancy (multiple awaits), improves timing (one module load), centralizes.
       let tauri: TauriClient | null = null;
       if (!data && res.path) {
-        if (name.endsWith('.smf')) {
+        if (detectedSourceFormat === 'smf') {
           tauri = await getTauriClient();
           const peek = await fetchSmfDesktopInfo(res.path, tauri);
           if (!isCurrentLoad()) return;
@@ -166,7 +162,7 @@ export function useLoadModel() {
         if (!tauri) tauri = await getTauriClient();
         data = await tauri.readBinaryFile(res.path);
         if (!isCurrentLoad()) return;
-      } else if (name.endsWith('.smf') && res.path) {
+      } else if (detectedSourceFormat === 'smf' && res.path) {
         tauri = await getTauriClient();
         const peek = await fetchSmfDesktopInfo(res.path, tauri);
         if (!isCurrentLoad()) return;
@@ -175,17 +171,17 @@ export function useLoadModel() {
         rustPeekMsg = peek.rustPeekMsg;
       }
 
-      if (name.endsWith('.smf')) {
+      if (detectedSourceFormat === 'smf') {
         if (!data) {
           throw new Error('Could not obtain binary data for .smf (browser provides via input; desktop uses read_file_binary)');
         }
         const imported = importSMF(bytesToArrayBuffer(data));
         lastSmfDataRef.current = imported;
         loaded = buildSmfScene(imported);
-      } else if (name.endsWith('.fbx')) {
+      } else if (detectedSourceFormat === 'fbx') {
         const urlOrBuf: string | ArrayBuffer = data ? bytesToArrayBuffer(data) : (res.path || '');
         loaded = await loadFBX(urlOrBuf);
-      } else if (name.endsWith('.obj')) {
+      } else if (detectedSourceFormat === 'obj') {
         const urlOrBuf: string | ArrayBuffer = data ? bytesToArrayBuffer(data) : (res.path || '');
         loaded = await loadOBJ(urlOrBuf);
       } else {
@@ -211,14 +207,14 @@ export function useLoadModel() {
         pb.setCurrentTime(0);
       }
 
-      if (name.endsWith('.fbx')) {
+      if (detectedSourceFormat === 'fbx') {
         ui.setStatus(`Loaded FBX: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length || 0}`);
       } else {
         let status = `Loaded: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length} | verts: ${loaded.skinnedMeshes?.[0]?.geometry?.attributes?.position?.count || '?'}`;
         if (rustPeekMsg) {
           status = `${rustPeekMsg} | ${status}`;
         }
-        if (rustValidated && name.endsWith('.smf')) {
+        if (rustValidated && detectedSourceFormat === 'smf') {
           status = `Rust validated SMF | ${status}`;
         }
         ui.setStatus(status);
@@ -228,10 +224,12 @@ export function useLoadModel() {
 
     } catch (e: any) {
       if (!isCurrentLoad()) return;
-      console.error(e);
       const msg = e?.message || String(e);
+      if (!msg.startsWith('Unsupported model format.')) {
+        console.error(e);
+      }
       ui.setErrorMsg(`Load error: ${msg}`);
-      ui.setStatus(`Load error: ${msg}. Try a .glb or .smf from docs/references/old-src/datafiles/SMF/.`);
+      ui.setStatus(`Load error: ${msg}. Try ${supportedModelFormatsLabel()} from docs/references/old-src/datafiles/SMF/.`);
     } finally {
       if (isCurrentLoad()) ui.setIsLoading(false);
     }
@@ -240,7 +238,7 @@ export function useLoadModel() {
   const handleOpen = useCallback(async () => {
     const openSeqGuard = openSeqGuardRef.current;
     const openSeq = openSeqGuard.next();
-    ui.setStatus('Opening file picker (.smf/.glb/.fbx/.obj supported)...');
+    ui.setStatus(`Opening file picker (${supportedModelFormatsLabel()} supported)...`);
     try {
       const res: OpenResult | null = await (await getTauriClient()).openFile();
       if (!openSeqGuard.isCurrent(openSeq)) return;

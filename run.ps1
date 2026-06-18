@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-    [string]$Task = "menu"
+    [string]$Task = "menu",
+    [string]$GenEyeRoot = "",
+    [switch]$NoGenEye
 )
 
 $ErrorActionPreference = "Stop"
@@ -212,6 +214,132 @@ function Invoke-FrontendNpm([string[]]$NpmArgs) {
     }
 }
 
+function Resolve-GenEyeRunBat {
+    $candidates = [System.Collections.Generic.List[string]]::new()
+    if (-not [string]::IsNullOrWhiteSpace($env:GENEYE_RUN_BAT)) {
+        $runBat = try { Resolve-Path -LiteralPath $env:GENEYE_RUN_BAT -ErrorAction Stop } catch { $null }
+        if ($runBat -and (Test-Path -LiteralPath $runBat.ProviderPath -PathType Leaf)) {
+            return $runBat.ProviderPath
+        }
+    }
+    if (-not [string]::IsNullOrWhiteSpace($GenEyeRoot)) { $candidates.Add($GenEyeRoot) }
+    if (-not [string]::IsNullOrWhiteSpace($env:GENEYE_ROOT)) { $candidates.Add($env:GENEYE_ROOT) }
+    $candidates.Add("C:\DevStuff\Three-sisters\GenEye")
+    $candidates.Add((Join-Path $RepoRoot "..\GenEye"))
+    $candidates.Add((Join-Path $RepoRoot "..\..\GenEye"))
+    $candidates.Add((Join-Path $RepoRoot "..\Three-sisters\GenEye"))
+
+    foreach ($candidate in $candidates) {
+        if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
+        $resolved = try { Resolve-Path -LiteralPath $candidate -ErrorAction Stop } catch { $null }
+        if (-not $resolved) { continue }
+        $runBat = Join-Path $resolved.ProviderPath "run.bat"
+        if (Test-Path -LiteralPath $runBat -PathType Leaf) {
+            return $runBat
+        }
+    }
+    return $null
+}
+
+function Read-GenEyeProjectStatus([string]$ReportPath) {
+    if ([string]::IsNullOrWhiteSpace($ReportPath) -or -not (Test-Path -LiteralPath $ReportPath)) {
+        return $null
+    }
+    try {
+        $report = Get-Content -Raw -LiteralPath $ReportPath | ConvertFrom-Json
+    } catch {
+        return $null
+    }
+    if ($null -eq $report.project_tests) {
+        return $null
+    }
+    $exitCode = if ($null -ne $report.project_tests.exit_code) {
+        [int]$report.project_tests.exit_code
+    } elseif ($report.project_tests.status -eq "passed") {
+        0
+    } else {
+        1
+    }
+    return [pscustomobject]@{
+        Status = [string]$report.project_tests.status
+        ExitCode = $exitCode
+    }
+}
+
+function Invoke-GenEyePlaywright {
+    if ($NoGenEye -or $env:RUSTSMF_NO_GENEYE -eq "1") {
+        Write-Info "[GENEYE] Disabled for this run; running browser-only Playwright."
+        return $false
+    }
+
+    $runBat = Resolve-GenEyeRunBat
+    if (-not $runBat) {
+        Write-Warn "[GENEYE] GenEye not found; running browser-only Playwright."
+        return $false
+    }
+
+    Ensure-Dirs
+    $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+    $outDir = Join-Path $RepoRoot "runtime-data\geneye-playwright-runs\rustsmf-e2e-$stamp"
+    New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+    $reportJson = Join-Path $outDir "project-report.json"
+    $projectCommand = "npm run test:e2e -- --reporter=json"
+    $genEyeRoot = Split-Path -Path $runBat -Parent
+    $args = @(
+        "-Task", "playwright-full",
+        "-Group", "geneye-watch-fixture",
+        "-PlaywrightTestCwd", $FrontendDir,
+        "-PlaywrightTestCommand", $projectCommand,
+        "-PlaywrightTestReportJson", $reportJson,
+        "-AllowGenEyeFailure",
+        "-Out", $outDir,
+        "-DurationMs", "600000",
+        "-VideoFrameLimit", "4",
+        "-MaxFrames", "0"
+    )
+
+    Write-Info "[GENEYE] Running advisory GenEye Playwright wrapper."
+    Write-Info "[GENEYE] Evidence output: $outDir"
+    Push-Location -LiteralPath $genEyeRoot
+    try {
+        & $runBat @args
+        $exitCode = $LASTEXITCODE
+    } finally {
+        Pop-Location
+    }
+
+    $summaryPath = Join-Path $outDir "summary.json"
+    $fallbackPath = Join-Path $outDir "advisory-fallback-summary.json"
+    $summaryProject = Read-GenEyeProjectStatus $summaryPath
+    $fallbackProject = Read-GenEyeProjectStatus $fallbackPath
+    $projectStatus = if ($summaryProject) { $summaryProject } else { $fallbackProject }
+
+    if ($exitCode -eq 0) {
+        if (Test-Path -LiteralPath $summaryPath) {
+            Write-Ok "[GENEYE] Advisory subagent evidence ready: $summaryPath"
+            return $true
+        }
+        if (Test-Path -LiteralPath $fallbackPath) {
+            Write-Warn "[GENEYE] Enrichment fell back to direct RustSMF tests: $fallbackPath"
+            return $true
+        }
+        Write-Warn "[GENEYE] Wrapper exited 0 without an expected report; rerunning browser-only Playwright."
+        return $false
+    }
+
+    if ($projectStatus) {
+        if ($projectStatus.ExitCode -ne 0) {
+            Write-Warn "[E2E] RustSMF Playwright failed under GenEye wrapper (exit $($projectStatus.ExitCode))."
+            exit $projectStatus.ExitCode
+        }
+        Write-Warn "[GENEYE] GenEye wrapper failed after RustSMF tests passed; treating GenEye as advisory."
+        return $true
+    }
+
+    Write-Warn "[GENEYE] Wrapper failed before producing RustSMF project-test evidence (exit $exitCode); running browser-only Playwright."
+    return $false
+}
+
 function Invoke-SourceNpm([string[]]$NpmArgs) {
     if (-not (Test-Path -LiteralPath $SourceDir)) {
         Write-Warn "source not present yet. See docs/dev/TODO.md and docs/dev/APP_STATE.md for current state."
@@ -371,7 +499,10 @@ switch -Exact ($NormalizedTask) {
     }
     "test:e2e" {
         Write-Info "[E2E] Running Playwright..."
-        if (-not (Invoke-FrontendNpm @("run", "test:e2e"))) { exit 1 }
+        $genEyeRanProject = Invoke-GenEyePlaywright
+        if (-not $genEyeRanProject) {
+            if (-not (Invoke-FrontendNpm @("run", "test:e2e"))) { exit 1 }
+        }
     }
     "test:visual-strict" {
         Write-Info "[VISUAL] Running strict SMF visual snapshot checks..."
@@ -447,7 +578,7 @@ Tasks:
   compile       - production desktop build
   clean         - stop dev servers and remove generated build artifacts
   verify        - lint/typecheck/build/chunk/unit/cargo checks
-  test:e2e      - Playwright
+  test:e2e      - Playwright (optional GenEye advisory wrapper; use -NoGenEye for browser-only)
   test:visual-strict - opt-in strict SMF visual snapshot checks
   test:visual-update - refresh opt-in strict SMF visual snapshots
   desktop-smoke - unbundled tauri build + basic check
@@ -460,6 +591,8 @@ Examples:
   .\run.bat 2
   .\run.ps1 -Task run
   .\run.ps1 -Task verify
+  .\run.ps1 -Task test:e2e -GenEyeRoot C:\DevStuff\Three-sisters\GenEye
+  .\run.ps1 -Task test:e2e -NoGenEye
 
 See docs/dev/TODO.md, docs/dev/APP_STATE.md and summary_bank.json for state, commands, gaps. Source/frontend and src-tauri fully populated (modular hook+components+loaders+Rust peeks).
 "@

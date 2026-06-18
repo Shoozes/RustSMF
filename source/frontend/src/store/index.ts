@@ -8,6 +8,7 @@
 
 import { useState, useCallback } from 'react';
 import * as THREE from 'three';
+import { supportedModelFormatsLabel } from '../utils/modelFormat';
 
 export interface LoadedModelState {
   root: THREE.Group | null;
@@ -81,7 +82,7 @@ export function useModelSlice(initial: Partial<LoadedModelState> = {}) {
 }
 
 export function useUiSlice(initial: Partial<UiState> = {}) {
-  const [status, setStatus] = useState<string>(initial.status ?? 'Three.js viewport ready (Y-up). Open .smf/.glb/.fbx/.obj. SMF/GLB/FBX export supported.');
+  const [status, setStatus] = useState<string>(initial.status ?? `Three.js viewport ready (Y-up). Open ${supportedModelFormatsLabel()}. SMF/GLB/FBX export supported.`);
   const [selected, setSelected] = useState<string>(initial.selected ?? 'Scene');
   const [isLoading, setIsLoading] = useState<boolean>(initial.isLoading ?? false);
   const [errorMsg, setErrorMsg] = useState<string>(initial.errorMsg ?? '');

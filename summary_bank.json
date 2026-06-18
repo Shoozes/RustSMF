@@ -75,7 +75,7 @@
     },
     "subsystem__harness_and_context": {
       "description": "Run scripts, agent workflows, context-bank generation, and repo helper tooling.",
-      "status": "Canonical process safety and verification context are anchored in `run.ps1`/`run.bat`, with context-bank checks in verify. Dev preview/e2e uses build+preview and retains separate process-lifecycle safeguards.",
+      "status": "Canonical process safety and verification context are anchored in `run.ps1`/`run.bat`, with context-bank checks in verify. Dev preview/e2e uses build+preview, can optionally wrap RustSMF Playwright through GenEye advisory `playwright-full -Group geneye-watch-fixture`, and retains separate process-lifecycle safeguards.",
       "paths": [
         "run.ps1",
         "run.bat",
@@ -100,6 +100,7 @@
       "notes": [
         "Use `pwsh -File run.ps1 -Task verify` for the canonical local health check; it must exit nonzero on failed gates.",
         "Use `pwsh -File run.ps1 -Task desktop-smoke` for unbundled Tauri build, Rust peeks, and native IPC mock coverage.",
+        "Use `pwsh -File run.ps1 -Task test:e2e -GenEyeRoot <path>` when GenEye subagent evidence is useful; use `-NoGenEye` for browser-only proof. The RustSMF Playwright command remains authoritative; app evidence comes from GenEye `project_tests` plus RustSMF artifacts, while the built-in GenEye scenario is plumbing-only.",
         "Use `pwsh -File run.ps1 -Task test:visual-strict` only for opt-in strict SMF screenshot baselines; use `test:visual-update` only for intentional snapshot refreshes.",
         "Use no-arg `pwsh -File run.ps1` or `run.bat` for default desktop launch.",
         "Avoid `summary_bank.json --auto-add` unless intentionally refreshing broad generated file lists; prefer narrow paths.",
@@ -279,6 +280,23 @@
       "next_prevention": "Keep contract statements aligned across README/docs/user/APP_STATE and verify no stale mention of outdated launcher guarantees appears during future doc edits.",
       "files": []
     },
+    "issue__geneye_precheck_without_evidence": {
+      "description": "A standalone GenEye smoke precheck can prove GenEye health without producing RustSMF Playwright JSON, artifact, or subagent-handoff evidence for the actual e2e run.",
+      "status": "fixed 2026-06-18",
+      "last_seen": "2026-06-18",
+      "paths": [
+        "run.ps1",
+        "README.md",
+        "source/frontend/tests/README.md",
+        "docs/dev/APP_STATE.md",
+        "docs/dev/TODO.md",
+        "docs/dev/PITFALL_LEDGER.md",
+        "summary_bank.json"
+      ],
+      "current_solution": "`run.ps1 -Task test:e2e` resolves optional GenEye and passes RustSMF's own `npm run test:e2e -- --reporter=json` command to GenEye `playwright-full -AllowGenEyeFailure -Group geneye-watch-fixture`, writing ignored evidence under `runtime-data/geneye-playwright-runs`. `-NoGenEye` or `RUSTSMF_NO_GENEYE=1` forces browser-only proof. Missing GenEye or pre-evidence GenEye failure falls back to browser-only Playwright; project-test failures still exit nonzero.",
+      "next_prevention": "When GenEye `playwright-full` or RustSMF e2e command names change, update README/tests/APP_STATE/pitfall text together and re-run the GenEye-backed path plus browser-only fallback.",
+      "files": []
+    },
     "issue__rogue_node_servers": {
       "description": "Rogue node/vite (or tauri-cli) dev servers left listening after close cmd/pwsh window (X), close Tauri app, Ctrl+C, or hard kill when using tauri dev (beforeDevCommand spawn) or direct npm/vite.",
       "status": "fixed 2026-06-16 via layered launcher (run.ps1 Job+tree+scans+finally+trap+stale) + beforeDev wrapper (mjs signals+killViteTree+taskkill /T+parent poll). Prior related: issue__launcher_default_local_tauri. Status includes unix fallback in wrapper (`pkill`/`kill`) for non-Windows environments. Checks (typecheck/cargo/context/verify) clean post-implementation.",
@@ -302,7 +320,7 @@
     },
     "tests__quality": {
       "description": "Automated quality gates: lint, app typecheck, test typecheck, Vite build, chunk guard, unit roundtrips, Playwright e2e, native IPC mocks, and Rust cargo checks/tests.",
-      "status": "Quality posture: app/typecheck gates, unit and e2e suites, native IPC/preview checks, and chunk/verify gates are the canonical verification baseline; visual strict checks are opt-in.",
+      "status": "Quality posture: app/typecheck gates, unit and e2e suites, native IPC/preview checks, optional GenEye advisory e2e evidence, and chunk/verify gates are the canonical verification baseline; visual strict checks are opt-in.",
       "paths": [
         "source/frontend/package.json",
         "source/package.json",

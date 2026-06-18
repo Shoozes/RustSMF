@@ -1,5 +1,6 @@
 import React from 'react';
 import type { EditorMode, ViewportLayout } from '../store';
+import { SUPPORTED_MODEL_ACCEPT } from '../utils/modelFormat';
 
 interface ToolbarProps {
   onOpen: () => void;
@@ -122,7 +123,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         type="file"
         data-testid="model-file-input"
         style={{ display: 'none' }}
-        accept=".smf,.glb,.gltf,.fbx,.obj"
+        accept={SUPPORTED_MODEL_ACCEPT}
         onChange={onFileChange}
       />
       <div className="text-xs text-slate-400 ml-auto pr-2">

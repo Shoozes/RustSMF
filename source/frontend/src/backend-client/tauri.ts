@@ -7,6 +7,7 @@
 import { invoke } from '@tauri-apps/api/core'
 import { open, save } from '@tauri-apps/plugin-dialog'
 import { bytesToArrayBuffer } from '../loaders'
+import { SUPPORTED_MODEL_ACCEPT } from '../utils/modelFormat'
 
 export interface OpenResult {
   path?: string
@@ -69,7 +70,7 @@ export async function openFile(): Promise<OpenResult | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = '.smf,.glb,.gltf,.fbx,.obj'
+    input.accept = SUPPORTED_MODEL_ACCEPT
     input.style.display = 'none'
     input.multiple = false
 

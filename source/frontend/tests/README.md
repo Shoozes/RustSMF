@@ -12,6 +12,8 @@ Use `pwsh -File ../../run.ps1 -Task test:visual-strict` from `source/frontend` o
 
 Playwright e2e is served from a production build through `vite preview`, not `vite dev`. Vite dev-server HMR websocket failures after the Vite 8 upgrade could reload pages during parallel WebGL/file-flow tests and create false failures, so `source/frontend/playwright.config.ts` builds first and starts preview on `127.0.0.1:5173`.
 
+From the repo root, `pwsh -File run.ps1 -Task test:e2e` first tries GenEye as an optional advisory subagent. When GenEye is available, RustSMF passes its own Playwright command (`npm run test:e2e -- --reporter=json`) to GenEye `playwright-full -AllowGenEyeFailure`, which writes `summary.json`, `subagent-handoff.json`, and related evidence under ignored `runtime-data\geneye-playwright-runs\`. RustSMF's Playwright config owns the app server/navigation, so GenEye's built-in scenario is only a plumbing check; use the `project_tests` block and discovered RustSMF Playwright artifacts as app evidence. Use `-NoGenEye` or `RUSTSMF_NO_GENEYE=1` for a browser-only run. If GenEye is missing or cannot produce project-test evidence, the launcher runs browser-only Playwright. RustSMF test failures remain blocking in either mode.
+
 ## How Visual Tests Are Made
 
 What:
@@ -69,6 +71,8 @@ Run from the repo root:
 ```powershell
 pwsh -File run.ps1 -Task verify
 pwsh -File run.ps1 -Task test:e2e
+pwsh -File run.ps1 -Task test:e2e -GenEyeRoot C:\DevStuff\Three-sisters\GenEye
+pwsh -File run.ps1 -Task test:e2e -NoGenEye
 pwsh -File run.ps1 -Task test:visual-strict
 ```
 

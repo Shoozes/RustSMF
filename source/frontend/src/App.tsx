@@ -9,6 +9,7 @@ import AnimatePanel from './components/AnimatePanel';
 import ExportPanel from './components/ExportPanel';
 import { useLoadModel } from './hooks/useLoadModel'
 import type { EditorMode } from './store'
+import { supportedModelFormatsLabel } from './utils/modelFormat'
 
 type WorkspaceProfile = {
   showTimeline: boolean;
@@ -217,7 +218,7 @@ export default function App() {
             {ui.status}
             {ui.isLoading && ' …'}
           </div>
-          <div className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 pointer-events-none">Drop .smf/.glb/.fbx/.obj here</div>
+          <div className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 pointer-events-none">Drop {supportedModelFormatsLabel()} here</div>
         </div>
 
         <div className="inspector-stack">

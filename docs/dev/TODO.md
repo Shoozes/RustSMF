@@ -17,6 +17,7 @@ This file is the active backlog. Completed work should stay in:
 - How:
   - Add a short launch contract matrix review whenever launcher scripts or scripts paths change.
   - Keep reduced-coverage vs canonical paths explicit in one place (launcher docs).
+  - Keep the optional GenEye advisory e2e contract aligned across `run.ps1`, README, test docs, APP_STATE, and summary_bank whenever either side changes the wrapper command or browser-only `-NoGenEye` behavior.
   - Run `python scripts/verify-context-bank.py` after docs or path changes.
 - Acceptance: New launcher/verify edits include one matching `docs/dev` and summary-bank path update with no stale-path references.
 

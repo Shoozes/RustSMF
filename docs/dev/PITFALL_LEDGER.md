@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-16 (updated SMF head-dummy pitfall after reported `.smf` load hang: effective-parent walks now detect self-parent/cycles, inverse binds are calculated after world-matrix update, and head dummy animation tracks are skipped).
+Last reviewed: 2026-06-18 (updated GenEye advisory e2e pitfall: RustSMF now wraps its own Playwright command with GenEye when available, while keeping browser-only e2e independent).
 
 ### Q: What pitfall are we preventing?
 
@@ -23,6 +23,28 @@ Last reviewed: 2026-06-16 (updated SMF head-dummy pitfall after reported `.smf` 
 **Relevance check:** Current. This repo intentionally keeps multiple docs and local skills, so path drift is likely during future consolidation.
 
 **Next prevention step:** Keep active docs under `docs/dev/`; if a doc moves, update `summary_bank.json` in the same change and run the verifier.
+
+### Q: What pitfall are we preventing?
+
+**What:** A GenEye smoke precheck can make an e2e run look GenEye-assisted without producing RustSMF Playwright evidence.
+
+**Why it happened:** A standalone `GenEye smoke` run proves the GenEye repo is healthy, but it does not wrap RustSMF's Playwright command, ingest RustSMF JSON reporter output, save RustSMF screenshots/traces/videos, or write a `subagent-handoff.json` for the actual project run.
+
+**Where:** `run.ps1 -Task test:e2e`, `README.md`, `source/frontend/tests/README.md`, `docs/dev/APP_STATE.md`, and GenEye `docs/PLAYWRIGHT.md`.
+
+**How to catch it:** Run `pwsh -File run.ps1 -Task test:e2e -GenEyeRoot C:\DevStuff\Three-sisters\GenEye` and confirm an ignored `runtime-data\geneye-playwright-runs\<stamp>\summary.json` or `advisory-fallback-summary.json` exists. If RustSMF tests fail, the command must still exit nonzero.
+
+**Solutions tried:**
+1. `55/100` Run GenEye smoke before direct Playwright, result: GenEye health was checked but no RustSMF subagent evidence was produced.
+2. `95/100` Pass RustSMF's own `npm run test:e2e -- --reporter=json` command to GenEye `playwright-full -AllowGenEyeFailure -Group geneye-watch-fixture`, result: GenEye can produce subagent evidence when available while browser-only e2e remains the fallback and app evidence stays tied to `project_tests`.
+
+**Current solution:** `run.ps1 -Task test:e2e` resolves GenEye from `-GenEyeRoot`, `GENEYE_ROOT`, `GENEYE_RUN_BAT`, or the local Three-Sisters path, then calls GenEye `playwright-full` in advisory mode with the small `geneye-watch-fixture` plumbing scenario. `-NoGenEye` or `RUSTSMF_NO_GENEYE=1` forces direct Playwright. If GenEye is missing or fails before project-test evidence exists, RustSMF runs direct Playwright. Project-test failures remain authoritative.
+
+**Effectiveness:** `95/100`, durable once kept aligned with GenEye's `playwright-full` contract. It gives Codex/subagents compact evidence without making RustSMF depend on GenEye to test itself.
+
+**Relevance check:** Current. RustSMF is the active external consumer for proving GenEye's browser-app testing workflow.
+
+**Next prevention step:** After any GenEye wrapper or RustSMF e2e command change, run both the GenEye-backed e2e path and the browser-only fallback, then update docs if evidence paths or command names change.
 
 ### Q: What pitfall are we preventing?
 

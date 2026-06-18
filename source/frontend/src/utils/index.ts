@@ -17,3 +17,13 @@ export {
 } from './viewportLayout';
 export type { ModelBounds, ViewportSpec, ViewportRole } from './viewportLayout';
 export { createSeqGuard } from './seqGuard';
+export {
+  MODEL_FORMAT_EXTENSIONS,
+  SUPPORTED_MODEL_ACCEPT,
+  SUPPORTED_MODEL_EXTENSIONS,
+  detectModelFormat,
+  getModelExtension,
+  isSupportedModelFormat,
+  supportedModelFormatsLabel,
+} from './modelFormat';
+export type { ModelSourceFormat } from './modelFormat';

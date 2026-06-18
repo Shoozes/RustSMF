@@ -15,9 +15,11 @@ Core: high-fidelity SMF roundtrip (import/export with coord/DQ), guarded skinned
 .\run.bat 2                            # run desktop app if already installed
 pwsh -File run.ps1 -Task run           # run desktop app if already installed
 pwsh -File run.ps1 -Task verify        # lint + app typecheck + test typecheck + build + chunk guard + unit + cargo check
-pwsh -File run.ps1 -Task test:e2e      # Playwright via build+preview (smoke + visual + native IPC mocks)
+pwsh -File run.ps1 -Task test:e2e      # Playwright via optional GenEye advisory wrapper, or browser-only if unavailable
 pwsh -File run.ps1 -Task test:visual-strict # opt-in strict SMF screenshot baselines
 pwsh -File run.ps1 -Task desktop-smoke # unbundled tauri build + Rust native peek tests (4 tests in main.rs)
+
+`test:e2e` keeps RustSMF independent. When GenEye is discoverable through `-GenEyeRoot`, `GENEYE_ROOT`, `GENEYE_RUN_BAT`, or the local Three-Sisters path, it wraps the RustSMF Playwright command with GenEye `playwright-full -AllowGenEyeFailure` and writes ignored evidence under `runtime-data\geneye-playwright-runs\`. RustSMF's Playwright config owns the app server/navigation, so GenEye's built-in scenario is only a plumbing check; the RustSMF app evidence is the GenEye `project_tests` result plus discovered RustSMF Playwright artifacts. Use `-NoGenEye` or `RUSTSMF_NO_GENEYE=1` for a browser-only run. If GenEye is missing or fails before project-test evidence exists, RustSMF runs browser-only Playwright. If RustSMF tests fail, their exit code stays authoritative.
 
 ## Launcher contract matrix (current)
 
