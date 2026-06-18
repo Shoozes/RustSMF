@@ -29,15 +29,21 @@ html, body, #root {
 
 .mode-tablist {
   display: inline-flex;
+  flex: 0 1 auto;
   gap: 6px;
   align-items: center;
   border: 1px solid #334155;
   border-radius: 6px;
   padding: 2px;
   background: #0f172a;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .mode-tab {
+  flex: 0 0 auto;
   height: 28px;
   min-width: 58px;
   padding: 0 8px;
@@ -185,7 +191,17 @@ button:active {
     padding: 8px;
   }
 
+  .mode-tablist {
+    order: 2;
+    width: 100%;
+  }
+
+  .layout-switch {
+    margin-left: 0;
+  }
+
   .toolbar .ml-auto {
+    order: 3;
     margin-left: 0;
     width: 100%;
   }

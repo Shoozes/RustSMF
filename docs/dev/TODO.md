@@ -38,47 +38,29 @@ This file is the active backlog. Completed work should stay in:
 - Why: `App` state plumbing is stable, but transition timing is a high-risk area for subtle UX regressions.
 - Where: `source/frontend/src/App.tsx`, `source/frontend/src/store/index.ts`, `source/frontend/src/components/{SkinPanel,AnimatePanel,ExportPanel}.tsx`, `source/frontend/tests/smoke.spec.ts`.
 - How:
-  - Keep viewport controls model-aware in the short path: no-model app state remains single-layout and single/quad layout switching becomes active after a model exists.
+  - Keep viewport controls model-aware in the short path: no-model app state remains single-layout and single/quad layout switching becomes active after a model exists. Current smoke coverage asserts the pre-load lock and constrained-width post-load tab switching.
   - Add transition assertions around mode + layout continuity for panel visibility, export status, and playback scrub timing.
   - Keep shared model root/persistence unchanged; assert no redundant reloads on switch.
   - Add one negative transition case (closed/disabled model + mode switch) to block stale panel writes.
 - Acceptance: Smoke plus a dedicated transition test suite demonstrates no accidental reload, status reset, or stale export state across workspace switches.
 
-### P2: Add contract-level tests for Tauri/native import-export edges
-
-- What: Keep browser fallback and native bridge contract behavior aligned with command payloads and cancel paths.
-- Why: Runtime-visible status and save behavior can drift after minor refactors even when unit tests pass.
-- Where: `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/native.spec.ts`, `source/src-tauri/src/main.rs`.
-- How:
-  - Expand async edge-case tests for open/read/save race/cancel paths (especially rapid sequential operations).
-  - Keep command contracts in docs and tests where behavior changes (what contract changed, why, and migration impact).
-- Acceptance: No import/export edge case modifies UI with stale path/version/contract data after a canceled or superseded operation.
-
 ### P2: Expand async race contract coverage across all load entrypoints
 
-- What: Add deterministic multi-path tests proving stale results cannot commit when operations overlap across picker open, file input, drag/drop, and export actions.
+- What: Complete deterministic multi-path coverage proving stale results cannot commit when operations overlap across picker open, file input, drag/drop, and export actions.
 - Why: Guards in `useLoadModel` look correct, but we do not currently validate all entrypoint permutations and timings together in one regression harness.
 - Where: `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests` (new race-spec or hook harness), `source/frontend/tests/native.spec.ts`, `source/frontend/tests/smoke.spec.ts`.
 - How:
-  - Add a focused test that starts overlapping `handleOpen`, `handleFileInputChange`, and `handleDrop` sequences and asserts final model/state/status reflect only the latest successful operation.
-  - Add a busy-guard race case where export save resolves late while a second export or load starts.
-  - Include explicit status/error assertions for canceled saves and superseded reads to prevent UI state from drifting.
+  - Keep native open/load/export overlap coverage in `native.spec.ts` (open cancel/read/save overlaps + delayed-save single-flight).
+  - Keep native open coverage format-agnostic by adding a path-backed non-SMF assertion that `read_file_binary` is used and no `.smf` peek is called.
+  - Added browser overlap coverage in `smoke.spec.ts`:
+    - delayed file-read in file input + immediate synthetic drop read with a different fixture.
+    - final status remains the latest drop result; delayed input result is ignored.
+  - Keep a shared helper pair in `source/frontend/tests/helpers/smoke-helpers.ts` to patch/restore delayed `File.prototype.arrayBuffer` and dispatch synthetic drop payloads.
+  - Add explicit status/error assertions for canceled saves and superseded reads to prevent UI state drift.
 - Acceptance:
-  - No stale root/selection/status/error writes are visible after a newer op has started.
-  - The harness covers at least one browser-file and one native-like mocked-open path.
-
-### P2: Resolve tiny-viewport mode/workspace transition variance
-
-- What: Remove remaining model-mode workspace non-determinism on narrow layouts so mode tab clicks (Model/Rig/Skin/Animate/Export) transition consistently under constrained viewport widths.
-- Why: One e2e flow had to relax strict mode-switch assertions on very small viewports to avoid false negatives, which hides a real UX consistency gap and keeps workspace intent ambiguous for constrained desktops/tablets.
-- Where: `source/frontend/src/App.tsx`, `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/components/SkinPanel.tsx`, `source/frontend/src/components/AnimatePanel.tsx`, `source/frontend/src/components/ExportPanel.tsx`, `source/frontend/tests/smoke.spec.ts`.
-- How:
-  - Capture and assert the effective workspace mode transition state from both toolbar button state and panel mount outcome.
-  - Add a deterministic small-viewport transition test that proves at least one workspace switch succeeds per click and that selected bone/scrub continuity remains stable.
-  - If layout-size gating is intentional, make the behavior explicit in UI copy and tests (instead of relying on relaxed assertions).
-- Acceptance:
-  - Small-width model flows reliably switch workspace panel and mode state in repeated clicks with stable selected/scrub continuity.
-  - Coverage proves behavior in e2e with no fallback assertions for mode-change progress.
+  - No stale root/selection/status/error writes are visible after a newer load op has started.
+  - Browser load overlap now covers file-input + drop; native covers open/load/export overlaps.
+  - Deferred follow-up: add deterministic browser export-overlap assertions if the download/export path is made fully test-addressable.
 
 ### P2: Maintain modular-doc integrity and reduce review debt
 

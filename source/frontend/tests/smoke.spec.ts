@@ -1,10 +1,15 @@
 import { test, expect, type Page } from '@playwright/test';
 import fs from 'fs';
+import path from 'path';
 import {
   BAD_INPUT_FOR_ERROR_TEST,
   SAMPLE_FBX,
   SAMPLE_OBJ,
   SAMPLE_SMF,
+  SyntheticDropFile,
+  dispatchSyntheticDrop,
+  restoreBrowserFileArrayBuffer,
+  withBrowserFileArrayBufferDelay,
   expectRenderedScreenshot,
   getBrowserErrors,
   pausePlaybackIfRunning,
@@ -16,6 +21,8 @@ const parseSelectedBone = (statusText: string | null): string => {
   const match = /Selected:\s*([^\|\n]+)/.exec(statusText ?? '');
   return match?.[1]?.trim() ?? '';
 };
+
+const fileToBase64 = (filePath: string): string => fs.readFileSync(filePath).toString('base64');
 
 type RelativePoint = { x: number; y: number };
 
@@ -166,7 +173,11 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     // Viewport + canvas
     await expect(page.getByTestId('viewport-container')).toBeVisible();
-    await expect(page.getByTestId('three-canvas')).toBeVisible();
+    const canvas = page.getByTestId('three-canvas');
+    await expect(canvas).toBeVisible();
+    await expect(canvas).toHaveAttribute('data-viewport-layout', 'single');
+    await expect(page.getByTestId('viewport-layout-single')).toBeDisabled();
+    await expect(page.getByTestId('viewport-layout-quad')).toBeDisabled();
 
     // Timeline and outliner present
     await expect(page.getByTestId('timeline')).toBeVisible();
@@ -316,6 +327,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const quadBtn = page.getByTestId('viewport-layout-quad');
     await expect(singleBtn).toHaveAttribute('aria-pressed', 'true');
     await expect(quadBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(singleBtn).toBeEnabled();
+    await expect(quadBtn).toBeEnabled();
 
     await setViewportLayout(page, 'quad');
     await expect(page.getByTestId('viewport-container')).toBeVisible();
@@ -342,6 +355,89 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await setViewportLayout(page, 'single');
     await expect(page.getByTestId('viewport-container')).toBeVisible();
     await expectRenderedScreenshot(page.getByTestId('viewport-container'), 2500);
+  });
+
+  test('small viewport mode tabs switch deterministically after load', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
+
+    await page.setViewportSize({ width: 360, height: 720 });
+    await page.goto('/');
+
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-layout', 'single');
+    await expect(page.getByTestId('viewport-layout-quad')).toBeDisabled();
+
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('viewport-layout-quad')).toBeEnabled();
+
+    const inspector = page.getByTestId('inspector');
+    const firstBone = inspector.locator('li > div').filter({ hasText: /./ }).first();
+    await firstBone.click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
+    const selectedBefore = parseSelectedBone(await page.getByTestId('status-text').textContent());
+
+    await pausePlaybackIfRunning(page);
+    const slider = page.getByTestId('timeline').locator('input[type="range"]');
+    await slider.fill('0.2');
+    const scrubBefore = await page.getByTestId('time-display').textContent();
+
+    const switchMode = async (
+      mode: 'view' | 'rig' | 'skin' | 'animate' | 'export',
+      panelTestId?: string,
+    ): Promise<void> => {
+      const tab = page.getByTestId(`mode-tab-${mode}`);
+      await tab.scrollIntoViewIfNeeded();
+      await expect(tab).toBeVisible();
+      await tab.click();
+      await expect(tab).toHaveAttribute('aria-selected', 'true');
+      if (panelTestId) {
+        await expect(page.getByTestId(panelTestId)).toBeVisible();
+      }
+      await expect(page.getByTestId('three-canvas')).toBeVisible();
+    };
+
+    await switchMode('rig');
+    await switchMode('skin', 'skin-workspace-panel');
+    await switchMode('animate', 'animate-workspace-panel');
+    await switchMode('export', 'export-workspace-panel');
+    await switchMode('view');
+
+    const statusAfter = await page.getByTestId('status-text').textContent();
+    expect(parseSelectedBone(statusAfter)).toBe(selectedBefore);
+    expect(await page.getByTestId('time-display').textContent()).toBe(scrubBefore);
+  });
+
+  test('latest async load wins between file input and drop', async ({ page }) => {
+    test.skip(!SAMPLE_SMF || !SAMPLE_FBX, 'Both .smf and .fbx fixtures are required for async overlap coverage.');
+
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    const inputDropTarget = page.getByTestId('viewport-container');
+    const fbxBase64 = fileToBase64(SAMPLE_FBX!);
+    const dropFileSpec: SyntheticDropFile = {
+      name: 'sample-fbx.fbx',
+      mimeType: 'application/x-fbx',
+      base64: fbxBase64,
+    };
+
+    await withBrowserFileArrayBufferDelay(page, {
+      delayedFileName: path.basename(SAMPLE_SMF!),
+      delayMs: 450,
+    });
+
+    try {
+      await input.setInputFiles(SAMPLE_SMF!);
+      await dispatchSyntheticDrop(inputDropTarget, dropFileSpec);
+
+      await expect(page.getByTestId('status-text')).toContainText('Loaded FBX', { timeout: 15000 });
+      await expect(page.getByTestId('status-text')).not.toContainText(/Loaded:.*\.smf|mixamo/i);
+      await expect(page.getByTestId('three-canvas')).toBeVisible();
+      await page.waitForTimeout(250);
+      await expect(page.getByTestId('status-text')).toContainText(/Loaded FBX|Nothing to export|No skinned model loaded/i);
+    } finally {
+      await restoreBrowserFileArrayBuffer(page);
+    }
   });
 
   test('endpoint drag works in rig mode across single and quad layouts', async ({ page }) => {

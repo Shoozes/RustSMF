@@ -99,6 +99,7 @@ export default function App() {
 
   const workspace = WORKSPACE_BY_MODE[editorMode];
   const shouldShowBoneLabels = showBoneLabels || workspace.boneLabelsEnabledByDefault;
+  const hasModel = !!model.root;
   const hasSkinnedModel = !!model.skeleton && model.skeleton.bones.length > 0;
   const modeWorkspacePanel = (() => {
     if (editorMode === 'skin') {
@@ -145,6 +146,12 @@ export default function App() {
     return cleanup;
   }, [setupKeyboard]);
 
+  useEffect(() => {
+    if (!hasModel && viewportLayout !== 'single') {
+      setViewportLayout('single');
+    }
+  }, [hasModel, setViewportLayout, viewportLayout]);
+
   return (
     <div className="app-shell">
       <Toolbar
@@ -154,6 +161,7 @@ export default function App() {
         onPing={pingRust}
         isLoading={ui.isLoading}
         onFileChange={handleFileInputChange}
+        hasModel={hasModel}
         editorMode={editorMode}
         setEditorMode={setEditorMode}
         viewportLayout={viewportLayout}

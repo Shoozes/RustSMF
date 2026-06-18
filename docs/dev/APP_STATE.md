@@ -11,7 +11,7 @@ Core flow:
 - Load `.smf`, `.glb`, `.gltf`, `.fbx`, and `.obj` through browser input, drag/drop, or Tauri native dialog.
 - Render model roots in a self-contained Three.js viewport with orbit, wheel zoom, right-drag pan, reset, lighting, grid, axes, resize handling, and cleanup.
 - Viewport layout controls are model-aware: with no model loaded, layout is forced to single-view (`data-viewport-layout="single"`); single/quad layout controls become active after a model is loaded.
-- Mode/workspace switching is continuity-checked in normal and medium viewports; very narrow layouts have one remaining deterministic-UI gap where mode tab reactivity can vary by browser sizing. This is tracked as an active P2 in the todo backlog.
+- Mode/workspace switching is continuity-checked in normal, medium, and constrained-width viewports; narrow layouts put mode tabs on a scrollable row, and layout switching remains disabled until a model is loaded.
 - Launcher contract (current):
   - `run.bat` / `run.ps1` are the canonical Windows workflow and carry full orphan-prevention coverage.
   - `run.ps1 -Task run` (same as launcher option 2) is the default app launch path after setup.
@@ -24,9 +24,10 @@ Core flow:
 - Export compatible skinned GLB/FBX runtime roots to SMF through `threeToSmf`; use GLB export for static/material/scale cases.
 - Cover default non-SMF skinned load/export e2e with a generated self-authored skinned GLB fixture.
 - Cover basic FBX parsing/export dispatch with a self-authored static ASCII FBX fixture.
-- Use Rust/Tauri commands for native open/save, binary read/write, and small SMF header/rig/anim/model validation/status peeks.
-- Ignore stale file-open and browser file/drop read results when a newer operation has started.
+- Use Rust/Tauri commands for native open/save, binary read/write, and small SMF header/rig/anim/model validation/status peeks. Desktop open is format-aware: all path-backed non-SMF models now route through `readBinaryFile`, while `.smf` still performs `get_smf_desktop_info` validation before parse.
+- Ignore stale file-open and browser file/drop read results when a newer operation has started (covered by native mocked-open/rapid-export checks and browser file-input/drop overlap smoke assertions).
 - Keep editor mode + viewport layout transitions on the same shared model/viewport root; selected bone and scrub/timeline state are preserved across those transitions and now covered by smoke assertions.
+- Keep constrained-width workspace tabs deterministic after model load; the 360px smoke path clicks Model/Rig/Skin/Animate/Export without forced clicks and verifies selected bone plus scrub continuity.
 - Model/load/export async failures in `useLoadModel` now normalize unknown error values through a single helper and remove brittle `any` traversal casts for skinned mesh extraction/clip reads.
 - Planned modernization keeps the current React/Tauri/Three stack, uses GLB/GLTF as the preferred modern fidelity format, preserves SMF for backwards compatibility, and uses the old GameMaker screenshots to guide optional quad/ortho workspaces with larger bone handles/labels for rigging and skinning. Endpoint drag constraints and pane-aware timing have been validated in e2e (single + quad).
 
@@ -35,7 +36,7 @@ Core flow:
 - `source/frontend/src/App.tsx`: thin shell wiring toolbar, viewport, inspector, timeline, outliner, drop zone, status, and error banner.
 - `source/frontend/src/hooks/useLoadModel.ts`: load/export orchestration, source format tracking, Tauri lazy imports, load/open stale guards, selected bone handling, pose edit persistence, transform mode, and weight preview state.
 - `source/frontend/src/hooks/useLoadModel.ts`: loader path now resolves a typed `TauriClient` contract (`../backend-client/tauri`) and uses a shared typed `LoadedModelResult`, reducing `any` usage across load/export/peek branches.
-- `source/frontend/src/hooks/useLoadModel.ts`: in-flight export/save guard (`isBusy`) now serializes export actions during async save/write.
+- `source/frontend/src/hooks/useLoadModel.ts`: in-flight export/save guard (`isExportingRef` + export seq guard) serializes export actions during async save/write and blocks stale completions.
 - `source/frontend/tests/native.spec.ts`: added Playwright native IPC race coverage for delayed native saves to prove single-flight export behavior and status-button recovery under rapid click.
 - `source/frontend/src/hooks/poseEdits.ts`: nudge delta types and helpers for live SMF position/rotation edits.
 - `source/frontend/src/components/ThreeViewport.tsx`: renderer, scene, camera, orbit, model attach/dispose, mixer, skeleton helper, raycast bone picking, marker, TransformControls, and weight preview.

@@ -149,6 +149,12 @@ export async function pausePlaybackIfRunning(page: Page): Promise<void> {
   }
 }
 
+export interface SyntheticDropFile {
+  name: string;
+  mimeType: string;
+  base64: string;
+}
+
 export async function expectRenderedScreenshot(
   locator: Locator,
   minBytes = 3000,
@@ -166,6 +172,72 @@ export async function expectRenderedScreenshot(
   // Still proves the viewport actually rendered something substantial (model + grid + axes etc.).
   const shot = await locator.screenshot();
   expect(shot.length).toBeGreaterThan(minBytes);
+}
+
+export async function withBrowserFileArrayBufferDelay(
+  page: Page,
+  options: { delayedFileName: string; delayMs: number },
+): Promise<void> {
+  await page.evaluate((config) => {
+    const originalArrayBuffer = File.prototype.arrayBuffer;
+    const delayedFile = config.delayedFileName;
+    const delayMs = config.delayMs;
+    let remainingDelayCalls = 1;
+
+    File.prototype.arrayBuffer = async function (): Promise<ArrayBuffer> {
+      const fileName = this instanceof File ? this.name : '';
+      const shouldDelay = fileName === delayedFile && remainingDelayCalls > 0;
+      if (shouldDelay) {
+        remainingDelayCalls -= 1;
+        await new Promise<void>((resolve) => window.setTimeout(resolve, delayMs));
+      }
+      return originalArrayBuffer.call(this) as Promise<ArrayBuffer>;
+    };
+
+    (window as any).__RUSTSMF_ARRAYBUFFER_RESTORE__ = () => {
+      File.prototype.arrayBuffer = originalArrayBuffer;
+    };
+  }, options);
+}
+
+export async function restoreBrowserFileArrayBuffer(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const restore = (window as any).__RUSTSMF_ARRAYBUFFER_RESTORE__;
+    if (typeof restore === 'function') {
+      restore();
+      (window as any).__RUSTSMF_ARRAYBUFFER_RESTORE__ = undefined;
+    }
+  });
+}
+
+export async function dispatchSyntheticDrop(
+  target: Locator,
+  file: SyntheticDropFile,
+): Promise<void> {
+  await target.evaluate((targetElement, fileDef) => {
+    const binaryString = atob(fileDef.base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i += 1) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+
+    const synthetic = new File([bytes], fileDef.name, {
+      type: fileDef.mimeType || 'application/octet-stream',
+    });
+
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(synthetic);
+    targetElement.dispatchEvent(new DragEvent('dragover', {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer,
+    }));
+    targetElement.dispatchEvent(new DragEvent('drop', {
+      bubbles: true,
+      cancelable: true,
+      dataTransfer,
+    }));
+  }, file);
 }
 
 interface DiagnosticPage extends Page {
@@ -229,6 +301,7 @@ export interface TauriMockInit {
   cancelOpen?: boolean;
   cancelSave?: boolean;
   failWrite?: boolean;
+  writeDelayMs?: number;
 }
 
 interface TauriMockCall {
@@ -280,6 +353,9 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
             return state.desktopInfo;
           case 'write_file_binary': {
             if (state.failWrite) throw new Error('mock write failed');
+            if (typeof state.writeDelayMs === 'number' && state.writeDelayMs > 0) {
+              await new Promise((resolve) => setTimeout(resolve, state.writeDelayMs));
+            }
             const data = Array.isArray(args?.data) ? args.data as number[] : [];
             const pathValue = typeof args?.path === 'string' ? args.path : '';
             state.writes.push({
@@ -314,7 +390,7 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
   }, init);
 }
 
-export async function updateTauriMock(page: Page, patch: Partial<Pick<TauriMockInit, 'cancelOpen' | 'cancelSave' | 'failWrite'>>): Promise<void> {
+export async function updateTauriMock(page: Page, patch: Partial<Pick<TauriMockInit, 'cancelOpen' | 'cancelSave' | 'failWrite' | 'writeDelayMs'>>): Promise<void> {
   await page.evaluate((statePatch) => {
     const state = (window as TauriMockWindow).__RUSTSMF_TAURI_MOCK__;
     if (state) Object.assign(state, statePatch);

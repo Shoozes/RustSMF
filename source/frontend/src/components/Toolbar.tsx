@@ -9,6 +9,7 @@ interface ToolbarProps {
   onPing: () => void;
   isLoading: boolean;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  hasModel: boolean;
   editorMode: EditorMode;
   setEditorMode: (mode: EditorMode) => void;
   viewportLayout: ViewportLayout;
@@ -22,6 +23,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onPing,
   isLoading,
   onFileChange,
+  hasModel,
   editorMode,
   setEditorMode,
   viewportLayout,
@@ -101,7 +103,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
           data-testid="viewport-layout-single"
           className={`layout-btn ${viewportLayout === 'single' ? 'layout-btn-active' : ''}`}
           onClick={() => setViewportLayout('single')}
-          disabled={isLoading}
+          disabled={isLoading || !hasModel}
           aria-pressed={viewportLayout === 'single'}
         >
           Single
@@ -112,7 +114,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
           data-testid="viewport-layout-quad"
           className={`layout-btn ${viewportLayout === 'quad' ? 'layout-btn-active' : ''}`}
           onClick={() => setViewportLayout('quad')}
-          disabled={isLoading}
+          disabled={isLoading || !hasModel}
           aria-pressed={viewportLayout === 'quad'}
         >
           Quad

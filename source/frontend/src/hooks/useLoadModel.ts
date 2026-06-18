@@ -64,6 +64,33 @@ export function useLoadModel() {
   const loadSeqGuardRef = useRef(createSeqGuard());
   const openSeqGuardRef = useRef(createSeqGuard());
   const fileReadSeqGuardRef = useRef(createSeqGuard());
+  const exportSeqGuardRef = useRef(createSeqGuard());
+  const isExportingRef = useRef(false);
+
+  const withExportBusy = useCallback(async (actionLabel: string, action: () => Promise<void>) => {
+    if (isExportingRef.current) {
+      ui.setStatus(`${actionLabel} already in progress. Wait for the current save to finish.`);
+      return;
+    }
+
+    const exportSeq = exportSeqGuardRef.current.next();
+    const isCurrentExport = () => exportSeqGuardRef.current.isCurrent(exportSeq);
+
+    isExportingRef.current = true;
+    ui.setIsLoading(true);
+
+    try {
+      await action();
+    } catch (e: any) {
+      if (!isCurrentExport()) return;
+      ui.setErrorMsg(`${actionLabel} error: ${e?.message || e}`);
+      ui.setStatus(`${actionLabel} error: ${e?.message || e}`);
+    } finally {
+      if (!isCurrentExport()) return;
+      isExportingRef.current = false;
+      ui.setIsLoading(false);
+    }
+  }, [ui]);
 
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
@@ -149,26 +176,21 @@ export function useLoadModel() {
       // Single dynamic import for all Tauri client fns when on desktop .smf path.
       // Reduces redundancy (multiple awaits), improves timing (one module load), centralizes.
       let tauri: TauriClient | null = null;
-      if (!data && res.path) {
+      if (res.path) {
+        tauri = await getTauriClient();
         if (detectedSourceFormat === 'smf') {
-          tauri = await getTauriClient();
           const peek = await fetchSmfDesktopInfo(res.path, tauri);
           if (!isCurrentLoad()) return;
           if (!peek.rustValidated && peek.rustPeekMsg) return; // already set error above
           rustValidated = peek.rustValidated;
           rustPeekMsg = peek.rustPeekMsg;
         }
+      }
+
+      if (!data && res.path) {
         ui.setStatus('Reading binary from desktop path...');
-        if (!tauri) tauri = await getTauriClient();
-        data = await tauri.readBinaryFile(res.path);
+        data = await tauri!.readBinaryFile(res.path);
         if (!isCurrentLoad()) return;
-      } else if (detectedSourceFormat === 'smf' && res.path) {
-        tauri = await getTauriClient();
-        const peek = await fetchSmfDesktopInfo(res.path, tauri);
-        if (!isCurrentLoad()) return;
-        if (!peek.rustValidated && peek.rustPeekMsg) return; // already set error above
-        rustValidated = peek.rustValidated;
-        rustPeekMsg = peek.rustPeekMsg;
       }
 
       if (detectedSourceFormat === 'smf') {
@@ -236,9 +258,11 @@ export function useLoadModel() {
   }, [ui, model, playbackRef, clearLoadedModel, formatSmfDesktopInfo]);
 
   const handleOpen = useCallback(async () => {
+    if (ui.isLoading) return;
     const openSeqGuard = openSeqGuardRef.current;
     const openSeq = openSeqGuard.next();
     ui.setStatus(`Opening file picker (${supportedModelFormatsLabel()} supported)...`);
+    ui.setIsLoading(true);
     try {
       const res: OpenResult | null = await (await getTauriClient()).openFile();
       if (!openSeqGuard.isCurrent(openSeq)) return;
@@ -252,127 +276,137 @@ export function useLoadModel() {
       const msg = e?.message || String(e);
       ui.setErrorMsg(`Open error: ${msg}`);
       ui.setStatus(`Open error: ${msg}`);
+    } finally {
+      if (openSeqGuard.isCurrent(openSeq)) {
+        ui.setIsLoading(false);
+      }
     }
   }, [ui, loadModel]);
 
   const handleExport = useCallback(async () => {
     const smfData = lastSmfDataRef.current;
-    if (smfData) {
-      ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms + live pose edits)...');
+    await withExportBusy('Export', async () => {
       try {
-        const skeleton = model.skeleton;
-        const dataToExport = skeleton
-          ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
-          : smfData;
-        const buf = exportSMFToBuffer(dataToExport);
-        const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
-        if (!ok) { ui.setStatus('Export canceled.'); return; }
-        ui.setStatus('Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!');
-        return;
-      } catch (e: any) {
-        ui.setStatus(`SMF export error: ${e?.message || e}. Falling back to GLB...`);
-      }
-    }
+        if (smfData) {
+          ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms + live pose edits)...');
+          const skeleton = model.skeleton;
+          const dataToExport = skeleton
+            ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
+            : smfData;
 
-    const rootToExport = model.root;
-    if (!rootToExport) {
-      ui.setStatus('Nothing to export.');
-      return;
-    }
+          const buf = exportSMFToBuffer(dataToExport);
+          const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
+          if (!ok) {
+            ui.setStatus('Export canceled.');
+            return;
+          }
 
-    const srcFmt = lastSourceFormatRef.current;
-    const isFBXSource = srcFmt === 'fbx';
+          ui.setStatus('Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!');
+          return;
+        }
 
-    if (isFBXSource) {
-      ui.setStatus('Exporting FBX-loaded model (via GLTF container for full skin/anim fidelity; no new deps)...');
-      try {
-        const buf = await exportFBX(rootToExport, model.clips);
+        const rootToExport = model.root;
+        if (!rootToExport) {
+          ui.setStatus('Nothing to export.');
+          return;
+        }
+
+        const srcFmt = lastSourceFormatRef.current;
+        const isFBXSource = srcFmt === 'fbx';
+
+        if (isFBXSource) {
+          ui.setStatus('Exporting FBX-loaded model (via GLTF container for full skin/anim fidelity; no new deps)...');
+          try {
+            const buf = await exportFBX(rootToExport, model.clips);
+            const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.glb');
+            if (!ok) {
+              ui.setStatus('Export canceled.');
+              return;
+            }
+            ui.setStatus('Exported .glb (from FBX source via GLTF equivalent). Re-import as .glb works; for true .fbx use DCC or save-as-SMF first.');
+            return;
+          } catch (e: any) {
+            ui.setStatus(`FBX export error: ${e?.message || e}. Falling back to generic GLB...`);
+          }
+        }
+
+        ui.setStatus('Exporting current model as GLB...');
+        const buf = await exportGLB(rootToExport, model.clips);
         const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.glb');
-        if (!ok) { ui.setStatus('Export canceled.'); return; }
-        ui.setStatus('Exported .glb (from FBX source via GLTF equivalent). Re-import as .glb works; for true .fbx use DCC or save-as-SMF first.');
-        return;
+        if (!ok) {
+          ui.setStatus('Export canceled.');
+          return;
+        }
+        ui.setStatus('Exported .glb (animations included when present).');
       } catch (e: any) {
-        ui.setStatus(`FBX export error: ${e?.message || e}. Falling back to generic GLB...`);
+        const msg = e?.message || String(e);
+        ui.setErrorMsg(`Export error: ${msg}`);
+        ui.setStatus(`Export error: ${msg}`);
       }
-    }
-
-    ui.setStatus('Exporting current model as GLB...');
-    try {
-      const buf = await exportGLB(rootToExport, model.clips);
-      const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.glb');
-      if (!ok) { ui.setStatus('Export canceled.'); return; }
-      ui.setStatus('Exported .glb (animations included when present).');
-    } catch (e: any) {
-      const msg = e?.message || String(e);
-      ui.setErrorMsg(`Export error: ${msg}`);
-      ui.setStatus(`Export error: ${msg}`);
-    }
-  }, [ui, model]);
+    });
+  }, [ui, model, withExportBusy]);
 
   // Dedicated "Export as SMF" handler. SMF sources use the imported-data fidelity path;
   // non-SMF skinned sources use the guarded Three-to-SMF converter.
   const handleExportSmf = useCallback(async () => {
-    const rootToExport = model.root;
-    const skeleton = model.skeleton;
-
-    const smfData = lastSmfDataRef.current;
-    if (smfData) {
-      ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms + live pose edits)...');
+    await withExportBusy('Export as SMF', async () => {
       try {
-        const dataToExport = skeleton
-          ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
-          : smfData;
-        const buf = exportSMFToBuffer(dataToExport);
+        const rootToExport = model.root;
+        const skeleton = model.skeleton;
+        const smfData = lastSmfDataRef.current;
+
+        if (smfData) {
+          ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms + live pose edits)...');
+          const dataToExport = skeleton
+            ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
+            : smfData;
+          const buf = exportSMFToBuffer(dataToExport);
+          const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
+          if (!ok) {
+            ui.setStatus('Export canceled.');
+            return;
+          }
+          ui.setStatus('Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!');
+          return;
+        }
+
+        if (!rootToExport || !skeleton) {
+          ui.setStatus('No skinned model loaded for SMF export. Load a GLB/FBX with skeleton or use GLB export.');
+          return;
+        }
+
+        ui.setStatus('Exporting as SMF via guarded converter (Three skinned -> ImportedSmf)...');
+
+        // Collect any SkinnedMeshes under the loaded root (converter uses first for mesh data).
+        const skinnedMeshes: THREE.SkinnedMesh[] = [];
+        rootToExport.traverse((o: any) => {
+          if (o.isSkinnedMesh) skinnedMeshes.push(o as THREE.SkinnedMesh);
+        });
+
+        const imported = buildImportedSmfFromThree({
+          skeleton,
+          skinnedMeshes: skinnedMeshes.length ? skinnedMeshes : undefined,
+          clips: model.clips,
+        });
+
+        const buf = exportSMFToBuffer(imported);
         const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
         if (!ok) {
           ui.setStatus('Export canceled.');
           return;
         }
-        ui.setStatus('Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!');
-        return;
+        ui.setStatus('Exported .smf (from GLB/FBX via guarded threeToSmf converter + live pose). Re-import to verify fidelity!');
       } catch (e: any) {
-        ui.setStatus(`SMF export error: ${e?.message || e}. Falling back to guarded converter...`);
-      }
-    }
-
-    if (!rootToExport || !skeleton) {
-      ui.setStatus('No skinned model loaded for SMF export. Load a GLB/FBX with skeleton or use GLB export.');
-      return;
-    }
-
-    ui.setStatus('Exporting as SMF via guarded converter (Three skinned -> ImportedSmf)...');
-
-    try {
-      // Collect any SkinnedMeshes under the loaded root (converter uses first for mesh data).
-      const skinnedMeshes: THREE.SkinnedMesh[] = [];
-      rootToExport.traverse((o: any) => {
-        if (o.isSkinnedMesh) skinnedMeshes.push(o as THREE.SkinnedMesh);
-      });
-
-      const imported = buildImportedSmfFromThree({
-        skeleton,
-        skinnedMeshes: skinnedMeshes.length ? skinnedMeshes : undefined,
-        clips: model.clips,
-      });
-
-      const buf = exportSMFToBuffer(imported);
-      const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
-      if (!ok) {
-        ui.setStatus('Export canceled.');
-        return;
-      }
-      ui.setStatus('Exported .smf (from GLB/FBX via guarded threeToSmf converter + live pose). Re-import to verify fidelity!');
-    } catch (e: any) {
-      if (e instanceof SmfConversionError) {
-        ui.setStatus(`Cannot export as SMF: ${e.message}. Falling back to GLB for full fidelity.`);
-      } else {
+        if (e instanceof SmfConversionError) {
+          ui.setStatus(`Cannot export as SMF: ${e.message}. Falling back to GLB for full fidelity.`);
+          return;
+        }
         const msg = e?.message || String(e);
         ui.setErrorMsg(`SMF export error: ${msg}`);
         ui.setStatus(`SMF export error: ${msg}`);
       }
-    }
-  }, [ui, model]);
-
+    });
+  }, [ui, model, withExportBusy]);
   const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;

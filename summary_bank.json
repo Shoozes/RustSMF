@@ -110,7 +110,7 @@
     },
     "feature__model_loading_export": {
       "description": "User-facing load, preview, edit-preview, and export flow across SMF, GLB/GLTF, FBX, and OBJ.",
-      "status": "core connected; SMF high-fid + live pose export; dedicated Export as SMF preserves SMF-source fidelity; guarded non-SMF skinned SMF export wired and covered by generated skinned GLB e2e; static FBX fixture covers basic parser/export dispatch; overlapping open results guarded with stable seq refs; 2026-06-16: SMF head-dummy hierarchy walk is cycle-safe for self-parent root heads, inverse binds refresh world matrices before calculateInverses, and animation tracks skip non-scene heads so real .smf load clears without missing-target warnings; source-format detection is now centralized in `source/frontend/src/utils/modelFormat.ts` with explicit unsupported-format fail-fast behavior.",
+      "status": "core connected; SMF high-fid + live pose export; dedicated Export as SMF preserves SMF-source fidelity; guarded non-SMF skinned SMF export wired and covered by generated skinned GLB e2e; static FBX fixture covers basic parser/export dispatch; overlapping open results guarded with stable seq refs; 2026-06-18: browser input/drop overlap now has explicit e2e race coverage with delayed input read and synthetic drop read; desktop open now reads binary bytes for all path-backed model formats while preserving `.smf` desktop validation first; native open/load/export overlap remains covered in mocked Tauri; 2026-06-16: SMF head-dummy hierarchy walk is cycle-safe for self-parent root heads, inverse binds refresh world matrices before calculateInverses, and animation tracks skip non-scene heads so real .smf load clears without missing-target warnings; source-format detection is now centralized in `source/frontend/src/utils/modelFormat.ts` with explicit unsupported-format fail-fast behavior.",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -136,13 +136,14 @@
     },
     "feature__modern_editor_workspaces": {
       "description": "Planned modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, optional quad/ortho precision views, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
-      "status": "Editor workspace shell and quad/shared layout are active; remaining work is parity and ergonomics in ortho panes, bone affordances, and deeper precision controls while preserving shared model root continuity.",
+      "status": "Editor workspace shell and quad/shared layout are active; constrained-width mode tabs now use a scrollable toolbar row and deterministic post-load smoke coverage; remaining work is parity and ergonomics in ortho panes, bone affordances, and deeper precision controls while preserving shared model root continuity.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
         "docs/references/old-src/screenshots/README.md",
         "docs/references/old-src/screenshots/*.png",
         "source/frontend/src/App.tsx",
+        "source/frontend/src/index.css",
         "source/frontend/src/components/SkinPanel.tsx",
         "source/frontend/src/components/AnimatePanel.tsx",
         "source/frontend/src/components/ExportPanel.tsx",
@@ -221,7 +222,7 @@
     },
     "subsystem__tauri_bridge_and_rust_peeks": {
       "description": "Tauri native dialog/save/read commands, browser fallbacks, Rust SMF header/section peeks, and desktop status messages.",
-      "status": "native peeks and fallback strings covered; `TauriClient` contract is now centralized in `source/frontend/src/backend-client/tauri.ts`; `useLoadModel.ts` uses typed bridge and loader contracts for fewer runtime/typing mismatches; Playwright native IPC mock spec covers open/read/save/write/cancel and now validates `get_smf_desktop_info` command args plus version/offset/count contract presence in status text; true OS-dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it",
+      "status": "native peeks and fallback strings covered; `TauriClient` contract is centralized in `source/frontend/src/backend-client/tauri.ts`; `useLoadModel.ts` uses typed bridge and loader contracts for fewer runtime/typing mismatches; Playwright native IPC mock spec covers open/read/save/write/cancel and now asserts delayed-write single-flight export overlap plus `get_smf_desktop_info` argument + status-contract checks, and non-SMF native path loads are now explicitly exercised via `read_file_binary`; true OS-dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it",
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -493,16 +494,33 @@
     },
     "issue__open_dialog_stale_result": {
       "description": "Older openFile dialog results or browser file/drop read failures could mutate status/error or call loadModel after a newer operation had started.",
-      "status": "fixed 2026-06-15; handleOpen uses openSeqRef and browser file/drop read success/catch paths use fileReadSeqRef before mutation",
-      "last_seen": "2026-06-15",
+      "status": "completed 2026-06-18; handleOpen uses openSeqRef and browser file/drop read success/catch paths use fileReadSeqRef before mutation.",
+      "last_seen": "2026-06-18",
       "paths": [
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/tests/native.spec.ts",
+        "source/frontend/tests/smoke.spec.ts",
+        "source/frontend/tests/helpers/smoke-helpers.ts",
         "docs/dev/PITFALL_LEDGER.md"
       ],
-      "current_solution": "handleOpen increments `openSeqRef`; browser file-input/drop reads increment `fileReadSeqRef`; stale success/catch paths return before state mutation.",
-      "next_prevention": "Add a focused overlapping-open/read async test if open/load orchestration changes again.",
+      "current_solution": "handleOpen increments `openSeqRef`; browser file-input/drop reads increment `fileReadSeqRef`; stale success/catch paths return before state mutation. Native overlap checks stay in `native.spec.ts`; browser overlap checks added with delayed input reads + synthetic drop reads in `smoke.spec.ts`.",
+      "next_prevention": "Keep overlap checks current if `open`/load orchestration changes or if browser export-save mockability becomes deterministic enough for parity checks.",
+      "files": []
+    },
+    "issue__desktop_open_non_smf_path_read": {
+      "description": "Desktop path-based opens for non-SMF formats could be under-specified, with only SMF-specific validation path covered and no explicit assertion that non-SMF branches read file bytes through the desktop bridge.",
+      "status": "completed 2026-06-18",
+      "last_seen": "2026-06-18",
+      "paths": [
+        "source/frontend/src/hooks/useLoadModel.ts",
+        "source/frontend/src/backend-client/tauri.ts",
+        "source/frontend/tests/native.spec.ts",
+        "docs/dev/APP_STATE.md",
+        "summary_bank.json"
+      ],
+      "current_solution": "Native open now always reads bytes with `readBinaryFile` when `res.path` is present for non-SMF formats, while preserving SMF header peek for `.smf`; `native.spec.ts` now includes a path-backed non-SMF open test (`.obj`) that asserts `read_file_binary` is called and `get_smf_desktop_info` is intentionally not used.",
+      "next_prevention": "Keep format-agnostic desktop path-load coverage in `native.spec.ts` whenever a new supported import format is added.",
       "files": []
     },
     "issue__smf_visual_tearing": {
@@ -664,7 +682,7 @@
     },
     "issue__mode_layout_transition_continuity": {
       "description": "Mode or viewport-layout switches could alter selected-bone/clip scrub state without explicit continuity checks, even when model/model-root state was preserved.",
-      "status": "partially complete: smoke checks cover continuity across normal and medium viewports; narrow layout mode-tab reactivity still has deterministic-UI variance and is tracked as a follow-up issue.",
+      "status": "partially complete: smoke checks cover continuity across normal, medium, and constrained-width viewports; remaining work is a broader dedicated transition suite around export/status timing and negative no-model panel writes.",
       "last_seen": "2026-06-18",
       "paths": [
         "source/frontend/src/App.tsx",
@@ -682,23 +700,24 @@
     },
     "issue__mode_tab_responsive_regression": {
       "description": "Tiny viewport widths can make mode/workspace tab transitions inconsistent or visually inert across model view modes, while continuity assertions still pass with relaxed layout expectations.",
-      "status": "open",
+      "status": "completed 2026-06-18",
       "last_seen": "2026-06-18",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/components/Toolbar.tsx",
+        "source/frontend/src/index.css",
         "source/frontend/src/components/SkinPanel.tsx",
         "source/frontend/src/components/AnimatePanel.tsx",
         "source/frontend/src/components/ExportPanel.tsx",
         "source/frontend/tests/smoke.spec.ts"
       ],
-      "current_solution": "No fix is committed yet. Tests currently validate continuity and avoid strict mode-state assertions on narrow layouts to prevent false negatives.",
-      "next_prevention": "Add deterministic narrow-viewport mode transition test coverage and explicit UI behavior for constrained viewports before considering this issue complete.",
+      "current_solution": "Toolbar mode tabs now occupy a full-width scrollable row under 800px; layout buttons are disabled until a model exists and `App` forces no-model layout back to single. `smoke.spec.ts` includes a 360px post-load mode cycle that clicks Model/Rig/Skin/Animate/Export without forced clicks and verifies selected-bone plus scrub continuity.",
+      "next_prevention": "Keep constrained-width mode coverage whenever toolbar layout, mode state, or panel mount behavior changes.",
       "files": []
     },
     "issue__export_inflight_guard": {
       "description": "Rapid repeated export actions can overlap async save/write operations and leave duplicate writes or stale status/UI state when users interact faster than completion.",
-      "status": "completed 2026-06-18: in-flight save/write was hardened with UI busy guard; native Playwright now verifies delayed-write single-flight export behavior and post-write recovery.",
+      "status": "completed 2026-06-18: in-flight save/write is hardened with `isExportingRef` + export sequence guard; UI stays busy until completion and stale completions are ignored.",
       "last_seen": "2026-06-18",
       "paths": [
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -711,7 +730,7 @@
         "source/frontend/tests/native.spec.ts",
         "source/frontend/tests/helpers/smoke-helpers.ts"
       ],
-      "current_solution": "Added `isBusy` + `isBusyRef` around export handlers and wired toolbar isLoading to block rapid export/layout/mode clicks while save/write is running.",
+      "current_solution": "Export handlers call a shared `withExportBusy` wrapper that serializes export calls, uses a per-export sequence token to ignore stale completions, and reuses `ui.isLoading` for toolbar/mode/layout lockout. IPC mock supports `writeDelayMs` and native e2e asserts one write only under rapid clicks.",
       "next_prevention": "Keep native delayed-write single-flight coverage while export/state transitions evolve.",
       "files": []
     }

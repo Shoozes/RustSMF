@@ -136,6 +136,28 @@ Last reviewed: 2026-06-18 (updated GenEye advisory e2e pitfall: RustSMF now wrap
 
 ### Q: What pitfall are we preventing?
 
+**What:** Narrow toolbar layouts can make mode tabs partially unreachable or visually inert while broader viewport continuity checks still pass.
+
+**Why it happened:** The mode tablist used fixed-width inline-flex tabs inside a wrapping toolbar. At constrained widths, the tab group could overflow instead of becoming a predictable interaction row, and pre-load layout switching was documented as model-gated but not enforced by the toolbar controls.
+
+**Where:** `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/App.tsx`, `source/frontend/src/index.css`, and `source/frontend/tests/smoke.spec.ts`.
+
+**How to catch it:** Run the constrained-width smoke path that sets the viewport to 360px, loads the SMF fixture, clicks Model/Rig/Skin/Animate/Export tabs without forced clicks, and verifies selected-bone plus scrub continuity. Also assert no-model layout buttons are disabled and the canvas remains single-layout.
+
+**Solutions tried:**
+1. `65/100` Rely on normal/medium viewport mode continuity checks, result: narrow overflows could remain hidden.
+2. `93/100` Put mode tabs on a full-width scrollable row under 800px, disable layout switching until a model exists, force no-model layout back to single, and add the constrained-width smoke test, result: mode changes are deterministic at 360px and the documented no-model layout contract is executable.
+
+**Current solution:** Toolbar mode tabs use a constrained scroll row on small screens; `Toolbar` receives `hasModel` to gate layout buttons; `App` resets no-model layout to single; smoke tests cover pre-load layout lock and post-load narrow mode switching.
+
+**Effectiveness:** `93/100`, durable. The behavior is verified through a real browser at the problematic width and keeps state continuity assertions tied to actual clicks.
+
+**Relevance check:** Current. Toolbar, workspace panel, and viewport layout changes are active backlog areas.
+
+**Next prevention step:** Keep constrained-width e2e coverage with any toolbar, workspace mode, or layout-control refactor.
+
+### Q: What pitfall are we preventing?
+
 **What:** PowerShell test wrappers can report success even when npm/Playwright fails.
 
 **Why it happened:** PowerShell functions return everything written to the success stream. `Invoke-FrontendNpm` emitted npm output plus a boolean, so `if (-not (Invoke-FrontendNpm ...))` evaluated the non-empty output array as truthy even when `$LASTEXITCODE` was nonzero.
