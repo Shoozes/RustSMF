@@ -147,6 +147,6 @@ describe('skinWeights', () => {
     assert.equal(clean.dirtyMeshIds.size, 0);
     assert.equal(dirty.dirtyMeshIds.has('mesh-1'), true);
     assert.equal(dirty.editedVertices.get('mesh-1')?.has(4), true);
-    assert.match(getDirtySkinExportBlockReason(dirty) ?? '', /not yet connected to the SMF export serializer/);
+    assert.equal(getDirtySkinExportBlockReason(dirty), null);
   });
 });

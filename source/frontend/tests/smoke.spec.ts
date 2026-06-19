@@ -15,7 +15,10 @@ import {
   pausePlaybackIfRunning,
   setupBrowserDiagnostics,
 } from './helpers/smoke-helpers';
-import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
+import {
+  createSkinnedGlbFixtureInput,
+  createSkinnedGlbFixtureInputWithOptions,
+} from './helpers/skinned-glb-fixture';
 
 const parseSelectedBone = (statusText: string | null): string => {
   const match = /Selected:\s*([^\|\n]+)/.exec(statusText ?? '');
@@ -122,6 +125,34 @@ const dragEndpointHandle = async (
   return false;
 };
 
+const paintInViewport = async (
+  page: Page,
+  options?: { x?: number; y?: number; dx?: number; dy?: number },
+): Promise<boolean> => {
+  const canvas = page.getByTestId('three-canvas');
+  const box = await canvas.boundingBox();
+  if (!box) return false;
+
+  const x = options?.x ?? (box.x + box.width / 2);
+  const y = options?.y ?? (box.y + box.height / 2);
+  const dx = options?.dx ?? 28;
+  const dy = options?.dy ?? 24;
+
+  await page.mouse.move(x, y);
+  await page.mouse.down({ button: 'left' });
+  await page.mouse.move(x + dx, y + dy);
+  await page.waitForTimeout(80);
+  await page.mouse.up({ button: 'left' });
+  return true;
+};
+
+const setRangeValue = async (page: Page, testId: string, value: number): Promise<void> => {
+  const slider = page.getByTestId(testId);
+  await slider.fill(String(value));
+  await slider.dispatchEvent('input');
+  await page.waitForTimeout(20);
+};
+
 const setViewportLayout = async (page: Page, layout: 'single' | 'quad'): Promise<void> => {
   const canvas = page.getByTestId('three-canvas');
   const singleBtn = page.getByTestId('viewport-layout-single');
@@ -177,13 +208,94 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(canvas).toBeVisible();
     await expect(canvas).toHaveAttribute('data-viewport-layout', 'single');
     await expect(canvas).toHaveAttribute('data-wireframe-enabled', 'false');
+    await expect(canvas).toHaveAttribute('data-grid-enabled', 'true');
+    await expect(canvas).toHaveAttribute('data-axes-enabled', 'true');
+    await expect(canvas).toHaveAttribute('data-texture-enabled', 'true');
+    await expect(canvas).toHaveAttribute('data-shader-enabled', 'false');
+    await expect(canvas).toHaveAttribute('data-perspective-enabled', 'true');
+    await expect(canvas).toHaveAttribute('data-model-opacity', '1');
+    await expect(canvas).toHaveAttribute('data-bone-index-labels-enabled', 'false');
+    await expect(canvas).toHaveAttribute('data-rig-opacity', '1');
+    await expect(canvas).toHaveAttribute('data-rig-thickness-scale', '1');
     await expect(page.getByTestId('viewport-layout-single')).toBeDisabled();
     await expect(page.getByTestId('viewport-layout-quad')).toBeDisabled();
     await expect(page.getByTestId('viewport-wireframe-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-grid-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-axes-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-texture-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-bone-index-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-shader-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-perspective-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-model-opacity-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-rig-opacity-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-rig-thickness-toggle')).toBeDisabled();
 
     // Timeline and outliner present
     await expect(page.getByTestId('timeline')).toBeVisible();
     await expect(page.getByTestId('outliner')).toBeVisible();
+  });
+
+  test('mode switching without model keeps disabled layout controls stable', async ({ page }) => {
+    await page.goto('/');
+
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-layout', 'single');
+    await expect(page.getByTestId('viewport-layout-single')).toBeDisabled();
+    await expect(page.getByTestId('viewport-layout-quad')).toBeDisabled();
+    await expect(page.getByTestId('viewport-wireframe-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-texture-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-bone-index-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-shader-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-perspective-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-model-opacity-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-rig-opacity-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-rig-thickness-toggle')).toBeDisabled();
+
+  const assertModeActive = async (mode: 'view' | 'rig' | 'skin' | 'animate' | 'export'): Promise<void> => {
+    const tab = page.getByTestId(`mode-tab-${mode}`);
+    await tab.click({ force: true });
+    await expect(tab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('three-canvas')).toBeVisible();
+    await expect(page.getByTestId('viewport-layout-single')).toBeDisabled();
+    await expect(page.getByTestId('viewport-layout-quad')).toBeDisabled();
+    await expect(page.getByTestId('viewport-wireframe-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-grid-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-axes-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-texture-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-bone-index-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-shader-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-perspective-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-model-opacity-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-rig-opacity-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-rig-thickness-toggle')).toBeDisabled();
+    const statusText = await page.getByTestId('status-text').textContent();
+    expect(statusText).toContain('Three.js viewport ready');
+    };
+
+    await assertModeActive('view');
+    await expect(page.getByTestId('skin-workspace-panel')).toBeHidden();
+    await expect(page.getByTestId('animate-workspace-panel')).toBeHidden();
+    await expect(page.getByTestId('export-workspace-panel')).toBeHidden();
+
+    await assertModeActive('rig');
+    await expect(page.getByTestId('inspector')).toBeVisible();
+    await expect(page.getByTestId('three-canvas')).toBeVisible();
+
+    await assertModeActive('skin');
+    await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+    await expect(page.getByTestId('skin-paint-mode-set')).toBeDisabled();
+    await expect(page.getByTestId('skin-paint-mode-add')).toBeDisabled();
+    await expect(page.getByTestId('skin-paint-mode-subtract')).toBeDisabled();
+
+    await assertModeActive('animate');
+    await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
+
+    await assertModeActive('export');
+    await expect(page.getByTestId('export-workspace-panel')).toBeVisible();
+    await expect(page.getByTestId('export-btn')).toBeEnabled();
+    await expect(page.getByTestId('export-smf-btn')).toBeEnabled();
+
+    const criticalErrors = getBrowserErrors(page).filter((e: string) => e.includes('ERROR'));
+    expect(criticalErrors.length).toBe(0);
   });
 
   test('can load a real SMF sample and basic UI updates', async ({ page }) => {
@@ -218,15 +330,102 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     // Canvas still there (Three.js kept rendering)
     await expect(page.getByTestId('three-canvas')).toBeVisible();
     const wireframeBtn = page.getByTestId('viewport-wireframe-toggle');
+    const gridBtn = page.getByTestId('viewport-grid-toggle');
+    const axesBtn = page.getByTestId('viewport-axes-toggle');
+    const textureBtn = page.getByTestId('viewport-texture-toggle');
+    const shaderBtn = page.getByTestId('viewport-shader-toggle');
+    const perspectiveBtn = page.getByTestId('viewport-perspective-toggle');
+    const boneIndexBtn = page.getByTestId('viewport-bone-index-toggle');
+    const rigOpacityBtn = page.getByTestId('viewport-rig-opacity-toggle');
+    const rigThicknessBtn = page.getByTestId('viewport-rig-thickness-toggle');
+    const modelOpacityBtn = page.getByTestId('viewport-model-opacity-toggle');
     const canvas = page.getByTestId('three-canvas');
     await expect(wireframeBtn).toBeEnabled();
     await expect(wireframeBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(gridBtn).toBeEnabled();
+    await expect(gridBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(axesBtn).toBeEnabled();
+    await expect(axesBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(textureBtn).toBeEnabled();
+    await expect(textureBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(shaderBtn).toBeEnabled();
+    await expect(shaderBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(perspectiveBtn).toBeEnabled();
+    await expect(perspectiveBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(modelOpacityBtn).toBeEnabled();
+    await expect(modelOpacityBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(boneIndexBtn).toBeEnabled();
+    await expect(boneIndexBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(rigOpacityBtn).toBeEnabled();
+    await expect(rigOpacityBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(rigThicknessBtn).toBeEnabled();
+    await expect(rigThicknessBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvas).toHaveAttribute('data-grid-enabled', 'true');
+    await expect(canvas).toHaveAttribute('data-axes-enabled', 'true');
+    await expect(canvas).toHaveAttribute('data-texture-enabled', 'true');
+    await expect(canvas).toHaveAttribute('data-shader-enabled', 'false');
+    await expect(canvas).toHaveAttribute('data-perspective-enabled', 'true');
+    await expect(canvas).toHaveAttribute('data-model-opacity', '1');
+    await expect(canvas).toHaveAttribute('data-bone-index-labels-enabled', 'false');
+    await expect(canvas).toHaveAttribute('data-rig-opacity', '1');
+    await expect(canvas).toHaveAttribute('data-rig-thickness-scale', '1');
     await wireframeBtn.click();
     await expect(wireframeBtn).toHaveAttribute('aria-pressed', 'true');
     await expect(canvas).toHaveAttribute('data-wireframe-enabled', 'true');
+    await gridBtn.click();
+    await expect(gridBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvas).toHaveAttribute('data-grid-enabled', 'false');
+    await axesBtn.click();
+    await expect(axesBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvas).toHaveAttribute('data-axes-enabled', 'false');
+    await textureBtn.click();
+    await expect(textureBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvas).toHaveAttribute('data-texture-enabled', 'false');
+    await shaderBtn.click();
+    await expect(shaderBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(canvas).toHaveAttribute('data-shader-enabled', 'true');
+    await perspectiveBtn.click();
+    await expect(perspectiveBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvas).toHaveAttribute('data-perspective-enabled', 'false');
+    await modelOpacityBtn.click();
+    await expect(modelOpacityBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(canvas).toHaveAttribute('data-model-opacity', '0.35');
+    await boneIndexBtn.click();
+    await expect(boneIndexBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(canvas).toHaveAttribute('data-bone-index-labels-enabled', 'true');
+    await rigOpacityBtn.click();
+    await expect(rigOpacityBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(canvas).toHaveAttribute('data-rig-opacity', '0.35');
+    await rigThicknessBtn.click();
+    await expect(rigThicknessBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(canvas).toHaveAttribute('data-rig-thickness-scale', '0.45');
     await expectRenderedScreenshot(page.getByTestId('viewport-container'), 2500);
     await wireframeBtn.click();
     await expect(canvas).toHaveAttribute('data-wireframe-enabled', 'false');
+    await gridBtn.click();
+    await expect(canvas).toHaveAttribute('data-grid-enabled', 'true');
+    await axesBtn.click();
+    await expect(canvas).toHaveAttribute('data-axes-enabled', 'true');
+    await textureBtn.click();
+    await expect(canvas).toHaveAttribute('data-texture-enabled', 'true');
+    await boneIndexBtn.click();
+    await expect(boneIndexBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvas).toHaveAttribute('data-bone-index-labels-enabled', 'false');
+    await rigOpacityBtn.click();
+    await expect(rigOpacityBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvas).toHaveAttribute('data-rig-opacity', '1');
+    await rigThicknessBtn.click();
+    await expect(rigThicknessBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvas).toHaveAttribute('data-rig-thickness-scale', '1');
+    await shaderBtn.click();
+    await expect(shaderBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvas).toHaveAttribute('data-shader-enabled', 'false');
+    await perspectiveBtn.click();
+    await expect(perspectiveBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(canvas).toHaveAttribute('data-perspective-enabled', 'true');
+    await modelOpacityBtn.click();
+    await expect(modelOpacityBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvas).toHaveAttribute('data-model-opacity', '1');
 
     // Exercise bone list selection (simulates user picking bone in inspector for coverage)
     // Also verifies collapsible hierarchy tree (nested ul/li with +/- toggles) using the real local model
@@ -452,6 +651,107 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
       await expect(page.getByTestId('three-canvas')).toBeVisible();
       await page.waitForTimeout(250);
       await expect(page.getByTestId('status-text')).toContainText(/Loaded FBX|Nothing to export|No skinned model loaded/i);
+    } finally {
+      await restoreBrowserFileArrayBuffer(page);
+    }
+  });
+
+  test('skin dirty state resets when stale overlapped load wins from drop', async ({ page }) => {
+    test.skip(!SAMPLE_SMF || !SAMPLE_FBX, 'Both .smf and .fbx fixtures are required for async overlap coverage with skin state.');
+
+    await page.goto('/');
+
+    const skinnedFixtureInput = await createSkinnedGlbFixtureInput();
+    const input = page.getByTestId('model-file-input');
+    const inputDropTarget = page.getByTestId('viewport-container');
+    const fbxBase64 = fileToBase64(SAMPLE_FBX!);
+    const dropFileSpec: SyntheticDropFile = {
+      name: 'sample-fbx.fbx',
+      mimeType: 'application/x-fbx',
+      base64: fbxBase64,
+    };
+
+    await input.setInputFiles(skinnedFixtureInput);
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
+    await page.getByTestId('mode-tab-skin').click({ force: true });
+    await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+    await expect(page.getByTestId('skin-paint-mode-subtract')).toBeEnabled();
+
+    const inspector = page.getByTestId('inspector');
+    const fixtureBone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    await fixtureBone.click({ force: true });
+    await page.waitForTimeout(60);
+    const selectedBefore = parseSelectedBone(await page.getByTestId('status-text').textContent());
+    expect(selectedBefore).toBe('FixtureTip');
+
+    await page.getByTestId('skin-paint-mode-subtract').click({ force: true }).catch(() => {});
+    await setRangeValue(page, 'skin-paint-target', 1);
+    await setRangeValue(page, 'skin-paint-radius', 1);
+    await setRangeValue(page, 'skin-paint-strength', 1);
+    await paintInViewport(page);
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
+
+    await withBrowserFileArrayBufferDelay(page, {
+      delayedFileName: path.basename(SAMPLE_SMF!),
+      delayMs: 450,
+    });
+
+    try {
+      await input.setInputFiles(SAMPLE_SMF!);
+      await dispatchSyntheticDrop(inputDropTarget, dropFileSpec);
+
+      await expect(page.getByTestId('status-text')).toContainText('Loaded FBX', { timeout: 15000 });
+      await expect(page.getByTestId('status-text')).not.toContainText(/Loaded:.*\.smf|mixamo|FixtureTip/i);
+      await page.getByTestId('mode-tab-skin').click({ force: true });
+      await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: false');
+      await expect(page.getByTestId('skin-export-block')).toHaveCount(0);
+    } finally {
+      await restoreBrowserFileArrayBuffer(page);
+    }
+  });
+
+  test('pose edit dirty state resets when stale overlapped load wins from drop', async ({ page }) => {
+    test.skip(!SAMPLE_SMF || !SAMPLE_FBX, 'Both .smf and .fbx fixtures are required for async overlap coverage.');
+
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    const inputDropTarget = page.getByTestId('viewport-container');
+    const fbxBase64 = fileToBase64(SAMPLE_FBX!);
+    const dropFileSpec: SyntheticDropFile = {
+      name: 'sample-fbx.fbx',
+      mimeType: 'application/x-fbx',
+      base64: fbxBase64,
+    };
+
+    await input.setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    await expect(page.getByTestId('inspector')).toBeVisible();
+    const firstBone = page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    await expect(firstBone).toBeVisible();
+    await firstBone.click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
+    await page.getByTestId('transform-x-btn').click({ force: true }).catch(() => {});
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+
+    await withBrowserFileArrayBufferDelay(page, {
+      delayedFileName: path.basename(SAMPLE_SMF!),
+      delayMs: 450,
+    });
+
+    try {
+      await input.setInputFiles(SAMPLE_SMF!);
+      await dispatchSyntheticDrop(inputDropTarget, dropFileSpec);
+
+      await expect(page.getByTestId('status-text')).toContainText('Loaded FBX', { timeout: 15000 });
+      await expect(page.getByTestId('status-text')).not.toContainText(/Loaded:.*\.smf|mixamo|FixtureTip|Pose edit dirty/i);
+
+      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
     } finally {
       await restoreBrowserFileArrayBuffer(page);
     }
@@ -806,6 +1106,12 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(roundtripResult).toBeVisible({ timeout: 5000 });
     await expect(roundtripResult).toHaveAttribute('data-smf-roundtrip-ok', 'true');
     await expect(roundtripResult).toContainText(/Roundtrip passed/i);
+    const roundtripSummaryText = (await roundtripResult.textContent()) || '';
+    const normalizedRoundtripSummary = roundtripSummaryText.replace(/\s+/g, ' ');
+    expect(normalizedRoundtripSummary).toContain('max vertex delta');
+    expect(normalizedRoundtripSummary).toContain('normal delta');
+    expect(normalizedRoundtripSummary).toContain('bone pose delta');
+    expect(normalizedRoundtripSummary).toContain('samples');
     await expect(page.getByTestId('status-text')).toContainText(/SMF roundtrip check passed/i, { timeout: 5000 });
     await page.getByTestId('save-smf-report-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Saved SMF diagnostic report/i, { timeout: 5000 });
@@ -835,6 +1141,131 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const errors = getBrowserErrors(page);
     const criticalErrors = errors.filter((e: string) => e.includes('ERROR'));
     expect(criticalErrors.length).toBe(0);
+  });
+
+  test('generated skinned GLB with material layout warnings surfaces SMF compatibility notes', async ({ page }) => {
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(await createSkinnedGlbFixtureInputWithOptions({ withTexture: true, nonPowerOfTwoTexture: true }));
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+
+    await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture-texture\.glb|bones: 2|clips: 1/i);
+
+    await page.getByTestId('mode-tab-export').click({ force: true });
+    const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
+    await expect(diagnosticsPanel).toBeVisible();
+    await expect(diagnosticsPanel).toHaveAttribute('data-smf-can-export', 'true');
+    await expect(diagnosticsPanel).toContainText(/SMF diagnostics: ready/i);
+
+    const warnings = page.getByTestId('smf-diagnostic-warning');
+    await expect(warnings).toHaveCount(1);
+    await expect(warnings.first()).toContainText(/SMF_NON_POT_TEXTURE/);
+
+    await page.getByTestId('export-smf-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
+  });
+
+  test('skin paint is disabled without bone selection', async ({ page }) => {
+    await page.goto('/');
+
+    await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+
+    await page.getByTestId('mode-tab-skin').click({ force: true });
+    await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: false');
+
+    const canvas = page.getByTestId('three-canvas');
+    await page.getByTestId('three-canvas').click();
+    await paintInViewport(page);
+    await expect(canvas).toHaveAttribute('data-skin-brush-hover', 'inactive');
+    const noBoneHitCount = Number(await canvas.getAttribute('data-skin-paint-hit-count'));
+    expect(noBoneHitCount).toBe(0);
+    expect(await canvas.getAttribute('data-skin-brush-x')).toBe(null);
+
+    const reason = page.getByTestId('skin-export-block');
+    await expect(reason).toHaveCount(0);
+    await page.getByTestId('export-smf-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
+  });
+
+  test('skin paint updates edit state and exports SMF', async ({ page }) => {
+    await page.goto('/');
+
+    await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+
+    const skinTab = page.getByTestId('mode-tab-skin');
+    await skinTab.click({ force: true });
+    await expect(skinTab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+
+    const inspector = page.getByTestId('inspector');
+    const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    await expect(bone).toBeVisible();
+    await bone.click({ force: true });
+    await page.waitForTimeout(50);
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
+
+    await page.getByTestId('skin-paint-mode-subtract').click({ force: true }).catch(() => {});
+    await expect(page.getByTestId('skin-paint-mode-subtract')).toHaveClass(/bg-emerald-500/);
+    await setRangeValue(page, 'skin-paint-target', 1);
+    await setRangeValue(page, 'skin-paint-radius', 1);
+    await setRangeValue(page, 'skin-paint-strength', 1);
+    await expect(page.getByTestId('skin-paint-target')).toHaveValue('1');
+    await expect(page.getByTestId('skin-paint-radius')).toHaveValue('1');
+    await expect(page.getByTestId('skin-paint-strength')).toHaveValue('1');
+
+    await paintInViewport(page);
+    const paintCanvas = page.getByTestId('three-canvas');
+    await expect(paintCanvas).toHaveAttribute('data-skin-brush-hover', 'active');
+    const paintHitCount = Number(await paintCanvas.getAttribute('data-skin-paint-hit-count'));
+    expect(paintHitCount).toBeGreaterThan(0);
+    await expect(paintCanvas).toHaveAttribute('data-skin-paint-mode', 'subtract');
+    const brushX = await paintCanvas.getAttribute('data-skin-brush-x');
+    const brushY = await paintCanvas.getAttribute('data-skin-brush-y');
+    const brushZ = await paintCanvas.getAttribute('data-skin-brush-z');
+    expect(typeof brushX === 'string' && brushX.length > 0).toBeTruthy();
+    expect(typeof brushY === 'string' && brushY.length > 0).toBeTruthy();
+    expect(typeof brushZ === 'string' && brushZ.length > 0).toBeTruthy();
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
+
+    await page.getByTestId('export-smf-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
+    await expect(page.getByTestId('skin-export-block')).toHaveCount(0);
+  });
+
+  test('skin brush state clears when switching workspaces', async ({ page }) => {
+    await page.goto('/');
+
+    await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+
+    const skinTab = page.getByTestId('mode-tab-skin');
+    await skinTab.click({ force: true });
+    await expect(skinTab).toHaveAttribute('aria-selected', 'true');
+    const inspector = page.getByTestId('inspector');
+    const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    await expect(bone).toBeVisible();
+    await bone.click({ force: true });
+    await page.waitForTimeout(50);
+
+    const statusText = await page.getByTestId('status-text').textContent();
+    const selectedBone = parseSelectedBone(statusText);
+    expect(selectedBone).toBe('FixtureTip');
+
+    await page.getByTestId('skin-paint-mode-subtract').click({ force: true }).catch(() => {});
+    const paintCanvas = page.getByTestId('three-canvas');
+    await paintInViewport(page);
+    await expect(paintCanvas).toHaveAttribute('data-skin-brush-hover', 'active');
+
+    await page.getByTestId('mode-tab-view').click({ force: true });
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-editor-mode', 'view');
+    expect(await paintCanvas.getAttribute('data-skin-brush-hover')).toBe(null);
+    expect(await paintCanvas.getAttribute('data-skin-paint-active')).toBe(null);
+    expect(await paintCanvas.getAttribute('data-skin-paint-mode')).toBe(null);
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
   });
 
   // OBJ static load parity (per P4 and edge case search).

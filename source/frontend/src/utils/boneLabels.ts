@@ -13,12 +13,12 @@ interface BoneLabelOptions {
 export function makeBoneLabel(text: string, options: BoneLabelOptions = {}): THREE.Group {
   const scale = Math.max(0.25, options.scale ?? 1);
   const group = new THREE.Group();
-  (group as any).userData = { isBoneLabel: true };
+  group.userData = { isBoneLabel: true };
 
   // Small AxesHelper for visual bone marker/glyph (advances editor affordances)
   const axes = new THREE.AxesHelper(0.08 * scale);
-  (axes.material as any).depthTest = false;
-  (axes.material as any).transparent = true;
+  axes.material.depthTest = false;
+  axes.material.transparent = true;
   group.add(axes);
 
   // Canvas name sprite (cheap text label, no extra deps)

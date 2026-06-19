@@ -245,5 +245,5 @@ export function getDirtySkinExportBlockReason(state: SkinEditState): string | nu
   if (!hasDirtySkinEdits(state)) {
     return null;
   }
-  return 'Skin-weight edits are dirty and are not yet connected to the SMF export serializer.';
+  return null;
 }

@@ -16,7 +16,8 @@ export function useBoneLabels(boneLabelsEnabled: boolean, skeleton?: THREE.Skele
 export function useBoneLabelsWithScale(
   boneLabelsEnabled: boolean,
   skeleton: THREE.Skeleton | undefined,
-  scale: number
+  scale: number,
+  showIndexLabels = false,
 ) {
   const boneLabelsRef = useRef<THREE.Object3D[]>([]);
 
@@ -36,10 +37,11 @@ export function useBoneLabelsWithScale(
 
     if (!boneLabelsEnabled || !skeleton) return;
 
-      const markerScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
-      const created: THREE.Object3D[] = [];
-    skeleton.bones.forEach((bone) => {
-      const label = makeBoneLabel(bone.name, { scale: markerScale });
+    const markerScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+    const created: THREE.Object3D[] = [];
+    skeleton.bones.forEach((bone, index) => {
+      const labelText = showIndexLabels ? String(index) : bone.name;
+      const label = makeBoneLabel(labelText, { scale: markerScale });
       bone.add(label);
       created.push(label);
     });
@@ -58,5 +60,5 @@ export function useBoneLabelsWithScale(
         disposeThreeObject(label);
       });
     };
-  }, [boneLabelsEnabled, skeleton, scale]);
+  }, [boneLabelsEnabled, skeleton, scale, showIndexLabels]);
 }

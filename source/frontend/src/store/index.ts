@@ -34,7 +34,16 @@ export interface UiState {
   errorMsg: string;
   editorMode: EditorMode;
   viewportLayout: ViewportLayout;
+  textureEnabled: boolean;
+  boneIndexLabelsEnabled: boolean;
+  rigOpacity: number;
+  rigThicknessScale: number;
+  gridEnabled: boolean;
+  axesEnabled: boolean;
   wireframeEnabled: boolean;
+  shaderEnabled: boolean;
+  perspectiveEnabled: boolean;
+  modelOpacity: number;
 }
 
 export function usePlaybackSlice(initial: Partial<PlaybackState> = {}) {
@@ -89,7 +98,16 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
   const [errorMsg, setErrorMsg] = useState<string>(initial.errorMsg ?? '');
   const [editorMode, setEditorMode] = useState<EditorMode>(initial.editorMode ?? 'view');
   const [viewportLayout, setViewportLayout] = useState<ViewportLayout>(initial.viewportLayout ?? 'single');
+  const [textureEnabled, setTextureEnabled] = useState<boolean>(initial.textureEnabled ?? true);
+  const [boneIndexLabelsEnabled, setBoneIndexLabelsEnabled] = useState<boolean>(initial.boneIndexLabelsEnabled ?? false);
+  const [rigOpacity, setRigOpacity] = useState<number>(initial.rigOpacity ?? 1);
+  const [rigThicknessScale, setRigThicknessScale] = useState<number>(initial.rigThicknessScale ?? 1);
+  const [gridEnabled, setGridEnabled] = useState<boolean>(initial.gridEnabled ?? true);
+  const [axesEnabled, setAxesEnabled] = useState<boolean>(initial.axesEnabled ?? true);
   const [wireframeEnabled, setWireframeEnabled] = useState<boolean>(initial.wireframeEnabled ?? false);
+  const [shaderEnabled, setShaderEnabled] = useState<boolean>(initial.shaderEnabled ?? false);
+  const [perspectiveEnabled, setPerspectiveEnabled] = useState<boolean>(initial.perspectiveEnabled ?? true);
+  const [modelOpacity, setModelOpacity] = useState<number>(initial.modelOpacity ?? 1);
 
   const clearError = useCallback(() => setErrorMsg(''), []);
 
@@ -100,7 +118,16 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
     errorMsg, setErrorMsg,
     editorMode, setEditorMode,
     viewportLayout, setViewportLayout,
+    textureEnabled, setTextureEnabled,
+    boneIndexLabelsEnabled, setBoneIndexLabelsEnabled,
+    rigOpacity, setRigOpacity,
+    rigThicknessScale, setRigThicknessScale,
+    gridEnabled, setGridEnabled,
+    axesEnabled, setAxesEnabled,
     wireframeEnabled, setWireframeEnabled,
+    shaderEnabled, setShaderEnabled,
+    perspectiveEnabled, setPerspectiveEnabled,
+    modelOpacity, setModelOpacity,
     clearError,
   };
 }

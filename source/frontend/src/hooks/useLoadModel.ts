@@ -2,11 +2,13 @@ import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import type * as THREE from 'three';
 import type { OpenResult, SmfDesktopInfo, TauriClient } from '../backend-client/tauri';
 import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX, bytesToArrayBuffer, buildImportedSmfFromThree, SmfConversionError, collectSkinnedMeshes, compareSmfRoundtrip, inspectThreeToSmfSource, makeDiagnosticReport } from '../loaders';
+import { applyLiveSkinEditsToImportedSmf } from '../loaders/threeToSmf';
 import type { ImportedSmf, SmfDiagnosticReport, SmfRoundtripReport } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
 import {
   type BoneNudgeDelta,
   type PoseEditMap,
+  hasPoseEdits,
   applyNudgeDelta,
   emptyPoseEdit,
   applyPoseEditsToSmf,
@@ -14,6 +16,15 @@ import {
 import { findBoneByName } from '../utils/bonePicker';
 import { createSeqGuard } from '../utils/seqGuard';
 import { detectModelFormat, supportedModelFormatsLabel, type ModelSourceFormat } from '../utils/modelFormat';
+import {
+  makeSkinEditState,
+  type SkinEditState,
+  type SkinWeightEditMode,
+  getDirtySkinExportBlockReason,
+  hasDirtySkinEdits,
+  markSkinEdit,
+  editVertexBoneWeight,
+} from '../utils/skinWeights';
 
 type LoadedModelResult =
   | Awaited<ReturnType<typeof buildSmfScene>>
@@ -25,9 +36,55 @@ let cachedTauriClient: TauriClient | null = null;
 const getTauriClient = async (): Promise<TauriClient> => {
   if (cachedTauriClient) return cachedTauriClient;
   const clientMod = await import('../backend-client/tauri');
-  const client = clientMod as unknown as TauriClient;
+  const client: TauriClient = {
+    openFile: clientMod.openFile,
+    saveFile: clientMod.saveFile,
+    readBinaryFile: clientMod.readBinaryFile,
+    invokeCommand: clientMod.invokeCommand,
+    peekSmfHeader: clientMod.peekSmfHeader,
+    validateSmf: clientMod.validateSmf,
+    peekSmfRigBasic: clientMod.peekSmfRigBasic,
+    peekSmfAnimBasic: clientMod.peekSmfAnimBasic,
+    peekSmfModelBasic: clientMod.peekSmfModelBasic,
+    getSmfDesktopInfo: clientMod.getSmfDesktopInfo,
+  };
   cachedTauriClient = client;
   return client;
+};
+
+const isSkinnedMesh = (obj: THREE.Object3D): obj is THREE.SkinnedMesh => {
+  return obj.type === 'SkinnedMesh';
+};
+
+const clamp01 = (value: number): number => {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(1, Math.max(0, value));
+};
+
+const clampPositive = (value: number, minimum = 0, maximum = Number.MAX_SAFE_INTEGER): number => {
+  if (!Number.isFinite(value)) return minimum;
+  return Math.min(maximum, Math.max(minimum, value));
+};
+
+const collectSkinnedMeshById = (
+  root: THREE.Object3D | null,
+  meshId: string,
+): THREE.SkinnedMesh | null => {
+  if (!root || !meshId) return null;
+  let found: THREE.SkinnedMesh | null = null;
+  root.traverse((obj) => {
+    if (found) return;
+    if (isSkinnedMesh(obj) && obj.uuid === meshId) {
+      found = obj;
+    }
+  });
+  return found;
+};
+
+const getBoneIndex = (skeleton: THREE.Skeleton | null, boneName: string): number => {
+  if (!skeleton || !boneName) return -1;
+  const index = skeleton.bones.findIndex((bone) => bone.name === boneName);
+  return index;
 };
 
 /**
@@ -51,6 +108,7 @@ export function useLoadModel() {
 
   // Pose edits recorded from nudge buttons and gizmo; applied to SMF at export time
   const poseEditsRef = useRef<PoseEditMap>({});
+  const [poseEditHasDirtyState, setPoseEditHasDirtyState] = useState(false);
 
   // Selected-bone weight preview toggle.
   const [showWeightPreview, setShowWeightPreview] = useState(false);
@@ -60,6 +118,13 @@ export function useLoadModel() {
 
   // Bone labels toggle (3D name sprites in viewport for debug/selection aid). Off by default for perf.
   const [showBoneLabels, setShowBoneLabels] = useState(false);
+  const [skinEditState, setSkinEditState] = useState<SkinEditState>(() => makeSkinEditState());
+  const skinEditStateRef = useRef<SkinEditState>(skinEditState);
+
+  const [skinPaintMode, setSkinPaintMode] = useState<SkinWeightEditMode>('set');
+  const [skinPaintRadius, setSkinPaintRadius] = useState(0.2);
+  const [skinPaintStrength, setSkinPaintStrength] = useState(0.2);
+  const [skinPaintTarget, setSkinPaintTarget] = useState(1);
 
   const [sourceFormat, setSourceFormat] = useState('');
   const [smfRoundtripReport, setSmfRoundtripReport] = useState<SmfRoundtripReport | null>(null);
@@ -112,6 +177,13 @@ export function useLoadModel() {
     ]);
   }, [model.root, model.skeleton, model.clips, sourceFormat]);
 
+  useEffect(() => {
+    skinEditStateRef.current = skinEditState;
+  }, [skinEditState]);
+
+  const skinEditHasDirtyState = useMemo(() => hasDirtySkinEdits(skinEditState), [skinEditState]);
+  const skinEditBlockReason = useMemo(() => getDirtySkinExportBlockReason(skinEditState), [skinEditState]);
+
   const withExportBusy = useCallback(async (actionLabel: string, action: () => Promise<void>) => {
     if (isExportingRef.current) {
       ui.setStatus(`${actionLabel} already in progress. Wait for the current save to finish.`);
@@ -141,7 +213,9 @@ export function useLoadModel() {
     lastSmfDataRef.current = null;
     lastSourceFormatRef.current = '';
     setSourceFormat('');
+    setSkinEditState(makeSkinEditState('', ''));
     poseEditsRef.current = {};
+    setPoseEditHasDirtyState(false);
     setSmfRoundtripReport(null);
     model.clear();
     ui.setSelected('Scene');
@@ -151,6 +225,9 @@ export function useLoadModel() {
     setShowWeightPreview(false);
     setTransformMode('translate');
     setShowBoneLabels(false);
+    ui.setPerspectiveEnabled(true);
+    ui.setShaderEnabled(false);
+    ui.setModelOpacity(1);
     const pb = playbackRef.current;
     pb.setIsPlaying(false);
     pb.setCurrentTime(0);
@@ -198,6 +275,7 @@ export function useLoadModel() {
       }
       lastSourceFormatRef.current = detectedSourceFormat;
       setSourceFormat(detectedSourceFormat);
+      setSkinEditState(makeSkinEditState('', detectedSourceFormat));
 
       const fetchSmfDesktopInfo = async (
         path: string,
@@ -235,7 +313,10 @@ export function useLoadModel() {
 
       if (!data && res.path) {
         ui.setStatus('Reading binary from desktop path...');
-        data = await tauri!.readBinaryFile(res.path);
+        if (!tauri) {
+          throw new Error('Tauri client unavailable for binary desktop read.');
+        }
+        data = await tauri.readBinaryFile(res.path);
         if (!isCurrentLoad()) return;
       }
 
@@ -336,9 +417,12 @@ export function useLoadModel() {
         if (smfData) {
           ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms + live pose edits)...');
           const skeleton = model.skeleton;
-          const dataToExport = skeleton
+          let dataToExport = skeleton
             ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
             : smfData;
+          if (model.root) {
+            dataToExport = applyLiveSkinEditsToImportedSmf(dataToExport, collectSkinnedMeshes(model.root));
+          }
 
           const buf = exportSMFToBuffer(dataToExport);
           const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
@@ -397,9 +481,13 @@ export function useLoadModel() {
     const skeleton = model.skeleton;
 
     if (smfData) {
-      return skeleton
+      let dataToExport = skeleton
         ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
         : smfData;
+      if (model.root) {
+        dataToExport = applyLiveSkinEditsToImportedSmf(dataToExport, collectSkinnedMeshes(model.root));
+      }
+      return dataToExport;
     }
 
     const rootToExport = model.root;
@@ -497,12 +585,14 @@ export function useLoadModel() {
         const rootToExport = model.root;
         const skeleton = model.skeleton;
         const smfData = lastSmfDataRef.current;
-
         if (smfData) {
           ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms + live pose edits)...');
-          const dataToExport = skeleton
+          let dataToExport = skeleton
             ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
             : smfData;
+          if (rootToExport) {
+            dataToExport = applyLiveSkinEditsToImportedSmf(dataToExport, collectSkinnedMeshes(rootToExport));
+          }
           const buf = exportSMFToBuffer(dataToExport);
           const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
           if (!ok) {
@@ -635,6 +725,10 @@ export function useLoadModel() {
   const handleSelectBone = useCallback((name: string) => {
     ui.setSelected(name);
     ui.setStatus(`Selected: ${name}`);
+    setSkinEditState((prev) => ({
+      ...prev,
+      selectedBoneName: name,
+    }));
   }, [ui]);
 
   // Route bone nudge buttons through pose-edit layer so edits are captured at export time.
@@ -649,6 +743,7 @@ export function useLoadModel() {
     const prev = poseEditsRef.current[boneName] ?? emptyPoseEdit();
     const next = applyNudgeDelta(prev, delta);
     poseEditsRef.current = { ...poseEditsRef.current, [boneName]: next };
+    setPoseEditHasDirtyState(hasPoseEdits(poseEditsRef.current));
 
     if (delta.reset) {
       bone.position.set(0, 0, 0);
@@ -661,6 +756,91 @@ export function useLoadModel() {
     bone.updateMatrix();
     skeleton.update();
   }, [model]);
+
+  const applySkinPaint = useCallback((
+    paintVertices: Array<{
+      meshId: string;
+      vertexIndex: number;
+      amount: number;
+    }>,
+  ) => {
+    if (!model.root || !model.skeleton) {
+      ui.setStatus('Load a skinned model before painting skin weights.');
+      return;
+    }
+    const source = skinEditStateRef.current;
+    const selectedBoneName = source.selectedBoneName || ui.selected;
+    if (!selectedBoneName || selectedBoneName === 'Scene') {
+      ui.setStatus('Select a bone to paint skin weights.');
+      return;
+    }
+
+    const boneIndex = getBoneIndex(model.skeleton, selectedBoneName);
+    if (boneIndex < 0) {
+      ui.setStatus('Selected bone is not in current skeleton.');
+      return;
+    }
+
+    const mode = skinPaintMode;
+    const unique = new Map<string, { mesh: string; index: number; amount: number }>();
+
+    for (const paint of paintVertices) {
+      if (!Number.isInteger(paint.vertexIndex) || paint.vertexIndex < 0) continue;
+      const clampedAmount = clamp01(paint.amount);
+      if (clampedAmount <= 0) continue;
+      const key = `${paint.meshId}:${paint.vertexIndex}`;
+      if (!unique.has(key)) {
+        unique.set(key, { mesh: paint.meshId, index: paint.vertexIndex, amount: clampedAmount });
+      }
+    }
+
+    if (unique.size === 0) {
+      ui.setStatus('No editable skin vertices in brush area.');
+      return;
+    }
+
+    let changed = 0;
+    let touched = 0;
+    let nextState = source;
+    unique.forEach(({ mesh, index, amount }) => {
+      const meshObj = collectSkinnedMeshById(model.root, mesh);
+      if (!meshObj) return;
+      const result = editVertexBoneWeight(meshObj, index, boneIndex, mode, amount);
+      if (!result.ok) return;
+      touched += 1;
+      nextState = markSkinEdit(nextState, mesh, index);
+      if (result.changed) {
+        changed += 1;
+      }
+    });
+
+    if (touched > 0) {
+      setSkinEditState(nextState);
+      if (changed > 0) {
+        ui.setStatus(`Painted ${changed} skin vertices on ${selectedBoneName} (${mode} mode).`);
+      } else {
+        ui.setStatus(`Paint stroke touched ${touched} vertices on ${selectedBoneName} but kept equivalent weights.`);
+      }
+    } else {
+      ui.setStatus('No skin vertices changed during paint stroke.');
+    }
+  }, [model, ui, skinPaintMode]);
+
+  const onSkinPaintModeChange = useCallback((next: SkinWeightEditMode) => {
+    setSkinPaintMode(next);
+  }, []);
+
+  const onSkinPaintRadiusChange = useCallback((next: number) => {
+    setSkinPaintRadius(clampPositive(next, 0.01, 4));
+  }, []);
+
+  const onSkinPaintStrengthChange = useCallback((next: number) => {
+    setSkinPaintStrength(clamp01(next));
+  }, []);
+
+  const onSkinPaintTargetChange = useCallback((next: number) => {
+    setSkinPaintTarget(Math.max(1, Math.round(clampPositive(next, 1, 4))));
+  }, []);
 
   return {
     ui,
@@ -693,8 +873,38 @@ export function useLoadModel() {
     smfDiagnosticReport,
     smfRoundtripReport,
     sourceFormat,
+    skinEditHasDirtyState,
+    skinEditBlockReason,
+    skinPaintMode,
+    skinPaintRadius,
+    skinPaintStrength,
+    skinPaintTarget,
+    onSkinPaintModeChange,
+    onSkinPaintRadiusChange,
+    onSkinPaintStrengthChange,
+    onSkinPaintTargetChange,
+    applySkinPaint,
+    poseEditHasDirtyState,
     viewportLayout: ui.viewportLayout,
     setViewportLayout: ui.setViewportLayout,
+    gridEnabled: ui.gridEnabled,
+    setGridEnabled: ui.setGridEnabled,
+    axesEnabled: ui.axesEnabled,
+    setAxesEnabled: ui.setAxesEnabled,
+    textureEnabled: ui.textureEnabled,
+    setTextureEnabled: ui.setTextureEnabled,
+    boneIndexLabelsEnabled: ui.boneIndexLabelsEnabled,
+    setBoneIndexLabelsEnabled: ui.setBoneIndexLabelsEnabled,
+    rigOpacity: ui.rigOpacity,
+    setRigOpacity: ui.setRigOpacity,
+    rigThicknessScale: ui.rigThicknessScale,
+    setRigThicknessScale: ui.setRigThicknessScale,
+    shaderEnabled: ui.shaderEnabled,
+    setShaderEnabled: ui.setShaderEnabled,
+    perspectiveEnabled: ui.perspectiveEnabled,
+    setPerspectiveEnabled: ui.setPerspectiveEnabled,
+    modelOpacity: ui.modelOpacity,
+    setModelOpacity: ui.setModelOpacity,
     editorMode: ui.editorMode,
     setEditorMode: ui.setEditorMode,
   };

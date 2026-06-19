@@ -13,6 +13,10 @@ interface LoadedModel {
   mixer: THREE.AnimationMixer;
 }
 
+function isAnimationClip(value: unknown): value is THREE.AnimationClip {
+  return value instanceof THREE.AnimationClip;
+}
+
 export async function loadOBJ(urlOrBuffer: string | ArrayBuffer): Promise<LoadedModel> {
   const loader = new OBJLoader();
 
@@ -29,11 +33,17 @@ export async function loadOBJ(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
   root.name = 'OBJ_Root';
 
   const skinnedMeshes: THREE.SkinnedMesh[] = [];
-  const allClips: THREE.AnimationClip[] = (obj as any).animations || []; // FBX/OBJ loader populates on the loaded group object; safe narrow read here only.
+  const rawAnimations: unknown = Reflect.get(root as object, 'animations');
+  const allClips = Array.isArray(rawAnimations)
+    ? rawAnimations.filter(isAnimationClip)
+    : [];
 
-  root.traverse((obj: any) => {
-    if (obj.isMesh) {
-      const geo = obj.geometry as THREE.BufferGeometry;
+  root.traverse((node) => {
+    if (node.type !== 'Mesh' && node.type !== 'SkinnedMesh') {
+      return;
+    }
+    const mesh = node as THREE.Mesh | THREE.SkinnedMesh;
+    const geo = mesh.geometry;
       if (!geo.attributes.uv) {
         const count = geo.attributes.position?.count || 0;
         geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
@@ -46,10 +56,9 @@ export async function loadOBJ(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
       }
 
       // OBJ meshes are rarely skinned, but collect if so
-      if (obj.isSkinnedMesh) {
-        skinnedMeshes.push(obj);
+      if (node.type === 'SkinnedMesh') {
+        skinnedMeshes.push(mesh as THREE.SkinnedMesh);
       }
-    }
   });
 
   let skeleton: THREE.Skeleton | undefined;

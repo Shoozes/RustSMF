@@ -28,6 +28,10 @@ export function emptyPoseEdit(): PoseBoneEdit {
   return { dx: 0, dy: 0, dRotZ: 0 };
 }
 
+export function hasPoseEdits(edits: PoseEditMap): boolean {
+  return Object.values(edits).some((edit) => edit.dx !== 0 || edit.dy !== 0 || edit.dRotZ !== 0);
+}
+
 export function applyNudgeDelta(current: PoseBoneEdit, delta: BoneNudgeDelta): PoseBoneEdit {
   if (delta.reset) return emptyPoseEdit();
   return {

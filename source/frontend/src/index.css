@@ -21,10 +21,13 @@ html, body, #root {
   background: #1e293b;
   border-bottom: 1px solid #334155;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   padding: 0 12px;
   gap: 12px;
   font-size: 13px;
+  min-height: 48px;
+  height: auto;
 }
 
 .mode-tablist {
@@ -65,17 +68,23 @@ html, body, #root {
   border-radius: 6px;
   padding: 2px;
   background: #0f172a;
-  margin-left: auto;
+  margin-left: 0;
 }
 
 .layout-btn {
   height: 28px;
-  min-width: 58px;
+  min-width: 50px;
   padding: 0 8px;
   font-size: 11px;
   background: transparent;
   border: 0;
   border-radius: 4px;
+}
+
+.toolbar-hint {
+  white-space: nowrap;
+  min-width: 0;
+  flex: 0 1 auto;
 }
 
 .layout-btn-active {

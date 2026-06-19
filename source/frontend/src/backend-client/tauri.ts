@@ -47,9 +47,17 @@ interface TauriWindow extends Window {
   __TAURI_INTERNALS__?: unknown;
 }
 
+type TauriOpenSelection = string | { path?: unknown };
+
 function isTauriEnv(): boolean {
-  const w = window as unknown as TauriWindow;
+  const w = window as TauriWindow;
   return !!(w.__TAURI__ || w.__TAURI_INTERNALS__);
+}
+
+function resolveOpenSelectionPath(selection: TauriOpenSelection | null): string {
+  if (typeof selection === 'string') return selection;
+  if (!selection || typeof selection.path !== 'string') return '';
+  return selection.path;
 }
 
 export async function openFile(): Promise<OpenResult | null> {
@@ -64,7 +72,8 @@ export async function openFile(): Promise<OpenResult | null> {
         ]
       })
       if (!selected) return null
-      const path = typeof selected === 'string' ? selected : (selected && typeof selected === 'object' && 'path' in selected ? String((selected as { path?: unknown }).path) : String(selected));
+      const path = resolveOpenSelectionPath(selected as TauriOpenSelection);
+      if (!path) return null;
       // Desktop returns a path; the load flow calls readBinaryFile when bytes are needed.
       return { path, name: path.split(/[\\/]/).pop() }
     } catch (e) {
@@ -87,9 +96,8 @@ export async function openFile(): Promise<OpenResult | null> {
       settled = true
       window.removeEventListener('focus', onWindowFocus)
       input.removeEventListener('change', onChange)
-      const inp = input as any;
-      inp.onchange = null;
-      inp.oncancel = null;
+      input.onchange = null
+      input.removeEventListener('cancel', onCancel)
       if (input.parentElement) input.parentElement.removeChild(input)
       resolve(result)
     }
@@ -122,7 +130,7 @@ export async function openFile(): Promise<OpenResult | null> {
     }
 
     input.onchange = onChange
-    ;(input as any).oncancel = onCancel
+    input.addEventListener('cancel', onCancel)
     window.addEventListener('focus', onWindowFocus)
     document.body.appendChild(input)
     input.click()

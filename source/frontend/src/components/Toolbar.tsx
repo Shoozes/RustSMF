@@ -16,6 +16,24 @@ interface ToolbarProps {
   setViewportLayout: (layout: ViewportLayout) => void;
   wireframeEnabled: boolean;
   setWireframeEnabled: (enabled: boolean) => void;
+  gridEnabled: boolean;
+  setGridEnabled: (enabled: boolean) => void;
+  axesEnabled: boolean;
+  setAxesEnabled: (enabled: boolean) => void;
+  textureEnabled: boolean;
+  setTextureEnabled: (enabled: boolean) => void;
+  boneIndexLabelsEnabled: boolean;
+  setBoneIndexLabelsEnabled: (enabled: boolean) => void;
+  rigOpacity: number;
+  setRigOpacity: (opacity: number) => void;
+  rigThicknessScale: number;
+  setRigThicknessScale: (scale: number) => void;
+  shaderEnabled: boolean;
+  setShaderEnabled: (enabled: boolean) => void;
+  perspectiveEnabled: boolean;
+  setPerspectiveEnabled: (enabled: boolean) => void;
+  modelOpacity: number;
+  setModelOpacity: (opacity: number) => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
@@ -32,6 +50,24 @@ const Toolbar: React.FC<ToolbarProps> = ({
   setViewportLayout,
   wireframeEnabled,
   setWireframeEnabled,
+  gridEnabled,
+  setGridEnabled,
+  axesEnabled,
+  setAxesEnabled,
+  textureEnabled,
+  setTextureEnabled,
+  boneIndexLabelsEnabled,
+  setBoneIndexLabelsEnabled,
+  rigOpacity,
+  setRigOpacity,
+  rigThicknessScale,
+  setRigThicknessScale,
+  shaderEnabled,
+  setShaderEnabled,
+  perspectiveEnabled,
+  setPerspectiveEnabled,
+  modelOpacity,
+  setModelOpacity,
 }) => {
   const modes: EditorMode[] = ['view', 'rig', 'skin', 'animate', 'export'];
   const modeLabels: Record<EditorMode, string> = {
@@ -135,6 +171,105 @@ const Toolbar: React.FC<ToolbarProps> = ({
       >
         Wireframe
       </button>
+      <button
+        type="button"
+        data-testid="viewport-grid-toggle"
+        className={`layout-btn ${gridEnabled ? 'layout-btn-active' : ''}`}
+        onClick={() => setGridEnabled(!gridEnabled)}
+        disabled={isLoading || !hasModel}
+        aria-pressed={gridEnabled}
+        title="Toggle viewport grid"
+      >
+        Grid
+      </button>
+      <button
+        type="button"
+        data-testid="viewport-axes-toggle"
+        className={`layout-btn ${axesEnabled ? 'layout-btn-active' : ''}`}
+        onClick={() => setAxesEnabled(!axesEnabled)}
+        disabled={isLoading || !hasModel}
+        aria-pressed={axesEnabled}
+        title="Toggle viewport axes helper"
+      >
+        Axes
+      </button>
+      <button
+        type="button"
+        data-testid="viewport-texture-toggle"
+        className={`layout-btn ${textureEnabled ? 'layout-btn-active' : ''}`}
+        onClick={() => setTextureEnabled(!textureEnabled)}
+        disabled={isLoading || !hasModel}
+        aria-pressed={textureEnabled}
+        title="Toggle texture maps"
+      >
+        Textures
+      </button>
+      <button
+        type="button"
+        data-testid="viewport-shader-toggle"
+        className={`layout-btn ${shaderEnabled ? 'layout-btn-active' : ''}`}
+        onClick={() => setShaderEnabled(!shaderEnabled)}
+        disabled={isLoading || !hasModel}
+        aria-pressed={shaderEnabled}
+        title="Toggle flat-shaded viewport shader"
+      >
+        Shader
+      </button>
+      <button
+        type="button"
+        data-testid="viewport-bone-index-toggle"
+        className={`layout-btn ${boneIndexLabelsEnabled ? 'layout-btn-active' : ''}`}
+        onClick={() => setBoneIndexLabelsEnabled(!boneIndexLabelsEnabled)}
+        disabled={isLoading || !hasModel}
+        aria-pressed={boneIndexLabelsEnabled}
+        title="Toggle bone index overlay text"
+      >
+        Node indices
+      </button>
+      <button
+        type="button"
+        data-testid="viewport-rig-opacity-toggle"
+        className={`layout-btn ${rigOpacity < 1 ? 'layout-btn-active' : ''}`}
+        onClick={() => setRigOpacity(rigOpacity < 1 ? 1 : 0.35)}
+        disabled={isLoading || !hasModel}
+        aria-pressed={rigOpacity < 1}
+        title="Toggle rig opacity"
+      >
+        Rig opacity
+      </button>
+      <button
+        type="button"
+        data-testid="viewport-perspective-toggle"
+        className={`layout-btn ${perspectiveEnabled ? 'layout-btn-active' : ''}`}
+        onClick={() => setPerspectiveEnabled(!perspectiveEnabled)}
+        disabled={isLoading || !hasModel}
+        aria-pressed={perspectiveEnabled}
+        title="Toggle single-view perspective camera mode"
+      >
+        Perspective
+      </button>
+      <button
+        type="button"
+        data-testid="viewport-model-opacity-toggle"
+        className={`layout-btn ${modelOpacity < 1 ? 'layout-btn-active' : ''}`}
+        onClick={() => setModelOpacity(modelOpacity < 1 ? 1 : 0.35)}
+        disabled={isLoading || !hasModel}
+        aria-pressed={modelOpacity < 1}
+        title="Toggle model mesh opacity"
+      >
+        Model opacity
+      </button>
+      <button
+        type="button"
+        data-testid="viewport-rig-thickness-toggle"
+        className={`layout-btn ${rigThicknessScale !== 1 ? 'layout-btn-active' : ''}`}
+        onClick={() => setRigThicknessScale(rigThicknessScale === 1 ? 0.45 : 1)}
+        disabled={isLoading || !hasModel}
+        aria-pressed={rigThicknessScale !== 1}
+        title="Toggle rig thickness"
+      >
+        Rig thick
+      </button>
       {/* Persistent hidden file input for reliable e2e file simulation (Playwright setInputFiles) */}
       <input
         type="file"
@@ -143,7 +278,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
         accept={SUPPORTED_MODEL_ACCEPT}
         onChange={onFileChange}
       />
-      <div className="text-xs text-slate-400 ml-auto pr-2">
+      <div className="toolbar-hint text-xs text-slate-400 pr-2">
         Drag rotate • Right-drag pan • Wheel zoom • R reset • Space play/pause
       </div>
     </div>

@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-18 (full repo integrity pass: research-inbox cleared, interop casts reduced + tauri client cached for timing, docs/summary audit, verify + units + cargo clean).
+Last reviewed: 2026-06-19 (full repo integrity pass: skin paint continuity/telemetry cleanup + export path continuity, research-inbox cleared, interop casts reduced + tauri client cached for timing, docs/summary audit, verify + units + cargo clean).
 
 ## Current Product State
 
@@ -18,7 +18,7 @@ Core flow:
   - `run.ps1 -Task test:e2e` uses GenEye as an optional advisory Playwright subagent when discoverable, but RustSMF remains able to run browser-only e2e with `-NoGenEye`, `RUSTSMF_NO_GENEYE=1`, or no GenEye checkout/runtime.
   - Direct `npm run dev` / `npm run tauri:dev` flows remain available but intentionally have reduced non-canonical lifecycle guarantees.
 - Drive animation through viewport-owned `AnimationMixer` state with timeline play/pause, scrub, speed, and clip selection.
-- Inspect skeletons, select bones from the hierarchy or viewport click, show larger diamond/joint skeleton helpers, show a selected-bone marker, use TransformControls, use quick nudges, and toggle selected-bone weight preview. Weight preview now shares the same four-slot skin-weight reader used by the tested edit helpers. Full viewport skin-weight paint authoring and live export serialization are not implemented yet.
+- Inspect skeletons, select bones from the hierarchy or viewport click, show larger diamond/joint skeleton helpers, show a selected-bone marker, use TransformControls, use quick nudges, and toggle selected-bone weight preview. Weight preview now shares the same four-slot skin-weight reader used by the tested edit helpers. Viewport skin painting now supports set/add/subtract brush modes with selected-bone prerequisite, brush hover markers, radius/strength/target controls, state continuity across workspace transitions, and SMF export serialization of dirty skin edits.
 - Move selected bone endpoint markers in precision modes with camera-plane constrained drag (no model swap, no control conflict), and endpoint-drag lifecycle assertions are covered by e2e smoke in single and quad modes.
 - Export SMF sources through the high-fidelity SMF roundtrip path, including live position/rotation pose edits.
 - Export compatible skinned GLB/FBX runtime roots to SMF through `threeToSmf`; use GLB export for static/material/scale cases.
@@ -62,6 +62,7 @@ Core flow:
   - `pwsh -File run.ps1 -Task verify`
   - `pwsh -File run.ps1 -Task test:e2e`
     - `test:e2e` passes RustSMF's Playwright command to GenEye `playwright-full -AllowGenEyeFailure -Group geneye-watch-fixture` when GenEye is discoverable (`-GenEyeRoot`, `GENEYE_ROOT`, `GENEYE_RUN_BAT`, or local Three-Sisters path). Evidence is ignored under `runtime-data\geneye-playwright-runs\`; RustSMF app evidence is the GenEye `project_tests` block plus discovered RustSMF Playwright artifacts, while the built-in GenEye scenario only proves advisory plumbing. Use `-NoGenEye` or `RUSTSMF_NO_GENEYE=1` for browser-only e2e. If GenEye is unavailable or fails before project-test evidence exists, the launcher runs browser-only Playwright. RustSMF project-test failures stay authoritative.
+    - The launcher now emits one stable status trailer before final return: `[GENEYE] run_path=... project_tests.status=... project_tests.exit_code=...`, so consuming logs can parse authoritative project status without opening JSON.
   - `pwsh -File run.ps1 -Task test:visual-strict` (opt-in)
   - `pwsh -File run.ps1 -Task test:visual-update` (intentional baseline refresh only)
   - `pwsh -File run.ps1 -Task desktop-smoke`
@@ -77,7 +78,7 @@ Core flow:
 - GLB/FBX-to-SMF conversion is available for skinned models with one shared named skeleton and no scale animation. Static roots, textures/materials, morph tracks, object-level tracks, and scale animation still use GLB export for fidelity. SMF diagnostics now block known impossible exports before save, surface warnings for compatibility risks that do not block, and provide a count-based in-memory roundtrip check.
 - GLB/GLTF remains the preferred format for maximum fidelity and new development. SMF support is scoped to legacy recovery and users who target the old SMF binary pipeline.
 - Live SMF position/rotation pose edits export; scale edits are blocked for SMF export because the current SMF DQ path has no scale channel.
-- Quad layout, ortho camera panes, visible pane labels/dividers, model-safe wireframe display, larger diamond/joint rig helpers, oversized selected-bone endpoint handles, and endpoint drag interactions are implemented at a preview/editor-affordance level and covered by focused e2e checks. Full skin-weight paint authoring, texture/grid/node-visibility shelves, keyframe authoring, and deeper ortho-pane editing parity remain planned.
+- Quad layout, ortho camera panes, visible pane labels/dividers, model-safe wireframe display, larger diamond/joint rig helpers, oversized selected-bone endpoint handles, and endpoint drag interactions are implemented at a preview/editor-affordance level and covered by focused e2e checks. First-pass skin paint authoring now covers state continuity and supported export behavior; autoskin/undo, texture/grid/node-visibility shelves, keyframe authoring, and deeper ortho-pane editing parity remain planned.
 - Launcher process safety (no rogue node servers on close) is Windows-primary via run.ps1 + mjs layers (Job/tree/scans/poll). Direct `tauri dev` or non-Windows have reduced coverage (mjs signals + polls + child-tree cleanup where supported); behavior is documented explicitly in launcher docs.
 
 ## Context Docs

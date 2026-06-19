@@ -487,14 +487,14 @@ describe('smf export roundtrip (data-driven)', () => {
     ];
     const bounds = { center: new THREE.Vector3(1, 2, 3), maxDim: 4 };
 
-    const single = refreshViewportSpecs(800, 600, 'single', bounds, perspective, orthoCameras);
+    const single = refreshViewportSpecs(800, 600, 'single', bounds, perspective, orthoCameras, true);
     assert.strictEqual(single.length, 1);
     assert.strictEqual(single[0].role, 'perspective');
     assert.strictEqual(single[0].width, 800);
     assert.strictEqual(single[0].height, 600);
 
     refreshOrthoCameras(orthoCameras, bounds);
-    const quad = refreshViewportSpecs(800, 600, 'quad', bounds, perspective, orthoCameras);
+    const quad = refreshViewportSpecs(800, 600, 'quad', bounds, perspective, orthoCameras, true);
     assert.deepStrictEqual(quad.map((spec) => spec.role), ['front', 'side', 'top', 'perspective']);
     assert.ok(quad.every((spec) => spec.width === 400 && spec.height === 300), 'quad panes split canvas into quarters');
     assert.notStrictEqual(orthoCameras[0].position.z, 0, 'front camera is framed away from center');

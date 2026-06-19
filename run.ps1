@@ -313,6 +313,11 @@ function Invoke-GenEyePlaywright {
     $summaryProject = Read-GenEyeProjectStatus $summaryPath
     $fallbackProject = Read-GenEyeProjectStatus $fallbackPath
     $projectStatus = if ($summaryProject) { $summaryProject } else { $fallbackProject }
+    if ($projectStatus) {
+        Write-Info "[GENEYE] run_path=$outDir project_tests.status=$($projectStatus.Status) project_tests.exit_code=$($projectStatus.ExitCode)"
+    } else {
+        Write-Warn "[GENEYE] run_path=$outDir project_tests.status=unknown project_tests.exit_code=na"
+    }
 
     if ($exitCode -eq 0) {
         if (Test-Path -LiteralPath $summaryPath) {
@@ -504,6 +509,10 @@ switch -Exact ($NormalizedTask) {
             if (-not (Invoke-FrontendNpm @("run", "test:e2e"))) { exit 1 }
         }
     }
+    "test:unit" {
+        Write-Info "[UNIT] Running frontend unit tests..."
+        if (-not (Invoke-FrontendNpm @("run", "test:unit"))) { exit 1 }
+    }
     "test:visual-strict" {
         Write-Info "[VISUAL] Running strict SMF visual snapshot checks..."
         if (-not (Invoke-FrontendNpm @("run", "test:visual-strict"))) { exit 1 }
@@ -578,6 +587,7 @@ Tasks:
   compile       - production desktop build
   clean         - stop dev servers and remove generated build artifacts
   verify        - lint/typecheck/build/chunk/unit/cargo checks
+  test:unit     - frontend unit tests only
   test:e2e      - Playwright (optional GenEye advisory wrapper; use -NoGenEye for browser-only)
   test:visual-strict - opt-in strict SMF visual snapshot checks
   test:visual-update - refresh opt-in strict SMF visual snapshots

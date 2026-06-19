@@ -94,11 +94,41 @@ export default function App() {
     toggleBoneLabels,
     smfDiagnosticReport,
     smfRoundtripReport,
+    skinEditHasDirtyState,
+    skinEditBlockReason,
+    skinPaintMode,
+    skinPaintRadius,
+    skinPaintStrength,
+    skinPaintTarget,
+    onSkinPaintModeChange,
+    onSkinPaintRadiusChange,
+    onSkinPaintStrengthChange,
+    onSkinPaintTargetChange,
+    applySkinPaint,
     editorMode,
     setEditorMode,
     viewportLayout,
     setViewportLayout,
+    gridEnabled,
+    setGridEnabled,
+    axesEnabled,
+    setAxesEnabled,
+    textureEnabled,
+    setTextureEnabled,
+    boneIndexLabelsEnabled,
+    setBoneIndexLabelsEnabled,
+    rigOpacity,
+    setRigOpacity,
+    rigThicknessScale,
+    setRigThicknessScale,
+    shaderEnabled,
+    setShaderEnabled,
+    perspectiveEnabled,
+    setPerspectiveEnabled,
+    modelOpacity,
+    setModelOpacity,
     sourceFormat,
+    poseEditHasDirtyState,
   } = useLoadModel();
 
   const workspace = WORKSPACE_BY_MODE[editorMode];
@@ -116,6 +146,16 @@ export default function App() {
           onToggleWeightPreview={workspace.showWeightSection ? toggleWeightPreview : undefined}
           showBoneLabels={shouldShowBoneLabels}
           onToggleBoneLabels={toggleBoneLabels}
+          skinEditHasDirtyState={skinEditHasDirtyState}
+          skinEditBlockReason={skinEditBlockReason}
+          skinPaintMode={skinPaintMode}
+          skinPaintRadius={skinPaintRadius}
+          skinPaintStrength={skinPaintStrength}
+          skinPaintTarget={skinPaintTarget}
+          onSkinPaintModeChange={onSkinPaintModeChange}
+          onSkinPaintRadiusChange={onSkinPaintRadiusChange}
+          onSkinPaintStrengthChange={onSkinPaintStrengthChange}
+          onSkinPaintTargetChange={onSkinPaintTargetChange}
           editorMode={editorMode}
         />
       );
@@ -128,6 +168,7 @@ export default function App() {
           isPlaying={playback.isPlaying}
           currentTime={playback.currentTime}
           duration={playback.duration}
+          poseEditHasDirtyState={poseEditHasDirtyState}
           editorMode={editorMode}
         />
       );
@@ -176,6 +217,24 @@ export default function App() {
         setViewportLayout={setViewportLayout}
         wireframeEnabled={ui.wireframeEnabled}
         setWireframeEnabled={ui.setWireframeEnabled}
+        gridEnabled={gridEnabled}
+        setGridEnabled={setGridEnabled}
+        axesEnabled={axesEnabled}
+        setAxesEnabled={setAxesEnabled}
+        textureEnabled={textureEnabled}
+        setTextureEnabled={setTextureEnabled}
+        boneIndexLabelsEnabled={boneIndexLabelsEnabled}
+        setBoneIndexLabelsEnabled={setBoneIndexLabelsEnabled}
+        rigOpacity={rigOpacity}
+        setRigOpacity={setRigOpacity}
+        rigThicknessScale={rigThicknessScale}
+        setRigThicknessScale={setRigThicknessScale}
+        shaderEnabled={shaderEnabled}
+        setShaderEnabled={setShaderEnabled}
+        perspectiveEnabled={perspectiveEnabled}
+        setPerspectiveEnabled={setPerspectiveEnabled}
+        modelOpacity={modelOpacity}
+        setModelOpacity={setModelOpacity}
       />
 
       {/* Simple pure error banner (no extra deps) - always in DOM even when not shown (for e2e), hidden via style when no error */}
@@ -226,6 +285,20 @@ export default function App() {
             editorMode={editorMode}
             viewportLayout={viewportLayout}
             wireframeEnabled={ui.wireframeEnabled}
+            gridEnabled={gridEnabled}
+            axesEnabled={axesEnabled}
+            textureEnabled={textureEnabled}
+            boneIndexLabelsEnabled={boneIndexLabelsEnabled}
+            rigOpacity={rigOpacity}
+            rigThicknessScale={rigThicknessScale}
+            shaderEnabled={shaderEnabled}
+            perspectiveEnabled={perspectiveEnabled}
+            modelOpacity={modelOpacity}
+            onPaintSkinVertices={applySkinPaint}
+            skinPaintMode={skinPaintMode}
+            skinPaintRadius={skinPaintRadius}
+            skinPaintStrength={skinPaintStrength}
+            skinPaintTarget={skinPaintTarget}
           />
           {/* Simple pure loading overlay (no deps) */}
           {ui.isLoading && (

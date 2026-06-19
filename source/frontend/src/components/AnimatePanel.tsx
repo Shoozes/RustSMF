@@ -6,6 +6,7 @@ interface AnimatePanelProps {
   isPlaying: boolean;
   currentTime: number;
   duration: number;
+  poseEditHasDirtyState?: boolean;
   editorMode?: string;
 }
 
@@ -15,6 +16,7 @@ export default function AnimatePanel({
   isPlaying,
   currentTime,
   duration,
+  poseEditHasDirtyState = false,
   editorMode = 'animate',
 }: AnimatePanelProps) {
   const clipCount = clips.length;
@@ -25,6 +27,7 @@ export default function AnimatePanel({
       <div className="text-xs text-slate-300">Animation preview, clip list, and scrub pacing live in Timeline.</div>
       <div className="text-[10px] text-slate-400 mt-2">Clips loaded: {clipCount}</div>
       <div className="text-[10px] text-slate-400">Current clip: {currentClipName || 'none'}</div>
+      <div className="text-[10px] text-slate-400" data-testid="pose-edit-state">Pose edit dirty: {poseEditHasDirtyState ? 'true' : 'false'}</div>
       <div className="text-[10px] text-slate-400">Playback: {isPlaying ? 'Playing' : 'Paused'}</div>
       <div className="text-[10px] text-slate-400">Time: {currentTime.toFixed(2)} / {duration.toFixed(2)}s</div>
       <div className="text-[10px] text-slate-500 mt-2">

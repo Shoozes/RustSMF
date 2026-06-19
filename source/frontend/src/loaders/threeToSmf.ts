@@ -7,6 +7,7 @@ import {
   type SmfDiagnostic,
   type SmfDiagnosticReport,
 } from './smfDiagnostics';
+import { inspectMeshMaterialCompatibility, toSmfDiagnosticList } from '../utils/textureCompat';
 
 /**
  * Converts Three.js skinned scene data to an ImportedSmf structure for SMF export.
@@ -38,6 +39,181 @@ export function collectSkinnedMeshes(root: THREE.Object3D): THREE.SkinnedMesh[] 
     }
   });
   return skinnedMeshes;
+}
+
+interface MeshSkinPayload {
+  positions: Float32Array;
+  normals: Float32Array;
+  uvs: Float32Array;
+  tangents: Float32Array;
+  skinIndices: Uint16Array;
+  skinWeights: Float32Array;
+  vertices: number;
+}
+
+function readComponent(
+  attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+  vertexIndex: number,
+  component: number,
+): number {
+  if (component === 0) return attribute.getX(vertexIndex);
+  if (component === 1) return attribute.getY(vertexIndex);
+  if (component === 2) return attribute.getZ(vertexIndex);
+  return attribute.getW(vertexIndex);
+}
+
+function flattenVertexAttribute(
+  attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute | undefined | null,
+  itemSize: number,
+  fallbackItemSize: number,
+): Float32Array {
+  const vertexCount = attribute?.count ?? 0;
+  const out = new Float32Array(vertexCount * fallbackItemSize);
+  if (!attribute || attribute.itemSize < itemSize) return out;
+
+  for (let i = 0; i < vertexCount; i++) {
+    for (let c = 0; c < fallbackItemSize; c++) {
+      out[i * fallbackItemSize + c] = c < itemSize ? readComponent(attribute, i, c) : 0;
+    }
+  }
+  return out;
+}
+
+function readSkinPayload(geometry: THREE.BufferGeometry): { skinIndices: Uint16Array; skinWeights: Float32Array } {
+  const vertices = geometry.getAttribute('position')?.count ?? 0;
+  const skinIndex = geometry.getAttribute('skinIndex');
+  const skinWeight = geometry.getAttribute('skinWeight');
+  const skinIndices = new Uint16Array(vertices * 4);
+  const skinWeights = new Float32Array(vertices * 4);
+
+  if (!skinIndex || !skinWeight || skinIndex.itemSize < 4 || skinWeight.itemSize < 4) {
+    return { skinIndices, skinWeights };
+  }
+
+  const sourceCount = Math.min(vertices, skinIndex.count, skinWeight.count);
+  for (let i = 0; i < sourceCount; i++) {
+    const base = i * 4;
+    skinIndices[base] = Math.max(0, Math.round(skinIndex.getX(i)));
+    skinIndices[base + 1] = Math.max(0, Math.round(skinIndex.getY(i)));
+    skinIndices[base + 2] = Math.max(0, Math.round(skinIndex.getZ(i)));
+    skinIndices[base + 3] = Math.max(0, Math.round(skinIndex.getW(i)));
+    skinWeights[base] = Math.max(0, Math.min(1, skinWeight.getX(i)));
+    skinWeights[base + 1] = Math.max(0, Math.min(1, skinWeight.getY(i)));
+    skinWeights[base + 2] = Math.max(0, Math.min(1, skinWeight.getZ(i)));
+    skinWeights[base + 3] = Math.max(0, Math.min(1, skinWeight.getW(i)));
+  }
+  return { skinIndices, skinWeights };
+}
+
+function extractMeshPayload(mesh: THREE.SkinnedMesh): MeshSkinPayload {
+  const geometry = mesh.geometry;
+  const positions = flattenVertexAttribute(geometry.getAttribute('position'), 3, 3);
+  const normals = flattenVertexAttribute(geometry.getAttribute('normal'), 3, 3);
+  const uvs = flattenVertexAttribute(geometry.getAttribute('uv'), 2, 2);
+  const tangents = flattenVertexAttribute(geometry.getAttribute('tangent'), 4, 4);
+  const { skinIndices, skinWeights } = readSkinPayload(geometry);
+  const vertices = geometry.getAttribute('position')?.count ?? 0;
+
+  return {
+    positions,
+    normals,
+    uvs,
+    tangents,
+    skinIndices,
+    skinWeights,
+    vertices,
+  };
+}
+
+function cloneImportedSmfForExport(source: ImportedSmf): ImportedSmf {
+  return {
+    meshes: source.meshes.map((mesh) => ({
+      ...mesh,
+      positions: new Float32Array(mesh.positions),
+      normals: new Float32Array(mesh.normals),
+      uvs: new Float32Array(mesh.uvs),
+      tangents: new Float32Array(mesh.tangents),
+      skinIndices: new Uint16Array(mesh.skinIndices),
+      skinWeights: new Float32Array(mesh.skinWeights),
+      triangles: mesh.triangles.map((triangle) => [...triangle]),
+    })),
+    textures: source.textures.map((texture) => ({ ...texture })),
+    bones: source.bones.map((bone) => ({
+      ...bone,
+      dq: new Float32Array(bone.dq),
+      axis: [...bone.axis],
+    })),
+    animations: source.animations.map((animation) => ({
+      ...animation,
+      times: [...animation.times],
+      frames: animation.frames.map((frame) => frame.map((dq) => new Float32Array(dq))),
+      lockedBones: [...animation.lockedBones],
+    })),
+  };
+}
+
+export function applyLiveSkinEditsToImportedSmf(
+  source: ImportedSmf,
+  skinnedMeshes: THREE.SkinnedMesh[],
+): ImportedSmf {
+  if (!source.meshes.length || !skinnedMeshes.length) {
+    return cloneImportedSmfForExport(source);
+  }
+
+  const result = cloneImportedSmfForExport(source);
+  const unusedByIndex = skinnedMeshes.map((_, index) => index);
+  const byName = new Map<string, number[]>();
+
+  skinnedMeshes.forEach((mesh, index) => {
+    const key = mesh.name || `mesh-${index}`;
+    const bucket = byName.get(key) ?? [];
+    bucket.push(index);
+    byName.set(key, bucket);
+  });
+
+  const consumeByName = (name: string): THREE.SkinnedMesh | null => {
+    const bucket = byName.get(name);
+    if (!bucket || bucket.length === 0) return null;
+    const nextIndex = bucket.shift()!;
+    byName.set(name, bucket);
+    const foundAt = unusedByIndex.indexOf(nextIndex);
+    if (foundAt >= 0) unusedByIndex.splice(foundAt, 1);
+    return skinnedMeshes[nextIndex];
+  };
+
+  const consumeNextByIndex = (): THREE.SkinnedMesh | null => {
+    const next = unusedByIndex.shift();
+    if (next === undefined) return null;
+    return skinnedMeshes[next];
+  };
+
+  for (let meshIndex = 0; meshIndex < result.meshes.length; meshIndex++) {
+    const mesh = result.meshes[meshIndex];
+    let sourceMesh: THREE.SkinnedMesh | null = consumeByName(mesh.name);
+    if (!sourceMesh) {
+      sourceMesh = consumeNextByIndex();
+    }
+    if (!sourceMesh) continue;
+
+    const payload = extractMeshPayload(sourceMesh);
+    if (payload.vertices !== mesh.verts) {
+      throw new SmfConversionError(
+        `SMF export skin mismatch: live mesh "${sourceMesh.name}" has ${payload.vertices} vertices, expected ${mesh.verts}.`
+      );
+    }
+
+    const expectedWeightCount = mesh.verts * 4;
+    if (payload.skinIndices.length !== expectedWeightCount || payload.skinWeights.length !== expectedWeightCount) {
+      throw new SmfConversionError(
+        `SMF export skin mismatch for mesh "${mesh.name}" while applying viewport edits.`
+      );
+    }
+
+    mesh.skinIndices = payload.skinIndices;
+    mesh.skinWeights = payload.skinWeights;
+  }
+
+  return result;
 }
 
 export function inspectThreeToSmfSource(src: SmfConversionSource): SmfDiagnosticReport {
@@ -100,6 +276,11 @@ export function inspectThreeToSmfSource(src: SmfConversionSource): SmfDiagnostic
         meshName,
       );
     }
+
+    const textureDiagnostics = inspectMeshMaterialCompatibility(mesh);
+    toSmfDiagnosticList(textureDiagnostics).forEach((item) => {
+      diagnostics.push(item);
+    });
   }
 
   return makeDiagnosticReport(diagnostics);
@@ -163,52 +344,66 @@ export function buildImportedSmfFromThree(src: SmfConversionSource): ImportedSmf
     };
   });
 
-  // Build mesh data from first skinned mesh
+  // Build mesh data from skinned meshes
   const meshes: ImportedSmf['meshes'] = [];
-  const mesh = skinnedMeshes[0];
-  if (mesh) {
-    const geo = mesh.geometry;
-    const posArr = (geo.attributes.position?.array as Float32Array) ?? new Float32Array(0);
-    const norArr = (geo.attributes.normal?.array as Float32Array) ?? new Float32Array(0);
-    const uvArr = (geo.attributes.uv?.array as Float32Array) ?? new Float32Array(0);
-    const tanArr = (geo.attributes.tangent?.array as Float32Array) ?? new Float32Array(0);
-    const skinIdxArr = (geo.attributes.skinIndex?.array as Uint16Array) ?? new Uint16Array(0);
-    const skinWArr = (geo.attributes.skinWeight?.array as Float32Array) ?? new Float32Array(0);
-    const verts = posArr.length / 3;
+  skinnedMeshes.forEach((mesh, meshIndex) => {
+    const payload = extractMeshPayload(mesh);
+    const { positions, normals, uvs, tangents, skinIndices, skinWeights, vertices: verts } = payload;
 
-    const smfPos = new Float32Array(posArr.length);
-    const smfNor = new Float32Array(norArr.length);
+    const smfPos = new Float32Array(positions.length);
+    const smfNor = new Float32Array(normals.length);
     for (let v = 0; v < verts; v++) {
-      const sp = threeVecToSmf(new THREE.Vector3(posArr[v * 3], posArr[v * 3 + 1], posArr[v * 3 + 2]));
-      smfPos[v * 3] = sp[0]; smfPos[v * 3 + 1] = sp[1]; smfPos[v * 3 + 2] = sp[2];
-      if (norArr.length > 0) {
-        const sn = threeVecToSmf(new THREE.Vector3(norArr[v * 3], norArr[v * 3 + 1], norArr[v * 3 + 2]));
-        smfNor[v * 3] = sn[0]; smfNor[v * 3 + 1] = sn[1]; smfNor[v * 3 + 2] = sn[2];
+      const sp = threeVecToSmf(new THREE.Vector3(
+        positions[v * 3],
+        positions[v * 3 + 1],
+        positions[v * 3 + 2],
+      ));
+      smfPos[v * 3] = sp[0];
+      smfPos[v * 3 + 1] = sp[1];
+      smfPos[v * 3 + 2] = sp[2];
+
+      if (normals.length > 0) {
+        const sn = threeVecToSmf(new THREE.Vector3(
+          normals[v * 3],
+          normals[v * 3 + 1],
+          normals[v * 3 + 2],
+        ));
+        smfNor[v * 3] = sn[0];
+        smfNor[v * 3 + 1] = sn[1];
+        smfNor[v * 3 + 2] = sn[2];
       }
     }
 
     const triangles: number[][] = [];
-    if (geo.index) {
-      const idx = geo.index.array;
-      for (let i = 0; i < idx.length; i += 3) triangles.push([idx[i], idx[i + 1], idx[i + 2]]);
+    const index = mesh.geometry.index;
+    if (index) {
+      for (let i = 0; i + 2 < index.count; i += 3) {
+        triangles.push([
+          index.getX(i),
+          index.getX(i + 1),
+          index.getX(i + 2),
+        ]);
+      }
     } else {
-      for (let i = 0; i < verts; i += 3) triangles.push([i, i + 1, i + 2]);
+      for (let i = 0; i < verts; i += 3) {
+        triangles.push([i, i + 1, i + 2]);
+      }
     }
 
     meshes.push({
-      name: mesh.name || 'Mesh_0',
+      name: mesh.name || `Mesh_${meshIndex}`,
       verts,
       triangles,
       texIdx: -1,
       positions: smfPos,
       normals: smfNor,
-      uvs: uvArr,
-      tangents: tanArr,
-      skinIndices: skinIdxArr,
-      skinWeights: skinWArr,
+      uvs,
+      tangents,
+      skinIndices,
+      skinWeights,
       visible: mesh.visible ? 1 : 0,
     });
-  }
+  });
 
   // Build animations from clip track data (no mixer, direct track interpolation)
   const animations: ImportedSmf['animations'] = clips.map((clip, ci) => {

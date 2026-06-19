@@ -15,7 +15,7 @@ export function makeBoneHighlightMarker(scale = 1): THREE.Group {
   );
   group.add(sphere);
   const axes = new THREE.AxesHelper(0.25 * markerScale);
-  (axes.material as any).depthTest = false;
+  axes.material.depthTest = false;
   group.add(axes);
   return group;
 }
@@ -56,7 +56,7 @@ export function makeBoneEndpointHandle(scale = 1): THREE.Group {
     new THREE.LineBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.75 })
   ));
 
-  ;(group as any).userData = { isEndpointHandle: true, markerScale };
+  group.userData = { isEndpointHandle: true, markerScale };
 
   return group;
 }

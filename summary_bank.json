@@ -56,6 +56,7 @@
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
         "docs/dev/PITFALL_LEDGER.md",
+        "docs/dev/GENEYE_FEEDBACK.md",
         "docs/research-inbox/README.md",
         "docs/research-inbox/archived/README.md",
         "source/frontend/tests/README.md",
@@ -137,13 +138,16 @@
     },
     "feature__smf_export_diagnostics": {
       "description": "Structured SMF export preflight for non-SMF skinned sources plus compact Export workspace diagnostics.",
-      "status": "implemented for first-pass compatibility checks, count-based roundtrip, and report saving: missing skeleton and scale tracks block export; missing UVs/normals warn; missing skinIndex/skinWeight blocks skinned export; generated skinned GLB smoke asserts ready diagnostics, in-memory roundtrip pass, and diagnostic report save before SMF export.",
+      "status": "implemented for first-pass compatibility checks, count/bounds/first-frame-pose roundtrip, report saving, and first material/texture warnings: missing skeleton and scale tracks block export; missing UVs/normals warn; missing skinIndex/skinWeight blocks skinned export; non-POT textures, multiple material slots, and multiple texture maps warn without blocking GLB fidelity export; generated skinned GLB smoke asserts ready diagnostics, in-memory roundtrip pass, and diagnostic report save before SMF export.",
       "paths": [
         "docs/dev/APP_STATE.md",
         "docs/dev/TODO.md",
         "source/frontend/src/loaders/smfDiagnostics.ts",
+        "source/frontend/src/loaders/smfDiagnostics.test.ts",
         "source/frontend/src/loaders/threeToSmf.ts",
         "source/frontend/src/loaders/threeToSmf.test.ts",
+        "source/frontend/src/utils/textureCompat.ts",
+        "source/frontend/src/utils/textureCompat.test.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/components/ExportPanel.tsx",
         "source/frontend/src/App.tsx",
@@ -153,17 +157,18 @@
         "source/frontend/tests/README.md"
       ],
       "next_steps": [
-        "Expand roundtrip checks beyond summary counts into bounds and first-frame pose sanity.",
-        "Extend diagnostics for material/texture compatibility after stable mesh/material ids are available."
+        "Decide whether richer material layouts should remain warning-only, block SMF export, or offer a split/export action.",
+        "Add a compact texture/material detail panel only if the Export cockpit list becomes too dense."
       ],
       "files": []
     },
     "feature__modern_editor_workspaces": {
       "description": "Modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, active single/quad viewport layout, model-safe wireframe display, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
-      "status": "Editor workspace shell and quad/shared layout are active; constrained-width mode tabs now use a scrollable toolbar row and deterministic post-load smoke coverage; quad view now has visible pane dividers/labels plus e2e overlay assertions; model-safe wireframe display is implemented and smoke-tested. Skin-weight edit helpers and a typed dirty-state model now exist, with unit coverage for read/edit/normalize/export-block reason, but live viewport paint and serializer integration remain backlog work. Remaining old-editor parity is real skin paint UI/export wiring, animation keyframe authoring, viewport settings shelves, ortho panes, bone affordances, and deeper precision controls while preserving shared model root continuity.",
+      "status": "Editor workspace shell and quad/shared layout are active; constrained-width mode tabs now use a scrollable toolbar row and deterministic post-load smoke coverage; quad view now has visible pane dividers/labels plus e2e overlay assertions; model-safe wireframe display is implemented and smoke-tested. Skin-weight edit helpers, typed dirty-state model, selected-bone set/add/subtract viewport paint, brush telemetry, continuity checks, and supported SMF dirty-export serialization are active. Remaining old-editor parity is autoskin/undo, animation keyframe authoring, viewport settings shelves, ortho panes, bone affordances, and deeper precision controls while preserving shared model root continuity.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
+        "docs/dev/old_editor_source_map.md",
         "docs/references/old-src/screenshots/README.md",
         "docs/references/old-src/screenshots/*.png",
         "source/frontend/src/App.tsx",
@@ -195,6 +200,7 @@
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
+        "docs/dev/old_editor_source_map.md",
         "docs/references/old-src/screenshots/README.md",
         "docs/references/old-src/screenshots/*.png",
         "docs/references/Old SMF Documentation v1.pdf",

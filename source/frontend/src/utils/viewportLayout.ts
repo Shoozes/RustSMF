@@ -53,8 +53,21 @@ export function refreshViewportSpecs(
   modelBounds: ModelBounds,
   perspectiveCamera: THREE.PerspectiveCamera,
   orthoCameras: THREE.OrthographicCamera[],
+  perspectiveEnabled: boolean,
 ): ViewportSpec[] {
   if (layout === 'single') {
+    if (!perspectiveEnabled && orthoCameras.length > 0) {
+      return [{
+        camera: orthoCameras[0],
+        x: 0,
+        y: 0,
+        width,
+        height,
+        isPickingCamera: true,
+        role: 'front',
+      }];
+    }
+
     return [{
       camera: perspectiveCamera,
       x: 0,

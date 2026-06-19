@@ -4,7 +4,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as THREE from 'three';
-import { buildImportedSmfFromThree, inspectThreeToSmfSource, SmfConversionError } from './threeToSmf';
+import { applyLiveSkinEditsToImportedSmf, buildImportedSmfFromThree, inspectThreeToSmfSource, SmfConversionError } from './threeToSmf';
 import { exportSMFToBuffer, importSMF, ImportedSmf } from './smf';
 import { dqToLocalTransform } from './coord';
 import { buildSmfNodeList } from './smfRig';
@@ -21,6 +21,7 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
     normal?: boolean;
     uv?: boolean;
     skin?: boolean;
+    material?: THREE.Material;
   } = {}) => {
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute([
@@ -54,9 +55,27 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
         1, 0, 0, 0,
       ], 4));
     }
-    const mesh = new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial());
+    const mesh = new THREE.SkinnedMesh(geometry, options.material ?? new THREE.MeshBasicMaterial());
     mesh.name = 'DiagnosticMesh';
     return mesh;
+  };
+
+  const makeNamedMesh = (name: string): THREE.SkinnedMesh => {
+    const mesh = makeSkinnedMesh({ skin: true, normal: true, uv: true });
+    mesh.name = name;
+    return mesh;
+  };
+
+  const makeTexturedMaterial = (useNonPowerOfTwo = false): THREE.MeshStandardMaterial => {
+    const width = useNonPowerOfTwo ? 3 : 4;
+    const height = useNonPowerOfTwo ? 2 : 4;
+    const data = new Uint8Array(width * height * 4);
+    for (let i = 0; i < data.length; i += 1) {
+      data[i] = i % 256;
+    }
+    const texture = new THREE.DataTexture(data, width, height);
+    texture.needsUpdate = true;
+    return new THREE.MeshStandardMaterial({ map: texture });
   };
 
   it('throws SmfConversionError for source without skeleton bones', () => {
@@ -114,6 +133,60 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
     assert.ok(report.diagnostics.some((item) => item.code === 'SMF_MISSING_NORMALS'));
   });
 
+  it('reports warning for non power-of-two material textures', () => {
+    const report = inspectThreeToSmfSource({
+      skeleton: makeSkeleton(),
+      skinnedMeshes: [
+        makeSkinnedMesh({
+          normal: true,
+          uv: true,
+          skin: true,
+          material: makeTexturedMaterial(true),
+        }),
+      ],
+    });
+
+    assert.strictEqual(report.canExportSmf, true);
+    assert.ok(report.diagnostics.some((item) => item.code === 'SMF_NON_POT_TEXTURE'), 'expected non-POT texture warning');
+  });
+
+  it('reports warning for multi-material meshes', () => {
+    const base = makeSkinnedMesh({ normal: true, uv: true, skin: true });
+    const mesh = makeSkinnedMesh({ normal: true, uv: true, skin: true });
+    mesh.material = [base.material, new THREE.MeshStandardMaterial({ color: 0x3366ff })] as unknown as THREE.Material;
+    mesh.name = 'MultiMaterialMesh';
+
+    const report = inspectThreeToSmfSource({
+      skeleton: makeSkeleton(),
+      skinnedMeshes: [mesh],
+    });
+
+    assert.strictEqual(report.canExportSmf, true);
+    assert.ok(report.diagnostics.some((item) => item.code === 'SMF_MULTI_MATERIAL'), 'expected multi-material warning');
+  });
+
+  it('warns when multiple texture sources are used for a mesh and does not block', () => {
+    const texturedA = makeTexturedMaterial();
+    const texturedB = makeTexturedMaterial();
+    texturedB.needsUpdate = true;
+
+    const mesh = makeSkinnedMesh({
+      normal: true,
+      uv: true,
+      skin: true,
+    });
+    mesh.material = [texturedA, texturedB] as unknown as THREE.Material;
+    mesh.name = 'DualTextureMesh';
+
+    const report = inspectThreeToSmfSource({
+      skeleton: makeSkeleton(),
+      skinnedMeshes: [mesh],
+    });
+
+    assert.strictEqual(report.canExportSmf, true);
+    assert.ok(report.diagnostics.some((item) => item.code === 'SMF_MULTI_TEXTURE'), 'expected multi-texture warning');
+  });
+
   it('reports diagnostic error when skinned export mesh lacks skin attributes', () => {
     const report = inspectThreeToSmfSource({
       skeleton: makeSkeleton(),
@@ -137,6 +210,23 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
     assert.strictEqual(result.meshes.length, 0, 'no mesh when no skinnedMeshes');
     assert.strictEqual(result.animations.length, 0, 'no animations when no clips');
     assert.strictEqual(result.textures.length, 0);
+  });
+
+  it('converts all skinned meshes, not just the first', () => {
+    const bone = new THREE.Bone();
+    bone.name = 'Bone_0';
+    const skeleton = new THREE.Skeleton([bone]);
+    const converted = buildImportedSmfFromThree({
+      skeleton,
+      skinnedMeshes: [
+        makeNamedMesh('Mesh_A'),
+        makeNamedMesh('Mesh_B'),
+      ],
+    });
+
+    assert.strictEqual(converted.meshes.length, 2);
+    assert.strictEqual(converted.meshes[0].name, 'Mesh_A');
+    assert.strictEqual(converted.meshes[1].name, 'Mesh_B');
   });
 
   it('preserves parent-child bone hierarchy', () => {
@@ -240,6 +330,67 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
     const report = compareSmfRoundtrip(converted, reimported);
     assert.strictEqual(report.ok, true);
     assert.ok(report.messages[0].includes('matched'));
+  });
+
+  it('applies live skinned mesh weight edits to imported smf payload', () => {
+    const bone = new THREE.Bone();
+    bone.name = 'Bone_0';
+    const skeleton = new THREE.Skeleton([bone]);
+    const converted = buildImportedSmfFromThree({
+      skeleton,
+      skinnedMeshes: [makeNamedMesh('PaintTarget')],
+    });
+
+    const paintMesh = makeNamedMesh('PaintTarget');
+    const weight = paintMesh.geometry.getAttribute('skinWeight') as THREE.BufferAttribute;
+    weight.setX(0, 0.7);
+    weight.setY(0, 0.2);
+    weight.setZ(0, 0.1);
+    weight.setW(0, 0);
+    weight.setX(1, 0);
+    weight.setY(1, 1);
+    weight.setZ(1, 0);
+    weight.setW(1, 0);
+    weight.setX(2, 0);
+    weight.setY(2, 0);
+    weight.setZ(2, 0);
+    weight.setW(2, 1);
+    const patched = applyLiveSkinEditsToImportedSmf(converted, [paintMesh]);
+
+    assert.ok(Math.abs(patched.meshes[0].skinWeights[0] - 0.7) < 1e-6);
+    assert.ok(Math.abs(patched.meshes[0].skinWeights[1] - 0.2) < 1e-6);
+    assert.ok(Math.abs(patched.meshes[0].skinWeights[2] - 0.1) < 1e-6);
+    assert.ok(Math.abs(patched.meshes[0].skinWeights[3] - 0) < 1e-6);
+
+    assert.ok(Math.abs(patched.meshes[0].skinWeights[4] - 0) < 1e-6);
+    assert.ok(Math.abs(patched.meshes[0].skinWeights[5] - 1) < 1e-6);
+  });
+
+  it('throws when applying live weight edits with mismatched mesh topology', () => {
+    const bone = new THREE.Bone();
+    bone.name = 'Bone_0';
+    const skeleton = new THREE.Skeleton([bone]);
+    const converted = buildImportedSmfFromThree({
+      skeleton,
+      skinnedMeshes: [makeNamedMesh('PaintTarget')],
+    });
+
+    const wrongMesh = makeSkinnedMesh({ skin: true, normal: true, uv: true });
+    wrongMesh.name = 'PaintTarget';
+    wrongMesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute([
+      0, 0, 0,
+      1, 0, 0,
+      0, 1, 0,
+      1, 1, 0,
+    ], 3));
+
+    assert.throws(
+      () => applyLiveSkinEditsToImportedSmf(converted, [wrongMesh]),
+      (err: Error) => {
+        assert.ok(err instanceof SmfConversionError, 'should be SmfConversionError');
+        return true;
+      },
+    );
   });
 });
 

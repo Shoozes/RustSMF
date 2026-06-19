@@ -24,14 +24,14 @@ describe('viewportLayout', () => {
     const cameras = orthoCameras();
     const bounds = { center: new THREE.Vector3(1, 2, 3), maxDim: 4 };
 
-    const single = refreshViewportSpecs(801, 601, 'single', bounds, perspective, cameras);
+    const single = refreshViewportSpecs(801, 601, 'single', bounds, perspective, cameras, true);
     assert.equal(single.length, 1);
     assert.equal(single[0].role, 'perspective');
     assert.equal(single[0].width, 801);
     assert.equal(single[0].height, 601);
 
     refreshOrthoCameras(cameras, bounds);
-    const quad = refreshViewportSpecs(801, 601, 'quad', bounds, perspective, cameras);
+    const quad = refreshViewportSpecs(801, 601, 'quad', bounds, perspective, cameras, true);
     assert.deepEqual(quad.map((spec) => spec.role), ['front', 'side', 'top', 'perspective']);
     assert.deepEqual(quad.map((spec) => [spec.width, spec.height]), [
       [400, 300],
@@ -45,7 +45,7 @@ describe('viewportLayout', () => {
 
   it('falls back to perspective panes when ortho cameras are unavailable', () => {
     const perspective = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
-    const panes = refreshViewportSpecs(640, 480, 'quad', DEFAULT_VIEWPORT_BOUNDS, perspective, []);
+    const panes = refreshViewportSpecs(640, 480, 'quad', DEFAULT_VIEWPORT_BOUNDS, perspective, [], true);
     assert.equal(panes.length, 4);
     assert.ok(panes.every((spec) => spec.camera === perspective));
     assert.ok(panes.every((spec) => spec.role === 'perspective'));

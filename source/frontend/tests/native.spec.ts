@@ -10,6 +10,7 @@ import {
   type SmfDesktopInfo,
   updateTauriMock,
 } from './helpers/smoke-helpers';
+import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 
 function readSampleBytes(samplePath: string | null): number[] {
   if (!samplePath) return [];
@@ -184,5 +185,121 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await page.goto('/');
     await page.getByTestId('open-model-btn').click();
     await expect(page.getByTestId('status-text')).toContainText('No file selected.', { timeout: 5000 });
+  });
+
+  test('native export cancel keeps edited skin state dirty status', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf sample available for native IPC mock coverage');
+
+    const sampleBytes = readSampleBytes(SAMPLE_SMF);
+    const desktopInfo = simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes));
+    const savePath = 'C:\\tmp\\exported_model.smf';
+
+    await installTauriMock(page, {
+      openPath: SAMPLE_SMF!,
+      savePath,
+      sampleBytes,
+      desktopInfo,
+      cancelSave: true,
+      writeDelayMs: 150,
+    });
+
+    await page.goto('/');
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(await createSkinnedGlbFixtureInput());
+
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
+
+    await page.getByTestId('mode-tab-skin').click({ force: true });
+    await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+    const inspector = page.getByTestId('inspector');
+    const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    await expect(bone).toBeVisible();
+    await bone.click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
+
+    await page.getByTestId('skin-paint-mode-subtract').click({ force: true }).catch(() => {});
+    await page.getByTestId('skin-paint-target').fill('1');
+    await page.getByTestId('skin-paint-target').dispatchEvent('input');
+    await page.getByTestId('skin-paint-radius').fill('1');
+    await page.getByTestId('skin-paint-radius').dispatchEvent('input');
+    await page.getByTestId('skin-paint-strength').fill('1');
+    await page.getByTestId('skin-paint-strength').dispatchEvent('input');
+
+    const canvas = page.getByTestId('three-canvas');
+    const box = await canvas.boundingBox();
+    if (box) {
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      await page.mouse.move(x, y);
+      await page.mouse.down({ button: 'left' });
+      await page.mouse.move(x + 28, y + 24);
+      await page.waitForTimeout(60);
+      await page.mouse.up({ button: 'left' });
+    }
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
+
+    await page.getByTestId('export-smf-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText('Export canceled.', { timeout: 5000 });
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
+    await expect(page.getByTestId('skin-export-block')).toHaveCount(0);
+
+    let snapshot = await getTauriMockSnapshot(page);
+    expect(snapshot.writes).toHaveLength(0);
+
+    await updateTauriMock(page, { cancelSave: false });
+    await page.getByTestId('export-smf-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
+    snapshot = await getTauriMockSnapshot(page);
+    expect(snapshot.writes).toHaveLength(1);
+    expect(snapshot.calls.map((call) => call.cmd)).toContain('write_file_binary');
+  });
+
+  test('native export cancel keeps edited animation state dirty status', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf sample available for native IPC mock coverage');
+
+    const sampleBytes = readSampleBytes(SAMPLE_SMF);
+    const desktopInfo = simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes));
+    const savePath = 'C:\\tmp\\exported_animation_model.smf';
+
+    await installTauriMock(page, {
+      openPath: SAMPLE_SMF!,
+      savePath,
+      sampleBytes,
+      desktopInfo,
+      cancelSave: true,
+      writeDelayMs: 150,
+    });
+
+    await page.goto('/');
+    await page.getByTestId('open-model-btn').click();
+
+    await expect(page.getByTestId('status-text')).toContainText(/Rust validated SMF|Loaded/i, { timeout: 15000 });
+
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    const rigPanel = page.getByTestId('inspector');
+    const firstBone = rigPanel.locator('li > div').filter({ hasText: /SMF_Node_/ }).first();
+    await expect(firstBone).toBeVisible({ timeout: 8000 });
+    await firstBone.click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*SMF_Node_\d+/i);
+
+    await page.getByTestId('transform-x-btn').click({ force: true }).catch(() => {});
+
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+
+    await page.getByTestId('export-smf-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText('Export canceled.', { timeout: 5000 });
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+
+    let snapshot = await getTauriMockSnapshot(page);
+    expect(snapshot.writes).toHaveLength(0);
+
+    await updateTauriMock(page, { cancelSave: false });
+    await page.getByTestId('export-smf-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
+    snapshot = await getTauriMockSnapshot(page);
+    expect(snapshot.writes).toHaveLength(1);
+    expect(snapshot.calls.map((call) => call.cmd)).toContain('write_file_binary');
   });
 });

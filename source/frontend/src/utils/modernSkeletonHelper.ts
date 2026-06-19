@@ -24,7 +24,11 @@ type JointMeshItem = {
   mesh: THREE.Mesh;
 };
 
-export type DisposableSkeletonHelper = THREE.Object3D & { dispose?: () => void };
+export type DisposableSkeletonHelper = THREE.Object3D & {
+  dispose?: () => void;
+  setOpacity?: (opacity: number) => void;
+  setThicknessScale?: (scale: number) => void;
+};
 
 function markHelperObject(object: THREE.Object3D, bone?: THREE.Bone): void {
   object.userData = {
@@ -105,6 +109,11 @@ export class ModernSkeletonHelper extends THREE.Group {
   private readonly showBones: boolean;
   private readonly showLeafs: boolean;
   private readonly showJoints: boolean;
+  private opacity = 1;
+  private thicknessScale = 1;
+  private readonly baseBoneOpacity: number;
+  private readonly baseLeafOpacity: number;
+  private readonly baseJointOpacity: number;
 
   constructor(root: THREE.Object3D, options: ModernSkeletonHelperOptions = {}) {
     super();
@@ -131,12 +140,16 @@ export class ModernSkeletonHelper extends THREE.Group {
     this.baseBoneThickness = boneThickness;
     this.baseJointRadius = jointRadius;
 
+    this.baseBoneOpacity = 0.7;
+    this.baseLeafOpacity = 0.75;
+    this.baseJointOpacity = 0.9;
+
     this.boneMaterial = new THREE.MeshBasicMaterial({
       color: colorBone,
       depthTest,
       depthWrite: false,
       transparent: true,
-      opacity: 0.7,
+      opacity: this.baseBoneOpacity * this.opacity,
       wireframe: true,
     });
     this.leafMaterial = new THREE.MeshBasicMaterial({
@@ -144,7 +157,7 @@ export class ModernSkeletonHelper extends THREE.Group {
       depthTest,
       depthWrite: false,
       transparent: true,
-      opacity: 0.75,
+      opacity: this.baseLeafOpacity * this.opacity,
       wireframe: true,
     });
     this.jointMaterial = new THREE.MeshBasicMaterial({
@@ -152,7 +165,7 @@ export class ModernSkeletonHelper extends THREE.Group {
       depthTest,
       depthWrite: false,
       transparent: true,
-      opacity: 0.9,
+      opacity: this.baseJointOpacity * this.opacity,
       wireframe: true,
     });
 
@@ -184,8 +197,9 @@ export class ModernSkeletonHelper extends THREE.Group {
   }
 
   override updateMatrixWorld(force?: boolean): void {
-    const thickness = this.baseBoneThickness * this.averageBoneLength;
-    const jointRadius = this.baseJointRadius * this.averageBoneLength;
+    const scaleMultiplier = Math.max(0.05, this.thicknessScale);
+    const thickness = this.baseBoneThickness * this.averageBoneLength * scaleMultiplier;
+    const jointRadius = this.baseJointRadius * this.averageBoneLength * scaleMultiplier;
     const parentPos = new THREE.Vector3();
     const childPos = new THREE.Vector3();
     const localPos = new THREE.Vector3();
@@ -221,6 +235,20 @@ export class ModernSkeletonHelper extends THREE.Group {
     this.boneMaterial.dispose();
     this.leafMaterial.dispose();
     this.jointMaterial.dispose();
+  }
+
+  setOpacity(opacity: number): void {
+    const clamped = Number.isFinite(opacity) ? Math.max(0, Math.min(1, opacity)) : 1;
+    this.opacity = clamped;
+    this.boneMaterial.opacity = this.baseBoneOpacity * clamped;
+    this.leafMaterial.opacity = this.baseLeafOpacity * clamped;
+    this.jointMaterial.opacity = this.baseJointOpacity * clamped;
+    this.visible = clamped > 0;
+  }
+
+  setThicknessScale(scale: number): void {
+    const clamped = Number.isFinite(scale) ? Math.max(0.05, Math.min(4, scale)) : 1;
+    this.thicknessScale = clamped;
   }
 }
 

@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-18 (full review pass + interop/timing polish + test re-audit + doc consolidation)
+Last reviewed: 2026-06-19 (typed interop boundary cleanup + launcher trail output improvement + GenEye run-pass confirmation)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -20,22 +20,9 @@ Each active item should answer:
 
 ## Active Backlog
 
-### P1: Build an old-editor parity source map
+### Completed
 
-- What: Produce a focused implementation map from old GameMaker scripts/screenshots to RustSMF features before deeper authoring work starts.
-- Why: The old source has working behavior spread across `objects`, `scripts`, screenshots, and legacy SMF docs; implementing from screenshots alone risks missing data-model rules.
-- Where: `docs/references/old-src/screenshots/README.md`, `docs/references/old-src/scripts`, `docs/references/old-src/objects/oAnimEditSystem`, `docs/references/Old SMF Documentation v1.pdf`, `docs/references/old-src/issues.md`, `docs/dev/TODO.md`.
-- When: Do this before implementing skin paint or keyframe authoring beyond the current preview/playback features.
-- How:
-  - Map old script families to modern subsystems: `skineditor_*`, `animeditor_*`, `rigeditor_*`, `common_add_buttons`, viewport draw/step logic, and SMF import/export helpers.
-  - Capture only behavior needed for current RustSMF goals; do not recreate old GameMaker chrome verbatim.
-  - Record ambiguous or format-risky findings in `PITFALL_LEDGER.md` only when they represent repeatable hazards.
-- Subtasks:
-  - Inventory skin paint scripts and classify brush, selection, weight-normalization, autoskin, and UI-only behavior.
-  - Inventory animation scripts and classify clip list, keyframe grid, interpolation, copy/paste, sample-strip, and export behavior.
-  - Inventory viewport settings and classify display-only toggles versus data-mutating commands.
-  - Cross-check old screenshots against current RustSMF state and update stale comparison text.
-- Acceptance: A compact source map exists in docs or TODO notes, and each large implementation item below names the old scripts it depends on.
+Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`. Skin paint data/viewport/export wiring is now current app state; remaining skin work belongs to undo/autoskin/deeper precision items below.
 
 ### P1: Implement skin-weight edit data model
 
@@ -51,29 +38,28 @@ Each active item should answer:
   - Done: define typed `SkinEditState` with selected bone, dirty mesh ids, edited vertex weights, and source format in `skinWeights.ts`.
   - Done: extract pure helpers for read/edit/normalize selected-bone weight slots and reuse the reader in weight preview.
   - Done: add unit tests for add, subtract, set, clamp, normalize, invalid bone/vertex, and missing-skin-attribute cases in `skinWeights.test.ts`.
-  - Wire `SkinEditState` into `useLoadModel` or the store so dirty state is visible to panels and survives workspace switches.
-  - Add an explicit export gate in the live export path so unsupported dirty skin edits cannot silently disappear.
-  - Add dirty-state continuity tests once state is connected to the app shell.
+  - Done: wire `SkinEditState` into `useLoadModel`/panels so dirty state is visible and survives workspace switches.
+  - Done: serialize dirty skin edits into supported SMF export paths and show a block reason for unsupported dirty states.
+  - Done: add dirty-state continuity and canceled-save coverage in Playwright native/browser tests.
 - Acceptance: Unit tests prove edited weights normalize deterministically and no export path silently drops dirty skin edits.
 
-### P1: Implement skin paint viewport interaction
+### P2: Extend skin paint parity beyond first authoring path
 
-- What: Add actual viewport skin painting: selected-bone prerequisite, brush hover, set/add/subtract modes, radius/strength/influence controls, and live preview updates.
-- Why: Old Skinning mode is a core authoring workflow; current “Show Weights” only visualizes data and does not modify it.
+- What: Add the remaining old-editor skinning behaviors after the first selected-bone set/add/subtract paint path.
+- Why: The app can now paint and export supported dirty weights, but old Skinning mode also had autoskin, normalize/single-paint variants, and undo-oriented transactional safety.
 - Where: `source/frontend/src/components/SkinPanel.tsx`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/weightPreview.ts`, `source/frontend/tests/smoke.spec.ts`, `docs/references/old-src/scripts/skineditor_*`, `docs/references/old-src/screenshots/smf_editor_skinning_tab.png`, `docs/references/old-src/screenshots/smf_editor_skinning_painting.png`.
-- When: After `SkinEditState` exists and has pure helper tests.
+- When: After the current paint/export path stays stable under e2e and before claiming full old-editor skinning parity.
 - How:
-  - Use raycast hits on skinned geometry to find paint targets.
-  - Display brush hover only in Skin mode and only on paintable meshes.
-  - Require selected bone before modifying weights; show clear disabled/status behavior otherwise.
-  - Reuse weight preview colors after each edit so user feedback matches exported data.
+  - Keep the existing selected-bone gating and dirty export serialization.
+  - Add autoskin/normalize behavior only with pure helper tests first.
+  - Add undo/redo or equivalent transactional checkpoints before adding broader paint tools.
 - Subtasks:
-  - Add SkinPanel controls for paint mode: set, add, subtract.
-  - Add numeric controls for radius, strength, and target influence.
-  - Add viewport brush marker and hit telemetry for tests.
-  - Add Playwright coverage: select bone -> enable paint -> paint -> preview changes -> export status reflects dirty skin edits.
-  - Add a negative Playwright case: no bone selected -> brush visible but paint disabled/status explains why.
-- Acceptance: A selected bone can paint deterministic weights in the viewport, the preview updates, and tests cover both enabled and blocked paint paths.
+  - Done: SkinPanel controls for set/add/subtract, radius, strength, and target influence.
+  - Done: viewport brush marker/hit telemetry with selected-bone prerequisite.
+  - Done: Playwright coverage for no-bone blocked paint, enabled paint, workspace continuity, and supported SMF export.
+  - Add pure autoskin and normalize helpers based on old `skineditor_*` scripts.
+  - Add undo/redo checkpointing for skin paint edits.
+- Acceptance: Remaining skin tools match documented old-source semantics, are undo-safe, and cannot silently drop dirty edits on export.
 
 ### P1: Implement animation edit data model
 
@@ -156,10 +142,11 @@ Each active item should answer:
   - Keep GLB export untouched.
   - Only add split-by-material export after diagnostics identify stable mesh/material ids.
 - Subtasks:
-  - Add power-of-two texture helper tests.
-  - Detect multiple material slots on SMF-target meshes.
-  - Show texture names/resolution/source in a compact panel.
-  - Decide whether unsupported material layouts block SMF export or require split/export action.
+  - Done: add power-of-two texture helper tests.
+  - Done: detect multiple material slots and multiple texture maps on SMF-target meshes.
+  - Done: surface material/texture warnings in structured SMF diagnostics without blocking GLB export.
+  - Show texture names/resolution/source in a compact panel if diagnostics need more than the Export cockpit list.
+  - Decide whether unsupported material layouts should remain warning-only, block SMF export, or offer split/export action.
 - Acceptance: Material-heavy models produce clear SMF compatibility guidance, and GLB remains the recommended full-fidelity path.
 
 ### P1: Finish precision-editor parity in quad/ortho workflows
@@ -227,8 +214,10 @@ Each active item should answer:
   - Add targeted race cases as new authoring state becomes test-addressable.
 - Subtasks:
   - Add browser export-overlap assertions if the download/export path becomes fully mockable.
-  - Add stale-load protection cases for dirty skin/animation edit state once those states exist.
-  - Add canceled-save status assertions for edited model states.
+  - Done: added browser race coverage that verifies stale dirty pose edits are cleared when an older `.smf` load is overtaken by drag/drop `.fbx` load (`tests/smoke.spec.ts`).
+  - Done: added browser race coverage that verifies skin-dirty state and selected bone are cleared when a delayed `.smf` input load is overtaken by a drag/drop `.fbx` load (`tests/smoke.spec.ts`).
+  - Done: added native e2e assertion that skin edits stay dirty across canceled SMF export save (`tests/native.spec.ts`).
+  - Done: added pose-edit continuity coverage via `pose-edit` dirty state and canceled SMF save (`tests/native.spec.ts`).
   - Keep shared delayed-read/drop helpers isolated in `smoke-helpers.ts`.
 - Acceptance: No stale root, selection, status, error, dirty skin edit, or dirty animation edit writes are visible after a newer operation has started.
 

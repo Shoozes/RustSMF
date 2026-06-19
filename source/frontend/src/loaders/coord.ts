@@ -181,7 +181,7 @@ export function decomposeMatrix(m: THREE.Matrix4): { pos: THREE.Vector3; quat: T
 export function dqToLocalTransform(dq: Float32Array): { pos: THREE.Vector3; quat: THREE.Quaternion } {
   const mat = dqToThreeMatrix(dq);
   const yupMatArr = smfMatrixToThree(new Float32Array(mat.elements)); // convert space
-  const m = new THREE.Matrix4().fromArray(yupMatArr as any);
+  const m = new THREE.Matrix4().fromArray(yupMatArr);
   const { pos, quat } = decomposeMatrix(m);
   return { pos, quat };
 }

@@ -9,6 +9,16 @@ interface SkinPanelProps {
   showBoneLabels: boolean;
   onToggleBoneLabels?: () => void;
   editorMode?: string;
+  skinEditHasDirtyState: boolean;
+  skinEditBlockReason: string | null;
+  skinPaintMode: 'set' | 'add' | 'subtract';
+  skinPaintRadius: number;
+  skinPaintStrength: number;
+  skinPaintTarget: number;
+  onSkinPaintModeChange: (next: 'set' | 'add' | 'subtract') => void;
+  onSkinPaintRadiusChange: (value: number) => void;
+  onSkinPaintStrengthChange: (value: number) => void;
+  onSkinPaintTargetChange: (value: number) => void;
 }
 
 export default function SkinPanel({
@@ -19,10 +29,22 @@ export default function SkinPanel({
   onToggleWeightPreview,
   showBoneLabels,
   onToggleBoneLabels,
+  skinEditHasDirtyState,
+  skinEditBlockReason,
+  skinPaintMode,
+  skinPaintRadius,
+  skinPaintStrength,
+  skinPaintTarget,
+  onSkinPaintModeChange,
+  onSkinPaintRadiusChange,
+  onSkinPaintStrengthChange,
+  onSkinPaintTargetChange,
   editorMode = 'skin',
 }: SkinPanelProps) {
   const selectedBonePresent = !!selected && selected !== 'Scene';
   const hasSkeleton = !!skeleton && skeleton.bones.length > 0;
+  const isPaintEnabled = selectedBonePresent && hasSkeleton;
+  const sliderDisabled = !isPaintEnabled;
 
   return (
     <div className="inspector" data-testid="skin-workspace-panel" data-editor-mode={editorMode}>
@@ -57,6 +79,92 @@ export default function SkinPanel({
           >
             {showBoneLabels ? 'Hide' : 'Show'} Labels
           </button>
+        )}
+      </div>
+      <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
+        <div className="text-slate-400 mb-1">Skin paint</div>
+        <div className="text-slate-300 text-[10px] mb-2">
+          {isPaintEnabled ? 'Brush on painted mesh vertices to edit weights.' : 'Select a bone to enable skin painting.'}
+        </div>
+        <div className="flex gap-1 mb-2">
+          <button
+            data-testid="skin-paint-mode-set"
+            className={`px-1 py-0 text-xs ${skinPaintMode === 'set' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
+            disabled={!isPaintEnabled}
+            onClick={() => onSkinPaintModeChange('set')}
+          >
+            Set
+          </button>
+          <button
+            data-testid="skin-paint-mode-add"
+            className={`px-1 py-0 text-xs ${skinPaintMode === 'add' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
+            disabled={!isPaintEnabled}
+            onClick={() => onSkinPaintModeChange('add')}
+          >
+            Add
+          </button>
+          <button
+            data-testid="skin-paint-mode-subtract"
+            className={`px-1 py-0 text-xs ${skinPaintMode === 'subtract' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
+            disabled={!isPaintEnabled}
+            onClick={() => onSkinPaintModeChange('subtract')}
+          >
+            Subtract
+          </button>
+        </div>
+        <div className="grid gap-1.5 text-[10px]">
+          <label className="flex items-center justify-between gap-2 text-slate-400">
+            <span>Radius</span>
+            <input
+              data-testid="skin-paint-radius"
+              type="range"
+              min="0.05"
+              max="1.5"
+              step="0.05"
+              value={skinPaintRadius}
+              disabled={sliderDisabled}
+              onChange={(e) => onSkinPaintRadiusChange(Number(e.target.value))}
+              className="w-40"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-2 text-slate-400">
+            <span>Strength</span>
+            <input
+              data-testid="skin-paint-strength"
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={skinPaintStrength}
+              disabled={sliderDisabled}
+              onChange={(e) => onSkinPaintStrengthChange(Number(e.target.value))}
+              className="w-40"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-2 text-slate-400">
+            <span>Target</span>
+            <input
+              data-testid="skin-paint-target"
+              type="range"
+              min="1"
+              max="4"
+              step="1"
+              value={skinPaintTarget}
+              disabled={sliderDisabled}
+              onChange={(e) => onSkinPaintTargetChange(Number(e.target.value))}
+              className="w-40"
+            />
+          </label>
+        </div>
+      </div>
+      <div className="mt-2 text-[10px] border-t border-slate-700 pt-1" data-testid="skin-dirty-state">
+        <div className={skinEditHasDirtyState ? 'text-amber-300' : 'text-slate-500'}>
+          {skinEditHasDirtyState ? 'Skin edit dirty: true' : 'Skin edit dirty: false'}
+        </div>
+        {skinEditBlockReason && (
+          <div className="text-rose-300 mt-1" data-testid="skin-export-block">
+            {skinEditBlockReason}
+          </div>
         )}
       </div>
       <div className="text-[10px] text-slate-500 mt-2">
