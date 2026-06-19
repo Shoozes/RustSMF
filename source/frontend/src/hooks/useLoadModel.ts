@@ -21,12 +21,12 @@ type LoadedModelResult =
   | Awaited<ReturnType<typeof loadFBX>>
   | Awaited<ReturnType<typeof loadOBJ>>;
 
-const tauriClientRef = useRef<TauriClient | null>(null);
+let cachedTauriClient: TauriClient | null = null;
 const getTauriClient = async (): Promise<TauriClient> => {
-  if (tauriClientRef.current) return tauriClientRef.current;
+  if (cachedTauriClient) return cachedTauriClient;
   const clientMod = await import('../backend-client/tauri');
   const client = clientMod as unknown as TauriClient;
-  tauriClientRef.current = client;
+  cachedTauriClient = client;
   return client;
 };
 

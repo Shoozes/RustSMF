@@ -10,7 +10,7 @@ const THREE_VENDOR_PATTERNS = [
 export default defineConfig({
   plugins: [react()],
   resolve: {
-    dedupe: ['three']
+    dedupe: ['react', 'react-dom', 'three']
   },
   optimizeDeps: {
     include: ['three', 'three/examples/jsm/controls/TransformControls']

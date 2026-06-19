@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-18 (full repo/app review pass; research-inbox cleared; interop casts/timing improved; no new recurring pitfalls; verify green).
+Last reviewed: 2026-06-18 (skin edit helper + boot regression audit; verify, browser e2e, and GenEye-backed e2e green).
 
 ### Q: What pitfall are we preventing?
 
@@ -45,6 +45,28 @@ Last reviewed: 2026-06-18 (full repo/app review pass; research-inbox cleared; in
 **Relevance check:** Current. RustSMF is the active external consumer for proving GenEye's browser-app testing workflow.
 
 **Next prevention step:** After any GenEye wrapper or RustSMF e2e command change, run both the GenEye-backed e2e path and the browser-only fallback, then update docs if evidence paths or command names change.
+
+### Q: What pitfall are we preventing?
+
+**What:** React hooks called at module scope can make the built app boot to a blank page while lint, typecheck, unit tests, and Vite build still pass.
+
+**Why it happened:** A Tauri client cache used `useRef` outside `useLoadModel()`. React hook dispatchers are only valid during component or custom-hook render, so the production app failed at import time with `TypeError: Cannot read properties of null (reading 'useRef')`.
+
+**Where:** `source/frontend/src/hooks/useLoadModel.ts`, caught by `pwsh -File run.ps1 -Task test:e2e -NoGenEye` and confirmed with a direct Playwright probe against Vite preview.
+
+**How to catch it:** Run browser e2e after hook/cache refactors. If every spec fails before `status-text` appears and page errors mention `useRef`, inspect for `use*` calls outside React functions. Grep: `rg -n "const .* = use[A-Z]|let .* = use[A-Z]" source/frontend/src`.
+
+**Solutions tried:**
+1. `45/100` Add Vite `resolve.dedupe` for React/React DOM, result: useful hardening but did not fix the crash because the root cause was invalid hook placement.
+2. `94/100` Replace the module-scope `useRef` cache with a plain module variable `cachedTauriClient`, result: app boot smoke passed and full browser e2e returned to 22/22.
+
+**Current solution:** Module-level caches use plain variables or functions. React `useRef`, `useState`, `useMemo`, `useEffect`, and `useCallback` stay inside components or custom hooks.
+
+**Effectiveness:** `94/100`, durable. The failing full e2e was reproduced, the smallest boot smoke passed after the fix, and the full browser plus GenEye-backed e2e suites passed.
+
+**Relevance check:** Current. Future timing/cache cleanup around `useLoadModel` and Tauri lazy imports can repeat this mistake.
+
+**Next prevention step:** Add a small static grep/check if this recurs, or include module-scope hook search in integrity passes that touch hook files.
 
 ### Q: What pitfall are we preventing?
 

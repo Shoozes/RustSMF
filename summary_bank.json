@@ -160,7 +160,7 @@
     },
     "feature__modern_editor_workspaces": {
       "description": "Modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, active single/quad viewport layout, model-safe wireframe display, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
-      "status": "Editor workspace shell and quad/shared layout are active; constrained-width mode tabs now use a scrollable toolbar row and deterministic post-load smoke coverage; quad view now has visible pane dividers/labels plus e2e overlay assertions; model-safe wireframe display is implemented and smoke-tested. Remaining work is old-editor parity for real skin-weight paint authoring, animation keyframe authoring, viewport settings shelves, ortho panes, bone affordances, and deeper precision controls while preserving shared model root continuity.",
+      "status": "Editor workspace shell and quad/shared layout are active; constrained-width mode tabs now use a scrollable toolbar row and deterministic post-load smoke coverage; quad view now has visible pane dividers/labels plus e2e overlay assertions; model-safe wireframe display is implemented and smoke-tested. Skin-weight edit helpers and a typed dirty-state model now exist, with unit coverage for read/edit/normalize/export-block reason, but live viewport paint and serializer integration remain backlog work. Remaining old-editor parity is real skin paint UI/export wiring, animation keyframe authoring, viewport settings shelves, ortho panes, bone affordances, and deeper precision controls while preserving shared model root continuity.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
@@ -177,6 +177,8 @@
         "source/frontend/src/store/index.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/utils/modernSkeletonHelper.ts",
+        "source/frontend/src/utils/skinWeights.ts",
+        "source/frontend/src/utils/skinWeights.test.ts",
         "source/frontend/src/utils/viewportLayout.ts"
       ],
       "requirements": [
@@ -220,8 +222,8 @@
       "files": []
     },
     "subsystem__viewport_editor": {
-      "description": "Three.js viewport, orbit controls, model attach/dispose, animation mixer, modern skeleton helper, raycast/helper-hit bone selection, TransformControls, model-safe wireframe display, and weight preview.",
-      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed; viewport drag filtering, context-aware R reset vs TransformControls mode shortcuts, ref-decoupled timing, disposal helpers, and bonePicker remain current. Labels: toggleable per-bone (small AxesHelper marker + canvas name sprite attached to bone, off default, full dispose/traverse) via extracted boneLabels.ts + useBoneLabels hook. Added endpoint-like marker handles, precision hover marker, hover dataset telemetry, endpoint drag constraints, and a render-only wireframe override that does not mutate export materials. Stock SkeletonHelper was replaced by a typed modern skeleton helper adapted from old plain-JS ideas: larger diamond spans and joint markers carry bone metadata for direct helper-hit selection, then fall back to distance picking. Quad mode now has explicit pane dividers/labels and per-pane clearing; endpoint drag, wireframe state, and visible quad-overlay verification are exercised in smoke tests.",
+      "description": "Three.js viewport, orbit controls, model attach/dispose, animation mixer, modern skeleton helper, raycast/helper-hit bone selection, TransformControls, model-safe wireframe display, and weight preview/edit helper boundaries.",
+      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed; viewport drag filtering, context-aware R reset vs TransformControls mode shortcuts, ref-decoupled timing, disposal helpers, and bonePicker remain current. Labels: toggleable per-bone (small AxesHelper marker + canvas name sprite attached to bone, off default, full dispose/traverse) via extracted boneLabels.ts + useBoneLabels hook. Added endpoint-like marker handles, precision hover marker, hover dataset telemetry, endpoint drag constraints, and a render-only wireframe override that does not mutate export materials. Stock SkeletonHelper was replaced by a typed modern skeleton helper adapted from old plain-JS ideas: larger diamond spans and joint markers carry bone metadata for direct helper-hit selection, then fall back to distance picking. Quad mode now has explicit pane dividers/labels and per-pane clearing; endpoint drag, wireframe state, and visible quad-overlay verification are exercised in smoke tests. Weight preview now uses the same typed four-slot skin-weight reader as the edit helper model.",
       "paths": [
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/utils/SimpleOrbit.ts",
@@ -229,6 +231,8 @@
         "source/frontend/src/components/Inspector.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/utils/weightPreview.ts",
+        "source/frontend/src/utils/skinWeights.ts",
+        "source/frontend/src/utils/skinWeights.test.ts",
         "source/frontend/src/utils/bonePicker.ts",
         "source/frontend/src/utils/boneLabels.ts",
         "source/frontend/src/utils/modernSkeletonHelper.ts",
@@ -453,6 +457,21 @@
       ],
       "current_solution": "Invoke-FrontendNpm captures LASTEXITCODE after writing npm output to host; test:e2e branches on the boolean return and exits 1 on failure.",
       "next_prevention": "For new native-command wrappers, validate both passing and failing exit-code behavior.",
+      "files": []
+    },
+    "issue__module_scope_react_hook_boot_crash": {
+      "description": "A React hook used as a module-scope cache caused the production app to fail before the shell mounted.",
+      "status": "fixed 2026-06-18; Tauri client cache now uses a plain module variable, React/Vite dedupe is hardened, and browser plus GenEye-backed e2e pass",
+      "last_seen": "2026-06-18",
+      "paths": [
+        "source/frontend/src/hooks/useLoadModel.ts",
+        "source/frontend/vite.config.ts",
+        "source/frontend/tests/smoke.spec.ts",
+        "source/frontend/tests/visual.spec.ts",
+        "docs/dev/PITFALL_LEDGER.md"
+      ],
+      "current_solution": "React hooks stay inside components/custom hooks; module-level lazy caches use plain variables or functions. Full e2e catches blank-page boot regressions that build/typecheck cannot catch.",
+      "next_prevention": "Search for module-scope `use*` calls during hook/cache refactors and rerun at least the app-boot smoke before broader e2e.",
       "files": []
     },
     "issue__typecheck_gap": {

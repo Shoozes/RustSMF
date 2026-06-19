@@ -18,7 +18,7 @@ Core flow:
   - `run.ps1 -Task test:e2e` uses GenEye as an optional advisory Playwright subagent when discoverable, but RustSMF remains able to run browser-only e2e with `-NoGenEye`, `RUSTSMF_NO_GENEYE=1`, or no GenEye checkout/runtime.
   - Direct `npm run dev` / `npm run tauri:dev` flows remain available but intentionally have reduced non-canonical lifecycle guarantees.
 - Drive animation through viewport-owned `AnimationMixer` state with timeline play/pause, scrub, speed, and clip selection.
-- Inspect skeletons, select bones from the hierarchy or viewport click, show larger diamond/joint skeleton helpers, show a selected-bone marker, use TransformControls, use quick nudges, and toggle selected-bone weight preview. Weight preview is tested as visualization only; full additive/subtractive skin-weight paint authoring is not implemented yet.
+- Inspect skeletons, select bones from the hierarchy or viewport click, show larger diamond/joint skeleton helpers, show a selected-bone marker, use TransformControls, use quick nudges, and toggle selected-bone weight preview. Weight preview now shares the same four-slot skin-weight reader used by the tested edit helpers. Full viewport skin-weight paint authoring and live export serialization are not implemented yet.
 - Move selected bone endpoint markers in precision modes with camera-plane constrained drag (no model swap, no control conflict), and endpoint-drag lifecycle assertions are covered by e2e smoke in single and quad modes.
 - Export SMF sources through the high-fidelity SMF roundtrip path, including live position/rotation pose edits.
 - Export compatible skinned GLB/FBX runtime roots to SMF through `threeToSmf`; use GLB export for static/material/scale cases.
@@ -42,6 +42,7 @@ Core flow:
 - `source/frontend/src/hooks/poseEdits.ts`: nudge delta types and helpers for live SMF position/rotation edits.
 - `source/frontend/src/components/ThreeViewport.tsx`: renderer, scene, camera, orbit, model attach/dispose, mixer, modern skeleton helper, helper-mesh/raycast bone picking, marker, TransformControls, model-safe wireframe render override, and weight preview.
 - `source/frontend/src/utils/modernSkeletonHelper.ts`: typed port of the useful old helper idea, drawing larger diamond bone spans and joint markers with bone metadata for direct helper-hit selection.
+- `source/frontend/src/utils/skinWeights.ts`: pure skin-weight edit helpers and `SkinEditState` model for reading, setting, adding, subtracting, clamping, normalizing, dirty tracking, and producing an explicit dirty-export block reason before UI/export wiring.
 - `source/frontend/src/components/Inspector.tsx`: typed skeleton tree, clip list, selection controls, transform mode controls, and nudge controls.
 - `source/frontend/src/components/ExportPanel.tsx`: source-format and skeleton summary, structured SMF diagnostics for export preflight, in-memory SMF roundtrip check, and diagnostic report save control.
 - `source/frontend/src/utils/viewportLayout.ts`: shared single/quad viewport pane math, ortho camera framing, and pointer coordinate conversion helpers used by `ThreeViewport.tsx`.

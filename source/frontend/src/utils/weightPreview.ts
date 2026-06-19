@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getSkinAttributes, readVertexSkinWeights } from './skinWeights';
 
 type VertexColorMaterial = THREE.Material & { vertexColors?: boolean | undefined };
 
@@ -10,29 +11,6 @@ function getSkinnedMeshes(root: THREE.Object3D): THREE.SkinnedMesh[] {
     }
   });
   return meshes;
-}
-
-function toNumberArray(value: THREE.TypedArray | ArrayLike<number>): ArrayLike<number> {
-  if (value instanceof Float32Array || value instanceof Float64Array || value instanceof Int8Array || value instanceof Int16Array || value instanceof Int32Array || value instanceof Uint8Array || value instanceof Uint8ClampedArray || value instanceof Uint16Array || value instanceof Uint32Array) {
-    return value;
-  }
-  return value;
-}
-
-function readBoneWeightForVertex(
-  skinIndexAttr: ArrayLike<number>,
-  skinWeightAttr: ArrayLike<number>,
-  vertexIndex: number,
-  targetBoneIndex: number
-): number {
-  let maxWeight = 0;
-  for (let slot = 0; slot < 4; slot++) {
-    const boneIndex = skinIndexAttr[vertexIndex * 4 + slot];
-    if (boneIndex === targetBoneIndex) {
-      maxWeight = Math.max(maxWeight, skinWeightAttr[vertexIndex * 4 + slot]);
-    }
-  }
-  return maxWeight;
 }
 
 function restoreMeshColorState(mesh: THREE.SkinnedMesh, geometry: THREE.BufferGeometry): void {
@@ -102,14 +80,11 @@ export function applyWeightPreviewForBone(
       return;
     }
 
-    const skinIndex = geometry.getAttribute('skinIndex') as THREE.BufferAttribute | null;
-    const skinWeight = geometry.getAttribute('skinWeight') as THREE.BufferAttribute | null;
-    if (!skinIndex || !skinWeight) {
+    const skinAttributes = getSkinAttributes(geometry);
+    if (!skinAttributes) {
       return;
     }
 
-    const skinIndexArray = toNumberArray(skinIndex.array);
-    const skinWeightArray = toNumberArray(skinWeight.array);
     const existingColor = geometry.getAttribute('color');
 
     if (!mesh.userData._origColorAttr && existingColor) {
@@ -120,7 +95,12 @@ export function applyWeightPreviewForBone(
 
     const colors = new Float32Array(positionAttr.count * 3);
     for (let vertexIndex = 0; vertexIndex < positionAttr.count; vertexIndex++) {
-      const w = readBoneWeightForVertex(skinIndexArray, skinWeightArray, vertexIndex, boneIndex);
+      const weights = readVertexSkinWeights(skinAttributes, vertexIndex);
+      const w = weights
+        ? weights.weights.reduce((maxWeight, weight, slot) => (
+          weights.indices[slot] === boneIndex ? Math.max(maxWeight, weight) : maxWeight
+        ), 0)
+        : 0;
       colors[vertexIndex * 3 + 0] = w;
       colors[vertexIndex * 3 + 1] = 0;
       colors[vertexIndex * 3 + 2] = 1 - w;

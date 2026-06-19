@@ -41,17 +41,19 @@ Each active item should answer:
 
 - What: Add an internal skin-edit state model that can safely represent per-vertex selected-bone weight edits without immediately corrupting imported source data.
 - Why: Current RustSMF only previews selected-bone weights; real weight paint needs deterministic mutation, normalization, undo-ready dirty state, and export gating.
-- Where: `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/store/index.ts`, `source/frontend/src/utils/weightPreview.ts`, `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/threeToSmf.ts`, `source/frontend/tests`.
+- Where: `source/frontend/src/utils/skinWeights.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/store/index.ts`, `source/frontend/src/utils/weightPreview.ts`, `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/threeToSmf.ts`, `source/frontend/tests`.
 - When: After the old-editor skin source map identifies the required normalization and paint semantics; before adding brush UI.
 - How:
   - Represent editable skin weights separately from loaded SMF/GLB source data until an explicit apply/export path.
   - Normalize affected vertex weights and enforce the current four-bone influence limit.
   - Keep display preview and export serialization paths explicit so unsupported edits fail loudly.
 - Subtasks:
-  - Define a typed `SkinEditState` with selected bone, dirty mesh ids, edited vertex weights, and source format.
-  - Extract pure helpers for read/edit/normalize selected-bone weight slots.
-  - Add unit tests for add, subtract, set, clamp, normalize, no-selected-bone, and missing-skin-attribute cases.
-  - Add export-gate tests proving unsupported edited weights cannot silently disappear.
+  - Done: define typed `SkinEditState` with selected bone, dirty mesh ids, edited vertex weights, and source format in `skinWeights.ts`.
+  - Done: extract pure helpers for read/edit/normalize selected-bone weight slots and reuse the reader in weight preview.
+  - Done: add unit tests for add, subtract, set, clamp, normalize, invalid bone/vertex, and missing-skin-attribute cases in `skinWeights.test.ts`.
+  - Wire `SkinEditState` into `useLoadModel` or the store so dirty state is visible to panels and survives workspace switches.
+  - Add an explicit export gate in the live export path so unsupported dirty skin edits cannot silently disappear.
+  - Add dirty-state continuity tests once state is connected to the app shell.
 - Acceptance: Unit tests prove edited weights normalize deterministically and no export path silently drops dirty skin edits.
 
 ### P1: Implement skin paint viewport interaction
