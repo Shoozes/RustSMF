@@ -518,15 +518,15 @@ export function useLoadModel() {
         const isFBXSource = srcFmt === 'fbx';
 
         if (isFBXSource) {
-          ui.setStatus('Exporting FBX-loaded model (via GLTF container for full skin/anim fidelity; no new deps)...');
+          ui.setStatus('Exporting FBX-loaded model to binary .fbx...');
           try {
             const buf = await exportFBX(rootToExport, model.clips);
-            const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.glb');
+            const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.fbx');
             if (!ok) {
               ui.setStatus('Export canceled.');
               return;
             }
-            ui.setStatus('Exported .glb (from FBX source via GLTF equivalent). Re-import as .glb works; for true .fbx use DCC or save-as-SMF first.');
+            ui.setStatus('Exported .fbx (binary FBX 7500). Re-import to verify fidelity.');
             return;
           } catch (e: any) {
             ui.setStatus(`FBX export error: ${e?.message || e}. Falling back to generic GLB...`);

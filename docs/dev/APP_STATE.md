@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-29 (non-SMF rig delete).
+Last reviewed: 2026-06-29 (true FBX export).
 
 ## Current Product State
 
@@ -25,9 +25,10 @@ Core flow:
 - Move selected bone endpoint markers in precision modes with camera-plane constrained drag (no model swap, no control conflict), and endpoint-drag lifecycle assertions are covered by e2e smoke in single and quad modes.
 - Export SMF sources through the high-fidelity SMF roundtrip path, including live position/rotation pose edits.
 - Export compatible skinned GLB/FBX runtime roots to SMF through `threeToSmf`; use GLB export for static/material/scale cases.
+- Export FBX-loaded runtime roots to binary FBX 7500 through the vendored MIT `FBXExporter-threejs` writer; static binary output is covered by a header and loader roundtrip unit test.
 - Run structured SMF compatibility diagnostics before non-SMF SMF export. The Export workspace reports ready/blocked state, diagnostic error/warning counts, and specific issues such as missing skeletons, unsupported scale tracks, missing UVs/normals, or missing skin attributes. The Export workspace can also run an in-memory SMF roundtrip check that exports, reimports, compares summary counts, geometry, bounds, animation timing/metadata, and first/last-frame pose checks, then save the diagnostics/roundtrip report through the existing save bridge.
 - Cover default non-SMF skinned load/export e2e with a generated self-authored skinned GLB fixture.
-- Cover basic FBX parsing/export dispatch with a self-authored static ASCII FBX fixture.
+- Cover basic FBX parsing with a self-authored static ASCII FBX fixture, and true binary FBX export with a self-authored static scene unit roundtrip.
 - Use Rust/Tauri commands for native open/save, binary read/write, and small SMF header/rig/anim/model validation/status peeks. Desktop open is format-aware: all path-backed non-SMF models now route through `readBinaryFile`, while `.smf` still performs `get_smf_desktop_info` validation before parse.
 - Ignore stale file-open and browser file/drop read results when a newer operation has started (covered by native mocked-open/rapid-export checks and browser file-input/drop overlap smoke assertions).
 - Keep editor mode + viewport layout transitions on the same shared model/viewport root; selected bone and scrub/timeline state are preserved across those transitions and now covered by smoke assertions.
@@ -53,7 +54,7 @@ Core flow:
 - `source/frontend/src/components/ExportPanel.tsx`: source-format and skeleton summary, structured SMF diagnostics for export preflight, in-memory SMF roundtrip status/check rows, and diagnostic report save control.
 - `source/frontend/src/utils/viewportLayout.ts`: shared single/quad viewport pane math, ortho camera framing, and pointer coordinate conversion helpers used by `ThreeViewport.tsx`.
 - `source/frontend/src/utils/modelOutliner.ts`, `source/frontend/src/utils/animationTimeline.ts`, and `source/frontend/src/utils/animationEdits.ts`: pure helpers for model tree summaries, imported clip keyframe summaries, editable animation keyframes, runtime clip rebuilding, and SMF-source dirty animation patching.
-- `source/frontend/src/loaders/*`: SMF import/export (buildThreeScene delegates rig to buildRigHierarchy for flat nodes + isBone=0 head dummies: cycle-safe effective-parent walk skips heads for direct real-bone .add() + deform-only Skeleton; bind locals use nearest real ancestor world for correct matrixWorld; inverse binds are calculated after world matrices update; animation tracks are emitted only for real scene bones; names `SMF_Node_N` + userData; skin remap direct on compressed is-bone seq), bounded binary helpers, rig node-list helper (export), structured SMF diagnostics, guarded Three-to-SMF conversion, GLB/FBX/OBJ loading/export, coordinate swizzles, and DQ math. SMF rig tree now produces clean SkeletonHelper/Inspector/picker for rigs with disconnected parts (skin/anim/export fidelity preserved via world DQ + compose).
+- `source/frontend/src/loaders/*` and `source/frontend/src/vendor/FBXExporter.js`: SMF import/export (buildThreeScene delegates rig to buildRigHierarchy for flat nodes + isBone=0 head dummies: cycle-safe effective-parent walk skips heads for direct real-bone .add() + deform-only Skeleton; bind locals use nearest real ancestor world for correct matrixWorld; inverse binds are calculated after world matrices update; animation tracks are emitted only for real scene bones; names `SMF_Node_N` + userData; skin remap direct on compressed is-bone seq), bounded binary helpers, rig node-list helper (export), structured SMF diagnostics, guarded Three-to-SMF conversion, GLB/FBX/OBJ loading/export, binary FBX 7500 export, coordinate swizzles, and DQ math. SMF rig tree now produces clean SkeletonHelper/Inspector/picker for rigs with disconnected parts (skin/anim/export fidelity preserved via world DQ + compose).
 - `source/frontend/src/backend-client/tauri.ts`: `TauriClient` interface now centralizes shared desktop bridge function contracts for load/export/peek calls, and `useLoadModel.ts` consumes it directly.
 - `source/frontend/src/backend-client/tauri.ts`: browser/Tauri bridge for dialog, save, binary read, invokes, and desktop fallback messages. `saveFile` returns `boolean` so cancel is explicit.
 - `source/frontend/src/utils/modelFormat.ts`: canonical format extension parser + shared extension constants for open/load/tauri filters.
@@ -81,7 +82,7 @@ Core flow:
 ## Current Limits
 
 - Native UI roundtrip automation is covered through deterministic Playwright Tauri IPC mocks plus Rust command tests; true OS dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it.
-- Default non-SMF skinned coverage uses a generated skinned GLB fixture. FBX coverage uses a self-authored static ASCII FBX fixture for basic parser/export dispatch; skinned FBX fidelity still needs a dedicated redistributable skinned FBX asset if that path becomes important.
+- Default non-SMF skinned coverage uses a generated skinned GLB fixture. FBX coverage uses a self-authored static ASCII FBX fixture for parser coverage plus a generated static scene for binary FBX export roundtrip; skinned FBX fidelity still needs a dedicated redistributable skinned FBX asset if that path becomes important.
 - GLB/FBX-to-SMF conversion is available for skinned models with one shared named skeleton and no scale animation. Static roots, textures/materials, morph tracks, object-level tracks, and scale animation still use GLB export for fidelity. SMF diagnostics now block known impossible exports before save, surface warnings for compatibility risks that do not block, and provide a structured in-memory roundtrip check for count, geometry, bounds, animation timing/metadata, and first/last-frame pose deltas. Real imported SMF samples can still expose strict pose-delta mismatches; those are now classified in the cockpit but not yet root-caused.
 - GLB/GLTF remains the preferred format for maximum fidelity and new development. SMF support is scoped to legacy recovery and users who target the old SMF binary pipeline.
 - Live SMF position/rotation pose edits export; scale edits are blocked for SMF export because the current SMF DQ path has no scale channel.

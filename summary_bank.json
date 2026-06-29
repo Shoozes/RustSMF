@@ -111,7 +111,7 @@
     },
     "feature__model_loading_export": {
       "description": "User-facing load, preview, edit-preview, and export flow across SMF, GLB/GLTF, FBX, and OBJ.",
-      "status": "core connected; SMF high-fid + live pose export; dedicated Export as SMF preserves SMF-source fidelity; guarded non-SMF skinned SMF export wired and covered by generated skinned GLB e2e; structured SMF diagnostics now preflight non-SMF SMF export, render ready/blocked state, and expose structured roundtrip check rows for count/geometry/bounds/animation pose in ExportPanel; static FBX fixture covers basic parser/export dispatch; overlapping open results guarded with stable seq refs; 2026-06-18: browser input/drop overlap now has explicit e2e race coverage with delayed input read and synthetic drop read; desktop open now reads binary bytes for all path-backed model formats while preserving `.smf` desktop validation first; native open/load/export overlap remains covered in mocked Tauri; 2026-06-16: SMF head-dummy hierarchy walk is cycle-safe for self-parent root heads, inverse binds refresh world matrices before calculateInverses, and animation tracks skip non-scene heads so real .smf load clears without missing-target warnings; source-format detection is now centralized in `source/frontend/src/utils/modelFormat.ts` with explicit unsupported-format fail-fast behavior. 2026-06-18 review: loader clips contract direct (removed redundant root.animations attaches + fallback casts); tauri client cached; Tauri env/path casts narrowed.",
+      "status": "core connected; SMF high-fid + live pose export; dedicated Export as SMF preserves SMF-source fidelity; guarded non-SMF skinned SMF export wired and covered by generated skinned GLB e2e; true FBX-source export writes binary FBX 7500 through vendored FBXExporter-threejs and has static header + load roundtrip unit coverage; structured SMF diagnostics now preflight non-SMF SMF export, render ready/blocked state, and expose structured roundtrip check rows for count/geometry/bounds/animation pose in ExportPanel; static FBX fixture covers basic parser dispatch; overlapping open results guarded with stable seq refs; 2026-06-18: browser input/drop overlap now has explicit e2e race coverage with delayed input read and synthetic drop read; desktop open now reads binary bytes for all path-backed model formats while preserving `.smf` desktop validation first; native open/load/export overlap remains covered in mocked Tauri; 2026-06-16: SMF head-dummy hierarchy walk is cycle-safe for self-parent root heads, inverse binds refresh world matrices before calculateInverses, and animation tracks skip non-scene heads so real .smf load clears without missing-target warnings; source-format detection is now centralized in `source/frontend/src/utils/modelFormat.ts` with explicit unsupported-format fail-fast behavior. 2026-06-18 review: loader clips contract direct (removed redundant root.animations attaches + fallback casts); tauri client cached; Tauri env/path casts narrowed.",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -125,6 +125,10 @@
         "source/frontend/src/loaders/smfBinary.ts",
         "source/frontend/src/loaders/threeToSmf.ts",
         "source/frontend/src/loaders/threeToSmf.test.ts",
+        "source/frontend/src/loaders/fbx.test.ts",
+        "source/frontend/src/vendor/FBXExporter.js",
+        "source/frontend/src/vendor/FBXExporter.d.ts",
+        "source/frontend/src/vendor/FBXExporter-threejs.LICENSE.txt",
         "source/frontend/tests/helpers/skinned-glb-fixture.ts",
         "source/frontend/tests/test.fbx",
         "source/frontend/tests/smoke.spec.ts",
@@ -428,6 +432,7 @@
         "source/frontend/playwright.config.ts",
         "source/frontend/scripts/run-strict-visuals.mjs",
         "source/frontend/src/loaders/coord.test.ts",
+        "source/frontend/src/loaders/fbx.test.ts",
         "source/frontend/src/loaders/threeToSmf.test.ts",
         "source/frontend/src/loaders/smfBinary.ts",
         "source/frontend/src/utils/modelFormat.test.ts",

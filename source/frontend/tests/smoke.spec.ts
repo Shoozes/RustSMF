@@ -1171,7 +1171,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     const exportBtn = page.getByTestId('export-btn');
     await exportBtn.click();
-    await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb/i, { timeout: 5000 });
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.fbx/i, { timeout: 5000 });
 
     await page.getByTestId('export-smf-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(

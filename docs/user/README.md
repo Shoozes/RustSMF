@@ -28,14 +28,15 @@ Both commands open the numbered launcher menu. Choose `2. Run if already install
 - Use the Display menu for model-safe wireframe, grid, axes, texture, shader, node-index, rig-opacity, model-opacity, and rig-thickness viewport inspection controls without changing source export data.
 - Export loaded SMF sources through the high-fidelity SMF path with supported live position/rotation pose edits.
 - Export compatible skinned GLB/FBX runtime roots to SMF when they have one shared named skeleton and supported position/quaternion bone tracks.
-- Export static or higher-fidelity modern assets through GLB.
+- Export FBX-loaded sources back to binary FBX 7500.
+- Export static or higher-fidelity GLB/GLTF/OBJ assets through GLB.
 
 ## Format Limits
 
 - GLB/GLTF is the preferred modern format for materials, textures, static meshes, morphs, object tracks, and scale animation.
 - SMF is preserved for compatibility. The current SMF export path does not encode scale edits, materials, morphs, or multiple skeletons.
-- FBX import is supported through Three.js. Export from FBX writes a GLB container unless a future true-FBX writer is adopted.
+- FBX import is supported through Three.js. FBX-source export writes binary FBX 7500 through the vendored `FBXExporter-threejs` writer.
 - OBJ support is load/preview focused; use GLB export for saved output.
-- Skin-weight paint authoring and animation keyframe authoring are planned editor features; current skin and animation surfaces are preview/playback/edit-affordance focused.
+- Skin-weight paint authoring and animation keyframe authoring are available for supported paths, with format-specific export limits still enforced.
 
 For developer state, backlog, and verification results, see `docs/dev/APP_STATE.md` and `docs/dev/TODO.md`.

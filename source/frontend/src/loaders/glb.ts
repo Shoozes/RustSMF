@@ -105,7 +105,7 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
 
 /**
  * Reusable GLB/GLTF binary export for the current Three scene root + clips.
- * Extracted for modularity (used by main GLB export and FBX export equivalent path).
+ * Extracted for modularity and generic non-FBX export paths.
  * Preserves skinned meshes, skeleton, and animation clips via GLTFExporter.
  * No new dependencies. The produced buffer is a valid .glb that roundtrips via loadGLB.
  */

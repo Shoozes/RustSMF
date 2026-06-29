@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-29 (non-SMF rig delete)
+Last reviewed: 2026-06-29 (true FBX export)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
