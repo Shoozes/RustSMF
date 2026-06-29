@@ -153,6 +153,14 @@ const setRangeValue = async (page: Page, testId: string, value: number): Promise
   await page.waitForTimeout(20);
 };
 
+const openViewportDisplayMenu = async (page: Page): Promise<void> => {
+  const panel = page.getByTestId('viewport-display-menu-panel');
+  if (!(await panel.isVisible())) {
+    await page.getByTestId('viewport-display-menu-button').click();
+  }
+  await expect(panel).toBeVisible();
+};
+
 const setViewportLayout = async (page: Page, layout: 'single' | 'quad'): Promise<void> => {
   const canvas = page.getByTestId('three-canvas');
   const singleBtn = page.getByTestId('viewport-layout-single');
@@ -285,6 +293,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('skin-paint-mode-set')).toBeDisabled();
     await expect(page.getByTestId('skin-paint-mode-add')).toBeDisabled();
     await expect(page.getByTestId('skin-paint-mode-subtract')).toBeDisabled();
+    await expect(page.getByTestId('skin-paint-undo-btn')).toBeDisabled();
+    await expect(page.getByTestId('skin-paint-redo-btn')).toBeDisabled();
 
     await assertModeActive('animate');
     await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
@@ -316,9 +326,24 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     // Outliner should reflect content
     await expect(page.getByTestId('outliner')).toContainText(/Scene Root|Bone|Mesh/i);
+    await expect(page.getByTestId('outliner-submodel-count')).toContainText(/\d+ mesh/i);
+    const firstSubmodel = page.getByTestId('outliner-submodel-0');
+    await expect(firstSubmodel).toBeVisible();
+    await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
+    const firstVisibilityToggle = page.getByTestId('outliner-visibility-toggle-0');
+    await expect(firstVisibilityToggle).toHaveAttribute('aria-pressed', 'true');
+    await firstVisibilityToggle.click();
+    await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
+    await expect(firstVisibilityToggle).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByTestId('status-text')).toContainText(/Hidden submodel/i);
+    await firstVisibilityToggle.click();
+    await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
+    await expect(firstVisibilityToggle).toHaveAttribute('aria-pressed', 'true');
 
     // Timeline should be enabled / have content
     await expect(page.getByTestId('timeline')).toBeVisible();
+    await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', /[1-9]\d*/);
+    await expect(page.locator('[data-testid^="timeline-keyframe-marker-"]').first()).toBeVisible();
 
     // Inspector and outliner should reflect content after load
     await expect(page.getByTestId('inspector')).toBeVisible();
@@ -369,6 +394,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(canvas).toHaveAttribute('data-bone-index-labels-enabled', 'false');
     await expect(canvas).toHaveAttribute('data-rig-opacity', '1');
     await expect(canvas).toHaveAttribute('data-rig-thickness-scale', '1');
+    await openViewportDisplayMenu(page);
     await wireframeBtn.click();
     await expect(wireframeBtn).toHaveAttribute('aria-pressed', 'true');
     await expect(canvas).toHaveAttribute('data-wireframe-enabled', 'true');
@@ -491,6 +517,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await animateTab.click({ force: true });
     await page.waitForTimeout(20);
     await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
+    await expect(page.getByTestId('animate-summary')).toContainText(/Tracks|Keys/);
     await exportTab.click({ force: true });
     await page.waitForTimeout(20);
     await expect(page.getByTestId('export-workspace-panel')).toBeVisible();
@@ -571,6 +598,19 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('viewport-container')).toBeVisible();
     await expect(page.getByTestId('quad-pane-overlay')).toBeHidden();
     await expectRenderedScreenshot(page.getByTestId('viewport-container'), 2500);
+
+    const cameraBtn = page.getByTestId('viewport-perspective-toggle');
+    await expect(cameraBtn).toContainText('3D');
+    await cameraBtn.click();
+    await expect(cameraBtn).toContainText('Ortho');
+    await expect(cameraBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvas).toHaveAttribute('data-perspective-enabled', 'false');
+    await expectRenderedScreenshot(page.getByTestId('viewport-container'), 2500);
+
+    await cameraBtn.click();
+    await expect(cameraBtn).toContainText('3D');
+    await expect(cameraBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(canvas).toHaveAttribute('data-perspective-enabled', 'true');
   });
 
   test('small viewport mode tabs switch deterministically after load', async ({ page }) => {
@@ -676,16 +716,16 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
     await page.getByTestId('mode-tab-skin').click({ force: true });
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
-    await expect(page.getByTestId('skin-paint-mode-subtract')).toBeEnabled();
+    await expect(page.getByTestId('skin-paint-mode-add')).toBeEnabled();
 
     const inspector = page.getByTestId('inspector');
-    const fixtureBone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    const fixtureBone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
     await fixtureBone.click({ force: true });
     await page.waitForTimeout(60);
     const selectedBefore = parseSelectedBone(await page.getByTestId('status-text').textContent());
-    expect(selectedBefore).toBe('FixtureTip');
+    expect(selectedBefore).toBe('FixtureRoot');
 
-    await page.getByTestId('skin-paint-mode-subtract').click({ force: true }).catch(() => {});
+    await page.getByTestId('skin-paint-mode-add').click({ force: true }).catch(() => {});
     await setRangeValue(page, 'skin-paint-target', 1);
     await setRangeValue(page, 'skin-paint-radius', 1);
     await setRangeValue(page, 'skin-paint-strength', 1);
@@ -702,7 +742,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
       await dispatchSyntheticDrop(inputDropTarget, dropFileSpec);
 
       await expect(page.getByTestId('status-text')).toContainText('Loaded FBX', { timeout: 15000 });
-      await expect(page.getByTestId('status-text')).not.toContainText(/Loaded:.*\.smf|mixamo|FixtureTip/i);
+      await expect(page.getByTestId('status-text')).not.toContainText(/Loaded:.*\.smf|mixamo|FixtureRoot|FixtureTip/i);
       await page.getByTestId('mode-tab-skin').click({ force: true });
       await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: false');
       await expect(page.getByTestId('skin-export-block')).toHaveCount(0);
@@ -794,6 +834,54 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await setViewportLayout(page, 'single');
     await expect(singleCanvas).not.toHaveAttribute('data-endpoint-drag', 'active');
+  });
+
+  test('animation keyframe authoring updates selected-bone clips and SMF checks', async ({ page }) => {
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
+    await pausePlaybackIfRunning(page);
+
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    const inspector = page.getByTestId('inspector');
+    const boneEntry = inspector
+      .locator('li > div')
+      .filter({ hasText: /FixtureTip/ })
+      .first();
+    await expect(boneEntry).toBeVisible({ timeout: 8000 });
+    await boneEntry.click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
+
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
+    await expect(page.getByTestId('animation-insert-key-btn')).toBeEnabled();
+    await page.getByTestId('animation-interpolation-select').selectOption('step');
+    await page.getByTestId('animation-insert-key-btn').click();
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
+    await expect(page.getByTestId('animation-selected-key')).not.toContainText('none');
+    await expect(page.getByTestId('status-text')).toContainText(/Inserted animation keyframe/i);
+
+    await page.getByTestId('animation-copy-key-btn').click();
+    await expect(page.getByTestId('animation-paste-key-btn')).toBeEnabled();
+    await setRangeValue(page, 'scrub-slider', 0.37);
+    await page.getByTestId('animation-paste-key-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Pasted animation keyframe/i);
+    await page.getByTestId('animation-update-key-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Updated animation keyframe/i);
+    await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', /[1-9]\d*/);
+
+    await page.getByTestId('mode-tab-export').click({ force: true });
+    await page.getByTestId('smf-roundtrip-check-btn').click();
+    await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/SMF roundtrip check passed/i);
+
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
+    await page.getByTestId('animation-delete-key-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Deleted animation keyframe/i);
   });
 
   test('export flow and basic visuals (smoke for roundtrip prep)', async ({ page }) => {
@@ -1105,6 +1193,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const roundtripResult = page.getByTestId('smf-roundtrip-result');
     await expect(roundtripResult).toBeVisible({ timeout: 5000 });
     await expect(roundtripResult).toHaveAttribute('data-smf-roundtrip-ok', 'true');
+    await expect(roundtripResult).toHaveAttribute('data-smf-roundtrip-status', 'passed');
     await expect(roundtripResult).toContainText(/Roundtrip passed/i);
     const roundtripSummaryText = (await roundtripResult.textContent()) || '';
     const normalizedRoundtripSummary = roundtripSummaryText.replace(/\s+/g, ' ');
@@ -1112,6 +1201,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     expect(normalizedRoundtripSummary).toContain('normal delta');
     expect(normalizedRoundtripSummary).toContain('bone pose delta');
     expect(normalizedRoundtripSummary).toContain('samples');
+    const checkList = page.getByTestId('smf-roundtrip-check-list');
+    await expect(checkList).toContainText(/SMF_ROUNDTRIP_COUNTS_OK/);
+    await expect(checkList).toContainText(/SMF_ROUNDTRIP_BOUNDS_OK/);
+    await expect(checkList).toContainText(/SMF_ROUNDTRIP_ANIMATION_POSE_OK/);
     await expect(page.getByTestId('status-text')).toContainText(/SMF roundtrip check passed/i, { timeout: 5000 });
     await page.getByTestId('save-smf-report-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Saved SMF diagnostic report/i, { timeout: 5000 });
@@ -1202,14 +1295,14 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
 
     const inspector = page.getByTestId('inspector');
-    const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    const bone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
     await expect(bone).toBeVisible();
     await bone.click({ force: true });
     await page.waitForTimeout(50);
-    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureRoot/i);
 
-    await page.getByTestId('skin-paint-mode-subtract').click({ force: true }).catch(() => {});
-    await expect(page.getByTestId('skin-paint-mode-subtract')).toHaveClass(/bg-emerald-500/);
+    await page.getByTestId('skin-paint-mode-add').click({ force: true }).catch(() => {});
+    await expect(page.getByTestId('skin-paint-mode-add')).toHaveClass(/bg-emerald-500/);
     await setRangeValue(page, 'skin-paint-target', 1);
     await setRangeValue(page, 'skin-paint-radius', 1);
     await setRangeValue(page, 'skin-paint-strength', 1);
@@ -1222,7 +1315,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(paintCanvas).toHaveAttribute('data-skin-brush-hover', 'active');
     const paintHitCount = Number(await paintCanvas.getAttribute('data-skin-paint-hit-count'));
     expect(paintHitCount).toBeGreaterThan(0);
-    await expect(paintCanvas).toHaveAttribute('data-skin-paint-mode', 'subtract');
+    await expect(paintCanvas).toHaveAttribute('data-skin-paint-mode', 'add');
     const brushX = await paintCanvas.getAttribute('data-skin-brush-x');
     const brushY = await paintCanvas.getAttribute('data-skin-brush-y');
     const brushZ = await paintCanvas.getAttribute('data-skin-brush-z');
@@ -1230,6 +1323,19 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     expect(typeof brushY === 'string' && brushY.length > 0).toBeTruthy();
     expect(typeof brushZ === 'string' && brushZ.length > 0).toBeTruthy();
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
+    await expect(page.getByTestId('skin-paint-undo-btn')).toBeEnabled();
+    await expect(page.getByTestId('skin-paint-redo-btn')).toBeDisabled();
+
+    await page.getByTestId('skin-paint-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid skin paint stroke/i);
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: false');
+    await expect(page.getByTestId('skin-paint-undo-btn')).toBeDisabled();
+    await expect(page.getByTestId('skin-paint-redo-btn')).toBeEnabled();
+
+    await page.getByTestId('skin-paint-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid skin paint stroke/i);
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
+    await expect(page.getByTestId('skin-paint-undo-btn')).toBeEnabled();
 
     await page.getByTestId('export-smf-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
@@ -1293,6 +1399,14 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     // Visual smoke for static render
     await expectRenderedScreenshot(page.getByTestId('viewport-container'));
+
+    await page.getByTestId('mode-tab-export').click({ force: true });
+    const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
+    await expect(diagnosticsPanel).toHaveAttribute('data-smf-can-export', 'false');
+    await expect(diagnosticsPanel).toContainText(/SMF diagnostics: blocked/i);
+    await expect(diagnosticsPanel).toContainText(/SMF_NO_SKINNED_SKELETON/);
+    await page.getByTestId('export-smf-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/SMF export blocked: SMF_NO_SKINNED_SKELETON/i, { timeout: 5000 });
 
     // Sharper error catching: no critical browser errors during static OBJ load (loader now avoids failed tangent computes on minimal static meshes).
     const objErrors = getBrowserErrors(page);

@@ -213,12 +213,12 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await page.getByTestId('mode-tab-skin').click({ force: true });
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
     const inspector = page.getByTestId('inspector');
-    const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    const bone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
     await expect(bone).toBeVisible();
     await bone.click({ force: true });
-    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureRoot/i);
 
-    await page.getByTestId('skin-paint-mode-subtract').click({ force: true }).catch(() => {});
+    await page.getByTestId('skin-paint-mode-add').click({ force: true }).catch(() => {});
     await page.getByTestId('skin-paint-target').fill('1');
     await page.getByTestId('skin-paint-target').dispatchEvent('input');
     await page.getByTestId('skin-paint-radius').fill('1');
@@ -283,14 +283,14 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await firstBone.click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*SMF_Node_\d+/i);
 
-    await page.getByTestId('transform-x-btn').click({ force: true }).catch(() => {});
-
     await page.getByTestId('mode-tab-animate').click({ force: true });
-    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    await expect(page.getByTestId('animation-insert-key-btn')).toBeEnabled();
+    await page.getByTestId('animation-insert-key-btn').click();
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
     await page.getByTestId('export-smf-btn').click();
     await expect(page.getByTestId('status-text')).toContainText('Export canceled.', { timeout: 5000 });
-    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
     let snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.writes).toHaveLength(0);

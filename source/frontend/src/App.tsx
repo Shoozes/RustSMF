@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import ThreeViewport from './components/ThreeViewport'
 import Timeline from './components/Timeline'
 import Outliner from './components/Outliner'
@@ -10,6 +10,8 @@ import ExportPanel from './components/ExportPanel';
 import { useLoadModel } from './hooks/useLoadModel'
 import type { EditorMode } from './store'
 import { supportedModelFormatsLabel } from './utils/modelFormat'
+import { collectModelOutlinerItems } from './utils/modelOutliner'
+import { getClipByName, summarizeAnimationTimeline } from './utils/animationTimeline'
 
 type WorkspaceProfile = {
   showTimeline: boolean;
@@ -105,6 +107,12 @@ export default function App() {
     onSkinPaintStrengthChange,
     onSkinPaintTargetChange,
     applySkinPaint,
+    beginSkinPaintStroke,
+    endSkinPaintStroke,
+    undoSkinPaint,
+    redoSkinPaint,
+    skinUndoAvailable,
+    skinRedoAvailable,
     editorMode,
     setEditorMode,
     viewportLayout,
@@ -129,12 +137,63 @@ export default function App() {
     setModelOpacity,
     sourceFormat,
     poseEditHasDirtyState,
+    animationEditHasDirtyState,
+    animationSelectedKeyTime,
+    animationClipboardHasKeyframe,
+    animationInterpolation,
+    insertAnimationKeyframe,
+    updateAnimationKeyframe,
+    deleteSelectedAnimationKeyframe,
+    copySelectedAnimationKeyframe,
+    pasteAnimationKeyframe,
+    selectAnimationKeyframeTime,
+    changeAnimationInterpolation,
   } = useLoadModel();
+
+  const [outlinerRevision, setOutlinerRevision] = useState(0);
+  const [selectedOutlinerId, setSelectedOutlinerId] = useState('');
 
   const workspace = WORKSPACE_BY_MODE[editorMode];
   const shouldShowBoneLabels = showBoneLabels || workspace.boneLabelsEnabledByDefault;
   const hasModel = !!model.root;
   const hasSkinnedModel = !!model.skeleton && model.skeleton.bones.length > 0;
+  const selectedBoneName = useMemo(() => {
+    return model.skeleton?.bones.some((bone) => bone.name === ui.selected) ? ui.selected : '';
+  }, [model.skeleton, ui.selected]);
+  const currentClip = useMemo(
+    () => getClipByName(model.clips, playback.currentClipName),
+    [model.clips, playback.currentClipName],
+  );
+  const animationTimelineSummary = useMemo(
+    () => summarizeAnimationTimeline(currentClip, selectedBoneName),
+    [currentClip, selectedBoneName],
+  );
+  const timelineKeyframeTimes = animationTimelineSummary.selectedKeyframeTimes.length > 0
+    ? animationTimelineSummary.selectedKeyframeTimes
+    : animationTimelineSummary.keyframeTimes;
+  const outlinerItems = useMemo(
+    () => collectModelOutlinerItems(model.root),
+    [model.root, outlinerRevision],
+  );
+  const handleSelectScene = useCallback(() => {
+    ui.setSelected('Scene');
+    setSelectedOutlinerId('');
+    ui.setStatus('Selected: Scene');
+  }, [ui]);
+  const handleSelectOutlinerItem = useCallback((id: string) => {
+    const item = outlinerItems.find((candidate) => candidate.id === id);
+    if (!item) return;
+    setSelectedOutlinerId(id);
+    ui.setStatus(`Selected submodel: ${item.name}`);
+  }, [outlinerItems, ui]);
+  const handleToggleOutlinerVisibility = useCallback((id: string) => {
+    const object = model.root?.getObjectByProperty('uuid', id);
+    if (!object) return;
+    object.visible = !object.visible;
+    setOutlinerRevision((value) => value + 1);
+    const name = object.name || object.type || 'submodel';
+    ui.setStatus(`${object.visible ? 'Shown' : 'Hidden'} submodel: ${name}`);
+  }, [model.root, ui]);
   const modeWorkspacePanel = (() => {
     if (editorMode === 'skin') {
       return (
@@ -156,6 +215,10 @@ export default function App() {
           onSkinPaintRadiusChange={onSkinPaintRadiusChange}
           onSkinPaintStrengthChange={onSkinPaintStrengthChange}
           onSkinPaintTargetChange={onSkinPaintTargetChange}
+          onUndoSkinPaint={undoSkinPaint}
+          onRedoSkinPaint={redoSkinPaint}
+          skinUndoAvailable={skinUndoAvailable}
+          skinRedoAvailable={skinRedoAvailable}
           editorMode={editorMode}
         />
       );
@@ -168,7 +231,19 @@ export default function App() {
           isPlaying={playback.isPlaying}
           currentTime={playback.currentTime}
           duration={playback.duration}
+          selectedBoneName={selectedBoneName}
+          timelineSummary={animationTimelineSummary}
           poseEditHasDirtyState={poseEditHasDirtyState}
+          animationEditHasDirtyState={animationEditHasDirtyState}
+          selectedKeyTime={animationSelectedKeyTime}
+          clipboardHasKeyframe={animationClipboardHasKeyframe}
+          interpolation={animationInterpolation}
+          onInsertKeyframe={insertAnimationKeyframe}
+          onUpdateKeyframe={updateAnimationKeyframe}
+          onDeleteKeyframe={deleteSelectedAnimationKeyframe}
+          onCopyKeyframe={copySelectedAnimationKeyframe}
+          onPasteKeyframe={pasteAnimationKeyframe}
+          onInterpolationChange={changeAnimationInterpolation}
           editorMode={editorMode}
         />
       );
@@ -200,6 +275,11 @@ export default function App() {
       setViewportLayout('single');
     }
   }, [hasModel, setViewportLayout, viewportLayout]);
+
+  useEffect(() => {
+    setOutlinerRevision((value) => value + 1);
+    setSelectedOutlinerId('');
+  }, [model.root]);
 
   return (
     <div className="app-shell">
@@ -254,7 +334,11 @@ export default function App() {
       <div className="main-area">
         <Outliner
           clipsCount={model.clips.length}
-          onSelectScene={() => ui.setSelected('Scene')}
+          items={outlinerItems}
+          selectedItemId={selectedOutlinerId}
+          onSelectScene={handleSelectScene}
+          onSelectItem={handleSelectOutlinerItem}
+          onToggleVisibility={handleToggleOutlinerVisibility}
         />
 
         <div
@@ -295,6 +379,8 @@ export default function App() {
             perspectiveEnabled={perspectiveEnabled}
             modelOpacity={modelOpacity}
             onPaintSkinVertices={applySkinPaint}
+            onSkinPaintStrokeStart={beginSkinPaintStroke}
+            onSkinPaintStrokeEnd={endSkinPaintStroke}
             skinPaintMode={skinPaintMode}
             skinPaintRadius={skinPaintRadius}
             skinPaintStrength={skinPaintStrength}
@@ -346,6 +432,10 @@ export default function App() {
           onReset={() => playback.setCurrentTime(0)}
           onScrub={onScrub}
           onSpeedChange={setSpeed}
+          playbackSpeed={playback.playbackSpeed}
+          keyframeTimes={timelineKeyframeTimes}
+          selectedKeyTime={animationSelectedKeyTime}
+          onSelectKeyframe={selectAnimationKeyframeTime}
           disabled={model.clips.length === 0}
         />
       )}

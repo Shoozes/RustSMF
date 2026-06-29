@@ -78,4 +78,33 @@ test.describe('RustSMF visual confirmations', () => {
     await expectNoHorizontalOverflow(page);
     await expectNoCriticalBrowserErrors(page);
   });
+
+  test('loaded Display menu and single Ortho view stay visually coherent', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf test model available for loaded viewport controls confirmation');
+
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto('/');
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips/i);
+    await pausePlaybackIfRunning(page);
+
+    await page.getByTestId('viewport-display-menu-button').click();
+    await expect(page.getByTestId('viewport-display-menu-panel')).toBeVisible();
+    await expect(page.getByTestId('viewport-wireframe-toggle')).toBeVisible();
+    await expect(page.getByTestId('viewport-rig-thickness-toggle')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    await page.getByTestId('viewport-display-menu-button').click();
+    const cameraBtn = page.getByTestId('viewport-perspective-toggle');
+    await expect(cameraBtn).toContainText('3D');
+    await cameraBtn.click();
+    await expect(cameraBtn).toContainText('Ortho');
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-perspective-enabled', 'false');
+    await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000);
+
+    await expectNoHorizontalOverflow(page);
+    await expectNoCriticalBrowserErrors(page);
+  });
 });

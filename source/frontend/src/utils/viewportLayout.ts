@@ -23,6 +23,21 @@ export const DEFAULT_VIEWPORT_BOUNDS: ModelBounds = {
   maxDim: 1,
 };
 
+function refreshOrthoFrustum(
+  camera: THREE.OrthographicCamera,
+  modelBounds: ModelBounds,
+  width: number,
+  height: number,
+): void {
+  const aspect = Math.max(1, width) / Math.max(1, height);
+  const halfDim = Math.max(modelBounds.maxDim * 1.0, 1);
+  camera.left = -halfDim * aspect;
+  camera.right = halfDim * aspect;
+  camera.top = halfDim;
+  camera.bottom = -halfDim;
+  camera.updateProjectionMatrix();
+}
+
 export function refreshOrthoCameras(
   orthoCameras: THREE.OrthographicCamera[],
   modelBounds: ModelBounds,
@@ -57,6 +72,7 @@ export function refreshViewportSpecs(
 ): ViewportSpec[] {
   if (layout === 'single') {
     if (!perspectiveEnabled && orthoCameras.length > 0) {
+      refreshOrthoFrustum(orthoCameras[0], modelBounds, width, height);
       return [{
         camera: orthoCameras[0],
         x: 0,
@@ -97,29 +113,11 @@ export function refreshViewportSpecs(
     }));
   }
 
-  const aspect0 = quarterSpec[0].width / quarterSpec[0].height;
-  const aspect1 = quarterSpec[1].width / quarterSpec[1].height;
-  const aspect2 = quarterSpec[2].width / quarterSpec[2].height;
-  const halfDim = Math.max(modelBounds.maxDim * 1.0, 1);
   const [front, side, top] = orthoCameras;
 
-  front.left = -halfDim * aspect0;
-  front.right = halfDim * aspect0;
-  front.top = halfDim;
-  front.bottom = -halfDim;
-  front.updateProjectionMatrix();
-
-  side.left = -halfDim * aspect1;
-  side.right = halfDim * aspect1;
-  side.top = halfDim;
-  side.bottom = -halfDim;
-  side.updateProjectionMatrix();
-
-  top.left = -halfDim * aspect2;
-  top.right = halfDim * aspect2;
-  top.top = halfDim;
-  top.bottom = -halfDim;
-  top.updateProjectionMatrix();
+  refreshOrthoFrustum(front, modelBounds, quarterSpec[0].width, quarterSpec[0].height);
+  refreshOrthoFrustum(side, modelBounds, quarterSpec[1].width, quarterSpec[1].height);
+  refreshOrthoFrustum(top, modelBounds, quarterSpec[2].width, quarterSpec[2].height);
 
   return [
     { camera: front, ...quarterSpec[0], isPickingCamera: true, role: 'front' },

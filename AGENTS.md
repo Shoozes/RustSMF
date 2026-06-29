@@ -13,7 +13,9 @@ Rust in the backend/main source
 
 ## Git Workflow
 
-Work locally on `main` only unless the user explicitly requests a different branch.
+Work locally on `main` only unless the user explicitly requests a different branch. Local Codex work should reflect `main` in progress, not a PR branch workflow.
+
+Review happens in this workspace with the user before any push. Do not open PRs or prepare PR branches unless the user explicitly asks for that.
 
 Do not push automatically. A push means the work is considered reviewed; the user may push manually, or explicitly request a push.
 

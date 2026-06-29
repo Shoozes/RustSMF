@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import * as THREE from 'three';
 import {
+  captureSkinVertexSnapshot,
+  cloneSkinEditState,
   editVertexBoneWeight,
   getDirtySkinExportBlockReason,
   getSkinAttributes,
@@ -10,7 +12,10 @@ import {
   markSkinEdit,
   normalizeVertexSkinWeights,
   readVertexSkinWeights,
+  restoreSkinVertexSnapshots,
+  sameVertexSkinWeights,
   setVertexBoneWeight,
+  writeSkinnedMeshVertexWeights,
 } from './skinWeights';
 
 function makeSkinnedMesh(): THREE.SkinnedMesh {
@@ -148,5 +153,52 @@ describe('skinWeights', () => {
     assert.equal(dirty.dirtyMeshIds.has('mesh-1'), true);
     assert.equal(dirty.editedVertices.get('mesh-1')?.has(4), true);
     assert.equal(getDirtySkinExportBlockReason(dirty), null);
+  });
+
+  it('clones skin edit state without sharing mutable sets', () => {
+    const dirty = markSkinEdit(makeSkinEditState('Bone', 'glb'), 'mesh-1', 4);
+    const clone = cloneSkinEditState(dirty);
+
+    clone.dirtyMeshIds.add('mesh-2');
+    clone.editedVertices.get('mesh-1')?.add(5);
+
+    assert.equal(dirty.dirtyMeshIds.has('mesh-2'), false);
+    assert.equal(dirty.editedVertices.get('mesh-1')?.has(5), false);
+    assert.equal(clone.selectedBoneName, 'Bone');
+    assert.equal(clone.sourceFormat, 'glb');
+  });
+
+  it('captures and restores touched vertex skin snapshots', () => {
+    const mesh = makeSkinnedMesh();
+    const root = new THREE.Group();
+    root.add(mesh);
+
+    const before = captureSkinVertexSnapshot(mesh, 1);
+    assert.ok(before);
+
+    const edit = editVertexBoneWeight(mesh, 1, 2, 'add', 10);
+    assert.equal(edit.ok, true);
+    if (!edit.ok) return;
+    assert.equal(sameVertexSkinWeights(before.vertex, edit.vertex), false);
+
+    const restored = restoreSkinVertexSnapshots(root, [before]);
+    assert.equal(restored, 1);
+    const afterRestore = captureSkinVertexSnapshot(mesh, 1);
+    assert.ok(afterRestore);
+    assert.equal(sameVertexSkinWeights(before.vertex, afterRestore.vertex), true);
+  });
+
+  it('writes individual skinned vertex weights with bounds checks', () => {
+    const mesh = makeSkinnedMesh();
+    const next = {
+      indices: [1, 0, 0, 0] as [number, number, number, number],
+      weights: [1, 0, 0, 0] as [number, number, number, number],
+    };
+
+    assert.equal(writeSkinnedMeshVertexWeights(mesh, 1, next), true);
+    const snapshot = captureSkinVertexSnapshot(mesh, 1);
+    assert.ok(snapshot);
+    assert.deepEqual(snapshot.vertex, next);
+    assert.equal(writeSkinnedMeshVertexWeights(mesh, 99, next), false);
   });
 });

@@ -30,6 +30,15 @@ describe('viewportLayout', () => {
     assert.equal(single[0].width, 801);
     assert.equal(single[0].height, 601);
 
+    const singleOrtho = refreshViewportSpecs(800, 400, 'single', bounds, perspective, cameras, false);
+    assert.equal(singleOrtho.length, 1);
+    assert.equal(singleOrtho[0].role, 'front');
+    assert.equal(singleOrtho[0].camera, cameras[0]);
+    assert.equal(cameras[0].left, -8);
+    assert.equal(cameras[0].right, 8);
+    assert.equal(cameras[0].top, 4);
+    assert.equal(cameras[0].bottom, -4);
+
     refreshOrthoCameras(cameras, bounds);
     const quad = refreshViewportSpecs(801, 601, 'quad', bounds, perspective, cameras, true);
     assert.deepEqual(quad.map((spec) => spec.role), ['front', 'side', 'top', 'perspective']);
@@ -49,6 +58,22 @@ describe('viewportLayout', () => {
     assert.equal(panes.length, 4);
     assert.ok(panes.every((spec) => spec.camera === perspective));
     assert.ok(panes.every((spec) => spec.role === 'perspective'));
+  });
+
+  it('keeps tiny ortho viewports finite and pickable', () => {
+    const perspective = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+    const cameras = orthoCameras();
+    const bounds = { center: new THREE.Vector3(0, 0, 0), maxDim: 0.25 };
+
+    refreshOrthoCameras(cameras, bounds);
+    const panes = refreshViewportSpecs(3, 2, 'quad', bounds, perspective, cameras, true);
+    assert.equal(panes.length, 4);
+    assert.ok(panes.every((spec) => spec.width >= 1));
+    assert.ok(panes.every((spec) => spec.height >= 1));
+    assert.ok(cameras.every((camera) => Number.isFinite(camera.left)));
+    assert.ok(cameras.every((camera) => Number.isFinite(camera.right)));
+    assert.ok(cameras.every((camera) => Number.isFinite(camera.top)));
+    assert.ok(cameras.every((camera) => Number.isFinite(camera.bottom)));
   });
 
   it('resolves viewport hit tests and normalized mouse coordinates', () => {

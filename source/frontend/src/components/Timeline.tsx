@@ -8,6 +8,10 @@ interface TimelineProps {
   onReset: () => void;
   onScrub: (t: number) => void;
   onSpeedChange: (s: number) => void;
+  playbackSpeed: number;
+  keyframeTimes?: number[];
+  selectedKeyTime?: number | null;
+  onSelectKeyframe?: (time: number) => void;
   disabled?: boolean;
 }
 
@@ -19,31 +23,40 @@ const Timeline: React.FC<TimelineProps> = ({
   onReset,
   onScrub,
   onSpeedChange,
+  playbackSpeed,
+  keyframeTimes = [],
+  selectedKeyTime = null,
+  onSelectKeyframe,
   disabled = false,
 }) => {
+  const safeDuration = duration || 1;
+  const markerTimes = keyframeTimes.slice(0, 80);
+
   return (
     <div data-testid="timeline" className="timeline">
-      <div className="flex items-center gap-2 text-xs mb-1">
-        <button onClick={onTogglePlay} disabled={disabled}>
-          {isPlaying ? '⏸ Pause' : '▶ Play'}
+      <div className="timeline-controls">
+        <button data-testid="timeline-play-btn" onClick={onTogglePlay} disabled={disabled}>
+          {isPlaying ? 'Pause' : 'Play'}
         </button>
-        <button onClick={onReset} disabled={disabled}>⏮ Reset</button>
+        <button data-testid="timeline-reset-btn" onClick={onReset} disabled={disabled}>Reset</button>
         <input
           type="range"
           data-testid="scrub-slider"
-          className="w-80 accent-emerald-500"
+          className="timeline-scrub accent-emerald-500"
           min={0}
-          max={duration || 1}
+          max={safeDuration}
           step={0.01}
           value={currentTime}
           onChange={(e) => onScrub(parseFloat(e.target.value))}
           disabled={disabled}
         />
-        <span data-testid="time-display" className="tabular-nums w-24 text-right">
+        <span data-testid="time-display" className="timeline-time tabular-nums">
           {currentTime.toFixed(2)} / {(duration || 0).toFixed(2)}s
         </span>
         <select
-          className="bg-slate-700 text-xs px-1"
+          data-testid="timeline-speed-select"
+          className="timeline-speed-select"
+          value={playbackSpeed}
           onChange={(e) => onSpeedChange(parseFloat(e.target.value))}
           disabled={disabled}
         >
@@ -52,8 +65,37 @@ const Timeline: React.FC<TimelineProps> = ({
           <option value="2">2x</option>
         </select>
       </div>
-      <div className="text-[10px] text-slate-400">
-        Real AnimationMixer + tracks from imported clips. SMF dual-quat converted in loaders/coord + smf.ts. Load a real .smf from docs/references/old-src/datafiles/SMF/ to see it in action.
+      <div
+        className="timeline-keyframe-lane"
+        data-testid="timeline-keyframe-lane"
+        data-keyframe-count={keyframeTimes.length}
+      >
+        <div
+          className="timeline-keyframe-progress"
+          style={{ width: `${Math.min(100, Math.max(0, (currentTime / safeDuration) * 100))}%` }}
+        />
+        {markerTimes.map((time, index) => (
+          <button
+            key={`${time}-${index}`}
+            type="button"
+            className={`timeline-keyframe-marker ${selectedKeyTime !== null && Math.abs(selectedKeyTime - time) < 0.0001 ? 'timeline-keyframe-marker-selected' : ''}`}
+            data-testid={`timeline-keyframe-marker-${index}`}
+            style={{ left: `${Math.min(100, Math.max(0, (time / safeDuration) * 100))}%` }}
+            aria-label={`Scrub to keyframe ${time.toFixed(2)} seconds`}
+            aria-pressed={selectedKeyTime !== null && Math.abs(selectedKeyTime - time) < 0.0001}
+            title={`${time.toFixed(2)}s`}
+            disabled={disabled}
+            onClick={() => {
+              onSelectKeyframe?.(time);
+              onScrub(time);
+            }}
+          />
+        ))}
+      </div>
+      <div className="timeline-note">
+        {keyframeTimes.length > 0
+          ? `${keyframeTimes.length} keyframe time${keyframeTimes.length === 1 ? '' : 's'} from the active clip`
+          : 'No keyframe times available for the active clip'}
       </div>
     </div>
   );

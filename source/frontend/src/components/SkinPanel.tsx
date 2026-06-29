@@ -19,6 +19,10 @@ interface SkinPanelProps {
   onSkinPaintRadiusChange: (value: number) => void;
   onSkinPaintStrengthChange: (value: number) => void;
   onSkinPaintTargetChange: (value: number) => void;
+  onUndoSkinPaint: () => void;
+  onRedoSkinPaint: () => void;
+  skinUndoAvailable: boolean;
+  skinRedoAvailable: boolean;
 }
 
 export default function SkinPanel({
@@ -39,6 +43,10 @@ export default function SkinPanel({
   onSkinPaintRadiusChange,
   onSkinPaintStrengthChange,
   onSkinPaintTargetChange,
+  onUndoSkinPaint,
+  onRedoSkinPaint,
+  skinUndoAvailable,
+  skinRedoAvailable,
   editorMode = 'skin',
 }: SkinPanelProps) {
   const selectedBonePresent = !!selected && selected !== 'Scene';
@@ -110,6 +118,24 @@ export default function SkinPanel({
             onClick={() => onSkinPaintModeChange('subtract')}
           >
             Subtract
+          </button>
+        </div>
+        <div className="flex gap-1 mb-2">
+          <button
+            data-testid="skin-paint-undo-btn"
+            className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600"
+            disabled={!skinUndoAvailable}
+            onClick={onUndoSkinPaint}
+          >
+            Undo
+          </button>
+          <button
+            data-testid="skin-paint-redo-btn"
+            className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600"
+            disabled={!skinRedoAvailable}
+            onClick={onRedoSkinPaint}
+          >
+            Redo
           </button>
         </div>
         <div className="grid gap-1.5 text-[10px]">

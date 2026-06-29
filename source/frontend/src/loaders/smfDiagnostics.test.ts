@@ -75,6 +75,10 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
 
     const report = compareSmfRoundtrip(base, clone);
     assert.strictEqual(report.ok, true);
+    assert.strictEqual(report.status, 'passed');
+    assert.ok(report.checks.some((check) => check.code === 'SMF_ROUNDTRIP_COUNTS_OK'));
+    assert.ok(report.checks.some((check) => check.code === 'SMF_ROUNDTRIP_BOUNDS_OK'));
+    assert.ok(report.checks.some((check) => check.code === 'SMF_ROUNDTRIP_ANIMATION_POSE_OK'));
     assert.equal(report.vertexPositionMaxDelta, 0);
     assert.equal(report.vertexNormalMaxDelta, 0);
     assert.equal(report.meshBoundsMaxDelta, 0);
@@ -96,7 +100,10 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
 
     const report = compareSmfRoundtrip(before, after);
     assert.strictEqual(report.ok, false);
+    assert.strictEqual(report.status, 'failed');
     assert.ok(report.vertexPositionMaxDelta > 0);
+    assert.ok(report.checks.some((check) => check.code === 'SMF_ROUNDTRIP_POSITION_DELTA'));
+    assert.ok(report.checks.some((check) => check.code === 'SMF_ROUNDTRIP_NORMAL_DELTA'));
     assert.ok(report.messages.some((line) => line.includes('positions differ')));
   });
 
@@ -122,8 +129,10 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
 
     const report = compareSmfRoundtrip(before, after);
     assert.strictEqual(report.ok, false);
+    assert.strictEqual(report.status, 'failed');
     assert.ok(report.bonePoseSamplesChecked > 0);
     assert.ok(report.bonePoseMaxDelta > 0.009);
+    assert.ok(report.checks.some((check) => check.code === 'SMF_ROUNDTRIP_FIRST_POSE_DELTA'));
     assert.ok(report.messages.some((line) => line.includes('pose delta exceeds tolerance')));
   });
 
@@ -142,8 +151,43 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
 
     const report = compareSmfRoundtrip(before, after);
     assert.strictEqual(report.ok, false);
+    assert.strictEqual(report.status, 'failed');
     assert.ok(report.meshBoundsMaxDelta > 0.9);
+    assert.ok(report.checks.some((check) => check.code === 'SMF_ROUNDTRIP_BOUNDS_DELTA'));
     assert.ok(report.messages.some((line) => line.includes('bounds differ beyond tolerance')));
     assert.ok(report.messages.some((line) => line.includes('positions differ beyond tolerance')));
+  });
+
+  it('serializes structured roundtrip checks for saved cockpit reports', () => {
+    const before = makeImportedSmf();
+    const movedPose = new Float32Array(before.animations[0].frames[0][0]);
+    movedPose[0] = 0.01;
+    const after = {
+      ...before,
+      animations: [
+        {
+          ...before.animations[0],
+          frames: [
+            [movedPose, new Float32Array(before.animations[0].frames[0][1])],
+            [
+              new Float32Array(before.animations[0].frames[1][0]),
+              new Float32Array(before.animations[0].frames[1][1]),
+            ],
+          ],
+        },
+      ],
+    };
+
+    const parsed = JSON.parse(JSON.stringify(compareSmfRoundtrip(before, after))) as {
+      status: string;
+      checks: Array<{ code: string; level: string; label: string }>;
+    };
+
+    assert.strictEqual(parsed.status, 'failed');
+    assert.ok(parsed.checks.some((check) => (
+      check.code === 'SMF_ROUNDTRIP_FIRST_POSE_DELTA'
+      && check.level === 'error'
+      && check.label === 'Animation pose'
+    )));
   });
 });

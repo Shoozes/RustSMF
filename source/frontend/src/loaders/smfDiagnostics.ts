@@ -24,10 +24,23 @@ export interface SmfRoundtripSummary {
   animationFrames: number;
 }
 
+export type SmfRoundtripStatus = 'passed' | 'warning' | 'failed';
+export type SmfRoundtripCheckLevel = 'pass' | 'warning' | 'error';
+
+export interface SmfRoundtripCheck {
+  level: SmfRoundtripCheckLevel;
+  code: string;
+  label: string;
+  message: string;
+  target?: string;
+}
+
 export interface SmfRoundtripReport {
   ok: boolean;
+  status: SmfRoundtripStatus;
   before: SmfRoundtripSummary;
   after: SmfRoundtripSummary;
+  checks: SmfRoundtripCheck[];
   vertexPositionMaxDelta: number;
   vertexNormalMaxDelta: number;
   bonePoseMaxDelta: number;
@@ -133,24 +146,68 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
   const before = summarizeImportedSmf(beforeSmf);
   const after = summarizeImportedSmf(afterSmf);
   const messages: string[] = [];
+  const checks: SmfRoundtripCheck[] = [];
   let vertexPositionMaxDelta = 0;
   let vertexNormalMaxDelta = 0;
   let bonePoseMaxDelta = 0;
   let meshBoundsMaxDelta = 0;
   let bonePoseSamplesChecked = 0;
+  let countMismatchCount = 0;
+  let geometryMismatchCount = 0;
+  let boundsMismatchCount = 0;
+  let timingMismatchCount = 0;
+  let poseMismatchCount = 0;
+  let animationMetadataMismatchCount = 0;
   const poseTolerance = 5e-4;
   const meshBoundsTolerance = 1e-4;
+  const frameCountTolerance = 1e-6;
+
+  const pushCheck = (
+    level: SmfRoundtripCheckLevel,
+    code: string,
+    label: string,
+    message: string,
+    target?: string,
+  ): void => {
+    checks.push({ level, code, label, message, target });
+  };
+
+  const pushMismatch = (
+    code: string,
+    label: string,
+    message: string,
+    target?: string,
+  ): void => {
+    messages.push(message);
+    pushCheck('error', code, label, message, target);
+  };
 
   for (const key of Object.keys(before) as (keyof SmfRoundtripSummary)[]) {
     if (before[key] !== after[key]) {
-      messages.push(`${key}: expected ${before[key]}, got ${after[key]}`);
+      countMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_COUNT_MISMATCH',
+        'Counts',
+        `${key}: expected ${before[key]}, got ${after[key]}`,
+        key,
+      );
     }
+  }
+
+  if (countMismatchCount === 0) {
+    pushCheck(
+      'pass',
+      'SMF_ROUNDTRIP_COUNTS_OK',
+      'Counts',
+      'Mesh, texture, bone, animation, vertex, triangle, and frame counts match.',
+    );
   }
 
   const countToCheck = Math.min(beforeSmf.meshes.length, afterSmf.meshes.length);
   for (let m = 0; m < countToCheck; m++) {
     const beforeMesh = beforeSmf.meshes[m];
     const afterMesh = afterSmf.meshes[m];
+    const meshTarget = beforeMesh.name || `mesh ${m}`;
     const meshPosDelta = maxDelta(beforeMesh.positions, afterMesh.positions, 1);
     const meshNormalDelta = maxDelta(beforeMesh.normals, afterMesh.normals, 1);
 
@@ -168,19 +225,60 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
         meshBoundsMaxDelta = boundsDelta;
       }
       if (boundsDelta > meshBoundsTolerance) {
-        messages.push(`mesh ${m} bounds differ beyond tolerance (${boundsDelta.toFixed(6)}).`);
+        boundsMismatchCount += 1;
+        pushMismatch(
+          'SMF_ROUNDTRIP_BOUNDS_DELTA',
+          'Bounds',
+          `mesh ${m} bounds differ beyond tolerance (${boundsDelta.toFixed(6)}).`,
+          meshTarget,
+        );
       }
     } else if (beforeBounds || afterBounds) {
-      messages.push(`mesh ${m} bounds missing parity after reimport.`);
+      boundsMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_BOUNDS_MISSING',
+        'Bounds',
+        `mesh ${m} bounds missing parity after reimport.`,
+        meshTarget,
+      );
       meshBoundsMaxDelta = meshBoundsTolerance;
     }
 
     if (meshPosDelta > 1e-4) {
-      messages.push(`mesh ${m} positions differ beyond tolerance (${meshPosDelta.toFixed(6)}).`);
+      geometryMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_POSITION_DELTA',
+        'Geometry',
+        `mesh ${m} positions differ beyond tolerance (${meshPosDelta.toFixed(6)}).`,
+        meshTarget,
+      );
     }
     if (meshNormalDelta > 1e-4) {
-      messages.push(`mesh ${m} normals differ beyond tolerance (${meshNormalDelta.toFixed(6)}).`);
+      geometryMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_NORMAL_DELTA',
+        'Geometry',
+        `mesh ${m} normals differ beyond tolerance (${meshNormalDelta.toFixed(6)}).`,
+        meshTarget,
+      );
     }
+  }
+
+  if (countToCheck > 0 && geometryMismatchCount === 0) {
+    pushCheck(
+      'pass',
+      'SMF_ROUNDTRIP_GEOMETRY_OK',
+      'Geometry',
+      'Vertex positions and normals are within tolerance.',
+    );
+  }
+  if (countToCheck > 0 && boundsMismatchCount === 0) {
+    pushCheck(
+      'pass',
+      'SMF_ROUNDTRIP_BOUNDS_OK',
+      'Bounds',
+      'Mesh bounds are within tolerance.',
+    );
   }
 
   const frameLimit = Math.min(beforeSmf.animations.length, afterSmf.animations.length);
@@ -203,14 +301,16 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
       afterAnim.nodeCount,
     );
 
-    const frameCountTolerance = 1e-6;
-
     for (let frameIndex = 0; frameIndex < frameCount; frameIndex++) {
       const beforeTimes = beforeAnim.times[frameIndex];
       const afterTimes = afterAnim.times[frameIndex];
       if (beforeTimes !== afterTimes && Math.abs(beforeTimes - afterTimes) > frameCountTolerance) {
-        messages.push(
-          `animation ${a} timestamp drift at frame ${frameIndex} (${Math.abs(beforeTimes - afterTimes).toFixed(6)}).`
+        timingMismatchCount += 1;
+        pushMismatch(
+          'SMF_ROUNDTRIP_ANIMATION_TIME_DELTA',
+          'Animation timing',
+          `animation ${a} timestamp drift at frame ${frameIndex} (${Math.abs(beforeTimes - afterTimes).toFixed(6)}).`,
+          beforeAnim.name || `animation ${a}`,
         );
       }
       const perFrameBones = Math.min(
@@ -235,8 +335,14 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
         if (frameIndex === 0 || frameIndex === frameCount - 1) {
           if (poseDelta > poseTolerance) {
             const position = frameIndex === 0 ? 'first' : 'last';
-            messages.push(
-              `animation ${a} ${position} frame bone ${boneIndex} pose delta exceeds tolerance (${poseDelta.toFixed(6)}).`
+            poseMismatchCount += 1;
+            pushMismatch(
+              position === 'first'
+                ? 'SMF_ROUNDTRIP_FIRST_POSE_DELTA'
+                : 'SMF_ROUNDTRIP_LAST_POSE_DELTA',
+              'Animation pose',
+              `animation ${a} ${position} frame bone ${boneIndex} pose delta exceeds tolerance (${poseDelta.toFixed(6)}).`,
+              beforeAnim.name || `animation ${a}`,
             );
           }
         }
@@ -244,48 +350,125 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
     }
 
     if (beforeAnim.nodeCount !== afterAnim.nodeCount) {
-      messages.push(
-        `animation ${a} nodeCount drift: expected ${beforeAnim.nodeCount}, got ${afterAnim.nodeCount}`
+      animationMetadataMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_ANIMATION_NODE_COUNT',
+        'Animation metadata',
+        `animation ${a} nodeCount drift: expected ${beforeAnim.nodeCount}, got ${afterAnim.nodeCount}`,
+        beforeAnim.name || `animation ${a}`,
       );
     }
     const durationDelta = Math.abs(beforeAnim.duration - afterAnim.duration);
     if (durationDelta > frameCountTolerance) {
-      messages.push(`animation ${a} duration drift (${durationDelta.toFixed(6)}).`);
+      animationMetadataMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_ANIMATION_DURATION',
+        'Animation metadata',
+        `animation ${a} duration drift (${durationDelta.toFixed(6)}).`,
+        beforeAnim.name || `animation ${a}`,
+      );
     }
     if (beforeAnim.interpolation !== afterAnim.interpolation) {
-      messages.push(
-        `animation ${a} interpolation drift: expected ${beforeAnim.interpolation}, got ${afterAnim.interpolation}`
+      animationMetadataMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_ANIMATION_INTERPOLATION',
+        'Animation metadata',
+        `animation ${a} interpolation drift: expected ${beforeAnim.interpolation}, got ${afterAnim.interpolation}`,
+        beforeAnim.name || `animation ${a}`,
       );
     }
     if (beforeAnim.sampleFrameMultiplier !== afterAnim.sampleFrameMultiplier) {
-      messages.push(
-        `animation ${a} sampleFrameMultiplier drift: expected ${beforeAnim.sampleFrameMultiplier}, got ${afterAnim.sampleFrameMultiplier}`
+      animationMetadataMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_ANIMATION_SAMPLE_MULTIPLIER',
+        'Animation metadata',
+        `animation ${a} sampleFrameMultiplier drift: expected ${beforeAnim.sampleFrameMultiplier}, got ${afterAnim.sampleFrameMultiplier}`,
+        beforeAnim.name || `animation ${a}`,
       );
     }
     if (beforeAnim.loop !== afterAnim.loop) {
-      messages.push(
-        `animation ${a} loop mode drift: expected ${beforeAnim.loop}, got ${afterAnim.loop}`
+      animationMetadataMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_ANIMATION_LOOP',
+        'Animation metadata',
+        `animation ${a} loop mode drift: expected ${beforeAnim.loop}, got ${afterAnim.loop}`,
+        beforeAnim.name || `animation ${a}`,
       );
     }
     const frameCountDelta = Math.abs(beforeAnim.times.length - afterAnim.times.length);
     if (frameCountDelta > 0) {
-      messages.push(`animation ${a} frame timestamp count drift: expected ${beforeAnim.times.length}, got ${afterAnim.times.length}`);
+      animationMetadataMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_ANIMATION_FRAME_COUNT',
+        'Animation metadata',
+        `animation ${a} frame timestamp count drift: expected ${beforeAnim.times.length}, got ${afterAnim.times.length}`,
+        beforeAnim.name || `animation ${a}`,
+      );
     }
 
     if (beforeAnim.lockedBones.length !== afterAnim.lockedBones.length) {
-      messages.push(
-        `animation ${a} lockedBones count drift: expected ${beforeAnim.lockedBones.length}, got ${afterAnim.lockedBones.length}`
+      animationMetadataMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_ANIMATION_LOCKED_BONES',
+        'Animation metadata',
+        `animation ${a} lockedBones count drift: expected ${beforeAnim.lockedBones.length}, got ${afterAnim.lockedBones.length}`,
+        beforeAnim.name || `animation ${a}`,
       );
     } else if (
       beforeAnim.lockedBones.some((beforeLock, index) => beforeLock !== afterAnim.lockedBones[index])
     ) {
-      messages.push(`animation ${a} lockedBones drift.`);
+      animationMetadataMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_ANIMATION_LOCKED_BONES',
+        'Animation metadata',
+        `animation ${a} lockedBones drift.`,
+        beforeAnim.name || `animation ${a}`,
+      );
     }
   }
 
   if (beforeSmf.animations.length !== afterSmf.animations.length) {
-    messages.push(
-      `animations: expected ${beforeSmf.animations.length}, got ${afterSmf.animations.length}.`
+    animationMetadataMismatchCount += 1;
+    pushMismatch(
+      'SMF_ROUNDTRIP_ANIMATION_COUNT',
+      'Animation metadata',
+      `animations: expected ${beforeSmf.animations.length}, got ${afterSmf.animations.length}.`,
+    );
+  }
+
+  if (beforeSmf.animations.length > 0 || afterSmf.animations.length > 0) {
+    if (timingMismatchCount === 0) {
+      pushCheck(
+        'pass',
+        'SMF_ROUNDTRIP_ANIMATION_TIMING_OK',
+        'Animation timing',
+        'Animation frame timestamps are within tolerance.',
+      );
+    }
+    if (poseMismatchCount === 0) {
+      pushCheck(
+        'pass',
+        'SMF_ROUNDTRIP_ANIMATION_POSE_OK',
+        'Animation pose',
+        bonePoseSamplesChecked > 0
+          ? 'First and last animation pose samples are within tolerance.'
+          : 'No animation pose samples were available to compare.',
+      );
+    }
+    if (animationMetadataMismatchCount === 0) {
+      pushCheck(
+        'pass',
+        'SMF_ROUNDTRIP_ANIMATION_METADATA_OK',
+        'Animation metadata',
+        'Animation metadata fields match.',
+      );
+    }
+  } else {
+    pushCheck(
+      'pass',
+      'SMF_ROUNDTRIP_NO_ANIMATIONS',
+      'Animation',
+      'No animation clips to compare.',
     );
   }
 
@@ -293,10 +476,16 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
     messages.push('SMF roundtrip summary matched after export and reimport.');
   }
 
+  const hasError = checks.some((check) => check.level === 'error');
+  const hasWarning = checks.some((check) => check.level === 'warning');
+  const status: SmfRoundtripStatus = hasError ? 'failed' : hasWarning ? 'warning' : 'passed';
+
   return {
-    ok: messages.length === 1 && messages[0].startsWith('SMF roundtrip summary matched'),
+    ok: status !== 'failed',
+    status,
     before,
     after,
+    checks,
     vertexPositionMaxDelta,
     vertexNormalMaxDelta,
     bonePoseMaxDelta,

@@ -15,6 +15,19 @@ export interface SkinEditState {
   editedVertices: Map<string, Set<number>>;
 }
 
+export interface SkinVertexSnapshot {
+  meshId: string;
+  vertexIndex: number;
+  vertex: VertexSkinWeights;
+}
+
+export interface SkinEditHistoryEntry {
+  beforeState: SkinEditState;
+  afterState: SkinEditState;
+  before: SkinVertexSnapshot[];
+  after: SkinVertexSnapshot[];
+}
+
 export type SkinWeightEditFailureReason =
   | 'missing-skin-attributes'
   | 'invalid-vertex'
@@ -78,6 +91,20 @@ export function makeSkinEditState(
   };
 }
 
+export function cloneSkinEditState(state: SkinEditState): SkinEditState {
+  const editedVertices = new Map<string, Set<number>>();
+  for (const [meshId, vertices] of state.editedVertices) {
+    editedVertices.set(meshId, new Set(vertices));
+  }
+
+  return {
+    selectedBoneName: state.selectedBoneName,
+    sourceFormat: state.sourceFormat,
+    dirtyMeshIds: new Set(state.dirtyMeshIds),
+    editedVertices,
+  };
+}
+
 export function getSkinAttributes(geometry: THREE.BufferGeometry): SkinAttributePair | null {
   const skinIndex = geometry.getAttribute('skinIndex');
   const skinWeight = geometry.getAttribute('skinWeight');
@@ -114,6 +141,15 @@ export function readVertexSkinWeights(
   };
 }
 
+export function sameVertexSkinWeights(
+  left: VertexSkinWeights,
+  right: VertexSkinWeights,
+  tolerance = 1e-6,
+): boolean {
+  return left.indices.every((index, slot) => index === right.indices[slot])
+    && left.weights.every((weight, slot) => Math.abs(weight - right.weights[slot]) <= tolerance);
+}
+
 export function normalizeVertexSkinWeights(vertex: VertexSkinWeights): VertexSkinWeights {
   const normalized = cloneVertex(vertex);
   normalized.weights = normalized.weights.map(clamp01) as VertexSkinWeights['weights'];
@@ -146,6 +182,60 @@ export function setVertexBoneWeight(
     vertex: normalizeVertexSkinWeights(next),
     slot,
   };
+}
+
+export function captureSkinVertexSnapshot(
+  mesh: THREE.SkinnedMesh,
+  vertexIndex: number,
+): SkinVertexSnapshot | null {
+  const attributes = getSkinAttributes(mesh.geometry);
+  if (!attributes) return null;
+  const vertex = readVertexSkinWeights(attributes, vertexIndex);
+  if (!vertex) return null;
+  return {
+    meshId: mesh.uuid,
+    vertexIndex,
+    vertex: cloneVertex(vertex),
+  };
+}
+
+export function writeSkinnedMeshVertexWeights(
+  mesh: THREE.SkinnedMesh,
+  vertexIndex: number,
+  vertex: VertexSkinWeights,
+): boolean {
+  const attributes = getSkinAttributes(mesh.geometry);
+  if (!attributes) return false;
+  if (!readVertexSkinWeights(attributes, vertexIndex)) return false;
+  writeVertexSkinWeights(attributes, vertexIndex, cloneVertex(vertex));
+  return true;
+}
+
+function isSkinnedMesh(obj: THREE.Object3D): obj is THREE.SkinnedMesh {
+  return obj.type === 'SkinnedMesh';
+}
+
+export function restoreSkinVertexSnapshots(
+  root: THREE.Object3D | null,
+  snapshots: SkinVertexSnapshot[],
+): number {
+  if (!root || snapshots.length === 0) return 0;
+  const meshById = new Map<string, THREE.SkinnedMesh>();
+  root.traverse((obj) => {
+    if (isSkinnedMesh(obj)) {
+      meshById.set(obj.uuid, obj);
+    }
+  });
+
+  let restored = 0;
+  for (const snapshot of snapshots) {
+    const mesh = meshById.get(snapshot.meshId);
+    if (!mesh) continue;
+    if (writeSkinnedMeshVertexWeights(mesh, snapshot.vertexIndex, snapshot.vertex)) {
+      restored += 1;
+    }
+  }
+  return restored;
 }
 
 export function writeVertexSkinWeights(

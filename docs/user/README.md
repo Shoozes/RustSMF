@@ -24,7 +24,8 @@ Both commands open the numbered launcher menu. Choose `2. Run if already install
 - Open `.smf`, `.glb`, `.gltf`, `.fbx`, or `.obj` by native dialog, file input, or drag/drop.
 - Orbit, pan, zoom, reset view, scrub animation, select bones, use TransformControls, and preview selected-bone weights.
 - Switch between single and quad viewport layouts after a model loads; quad view shows Top, 3D, Front, and Side panes with visible dividers.
-- Toggle model-safe wireframe display for viewport inspection without changing source materials or export data.
+- Switch the single viewport between 3D and Ortho camera modes.
+- Use the Display menu for model-safe wireframe, grid, axes, texture, shader, node-index, rig-opacity, model-opacity, and rig-thickness viewport inspection controls without changing source export data.
 - Export loaded SMF sources through the high-fidelity SMF path with supported live position/rotation pose edits.
 - Export compatible skinned GLB/FBX runtime roots to SMF when they have one shared named skeleton and supported position/quaternion bone tracks.
 - Export static or higher-fidelity modern assets through GLB.

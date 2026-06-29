@@ -90,6 +90,8 @@ interface ThreeViewportProps {
   perspectiveEnabled?: boolean;
   modelOpacity?: number;
   onPaintSkinVertices?: (paintVertices: Array<{ meshId: string; vertexIndex: number; amount: number }>) => void;
+  onSkinPaintStrokeStart?: () => void;
+  onSkinPaintStrokeEnd?: () => void;
   skinPaintMode?: SkinWeightEditMode;
   skinPaintRadius?: number;
   skinPaintStrength?: number;
@@ -126,6 +128,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   perspectiveEnabled = true,
   modelOpacity = 1,
   onPaintSkinVertices,
+  onSkinPaintStrokeStart,
+  onSkinPaintStrokeEnd,
   skinPaintMode = 'set',
   skinPaintRadius = 0.2,
   skinPaintStrength = 0.2,
@@ -161,6 +165,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const materialShaderBackupRef = useRef<Map<string, boolean | undefined>>(new Map());
   const meshMaterialsRef = useRef<Map<string, { mesh: THREE.Mesh; materials: THREE.Material[] }>>(new Map());
   const onPaintSkinVerticesRef = useRef(onPaintSkinVertices);
+  const onSkinPaintStrokeStartRef = useRef(onSkinPaintStrokeStart);
+  const onSkinPaintStrokeEndRef = useRef(onSkinPaintStrokeEnd);
   const skinPaintModeRef = useRef<SkinWeightEditMode>(skinPaintMode);
   const skinPaintRadiusRef = useRef<number>(skinPaintRadius);
   const skinPaintStrengthRef = useRef<number>(skinPaintStrength);
@@ -205,6 +211,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const applyViewportLayout = (nextLayout: ViewportLayout) => {
     const camera = cameraRef.current;
     if (!camera) return;
+    updateOrthoCameras(orthoCameraRefs.current, boundsRef.current);
     viewportRef.current = buildViewportSpecs(
       canvasSizeRef.current.width,
       canvasSizeRef.current.height,
@@ -215,7 +222,6 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       perspectiveEnabled,
     );
     layoutRef.current = nextLayout;
-    updateOrthoCameras(orthoCameraRefs.current, boundsRef.current);
   };
 
   const getViewportAt = (x: number, y: number, requirePicking = false): ViewportSpec | null => {
@@ -778,6 +784,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         const paintVertices = collectPaintVerticesWithTelemetry(event);
         const center = getBrushCenterForPaint(event);
         if (paintVertices.length > 0) {
+          onSkinPaintStrokeStartRef.current?.();
           onPaintSkinVerticesRef.current?.(paintVertices);
           skinPaintActiveRef.current = true;
           canvas.style.cursor = 'crosshair';
@@ -811,6 +818,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       }
       if (skinPaintActiveRef.current) {
         skinPaintActiveRef.current = false;
+        onSkinPaintStrokeEndRef.current?.();
         if (canvas.dataset.skinPaintActive) {
           delete canvas.dataset.skinPaintActive;
         }
@@ -845,6 +853,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       }
       if (skinPaintActiveRef.current) {
         skinPaintActiveRef.current = false;
+        onSkinPaintStrokeEndRef.current?.();
         const canvas = canvasRef.current;
         if (canvas?.dataset.skinPaintActive) {
           delete canvas.dataset.skinPaintActive;
@@ -863,6 +872,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       }
       if (skinPaintActiveRef.current) {
         skinPaintActiveRef.current = false;
+        onSkinPaintStrokeEndRef.current?.();
         const canvas = canvasRef.current;
         if (canvas?.dataset.skinPaintActive) {
           delete canvas.dataset.skinPaintActive;
@@ -1024,6 +1034,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
+      updateOrthoCameras(orthoCameraRefs.current, boundsRef.current);
       const specs = buildViewportSpecs(
         w,
         h,
@@ -1033,7 +1044,6 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         orthoCameraRefs.current,
         perspectiveEnabled,
       );
-      updateOrthoCameras(orthoCameraRefs.current, boundsRef.current);
       viewportRef.current = specs;
       canvasSizeRef.current = { width: w, height: h };
     };
@@ -1142,6 +1152,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => { onSelectBoneRef.current = onSelectBone; }, [onSelectBone]);
   useEffect(() => { skeletonRefForPick.current = skeleton; }, [skeleton]);
   useEffect(() => { onPaintSkinVerticesRef.current = onPaintSkinVertices; }, [onPaintSkinVertices]);
+  useEffect(() => { onSkinPaintStrokeStartRef.current = onSkinPaintStrokeStart; }, [onSkinPaintStrokeStart]);
+  useEffect(() => { onSkinPaintStrokeEndRef.current = onSkinPaintStrokeEnd; }, [onSkinPaintStrokeEnd]);
   useEffect(() => { skinPaintModeRef.current = skinPaintMode; }, [skinPaintMode]);
   useEffect(() => { skinPaintRadiusRef.current = skinPaintRadius; }, [skinPaintRadius]);
   useEffect(() => { skinPaintStrengthRef.current = skinPaintStrength; }, [skinPaintStrength]);
@@ -1150,6 +1162,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => {
     if (editorMode !== 'skin') {
       const canvas = canvasRef.current;
+      if (skinPaintActiveRef.current) {
+        onSkinPaintStrokeEndRef.current?.();
+      }
       skinPaintActiveRef.current = false;
       if (canvas?.dataset.skinPaintActive) {
         delete canvas.dataset.skinPaintActive;
@@ -1183,6 +1198,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   // Unmount cleanup for TransformControls (detach + remove from scene + dispose)
   useEffect(() => {
     return () => {
+      if (skinPaintActiveRef.current) {
+        skinPaintActiveRef.current = false;
+        onSkinPaintStrokeEndRef.current?.();
+      }
       restoreTransformControlsAfterEndpointDrag();
       const tc = transformControlsRef.current;
       const scene = sceneRef.current;
@@ -1387,8 +1406,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   }, [selectedBoneName, skeleton]);
 
   // Attach/replace model root + skeleton helper + create internal mixer when root prop changes.
-  // IMPORTANT: deps ONLY model data (root/skeleton/clips). Never include playback props (isPlaying/currentTime/currentClipName/playbackSpeed)
+  // IMPORTANT: deps ONLY loaded scene objects (root/skeleton). Never include playback props (isPlaying/currentTime/currentClipName/playbackSpeed)
   // or this will re-dispose + re-attach the entire model + recreate mixer on every frame/scrub (from parent setCurrentTime in RAF).
+  // Clip changes are handled by the clip-selection effect so animation edits can update tracks without disposing the model.
   // Playback mutations happen in the dedicated effects below (they read current action/mixer refs and apply without re-mount).
   useEffect(() => {
     const scene = sceneRef.current;
@@ -1488,7 +1508,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     return () => {
       // cleanup handled on next root change or unmount via the top of this effect
     };
-  }, [root, skeleton, clips]);  // <-- ONLY model data; playback handled by other effects to prevent re-attach loops on every tick
+  }, [root, skeleton]);  // <-- ONLY scene objects; playback/clips handled by other effects to prevent re-attach loops on every edit/tick
 
   return (
     <>

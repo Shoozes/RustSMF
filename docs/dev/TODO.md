@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-19 (typed interop boundary cleanup + launcher trail output improvement + GenEye run-pass confirmation)
+Last reviewed: 2026-06-29 (skin paint undo/redo + export cockpit structured checks)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -58,7 +58,7 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
   - Done: viewport brush marker/hit telemetry with selected-bone prerequisite.
   - Done: Playwright coverage for no-bone blocked paint, enabled paint, workspace continuity, and supported SMF export.
   - Add pure autoskin and normalize helpers based on old `skineditor_*` scripts.
-  - Add undo/redo checkpointing for skin paint edits.
+  - Done: add undo/redo checkpointing for skin paint edits, including touched-vertex snapshot restore and redo invalidation after new strokes.
 - Acceptance: Remaining skin tools match documented old-source semantics, are undo-safe, and cannot silently drop dirty edits on export.
 
 ### P1: Implement animation edit data model
@@ -72,10 +72,10 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
   - Support position/quaternion tracks first; keep scale/material/morph/object tracks blocked or GLB-only.
   - Preserve existing playback/scrub behavior while allowing dirty keyframes to drive the mixer.
 - Subtasks:
-  - Define typed editable clip/keyframe state with current clip, selected keyframe, selected bone, and dirty flag.
-  - Implement pure helpers for insert/update/delete selected-bone pos/rot keyframes.
-  - Implement conversion helpers between editable state and Three `VectorKeyframeTrack` / `QuaternionKeyframeTrack`.
-  - Add unit tests for keyframe insertion order, replacement, deletion guard, interpolation metadata, and zero-duration safety.
+  - Done: define typed editable clip/keyframe state with current clip, selected keyframe, selected bone, clipboard, interpolation, and dirty clip tracking.
+  - Done: implement pure helpers for insert/update/delete/copy/paste selected-bone pos/rot keyframes.
+  - Done: implement conversion helpers between editable state and Three `VectorKeyframeTrack` / `QuaternionKeyframeTrack`, plus SMF-source animation patching for dirty clips.
+  - Done: add unit tests for keyframe insertion order, replacement, deletion guard, interpolation metadata, zero-duration safety, edited clip conversion, and SMF-source patching.
 - Acceptance: Tests prove selected-bone pos/rot keyframes can be edited and converted to runtime/export tracks without changing unsupported channels.
 
 ### P1: Implement timeline/keyframe authoring UI
@@ -90,12 +90,13 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
   - Start with insert/update/delete/copy/paste for selected-bone pos/rot only.
   - Expose interpolation only where SMF/Three export behavior is defined.
 - Subtasks:
-  - Add selected-clip/keyframe display in AnimatePanel.
-  - Add timeline keyframe markers with deterministic test ids.
-  - Add Insert/Update/Delete/Copy/Paste controls.
-  - Add interpolation controls for supported modes.
-  - Add Playwright coverage for insert -> scrub -> update -> export status.
+  - Done: add selected-clip/keyframe display in AnimatePanel for imported clip summaries.
+  - Done: add timeline keyframe markers with deterministic test ids for imported clip/scrub preview.
+  - Done: add Insert/Update/Delete/Copy/Paste controls.
+  - Done: add interpolation controls for supported modes.
+  - Done: add Playwright coverage for insert -> scrub -> update -> SMF roundtrip status on the supported generated-skinned export path.
 - Acceptance: A user can create or edit a selected-bone pos/rot keyframe, scrub to it, see it on the timeline, and export supported edited animation data without silent loss.
+  - Note: real imported SMF samples can still report strict pose-delta roundtrip mismatches before and after animation edits; that belongs to the export cockpit/SMF pose diagnostics item below rather than the keyframe UI.
 
 ### P1: Expand export cockpit reports beyond first roundtrip check
 
@@ -109,10 +110,12 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
   - Expand comparisons from summary counts into bounds, first-frame pose sanity, and targeted mismatch details.
   - Keep GLB export unchanged for full-fidelity paths.
 - Subtasks:
-  - Add bounds and first-frame pose sanity checks to the existing "Run SMF Check" action.
-  - Add blocked-export and warning-only diagnostics result cases to the Export workspace e2e coverage.
-  - Add report serialization tests if the report payload grows beyond the current diagnostics/roundtrip JSON shape.
+  - Done: add bounds and first/last-frame pose sanity checks to the existing "Run SMF Check" action.
+  - Done: render structured roundtrip check rows for count, geometry, bounds, animation timing, animation metadata, and animation pose results instead of relying only on status text.
+  - Done: add blocked-export and warning-only diagnostics result cases to the Export workspace e2e coverage.
+  - Done: add report serialization tests for the expanded diagnostics/roundtrip JSON shape.
 - Acceptance: Export workspace can distinguish count, bounds, and pose mismatches without relying only on status text.
+  - Note: real imported SMF samples can still surface strict pose-delta failures; the cockpit now classifies those failures, but root-cause SMF pose conversion cleanup remains separate compatibility work.
 
 ### P2: Implement rig editing and validation
 
@@ -160,9 +163,12 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
   - Keep model/shared-root continuity unchanged.
   - Add regression tests before changing drag, hover, pane selection, or label scaling.
 - Subtasks:
-  - Add edge-case tests for small canvases and high-DPR rendering.
-  - Add fast single-to-quad-to-single switching tests around selected bone, hover state, endpoint telemetry, and scrub time.
-  - Add visual checks that quad labels/dividers do not overlap tool overlays at narrow widths.
+  - Done: add edge-case unit coverage that tiny ortho panes stay finite and pickable.
+  - Done: add single-view Ortho camera toggle smoke coverage with a loaded SMF render assertion.
+  - Done: add visual coverage for loaded Display menu + single-view Ortho render without horizontal overflow.
+  - Add high-DPR/browser-pixel coverage if renderer sizing or canvas pixel ratio logic changes.
+  - Add faster single-to-quad-to-single switching tests around selected bone, hover state, endpoint telemetry, and scrub time.
+  - Add visual checks that quad labels/dividers do not overlap tool overlays at narrow widths beyond the current loaded/narrow shell checks.
   - Decide whether ortho panes should support all bone selection/edit actions or a deliberate subset.
 - Recent progress: Larger old-editor-like diamond/joint skeleton helpers are implemented through `modernSkeletonHelper.ts`, with helper mesh hit mapping before the distance-picker fallback.
 - Acceptance: Rapid layout/mode switching in single and quad states never drops bone selection, scrub continuity, endpoint-hover state, or pane labels in e2e.
@@ -178,11 +184,12 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
   - Prefer compact controls over recreating the old left shelf wholesale.
   - Add DOM state assertions plus tolerant viewport screenshots.
 - Subtasks:
-  - Add grid/axes visibility toggles.
-  - Add material/texture visibility override that does not mutate source materials.
-  - Add rig opacity/thickness controls where Three allows reliable visual feedback.
-  - Add node label/index visibility controls that reuse existing bone label infrastructure.
-  - Add submodel visibility support through Outliner once model submesh ids are stable.
+  - Done: add grid/axes visibility toggles.
+  - Done: add material/texture visibility override that does not mutate source materials.
+  - Done: add rig opacity/thickness controls where Three allows reliable visual feedback.
+  - Done: add node label/index visibility controls that reuse existing bone label infrastructure.
+  - Done: group file actions, workspace tabs, layout/camera controls, and secondary display toggles into a compact toolbar/Display menu.
+  - Done: add submodel visibility support through Outliner once model submesh ids are stable.
 - Acceptance: Core old-editor display affordances can be toggled independently, remain disabled before model load where appropriate, and are covered by smoke tests.
 
 ### P2: Complete workspace transition and continuity coverage
@@ -198,8 +205,8 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
 - Subtasks:
   - Add transition assertions around mode + layout continuity for panel visibility, export status, and playback scrub timing.
   - Add negative transition case: no model loaded + mode switch + disabled layout/display controls.
-  - Add dirty-state continuity cases once skin edits and animation edits exist.
-  - Add export/status preservation cases for dirty skin/animation state.
+  - Done: add dirty-state continuity cases once skin edits and animation edits exist.
+  - Done: add export/status preservation cases for dirty skin/animation state.
 - Acceptance: Smoke plus a dedicated transition suite demonstrates no accidental reload, status reset, stale export state, or dirty-edit loss across workspace switches.
 
 ### P2: Expand async race contract coverage across all load entrypoints
@@ -218,6 +225,7 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
   - Done: added browser race coverage that verifies skin-dirty state and selected bone are cleared when a delayed `.smf` input load is overtaken by a drag/drop `.fbx` load (`tests/smoke.spec.ts`).
   - Done: added native e2e assertion that skin edits stay dirty across canceled SMF export save (`tests/native.spec.ts`).
   - Done: added pose-edit continuity coverage via `pose-edit` dirty state and canceled SMF save (`tests/native.spec.ts`).
+  - Done: added authored animation key dirty-state coverage across canceled native SMF export save (`tests/native.spec.ts`).
   - Keep shared delayed-read/drop helpers isolated in `smoke-helpers.ts`.
 - Acceptance: No stale root, selection, status, error, dirty skin edit, or dirty animation edit writes are visible after a newer operation has started.
 

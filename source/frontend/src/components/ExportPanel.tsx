@@ -21,6 +21,19 @@ export default function ExportPanel({
 }: ExportPanelProps) {
   const errors = smfDiagnosticReport.diagnostics.filter((item) => item.level === 'error').length;
   const warnings = smfDiagnosticReport.diagnostics.filter((item) => item.level === 'warning').length;
+  const roundtripStatus = smfRoundtripReport?.status ?? null;
+  const roundtripStatusText =
+    roundtripStatus === 'passed'
+      ? 'Roundtrip passed'
+      : roundtripStatus === 'warning'
+        ? 'Roundtrip warning'
+        : 'Roundtrip mismatch';
+  const roundtripClass =
+    roundtripStatus === 'passed'
+      ? 'smf-roundtrip-ok'
+      : roundtripStatus === 'warning'
+        ? 'smf-roundtrip-warning'
+        : 'smf-roundtrip-fail';
 
   return (
     <div className="inspector" data-testid="export-workspace-panel" data-editor-mode={editorMode}>
@@ -79,12 +92,13 @@ export default function ExportPanel({
         </button>
         {smfRoundtripReport && (
           <div
-            className={`smf-roundtrip-result ${smfRoundtripReport.ok ? 'smf-roundtrip-ok' : 'smf-roundtrip-fail'}`}
+            className={`smf-roundtrip-result ${roundtripClass}`}
             data-testid="smf-roundtrip-result"
             data-smf-roundtrip-ok={smfRoundtripReport.ok ? 'true' : 'false'}
+            data-smf-roundtrip-status={smfRoundtripReport.status}
           >
             <div className="smf-roundtrip-status">
-              {smfRoundtripReport.ok ? 'Roundtrip passed' : 'Roundtrip mismatch'}
+              {roundtripStatusText}
             </div>
             <div className="smf-roundtrip-summary">
               meshes {smfRoundtripReport.after.meshes}, bones {smfRoundtripReport.after.bones}, clips {smfRoundtripReport.after.animations}
@@ -92,6 +106,22 @@ export default function ExportPanel({
             <div className="smf-roundtrip-summary">
               max vertex delta {smfRoundtripReport.vertexPositionMaxDelta.toFixed(6)} / normal delta {smfRoundtripReport.vertexNormalMaxDelta.toFixed(6)} / bounds delta {smfRoundtripReport.meshBoundsMaxDelta.toFixed(6)} / bone pose delta {smfRoundtripReport.bonePoseMaxDelta.toFixed(6)} (samples {smfRoundtripReport.bonePoseSamplesChecked})
             </div>
+            <div className="smf-roundtrip-check-heading">Compatibility checks</div>
+            <ul className="smf-diagnostics-list smf-roundtrip-checks" data-testid="smf-roundtrip-check-list">
+              {smfRoundtripReport.checks.map((check) => (
+                <li
+                  key={`${check.code}-${check.target || check.message}`}
+                  className={`smf-diagnostic smf-roundtrip-check smf-roundtrip-check-${check.level}`}
+                  data-testid={`smf-roundtrip-check-${check.level}`}
+                  data-smf-roundtrip-check-code={check.code}
+                >
+                  <span className="smf-diagnostic-code">{check.code}</span>
+                  <span className="smf-roundtrip-check-label">{check.label}</span>
+                  <span>{check.message}</span>
+                  {check.target && <span className="smf-diagnostic-target">{check.target}</span>}
+                </li>
+              ))}
+            </ul>
             <ul className="smf-diagnostics-list">
               {smfRoundtripReport.messages.map((message) => (
                 <li key={message} className="smf-diagnostic smf-diagnostic-info">

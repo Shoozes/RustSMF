@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-18 (skin edit helper + boot regression audit; verify, browser e2e, and GenEye-backed e2e green).
+Last reviewed: 2026-06-19 (viewport toolbar/ortho audit; strict-port Playwright invocation pitfall recorded).
 
 ### Q: What pitfall are we preventing?
 
@@ -45,6 +45,28 @@ Last reviewed: 2026-06-18 (skin edit helper + boot regression audit; verify, bro
 **Relevance check:** Current. RustSMF is the active external consumer for proving GenEye's browser-app testing workflow.
 
 **Next prevention step:** After any GenEye wrapper or RustSMF e2e command change, run both the GenEye-backed e2e path and the browser-only fallback, then update docs if evidence paths or command names change.
+
+### Q: What pitfall are we preventing?
+
+**What:** Running separate Playwright commands in parallel can create a false failure because each command tries to start its own strict preview server on port 5173.
+
+**Why it happened:** The repo's Playwright config intentionally uses `npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort`. Launching two independent `npx playwright test ...` processes at once makes the second preview process fail with `Port 5173 is already in use`, even when the app and tests are healthy.
+
+**Where:** `source/frontend/playwright.config.ts`, local verification command usage, `source/frontend/tests/visual.spec.ts`, `source/frontend/tests/smoke.spec.ts`.
+
+**How to catch it:** If a Playwright run fails before tests execute with a Vite preview port error, run `Get-NetTCPConnection -LocalPort 5173 -State Listen` and rerun the affected specs as one Playwright command or sequential commands.
+
+**Solutions tried:**
+1. `35/100` Run smoke and visual specs as separate shell commands in parallel, result: the visual spec failed before starting because the smoke command owned the strict preview server.
+2. `91/100` Rerun the visual spec after the first Playwright command exited and confirmed port 5173 was clear, result: all visual tests passed.
+
+**Current solution:** Parallelize independent file reads, typechecks, unit tests, and builds where safe, but run Playwright web-server specs through one command or sequentially unless the config is changed to allocate distinct ports.
+
+**Effectiveness:** `91/100`, durable. The failure mode is simple, verified by the exact port error and passing rerun, and it preserves the product decision to test against production preview.
+
+**Relevance check:** Current. The e2e and visual specs intentionally use a strict preview server to avoid Vite dev/HMR instability.
+
+**Next prevention step:** If broader Playwright sharding is needed, add explicit per-worker/per-command ports before parallelizing independent `npx playwright test` invocations.
 
 ### Q: What pitfall are we preventing?
 
@@ -127,7 +149,7 @@ Last reviewed: 2026-06-18 (skin edit helper + boot regression audit; verify, bro
 2. `70/100` Reconcile branch-only artifacts and fixes onto local `main` while assuming old-src GML/YY lived in the execute-plan tip, result: docs preserved screenshots but misidentified the backing source for the GameMaker source edits.
 3. `96/100` Keep execute-plan docs/screenshots/proof artifacts and `options/reddit` metadata, restore tracked old-src `.gml`/`.yy`/`SMF.yyp` paths from `stash@{0}`, apply whitespace-only cleanup where needed before commit, document push semantics in `AGENTS.md`, keep generated reports/test-results out of source, and confirm the old-src GameMaker project manually after recovery, result: temp branches and the auto-stash each have a clear role and the recovered GML was user-tested.
 
-**Current solution:** Work locally on `main`; temp branches are scratch/review only; explicit `push to git` means push/sync `main` only unless the user names another branch. Do not drop `stash@{0}` until the recovered old-src `.gml`/`.yy`/`SMF.yyp` state is committed or separately archived, and account for expected execute-plan-only metadata or whitespace-only cleanup if comparing against the stash.
+**Current solution:** Work locally on `main`; Codex work should reflect `main` in progress and be reviewed in-place with the user, not through a default PR branch workflow. Temp branches are scratch/review only; explicit `push to git` means push/sync `main` only unless the user names another branch. Do not drop `stash@{0}` until the recovered old-src `.gml`/`.yy`/`SMF.yyp` state is committed or separately archived, and account for expected execute-plan-only metadata or whitespace-only cleanup if comparing against the stash.
 
 **Effectiveness:** `96/100`, durable once committed. The workflow rule is documented, branch cleanup can be validated with git diffs, stash cleanup now has an explicit guard, and the restored old-src GameMaker state was manually verified by loading/testing it.
 
