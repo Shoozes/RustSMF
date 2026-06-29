@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import * as THREE from 'three';
 import {
+  createChildBone,
   reparentBonePreserveWorldTransform,
   retargetAnimationClipBoneNames,
+  validateCreateChildBone,
   validateBoneReparent,
   validateBoneRename,
 } from './rigEdits';
@@ -82,5 +84,40 @@ describe('rigEdits', () => {
     assert.equal(result.ok, true);
     assert.equal(tip.parent, middle);
     assert.ok(before.distanceTo(after) < 1e-6);
+  });
+
+  it('validates child bone creation names and parents', () => {
+    const skeleton = makeSkeleton();
+
+    assert.deepEqual(validateCreateChildBone(skeleton, 'Root', 'Hand'), {
+      ok: true,
+      name: 'Hand',
+      parent: skeleton.bones[0],
+    });
+    assert.equal(validateCreateChildBone(skeleton, 'Scene', 'Hand').ok, false);
+    assert.equal(validateCreateChildBone(skeleton, 'Missing', 'Hand').ok, false);
+    assert.equal(validateCreateChildBone(skeleton, 'Root', '').ok, false);
+    assert.equal(validateCreateChildBone(skeleton, 'Root', 'Tip').ok, false);
+    assert.equal(validateCreateChildBone(skeleton, 'Root', 'bad name').ok, false);
+  });
+
+  it('creates a child bone with inverse bind data and resized skeleton buffers', () => {
+    const skeleton = makeSkeleton();
+    const root = skeleton.bones[0];
+    assert.ok(skeleton.boneMatrices);
+    const originalMatrixLength = skeleton.boneMatrices.length;
+
+    const result = createChildBone(skeleton, 'Root', 'Hand');
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.bone.name, 'Hand');
+    assert.equal(result.bone.parent, root);
+    assert.equal(skeleton.bones.at(-1), result.bone);
+    assert.equal(skeleton.boneInverses.length, 3);
+    assert.ok(skeleton.boneMatrices);
+    assert.equal(skeleton.boneMatrices.length, originalMatrixLength + 16);
+    assert.equal(root.children.includes(result.bone), true);
+    assert.equal(Number.isFinite(skeleton.boneMatrices[32]), true);
   });
 });

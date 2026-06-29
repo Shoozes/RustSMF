@@ -51,7 +51,7 @@ import {
   type AnimationInterpolation,
   type EditableBoneKeyframe,
 } from '../utils/animationEdits';
-import { reparentBonePreserveWorldTransform, retargetAnimationClipBoneNames, validateBoneRename } from '../utils/rigEdits';
+import { createChildBone, reparentBonePreserveWorldTransform, retargetAnimationClipBoneNames, validateBoneRename } from '../utils/rigEdits';
 
 type LoadedModelResult =
   | Awaited<ReturnType<typeof buildSmfScene>>
@@ -999,6 +999,28 @@ export function useLoadModel() {
     ui.setStatus(`Reparented ${boneName} under ${parentName}.`);
   }, [model.skeleton, sourceFormat, ui]);
 
+  const createChildForSelectedBone = useCallback((requestedName: string) => {
+    const skeleton = model.skeleton;
+    const parentName = ui.selected;
+    if (sourceFormat === 'smf') {
+      ui.setStatus('SMF-source child creation is blocked until head-node compatibility editing is explicit.');
+      return;
+    }
+    if (!skeleton) {
+      ui.setStatus('Load a skinned model before creating child bones.');
+      return;
+    }
+
+    const result = createChildBone(skeleton, parentName, requestedName);
+    if (!result.ok) {
+      ui.setStatus(result.message);
+      return;
+    }
+
+    ui.setSelected(result.bone.name);
+    ui.setStatus(`Created child bone ${result.bone.name} under ${parentName}.`);
+  }, [model.skeleton, sourceFormat, ui]);
+
   // Route bone nudge buttons through pose-edit layer so edits are captured at export time.
   // Applies the delta to the Three.js bone for immediate visual feedback, and records the
   // cumulative edit in poseEditsRef for use by handleExport.
@@ -1356,6 +1378,7 @@ export function useLoadModel() {
     handleSelectBone,
     renameSelectedBone,
     reparentSelectedBone,
+    createChildForSelectedBone,
     onNudgeBone,
     setupKeyboard,
     togglePlay,

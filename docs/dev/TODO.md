@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-29 (non-SMF rig reparent)
+Last reviewed: 2026-06-29 (non-SMF rig create child)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -131,12 +131,13 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
   - Done: add a RigPanel validation surface for loaded rigs before mutation commands.
   - Done: add selected-bone rename for non-SMF sources, including animation track retargeting, authored key edit retargeting, pose edit key migration, skin selected-bone migration, and generated-skinned export smoke coverage.
   - Done: add selected-bone reparent for non-SMF sources, including cycle/self-parent validation, world-transform preservation, Inspector hierarchy continuity after rename, and generated-skinned smoke coverage.
-  - Add RigPanel create/delete commands.
+  - Done: add selected-bone create-child for non-SMF sources, including new-name validation, Skeleton inverse/buffer refresh, generated-skinned create -> transform -> export/reimport smoke coverage.
+  - Add RigPanel delete command.
   - Decide whether SMF-source node renames remain blocked for node-index fidelity or need an explicit SMF metadata/name layer.
   - Done: add pure validators for cycles, duplicate names, orphaned nodes, missing skin attributes, mismatched skin attributes, and invalid skin references.
   - Add detach/head-node compatibility controls only after old-source source-map review.
   - Done: add unit tests for hierarchy validation and smoke coverage for no-model warning plus loaded generated-skinned pass state.
-  - Add e2e for create child -> transform -> export/reimport once edit commands exist.
+  - Done: add e2e for create child -> transform -> export/reimport on the generated-skinned path.
 - Acceptance: Rig edits cannot create cyclic or silently invalid SMF output, and unsupported cases produce actionable diagnostics.
 
 ### P2: Add texture and material compatibility diagnostics

@@ -8,6 +8,7 @@ interface RigPanelProps {
   sourceFormat: string;
   onRenameSelectedBone: (nextName: string) => void;
   onReparentSelectedBone: (parentName: string) => void;
+  onCreateChildBone: (name: string) => void;
   editorMode?: string;
 }
 
@@ -24,17 +25,21 @@ export default function RigPanel({
   sourceFormat,
   onRenameSelectedBone,
   onReparentSelectedBone,
+  onCreateChildBone,
   editorMode = 'rig',
 }: RigPanelProps) {
   const visibleIssues = report.issues.slice(0, 6);
   const [renameValue, setRenameValue] = useState(selected === 'Scene' ? '' : selected);
+  const [createValue, setCreateValue] = useState(selected && selected !== 'Scene' ? `${selected}_child` : '');
   const [parentValue, setParentValue] = useState('');
   const canRename = !!selected && selected !== 'Scene' && report.boneCount > 0 && sourceFormat !== 'smf';
+  const canCreateChild = canRename;
   const parentOptions = boneNames.filter((name) => name && name !== selected);
   const canReparent = canRename && parentOptions.length > 0;
 
   useEffect(() => {
     setRenameValue(selected === 'Scene' ? '' : selected);
+    setCreateValue(selected && selected !== 'Scene' ? `${selected}_child` : '');
   }, [selected]);
 
   useEffect(() => {
@@ -97,6 +102,24 @@ export default function RigPanel({
             onClick={() => onReparentSelectedBone(parentValue)}
           >
             Reparent
+          </button>
+        </div>
+        <div className="flex gap-1 mb-2">
+          <input
+            data-testid="rig-create-child-input"
+            value={createValue}
+            disabled={!canCreateChild}
+            onChange={(event) => setCreateValue(event.target.value)}
+            className="min-w-0 flex-1 bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100 disabled:text-slate-500"
+            aria-label="New child bone name"
+          />
+          <button
+            data-testid="rig-create-child-btn"
+            className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50"
+            disabled={!canCreateChild}
+            onClick={() => onCreateChildBone(createValue)}
+          >
+            Child
           </button>
         </div>
         {sourceFormat === 'smf' && (

@@ -1213,6 +1213,13 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Reparented FixtureTip under FixtureSpine/i);
     await expect(page.getByTestId('rig-validation-status')).toContainText(/pass/i);
 
+    await page.getByTestId('rig-create-child-input').fill('FixtureExtra');
+    await page.getByTestId('rig-create-child-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Created child bone FixtureExtra under FixtureTip/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await expect(inspector).toContainText(/Selected\s*FixtureExtra/i);
+    await page.getByTestId('transform-x-btn').click({ force: true });
+
     await page.getByTestId('mode-tab-export').click({ force: true });
     const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
     await expect(diagnosticsPanel).toBeVisible();

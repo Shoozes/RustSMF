@@ -23,6 +23,21 @@ export type RigReparentValidationResult =
   | { ok: true; bone: THREE.Bone; parent: THREE.Bone }
   | { ok: false; reason: RigReparentFailureReason; message: string };
 
+export type RigCreateChildFailureReason =
+  | 'no-parent-bone'
+  | 'missing-parent'
+  | 'empty-name'
+  | 'duplicate-name'
+  | 'invalid-name';
+
+export type RigCreateChildValidationResult =
+  | { ok: true; name: string; parent: THREE.Bone }
+  | { ok: false; reason: RigCreateChildFailureReason; message: string };
+
+export type RigCreateChildResult =
+  | { ok: true; bone: THREE.Bone; parent: THREE.Bone }
+  | { ok: false; reason: RigCreateChildFailureReason; message: string };
+
 const BONE_NAME_PATTERN = /^[A-Za-z0-9_.:-]+$/;
 
 export function validateBoneRename(
@@ -103,6 +118,27 @@ function findBone(skeleton: THREE.Skeleton | null | undefined, name: string): TH
   return skeleton.bones.find((bone) => bone.name === name) ?? null;
 }
 
+function validateNewBoneName(
+  skeleton: THREE.Skeleton,
+  requestedName: string,
+): Exclude<RigCreateChildValidationResult, { ok: true }> | { ok: true; name: string } {
+  const nextName = requestedName.trim();
+  if (!nextName) {
+    return { ok: false, reason: 'empty-name', message: 'Bone name cannot be empty.' };
+  }
+  if (!BONE_NAME_PATTERN.test(nextName)) {
+    return {
+      ok: false,
+      reason: 'invalid-name',
+      message: 'Bone names may contain letters, numbers, underscore, dash, dot, and colon.',
+    };
+  }
+  if (skeleton.bones.some((bone) => bone.name === nextName)) {
+    return { ok: false, reason: 'duplicate-name', message: `A bone named ${nextName} already exists.` };
+  }
+  return { ok: true, name: nextName };
+}
+
 function isDescendantOf(candidate: THREE.Bone, ancestor: THREE.Bone): boolean {
   let parent = candidate.parent;
   while (parent) {
@@ -162,4 +198,48 @@ export function reparentBonePreserveWorldTransform(
   skeleton.update();
 
   return validation;
+}
+
+export function validateCreateChildBone(
+  skeleton: THREE.Skeleton | null | undefined,
+  parentName: string,
+  requestedName: string,
+): RigCreateChildValidationResult {
+  if (!skeleton || !parentName || parentName === 'Scene') {
+    return { ok: false, reason: 'no-parent-bone', message: 'Select a parent bone before creating a child.' };
+  }
+
+  const parent = findBone(skeleton, parentName);
+  if (!parent) {
+    return { ok: false, reason: 'missing-parent', message: `Parent bone ${parentName} is not in the current skeleton.` };
+  }
+
+  const nameValidation = validateNewBoneName(skeleton, requestedName);
+  if (!nameValidation.ok) return nameValidation;
+
+  return { ok: true, name: nameValidation.name, parent };
+}
+
+export function createChildBone(
+  skeleton: THREE.Skeleton,
+  parentName: string,
+  requestedName: string,
+): RigCreateChildResult {
+  const validation = validateCreateChildBone(skeleton, parentName, requestedName);
+  if (!validation.ok) return validation;
+
+  const { name, parent } = validation;
+  const bone = new THREE.Bone();
+  bone.name = name;
+  bone.position.set(0, 0.25, 0);
+  parent.add(bone);
+  parent.updateMatrixWorld(true);
+  bone.updateMatrixWorld(true);
+
+  skeleton.bones.push(bone);
+  skeleton.boneInverses.push(bone.matrixWorld.clone().invert());
+  skeleton.init();
+  skeleton.update();
+
+  return { ok: true, bone, parent };
 }

@@ -85,6 +85,7 @@ export default function App() {
     handleSelectBone,
     renameSelectedBone,
     reparentSelectedBone,
+    createChildForSelectedBone,
     onNudgeBone,
     setupKeyboard,
     togglePlay,
@@ -175,10 +176,7 @@ export default function App() {
     () => summarizeAnimationTimeline(currentClip, selectedBoneName),
     [currentClip, selectedBoneName],
   );
-  const rigValidationReport = useMemo(
-    () => validateRig(model.skeleton, model.root),
-    [model.skeleton, model.root],
-  );
+  const rigValidationReport = validateRig(model.skeleton, model.root);
   const timelineKeyframeTimes = animationTimelineSummary.selectedKeyframeTimes.length > 0
     ? animationTimelineSummary.selectedKeyframeTimes
     : animationTimelineSummary.keyframeTimes;
@@ -215,6 +213,7 @@ export default function App() {
           sourceFormat={sourceFormat}
           onRenameSelectedBone={renameSelectedBone}
           onReparentSelectedBone={reparentSelectedBone}
+          onCreateChildBone={createChildForSelectedBone}
           editorMode={editorMode}
         />
       );
