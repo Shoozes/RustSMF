@@ -2,25 +2,11 @@
 // RustSMF Tauri entry. Minimal shell for the Three.js frontend.
 // Provides native file dialogs plus binary SMF/GLB I/O commands.
 
+use std::path::PathBuf;
 use tauri::command;
 use tauri_plugin_dialog::DialogExt;
-use std::path::PathBuf;
-use serde::Serialize;
-
-#[derive(Serialize)]
-struct SmfDesktopInfo {
-    valid: bool,
-    version: String,
-    size: usize,
-    off_tex: usize,
-    off_model: usize,
-    off_rig: usize,
-    off_anim: usize,
-    model_count: Option<u32>,
-    rig_bone_count: Option<u32>,
-    anim_clip_count: Option<u32>,
-    error: Option<String>,
-}
+mod smf_core;
+use smf_core::{build_smf_desktop_info, parse_smf_header_info, SmfDesktopInfo};
 
 fn sanitize_path(path: PathBuf) -> String {
     let path_str = path.to_string_lossy().to_string();
@@ -28,97 +14,6 @@ fn sanitize_path(path: PathBuf) -> String {
         return path_str[4..].to_string();
     }
     path_str
-}
-
-// Helper to reduce redundancy in SMF header parsing across peek/validate/info commands.
-// Returns (version_str, file_size, off_tex, off_model, off_rig, off_anim) or error string.
-// Promotes modularity and easier maintenance for rust-smf parser progress.
-fn parse_smf_header_info(bytes: &[u8]) -> Result<(String, usize, usize, usize, usize, usize), String> {
-    if bytes.is_empty() {
-        return Err("empty file".to_string());
-    }
-    if bytes.len() < 32 {
-        return Err("too small".to_string());
-    }
-    let mut off = 0;
-    while off < bytes.len() && bytes[off] != 0 {
-        off += 1;
-    }
-    let version_end = off;
-    let mut s = String::new();
-    for &b in bytes.iter().take(version_end) {
-        s.push(b as char);
-    }
-    off += 1; // skip null
-    if off + 16 > bytes.len() {
-        return Err("header short".to_string());
-    }
-    let off_tex = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
-    let off_model = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
-    let off_rig = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize; off += 4;
-    let off_anim = u32::from_le_bytes([bytes[off], bytes[off+1], bytes[off+2], bytes[off+3]]) as usize;
-    // basic version + section validation (match TS support for v11/v12; offsets increasing + room for counts)
-    if s != "SMF_v11_by_Snidr_and_Bart" && s != "SMF_v12_by_Snidr_and_Bart" {
-        return Err(format!("unsupported version: {}", s));
-    }
-    if off_tex == 0 || off_model < off_tex || off_rig < off_model || off_anim < off_rig || off_anim + 1 > bytes.len() {
-        return Err("section offsets invalid or anim short".to_string());
-    }
-    Ok((s, bytes.len(), off_tex, off_model, off_rig, off_anim))
-}
-
-fn build_smf_desktop_info(bytes: &[u8]) -> SmfDesktopInfo {
-    let parsed = parse_smf_header_info(bytes);
-    match parsed {
-        Ok((version, size, off_tex, off_model, off_rig, off_anim)) => {
-            let model_count = if off_model + 1 <= bytes.len() {
-                Some(bytes[off_model] as u32)
-            } else {
-                None
-            };
-            let rig_bone_count = if off_rig + 4 <= bytes.len() {
-                Some(u32::from_le_bytes([
-                    bytes[off_rig],
-                    bytes[off_rig + 1],
-                    bytes[off_rig + 2],
-                    bytes[off_rig + 3],
-                ]))
-            } else {
-                None
-            };
-            let anim_clip_count = if off_anim + 1 <= bytes.len() {
-                Some(bytes[off_anim] as u32)
-            } else {
-                None
-            };
-            SmfDesktopInfo {
-                valid: true,
-                version,
-                size,
-                off_tex,
-                off_model,
-                off_rig,
-                off_anim,
-                model_count,
-                rig_bone_count,
-                anim_clip_count,
-                error: None,
-            }
-        }
-        Err(error) => SmfDesktopInfo {
-            valid: false,
-            version: String::new(),
-            size: bytes.len(),
-            off_tex: 0,
-            off_model: 0,
-            off_rig: 0,
-            off_anim: 0,
-            model_count: None,
-            rig_bone_count: None,
-            anim_clip_count: None,
-            error: Some(error),
-        },
-    }
 }
 
 #[command]
@@ -167,11 +62,17 @@ async fn peek_smf_header(path: String) -> Result<String, String> {
     // Uses shared parse helper for modularity. Frontend uses for desktop .smf to surface Rust I/O in status.
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
     match parse_smf_header_info(&bytes) {
-        Ok((s, size, _, _, _, _)) => {
-            if s.starts_with("SMF_v") {
-                Ok(format!("Rust SMF peek: {} (size: {} bytes)", s, size))
+        Ok(header) => {
+            if header.version.starts_with("SMF_v") {
+                Ok(format!(
+                    "Rust SMF peek: {} (size: {} bytes)",
+                    header.version, header.size
+                ))
             } else {
-                Ok(format!("not SMF header or unknown (size: {} bytes)", size))
+                Ok(format!(
+                    "not SMF header or unknown (size: {} bytes)",
+                    header.size
+                ))
             }
         }
         Err(msg) => Ok(msg),
@@ -185,11 +86,14 @@ async fn validate_smf(path: String) -> Result<String, String> {
     // Uses shared parse helper. Can be used for early desktop .smf checks before full load.
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
     match parse_smf_header_info(&bytes) {
-        Ok((s, _, _, _, _, _)) => {
-            if s.starts_with("SMF_v") {
+        Ok(header) => {
+            if header.version.starts_with("SMF_v") {
                 Ok("valid SMF".to_string())
             } else {
-                Ok(format!("invalid: not SMF header (starts with '{}')", s.chars().take(20).collect::<String>()))
+                Ok(format!(
+                    "invalid: not SMF header (starts with '{}')",
+                    header.version.chars().take(20).collect::<String>()
+                ))
             }
         }
         Err(msg) => Ok(format!("invalid: {}", msg)),
@@ -203,12 +107,20 @@ async fn validate_smf(path: String) -> Result<String, String> {
 async fn peek_smf_rig_basic(path: String) -> Result<String, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
     match parse_smf_header_info(&bytes) {
-        Ok((_, _, _, _, off_rig, _)) => {
-            if off_rig + 4 > bytes.len() {
-                return Ok(format!("rig offset {} beyond file", off_rig));
+        Ok(header) => {
+            if header.off_rig + 4 > bytes.len() {
+                return Ok(format!("rig offset {} beyond file", header.off_rig));
             }
-            let bone_count = u32::from_le_bytes([bytes[off_rig], bytes[off_rig+1], bytes[off_rig+2], bytes[off_rig+3]]);
-            Ok(format!("SMF rig basic: ~{} bones (at rig offset {})", bone_count, off_rig))
+            let bone_count = u32::from_le_bytes([
+                bytes[header.off_rig],
+                bytes[header.off_rig + 1],
+                bytes[header.off_rig + 2],
+                bytes[header.off_rig + 3],
+            ]);
+            Ok(format!(
+                "SMF rig basic: ~{} bones (at rig offset {})",
+                bone_count, header.off_rig
+            ))
         }
         Err(msg) => Ok(msg),
     }
@@ -221,13 +133,16 @@ async fn peek_smf_rig_basic(path: String) -> Result<String, String> {
 async fn peek_smf_anim_basic(path: String) -> Result<String, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
     match parse_smf_header_info(&bytes) {
-        Ok((_, _, _, _, _, off_anim)) => {
-            if off_anim + 1 > bytes.len() {
-                return Ok(format!("anim offset {} beyond file", off_anim));
+        Ok(header) => {
+            if header.off_anim + 1 > bytes.len() {
+                return Ok(format!("anim offset {} beyond file", header.off_anim));
             }
             // u8 per TS loader (SMF: after header offs, TEX u8, MODEL u8, RIG u32, ANIM u8)
-            let clip_count = bytes[off_anim] as u32;
-            Ok(format!("SMF anim basic: ~{} clips (at anim offset {})", clip_count, off_anim))
+            let clip_count = bytes[header.off_anim] as u32;
+            Ok(format!(
+                "SMF anim basic: ~{} clips (at anim offset {})",
+                clip_count, header.off_anim
+            ))
         }
         Err(msg) => Ok(msg),
     }
@@ -240,12 +155,15 @@ async fn peek_smf_anim_basic(path: String) -> Result<String, String> {
 async fn peek_smf_model_basic(path: String) -> Result<String, String> {
     let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
     match parse_smf_header_info(&bytes) {
-        Ok((_, _, _, off_model, _, _)) => {
-            if off_model + 1 > bytes.len() {
-                return Ok(format!("model offset {} beyond file", off_model));
+        Ok(header) => {
+            if header.off_model + 1 > bytes.len() {
+                return Ok(format!("model offset {} beyond file", header.off_model));
             }
-            let model_count = bytes[off_model] as u32; // u8 count of meshes per format
-            Ok(format!("SMF model basic: ~{} meshes (at model offset {})", model_count, off_model))
+            let model_count = bytes[header.off_model] as u32; // u8 count of meshes per format
+            Ok(format!(
+                "SMF model basic: ~{} meshes (at model offset {})",
+                model_count, header.off_model
+            ))
         }
         Err(msg) => Ok(msg),
     }
@@ -263,7 +181,19 @@ async fn get_smf_desktop_info(path: String) -> Result<SmfDesktopInfo, String> {
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
-        .invoke_handler(tauri::generate_handler![open_file, greet, read_file_text, read_file_binary, write_file_binary, peek_smf_header, validate_smf, peek_smf_rig_basic, peek_smf_anim_basic, peek_smf_model_basic, get_smf_desktop_info])
+        .invoke_handler(tauri::generate_handler![
+            open_file,
+            greet,
+            read_file_text,
+            read_file_binary,
+            write_file_binary,
+            peek_smf_header,
+            validate_smf,
+            peek_smf_rig_basic,
+            peek_smf_anim_basic,
+            peek_smf_model_basic,
+            get_smf_desktop_info
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -308,23 +238,40 @@ mod tests {
             assert!(off + 16 <= bytes.len(), "header too short in sample");
 
             // Use usize for offsets (matches the real peek command implementations)
-            let off_tex = u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
+            let off_tex =
+                u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
             off += 4;
-            let off_model = u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
+            let off_model =
+                u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
             off += 4;
-            let off_rig = u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
+            let off_rig =
+                u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
             off += 4;
-            let off_anim = u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
+            let off_anim =
+                u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
 
             let desktop_info = super::build_smf_desktop_info(&bytes);
-            assert!(desktop_info.valid, "Expected valid info for SMF sample, got: {:?}", desktop_info.error);
-            assert!(desktop_info.version.starts_with("SMF_v"), "expected SMF header in real sample, got: {}", desktop_info.version);
+            assert!(
+                desktop_info.valid,
+                "Expected valid info for SMF sample, got: {:?}",
+                desktop_info.error
+            );
+            assert!(
+                desktop_info.version.starts_with("SMF_v"),
+                "expected SMF header in real sample, got: {}",
+                desktop_info.version
+            );
 
             // Basic count reads (rig/anim like the peek basics) - cast u32 offsets to usize for indexing
             assert_eq!(desktop_info.off_rig, off_rig as usize);
             assert_eq!(desktop_info.off_anim, off_anim as usize);
             let rig_count = if (off_rig as usize) + 4 <= bytes.len() {
-                u32::from_le_bytes([bytes[off_rig as usize], bytes[(off_rig as usize) + 1], bytes[(off_rig as usize) + 2], bytes[(off_rig as usize) + 3]])
+                u32::from_le_bytes([
+                    bytes[off_rig as usize],
+                    bytes[(off_rig as usize) + 1],
+                    bytes[(off_rig as usize) + 2],
+                    bytes[(off_rig as usize) + 3],
+                ])
             } else {
                 0
             };
@@ -334,14 +281,21 @@ mod tests {
             } else {
                 0
             };
-            let model_count = if (off_model as usize) + 1 <= bytes.len() { bytes[off_model as usize] as u32 } else { 0 };
+            let model_count = if (off_model as usize) + 1 <= bytes.len() {
+                bytes[off_model as usize] as u32
+            } else {
+                0
+            };
 
             // Just sanity: non-negative and file makes sense (real sample will have reasonable counts)
             println!(
                 "Rust desktop peek smoke on {}: model~{} rig~{} anim~{} (offsets t{} m{} r{} a{})",
                 path, model_count, rig_count, anim_count, off_tex, off_model, off_rig, off_anim
             );
-            assert!(model_count < 1000 && rig_count < 1000 && anim_count < 100, "implausible counts from real sample parse");
+            assert!(
+                model_count < 1000 && rig_count < 1000 && anim_count < 100,
+                "implausible counts from real sample parse"
+            );
         } else {
             // Graceful in envs without the sample (e.g. minimal CI). Real desktop validation still recommended via tauri-dev + local mixamo.
             println!("Rust desktop peek smoke: no test .smf sample present in this env; skipping real binary parse (run desktop-smoke again after adding an SMF sample fixture).");
@@ -444,17 +398,26 @@ mod tests {
         bytes.extend_from_slice(&off_rig.to_le_bytes());
         bytes.extend_from_slice(&off_anim.to_le_bytes());
         // ensure len covers animOff + at least 2 (u8 count + next)
-        while bytes.len() < (off_anim as usize) + 5 { bytes.push(0); }
+        while bytes.len() < (off_anim as usize) + 5 {
+            bytes.push(0);
+        }
         // At animOff: u8 count=5 , then 0xFF,0xFF,0xFF to make u32-le=0xFFFFFF05 huge if misread as u32
         bytes[off_anim as usize] = 5u8;
         bytes[(off_anim as usize) + 1] = 0xFF;
         bytes[(off_anim as usize) + 2] = 0xFF;
         bytes[(off_anim as usize) + 3] = 0xFF;
         // Now parse via the shared helper (exercises version exact + section validation + u8 anim count)
-        let info = super::parse_smf_header_info(&bytes).expect("valid fixture header+sections");
+        let header = super::parse_smf_header_info(&bytes).expect("valid fixture header+sections");
         // anim count in combined info path would use the u8 logic now
-        let anim_u8 = if (info.5 + 1) <= bytes.len() { bytes[info.5] as u32 } else { 99 };
-        assert_eq!(anim_u8, 5, "anim count must be u8 read (5), not inflated u32 from following 0xFF bytes");
+        let anim_u8 = if (header.off_anim + 1) <= bytes.len() {
+            bytes[header.off_anim] as u32
+        } else {
+            99
+        };
+        assert_eq!(
+            anim_u8, 5,
+            "anim count must be u8 read (5), not inflated u32 from following 0xFF bytes"
+        );
         // also direct peek fn would return the ~5
         // Negative validation: bad version
         let mut badv = bytes.clone();

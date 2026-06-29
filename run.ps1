@@ -481,6 +481,8 @@ switch -Exact ($NormalizedTask) {
             if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "typecheck failed" }
             & npm run typecheck:test 2>&1 | Out-String | Write-Host
             if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "test typecheck failed" }
+            & npm run check:production-any 2>&1 | Out-String | Write-Host
+            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "production any boundary check failed" }
             & npm run build 2>&1 | Out-String | Write-Host
             if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "build failed" }
             & node scripts/check-entry-chunks.mjs 2>&1 | Out-String | Write-Host

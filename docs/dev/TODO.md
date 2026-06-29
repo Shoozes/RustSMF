@@ -1,11 +1,11 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-29 (material texture summaries)
+Last reviewed: 2026-06-29 (integrity/doc consolidation)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
 - `docs/dev/PITFALL_LEDGER.md` (durable pitfalls),
-- `summary_bank.json` (group registry).
+- `summary_bank.json` (context routing).
 
 ## Backlog Format
 
@@ -20,256 +20,105 @@ Each active item should answer:
 
 ## Active Backlog
 
-### Completed
+### P1: Resolve strict SMF pose roundtrip mismatches
 
-Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`. Skin paint data/viewport/export wiring is now current app state; remaining skin work belongs to deeper precision items below.
-
-### P1: Implement skin-weight edit data model
-
-- What: Add an internal skin-edit state model that can safely represent per-vertex selected-bone weight edits without immediately corrupting imported source data.
-- Why: Current RustSMF only previews selected-bone weights; real weight paint needs deterministic mutation, normalization, undo-ready dirty state, and export gating.
-- Where: `source/frontend/src/utils/skinWeights.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/store/index.ts`, `source/frontend/src/utils/weightPreview.ts`, `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/threeToSmf.ts`, `source/frontend/tests`.
-- When: After the old-editor skin source map identifies the required normalization and paint semantics; before adding brush UI.
+- What: Root-cause and reduce strict first/last-frame pose-delta mismatches reported by the Export workspace for real imported SMF samples.
+- Why: The export cockpit now classifies pose failures, but release confidence depends on knowing whether remaining deltas are conversion tolerance, source ambiguity, or a real coordinate/DQ bug.
+- Where: `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/coord.ts`, `source/frontend/src/loaders/smfDiagnostics.ts`, `source/frontend/src/loaders/coord.test.ts`, `source/frontend/tests/smoke.spec.ts`, real SMF fixtures under `docs/references/old-src/datafiles/SMF/`.
+- When: Before claiming release-level SMF animation fidelity or widening SMF export claims beyond current diagnostics.
 - How:
-  - Represent editable skin weights separately from loaded SMF/GLB source data until an explicit apply/export path.
-  - Normalize affected vertex weights and enforce the current four-bone influence limit.
-  - Keep display preview and export serialization paths explicit so unsupported edits fail loudly.
+  - Build a focused fixture matrix for one passing generated skinned path and one failing real SMF path.
+  - Compare bind pose, inverse bind, parent transforms, DQ normalization, frame endpoint sampling, and coordinate swizzles.
+  - Keep diagnostics honest while tightening math; do not relax thresholds without evidence.
 - Subtasks:
-  - Done: define typed `SkinEditState` with selected bone, dirty mesh ids, edited vertex weights, and source format in `skinWeights.ts`.
-  - Done: extract pure helpers for read/edit/normalize selected-bone weight slots and reuse the reader in weight preview.
-  - Done: add unit tests for add, subtract, set, clamp, normalize, invalid bone/vertex, and missing-skin-attribute cases in `skinWeights.test.ts`.
-  - Done: wire `SkinEditState` into `useLoadModel`/panels so dirty state is visible and survives workspace switches.
-  - Done: serialize dirty skin edits into supported SMF export paths and show a block reason for unsupported dirty states.
-  - Done: add dirty-state continuity and canceled-save coverage in Playwright native/browser tests.
-- Acceptance: Unit tests prove edited weights normalize deterministically and no export path silently drops dirty skin edits.
-
-### P2: Extend skin paint parity beyond first authoring path
-
-- What: Add the remaining old-editor skinning behaviors after the first selected-bone set/add/subtract paint path.
-- Why: The app can now paint and export supported dirty weights, but old Skinning mode also had autoskin, normalize/single-paint variants, and undo-oriented transactional safety.
-- Where: `source/frontend/src/components/SkinPanel.tsx`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/weightPreview.ts`, `source/frontend/tests/smoke.spec.ts`, `docs/references/old-src/scripts/skineditor_*`, `docs/references/old-src/screenshots/smf_editor_skinning_tab.png`, `docs/references/old-src/screenshots/smf_editor_skinning_painting.png`.
-- When: After the current paint/export path stays stable under e2e and before claiming full old-editor skinning parity.
-- How:
-  - Keep the existing selected-bone gating and dirty export serialization.
-  - Add autoskin/normalize behavior only with pure helper tests first.
-  - Add undo/redo or equivalent transactional checkpoints before adding broader paint tools.
-- Subtasks:
-  - Done: SkinPanel controls for set/add/subtract, radius, strength, and target influence.
-  - Done: viewport brush marker/hit telemetry with selected-bone prerequisite.
-  - Done: Playwright coverage for no-bone blocked paint, enabled paint, workspace continuity, and supported SMF export.
-  - Done: add pure autoskin and normalize helpers based on old `skineditor_*` scripts, exposed as undo-safe full-model Skin workspace actions.
-  - Done: add undo/redo checkpointing for skin paint edits, including touched-vertex snapshot restore and redo invalidation after new strokes.
-- Acceptance: Remaining skin tools match documented old-source semantics, are undo-safe, and cannot silently drop dirty edits on export.
-
-### P1: Implement animation edit data model
-
-- What: Add an editable clip/keyframe model for selected-bone position and rotation tracks.
-- Why: Current Timeline drives imported clips, but old Animation mode authored keyframes. Editing live pose without an animation edit model cannot safely become exported keyframes.
-- Where: `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/store/index.ts`, `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/threeToSmf.ts`, `source/frontend/src/components/AnimatePanel.tsx`, `source/frontend/src/components/Timeline.tsx`, `docs/references/old-src/scripts/animeditor_*`, `docs/references/old-src/scripts/smf_anim`.
-- When: After old animation keyframe-grid semantics are mapped; before building timeline UI controls.
-- How:
-  - Maintain editable clip state separate from loaded `THREE.AnimationClip` until committed.
-  - Support position/quaternion tracks first; keep scale/material/morph/object tracks blocked or GLB-only.
-  - Preserve existing playback/scrub behavior while allowing dirty keyframes to drive the mixer.
-- Subtasks:
-  - Done: define typed editable clip/keyframe state with current clip, selected keyframe, selected bone, clipboard, interpolation, and dirty clip tracking.
-  - Done: implement pure helpers for insert/update/delete/copy/paste selected-bone pos/rot keyframes.
-  - Done: implement conversion helpers between editable state and Three `VectorKeyframeTrack` / `QuaternionKeyframeTrack`, plus SMF-source animation patching for dirty clips.
-  - Done: add unit tests for keyframe insertion order, replacement, deletion guard, interpolation metadata, zero-duration safety, edited clip conversion, and SMF-source patching.
-- Acceptance: Tests prove selected-bone pos/rot keyframes can be edited and converted to runtime/export tracks without changing unsupported channels.
-
-### P1: Implement timeline/keyframe authoring UI
-
-- What: Add user-facing keyframe authoring controls and a timeline surface beyond play/scrub.
-- Why: Old Animation mode included colored keyframe strips, insert/edit/delete/copy/paste, interpolation, frame multiplier, clip list editing, and selected-node transform actions.
-- Where: `source/frontend/src/components/Timeline.tsx`, `source/frontend/src/components/AnimatePanel.tsx`, `source/frontend/src/components/Inspector.tsx`, `source/frontend/src/index.css`, `source/frontend/tests/smoke.spec.ts`, `docs/references/old-src/screenshots/smf_editor_animation_tab.png`.
-- When: After editable animation state and conversion helpers exist.
-- How:
-  - Keep playback controls intact.
-  - Add compact keyframe lane UI for selected clip and selected bone.
-  - Start with insert/update/delete/copy/paste for selected-bone pos/rot only.
-  - Expose interpolation only where SMF/Three export behavior is defined.
-- Subtasks:
-  - Done: add selected-clip/keyframe display in AnimatePanel for imported clip summaries.
-  - Done: add timeline keyframe markers with deterministic test ids for imported clip/scrub preview.
-  - Done: add Insert/Update/Delete/Copy/Paste controls.
-  - Done: add interpolation controls for supported modes.
-  - Done: add Playwright coverage for insert -> scrub -> update -> SMF roundtrip status on the supported generated-skinned export path.
-- Acceptance: A user can create or edit a selected-bone pos/rot keyframe, scrub to it, see it on the timeline, and export supported edited animation data without silent loss.
-  - Note: real imported SMF samples can still report strict pose-delta roundtrip mismatches before and after animation edits; that belongs to the export cockpit/SMF pose diagnostics item below rather than the keyframe UI.
-
-### P1: Expand export cockpit reports beyond first roundtrip check
-
-- What: Extend the current Export workspace diagnostics, in-memory roundtrip check, and saved report into a fuller compatibility cockpit with richer comparisons.
-- Why: SMF export is the product boundary; users should know exactly why export is safe, warning-only, or blocked before committing files.
-- Where: `source/frontend/src/components/ExportPanel.tsx`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/loaders/smfDiagnostics.ts`, `source/frontend/src/loaders/smf.ts`, `source/frontend/tests`.
-- When: After first-pass diagnostics and count-based roundtrip check are stable; before claiming release-level SMF compatibility UX.
-- How:
-  - Keep `smfDiagnostics.ts` as the structured report owner.
-  - Continue exporting to memory and reimporting before optional save.
-  - Expand comparisons from summary counts into bounds, first-frame pose sanity, and targeted mismatch details.
-  - Keep GLB export unchanged for full-fidelity paths.
-- Subtasks:
-  - Done: add bounds and first/last-frame pose sanity checks to the existing "Run SMF Check" action.
-  - Done: render structured roundtrip check rows for count, geometry, bounds, animation timing, animation metadata, and animation pose results instead of relying only on status text.
-  - Done: add blocked-export and warning-only diagnostics result cases to the Export workspace e2e coverage.
-  - Done: add report serialization tests for the expanded diagnostics/roundtrip JSON shape.
-- Acceptance: Export workspace can distinguish count, bounds, and pose mismatches without relying only on status text.
-  - Note: real imported SMF samples can still surface strict pose-delta failures; the cockpit now classifies those failures, but root-cause SMF pose conversion cleanup remains separate compatibility work.
-
-### P2: Implement rig editing and validation
-
-- What: Add real rig editing commands: rename, create, delete, reparent, detach/connect, mirror/reset helpers, and hierarchy validation.
-- Why: SMF rigs are node-based, disconnected/head nodes matter, and rig edits can invalidate skin weights or animation tracks if not validated.
-- Where: `source/frontend/src/loaders/smfRig.ts`, `source/frontend/src/utils/rigValidation.ts`, `source/frontend/src/utils/rigEdits.ts`, `source/frontend/src/components/Inspector.tsx`, `source/frontend/src/components/RigPanel.tsx`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/tests`.
-- When: After skin edit state or alongside animation authoring only when validation/undo boundaries are explicit.
-- How:
-  - Keep rig edits in a non-destructive edit layer before export.
-  - Rebuild or patch the Three skeleton through tested helpers.
-  - Validate cycles, orphan bones, self-parent roots, missing bind targets, and skin indices pointing at deleted bones.
-- Subtasks:
-  - Done: add a RigPanel validation surface for loaded rigs before mutation commands.
-  - Done: add selected-bone rename for non-SMF sources, including animation track retargeting, authored key edit retargeting, pose edit key migration, skin selected-bone migration, and generated-skinned export smoke coverage.
-  - Done: add selected-bone reparent for non-SMF sources, including cycle/self-parent validation, world-transform preservation, Inspector hierarchy continuity after rename, and generated-skinned smoke coverage.
-  - Done: add selected-bone create-child for non-SMF sources, including new-name validation, Skeleton inverse/buffer refresh, generated-skinned create -> transform -> export/reimport smoke coverage.
-  - Done: add selected-bone delete for non-SMF sources, including root/weighted-skin-reference guards, Skeleton compaction, skinIndex remapping, animation/pose cleanup, and generated-skinned create -> transform -> delete -> export/reimport smoke coverage.
-  - Decide whether SMF-source node renames remain blocked for node-index fidelity or need an explicit SMF metadata/name layer.
-  - Done: add pure validators for cycles, duplicate names, orphaned nodes, missing skin attributes, mismatched skin attributes, and invalid skin references.
-  - Add detach/head-node compatibility controls only after old-source source-map review.
-  - Done: add unit tests for hierarchy validation and smoke coverage for no-model warning plus loaded generated-skinned pass state.
-  - Done: add e2e for create child -> transform -> export/reimport on the generated-skinned path.
-- Acceptance: Rig edits cannot create cyclic or silently invalid SMF output, and unsupported cases produce actionable diagnostics.
-
-### P2: Add texture and material compatibility diagnostics
-
-- What: Add material/texture inspection for SMF export: texture source, resolution, power-of-two status, one-texture-per-mesh constraints, and split/block guidance.
-- Why: GLB can preserve richer material graphs, while SMF compatibility needs explicit texture limits and clear user choices.
-- Where: `source/frontend/src/components/ExportPanel.tsx`, `source/frontend/src/components/TexturePanel.tsx`, `source/frontend/src/loaders/smfDiagnostics.ts`, `source/frontend/src/loaders/threeToSmf.ts`, `source/frontend/src/utils/textureCompat.ts`, `source/frontend/tests`.
-- When: After export diagnostics and before broad release packaging or material-heavy sample validation.
-- How:
-  - Extend diagnostics with material/texture warnings and errors.
-  - Keep GLB export untouched.
-  - Only add split-by-material export after diagnostics identify stable mesh/material ids.
-- Subtasks:
-  - Done: add power-of-two texture helper tests.
-  - Done: detect multiple material slots and multiple texture maps on SMF-target meshes.
-  - Done: surface material/texture warnings in structured SMF diagnostics without blocking GLB export.
-  - Done: show texture map type, name, mesh/material slot, resolution, power-of-two status, and runtime source in a compact Export workspace panel.
-  - Done: keep unsupported material layouts warning-only for SMF guidance and direct users to GLB for full material fidelity; defer split/export until mesh/material identity requirements are explicit.
-- Acceptance: Material-heavy models produce clear SMF compatibility guidance, and GLB remains the recommended full-fidelity path.
+  - Add a targeted unit or diagnostic helper that prints per-bone max pose deltas with bone names and frame endpoints.
+  - Add one regression fixture/assertion for a known real-sample mismatch once root cause is isolated.
+  - Update the pitfall ledger only if the investigation finds a repeated conversion hazard.
+- Acceptance: A failing real-sample pose check is either fixed with a regression test or documented as a deliberate unsupported/tolerance-bound case with specific diagnostics.
 
 ### P1: Finish precision-editor parity in quad/ortho workflows
 
 - What: Close remaining orthographic/pane affordance gaps for rigging/skinning precision.
 - Why: Quad view, labels, endpoint handles, and per-pane rendering are active, but old editor parity still depends on reliable ortho-pane hit behavior and clear precision feedback.
 - Where: `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/components/Inspector.tsx`, `source/frontend/src/utils/viewportLayout.ts`, `source/frontend/tests/smoke.spec.ts`, `source/frontend/tests/visual.spec.ts`.
-- When: Continue alongside skin/animation work whenever pointer interaction or quad rendering changes.
+- When: Continue alongside any pointer, camera, pane, or endpoint-editing change.
 - How:
-  - Keep pane math in `viewportLayout.ts`.
+  - Keep pane math centralized in `viewportLayout.ts`.
   - Keep model/shared-root continuity unchanged.
-  - Add regression tests before changing drag, hover, pane selection, or label scaling.
+  - Add regression tests before changing drag, hover, pane selection, label scaling, or DPR handling.
 - Subtasks:
-  - Done: add edge-case unit coverage that tiny ortho panes stay finite and pickable.
-  - Done: add single-view Ortho camera toggle smoke coverage with a loaded SMF render assertion.
-  - Done: add visual coverage for loaded Display menu + single-view Ortho render without horizontal overflow.
-  - Add high-DPR/browser-pixel coverage if renderer sizing or canvas pixel ratio logic changes.
+  - Add high-DPR/browser-pixel coverage if renderer sizing or canvas pixel-ratio logic changes.
   - Add faster single-to-quad-to-single switching tests around selected bone, hover state, endpoint telemetry, and scrub time.
   - Add visual checks that quad labels/dividers do not overlap tool overlays at narrow widths beyond the current loaded/narrow shell checks.
   - Decide whether ortho panes should support all bone selection/edit actions or a deliberate subset.
-- Recent progress: Larger old-editor-like diamond/joint skeleton helpers are implemented through `modernSkeletonHelper.ts`, with helper mesh hit mapping before the distance-picker fallback.
 - Acceptance: Rapid layout/mode switching in single and quad states never drops bone selection, scrub continuity, endpoint-hover state, or pane labels in e2e.
 
-### P2: Adapt old viewport/settings shelf controls
+### P2: Complete SMF-aware rig editing parity
 
-- What: Round out old editor display toggles after the first modern wireframe setting.
-- Why: Old screenshots show useful display controls beyond wireframe: texture visibility, grid, shader, draw node indices, perspective, node opacity, rig opacity/thickness, and submodel visibility/color cues.
-- Where: `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/components/Outliner.tsx`, `source/frontend/src/index.css`, `source/frontend/tests/smoke.spec.ts`, `docs/references/old-src/scripts/common_add_buttons`, `docs/references/old-src/objects/oAnimEditSystem/Draw_0.gml`.
-- When: After wireframe is stable; before deep visual QA or release-style editor parity claims.
+- What: Decide and implement the next safe SMF-source rig edit layer, including metadata/name behavior, detach/connect, and mirror/reset helpers.
+- Why: Non-SMF rig rename/reparent/create/delete are implemented, but SMF-source edits remain blocked to preserve node-index and head-node export fidelity.
+- Where: `source/frontend/src/loaders/smfRig.ts`, `source/frontend/src/utils/rigValidation.ts`, `source/frontend/src/utils/rigEdits.ts`, `source/frontend/src/components/RigPanel.tsx`, `source/frontend/tests`, `docs/references/old-src/scripts/rig_*`, `docs/references/old-src/screenshots/`.
+- When: After SMF pose/fidelity cleanup or when an SMF-source authoring workflow specifically needs rig metadata edits.
 - How:
-  - Keep toggles display-only unless explicitly named as data-mutating.
-  - Prefer compact controls over recreating the old left shelf wholesale.
-  - Add DOM state assertions plus tolerant viewport screenshots.
+  - Start with a source-map pass over old rig scripts for detach/connect/mirror/reset semantics.
+  - Keep SMF node-index fidelity as the default; add a separate metadata/edit layer only if export can preserve or intentionally rewrite indexes.
+  - Add pure validators before UI controls.
 - Subtasks:
-  - Done: add grid/axes visibility toggles.
-  - Done: add material/texture visibility override that does not mutate source materials.
-  - Done: add rig opacity/thickness controls where Three allows reliable visual feedback.
-  - Done: add node label/index visibility controls that reuse existing bone label infrastructure.
-  - Done: group file actions, workspace tabs, layout/camera controls, and secondary display toggles into a compact toolbar/Display menu.
-  - Done: add submodel visibility support through Outliner once model submesh ids are stable.
-- Acceptance: Core old-editor display affordances can be toggled independently, remain disabled before model load where appropriate, and are covered by smoke tests.
+  - Decide whether SMF-source node names stay display-only, become metadata-only, or rewrite SMF node records.
+  - Add detach/head-node compatibility controls only after old-source source-map review.
+  - Add mirror/reset helpers only with pure tests for hierarchy and skin/animation safety.
+- Acceptance: SMF-source rig controls either remain explicitly blocked with clear UX, or ship with tests proving they cannot corrupt node-index, skin, or animation fidelity.
 
 ### P2: Complete workspace transition and continuity coverage
 
 - What: Harden mode/workspace transitions around model-dependent panel state and user feedback timing.
-- Why: `App` state plumbing is stable, but transition timing is a high-risk area for subtle UX regressions as Skin and Animate become authoring surfaces.
-- Where: `source/frontend/src/App.tsx`, `source/frontend/src/store/index.ts`, `source/frontend/src/components/{SkinPanel,AnimatePanel,ExportPanel}.tsx`, `source/frontend/tests/smoke.spec.ts`.
+- Why: Skin, Animate, Rig, Export, layout, and Display controls now share one model root; transition timing can regress status, scrub, selection, dirty state, or disabled-control semantics.
+- Where: `source/frontend/src/App.tsx`, `source/frontend/src/store/index.ts`, `source/frontend/src/components/{SkinPanel,AnimatePanel,ExportPanel,RigPanel,Toolbar}.tsx`, `source/frontend/tests/smoke.spec.ts`.
 - When: Expand this before or during each new authoring panel feature.
 - How:
   - Keep viewport controls model-aware.
-  - Keep shared model root/persistence unchanged.
+  - Keep shared model root and persistence unchanged.
   - Assert no redundant reloads or stale panel writes during mode changes.
 - Subtasks:
   - Add transition assertions around mode + layout continuity for panel visibility, export status, and playback scrub timing.
   - Add negative transition case: no model loaded + mode switch + disabled layout/display controls.
-  - Done: add dirty-state continuity cases once skin edits and animation edits exist.
-  - Done: add export/status preservation cases for dirty skin/animation state.
-- Acceptance: Smoke plus a dedicated transition suite demonstrates no accidental reload, status reset, stale export state, or dirty-edit loss across workspace switches.
+  - Keep existing dirty skin/animation continuity and canceled-save coverage current as panels change.
+- Acceptance: Smoke plus a dedicated transition slice demonstrates no accidental reload, status reset, stale export state, or dirty-edit loss across workspace switches.
 
-### P2: Expand async race contract coverage across all load entrypoints
+### P2: Expand async race contract coverage across all load/export entrypoints
 
 - What: Complete deterministic multi-path coverage proving stale results cannot commit when operations overlap across picker open, file input, drag/drop, and export actions.
-- Why: Guards in `useLoadModel` are in place, but new dirty authoring state will increase the cost of stale writes.
+- Why: Guards in `useLoadModel` are in place, but dirty authoring state increases the cost of stale writes.
 - Where: `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/native.spec.ts`, `source/frontend/tests/smoke.spec.ts`, `source/frontend/tests/helpers/smoke-helpers.ts`.
-- When: Before adding skin/animation dirty state to export flows, and again whenever load/export orchestration changes.
+- When: Revisit whenever load/export orchestration, save behavior, or dirty state changes.
 - How:
   - Keep native open/load/export overlap coverage in `native.spec.ts`.
   - Keep browser overlap coverage in smoke tests.
   - Add targeted race cases as new authoring state becomes test-addressable.
 - Subtasks:
   - Add browser export-overlap assertions if the download/export path becomes fully mockable.
-  - Done: added browser race coverage that verifies stale dirty pose edits are cleared when an older `.smf` load is overtaken by drag/drop `.fbx` load (`tests/smoke.spec.ts`).
-  - Done: added browser race coverage that verifies skin-dirty state and selected bone are cleared when a delayed `.smf` input load is overtaken by a drag/drop `.fbx` load (`tests/smoke.spec.ts`).
-  - Done: added native e2e assertion that skin edits stay dirty across canceled SMF export save (`tests/native.spec.ts`).
-  - Done: added pose-edit continuity coverage via `pose-edit` dirty state and canceled SMF save (`tests/native.spec.ts`).
-  - Done: added authored animation key dirty-state coverage across canceled native SMF export save (`tests/native.spec.ts`).
   - Keep shared delayed-read/drop helpers isolated in `smoke-helpers.ts`.
+  - Add stale worker-response coverage if SMF import/export is workerized.
 - Acceptance: No stale root, selection, status, error, dirty skin edit, or dirty animation edit writes are visible after a newer operation has started.
 
 ### P2: Tighten typed interop boundaries
 
-- What: Reduce remaining production `as any` casts and isolate unavoidable library/bridge boundary casts behind typed helpers.
-- Why: The current app typechecks, but authoring-state growth will make loose Tauri dialog, loader animation, and TransformControls boundaries harder to audit.
-- Where: `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/loaders/{glb,fbx,obj}.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/tests`.
-- When: Before adding dirty skin/animation authoring state to load/export paths, or opportunistically when touching those files.
+- What: Reduce remaining production `any` casts and isolate unavoidable library/bridge boundary casts behind typed helpers.
+- Why: The current app typechecks, but broad Three.js, Tauri, and TransformControls boundaries make regressions harder to audit as authoring-state grows.
+- Where: `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/loaders/{glb,fbx,obj}.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/threeDisposal.ts`, `source/frontend/tests`.
+- When: Opportunistically when touching loader, bridge, export, or viewport code; before major new authoring surfaces.
 - How:
-  - Add narrow type guards for Tauri selected file results instead of direct bridge casts.
-  - Introduce a small `Object3DWithAnimations` helper/type for loader roots and animation extraction.
-  - Wrap TransformControls attach/add interop in one local helper with a comment that explains the Three.js type skew.
+  - Keep error handling on `unknown` and use shared formatting helpers.
+  - Use type guards for loaded Three objects and bridge results.
+  - Wrap TransformControls attach/listener interop in one local helper with a short type-skew comment.
   - Keep test-only casts separate from production cleanup scope.
 - Subtasks:
-  - Replace Tauri dialog selected-path casts with a typed parser and unit or native mock coverage. (2026-06-18 review: added TauriWindow interface + get path helper + isTauriEnv typed.)
-  - Replace repeated loader root animation casts with a shared typed helper. (2026-06-18: removed legacy (root as any).animations = attaches in glb/fbx/smf/obj + (root as any) fallback in useLoadModel; rely on returned .clips consistently.)
+  - Done: Tauri window/selected-path guards and cached Tauri client.
+  - Done: loader clips contract direct; no legacy `root.animations` attach/fallback.
+  - Done: unknown-error formatter in `useLoadModel` and typed GLB/FBX skinned-mesh traversal.
+  - Done: add `check:production-any` to the frontend and repo verification path so new production `any` casts fail before merge.
   - Re-audit `ThreeViewport.tsx` casts after any TransformControls or endpoint drag refactor.
-  - Add a grep check or review note so new production `as any` casts are justified at boundary points.
 - Acceptance: Frontend typecheck and test typecheck pass, and production `as any` use is either eliminated or isolated in named bridge/library boundary helpers.
-- Recent: 2026-06-18 review pass + opportunistic tighten: Tauri window/selected guarded, loader clips contract direct, tauri client cached for repeated call timing. Remaining boundary casts (TransformControls, three materials/userData, test polyfills, obj read anims) are documented.
-
-### P2: Promote Rust SMF parser core beyond peeks
-
-- What: Move Rust SMF handling from desktop peek helpers toward a small canonical parser module that returns structured header and section summaries.
-- Why: The desktop app already uses Rust for file IO/status peeks; a focused parser core improves error quality and future native confidence without porting the full Three visual loader at once.
-- Where: `source/src-tauri/src/main.rs`, `source/src-tauri/src/smf_core.rs`, `source/src-tauri/Cargo.toml`, `source/frontend/src/backend-client/tauri.ts`, `source/frontend/tests/native.spec.ts`.
-- When: After export diagnostics are stable and before packaging the app as a serious desktop compatibility tool.
-- How:
-  - First move header parsing and offset bounds into `smf_core.rs`.
-  - Keep TS loader as the visual/Three owner.
-  - Add Rust unit tests for malformed offset, missing null, non-SMF header, and valid sample.
-- Subtasks:
-  - Extract current Rust parse helpers into `smf_core.rs`.
-  - Return a typed `SmfParsedSummary` from desktop info commands.
-  - Keep Playwright native mocks aligned with Rust field widths and offsets.
-  - Defer full parse/export port until parity tests are stronger.
-- Acceptance: Rust parser core rejects malformed headers with bounded errors and existing desktop status behavior stays compatible.
 
 ### P3: Workerize heavy SMF import/export and large-file progress
 
@@ -290,8 +139,8 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
 
 ### P2: Maintain launch/task-guard completeness
 
-- What: Keep launch docs, gates, and automation contracts synchronized across `README`, `run.ps1`, `run.bat`, and `source/package.json`.
-- Why: `docs__state_backlog` and `subsystem__harness_and_context` rely on docs correctness to prevent onboarding and verification drift.
+- What: Keep launch docs, gates, and automation contracts synchronized across `README`, `run.ps1`, `run.bat`, and package scripts.
+- Why: Launcher and verification drift can make green local claims misleading.
 - Where: `README.md`, `docs/user/README.md`, `docs/dev/APP_STATE.md`, `run.ps1`, `run.bat`, `source/package.json`, `scripts/verify-context-bank.py`, `summary_bank.json`.
 - When: Whenever launcher scripts, package scripts, GenEye wrapper behavior, or verification tasks change.
 - How:
@@ -307,7 +156,7 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
 ### P2: Maintain modular-doc integrity and reduce review debt
 
 - What: Keep summary docs concise, non-duplicative, and aligned with current app state.
-- Why: `docs/dev/TODO.md`, `docs/dev/APP_STATE.md`, `docs/dev/PITFALL_LEDGER.md`, and `summary_bank.json` are the main durable state surfaces.
+- Why: `docs/dev/TODO.md`, `docs/dev/APP_STATE.md`, `docs/dev/PITFALL_LEDGER.md`, `source/frontend/tests/README.md`, and `summary_bank.json` are the durable state surfaces for future work.
 - Where: `docs/dev/TODO.md`, `docs/dev/APP_STATE.md`, `docs/dev/PITFALL_LEDGER.md`, `summary_bank.json`, `source/frontend/tests/README.md`.
 - When: After any feature, test, path, or current-state shift.
 - How:
@@ -315,6 +164,7 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
   - Keep verified current behavior in APP_STATE.
   - Keep repeated failure modes in PITFALL_LEDGER.
   - Keep context paths in summary_bank narrow and validated.
+  - Keep the test README coverage-oriented, not a full progress log.
 - Subtasks:
   - Remove completed-work narration from TODO after implementation lands.
   - Update APP_STATE only when current behavior changes.

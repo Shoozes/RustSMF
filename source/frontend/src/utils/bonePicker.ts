@@ -36,7 +36,7 @@ export function findClosestBone(
 /**
  * Shared pure helper to locate a bone by name in a Three Skeleton (promotes modularity).
  * Used across viewport (marker, transform, raycast follow), hook (selection), poseEdits.
- * Returns the first matching bone or undefined. Preserves existing any[] style for compatibility.
+ * Returns the first matching bone or undefined.
  */
 export function findBoneByName(skeleton: THREE.Skeleton | null | undefined, name: string): THREE.Bone | undefined {
   if (!skeleton?.bones?.length || !name) return undefined;

@@ -14,6 +14,8 @@ interface FbxLoadedModel {
   mixer: THREE.AnimationMixer;
 }
 
+const isSkinnedMesh = (obj: THREE.Object3D): obj is THREE.SkinnedMesh => obj.type === 'SkinnedMesh';
+
 export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoadedModel> {
   const loader = new FBXLoader();
 
@@ -32,22 +34,23 @@ export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoa
   const skinnedMeshes: THREE.SkinnedMesh[] = [];
   const allClips: THREE.AnimationClip[] = fbx.animations || [];
 
-  root.traverse((obj: any) => {
-    if (obj.isSkinnedMesh) {
-      const geo = obj.geometry;
-      if (!geo.attributes.tangent) {
-        geo.computeTangents?.();
-      }
-      if (!geo.attributes.uv) {
-        const count = geo.attributes.position.count;
-        geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
-      }
-      if (!geo.attributes.normal) {
-        geo.computeVertexNormals();
-      }
-
-      skinnedMeshes.push(obj);
+  root.traverse((obj) => {
+    if (!isSkinnedMesh(obj)) {
+      return;
     }
+    const geo = obj.geometry;
+    if (!geo.attributes.tangent) {
+      geo.computeTangents?.();
+    }
+    if (!geo.attributes.uv) {
+      const count = geo.attributes.position.count;
+      geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
+    }
+    if (!geo.attributes.normal) {
+      geo.computeVertexNormals();
+    }
+
+    skinnedMeshes.push(obj);
   });
 
   let skeleton: THREE.Skeleton | undefined;

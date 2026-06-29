@@ -46,9 +46,13 @@ type MaterialWithFlatShading = MaterialWithMap & {
   flatShading?: boolean;
 };
 
+type TransformControlsDraggingEvent = { value: boolean };
+
 const isObject3D = (value: unknown): value is THREE.Object3D => value instanceof THREE.Object3D;
 const transformControlsAsObject3D = (controls: TransformControls): THREE.Object3D =>
   controls as unknown as THREE.Object3D;
+const isDraggingEvent = (event: unknown): event is TransformControlsDraggingEvent =>
+  typeof event === 'object' && event !== null && typeof (event as TransformControlsDraggingEvent).value === 'boolean';
 
 const isSkinnedMesh = (obj: THREE.Object3D): obj is THREE.SkinnedMesh => obj.type === 'SkinnedMesh' || (obj as THREE.SkinnedMesh).isSkinnedMesh === true;
 
@@ -1384,8 +1388,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
           activeSkeleton.update();
         }
       });
-      tc.addEventListener('dragging-changed', (event: any) => {
-        orbitRef.current.enabled = !event.value;
+      tc.addEventListener('dragging-changed', (event) => {
+        if (isDraggingEvent(event)) {
+          orbitRef.current.enabled = !event.value;
+        }
       });
       try {
         scene.add(transformControlsAsObject3D(tc));

@@ -6,7 +6,7 @@ Core: high-fidelity SMF roundtrip (import/export with coord/DQ), guarded skinned
 
 ## State and work
 - Current app state: docs/dev/APP_STATE.md
-- Active backlog + recent completed integrity work (paired what/why/where/when/how, subtasks, and done criteria): docs/dev/TODO.md
+- Active backlog (paired what/why/where/when/how, subtasks, and done criteria): docs/dev/TODO.md
 - Regression prevention and verification gaps: docs/dev/PITFALL_LEDGER.md
 - Context groups for files/folders/features/issues: summary_bank.json (narrow paths, intent-based; validate with `python scripts/verify-context-bank.py` after edits)
 
@@ -17,7 +17,7 @@ pwsh -File run.ps1 -Task run           # run desktop app if already installed
 pwsh -File run.ps1 -Task verify        # lint + app typecheck + test typecheck + build + chunk guard + unit + cargo check
 pwsh -File run.ps1 -Task test:e2e      # Playwright via optional GenEye advisory wrapper, or browser-only if unavailable
 pwsh -File run.ps1 -Task test:visual-strict # opt-in strict SMF screenshot baselines
-pwsh -File run.ps1 -Task desktop-smoke # unbundled tauri build + Rust native peek tests (4 tests in main.rs)
+pwsh -File run.ps1 -Task desktop-smoke # unbundled tauri build + Rust native parser/peek tests
 
 `test:e2e` keeps RustSMF independent. When GenEye is discoverable through `-GenEyeRoot`, `GENEYE_ROOT`, `GENEYE_RUN_BAT`, or the local Three-Sisters path, it wraps the RustSMF Playwright command with GenEye `playwright-full -AllowGenEyeFailure` and writes ignored evidence under `runtime-data\geneye-playwright-runs\`. RustSMF's Playwright config owns the app server/navigation, so GenEye's built-in scenario is only a plumbing check; the RustSMF app evidence is the GenEye `project_tests` result plus discovered RustSMF Playwright artifacts. Use `-NoGenEye` or `RUSTSMF_NO_GENEYE=1` for a browser-only run. If GenEye is missing or fails before project-test evidence exists, RustSMF runs browser-only Playwright. If RustSMF tests fail, their exit code stays authoritative.
 
@@ -37,14 +37,14 @@ See run.ps1 help, source/frontend/package.json, source/package.json (workspace),
 - loaders/: SMF binary (smf.ts + smfBinary.ts with bounded reads/DQ guards/zero-dur), threeToSmf (guarded converter), glb/fbx/obj, coord (swizzles + DQ math, the single source of truth)
 - backend-client/tauri.ts: bridge (native dialog/read/write + browser fallbacks); save returns bool for cancel distinction
 - store/: lightweight slice hooks (no extra deps)
-- src-tauri/src/main.rs: Tauri commands + shared parse_smf_header_info + native tests exercising same logic as TS/Rust peeks
+- src-tauri/src/main.rs + src-tauri/src/smf_core.rs: Tauri commands, shared SMF header/section parsing, and native tests exercising the same logic as TS/Rust peeks
 - Tests: unit (DQ/roundtrip/guard edges in loaders/*.test.ts), e2e smoke (real fixtures + static FBX + generated skinned GLB + UI), opt-in strict SMF visual snapshots, native.spec (deterministic IPC mocks for open/read/save/cancel + desktop status sims aligned to u8 anim count)
 
 ## Known limits (intentional)
 - SMF export from edited pose or converted skinned: pos/rot only (no scale channel in DQ path). Scale edits block SMF export with status.
 - Non-SMF SMF export only for single shared named skeleton skinned, pos/quat bone tracks (no scale anim, no static, no multi-skel). Else GLB.
-- FBX export uses GLB container (no official FBXExporter without new deps).
-- FBX load/export dispatch uses a self-authored static ASCII fixture; skinned non-SMF export fidelity is covered by the generated skinned GLB fixture.
+- FBX-source export writes binary FBX 7500 through the vendored MIT FBXExporter-threejs writer.
+- FBX load/export dispatch uses a self-authored static ASCII fixture plus a generated static export roundtrip; skinned non-SMF export fidelity is covered by the generated skinned GLB fixture.
 - OBJ: load/preview parity only (static focus); export via GLB.
 - Native automation: deterministic Playwright Tauri IPC mocks + Rust cmd tests (real OS dialogs optional later via tauri-driver if needed).
 - Desktop peeks: small header/rig/anim/model validation for .smf status (real FS in Rust; complements full TS loader).

@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-29 (material texture summaries).
+Last reviewed: 2026-06-29 (integrity/doc consolidation).
 
 ## Current Product State
 
@@ -29,11 +29,12 @@ Core flow:
 - Run structured SMF compatibility diagnostics before non-SMF SMF export. The Export workspace reports ready/blocked state, diagnostic error/warning counts, and specific issues such as missing skeletons, unsupported scale tracks, missing UVs/normals, missing skin attributes, non-power-of-two textures, multi-material meshes, and multi-texture material layouts. It also shows a compact material texture list with map type, name, mesh/material slot, resolution, power-of-two status, and runtime source. The Export workspace can run an in-memory SMF roundtrip check that exports, reimports, compares summary counts, geometry, bounds, animation timing/metadata, and first/last-frame pose checks, then save the diagnostics/roundtrip report through the existing save bridge.
 - Cover default non-SMF skinned load/export e2e with a generated self-authored skinned GLB fixture.
 - Cover basic FBX parsing with a self-authored static ASCII FBX fixture, and true binary FBX export with a self-authored static scene unit roundtrip.
-- Use Rust/Tauri commands for native open/save, binary read/write, and small SMF header/rig/anim/model validation/status peeks. Desktop open is format-aware: all path-backed non-SMF models now route through `readBinaryFile`, while `.smf` still performs `get_smf_desktop_info` validation before parse.
+- Use Rust/Tauri commands for native open/save, binary read/write, and small SMF header/rig/anim/model validation/status peeks. Desktop open is format-aware: all path-backed non-SMF models now route through `readBinaryFile`, while `.smf` still performs `get_smf_desktop_info` validation before parse. Rust SMF header/section parsing now lives in `source/src-tauri/src/smf_core.rs` with typed `SmfHeaderSummary` / `SmfDesktopInfo` output and tests for missing terminators, bad versions, invalid offsets, valid fixtures, and count-width behavior.
 - Ignore stale file-open and browser file/drop read results when a newer operation has started (covered by native mocked-open/rapid-export checks and browser file-input/drop overlap smoke assertions).
 - Keep editor mode + viewport layout transitions on the same shared model/viewport root; selected bone and scrub/timeline state are preserved across those transitions and now covered by smoke assertions.
 - Keep constrained-width workspace tabs deterministic after model load; the 360px smoke path clicks Model/Rig/Skin/Animate/Export without forced clicks and verifies selected bone plus scrub continuity.
-- Model/load/export async failures in `useLoadModel` now normalize unknown error values through a single helper and remove brittle `any` traversal casts for skinned mesh extraction/clip reads.
+- Model/load/export async failures in `useLoadModel` normalize unknown error values through a single helper; GLB/FBX skinned traversal, TransformControls drag events, and Three disposal boundaries use typed guards instead of broad production `any` casts.
+- `run.ps1 -Task verify` and `npm run verify` now include `check:production-any`, which fails new production `as any`, `: any`, or typed-catch `any` usages outside tests and vendored code.
 - Modernization keeps the current React/Tauri/Three stack, uses GLB/GLTF as the preferred modern fidelity format, and preserves SMF for backwards compatibility. Old GameMaker screenshots/scripts now guide the remaining authoring parity work: deeper animation tooling polish, SMF head-node-aware rig metadata edits, rig detach/connect and mirror/reset helpers, and deeper ortho-pane editing controls. Quad layout, pane labels/dividers, model-safe wireframe display, grouped Display menu toggles, submodel visibility/color cues, endpoint handles, imported/authored keyframe markers, autoskin/normalize batch tools, Rig validation/rename/reparent/create/delete, and pane-aware timing are current editor affordances covered by e2e/visual checks.
 
 ## Architecture
@@ -60,7 +61,7 @@ Core flow:
 - `source/frontend/src/utils/modelFormat.ts`: canonical format extension parser + shared extension constants for open/load/tauri filters.
 - `source/frontend/tests/helpers/skinned-glb-fixture.ts`: generated self-authored skinned GLB fixture for default non-SMF skinned e2e coverage.
 - `source/frontend/src/store`: lightweight React state slices for model, playback, and UI.
-- `source/src-tauri/src/main.rs`: Tauri commands and Rust SMF header/section peeks with native tests.
+- `source/src-tauri/src/main.rs` and `source/src-tauri/src/smf_core.rs`: Tauri commands plus the Rust SMF header/section parser core, desktop summary struct, and native parser tests.
 - `source/backend`: reserved boundary only; no current backend service is required.
 - Launchers + dev server lifecycle (`run.ps1` / `run.bat` default, `source/frontend/scripts/start-vite-dev.mjs` beforeDev wrapper, `source/src-tauri/tauri.conf.json`): safe child process handling (Windows JobObject KILL_ON_JOB_CLOSE + recursive tree kill + port 5173 + cmdline sweeps + entry stale reaper + signals + finally/traps + parent poll) so closing the cmd window or Tauri app does not leave rogue node/Vite servers. Tauri CLI term of beforeDev triggers mjs cleanup; launcher owns the outer tree. (See PITFALL for the pre-fix rogue class and summary_bank subsystem__dev_process_lifecycle.)
 
@@ -68,6 +69,7 @@ Core flow:
 
 - Primary commands:
   - `pwsh -File run.ps1 -Task verify`
+    - Runs context-bank validation, lint, app/test typecheck, production `any` boundary check, build, chunk guard, frontend units, and Rust cargo check.
   - `pwsh -File run.ps1 -Task test:e2e`
     - `test:e2e` passes RustSMF's Playwright command to GenEye `playwright-full -AllowGenEyeFailure -Group geneye-watch-fixture` when GenEye is discoverable (`-GenEyeRoot`, `GENEYE_ROOT`, `GENEYE_RUN_BAT`, or local Three-Sisters path). Evidence is ignored under `runtime-data\geneye-playwright-runs\`; RustSMF app evidence is the GenEye `project_tests` block plus discovered RustSMF Playwright artifacts, while the built-in GenEye scenario only proves advisory plumbing. Use `-NoGenEye` or `RUSTSMF_NO_GENEYE=1` for browser-only e2e. If GenEye is unavailable or fails before project-test evidence exists, the launcher runs browser-only Playwright. RustSMF project-test failures stay authoritative.
     - The launcher now emits one stable status trailer before final return: `[GENEYE] run_path=... project_tests.status=... project_tests.exit_code=...`, so consuming logs can parse authoritative project status without opening JSON.

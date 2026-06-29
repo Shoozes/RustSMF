@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /**
  * GLB / GLTF loader.
@@ -29,14 +30,16 @@ function collectSkeletonBones(root: THREE.Object3D): THREE.Bone[] {
   return bones;
 }
 
+const isSkinnedMesh = (obj: THREE.Object3D): obj is THREE.SkinnedMesh => obj.type === 'SkinnedMesh';
+
 export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<LoadedModel> {
   const loader = new GLTFLoader();
 
-  let gltf: any;
+  let gltf: GLTF;
   if (typeof urlOrBuffer === 'string') {
     gltf = await loader.loadAsync(urlOrBuffer);
   } else {
-    gltf = await new Promise((resolve, reject) => {
+    gltf = await new Promise<GLTF>((resolve, reject) => {
       loader.parse(urlOrBuffer, '', resolve, reject);
     });
   }
@@ -49,28 +52,29 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
   const allClips: THREE.AnimationClip[] = gltf.animations || [];
   const sceneBones = collectSkeletonBones(scene);
 
-  scene.traverse((obj: any) => {
-    if (obj.isSkinnedMesh) {
-      // Ensure we have everything three needs
-      const geo = obj.geometry;
-      if (!geo.attributes.tangent) {
-        geo.computeTangents?.();
-      }
-      if (!geo.attributes.uv) {
-        const count = geo.attributes.position.count;
-        geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
-      }
-      if (!geo.attributes.normal) {
-        geo.computeVertexNormals();
-      }
+  scene.traverse((obj) => {
+    if (!isSkinnedMesh(obj)) {
+      return;
+    }
+    // Ensure we have everything three needs
+    const geo = obj.geometry;
+    if (!geo.attributes.tangent) {
+      geo.computeTangents?.();
+    }
+    if (!geo.attributes.uv) {
+      const count = geo.attributes.position.count;
+      geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
+    }
+    if (!geo.attributes.normal) {
+      geo.computeVertexNormals();
+    }
 
-      skinnedMeshes.push(obj);
-      // Some GLB/GLTF paths can produce skinned meshes with an empty bone list.
-      // Build a fallback local skeleton so skinning and animation pipelines can still proceed.
-      if (!obj.skeleton || !obj.skeleton.bones.length) {
-        if (sceneBones.length > 0) {
-          obj.bind(new THREE.Skeleton(sceneBones), obj.bindMatrix);
-        }
+    skinnedMeshes.push(obj);
+    // Some GLB/GLTF paths can produce skinned meshes with an empty bone list.
+    // Build a fallback local skeleton so skinning and animation pipelines can still proceed.
+    if (!obj.skeleton || !obj.skeleton.bones.length) {
+      if (sceneBones.length > 0) {
+        obj.bind(new THREE.Skeleton(sceneBones), obj.bindMatrix);
       }
     }
   });

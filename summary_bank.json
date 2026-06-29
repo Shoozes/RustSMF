@@ -67,7 +67,7 @@
         "docs/references/old-src/GML-short-skills.md"
       ],
       "notes": [
-        "TODO entries use what/why/where/when/how, subtasks, and done criteria for active concerns plus recent completed integrity work.",
+        "TODO entries use what/why/where/when/how, subtasks, and done criteria for active concerns only.",
         "APP_STATE is current-state only.",
         "Pitfalls capture regressions or hidden verification gaps.",
         "Completed work is summarized once; avoid re-adding long pass logs."
@@ -76,7 +76,7 @@
     },
     "subsystem__harness_and_context": {
       "description": "Run scripts, agent workflows, context-bank generation, and repo helper tooling.",
-      "status": "Canonical process safety and verification context are anchored in `run.ps1`/`run.bat`, with context-bank checks in verify. Dev preview/e2e uses build+preview, can optionally wrap RustSMF Playwright through GenEye advisory `playwright-full -Group geneye-watch-fixture`, and retains separate process-lifecycle safeguards.",
+      "status": "Canonical process safety and verification context are anchored in `run.ps1`/`run.bat`, with context-bank checks and production-any boundary checks in verify. Dev preview/e2e uses build+preview, can optionally wrap RustSMF Playwright through GenEye advisory `playwright-full -Group geneye-watch-fixture`, and retains separate process-lifecycle safeguards.",
       "paths": [
         "run.ps1",
         "run.bat",
@@ -85,6 +85,7 @@
         "source/frontend/package.json",
         "source/frontend/playwright.config.ts",
         "source/frontend/scripts/run-strict-visuals.mjs",
+        "source/frontend/scripts/check-production-any.mjs",
         "source/frontend/scripts/start-vite-dev.mjs",
         "source/src-tauri/tauri.conf.json",
         ".tools/*.ps1",
@@ -111,7 +112,7 @@
     },
     "feature__model_loading_export": {
       "description": "User-facing load, preview, edit-preview, and export flow across SMF, GLB/GLTF, FBX, and OBJ.",
-      "status": "core connected; SMF high-fid + live pose export; dedicated Export as SMF preserves SMF-source fidelity; guarded non-SMF skinned SMF export wired and covered by generated skinned GLB e2e; true FBX-source export writes binary FBX 7500 through vendored FBXExporter-threejs and has static header + load roundtrip unit coverage; structured SMF diagnostics now preflight non-SMF SMF export, render ready/blocked state, and expose structured roundtrip check rows for count/geometry/bounds/animation pose in ExportPanel; static FBX fixture covers basic parser dispatch; overlapping open results guarded with stable seq refs; 2026-06-18: browser input/drop overlap now has explicit e2e race coverage with delayed input read and synthetic drop read; desktop open now reads binary bytes for all path-backed model formats while preserving `.smf` desktop validation first; native open/load/export overlap remains covered in mocked Tauri; 2026-06-16: SMF head-dummy hierarchy walk is cycle-safe for self-parent root heads, inverse binds refresh world matrices before calculateInverses, and animation tracks skip non-scene heads so real .smf load clears without missing-target warnings; source-format detection is now centralized in `source/frontend/src/utils/modelFormat.ts` with explicit unsupported-format fail-fast behavior. 2026-06-18 review: loader clips contract direct (removed redundant root.animations attaches + fallback casts); tauri client cached; Tauri env/path casts narrowed.",
+      "status": "core connected; SMF high-fid + live pose export; dedicated Export as SMF preserves SMF-source fidelity; guarded non-SMF skinned SMF export wired and covered by generated skinned GLB e2e; true FBX-source export writes binary FBX 7500 through vendored FBXExporter-threejs and has static header + load roundtrip unit coverage; structured SMF diagnostics now preflight non-SMF SMF export, render ready/blocked state, and expose structured roundtrip check rows for count/geometry/bounds/animation pose in ExportPanel; static FBX fixture covers basic parser dispatch; overlapping open results guarded with stable seq refs; browser input/drop overlap has explicit e2e race coverage with delayed input read and synthetic drop read; desktop open reads binary bytes for all path-backed model formats while preserving `.smf` desktop validation first; native open/load/export overlap remains covered in mocked Tauri; SMF head-dummy hierarchy walk is cycle-safe for self-parent root heads, inverse binds refresh world matrices before calculateInverses, and animation tracks skip non-scene heads so real .smf load clears without missing-target warnings; source-format detection is centralized in `source/frontend/src/utils/modelFormat.ts` with explicit unsupported-format fail-fast behavior; loader clips contract is direct; tauri client is cached; Tauri env/path casts, load/export error catches, and GLB/FBX skinned traversal are typed; `check-production-any.mjs` prevents broad production any casts from returning.",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -248,7 +249,7 @@
     },
     "subsystem__viewport_editor": {
       "description": "Three.js viewport, orbit controls, model attach/dispose, animation mixer, modern skeleton helper, raycast/helper-hit bone selection, TransformControls, model-safe wireframe display, and weight preview/edit helper boundaries.",
-      "status": "modular and typechecked; 2026-06-15 review found no forced split needed; Inspector bone tree typed and tracks hierarchy expansion by bone UUID so rename does not collapse expanded rows; Rig panel validates skeleton graph and skin references, can rename selected non-SMF bones while retargeting animation tracks/edits, can reparent selected non-SMF bones with cycle validation plus world-transform preservation, can create child bones with unique-name validation plus Skeleton inverse/buffer initialization, and can delete unweighted non-root branches with Skeleton compaction, skinIndex remapping, animation track/edit cleanup, and pose cleanup; viewport drag filtering, context-aware R reset vs TransformControls mode shortcuts, ref-decoupled timing, disposal helpers, and bonePicker remain current. Labels: toggleable per-bone (small AxesHelper marker + canvas name sprite attached to bone, off default, full dispose/traverse) via extracted boneLabels.ts + useBoneLabels hook. Added endpoint-like marker handles, precision hover marker, hover dataset telemetry, endpoint drag constraints, and a render-only wireframe override that does not mutate export materials. Stock SkeletonHelper was replaced by a typed modern skeleton helper adapted from old plain-JS ideas: larger diamond spans and joint markers carry bone metadata for direct helper-hit selection, then fall back to distance picking. Quad mode now has explicit pane dividers/labels and per-pane clearing; single-view Ortho gets active-canvas frustum sizing; endpoint drag, wireframe/display state, visible quad-overlay, and loaded Display-menu/Ortho verification are exercised in smoke/visual tests. Weight preview now uses the same typed four-slot skin-weight reader as the edit helper model; skin paint strokes bracket touched-vertex snapshots for undo/redo; full-model Normalize and Auto Skin actions use the same undo/dirty/export path.",
+      "status": "modular and typechecked; Inspector bone tree typed and tracks hierarchy expansion by bone UUID so rename does not collapse expanded rows; Rig panel validates skeleton graph and skin references, can rename selected non-SMF bones while retargeting animation tracks/edits, can reparent selected non-SMF bones with cycle validation plus world-transform preservation, can create child bones with unique-name validation plus Skeleton inverse/buffer initialization, and can delete unweighted non-root branches with Skeleton compaction, skinIndex remapping, animation track/edit cleanup, and pose cleanup; viewport drag filtering, context-aware R reset vs TransformControls mode shortcuts, ref-decoupled timing, typed TransformControls drag events, typed disposal helpers, and bonePicker remain current. Labels are toggleable per-bone via extracted boneLabels.ts + useBoneLabels hook. Endpoint-like marker handles, precision hover marker, hover dataset telemetry, endpoint drag constraints, and a render-only wireframe override do not mutate export materials. The modern skeleton helper draws larger diamond spans and joint markers with bone metadata for direct helper-hit selection, then falls back to distance picking. Quad mode has explicit pane dividers/labels and per-pane clearing; single-view Ortho gets active-canvas frustum sizing; endpoint drag, wireframe/display state, visible quad-overlay, and loaded Display-menu/Ortho verification are exercised in smoke/visual tests. Weight preview uses the same typed four-slot skin-weight reader as the edit helper model; skin paint strokes bracket touched-vertex snapshots for undo/redo; full-model Normalize and Auto Skin actions use the same undo/dirty/export path.",
       "paths": [
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/components/RigPanel.tsx",
@@ -317,13 +318,14 @@
     },
     "subsystem__tauri_bridge_and_rust_peeks": {
       "description": "Tauri native dialog/save/read commands, browser fallbacks, Rust SMF header/section peeks, and desktop status messages.",
-      "status": "native peeks and fallback strings covered; `TauriClient` contract is centralized in `source/frontend/src/backend-client/tauri.ts`; `useLoadModel.ts` uses typed bridge and loader contracts for fewer runtime/typing mismatches; Playwright native IPC mock spec covers open/read/save/write/cancel and now asserts delayed-write single-flight export overlap plus `get_smf_desktop_info` argument + status-contract checks, and non-SMF native path loads are now explicitly exercised via `read_file_binary`; true OS-dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it",
+      "status": "native peeks and fallback strings covered; Rust SMF header/section parsing is extracted to `source/src-tauri/src/smf_core.rs` with typed `SmfHeaderSummary`/`SmfDesktopInfo` and tests for valid fixtures, bad versions, missing null terminators, invalid offsets, and count widths; `TauriClient` contract is centralized in `source/frontend/src/backend-client/tauri.ts`; `useLoadModel.ts` uses typed bridge and loader contracts for fewer runtime/typing mismatches; Playwright native IPC mock spec covers open/read/save/write/cancel and now asserts delayed-write single-flight export overlap plus `get_smf_desktop_info` argument + status-contract checks, and non-SMF native path loads are now explicitly exercised via `read_file_binary`; true OS-dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it",
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/tests/native.spec.ts",
         "source/frontend/tests/helpers/smoke-helpers.ts",
         "source/src-tauri/src/main.rs",
+        "source/src-tauri/src/smf_core.rs",
         "source/src-tauri/Cargo.toml",
         "source/src-tauri/capabilities/default.json",
         "source/src-tauri/tauri.conf.json",
@@ -415,8 +417,8 @@
       "files": []
     },
     "tests__quality": {
-      "description": "Automated quality gates: lint, app typecheck, test typecheck, Vite build, chunk guard, unit roundtrips, Playwright e2e, native IPC mocks, and Rust cargo checks/tests.",
-      "status": "Quality posture: app/typecheck gates, unit and e2e suites, native IPC/preview checks, optional GenEye advisory e2e evidence, and chunk/verify gates are the canonical verification baseline; visual strict checks are opt-in.",
+      "description": "Automated quality gates: lint, app typecheck, test typecheck, production any boundary check, Vite build, chunk guard, unit roundtrips, Playwright e2e, native IPC mocks, and Rust cargo checks/tests.",
+      "status": "Quality posture: app/typecheck gates, production any boundary checks, unit and e2e suites, native IPC/preview checks, optional GenEye advisory e2e evidence, and chunk/verify gates are the canonical verification baseline; visual strict checks are opt-in.",
       "paths": [
         "source/frontend/package.json",
         "source/package.json",
@@ -430,6 +432,7 @@
         "source/frontend/tests/helpers/smoke-helpers.ts",
         "source/frontend/tests/README.md",
         "source/frontend/playwright.config.ts",
+        "source/frontend/scripts/check-production-any.mjs",
         "source/frontend/scripts/run-strict-visuals.mjs",
         "source/frontend/src/loaders/coord.test.ts",
         "source/frontend/src/loaders/fbx.test.ts",

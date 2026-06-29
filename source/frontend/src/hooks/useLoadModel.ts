@@ -120,6 +120,12 @@ const getBoneIndex = (skeleton: THREE.Skeleton | null, boneName: string): number
   return index;
 };
 
+const errorMessage = (error: unknown): string => {
+  if (error instanceof Error) return error.message;
+  if (typeof error === 'string') return error;
+  return String(error);
+};
+
 /**
  * Custom hook to encapsulate model loading logic, error handling, and related handlers.
  * Uses the store slices internally for state.
@@ -244,10 +250,11 @@ export function useLoadModel() {
 
     try {
       await action();
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (!isCurrentExport()) return;
-      ui.setErrorMsg(`${actionLabel} error: ${e?.message || e}`);
-      ui.setStatus(`${actionLabel} error: ${e?.message || e}`);
+      const msg = errorMessage(e);
+      ui.setErrorMsg(`${actionLabel} error: ${msg}`);
+      ui.setStatus(`${actionLabel} error: ${msg}`);
     } finally {
       if (!isCurrentExport()) return;
       isExportingRef.current = false;
@@ -439,9 +446,9 @@ export function useLoadModel() {
 
       ui.setSelected(loaded.skinnedMeshes?.[0]?.name || 'root');
 
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (!isCurrentLoad()) return;
-      const msg = e?.message || String(e);
+      const msg = errorMessage(e);
       if (!msg.startsWith('Unsupported model format.')) {
         console.error(e);
       }
@@ -466,9 +473,9 @@ export function useLoadModel() {
         return;
       }
       await loadModel(res);
-    } catch (e: any) {
+    } catch (e: unknown) {
       if (!openSeqGuard.isCurrent(openSeq)) return;
-      const msg = e?.message || String(e);
+      const msg = errorMessage(e);
       ui.setErrorMsg(`Open error: ${msg}`);
       ui.setStatus(`Open error: ${msg}`);
     } finally {
@@ -528,8 +535,8 @@ export function useLoadModel() {
             }
             ui.setStatus('Exported .fbx (binary FBX 7500). Re-import to verify fidelity.');
             return;
-          } catch (e: any) {
-            ui.setStatus(`FBX export error: ${e?.message || e}. Falling back to generic GLB...`);
+          } catch (e: unknown) {
+            ui.setStatus(`FBX export error: ${errorMessage(e)}. Falling back to generic GLB...`);
           }
         }
 
@@ -541,8 +548,8 @@ export function useLoadModel() {
           return;
         }
         ui.setStatus('Exported .glb (animations included when present).');
-      } catch (e: any) {
-        const msg = e?.message || String(e);
+      } catch (e: unknown) {
+        const msg = errorMessage(e);
         ui.setErrorMsg(`Export error: ${msg}`);
         ui.setStatus(`Export error: ${msg}`);
       }
@@ -616,13 +623,13 @@ export function useLoadModel() {
           ui.setErrorMsg(`SMF roundtrip mismatch: ${report.messages.join('; ')}`);
           ui.setStatus(`SMF roundtrip mismatch: ${report.messages.join('; ')}`);
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (e instanceof SmfConversionError) {
           ui.setErrorMsg(`SMF roundtrip blocked: ${e.message}`);
           ui.setStatus(`SMF roundtrip blocked: ${e.message}`);
           return;
         }
-        const msg = e?.message || String(e);
+        const msg = errorMessage(e);
         ui.setErrorMsg(`SMF roundtrip check error: ${msg}`);
         ui.setStatus(`SMF roundtrip check error: ${msg}`);
       }
@@ -647,8 +654,8 @@ export function useLoadModel() {
           return;
         }
         ui.setStatus('Saved SMF diagnostic report.');
-      } catch (e: any) {
-        const msg = e?.message || String(e);
+      } catch (e: unknown) {
+        const msg = errorMessage(e);
         ui.setErrorMsg(`Save SMF diagnostic report error: ${msg}`);
         ui.setStatus(`Save SMF diagnostic report error: ${msg}`);
       }
@@ -706,13 +713,13 @@ export function useLoadModel() {
           return;
         }
         ui.setStatus('Exported .smf (from GLB/FBX via guarded threeToSmf converter + live pose). Re-import to verify fidelity!');
-      } catch (e: any) {
+      } catch (e: unknown) {
         if (e instanceof SmfConversionError) {
           ui.setErrorMsg(`SMF export blocked: ${e.message}`);
           ui.setStatus(`SMF export blocked: ${e.message}`);
           return;
         }
-        const msg = e?.message || String(e);
+        const msg = errorMessage(e);
         ui.setErrorMsg(`SMF export error: ${msg}`);
         ui.setStatus(`SMF export error: ${msg}`);
       }
@@ -728,9 +735,9 @@ export function useLoadModel() {
       const buf = await file.arrayBuffer();
       if (!fileReadSeqGuard.isCurrent(readSeq)) return;
       await loadModel({ name: file.name, data: new Uint8Array(buf) });
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (!fileReadSeqGuard.isCurrent(readSeq)) return;
-      const m = err?.message || String(err);
+      const m = errorMessage(err);
       ui.setErrorMsg(`File load error: ${m}`);
       ui.setStatus(`File load error: ${m}`);
     } finally {
@@ -901,8 +908,8 @@ export function useLoadModel() {
     try {
       const msg = await (await getTauriClient()).invokeCommand<string>('greet', { name: 'RustSMF' });
       ui.setStatus(msg + ' (real tauri invoke)');
-    } catch (e: any) {
-      ui.setStatus('Ping only works in Tauri desktop shell: ' + (e?.message || e));
+    } catch (e: unknown) {
+      ui.setStatus('Ping only works in Tauri desktop shell: ' + errorMessage(e));
     }
   }, [ui]);
 
@@ -915,9 +922,9 @@ export function useLoadModel() {
       const buf = await file.arrayBuffer();
       if (!fileReadSeqGuard.isCurrent(readSeq)) return;
       await loadModel({ name: file.name, data: new Uint8Array(buf) });
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (!fileReadSeqGuard.isCurrent(readSeq)) return;
-      const m = err?.message || String(err);
+      const m = errorMessage(err);
       ui.setErrorMsg(`Drop load error: ${m}`);
       ui.setStatus(`Drop load error: ${m}`);
     }
