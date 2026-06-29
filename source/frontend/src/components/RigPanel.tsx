@@ -9,6 +9,7 @@ interface RigPanelProps {
   onRenameSelectedBone: (nextName: string) => void;
   onReparentSelectedBone: (parentName: string) => void;
   onCreateChildBone: (name: string) => void;
+  onDeleteSelectedBone: () => void;
   editorMode?: string;
 }
 
@@ -26,6 +27,7 @@ export default function RigPanel({
   onRenameSelectedBone,
   onReparentSelectedBone,
   onCreateChildBone,
+  onDeleteSelectedBone,
   editorMode = 'rig',
 }: RigPanelProps) {
   const visibleIssues = report.issues.slice(0, 6);
@@ -122,6 +124,14 @@ export default function RigPanel({
             Child
           </button>
         </div>
+        <button
+          data-testid="rig-delete-bone-btn"
+          className="w-full px-1 py-0.5 text-xs bg-rose-950/70 hover:bg-rose-900/80 border border-rose-800/70 text-rose-100 disabled:opacity-50"
+          disabled={!canRename}
+          onClick={onDeleteSelectedBone}
+        >
+          Delete Selected
+        </button>
         {sourceFormat === 'smf' && (
           <div className="text-[10px] text-slate-500 mb-2">
             SMF source nodes keep indexed names for fidelity export.

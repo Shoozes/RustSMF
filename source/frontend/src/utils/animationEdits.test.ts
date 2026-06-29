@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {
   applyAnimationEditsToClips,
   applyAnimationEditsToImportedSmf,
+  deleteAnimationEditBones,
   deleteAnimationKeyframe,
   getCurrentClipKey,
   hasDirtyAnimationEdits,
@@ -144,6 +145,28 @@ test('renameAnimationEditBone moves authored keys to the new bone name', () => {
   assert.equal(renamed.editsByClip.Walk.Spine.length, 1);
   assert.deepEqual(renamed.editsByClip.Walk.Spine[0].position, [1, 2, 3]);
   assert.equal(state.editsByClip.Walk.Root.length, 1);
+});
+
+test('deleteAnimationEditBones removes authored keys and marks affected clips dirty', () => {
+  let state = upsertAnimationKeyframe(makeAnimationEditState(), 'Walk', 'Root', {
+    time: 0,
+    position: [0, 0, 0],
+    quaternion: [0, 0, 0, 1],
+    interpolation: 'linear',
+  });
+  state = upsertAnimationKeyframe(state, 'Walk', 'Tip', {
+    time: 0,
+    position: [1, 0, 0],
+    quaternion: [0, 0, 0, 1],
+    interpolation: 'linear',
+  });
+
+  const next = deleteAnimationEditBones(state, ['Tip']);
+
+  assert.equal(next.editsByClip.Walk.Tip, undefined);
+  assert.equal(next.editsByClip.Walk.Root.length, 1);
+  assert.equal(next.dirtyClipNames.includes('Walk'), true);
+  assert.equal(next.selectedKeyTime, null);
 });
 
 test('getCurrentClipKey falls back safely for missing clips and zero-duration clips', () => {

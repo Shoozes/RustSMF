@@ -38,7 +38,18 @@ export type RigCreateChildResult =
   | { ok: true; bone: THREE.Bone; parent: THREE.Bone }
   | { ok: false; reason: RigCreateChildFailureReason; message: string };
 
+export type RigDeleteFailureReason =
+  | 'no-selected-bone'
+  | 'missing-bone'
+  | 'root-bone'
+  | 'skin-references';
+
+export type RigDeleteResult =
+  | { ok: true; deletedNames: string[]; indexMap: Map<number, number> }
+  | { ok: false; reason: RigDeleteFailureReason; message: string };
+
 const BONE_NAME_PATTERN = /^[A-Za-z0-9_.:-]+$/;
+const SKIN_WEIGHT_EPSILON = 1e-6;
 
 export function validateBoneRename(
   skeleton: THREE.Skeleton | null | undefined,
@@ -89,6 +100,13 @@ function cloneTrackWithName(track: THREE.KeyframeTrack, name: string): THREE.Key
   return cloned;
 }
 
+function isTrackForBoneName(trackName: string, boneName: string): boolean {
+  return trackName === boneName
+    || trackName.startsWith(`${boneName}.`)
+    || trackName.includes(`[${boneName}]`)
+    || trackName.includes(`.${boneName}.`);
+}
+
 export function retargetAnimationClipBoneName(
   clip: THREE.AnimationClip,
   oldBoneName: string,
@@ -103,6 +121,21 @@ export function retargetAnimationClipBoneName(
     return cloneTrackWithName(track, nextName);
   });
   return changed ? new THREE.AnimationClip(clip.name, clip.duration, tracks) : clip;
+}
+
+export function removeAnimationClipBoneNames(
+  clips: THREE.AnimationClip[],
+  boneNames: Iterable<string>,
+): THREE.AnimationClip[] {
+  const names = new Set([...boneNames].filter(Boolean));
+  if (names.size === 0) return clips;
+
+  return clips.map((clip) => {
+    const tracks = clip.tracks.filter((track) => (
+      ![...names].some((name) => isTrackForBoneName(track.name, name))
+    ));
+    return tracks.length === clip.tracks.length ? clip : new THREE.AnimationClip(clip.name, clip.duration, tracks);
+  });
 }
 
 export function retargetAnimationClipBoneNames(
@@ -146,6 +179,84 @@ function isDescendantOf(candidate: THREE.Bone, ancestor: THREE.Bone): boolean {
     parent = parent.parent;
   }
   return false;
+}
+
+function collectBoneBranch(root: THREE.Bone): THREE.Bone[] {
+  const branch: THREE.Bone[] = [root];
+  root.traverse((object) => {
+    if (object !== root && (object as THREE.Bone).isBone === true) {
+      branch.push(object as THREE.Bone);
+    }
+  });
+  return branch;
+}
+
+function getSkinAttributes(mesh: THREE.SkinnedMesh): {
+  skinIndex: THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
+  skinWeight: THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
+} | null {
+  const skinIndex = mesh.geometry.getAttribute('skinIndex');
+  const skinWeight = mesh.geometry.getAttribute('skinWeight');
+  if (!skinIndex || !skinWeight || skinIndex.itemSize < 4 || skinWeight.itemSize < 4) return null;
+  return { skinIndex, skinWeight };
+}
+
+function skinAttributeValues(
+  attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
+  vertexIndex: number,
+): [number, number, number, number] {
+  return [
+    attribute.getX(vertexIndex),
+    attribute.getY(vertexIndex),
+    attribute.getZ(vertexIndex),
+    attribute.getW(vertexIndex),
+  ];
+}
+
+function hasWeightedSkinReference(
+  meshes: readonly THREE.SkinnedMesh[],
+  deletedIndices: Set<number>,
+): boolean {
+  for (const mesh of meshes) {
+    const attributes = getSkinAttributes(mesh);
+    if (!attributes) continue;
+    const vertexCount = Math.min(attributes.skinIndex.count, attributes.skinWeight.count);
+    for (let vertexIndex = 0; vertexIndex < vertexCount; vertexIndex += 1) {
+      const indices = skinAttributeValues(attributes.skinIndex, vertexIndex).map((value) => Math.max(0, Math.trunc(value)));
+      const weights = skinAttributeValues(attributes.skinWeight, vertexIndex);
+      if (indices.some((index, slot) => deletedIndices.has(index) && Math.abs(weights[slot]) > SKIN_WEIGHT_EPSILON)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function remapSkinnedMeshBoneIndices(
+  meshes: readonly THREE.SkinnedMesh[],
+  indexMap: Map<number, number>,
+  deletedIndices: Set<number>,
+): void {
+  for (const mesh of meshes) {
+    const attributes = getSkinAttributes(mesh);
+    if (!attributes) continue;
+    const vertexCount = Math.min(attributes.skinIndex.count, attributes.skinWeight.count);
+    for (let vertexIndex = 0; vertexIndex < vertexCount; vertexIndex += 1) {
+      const indices = skinAttributeValues(attributes.skinIndex, vertexIndex).map((value) => Math.max(0, Math.trunc(value)));
+      const weights = skinAttributeValues(attributes.skinWeight, vertexIndex);
+      const next = indices.map((index, slot) => {
+        if (deletedIndices.has(index)) {
+          return Math.abs(weights[slot]) <= SKIN_WEIGHT_EPSILON ? 0 : index;
+        }
+        return indexMap.get(index) ?? index;
+      });
+      attributes.skinIndex.setX(vertexIndex, next[0]);
+      attributes.skinIndex.setY(vertexIndex, next[1]);
+      attributes.skinIndex.setZ(vertexIndex, next[2]);
+      attributes.skinIndex.setW(vertexIndex, next[3]);
+    }
+    attributes.skinIndex.needsUpdate = true;
+  }
 }
 
 export function validateBoneReparent(
@@ -242,4 +353,57 @@ export function createChildBone(
   skeleton.update();
 
   return { ok: true, bone, parent };
+}
+
+export function deleteBoneBranch(
+  skeleton: THREE.Skeleton,
+  boneName: string,
+  skinnedMeshes: readonly THREE.SkinnedMesh[] = [],
+): RigDeleteResult {
+  if (!skeleton || !boneName || boneName === 'Scene') {
+    return { ok: false, reason: 'no-selected-bone', message: 'Select a bone before deleting.' };
+  }
+
+  const bone = findBone(skeleton, boneName);
+  if (!bone) {
+    return { ok: false, reason: 'missing-bone', message: `Bone ${boneName} is not in the current skeleton.` };
+  }
+
+  if (!bone.parent || (bone.parent as THREE.Bone).isBone !== true || !skeleton.bones.includes(bone.parent as THREE.Bone)) {
+    return { ok: false, reason: 'root-bone', message: 'Root bones cannot be deleted from the Rig workspace.' };
+  }
+
+  const deletedBones = collectBoneBranch(bone);
+  const deletedSet = new Set(deletedBones);
+  const deletedIndices = new Set<number>();
+  skeleton.bones.forEach((candidate, index) => {
+    if (deletedSet.has(candidate)) {
+      deletedIndices.add(index);
+    }
+  });
+
+  if (hasWeightedSkinReference(skinnedMeshes, deletedIndices)) {
+    return {
+      ok: false,
+      reason: 'skin-references',
+      message: `Cannot delete ${boneName}: one or more skinned vertices still use this bone.`,
+    };
+  }
+
+  const keptBones = skeleton.bones.filter((candidate) => !deletedSet.has(candidate));
+  const indexMap = new Map<number, number>();
+  skeleton.bones.forEach((candidate, oldIndex) => {
+    if (!deletedSet.has(candidate)) {
+      indexMap.set(oldIndex, keptBones.indexOf(candidate));
+    }
+  });
+
+  remapSkinnedMeshBoneIndices(skinnedMeshes, indexMap, deletedIndices);
+  bone.parent.remove(bone);
+  skeleton.bones = keptBones;
+  skeleton.boneInverses = skeleton.boneInverses.filter((_, index) => !deletedIndices.has(index));
+  skeleton.init();
+  skeleton.update();
+
+  return { ok: true, deletedNames: deletedBones.map((deleted) => deleted.name), indexMap };
 }

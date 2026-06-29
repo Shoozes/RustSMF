@@ -86,6 +86,7 @@ export default function App() {
     renameSelectedBone,
     reparentSelectedBone,
     createChildForSelectedBone,
+    deleteSelectedBone,
     onNudgeBone,
     setupKeyboard,
     togglePlay,
@@ -214,6 +215,7 @@ export default function App() {
           onRenameSelectedBone={renameSelectedBone}
           onReparentSelectedBone={reparentSelectedBone}
           onCreateChildBone={createChildForSelectedBone}
+          onDeleteSelectedBone={deleteSelectedBone}
           editorMode={editorMode}
         />
       );

@@ -1219,6 +1219,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('rig-bone-count')).toContainText('3');
     await expect(inspector).toContainText(/Selected\s*FixtureExtra/i);
     await page.getByTestId('transform-x-btn').click({ force: true });
+    await page.getByTestId('rig-delete-bone-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Deleted bone FixtureExtra/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('2');
+    await expect(inspector).toContainText(/Selected\s*FixtureTip/i);
 
     await page.getByTestId('mode-tab-export').click({ force: true });
     const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');

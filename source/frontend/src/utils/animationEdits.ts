@@ -215,6 +215,36 @@ export const renameAnimationEditBone = (
   return next;
 };
 
+export const deleteAnimationEditBones = (
+  state: AnimationEditState,
+  boneNames: Iterable<string>,
+): AnimationEditState => {
+  const names = new Set([...boneNames].filter(Boolean));
+  if (names.size === 0) return cloneAnimationEditState(state);
+
+  const next = cloneAnimationEditState(state);
+  for (const [clipName, clipEdits] of Object.entries(next.editsByClip)) {
+    let changed = false;
+    for (const boneName of names) {
+      if (clipEdits[boneName]) {
+        delete clipEdits[boneName];
+        changed = true;
+      }
+    }
+    if (Object.keys(clipEdits).length === 0) {
+      delete next.editsByClip[clipName];
+    }
+    if (changed) {
+      markDirty(next, clipName);
+    }
+  }
+  if (next.clipboard && names.size > 0) {
+    next.clipboard = null;
+  }
+  next.selectedKeyTime = null;
+  return next;
+};
+
 export const getEditedKeyframe = (
   state: AnimationEditState,
   clipName: string,

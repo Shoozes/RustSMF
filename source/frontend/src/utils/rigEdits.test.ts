@@ -3,7 +3,9 @@ import { describe, it } from 'node:test';
 import * as THREE from 'three';
 import {
   createChildBone,
+  deleteBoneBranch,
   reparentBonePreserveWorldTransform,
+  removeAnimationClipBoneNames,
   retargetAnimationClipBoneNames,
   validateCreateChildBone,
   validateBoneReparent,
@@ -17,6 +19,15 @@ function makeSkeleton(): THREE.Skeleton {
   tip.name = 'Tip';
   root.add(tip);
   return new THREE.Skeleton([root, tip]);
+}
+
+function makeSkinnedMesh(indices: number[], weights: number[]): THREE.SkinnedMesh {
+  const geometry = new THREE.BufferGeometry();
+  const vertexCount = indices.length / 4;
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(new Array(vertexCount * 3).fill(0), 3));
+  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(indices, 4));
+  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute(weights, 4));
+  return new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial());
 }
 
 describe('rigEdits', () => {
@@ -119,5 +130,59 @@ describe('rigEdits', () => {
     assert.equal(skeleton.boneMatrices.length, originalMatrixLength + 16);
     assert.equal(root.children.includes(result.bone), true);
     assert.equal(Number.isFinite(skeleton.boneMatrices[32]), true);
+  });
+
+  it('deletes an unweighted bone and remaps later skin indices', () => {
+    const root = new THREE.Bone();
+    root.name = 'Root';
+    const middle = new THREE.Bone();
+    middle.name = 'Middle';
+    const tip = new THREE.Bone();
+    tip.name = 'Tip';
+    root.add(middle);
+    root.add(tip);
+    const skeleton = new THREE.Skeleton([root, middle, tip]);
+    const mesh = makeSkinnedMesh(
+      [0, 2, 0, 0],
+      [0.5, 0.5, 0, 0],
+    );
+
+    const result = deleteBoneBranch(skeleton, 'Middle', [mesh]);
+    const skinIndex = mesh.geometry.getAttribute('skinIndex');
+
+    assert.equal(result.ok, true);
+    assert.equal(skeleton.bones.length, 2);
+    assert.deepEqual(skeleton.bones.map((bone) => bone.name), ['Root', 'Tip']);
+    assert.equal(root.children.includes(middle), false);
+    assert.equal(skinIndex.getX(0), 0);
+    assert.equal(skinIndex.getY(0), 1);
+    assert.equal(skeleton.boneInverses.length, 2);
+    assert.equal(skeleton.boneMatrices?.length, 32);
+  });
+
+  it('blocks deleting bones that still have weighted skin references', () => {
+    const skeleton = makeSkeleton();
+    const mesh = makeSkinnedMesh(
+      [1, 0, 0, 0],
+      [1, 0, 0, 0],
+    );
+
+    const result = deleteBoneBranch(skeleton, 'Tip', [mesh]);
+
+    assert.equal(result.ok, false);
+    assert.equal(skeleton.bones.length, 2);
+    assert.equal(skeleton.bones[0].children.includes(skeleton.bones[1]), true);
+  });
+
+  it('removes animation tracks for deleted bone names', () => {
+    const clip = new THREE.AnimationClip('Move', 1, [
+      new THREE.VectorKeyframeTrack('Root.position', [0, 1], [0, 0, 0, 1, 0, 0]),
+      new THREE.VectorKeyframeTrack('Tip.position', [0, 1], [0, 0, 0, 0, 1, 0]),
+    ]);
+
+    const [cleaned] = removeAnimationClipBoneNames([clip], ['Tip']);
+
+    assert.deepEqual(cleaned.tracks.map((track) => track.name), ['Root.position']);
+    assert.deepEqual(clip.tracks.map((track) => track.name), ['Root.position', 'Tip.position']);
   });
 });

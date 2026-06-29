@@ -36,6 +36,7 @@ import {
   applyAnimationEditsToClips,
   applyAnimationEditsToImportedSmf,
   copyAnimationKeyframe,
+  deleteAnimationEditBones,
   deleteAnimationKeyframe,
   getClipKey,
   getCurrentClipKey,
@@ -51,7 +52,7 @@ import {
   type AnimationInterpolation,
   type EditableBoneKeyframe,
 } from '../utils/animationEdits';
-import { createChildBone, reparentBonePreserveWorldTransform, retargetAnimationClipBoneNames, validateBoneRename } from '../utils/rigEdits';
+import { createChildBone, deleteBoneBranch, reparentBonePreserveWorldTransform, removeAnimationClipBoneNames, retargetAnimationClipBoneNames, validateBoneRename } from '../utils/rigEdits';
 
 type LoadedModelResult =
   | Awaited<ReturnType<typeof buildSmfScene>>
@@ -1021,6 +1022,49 @@ export function useLoadModel() {
     ui.setStatus(`Created child bone ${result.bone.name} under ${parentName}.`);
   }, [model.skeleton, sourceFormat, ui]);
 
+  const deleteSelectedBone = useCallback(() => {
+    const skeleton = model.skeleton;
+    const boneName = ui.selected;
+    if (sourceFormat === 'smf') {
+      ui.setStatus('SMF-source bone deletion is blocked until head-node compatibility editing is explicit.');
+      return;
+    }
+    if (!skeleton || !model.root) {
+      ui.setStatus('Load a skinned model before deleting bones.');
+      return;
+    }
+
+    const bone = findBoneByName(skeleton, boneName);
+    const parentName = bone?.parent && (bone.parent as THREE.Bone).isBone === true
+      ? (bone.parent as THREE.Bone).name
+      : 'Scene';
+    const result = deleteBoneBranch(skeleton, boneName, collectSkinnedMeshes(model.root));
+    if (!result.ok) {
+      ui.setStatus(result.message);
+      return;
+    }
+
+    baseClipsRef.current = removeAnimationClipBoneNames(baseClipsRef.current, result.deletedNames);
+    const nextAnimationState = deleteAnimationEditBones(animationEditStateRef.current, result.deletedNames);
+    animationEditStateRef.current = nextAnimationState;
+    setAnimationEditState(nextAnimationState);
+    model.setClips(applyAnimationEditsToClips(baseClipsRef.current, nextAnimationState));
+
+    const nextPoseEdits = { ...poseEditsRef.current };
+    for (const deletedName of result.deletedNames) {
+      delete nextPoseEdits[deletedName];
+    }
+    poseEditsRef.current = nextPoseEdits;
+    setPoseEditHasDirtyState(hasPoseEdits(nextPoseEdits));
+
+    commitSkinEditState({
+      ...skinEditStateRef.current,
+      selectedBoneName: parentName === 'Scene' ? '' : parentName,
+    });
+    ui.setSelected(parentName);
+    ui.setStatus(`Deleted bone ${boneName}.`);
+  }, [commitSkinEditState, model, sourceFormat, ui]);
+
   // Route bone nudge buttons through pose-edit layer so edits are captured at export time.
   // Applies the delta to the Three.js bone for immediate visual feedback, and records the
   // cumulative edit in poseEditsRef for use by handleExport.
@@ -1379,6 +1423,7 @@ export function useLoadModel() {
     renameSelectedBone,
     reparentSelectedBone,
     createChildForSelectedBone,
+    deleteSelectedBone,
     onNudgeBone,
     setupKeyboard,
     togglePlay,
