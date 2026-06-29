@@ -1,8 +1,11 @@
+import { useEffect, useState } from 'react';
 import type { RigValidationReport } from '../utils/rigValidation';
 
 interface RigPanelProps {
   report: RigValidationReport;
   selected: string;
+  sourceFormat: string;
+  onRenameSelectedBone: (nextName: string) => void;
   editorMode?: string;
 }
 
@@ -15,9 +18,17 @@ function statusClass(status: RigValidationReport['status']): string {
 export default function RigPanel({
   report,
   selected,
+  sourceFormat,
+  onRenameSelectedBone,
   editorMode = 'rig',
 }: RigPanelProps) {
   const visibleIssues = report.issues.slice(0, 6);
+  const [renameValue, setRenameValue] = useState(selected === 'Scene' ? '' : selected);
+  const canRename = !!selected && selected !== 'Scene' && report.boneCount > 0 && sourceFormat !== 'smf';
+
+  useEffect(() => {
+    setRenameValue(selected === 'Scene' ? '' : selected);
+  }, [selected]);
 
   return (
     <div className="inspector" data-testid="rig-workspace-panel" data-editor-mode={editorMode}>
@@ -34,6 +45,30 @@ export default function RigPanel({
         </div>
       </div>
       <div className="mt-2 border-t border-slate-700 pt-2">
+        <div className="text-slate-400 text-[10px] mb-1">Edit</div>
+        <div className="flex gap-1 mb-2">
+          <input
+            data-testid="rig-rename-input"
+            value={renameValue}
+            disabled={!canRename}
+            onChange={(event) => setRenameValue(event.target.value)}
+            className="min-w-0 flex-1 bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100 disabled:text-slate-500"
+            aria-label="Bone name"
+          />
+          <button
+            data-testid="rig-rename-btn"
+            className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50"
+            disabled={!canRename}
+            onClick={() => onRenameSelectedBone(renameValue)}
+          >
+            Rename
+          </button>
+        </div>
+        {sourceFormat === 'smf' && (
+          <div className="text-[10px] text-slate-500 mb-2">
+            SMF source nodes keep indexed names for fidelity export.
+          </div>
+        )}
         <div className="text-slate-400 text-[10px] mb-1">Validation</div>
         <div data-testid="rig-validation-status" className={`text-xs ${statusClass(report.status)}`}>
           {report.status === 'pass'

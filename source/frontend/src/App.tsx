@@ -83,6 +83,7 @@ export default function App() {
     handleFileInputChange,
     handleDrop,
     handleSelectBone,
+    renameSelectedBone,
     onNudgeBone,
     setupKeyboard,
     togglePlay,
@@ -208,6 +209,8 @@ export default function App() {
         <RigPanel
           selected={ui.selected}
           report={rigValidationReport}
+          sourceFormat={sourceFormat}
+          onRenameSelectedBone={renameSelectedBone}
           editorMode={editorMode}
         />
       );

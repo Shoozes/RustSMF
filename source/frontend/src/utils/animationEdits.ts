@@ -194,6 +194,27 @@ export const copyAnimationKeyframe = (
   clipboard: cloneKey(keyframe),
 });
 
+export const renameAnimationEditBone = (
+  state: AnimationEditState,
+  oldBoneName: string,
+  newBoneName: string,
+): AnimationEditState => {
+  if (!oldBoneName || !newBoneName || oldBoneName === newBoneName) {
+    return cloneAnimationEditState(state);
+  }
+
+  const next = cloneAnimationEditState(state);
+  for (const clipEdits of Object.values(next.editsByClip)) {
+    const existing = clipEdits[oldBoneName];
+    if (!existing) continue;
+    const destination = clipEdits[newBoneName] ?? [];
+    clipEdits[newBoneName] = [...destination, ...existing.map(cloneKey)]
+      .sort((left, right) => left.time - right.time);
+    delete clipEdits[oldBoneName];
+  }
+  return next;
+};
+
 export const getEditedKeyframe = (
   state: AnimationEditState,
   clipName: string,

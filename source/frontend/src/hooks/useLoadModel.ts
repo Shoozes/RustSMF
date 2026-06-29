@@ -43,6 +43,7 @@ import {
   hasDirtyAnimationEdits,
   makeAnimationEditState,
   makeKeyframeFromBone,
+  renameAnimationEditBone,
   selectAnimationKeyframe,
   setAnimationInterpolation,
   upsertAnimationKeyframe,
@@ -50,6 +51,7 @@ import {
   type AnimationInterpolation,
   type EditableBoneKeyframe,
 } from '../utils/animationEdits';
+import { retargetAnimationClipBoneNames, validateBoneRename } from '../utils/rigEdits';
 
 type LoadedModelResult =
   | Awaited<ReturnType<typeof buildSmfScene>>
@@ -930,6 +932,52 @@ export function useLoadModel() {
     });
   }, [ui, commitSkinEditState]);
 
+  const renameSelectedBone = useCallback((requestedName: string) => {
+    const skeleton = model.skeleton;
+    const oldName = ui.selected;
+    if (sourceFormat === 'smf') {
+      ui.setStatus('SMF-source bone renames are blocked to preserve node-index export fidelity.');
+      return;
+    }
+
+    const validation = validateBoneRename(skeleton, oldName, requestedName);
+    if (!validation.ok) {
+      ui.setStatus(validation.message);
+      return;
+    }
+
+    const bone = findBoneByName(skeleton ?? null, oldName);
+    if (!bone) {
+      ui.setStatus('Selected item is not an editable rig bone.');
+      return;
+    }
+
+    bone.name = validation.name;
+    bone.updateMatrixWorld(true);
+    skeleton?.update();
+
+    baseClipsRef.current = retargetAnimationClipBoneNames(baseClipsRef.current, oldName, validation.name);
+    const renamedAnimationState = renameAnimationEditBone(animationEditStateRef.current, oldName, validation.name);
+    animationEditStateRef.current = renamedAnimationState;
+    setAnimationEditState(renamedAnimationState);
+    model.setClips(applyAnimationEditsToClips(baseClipsRef.current, renamedAnimationState));
+
+    if (poseEditsRef.current[oldName]) {
+      poseEditsRef.current = {
+        ...poseEditsRef.current,
+        [validation.name]: poseEditsRef.current[oldName],
+      };
+      delete poseEditsRef.current[oldName];
+    }
+
+    commitSkinEditState({
+      ...skinEditStateRef.current,
+      selectedBoneName: validation.name,
+    });
+    ui.setSelected(validation.name);
+    ui.setStatus(`Renamed bone ${oldName} to ${validation.name}.`);
+  }, [commitSkinEditState, model, sourceFormat, ui]);
+
   // Route bone nudge buttons through pose-edit layer so edits are captured at export time.
   // Applies the delta to the Three.js bone for immediate visual feedback, and records the
   // cumulative edit in poseEditsRef for use by handleExport.
@@ -1285,6 +1333,7 @@ export function useLoadModel() {
     handleFileInputChange,
     handleDrop,
     handleSelectBone,
+    renameSelectedBone,
     onNudgeBone,
     setupKeyboard,
     togglePlay,

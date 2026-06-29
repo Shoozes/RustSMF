@@ -9,6 +9,7 @@ import {
   hasDirtyAnimationEdits,
   makeAnimationEditState,
   makeKeyframeFromBone,
+  renameAnimationEditBone,
   setAnimationInterpolation,
   upsertAnimationKeyframe,
 } from './animationEdits';
@@ -127,6 +128,22 @@ test('makeKeyframeFromBone and interpolation helpers preserve supported metadata
   const state = upsertAnimationKeyframe(makeAnimationEditState(), 'Walk', 'Bone', key);
   const next = setAnimationInterpolation(state, 'linear', 'Walk', 'Bone');
   assert.equal(next.editsByClip.Walk.Bone[0].interpolation, 'linear');
+});
+
+test('renameAnimationEditBone moves authored keys to the new bone name', () => {
+  const state = upsertAnimationKeyframe(makeAnimationEditState(), 'Walk', 'Root', {
+    time: 0,
+    position: [1, 2, 3],
+    quaternion: [0, 0, 0, 1],
+    interpolation: 'linear',
+  });
+
+  const renamed = renameAnimationEditBone(state, 'Root', 'Spine');
+
+  assert.equal(renamed.editsByClip.Walk.Root, undefined);
+  assert.equal(renamed.editsByClip.Walk.Spine.length, 1);
+  assert.deepEqual(renamed.editsByClip.Walk.Spine[0].position, [1, 2, 3]);
+  assert.equal(state.editsByClip.Walk.Root.length, 1);
 });
 
 test('getCurrentClipKey falls back safely for missing clips and zero-duration clips', () => {

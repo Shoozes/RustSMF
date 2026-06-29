@@ -1194,6 +1194,17 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(inspector).toContainText(/FixtureRoot|FixtureTip/i);
     await expect(page.getByTestId('timeline')).toBeVisible();
 
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    await expect(page.getByTestId('rig-workspace-panel')).toBeVisible();
+    const rootBoneEntry = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
+    await expect(rootBoneEntry).toBeVisible();
+    await rootBoneEntry.click({ force: true });
+    await page.getByTestId('rig-rename-input').fill('FixtureSpine');
+    await page.getByTestId('rig-rename-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Renamed bone FixtureRoot to FixtureSpine/i);
+    await expect(page.getByTestId('rig-validation-status')).toContainText(/pass/i);
+    await expect(inspector).toContainText(/FixtureSpine/i);
+
     await page.getByTestId('mode-tab-export').click({ force: true });
     const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
     await expect(diagnosticsPanel).toBeVisible();
@@ -1220,7 +1231,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Saved SMF diagnostic report/i, { timeout: 5000 });
     await page.getByTestId('mode-tab-view').click({ force: true });
 
-    const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /FixtureRoot|FixtureTip/ }).first();
+    const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /FixtureSpine|FixtureTip/ }).first();
     await anyBoneEntry.click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
 
