@@ -1294,6 +1294,11 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const warnings = page.getByTestId('smf-diagnostic-warning');
     await expect(warnings).toHaveCount(1);
     await expect(warnings.first()).toContainText(/SMF_NON_POT_TEXTURE/);
+    const textureRows = page.getByTestId('smf-material-texture-row');
+    await expect(textureRows).toHaveCount(1);
+    await expect(textureRows.first()).toContainText(/FixtureSkinnedMesh/);
+    await expect(textureRows.first()).toContainText(/3x2/);
+    await expect(textureRows.first()).toContainText(/non-POT/);
 
     await page.getByTestId('export-smf-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });

@@ -142,7 +142,7 @@
     },
     "feature__smf_export_diagnostics": {
       "description": "Structured SMF export preflight for non-SMF skinned sources plus compact Export workspace diagnostics.",
-      "status": "implemented for structured compatibility checks, report saving, and first material/texture warnings: missing skeleton and scale tracks block export; missing UVs/normals warn; missing skinIndex/skinWeight blocks skinned export; non-POT textures, multiple material slots, and multiple texture maps warn without blocking GLB fidelity export; in-memory roundtrip reports now include status plus check rows/codes for counts, geometry, bounds, animation timing/metadata, and first/last-frame pose; generated skinned GLB smoke asserts ready diagnostics and pass checks, static OBJ smoke asserts blocked diagnostics, and report JSON serialization is unit-covered.",
+      "status": "implemented for structured compatibility checks, report saving, and material/texture warnings: missing skeleton and scale tracks block export; missing UVs/normals warn; missing skinIndex/skinWeight blocks skinned export; non-POT textures, multiple material slots, and multiple texture maps warn without blocking GLB fidelity export; ExportPanel shows texture map type/name/mesh/material slot/resolution/source/POT status; in-memory roundtrip reports now include status plus check rows/codes for counts, geometry, bounds, animation timing/metadata, and first/last-frame pose; generated skinned GLB smoke asserts ready diagnostics, texture summary rows, and pass checks, static OBJ smoke asserts blocked diagnostics, and report JSON serialization is unit-covered.",
       "paths": [
         "docs/dev/APP_STATE.md",
         "docs/dev/TODO.md",

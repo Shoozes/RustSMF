@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-29 (true FBX export)
+Last reviewed: 2026-06-29 (material texture summaries)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -154,8 +154,8 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
   - Done: add power-of-two texture helper tests.
   - Done: detect multiple material slots and multiple texture maps on SMF-target meshes.
   - Done: surface material/texture warnings in structured SMF diagnostics without blocking GLB export.
-  - Show texture names/resolution/source in a compact panel if diagnostics need more than the Export cockpit list.
-  - Decide whether unsupported material layouts should remain warning-only, block SMF export, or offer split/export action.
+  - Done: show texture map type, name, mesh/material slot, resolution, power-of-two status, and runtime source in a compact Export workspace panel.
+  - Done: keep unsupported material layouts warning-only for SMF guidance and direct users to GLB for full material fidelity; defer split/export until mesh/material identity requirements are explicit.
 - Acceptance: Material-heavy models produce clear SMF compatibility guidance, and GLB remains the recommended full-fidelity path.
 
 ### P1: Finish precision-editor parity in quad/ortho workflows

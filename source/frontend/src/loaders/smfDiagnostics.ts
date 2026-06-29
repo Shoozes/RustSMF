@@ -12,6 +12,18 @@ export interface SmfDiagnostic {
 export interface SmfDiagnosticReport {
   canExportSmf: boolean;
   diagnostics: SmfDiagnostic[];
+  materialTextures?: SmfMaterialTextureSummary[];
+}
+
+export interface SmfMaterialTextureSummary {
+  meshName: string;
+  materialIndex: number;
+  mapType: string;
+  textureName: string;
+  width: number | null;
+  height: number | null;
+  source: string;
+  isPowerOfTwo: boolean | null;
 }
 
 export interface SmfRoundtripSummary {
@@ -113,9 +125,13 @@ function maxBoundsDelta(
   return max;
 }
 
-export function makeDiagnosticReport(diagnostics: SmfDiagnostic[]): SmfDiagnosticReport {
+export function makeDiagnosticReport(
+  diagnostics: SmfDiagnostic[],
+  materialTextures: SmfMaterialTextureSummary[] = [],
+): SmfDiagnosticReport {
   return {
     diagnostics,
+    materialTextures,
     canExportSmf: diagnostics.every((item) => item.level !== 'error'),
   };
 }

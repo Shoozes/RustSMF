@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as THREE from 'three';
-import { inspectMeshMaterialCompatibility } from './textureCompat';
+import { inspectMeshMaterialCompatibility, summarizeMeshTextures } from './textureCompat';
 
 function makeSkinnedQuadMesh(material: THREE.Material | THREE.Material[]): THREE.SkinnedMesh {
   const geometry = new THREE.PlaneGeometry(1, 1);
@@ -18,6 +18,7 @@ function makeTexturedMaterial(width: number, height: number): THREE.MeshStandard
     data[i] = i % 256;
   }
   const texture = new THREE.DataTexture(data, width, height);
+  texture.name = `Texture_${width}x${height}`;
   texture.needsUpdate = true;
   return new THREE.MeshStandardMaterial({ map: texture });
 }
@@ -45,5 +46,20 @@ describe('textureCompat.inspectMeshMaterialCompatibility', () => {
     ]);
     const diagnostics = inspectMeshMaterialCompatibility(mesh);
     assert.ok(diagnostics.some((d) => d.code === 'SMF_MULTI_TEXTURE'), 'expected multi-texture warning');
+  });
+
+  it('summarizes texture name, size, source, and power-of-two status', () => {
+    const mesh = makeSkinnedQuadMesh(makeTexturedMaterial(3, 2));
+    const summaries = summarizeMeshTextures(mesh);
+
+    assert.equal(summaries.length, 1);
+    assert.equal(summaries[0].meshName, 'DiagnosticMesh');
+    assert.equal(summaries[0].materialIndex, 0);
+    assert.equal(summaries[0].mapType, 'map');
+    assert.equal(summaries[0].textureName, 'Texture_3x2');
+    assert.equal(summaries[0].width, 3);
+    assert.equal(summaries[0].height, 2);
+    assert.equal(summaries[0].isPowerOfTwo, false);
+    assert.match(summaries[0].source, /^three-source:/);
   });
 });

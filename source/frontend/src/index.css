@@ -614,6 +614,12 @@ button:active {
   border-top: 1px solid #334155;
 }
 
+.smf-material-textures {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #334155;
+}
+
 .smf-roundtrip {
   margin-top: 10px;
   padding-top: 8px;

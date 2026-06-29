@@ -148,6 +148,10 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
 
     assert.strictEqual(report.canExportSmf, true);
     assert.ok(report.diagnostics.some((item) => item.code === 'SMF_NON_POT_TEXTURE'), 'expected non-POT texture warning');
+    assert.strictEqual(report.materialTextures?.length, 1);
+    assert.strictEqual(report.materialTextures?.[0]?.width, 3);
+    assert.strictEqual(report.materialTextures?.[0]?.height, 2);
+    assert.strictEqual(report.materialTextures?.[0]?.isPowerOfTwo, false);
   });
 
   it('reports warning for multi-material meshes', () => {
@@ -185,6 +189,7 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
 
     assert.strictEqual(report.canExportSmf, true);
     assert.ok(report.diagnostics.some((item) => item.code === 'SMF_MULTI_TEXTURE'), 'expected multi-texture warning');
+    assert.strictEqual(report.materialTextures?.length, 2);
   });
 
   it('reports diagnostic error when skinned export mesh lacks skin attributes', () => {

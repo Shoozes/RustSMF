@@ -21,6 +21,7 @@ export default function ExportPanel({
 }: ExportPanelProps) {
   const errors = smfDiagnosticReport.diagnostics.filter((item) => item.level === 'error').length;
   const warnings = smfDiagnosticReport.diagnostics.filter((item) => item.level === 'warning').length;
+  const materialTextures = smfDiagnosticReport.materialTextures ?? [];
   const roundtripStatus = smfRoundtripReport?.status ?? null;
   const roundtripStatusText =
     roundtripStatus === 'passed'
@@ -73,6 +74,36 @@ export default function ExportPanel({
             </li>
           ))}
         </ul>
+      </div>
+      <div className="smf-material-textures" data-testid="smf-material-textures-panel">
+        <div className="smf-diagnostics-title">Material textures</div>
+        {materialTextures.length > 0 ? (
+          <ul className="smf-diagnostics-list">
+            {materialTextures.map((texture) => (
+              <li
+                key={`${texture.meshName}-${texture.materialIndex}-${texture.mapType}-${texture.textureName}-${texture.source}`}
+                className="smf-diagnostic smf-diagnostic-info"
+                data-testid="smf-material-texture-row"
+              >
+                <span className="smf-diagnostic-code">{texture.mapType}</span>
+                <span>{texture.textureName}</span>
+                <span className="smf-diagnostic-target">{texture.meshName}</span>
+                <span>
+                  material {texture.materialIndex}
+                  {' '}
+                  {texture.width && texture.height ? `${texture.width}x${texture.height}` : 'unreadable size'}
+                  {' '}
+                  {texture.isPowerOfTwo === null ? 'size unknown' : texture.isPowerOfTwo ? 'POT' : 'non-POT'}
+                </span>
+                <span className="smf-diagnostic-target">{texture.source}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="smf-diagnostics-summary" data-testid="smf-material-textures-empty">
+            No skinned-mesh texture maps detected.
+          </div>
+        )}
       </div>
       <div className="smf-roundtrip" data-testid="smf-roundtrip-panel">
         <div className="smf-diagnostics-title">Roundtrip check</div>

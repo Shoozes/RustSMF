@@ -10,6 +10,17 @@ export interface TextureDiagnostic {
   target?: string;
 }
 
+export interface TextureSummary {
+  meshName: string;
+  materialIndex: number;
+  mapType: string;
+  textureName: string;
+  width: number | null;
+  height: number | null;
+  source: string;
+  isPowerOfTwo: boolean | null;
+}
+
 interface MaterialTextureMap {
   materialIndex: number;
   mapType: string;
@@ -37,6 +48,29 @@ function textureImageSize(texture: THREE.Texture): { width: number; height: numb
   const height = Number((image as { height?: unknown }).height);
   if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
   return { width, height };
+}
+
+function textureImageSource(texture: THREE.Texture): string {
+  const image = texture.image as Record<string, unknown> | null | undefined;
+
+  const currentSrc = typeof image?.currentSrc === 'string' ? image.currentSrc : '';
+  if (currentSrc) return currentSrc;
+
+  const src = typeof image?.src === 'string' ? image.src : '';
+  if (src) return src;
+
+  const dataset = image?.dataset as { source?: unknown } | undefined;
+  const datasetSource = typeof dataset?.source === 'string' ? dataset.source : '';
+  if (datasetSource) return datasetSource;
+
+  if (texture.source?.uuid) return `three-source:${texture.source.uuid}`;
+  if (texture.uuid) return `three-texture:${texture.uuid}`;
+  return 'runtime texture';
+}
+
+function textureDisplayName(texture: THREE.Texture): string {
+  if (texture.name) return texture.name;
+  return texture.uuid ? `Texture ${texture.uuid.slice(0, 8)}` : 'Texture';
 }
 
 function addDiagnostic(
@@ -134,6 +168,31 @@ export function inspectMeshMaterialCompatibility(mesh: SkinnedMesh): TextureDiag
   }
 
   return diagnostics;
+}
+
+export function summarizeMeshTextures(mesh: SkinnedMesh): TextureSummary[] {
+  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  const meshName = mesh.name || 'mesh';
+  const summaries: TextureSummary[] = [];
+
+  materials.forEach((material, materialIndex) => {
+    if (!material) return;
+    collectTextureMapsFromMaterial(material, materialIndex).forEach((entry) => {
+      const size = textureImageSize(entry.texture);
+      summaries.push({
+        meshName,
+        materialIndex,
+        mapType: entry.mapType,
+        textureName: textureDisplayName(entry.texture),
+        width: size?.width ?? null,
+        height: size?.height ?? null,
+        source: textureImageSource(entry.texture),
+        isPowerOfTwo: size ? isPowerOfTwo(size.width) && isPowerOfTwo(size.height) : null,
+      });
+    });
+  });
+
+  return summaries;
 }
 
 export function toSmfDiagnosticList(

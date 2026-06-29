@@ -7,7 +7,7 @@ import {
   type SmfDiagnostic,
   type SmfDiagnosticReport,
 } from './smfDiagnostics';
-import { inspectMeshMaterialCompatibility, toSmfDiagnosticList } from '../utils/textureCompat';
+import { inspectMeshMaterialCompatibility, summarizeMeshTextures, toSmfDiagnosticList } from '../utils/textureCompat';
 
 /**
  * Converts Three.js skinned scene data to an ImportedSmf structure for SMF export.
@@ -218,6 +218,7 @@ export function applyLiveSkinEditsToImportedSmf(
 
 export function inspectThreeToSmfSource(src: SmfConversionSource): SmfDiagnosticReport {
   const diagnostics: SmfDiagnostic[] = [];
+  const materialTextures: NonNullable<SmfDiagnosticReport['materialTextures']> = [];
   const { skeleton, skinnedMeshes = [], clips = [] } = src;
 
   if (!skeleton || skeleton.bones.length === 0) {
@@ -281,9 +282,12 @@ export function inspectThreeToSmfSource(src: SmfConversionSource): SmfDiagnostic
     toSmfDiagnosticList(textureDiagnostics).forEach((item) => {
       diagnostics.push(item);
     });
+    summarizeMeshTextures(mesh).forEach((item) => {
+      materialTextures.push(item);
+    });
   }
 
-  return makeDiagnosticReport(diagnostics);
+  return makeDiagnosticReport(diagnostics, materialTextures);
 }
 
 // Convert a Three.js bone's current local matrix to SMF-space DQ (negated storage convention).
