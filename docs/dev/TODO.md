@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-29 (skin paint undo/redo + export cockpit structured checks)
+Last reviewed: 2026-06-29 (skin autoskin/normalize batch tools)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -22,7 +22,7 @@ Each active item should answer:
 
 ### Completed
 
-Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`. Skin paint data/viewport/export wiring is now current app state; remaining skin work belongs to undo/autoskin/deeper precision items below.
+Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`. Skin paint data/viewport/export wiring is now current app state; remaining skin work belongs to deeper precision items below.
 
 ### P1: Implement skin-weight edit data model
 
@@ -57,7 +57,7 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
   - Done: SkinPanel controls for set/add/subtract, radius, strength, and target influence.
   - Done: viewport brush marker/hit telemetry with selected-bone prerequisite.
   - Done: Playwright coverage for no-bone blocked paint, enabled paint, workspace continuity, and supported SMF export.
-  - Add pure autoskin and normalize helpers based on old `skineditor_*` scripts.
+  - Done: add pure autoskin and normalize helpers based on old `skineditor_*` scripts, exposed as undo-safe full-model Skin workspace actions.
   - Done: add undo/redo checkpointing for skin paint edits, including touched-vertex snapshot restore and redo invalidation after new strokes.
 - Acceptance: Remaining skin tools match documented old-source semantics, are undo-safe, and cannot silently drop dirty edits on export.
 

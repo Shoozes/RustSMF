@@ -111,6 +111,8 @@ export default function App() {
     endSkinPaintStroke,
     undoSkinPaint,
     redoSkinPaint,
+    normalizeSkinWeights,
+    autoSkinWeights,
     skinUndoAvailable,
     skinRedoAvailable,
     editorMode,
@@ -217,6 +219,8 @@ export default function App() {
           onSkinPaintTargetChange={onSkinPaintTargetChange}
           onUndoSkinPaint={undoSkinPaint}
           onRedoSkinPaint={redoSkinPaint}
+          onNormalizeSkinWeights={normalizeSkinWeights}
+          onAutoSkinWeights={autoSkinWeights}
           skinUndoAvailable={skinUndoAvailable}
           skinRedoAvailable={skinRedoAvailable}
           editorMode={editorMode}

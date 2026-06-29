@@ -29,6 +29,8 @@ import {
   editVertexBoneWeight,
   restoreSkinVertexSnapshots,
   sameVertexSkinWeights,
+  normalizeSkinnedMeshWeights,
+  autoSkinSkinnedMeshWeights,
 } from '../utils/skinWeights';
 import {
   applyAnimationEditsToClips,
@@ -1045,6 +1047,128 @@ export function useLoadModel() {
     ui.setStatus(`Redid skin paint stroke (${restored} vertices restored).`);
   }, [model.root, model.skeleton, ui, endSkinPaintStroke, commitSkinEditState, refreshSkinHistoryAvailability]);
 
+  const captureAllSkinSnapshots = useCallback((meshes: THREE.SkinnedMesh[]) => {
+    return meshes.flatMap((mesh) => {
+      const position = mesh.geometry.getAttribute('position');
+      if (!position) return [];
+      const snapshots = [];
+      for (let vertexIndex = 0; vertexIndex < position.count; vertexIndex += 1) {
+        const snapshot = captureSkinVertexSnapshot(mesh, vertexIndex);
+        if (snapshot) snapshots.push(snapshot);
+      }
+      return snapshots;
+    });
+  }, []);
+
+  const commitSkinBatchEdit = useCallback((
+    beforeState: SkinEditState,
+    before: NonNullable<ReturnType<typeof captureSkinVertexSnapshot>>[],
+    statusLabel: string,
+  ) => {
+    if (!model.root) return 0;
+    const after = before.flatMap((snapshot) => {
+      const mesh = collectSkinnedMeshById(model.root, snapshot.meshId);
+      const nextSnapshot = mesh ? captureSkinVertexSnapshot(mesh, snapshot.vertexIndex) : null;
+      return nextSnapshot ? [nextSnapshot] : [];
+    });
+
+    let nextState = skinEditStateRef.current;
+    let changed = 0;
+    for (const snapshot of before) {
+      const nextSnapshot = after.find((candidate) => (
+        candidate.meshId === snapshot.meshId && candidate.vertexIndex === snapshot.vertexIndex
+      ));
+      if (nextSnapshot && !sameVertexSkinWeights(snapshot.vertex, nextSnapshot.vertex, 1e-5)) {
+        nextState = markSkinEdit(nextState, snapshot.meshId, snapshot.vertexIndex);
+        changed += 1;
+      }
+    }
+
+    if (changed <= 0 || after.length === 0) {
+      ui.setStatus(`${statusLabel} kept equivalent skin weights.`);
+      return 0;
+    }
+
+    commitSkinEditState(nextState);
+    const entry: SkinEditHistoryEntry = {
+      beforeState: cloneSkinEditState(beforeState),
+      afterState: cloneSkinEditState(nextState),
+      before,
+      after,
+    };
+    skinUndoStackRef.current = [...skinUndoStackRef.current.slice(-49), entry];
+    skinRedoStackRef.current = [];
+    model.skeleton?.update();
+    refreshSkinHistoryAvailability();
+    return changed;
+  }, [commitSkinEditState, model.root, model.skeleton, refreshSkinHistoryAvailability, ui]);
+
+  const normalizeSkinWeights = useCallback(() => {
+    if (activeSkinStrokeRef.current) {
+      endSkinPaintStroke();
+    }
+    if (!model.root) {
+      ui.setStatus('Load a skinned model before normalizing skin weights.');
+      return;
+    }
+
+    const meshes = collectSkinnedMeshes(model.root);
+    if (meshes.length === 0) {
+      ui.setStatus('No skinned meshes are available to normalize.');
+      return;
+    }
+
+    const beforeState = cloneSkinEditState(skinEditStateRef.current);
+    const before = captureAllSkinSnapshots(meshes);
+    const summary = meshes.reduce((acc, mesh) => {
+      const result = normalizeSkinnedMeshWeights(mesh);
+      acc.touchedVertices += result.touchedVertices;
+      acc.changedVertices += result.changedVertices;
+      return acc;
+    }, { touchedVertices: 0, changedVertices: 0 });
+    const changed = commitSkinBatchEdit(beforeState, before, 'Normalize skin weights');
+    if (changed > 0) {
+      ui.setStatus(`Normalized ${changed} skin vertices across ${meshes.length} skinned mesh${meshes.length === 1 ? '' : 'es'}.`);
+    } else if (summary.touchedVertices === 0) {
+      ui.setStatus('No editable skin vertices were found to normalize.');
+    }
+  }, [captureAllSkinSnapshots, commitSkinBatchEdit, endSkinPaintStroke, model.root, ui]);
+
+  const autoSkinWeights = useCallback(() => {
+    if (activeSkinStrokeRef.current) {
+      endSkinPaintStroke();
+    }
+    const skeleton = model.skeleton;
+    if (!model.root || !skeleton) {
+      ui.setStatus('Load a skinned model before auto skinning.');
+      return;
+    }
+
+    const meshes = collectSkinnedMeshes(model.root);
+    if (meshes.length === 0) {
+      ui.setStatus('No skinned meshes are available to auto skin.');
+      return;
+    }
+
+    const beforeState = cloneSkinEditState(skinEditStateRef.current);
+    const before = captureAllSkinSnapshots(meshes);
+    const summary = meshes.reduce((acc, mesh) => {
+      const result = autoSkinSkinnedMeshWeights(mesh, skeleton, {
+        power: 2,
+        normalWeighting: 0,
+      });
+      acc.touchedVertices += result.touchedVertices;
+      acc.changedVertices += result.changedVertices;
+      return acc;
+    }, { touchedVertices: 0, changedVertices: 0 });
+    const changed = commitSkinBatchEdit(beforeState, before, 'Auto skin');
+    if (changed > 0) {
+      ui.setStatus(`Auto skinned ${changed} vertices across ${meshes.length} skinned mesh${meshes.length === 1 ? '' : 'es'}.`);
+    } else if (summary.touchedVertices === 0) {
+      ui.setStatus('No editable skin vertices were found to auto skin.');
+    }
+  }, [captureAllSkinSnapshots, commitSkinBatchEdit, endSkinPaintStroke, model.root, model.skeleton, ui]);
+
   const applySkinPaint = useCallback((
     paintVertices: Array<{
       meshId: string;
@@ -1192,6 +1316,8 @@ export function useLoadModel() {
     endSkinPaintStroke,
     undoSkinPaint,
     redoSkinPaint,
+    normalizeSkinWeights,
+    autoSkinWeights,
     skinUndoAvailable,
     skinRedoAvailable,
     poseEditHasDirtyState,

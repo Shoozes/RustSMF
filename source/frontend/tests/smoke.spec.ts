@@ -295,6 +295,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('skin-paint-mode-subtract')).toBeDisabled();
     await expect(page.getByTestId('skin-paint-undo-btn')).toBeDisabled();
     await expect(page.getByTestId('skin-paint-redo-btn')).toBeDisabled();
+    await expect(page.getByTestId('skin-normalize-btn')).toBeDisabled();
+    await expect(page.getByTestId('skin-autoskin-btn')).toBeDisabled();
 
     await assertModeActive('animate');
     await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
@@ -716,6 +718,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
     await page.getByTestId('mode-tab-skin').click({ force: true });
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+    await expect(page.getByTestId('skin-normalize-btn')).toBeEnabled();
+    await expect(page.getByTestId('skin-autoskin-btn')).toBeEnabled();
     await expect(page.getByTestId('skin-paint-mode-add')).toBeEnabled();
 
     const inspector = page.getByTestId('inspector');
@@ -1334,6 +1338,11 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await page.getByTestId('skin-paint-redo-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Redid skin paint stroke/i);
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
+    await expect(page.getByTestId('skin-paint-undo-btn')).toBeEnabled();
+
+    await page.getByTestId('skin-autoskin-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Auto skin/i);
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
     await expect(page.getByTestId('skin-paint-undo-btn')).toBeEnabled();
 

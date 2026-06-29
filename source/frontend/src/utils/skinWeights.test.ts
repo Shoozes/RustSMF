@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import * as THREE from 'three';
 import {
+  autoSkinSkinnedMeshWeights,
   captureSkinVertexSnapshot,
   cloneSkinEditState,
   editVertexBoneWeight,
@@ -10,12 +11,14 @@ import {
   hasDirtySkinEdits,
   makeSkinEditState,
   markSkinEdit,
+  normalizeSkinnedMeshWeights,
   normalizeVertexSkinWeights,
   readVertexSkinWeights,
   restoreSkinVertexSnapshots,
   sameVertexSkinWeights,
   setVertexBoneWeight,
   writeSkinnedMeshVertexWeights,
+  writeVertexSkinWeights,
 } from './skinWeights';
 
 function makeSkinnedMesh(): THREE.SkinnedMesh {
@@ -36,8 +39,42 @@ function makeSkinnedMesh(): THREE.SkinnedMesh {
   const mesh = new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial());
   const root = new THREE.Bone();
   const child = new THREE.Bone();
+  child.position.set(0, 1, 0);
   root.add(child);
   mesh.bind(new THREE.Skeleton([root, child]));
+  return mesh;
+}
+
+function makeAutoskinMesh(): THREE.SkinnedMesh {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute([
+    0, 0, 0,
+    0, 1, 0,
+  ], 3));
+  geometry.setAttribute('normal', new THREE.Float32BufferAttribute([
+    0, 0, 1,
+    0, 0, 1,
+  ], 3));
+  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute([
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+  ], 4));
+  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute([
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+  ], 4));
+
+  const mesh = new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial());
+  const root = new THREE.Bone();
+  root.name = 'Root';
+  root.position.set(0, 0, 0);
+  const tip = new THREE.Bone();
+  tip.name = 'Tip';
+  tip.position.set(0, 1, 0);
+  root.add(tip);
+  const skeleton = new THREE.Skeleton([root, tip]);
+  mesh.add(root);
+  mesh.bind(skeleton);
   return mesh;
 }
 
@@ -73,6 +110,42 @@ describe('skinWeights', () => {
       indices: [4, 5, 6, 7],
       weights: [1, 0, 0, 0],
     });
+  });
+
+  it('normalizes all writable vertices in a skinned mesh', () => {
+    const mesh = makeSkinnedMesh();
+    const attributes = getSkinAttributes(mesh.geometry);
+    assert.ok(attributes);
+    writeVertexSkinWeights(attributes, 1, {
+      indices: [0, 1, 2, 3],
+      weights: [0.5, 0.5, 0.5, 0.5],
+    });
+
+    const summary = normalizeSkinnedMeshWeights(mesh);
+    assert.equal(summary.touchedVertices, 2);
+    assert.equal(summary.changedVertices, 1);
+    const normalized = readVertexSkinWeights(attributes, 1);
+    assert.ok(normalized);
+    assert.equal(weightsTotal(normalized.weights), 1);
+    assert.deepEqual(normalized.weights, [0.25, 0.25, 0.25, 0.25]);
+  });
+
+  it('auto skins vertices from inverse distance to bone segments', () => {
+    const mesh = makeAutoskinMesh();
+    const summary = autoSkinSkinnedMeshWeights(mesh, mesh.skeleton, { power: 2, normalWeighting: 0 });
+    const attributes = getSkinAttributes(mesh.geometry);
+    assert.ok(attributes);
+
+    const rootVertex = readVertexSkinWeights(attributes, 0);
+    const tipVertex = readVertexSkinWeights(attributes, 1);
+    assert.ok(rootVertex);
+    assert.ok(tipVertex);
+    assert.equal(summary.touchedVertices, 2);
+    assert.ok(Math.abs(weightsTotal(rootVertex.weights) - 1) < 1e-6);
+    assert.ok(Math.abs(weightsTotal(tipVertex.weights) - 1) < 1e-6);
+    assert.equal(rootVertex.indices[0], 0);
+    assert.equal(tipVertex.indices[0], 1);
+    assert.ok(tipVertex.weights[0] > 0.99);
   });
 
   it('sets an existing bone slot and preserves normalized four-bone weights', () => {

@@ -51,9 +51,24 @@ export interface SkinAttributePair {
   skinWeight: THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
 }
 
+export interface SkinAutoWeightOptions {
+  power?: number;
+  normalWeighting?: number;
+}
+
+export interface SkinMeshWeightEditSummary {
+  touchedVertices: number;
+  changedVertices: number;
+}
+
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.min(1, Math.max(0, value));
+}
+
+function clampPositive(value: number, fallback: number): number {
+  if (!Number.isFinite(value) || value <= 0) return fallback;
+  return value;
 }
 
 function cloneVertex(vertex: VertexSkinWeights): VertexSkinWeights {
@@ -209,6 +224,157 @@ export function writeSkinnedMeshVertexWeights(
   if (!readVertexSkinWeights(attributes, vertexIndex)) return false;
   writeVertexSkinWeights(attributes, vertexIndex, cloneVertex(vertex));
   return true;
+}
+
+export function normalizeSkinnedMeshWeights(mesh: THREE.SkinnedMesh): SkinMeshWeightEditSummary {
+  const attributes = getSkinAttributes(mesh.geometry);
+  if (!attributes) {
+    return { touchedVertices: 0, changedVertices: 0 };
+  }
+
+  let touchedVertices = 0;
+  let changedVertices = 0;
+  for (let vertexIndex = 0; vertexIndex < attributes.skinIndex.count; vertexIndex += 1) {
+    const current = readVertexSkinWeights(attributes, vertexIndex);
+    if (!current) continue;
+    touchedVertices += 1;
+    const normalized = normalizeVertexSkinWeights(current);
+    if (!sameVertexSkinWeights(current, normalized)) {
+      writeVertexSkinWeights(attributes, vertexIndex, normalized);
+      changedVertices += 1;
+    }
+  }
+
+  return { touchedVertices, changedVertices };
+}
+
+function distanceToSegment(point: THREE.Vector3, start: THREE.Vector3, end: THREE.Vector3): number {
+  const segment = end.clone().sub(start);
+  const lengthSq = segment.lengthSq();
+  if (lengthSq <= 1e-12) {
+    return point.distanceTo(start);
+  }
+  const t = Math.min(1, Math.max(0, point.clone().sub(start).dot(segment) / lengthSq));
+  return point.distanceTo(start.clone().addScaledVector(segment, t));
+}
+
+function segmentClosestPoint(point: THREE.Vector3, start: THREE.Vector3, end: THREE.Vector3): THREE.Vector3 {
+  const segment = end.clone().sub(start);
+  const lengthSq = segment.lengthSq();
+  if (lengthSq <= 1e-12) {
+    return start.clone();
+  }
+  const t = Math.min(1, Math.max(0, point.clone().sub(start).dot(segment) / lengthSq));
+  return start.clone().addScaledVector(segment, t);
+}
+
+function getBoneWorldPosition(bone: THREE.Bone): THREE.Vector3 {
+  return bone.getWorldPosition(new THREE.Vector3());
+}
+
+function getBoneSegment(bone: THREE.Bone, skeleton: THREE.Skeleton): { start: THREE.Vector3; end: THREE.Vector3 } {
+  const bonePosition = getBoneWorldPosition(bone);
+  const parent = bone.parent instanceof THREE.Bone && skeleton.bones.includes(bone.parent)
+    ? getBoneWorldPosition(bone.parent)
+    : null;
+  if (parent) {
+    return { start: parent, end: bonePosition };
+  }
+
+  return { start: bonePosition, end: bonePosition };
+}
+
+function makeWeightedVertex(entries: Array<{ boneIndex: number; weight: number }>): VertexSkinWeights | null {
+  const strongest = entries
+    .filter((entry) => Number.isInteger(entry.boneIndex) && entry.boneIndex >= 0 && Number.isFinite(entry.weight) && entry.weight > 0)
+    .sort((left, right) => right.weight - left.weight)
+    .slice(0, 4);
+
+  if (strongest.length === 0) return null;
+
+  const indices = [0, 0, 0, 0] as VertexSkinWeights['indices'];
+  const weights = [0, 0, 0, 0] as VertexSkinWeights['weights'];
+  strongest.forEach((entry, slot) => {
+    indices[slot] = entry.boneIndex;
+    weights[slot] = entry.weight;
+  });
+
+  return normalizeVertexSkinWeights({ indices, weights });
+}
+
+export function autoSkinSkinnedMeshWeights(
+  mesh: THREE.SkinnedMesh,
+  skeleton: THREE.Skeleton,
+  options: SkinAutoWeightOptions = {},
+): SkinMeshWeightEditSummary {
+  const attributes = getSkinAttributes(mesh.geometry);
+  const position = mesh.geometry.getAttribute('position');
+  if (!attributes || !position || position.itemSize < 3 || skeleton.bones.length === 0) {
+    return { touchedVertices: 0, changedVertices: 0 };
+  }
+
+  mesh.updateMatrixWorld(true);
+  skeleton.bones.forEach((bone) => bone.updateMatrixWorld(true));
+
+  const power = Math.max(1, clampPositive(options.power ?? 2, 2));
+  const normalWeighting = clamp01(options.normalWeighting ?? 0);
+  const normal = mesh.geometry.getAttribute('normal');
+  const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
+  const modelBox = new THREE.Box3().setFromObject(mesh);
+  const modelSize = Math.max(
+    modelBox.max.x - modelBox.min.x,
+    modelBox.max.y - modelBox.min.y,
+    modelBox.max.z - modelBox.min.z,
+    1e-6,
+  );
+
+  const segments = skeleton.bones.map((bone, boneIndex) => ({
+    boneIndex,
+    ...getBoneSegment(bone, skeleton),
+  }));
+
+  const vertexPosition = new THREE.Vector3();
+  const worldPosition = new THREE.Vector3();
+  const vertexNormal = new THREE.Vector3();
+  let touchedVertices = 0;
+  let changedVertices = 0;
+
+  for (let vertexIndex = 0; vertexIndex < position.count; vertexIndex += 1) {
+    const current = readVertexSkinWeights(attributes, vertexIndex);
+    if (!current) continue;
+
+    vertexPosition.fromBufferAttribute(position, vertexIndex);
+    worldPosition.copy(vertexPosition).applyMatrix4(mesh.matrixWorld);
+    if (normal && normal.itemSize >= 3 && vertexIndex < normal.count) {
+      vertexNormal.fromBufferAttribute(normal, vertexIndex).applyMatrix3(normalMatrix).normalize();
+    } else {
+      vertexNormal.set(0, 0, 0);
+    }
+
+    const entries = segments.map((segment) => {
+      const closest = segmentClosestPoint(worldPosition, segment.start, segment.end);
+      const distance = Math.max(distanceToSegment(worldPosition, segment.start, segment.end), 1e-6);
+      const awayFromBone = vertexNormal.lengthSq() > 0
+        ? 2 - worldPosition.clone().sub(closest).normalize().dot(vertexNormal)
+        : 1;
+      const modifiedDistance = 1 + 64 * distance * THREE.MathUtils.lerp(1, awayFromBone, normalWeighting) / modelSize;
+      return {
+        boneIndex: segment.boneIndex,
+        weight: 1 / Math.pow(Math.max(modifiedDistance, 1e-6), power),
+      };
+    });
+
+    const next = makeWeightedVertex(entries);
+    if (!next) continue;
+
+    touchedVertices += 1;
+    if (!sameVertexSkinWeights(current, next, 1e-5)) {
+      writeVertexSkinWeights(attributes, vertexIndex, next);
+      changedVertices += 1;
+    }
+  }
+
+  return { touchedVertices, changedVertices };
 }
 
 function isSkinnedMesh(obj: THREE.Object3D): obj is THREE.SkinnedMesh {

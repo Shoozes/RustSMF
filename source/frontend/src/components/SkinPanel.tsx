@@ -21,6 +21,8 @@ interface SkinPanelProps {
   onSkinPaintTargetChange: (value: number) => void;
   onUndoSkinPaint: () => void;
   onRedoSkinPaint: () => void;
+  onNormalizeSkinWeights: () => void;
+  onAutoSkinWeights: () => void;
   skinUndoAvailable: boolean;
   skinRedoAvailable: boolean;
 }
@@ -45,6 +47,8 @@ export default function SkinPanel({
   onSkinPaintTargetChange,
   onUndoSkinPaint,
   onRedoSkinPaint,
+  onNormalizeSkinWeights,
+  onAutoSkinWeights,
   skinUndoAvailable,
   skinRedoAvailable,
   editorMode = 'skin',
@@ -136,6 +140,24 @@ export default function SkinPanel({
             onClick={onRedoSkinPaint}
           >
             Redo
+          </button>
+        </div>
+        <div className="flex gap-1 mb-2">
+          <button
+            data-testid="skin-normalize-btn"
+            className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600"
+            disabled={!hasSkeleton}
+            onClick={onNormalizeSkinWeights}
+          >
+            Normalize
+          </button>
+          <button
+            data-testid="skin-autoskin-btn"
+            className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600"
+            disabled={!hasSkeleton}
+            onClick={onAutoSkinWeights}
+          >
+            Auto Skin
           </button>
         </div>
         <div className="grid gap-1.5 text-[10px]">
