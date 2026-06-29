@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-29 (skin autoskin/normalize batch tools).
+Last reviewed: 2026-06-29 (rig validation panel + helper coverage).
 
 ## Current Product State
 
@@ -20,6 +20,7 @@ Core flow:
   - Direct `npm run dev` / `npm run tauri:dev` flows remain available but intentionally have reduced non-canonical lifecycle guarantees.
 - Drive animation through viewport-owned `AnimationMixer` state with timeline play/pause, scrub, speed, clip selection, imported keyframe markers, and an Animate workspace summary for active clip/selected-bone tracks.
 - Author selected-bone animation keys for position/quaternion tracks through the Animate workspace: Insert, Update, Delete, Copy, Paste, and Linear/Step interpolation controls update an edit layer, rebuild runtime `AnimationClip` tracks, drive the viewport mixer, and feed supported SMF export/check paths.
+- Validate loaded rigs in the Rig workspace. The Rig panel reports bone and skinned-mesh counts plus pass/warning/error rows for missing skeletons, duplicate bone names, orphan parents, self-parent/cycle hazards, incomplete skin attributes, mismatched skin attributes, and skin indices that reference missing bones.
 - Inspect skeletons, select bones from the hierarchy or viewport click, show larger diamond/joint skeleton helpers, show a selected-bone marker, use TransformControls, use quick nudges, and toggle selected-bone weight preview. Weight preview now shares the same four-slot skin-weight reader used by the tested edit helpers. Viewport skin painting now supports set/add/subtract brush modes with selected-bone prerequisite, brush hover markers, radius/strength/target controls, undo/redo stroke checkpoints, full-model Normalize and Auto Skin batch actions, state continuity across workspace transitions, and SMF export serialization of dirty skin edits.
 - Move selected bone endpoint markers in precision modes with camera-plane constrained drag (no model swap, no control conflict), and endpoint-drag lifecycle assertions are covered by e2e smoke in single and quad modes.
 - Export SMF sources through the high-fidelity SMF roundtrip path, including live position/rotation pose edits.
@@ -32,7 +33,7 @@ Core flow:
 - Keep editor mode + viewport layout transitions on the same shared model/viewport root; selected bone and scrub/timeline state are preserved across those transitions and now covered by smoke assertions.
 - Keep constrained-width workspace tabs deterministic after model load; the 360px smoke path clicks Model/Rig/Skin/Animate/Export without forced clicks and verifies selected bone plus scrub continuity.
 - Model/load/export async failures in `useLoadModel` now normalize unknown error values through a single helper and remove brittle `any` traversal casts for skinned mesh extraction/clip reads.
-- Modernization keeps the current React/Tauri/Three stack, uses GLB/GLTF as the preferred modern fidelity format, and preserves SMF for backwards compatibility. Old GameMaker screenshots/scripts now guide the remaining authoring parity work: deeper animation tooling polish, rig editing/validation, and deeper ortho-pane editing controls. Quad layout, pane labels/dividers, model-safe wireframe display, grouped Display menu toggles, submodel visibility/color cues, endpoint handles, imported/authored keyframe markers, autoskin/normalize batch tools, and pane-aware timing are current editor affordances covered by e2e/visual checks.
+- Modernization keeps the current React/Tauri/Three stack, uses GLB/GLTF as the preferred modern fidelity format, and preserves SMF for backwards compatibility. Old GameMaker screenshots/scripts now guide the remaining authoring parity work: deeper animation tooling polish, rig edit commands, and deeper ortho-pane editing controls. Quad layout, pane labels/dividers, model-safe wireframe display, grouped Display menu toggles, submodel visibility/color cues, endpoint handles, imported/authored keyframe markers, autoskin/normalize batch tools, Rig validation, and pane-aware timing are current editor affordances covered by e2e/visual checks.
 
 ## Architecture
 
@@ -45,6 +46,7 @@ Core flow:
 - `source/frontend/src/components/ThreeViewport.tsx`: renderer, scene, camera, orbit, model attach/dispose, mixer, modern skeleton helper, helper-mesh/raycast bone picking, marker, TransformControls, model-safe wireframe render override, and weight preview.
 - `source/frontend/src/utils/modernSkeletonHelper.ts`: typed port of the useful old helper idea, drawing larger diamond bone spans and joint markers with bone metadata for direct helper-hit selection.
 - `source/frontend/src/utils/skinWeights.ts`: pure skin-weight edit helpers and `SkinEditState` model for reading, setting, adding, subtracting, clamping, normalizing, inverse-distance autoskinning, touched-vertex snapshots, dirty tracking, and producing an explicit dirty-export block reason before UI/export wiring.
+- `source/frontend/src/utils/rigValidation.ts` / `source/frontend/src/components/RigPanel.tsx`: pure rig validation and Rig workspace report rows for skeleton graph and skin-reference hazards.
 - `source/frontend/src/components/Inspector.tsx`: typed skeleton tree, clip list, selection controls, transform mode controls, and nudge controls.
 - `source/frontend/src/components/Outliner.tsx`: model-derived submodel list with display-only visibility toggles and material/color cues.
 - `source/frontend/src/components/Timeline.tsx` / `source/frontend/src/components/AnimatePanel.tsx`: playback controls, scrub/keyframe lane, selected-key state, imported/authored keyframe markers, active clip/selected-bone summary, and keyframe authoring controls.
@@ -83,7 +85,7 @@ Core flow:
 - GLB/FBX-to-SMF conversion is available for skinned models with one shared named skeleton and no scale animation. Static roots, textures/materials, morph tracks, object-level tracks, and scale animation still use GLB export for fidelity. SMF diagnostics now block known impossible exports before save, surface warnings for compatibility risks that do not block, and provide a structured in-memory roundtrip check for count, geometry, bounds, animation timing/metadata, and first/last-frame pose deltas. Real imported SMF samples can still expose strict pose-delta mismatches; those are now classified in the cockpit but not yet root-caused.
 - GLB/GLTF remains the preferred format for maximum fidelity and new development. SMF support is scoped to legacy recovery and users who target the old SMF binary pipeline.
 - Live SMF position/rotation pose edits export; scale edits are blocked for SMF export because the current SMF DQ path has no scale channel.
-- Quad layout, ortho camera panes, single-view Ortho, visible pane labels/dividers, model-safe wireframe display, grouped Display menu toggles, Outliner submodel visibility/color cues, larger diamond/joint rig helpers, oversized selected-bone endpoint handles, imported/authored keyframe markers, selected-bone keyframe authoring, and endpoint drag interactions are implemented and covered by focused e2e/visual checks. Skin paint authoring now covers stroke undo/redo, autoskin/normalize batch actions, state continuity, and supported export behavior; deeper animation polish, real-SMF strict pose roundtrip cleanup, rig editing/validation, and deeper ortho-pane editing parity remain planned.
+- Quad layout, ortho camera panes, single-view Ortho, visible pane labels/dividers, model-safe wireframe display, grouped Display menu toggles, Outliner submodel visibility/color cues, larger diamond/joint rig helpers, oversized selected-bone endpoint handles, imported/authored keyframe markers, selected-bone keyframe authoring, Rig validation, and endpoint drag interactions are implemented and covered by focused e2e/visual checks. Skin paint authoring now covers stroke undo/redo, autoskin/normalize batch actions, state continuity, and supported export behavior; deeper animation polish, real-SMF strict pose roundtrip cleanup, rig edit commands, and deeper ortho-pane editing parity remain planned.
 - Launcher process safety (no rogue node servers on close) is Windows-primary via run.ps1 + mjs layers (Job/tree/scans/poll). Direct `tauri dev` or non-Windows have reduced coverage (mjs signals + polls + child-tree cleanup where supported); behavior is documented explicitly in launcher docs.
 
 ## Context Docs

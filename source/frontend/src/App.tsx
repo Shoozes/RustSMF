@@ -5,6 +5,7 @@ import Outliner from './components/Outliner'
 import Inspector from './components/Inspector'
 import Toolbar from './components/Toolbar'
 import SkinPanel from './components/SkinPanel';
+import RigPanel from './components/RigPanel';
 import AnimatePanel from './components/AnimatePanel';
 import ExportPanel from './components/ExportPanel';
 import { useLoadModel } from './hooks/useLoadModel'
@@ -12,6 +13,7 @@ import type { EditorMode } from './store'
 import { supportedModelFormatsLabel } from './utils/modelFormat'
 import { collectModelOutlinerItems } from './utils/modelOutliner'
 import { getClipByName, summarizeAnimationTimeline } from './utils/animationTimeline'
+import { validateRig } from './utils/rigValidation'
 
 type WorkspaceProfile = {
   showTimeline: boolean;
@@ -170,6 +172,10 @@ export default function App() {
     () => summarizeAnimationTimeline(currentClip, selectedBoneName),
     [currentClip, selectedBoneName],
   );
+  const rigValidationReport = useMemo(
+    () => validateRig(model.skeleton, model.root),
+    [model.skeleton, model.root],
+  );
   const timelineKeyframeTimes = animationTimelineSummary.selectedKeyframeTimes.length > 0
     ? animationTimelineSummary.selectedKeyframeTimes
     : animationTimelineSummary.keyframeTimes;
@@ -197,6 +203,15 @@ export default function App() {
     ui.setStatus(`${object.visible ? 'Shown' : 'Hidden'} submodel: ${name}`);
   }, [model.root, ui]);
   const modeWorkspacePanel = (() => {
+    if (editorMode === 'rig') {
+      return (
+        <RigPanel
+          selected={ui.selected}
+          report={rigValidationReport}
+          editorMode={editorMode}
+        />
+      );
+    }
     if (editorMode === 'skin') {
       return (
         <SkinPanel

@@ -1,0 +1,67 @@
+import type { RigValidationReport } from '../utils/rigValidation';
+
+interface RigPanelProps {
+  report: RigValidationReport;
+  selected: string;
+  editorMode?: string;
+}
+
+function statusClass(status: RigValidationReport['status']): string {
+  if (status === 'error') return 'text-rose-300';
+  if (status === 'warning') return 'text-amber-300';
+  return 'text-emerald-300';
+}
+
+export default function RigPanel({
+  report,
+  selected,
+  editorMode = 'rig',
+}: RigPanelProps) {
+  const visibleIssues = report.issues.slice(0, 6);
+
+  return (
+    <div className="inspector" data-testid="rig-workspace-panel" data-editor-mode={editorMode}>
+      <div className="panel-title">Rig Workspace</div>
+      <div className="text-[10px] text-slate-400">Selected: <span className="font-mono text-amber-300">{selected || 'Scene'}</span></div>
+      <div className="mt-2 grid grid-cols-2 gap-1 text-[10px]">
+        <div className="bg-slate-900/60 px-1 py-1 rounded">
+          <div className="text-slate-500">Bones</div>
+          <div data-testid="rig-bone-count" className="text-slate-200">{report.boneCount}</div>
+        </div>
+        <div className="bg-slate-900/60 px-1 py-1 rounded">
+          <div className="text-slate-500">Skinned Meshes</div>
+          <div data-testid="rig-skinned-mesh-count" className="text-slate-200">{report.skinnedMeshCount}</div>
+        </div>
+      </div>
+      <div className="mt-2 border-t border-slate-700 pt-2">
+        <div className="text-slate-400 text-[10px] mb-1">Validation</div>
+        <div data-testid="rig-validation-status" className={`text-xs ${statusClass(report.status)}`}>
+          {report.status === 'pass'
+            ? 'Rig validation: pass'
+            : report.status === 'warning'
+              ? `Rig validation: ${report.issues.length} warning${report.issues.length === 1 ? '' : 's'}`
+              : `Rig validation: ${report.issues.length} issue${report.issues.length === 1 ? '' : 's'}`}
+        </div>
+        {visibleIssues.length > 0 && (
+          <div className="mt-2 grid gap-1" data-testid="rig-validation-issues">
+            {visibleIssues.map((issue, index) => (
+              <div
+                key={`${issue.code}-${index}`}
+                className={`text-[10px] leading-snug border-l-2 pl-1 ${issue.severity === 'error' ? 'border-rose-400 text-rose-200' : 'border-amber-400 text-amber-200'}`}
+                data-testid={`rig-validation-issue-${index}`}
+              >
+                <div className="font-mono">{issue.code}</div>
+                <div>{issue.message}</div>
+              </div>
+            ))}
+          </div>
+        )}
+        {report.issues.length > visibleIssues.length && (
+          <div className="text-[10px] text-slate-500 mt-1">
+            {report.issues.length - visibleIssues.length} more issue{report.issues.length - visibleIssues.length === 1 ? '' : 's'} hidden.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

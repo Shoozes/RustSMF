@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-29 (skin autoskin/normalize batch tools)
+Last reviewed: 2026-06-29 (rig validation panel + helper coverage)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -121,17 +121,19 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
 
 - What: Add real rig editing commands: rename, create, delete, reparent, detach/connect, mirror/reset helpers, and hierarchy validation.
 - Why: SMF rigs are node-based, disconnected/head nodes matter, and rig edits can invalidate skin weights or animation tracks if not validated.
-- Where: `source/frontend/src/loaders/smfRig.ts`, `source/frontend/src/components/Inspector.tsx`, `source/frontend/src/components/RigPanel.tsx`, `source/frontend/src/hooks/rigEdits.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/tests`.
+- Where: `source/frontend/src/loaders/smfRig.ts`, `source/frontend/src/utils/rigValidation.ts`, `source/frontend/src/components/Inspector.tsx`, `source/frontend/src/components/RigPanel.tsx`, `source/frontend/src/hooks/rigEdits.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/tests`.
 - When: After skin edit state or alongside animation authoring only when validation/undo boundaries are explicit.
 - How:
   - Keep rig edits in a non-destructive edit layer before export.
   - Rebuild or patch the Three skeleton through tested helpers.
   - Validate cycles, orphan bones, self-parent roots, missing bind targets, and skin indices pointing at deleted bones.
 - Subtasks:
-  - Add a RigPanel for rename/reparent/create/delete commands.
-  - Add pure validators for cycles, orphaned nodes, and invalid skin references.
+  - Done: add a RigPanel validation surface for loaded rigs before mutation commands.
+  - Add RigPanel rename/reparent/create/delete commands.
+  - Done: add pure validators for cycles, duplicate names, orphaned nodes, missing skin attributes, mismatched skin attributes, and invalid skin references.
   - Add detach/head-node compatibility controls only after old-source source-map review.
-  - Add unit tests for hierarchy validation and e2e for create child -> transform -> export/reimport.
+  - Done: add unit tests for hierarchy validation and smoke coverage for no-model warning plus loaded generated-skinned pass state.
+  - Add e2e for create child -> transform -> export/reimport once edit commands exist.
 - Acceptance: Rig edits cannot create cyclic or silently invalid SMF output, and unsupported cases produce actionable diagnostics.
 
 ### P2: Add texture and material compatibility diagnostics

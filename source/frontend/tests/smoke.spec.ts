@@ -286,6 +286,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await assertModeActive('rig');
     await expect(page.getByTestId('inspector')).toBeVisible();
+    await expect(page.getByTestId('rig-workspace-panel')).toBeVisible();
+    await expect(page.getByTestId('rig-validation-status')).toContainText(/warning/i);
     await expect(page.getByTestId('three-canvas')).toBeVisible();
 
     await assertModeActive('skin');
@@ -716,6 +718,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await input.setInputFiles(skinnedFixtureInput);
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    await expect(page.getByTestId('rig-workspace-panel')).toBeVisible();
+    await expect(page.getByTestId('rig-validation-status')).toContainText(/pass/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('2');
     await page.getByTestId('mode-tab-skin').click({ force: true });
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
     await expect(page.getByTestId('skin-normalize-btn')).toBeEnabled();
