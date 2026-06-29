@@ -1205,6 +1205,14 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('rig-validation-status')).toContainText(/pass/i);
     await expect(inspector).toContainText(/FixtureSpine/i);
 
+    const tipBoneEntry = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    await expect(tipBoneEntry).toBeVisible();
+    await tipBoneEntry.click({ force: true });
+    await page.getByTestId('rig-reparent-parent').selectOption('FixtureSpine');
+    await page.getByTestId('rig-reparent-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Reparented FixtureTip under FixtureSpine/i);
+    await expect(page.getByTestId('rig-validation-status')).toContainText(/pass/i);
+
     await page.getByTestId('mode-tab-export').click({ force: true });
     const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
     await expect(diagnosticsPanel).toBeVisible();

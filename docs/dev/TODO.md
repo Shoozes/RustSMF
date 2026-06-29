@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-29 (non-SMF rig rename)
+Last reviewed: 2026-06-29 (non-SMF rig reparent)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -130,7 +130,8 @@ Source-map parity foundation is captured in `docs/dev/old_editor_source_map.md`.
 - Subtasks:
   - Done: add a RigPanel validation surface for loaded rigs before mutation commands.
   - Done: add selected-bone rename for non-SMF sources, including animation track retargeting, authored key edit retargeting, pose edit key migration, skin selected-bone migration, and generated-skinned export smoke coverage.
-  - Add RigPanel reparent/create/delete commands.
+  - Done: add selected-bone reparent for non-SMF sources, including cycle/self-parent validation, world-transform preservation, Inspector hierarchy continuity after rename, and generated-skinned smoke coverage.
+  - Add RigPanel create/delete commands.
   - Decide whether SMF-source node renames remain blocked for node-index fidelity or need an explicit SMF metadata/name layer.
   - Done: add pure validators for cycles, duplicate names, orphaned nodes, missing skin attributes, mismatched skin attributes, and invalid skin references.
   - Add detach/head-node compatibility controls only after old-source source-map review.

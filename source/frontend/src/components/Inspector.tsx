@@ -57,17 +57,17 @@ const Inspector: React.FC<InspectorProps> = ({
   React.useEffect(() => {
     if (skeleton && skeleton.bones.length > 0) {
       const roots = getRootBones(skeleton.bones);
-      setExpandedBones(new Set(roots.map((bone) => bone.name)));
+      setExpandedBones(new Set(roots.map((bone) => bone.uuid)));
     } else {
       setExpandedBones(new Set());
     }
   }, [skeleton]);
 
-  const toggleBone = (name: string, e: React.MouseEvent) => {
+  const toggleBone = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setExpandedBones(prev => {
       const next = new Set(prev);
-      if (next.has(name)) next.delete(name); else next.add(name);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
@@ -77,7 +77,7 @@ const Inspector: React.FC<InspectorProps> = ({
     const isSelected = selected === bone.name;
     const childBones = bone.children.filter(isBone);
     const hasChildren = childBones.length > 0;
-    const isExpanded = expandedBones.has(bone.name);
+    const isExpanded = expandedBones.has(bone.uuid);
     return (
       <li key={bone.name || depth} className="list-none">
         <div
@@ -88,7 +88,7 @@ const Inspector: React.FC<InspectorProps> = ({
           {hasChildren && (
             <span
               className="inline-block w-3 text-center mr-1 select-none"
-              onClick={(e) => toggleBone(bone.name, e)}
+              onClick={(e) => toggleBone(bone.uuid, e)}
             >
               {isExpanded ? '−' : '+'}
             </span>

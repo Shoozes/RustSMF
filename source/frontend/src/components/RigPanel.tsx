@@ -4,8 +4,10 @@ import type { RigValidationReport } from '../utils/rigValidation';
 interface RigPanelProps {
   report: RigValidationReport;
   selected: string;
+  boneNames: string[];
   sourceFormat: string;
   onRenameSelectedBone: (nextName: string) => void;
+  onReparentSelectedBone: (parentName: string) => void;
   editorMode?: string;
 }
 
@@ -18,17 +20,28 @@ function statusClass(status: RigValidationReport['status']): string {
 export default function RigPanel({
   report,
   selected,
+  boneNames,
   sourceFormat,
   onRenameSelectedBone,
+  onReparentSelectedBone,
   editorMode = 'rig',
 }: RigPanelProps) {
   const visibleIssues = report.issues.slice(0, 6);
   const [renameValue, setRenameValue] = useState(selected === 'Scene' ? '' : selected);
+  const [parentValue, setParentValue] = useState('');
   const canRename = !!selected && selected !== 'Scene' && report.boneCount > 0 && sourceFormat !== 'smf';
+  const parentOptions = boneNames.filter((name) => name && name !== selected);
+  const canReparent = canRename && parentOptions.length > 0;
 
   useEffect(() => {
     setRenameValue(selected === 'Scene' ? '' : selected);
   }, [selected]);
+
+  useEffect(() => {
+    if (!parentOptions.includes(parentValue)) {
+      setParentValue(parentOptions[0] ?? '');
+    }
+  }, [parentOptions, parentValue]);
 
   return (
     <div className="inspector" data-testid="rig-workspace-panel" data-editor-mode={editorMode}>
@@ -62,6 +75,28 @@ export default function RigPanel({
             onClick={() => onRenameSelectedBone(renameValue)}
           >
             Rename
+          </button>
+        </div>
+        <div className="flex gap-1 mb-2">
+          <select
+            data-testid="rig-reparent-parent"
+            value={parentValue}
+            disabled={!canReparent}
+            onChange={(event) => setParentValue(event.target.value)}
+            className="min-w-0 flex-1 bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100 disabled:text-slate-500"
+            aria-label="Parent bone"
+          >
+            {parentOptions.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          <button
+            data-testid="rig-reparent-btn"
+            className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50"
+            disabled={!canReparent || !parentValue}
+            onClick={() => onReparentSelectedBone(parentValue)}
+          >
+            Reparent
           </button>
         </div>
         {sourceFormat === 'smf' && (

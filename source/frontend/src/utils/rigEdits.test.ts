@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import * as THREE from 'three';
 import {
+  reparentBonePreserveWorldTransform,
   retargetAnimationClipBoneNames,
+  validateBoneReparent,
   validateBoneRename,
 } from './rigEdits';
 
@@ -46,5 +48,39 @@ describe('rigEdits', () => {
       'Root.quaternion',
       'Arm.position',
     ]);
+  });
+
+  it('validates reparent requests without allowing cycles', () => {
+    const skeleton = makeSkeleton();
+
+    assert.equal(validateBoneReparent(skeleton, 'Tip', 'Root').ok, true);
+    assert.equal(validateBoneReparent(skeleton, 'Root', 'Tip').ok, false);
+    assert.equal(validateBoneReparent(skeleton, 'Root', 'Root').ok, false);
+    assert.equal(validateBoneReparent(skeleton, 'Missing', 'Root').ok, false);
+    assert.equal(validateBoneReparent(skeleton, 'Tip', 'Missing').ok, false);
+  });
+
+  it('reparents a bone while preserving its world transform', () => {
+    const root = new THREE.Bone();
+    root.name = 'Root';
+    root.position.set(1, 0, 0);
+    const middle = new THREE.Bone();
+    middle.name = 'Middle';
+    middle.position.set(0, 2, 0);
+    const tip = new THREE.Bone();
+    tip.name = 'Tip';
+    tip.position.set(0, 0, 3);
+    root.add(middle);
+    root.add(tip);
+    const skeleton = new THREE.Skeleton([root, middle, tip]);
+    root.updateMatrixWorld(true);
+    const before = tip.getWorldPosition(new THREE.Vector3());
+
+    const result = reparentBonePreserveWorldTransform(skeleton, 'Tip', 'Middle');
+    const after = tip.getWorldPosition(new THREE.Vector3());
+
+    assert.equal(result.ok, true);
+    assert.equal(tip.parent, middle);
+    assert.ok(before.distanceTo(after) < 1e-6);
   });
 });

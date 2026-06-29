@@ -11,6 +11,18 @@ export type RigRenameValidationResult =
   | { ok: true; name: string }
   | { ok: false; reason: RigRenameFailureReason; message: string };
 
+export type RigReparentFailureReason =
+  | 'no-selected-bone'
+  | 'no-parent-bone'
+  | 'missing-bone'
+  | 'missing-parent'
+  | 'self-parent'
+  | 'cycle';
+
+export type RigReparentValidationResult =
+  | { ok: true; bone: THREE.Bone; parent: THREE.Bone }
+  | { ok: false; reason: RigReparentFailureReason; message: string };
+
 const BONE_NAME_PATTERN = /^[A-Za-z0-9_.:-]+$/;
 
 export function validateBoneRename(
@@ -84,4 +96,70 @@ export function retargetAnimationClipBoneNames(
   newBoneName: string,
 ): THREE.AnimationClip[] {
   return clips.map((clip) => retargetAnimationClipBoneName(clip, oldBoneName, newBoneName));
+}
+
+function findBone(skeleton: THREE.Skeleton | null | undefined, name: string): THREE.Bone | null {
+  if (!skeleton || !name || name === 'Scene') return null;
+  return skeleton.bones.find((bone) => bone.name === name) ?? null;
+}
+
+function isDescendantOf(candidate: THREE.Bone, ancestor: THREE.Bone): boolean {
+  let parent = candidate.parent;
+  while (parent) {
+    if (parent === ancestor) return true;
+    parent = parent.parent;
+  }
+  return false;
+}
+
+export function validateBoneReparent(
+  skeleton: THREE.Skeleton | null | undefined,
+  boneName: string,
+  parentName: string,
+): RigReparentValidationResult {
+  if (!skeleton || !boneName || boneName === 'Scene') {
+    return { ok: false, reason: 'no-selected-bone', message: 'Select a bone before reparenting.' };
+  }
+  if (!parentName || parentName === 'Scene') {
+    return { ok: false, reason: 'no-parent-bone', message: 'Choose a parent bone before reparenting.' };
+  }
+
+  const bone = findBone(skeleton, boneName);
+  if (!bone) {
+    return { ok: false, reason: 'missing-bone', message: `Bone ${boneName} is not in the current skeleton.` };
+  }
+  const parent = findBone(skeleton, parentName);
+  if (!parent) {
+    return { ok: false, reason: 'missing-parent', message: `Parent bone ${parentName} is not in the current skeleton.` };
+  }
+  if (bone === parent) {
+    return { ok: false, reason: 'self-parent', message: 'A bone cannot be parented to itself.' };
+  }
+  if (isDescendantOf(parent, bone)) {
+    return { ok: false, reason: 'cycle', message: 'Cannot reparent a bone under one of its descendants.' };
+  }
+
+  return { ok: true, bone, parent };
+}
+
+export function reparentBonePreserveWorldTransform(
+  skeleton: THREE.Skeleton,
+  boneName: string,
+  parentName: string,
+): RigReparentValidationResult {
+  const validation = validateBoneReparent(skeleton, boneName, parentName);
+  if (!validation.ok) return validation;
+
+  const { bone, parent } = validation;
+  const worldMatrix = bone.matrixWorld.clone();
+  parent.add(bone);
+  parent.updateMatrixWorld(true);
+
+  const localMatrix = parent.matrixWorld.clone().invert().multiply(worldMatrix);
+  localMatrix.decompose(bone.position, bone.quaternion, bone.scale);
+  bone.updateMatrix();
+  bone.updateMatrixWorld(true);
+  skeleton.update();
+
+  return validation;
 }

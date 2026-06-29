@@ -84,6 +84,7 @@ export default function App() {
     handleDrop,
     handleSelectBone,
     renameSelectedBone,
+    reparentSelectedBone,
     onNudgeBone,
     setupKeyboard,
     togglePlay,
@@ -162,6 +163,7 @@ export default function App() {
   const shouldShowBoneLabels = showBoneLabels || workspace.boneLabelsEnabledByDefault;
   const hasModel = !!model.root;
   const hasSkinnedModel = !!model.skeleton && model.skeleton.bones.length > 0;
+  const rigBoneNames = model.skeleton?.bones.map((bone) => bone.name).filter(Boolean) ?? [];
   const selectedBoneName = useMemo(() => {
     return model.skeleton?.bones.some((bone) => bone.name === ui.selected) ? ui.selected : '';
   }, [model.skeleton, ui.selected]);
@@ -208,9 +210,11 @@ export default function App() {
       return (
         <RigPanel
           selected={ui.selected}
+          boneNames={rigBoneNames}
           report={rigValidationReport}
           sourceFormat={sourceFormat}
           onRenameSelectedBone={renameSelectedBone}
+          onReparentSelectedBone={reparentSelectedBone}
           editorMode={editorMode}
         />
       );

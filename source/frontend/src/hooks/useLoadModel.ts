@@ -51,7 +51,7 @@ import {
   type AnimationInterpolation,
   type EditableBoneKeyframe,
 } from '../utils/animationEdits';
-import { retargetAnimationClipBoneNames, validateBoneRename } from '../utils/rigEdits';
+import { reparentBonePreserveWorldTransform, retargetAnimationClipBoneNames, validateBoneRename } from '../utils/rigEdits';
 
 type LoadedModelResult =
   | Awaited<ReturnType<typeof buildSmfScene>>
@@ -978,6 +978,27 @@ export function useLoadModel() {
     ui.setStatus(`Renamed bone ${oldName} to ${validation.name}.`);
   }, [commitSkinEditState, model, sourceFormat, ui]);
 
+  const reparentSelectedBone = useCallback((parentName: string) => {
+    const skeleton = model.skeleton;
+    const boneName = ui.selected;
+    if (sourceFormat === 'smf') {
+      ui.setStatus('SMF-source reparenting is blocked until head-node compatibility editing is explicit.');
+      return;
+    }
+    if (!skeleton) {
+      ui.setStatus('Load a skinned model before reparenting bones.');
+      return;
+    }
+
+    const result = reparentBonePreserveWorldTransform(skeleton, boneName, parentName);
+    if (!result.ok) {
+      ui.setStatus(result.message);
+      return;
+    }
+
+    ui.setStatus(`Reparented ${boneName} under ${parentName}.`);
+  }, [model.skeleton, sourceFormat, ui]);
+
   // Route bone nudge buttons through pose-edit layer so edits are captured at export time.
   // Applies the delta to the Three.js bone for immediate visual feedback, and records the
   // cumulative edit in poseEditsRef for use by handleExport.
@@ -1334,6 +1355,7 @@ export function useLoadModel() {
     handleDrop,
     handleSelectBone,
     renameSelectedBone,
+    reparentSelectedBone,
     onNudgeBone,
     setupKeyboard,
     togglePlay,
