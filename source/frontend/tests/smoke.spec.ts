@@ -300,10 +300,16 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('skin-paint-mode-set')).toBeDisabled();
     await expect(page.getByTestId('skin-paint-mode-add')).toBeDisabled();
     await expect(page.getByTestId('skin-paint-mode-subtract')).toBeDisabled();
+    await expect(page.getByTestId('skin-paint-mode-auto')).toBeDisabled();
+    await expect(page.getByTestId('skin-paint-target-mode')).toBeDisabled();
     await expect(page.getByTestId('skin-paint-undo-btn')).toBeDisabled();
     await expect(page.getByTestId('skin-paint-redo-btn')).toBeDisabled();
     await expect(page.getByTestId('skin-normalize-btn')).toBeDisabled();
     await expect(page.getByTestId('skin-autoskin-btn')).toBeDisabled();
+    await expect(page.getByTestId('skin-autoskin-algorithm')).toBeDisabled();
+    await expect(page.getByTestId('skin-autoskin-power')).toBeDisabled();
+    await expect(page.getByTestId('skin-autoskin-normal-weighting')).toBeDisabled();
+    await expect(page.getByTestId('skin-autoskin-max-influences')).toBeDisabled();
 
     await assertModeActive('animate');
     await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
@@ -345,9 +351,42 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
     await expect(firstVisibilityToggle).toHaveAttribute('aria-pressed', 'false');
     await expect(page.getByTestId('status-text')).toContainText(/Hidden submodel/i);
-    await firstVisibilityToggle.click();
+    await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
+    await page.getByTestId('editor-undo-btn').click();
     await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
     await expect(firstVisibilityToggle).toHaveAttribute('aria-pressed', 'true');
+    await expect(page.getByTestId('status-text')).toContainText(/Undid outliner visibility toggle/i);
+    await expect(page.getByTestId('editor-redo-btn')).toBeEnabled();
+    await page.getByTestId('editor-redo-btn').click();
+    await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
+    await expect(firstVisibilityToggle).toHaveAttribute('aria-pressed', 'false');
+    await expect(page.getByTestId('status-text')).toContainText(/Redid outliner visibility toggle/i);
+    await page.getByTestId('editor-undo-btn').click();
+    await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
+    await expect(firstVisibilityToggle).toHaveAttribute('aria-pressed', 'true');
+    await firstSubmodel.locator('button').first().click();
+    await expect(firstSubmodel).toHaveAttribute('data-selected', 'true');
+    await expect(page.getByTestId('outliner-selection-count')).toContainText('1 selected');
+    await page.getByTestId('outliner-select-all-btn').click();
+    await expect(page.getByTestId('outliner-selection-count')).toContainText(/selected/);
+    await page.getByTestId('outliner-hide-selected-btn').click();
+    await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
+    await page.keyboard.press('Control+Z');
+    await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
+    await expect(page.getByTestId('status-text')).toContainText(/Undid hide selected submodels/i);
+    await page.keyboard.press('Control+Y');
+    await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
+    await expect(page.getByTestId('status-text')).toContainText(/Redid hide selected submodels/i);
+    await page.getByTestId('outliner-unhide-all-btn').click();
+    await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
+    await firstSubmodel.locator('button').first().click();
+    await page.getByTestId('outliner-hide-unselected-btn').click();
+    if (await page.getByTestId('outliner-submodel-1').count() > 0) {
+      await expect(page.getByTestId('outliner-submodel-1')).toHaveAttribute('data-visible', 'false');
+    }
+    await page.getByTestId('outliner-unhide-all-btn').click();
+    await page.getByTestId('outliner-clear-selection-btn').click();
+    await expect(page.getByTestId('outliner-selection-count')).toContainText('0 selected');
 
     // Timeline should be enabled / have content
     await expect(page.getByTestId('timeline')).toBeVisible();
@@ -375,6 +414,17 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const skinPointsBtn = page.getByTestId('viewport-skin-points-toggle');
     const modelOpacityBtn = page.getByTestId('viewport-model-opacity-toggle');
     const canvas = page.getByTestId('three-canvas');
+    await canvas.click({ position: { x: 410, y: 260 } });
+    await expect(canvas).toHaveAttribute('data-pointer-owner', 'model-select');
+    await expect(page.getByTestId('outliner-selection-count')).toContainText('1 selected');
+    await expect(page.getByTestId('outliner').locator('[data-selected="true"]').first()).toBeVisible();
+    await expect(canvas).toHaveAttribute('data-selection-overlay-count', /[1-9]\d*/);
+    await page.getByTestId('outliner-hide-selected-btn').click();
+    await expect(canvas).toHaveAttribute('data-selection-overlay-count', '0');
+    await page.getByTestId('outliner-unhide-all-btn').click();
+    await expect(canvas).toHaveAttribute('data-selection-overlay-count', /[1-9]\d*/);
+    await canvas.click({ button: 'right', position: { x: 410, y: 260 } });
+    await expect(page.getByTestId('status-text')).toContainText(/Submodel context actions ready/i);
     await expect(wireframeBtn).toBeEnabled();
     await expect(wireframeBtn).toHaveAttribute('aria-pressed', 'false');
     await expect(gridBtn).toBeEnabled();
@@ -553,13 +603,11 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('animate-workspace-panel')).toBeHidden();
     await expect(page.getByTestId('export-workspace-panel')).toBeHidden();
 
-    // Exercise 3D viewport click (exercises raycast bone pick handler + orbit compat; no crash expected)
+    // Exercise Model workspace viewport click routing (object pick/empty clear + orbit compat; no crash expected)
     await canvas.click({ position: { x: 60, y: 60 } });
     await page.waitForTimeout(80);
     await expect(canvas).toBeVisible();
-
-    // Verify bone selection (list or 3D raycast) updates status UX
-    await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
+    await expect(canvas).toHaveAttribute('data-pointer-owner', 'model-select');
 
     // Assert no critical browser console errors during load (errors logged by listener)
     // (warnings may exist for Three.js, but no errors)
@@ -748,7 +796,13 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
     await expect(page.getByTestId('skin-normalize-btn')).toBeEnabled();
     await expect(page.getByTestId('skin-autoskin-btn')).toBeEnabled();
+    await expect(page.getByTestId('skin-autoskin-algorithm')).toHaveValue('inverse-segment-distance');
+    await expect(page.getByTestId('skin-autoskin-power')).toBeEnabled();
+    await expect(page.getByTestId('skin-autoskin-normal-weighting')).toBeEnabled();
+    await expect(page.getByTestId('skin-autoskin-max-influences')).toBeEnabled();
     await expect(page.getByTestId('skin-paint-mode-add')).toBeEnabled();
+    await expect(page.getByTestId('skin-paint-mode-auto')).toBeEnabled();
+    await expect(page.getByTestId('skin-paint-target-mode')).toBeEnabled();
 
     const inspector = page.getByTestId('inspector');
     const fixtureBone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
@@ -829,6 +883,51 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     }
   });
 
+  test('global pose undo and redo track nudge transactions', async ({ page }) => {
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
+
+    await expect(page.getByTestId('editor-undo-btn')).toBeDisabled();
+    await expect(page.getByTestId('editor-redo-btn')).toBeDisabled();
+
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    const inspector = page.getByTestId('inspector');
+    const boneEntry = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    await expect(boneEntry).toBeVisible();
+    await boneEntry.click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
+
+    await page.getByTestId('transform-x-btn').click({ force: true });
+    await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
+    await expect(page.getByTestId('editor-redo-btn')).toBeDisabled();
+
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid Nudge FixtureTip/i);
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
+    await expect(page.getByTestId('editor-undo-btn')).toBeDisabled();
+    await expect(page.getByTestId('editor-redo-btn')).toBeEnabled();
+
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid Nudge FixtureTip/i);
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
+
+    await page.keyboard.press('Control+Z');
+    await expect(page.getByTestId('status-text')).toContainText(/Undid Nudge FixtureTip/i);
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
+
+    await page.keyboard.press('Control+Y');
+    await expect(page.getByTestId('status-text')).toContainText(/Redid Nudge FixtureTip/i);
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+  });
+
   test('endpoint drag works in rig mode across single and quad layouts', async ({ page }) => {
     test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
 
@@ -859,6 +958,11 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const singleCanvas = page.getByTestId('three-canvas');
     const singleDrag = await dragEndpointHandle(page, selectedBone);
     expect(singleDrag).toBe(true);
+    await expect(singleCanvas).toHaveAttribute('data-pointer-owner', 'rig-endpoint-drag');
+    await expect(singleCanvas).toHaveAttribute('data-bone-transform-source', 'endpoint-drag');
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    await page.getByTestId('mode-tab-rig').click({ force: true });
 
     await setViewportLayout(page, 'quad');
     const quadDragOk = await dragEndpointHandle(page, selectedBone);
@@ -876,6 +980,15 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
     await pausePlaybackIfRunning(page);
+
+    const firstSubmodel = page.getByTestId('outliner-submodel-0');
+    const firstVisibilityToggle = page.getByTestId('outliner-visibility-toggle-0');
+    await expect(firstSubmodel).toBeVisible();
+    await firstVisibilityToggle.click();
+    await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
+    await firstVisibilityToggle.click();
+    await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
+    await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
 
     await page.getByTestId('mode-tab-rig').click({ force: true });
     const inspector = page.getByTestId('inspector');
@@ -895,12 +1008,28 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
     await expect(page.getByTestId('animation-selected-key')).not.toContainText('none');
     await expect(page.getByTestId('status-text')).toContainText(/Inserted animation keyframe/i);
+    await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
+
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid insert animation keyframe/i);
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: false');
+    await expect(page.getByTestId('editor-redo-btn')).toBeEnabled();
+
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid insert animation keyframe/i);
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
     await page.getByTestId('animation-copy-key-btn').click();
     await expect(page.getByTestId('animation-paste-key-btn')).toBeEnabled();
     await setRangeValue(page, 'scrub-slider', 0.37);
     await page.getByTestId('animation-paste-key-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Pasted animation keyframe/i);
+
+    await page.keyboard.press('Control+Z');
+    await expect(page.getByTestId('status-text')).toContainText(/Undid paste animation keyframe/i);
+    await page.keyboard.press('Control+Y');
+    await expect(page.getByTestId('status-text')).toContainText(/Redid paste animation keyframe/i);
+
     await page.getByTestId('animation-update-key-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Updated animation keyframe/i);
     await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', /[1-9]\d*/);
@@ -914,6 +1043,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
     await page.getByTestId('animation-delete-key-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Deleted animation keyframe/i);
+    await page.keyboard.press('Control+Z');
+    await expect(page.getByTestId('status-text')).toContainText(/Undid delete animation keyframe/i);
+    await page.keyboard.press('Control+Y');
+    await expect(page.getByTestId('status-text')).toContainText(/Redid delete animation keyframe/i);
   });
 
   test('export flow and basic visuals (smoke for roundtrip prep)', async ({ page }) => {
@@ -938,6 +1071,11 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     if (await anyBoneEntry.count() > 0) {
       await anyBoneEntry.click({ force: true }).catch(() => {});
       await page.waitForTimeout(60);
+    }
+    const scaleBtn = inspector.getByTestId('mode-scale-btn');
+    if (await scaleBtn.count() > 0) {
+      await scaleBtn.click({ force: true }).catch(() => {});
+      await expect(page.getByTestId('status-text')).toContainText(/SMF export does not support scale edits/i);
     }
     const xBtn = inspector.getByTestId('transform-x-btn');
     if (await xBtn.count() > 0) {
@@ -1073,9 +1211,11 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
       await page.waitForTimeout(60);
     }
 
-    // Canvas/raycast click for 3D select
-    await canvas.click({ position: { x: 60, y: 60 } });
+    // Canvas/raycast click for 3D bone select belongs to Rig mode; View mode now handles model/submodel picking.
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    await canvas.click({ position: { x: 70, y: 70 } });
     await page.waitForTimeout(80);
+    await expect(canvas).toHaveAttribute('data-pointer-owner', 'rig-select');
     await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
 
     // Confirm inspector reflects bones (rig info indirectly via count)
@@ -1226,25 +1366,52 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Renamed bone FixtureRoot to FixtureSpine/i);
     await expect(page.getByTestId('rig-validation-status')).toContainText(/pass/i);
     await expect(inspector).toContainText(/FixtureSpine/i);
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid rename rig bone FixtureRoot to FixtureSpine/i);
+    await expect(inspector).toContainText(/FixtureRoot/i);
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid rename rig bone FixtureRoot to FixtureSpine/i);
+    await expect(inspector).toContainText(/FixtureSpine/i);
 
     const tipBoneEntry = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
     await expect(tipBoneEntry).toBeVisible();
     await tipBoneEntry.click({ force: true });
-    await page.getByTestId('rig-reparent-parent').selectOption('FixtureSpine');
-    await page.getByTestId('rig-reparent-btn').click({ force: true });
-    await expect(page.getByTestId('status-text')).toContainText(/Reparented FixtureTip under FixtureSpine/i);
-    await expect(page.getByTestId('rig-validation-status')).toContainText(/pass/i);
 
     await page.getByTestId('rig-create-child-input').fill('FixtureExtra');
     await page.getByTestId('rig-create-child-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Created child bone FixtureExtra under FixtureTip/i);
     await expect(page.getByTestId('rig-bone-count')).toContainText('3');
     await expect(inspector).toContainText(/Selected\s*FixtureExtra/i);
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid create rig bone FixtureExtra/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('2');
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid create rig bone FixtureExtra/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await expect(inspector).toContainText(/Selected\s*FixtureExtra/i);
+
+    await page.getByTestId('rig-reparent-parent').selectOption('FixtureSpine');
+    await page.getByTestId('rig-reparent-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Reparented FixtureExtra under FixtureSpine/i);
+    await expect(page.getByTestId('rig-validation-status')).toContainText(/pass/i);
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid reparent rig bone FixtureExtra under FixtureSpine/i);
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid reparent rig bone FixtureExtra under FixtureSpine/i);
+
     await page.getByTestId('transform-x-btn').click({ force: true });
     await page.getByTestId('rig-delete-bone-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Deleted bone FixtureExtra/i);
     await expect(page.getByTestId('rig-bone-count')).toContainText('2');
-    await expect(inspector).toContainText(/Selected\s*FixtureTip/i);
+    await expect(inspector).toContainText(/Selected\s*FixtureSpine/i);
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid delete rig bone FixtureExtra/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await expect(inspector).toContainText(/Selected\s*FixtureExtra/i);
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid delete rig bone FixtureExtra/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('2');
+    await expect(inspector).toContainText(/Selected\s*FixtureSpine/i);
 
     await page.getByTestId('mode-tab-export').click({ force: true });
     const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
@@ -1337,8 +1504,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: false');
 
     const canvas = page.getByTestId('three-canvas');
-    await page.getByTestId('three-canvas').click();
     await paintInViewport(page);
+    await expect(canvas).toHaveAttribute('data-pointer-owner', 'rig-select');
     await expect(canvas).toHaveAttribute('data-skin-brush-hover', 'inactive');
     const noBoneHitCount = Number(await canvas.getAttribute('data-skin-paint-hit-count'));
     expect(noBoneHitCount).toBe(0);
@@ -1379,6 +1546,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await paintInViewport(page);
     const paintCanvas = page.getByTestId('three-canvas');
+    await expect(paintCanvas).toHaveAttribute('data-pointer-owner', 'skin-paint');
     await expect(paintCanvas).toHaveAttribute('data-skin-brush-hover', 'active');
     const paintHitCount = Number(await paintCanvas.getAttribute('data-skin-paint-hit-count'));
     expect(paintHitCount).toBeGreaterThan(0);
@@ -1392,22 +1560,65 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
     await expect(page.getByTestId('skin-paint-undo-btn')).toBeEnabled();
     await expect(page.getByTestId('skin-paint-redo-btn')).toBeDisabled();
+    await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
+    await expect(page.getByTestId('editor-redo-btn')).toBeDisabled();
 
-    await page.getByTestId('skin-paint-undo-btn').click({ force: true });
-    await expect(page.getByTestId('status-text')).toContainText(/Undid skin paint stroke/i);
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid skin edit/i);
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: false');
     await expect(page.getByTestId('skin-paint-undo-btn')).toBeDisabled();
     await expect(page.getByTestId('skin-paint-redo-btn')).toBeEnabled();
+    await expect(page.getByTestId('editor-redo-btn')).toBeEnabled();
 
-    await page.getByTestId('skin-paint-redo-btn').click({ force: true });
-    await expect(page.getByTestId('status-text')).toContainText(/Redid skin paint stroke/i);
+    await page.keyboard.press('Control+Y');
+    await expect(page.getByTestId('status-text')).toContainText(/Redid skin edit/i);
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
     await expect(page.getByTestId('skin-paint-undo-btn')).toBeEnabled();
 
+    await page.getByTestId('skin-autoskin-algorithm').selectOption('closest-two');
+    await page.getByTestId('skin-paint-mode-auto').click({ force: true }).catch(() => {});
+    await expect(page.getByTestId('skin-paint-mode-auto')).toHaveClass(/bg-emerald-500/);
+    await page.getByTestId('skin-paint-target-mode').selectOption('vertex');
+    await setRangeValue(page, 'skin-paint-radius', 0.35);
+    await setRangeValue(page, 'skin-paint-strength', 1);
+    await paintInViewport(page);
+    await expect(paintCanvas).toHaveAttribute('data-skin-paint-mode', 'auto');
+    await expect(paintCanvas).toHaveAttribute('data-skin-paint-target-mode', 'vertex');
+    const autoPaintHitCount = Number(await paintCanvas.getAttribute('data-skin-paint-hit-count'));
+    const autoPaintCandidateCount = Number(await paintCanvas.getAttribute('data-skin-candidate-count'));
+    const autoPaintTotalVertexCount = Number(await paintCanvas.getAttribute('data-skin-total-vertex-count'));
+    expect(autoPaintHitCount).toBeGreaterThan(0);
+    expect(autoPaintCandidateCount).toBeGreaterThan(0);
+    expect(autoPaintTotalVertexCount).toBeGreaterThan(autoPaintCandidateCount);
+    await expect(page.getByTestId('status-text')).toContainText(/auto Closest two mode/i);
+    await page.keyboard.press('Control+Z');
+    await expect(page.getByTestId('status-text')).toContainText(/Undid skin edit/i);
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid skin edit/i);
+
+    await page.getByTestId('skin-autoskin-algorithm').selectOption('nearest-segment');
+    await expect(page.getByTestId('skin-autoskin-power')).toBeDisabled();
+    await expect(page.getByTestId('skin-autoskin-normal-weighting')).toBeDisabled();
+    await expect(page.getByTestId('skin-autoskin-max-influences')).toBeDisabled();
+    await page.getByTestId('skin-autoskin-algorithm').selectOption('inverse-segment-distance');
+    await setRangeValue(page, 'skin-autoskin-power', 3);
+    await setRangeValue(page, 'skin-autoskin-normal-weighting', 0.5);
+    await setRangeValue(page, 'skin-autoskin-max-influences', 2);
+    await expect(page.getByTestId('skin-autoskin-power')).toHaveValue('3');
+    await expect(page.getByTestId('skin-autoskin-normal-weighting')).toHaveValue('0.5');
+    await expect(page.getByTestId('skin-autoskin-max-influences')).toHaveValue('2');
     await page.getByTestId('skin-autoskin-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Auto skin/i);
+    await expect(page.getByTestId('status-text')).toContainText(/power 3, normal 0.5, max 2/i);
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
     await expect(page.getByTestId('skin-paint-undo-btn')).toBeEnabled();
+
+    await page.keyboard.press('Control+Z');
+    await expect(page.getByTestId('status-text')).toContainText(/Undid skin edit/i);
+    await expect(page.getByTestId('skin-paint-redo-btn')).toBeEnabled();
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid skin edit/i);
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
 
     await page.getByTestId('export-smf-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });

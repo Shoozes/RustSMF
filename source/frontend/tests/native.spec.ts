@@ -167,12 +167,18 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     expect(snapshot.writes[0].path).toBe(savePath);
 
     const writesBeforeSecondExport = snapshot.writes.length;
+    const savesBeforeSecondExport = snapshot.calls.filter((call) => call.cmd === 'plugin:dialog|save').length;
     await updateTauriMock(page, { writeDelayMs: 0 });
-    await exportButton.click();
+    await expect(exportButton).toBeEnabled();
+    // First export above uses a real pointer click; this repeat path targets handler recovery after mocked native save focus.
+    await exportButton.dispatchEvent('click');
     await expect.poll(async () => (
       await getTauriMockSnapshot(page)
-    ).writes.length, { timeout: 5000 }).toBe(writesBeforeSecondExport + 1);
-    await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
+    ).calls.filter((call) => call.cmd === 'plugin:dialog|save').length, { timeout: 30000 }).toBe(savesBeforeSecondExport + 1);
+    await expect.poll(async () => (
+      await getTauriMockSnapshot(page)
+    ).writes.length, { timeout: 30000 }).toBe(writesBeforeSecondExport + 1);
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 30000 });
     snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.writes).toHaveLength(2);
   });

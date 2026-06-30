@@ -27,7 +27,8 @@ Sources used:
     - Autoskin path computes distance-to-bone and normal weighting, then normalizes to 255 weight sum.
   - Current implementation status in RustSMF:
     - `SkinPanel` provides mode/target/strength/radius controls.
-    - `ThreeViewport` executes pointer hit + brush writes through `skinWeights` helpers with mode gating.
+    - Auto Skin and Auto Paint share implemented algorithm/options controls: inverse segment distance, nearest segment, distance power, distance + normals, nearest bone, closest two, selected branch, power, normal weighting, and max influences.
+    - `ThreeViewport` executes pointer hit + brush writes through `skinWeights` helpers with mode gating, cached brush candidate indexing, projected-depth rejection, 50 fps drag throttling, and vertex/triangle brush targets.
     - Export and UI now preserve dirtied skin edits; legacy paint behavior without selected bone remains blocked.
 
 - UI and status mappings
@@ -52,7 +53,7 @@ Sources used:
   - `animeditor_draw_timeline` and helper scripts define keyframe rail visuals (`KEYFRAMEADDBLANK`, `KEYFRAMEINSERT`, etc.) with node-specific sample updates.
   - Current implementation status in RustSMF:
     - `Timeline` supports playback/scrub/clip list plus imported/authored keyframe markers.
-    - `AnimatePanel` and `useLoadModel` support selected-bone Insert/Update/Delete/Copy/Paste keyframe authoring for position/quaternion tracks, interpolation state, dirty tracking, runtime clip rebuild, and supported SMF export/check paths.
+    - `AnimatePanel` and `useLoadModel` support selected-bone Insert/Update/Delete/Copy/Paste keyframe authoring for position/quaternion tracks, interpolation state, dirty tracking, runtime clip rebuild, toolbar/Ctrl+Z/Ctrl+Y undo-redo, and supported SMF export/check paths.
     - Remaining parity is clip-level polish: rename/duplicate/reorder/delete, loop metadata editing, frame/sample multiplier UI, click-near keyframe selection, drag-to-time, and broader clip CRUD.
 
 - Risk notes to preserve:
@@ -74,8 +75,13 @@ Sources used:
   - Current implementation status in RustSMF:
     - Selection, hierarchy visibility, validation rows, endpoint drag, and non-SMF rename/reparent/create-child/delete are implemented.
     - Non-SMF rig edits validate cycles, self-parenting, root/weighted delete hazards, and retarget or clean animation/pose/skin state.
+    - TransformControls and endpoint drags now emit typed viewport edit events into `useLoadModel`, so SMF-source position/rotation pose edits are export-tracked instead of remaining local Three mutations.
+    - SMF scale mode is refused in the UI, and any recorded non-identity pose scale blocks SMF export/roundtrip because the DQ path has no scale channel.
     - SMF-source structural mutation remains deliberately blocked to preserve node-index, parent-index, `isBone`, head-node, skin-index, and DQ export fidelity.
-    - Remaining parity is SMF-source metadata-only aliases, detach/connect, mirror/reset helpers, and explicit undo/transaction boundaries.
+    - Pose-level Undo/Redo is implemented for quick nudges, TransformControls moves, and endpoint drags through a shared editor-history helper.
+    - Non-SMF rig rename/reparent/create/delete Undo/Redo snapshots restore skeleton bones, parent links, inverse binds, skin indices, base clips, authored animation edits, pose edits, selected bone, and selected skin-paint state.
+    - Viewport pointer ownership is now routed through a pure helper before mutation, so Rig endpoint drag, Rig/Animate bone select, Skin paint gating, Model placeholder selection, and Export read-only clicks have explicit owners.
+    - View-mode model/submodel viewport picking now syncs with Outliner selection. Remaining parity is SMF-source metadata-only aliases, detach/connect, mirror/reset helpers, and deeper rig tool modes.
 
 ## 4) Global shell/settings parity
 
@@ -83,18 +89,21 @@ Sources used:
   - Wireframe, texture, culling, repeat/filter, grid, shader, draw node indices, node perspective, rig opacity/thickness.
   - submodel list + hide/select/all + merge-by-texture actions.
   - autosave/undo/redo, file (save/save as/export SMF), and undo-stack semantics.
-- Current implementation status in RustSMF:
+  - Current implementation status in RustSMF:
   - Core workspace mode switches and a modern toolbar are implemented.
   - Wireframe, grid, axes, texture visibility, bone-index labels, perspective/ortho, rig opacity/thickness, model opacity, and display-only submodel visibility are implemented.
   - The `Legacy` display toggle now swaps in viewport-only SMF-lit material clones with diffuse/specular/rim behavior and restores original materials on disable so export material fidelity is not mutated.
   - The `Skin pts` display toggle now adds a viewport-only skinned vertex point overlay colored by selected-bone influence.
-  - Remaining shader/display parity is selection overlay behavior. Use these old shader references:
+  - View-mode model/Outliner selection now adds viewport-only selected-object overlays inspired by the old `sh_selection` blue overlay behavior; overlays are display helpers only and rebuild on selection/visibility changes.
+  - Shader/display reference files preserved for future display work:
     - `docs/references/old-src/shaders/sh_smf_animate/sh_smf_animate.vsh` and `.fsh`
     - `docs/references/old-src/shaders/sh_smf_static/sh_smf_static.vsh` and `.fsh`
     - `docs/references/old-src/shaders/sh_grid/sh_grid.vsh` and `.fsh`
     - `docs/references/old-src/shaders/sh_skinning_points/sh_skinning_points.vsh` and `.fsh`
     - `docs/references/old-src/shaders/sh_selection/sh_selection.vsh` and `.fsh`
-  - Missing global shelf items include culling, texture repeat/filter, snap-to-grid, include-textures policy, selection overlay parity, and bulk submodel actions such as select all, hide selected/unselected, unhide all, and merge same textures.
+  - Outliner bulk Select All, Clear, Hide selected, Hide unselected, and Show all are implemented as display-only visibility actions, and visibility mutations use toolbar/Ctrl+Z/Ctrl+Y undo-redo.
+  - Missing global shelf items include culling, texture repeat/filter, snap-to-grid, include-textures policy, and merge same textures.
+  - Global undo/redo is partially implemented: pose nudges, TransformControls moves, endpoint drags, non-SMF rig edits, selected-bone animation key edits, Outliner visibility, and Skin edit snapshots use toolbar/Ctrl+Z/Ctrl+Y history; remaining work is keeping new mutators inventoried as undoable, selection-only, display-only, or intentionally irreversible.
 
 ## 5) Integration rule for downstream TODO items
 

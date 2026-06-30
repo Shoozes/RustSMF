@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import * as THREE from 'three';
 import {
   autoSkinSkinnedMeshWeights,
+  autoSkinSkinnedMeshVertexWeights,
   captureSkinVertexSnapshot,
   cloneSkinEditState,
   editVertexBoneWeight,
@@ -14,6 +15,7 @@ import {
   normalizeSkinnedMeshWeights,
   normalizeVertexSkinWeights,
   readVertexSkinWeights,
+  resolveSkinAutoWeightOptions,
   restoreSkinVertexSnapshots,
   sameVertexSkinWeights,
   setVertexBoneWeight,
@@ -132,7 +134,12 @@ describe('skinWeights', () => {
 
   it('auto skins vertices from inverse distance to bone segments', () => {
     const mesh = makeAutoskinMesh();
-    const summary = autoSkinSkinnedMeshWeights(mesh, mesh.skeleton, { power: 2, normalWeighting: 0 });
+    const summary = autoSkinSkinnedMeshWeights(mesh, mesh.skeleton, {
+      algorithm: 'inverse-segment-distance',
+      power: 2,
+      normalWeighting: 0,
+      maxInfluences: 4,
+    });
     const attributes = getSkinAttributes(mesh.geometry);
     assert.ok(attributes);
 
@@ -146,6 +153,123 @@ describe('skinWeights', () => {
     assert.equal(rootVertex.indices[0], 0);
     assert.equal(tipVertex.indices[0], 1);
     assert.ok(tipVertex.weights[0] > 0.99);
+  });
+
+  it('auto skin options clamp and limit max influences', () => {
+    assert.deepEqual(resolveSkinAutoWeightOptions({
+      algorithm: 'inverse-segment-distance',
+      power: Number.NaN,
+      normalWeighting: 2,
+      maxInfluences: 99,
+    }), {
+      algorithm: 'inverse-segment-distance',
+      power: 2,
+      normalWeighting: 1,
+      maxInfluences: 4,
+      blendAmount: 1,
+      restrictToBoneIndices: undefined,
+    });
+
+    const mesh = makeAutoskinMesh();
+    const summary = autoSkinSkinnedMeshWeights(mesh, mesh.skeleton, {
+      algorithm: 'inverse-segment-distance',
+      maxInfluences: 1,
+    });
+    const attributes = getSkinAttributes(mesh.geometry);
+    assert.ok(attributes);
+    const rootVertex = readVertexSkinWeights(attributes, 0);
+    assert.ok(rootVertex);
+    assert.equal(summary.touchedVertices, 2);
+    assert.equal(rootVertex.weights.filter((weight) => weight > 1e-6).length, 1);
+  });
+
+  it('nearest-segment auto skin is a distinct implemented algorithm', () => {
+    const inverseMesh = makeAutoskinMesh();
+    autoSkinSkinnedMeshWeights(inverseMesh, inverseMesh.skeleton, {
+      algorithm: 'inverse-segment-distance',
+      maxInfluences: 4,
+    });
+    const inverseAttributes = getSkinAttributes(inverseMesh.geometry);
+    assert.ok(inverseAttributes);
+    const inverseRootVertex = readVertexSkinWeights(inverseAttributes, 0);
+    assert.ok(inverseRootVertex);
+
+    const nearestMesh = makeAutoskinMesh();
+    autoSkinSkinnedMeshWeights(nearestMesh, nearestMesh.skeleton, {
+      algorithm: 'nearest-segment',
+    });
+    const nearestAttributes = getSkinAttributes(nearestMesh.geometry);
+    assert.ok(nearestAttributes);
+    const nearestRootVertex = readVertexSkinWeights(nearestAttributes, 0);
+    assert.ok(nearestRootVertex);
+
+    assert.ok(inverseRootVertex.weights[1] > 0.4);
+    assert.deepEqual(nearestRootVertex.indices, [0, 0, 0, 0]);
+    assert.deepEqual(nearestRootVertex.weights, [1, 0, 0, 0]);
+  });
+
+  it('distance-normal, closest-two, nearest-bone, and selected-branch algorithms are implemented', () => {
+    const nearestMesh = makeAutoskinMesh();
+    autoSkinSkinnedMeshWeights(nearestMesh, nearestMesh.skeleton, {
+      algorithm: 'nearest-bone',
+    });
+    const nearestAttributes = getSkinAttributes(nearestMesh.geometry);
+    assert.ok(nearestAttributes);
+    const nearestRootVertex = readVertexSkinWeights(nearestAttributes, 0);
+    assert.ok(nearestRootVertex);
+    assert.deepEqual(nearestRootVertex.weights, [1, 0, 0, 0]);
+
+    const closestMesh = makeAutoskinMesh();
+    autoSkinSkinnedMeshWeights(closestMesh, closestMesh.skeleton, {
+      algorithm: 'closest-two',
+    });
+    const closestAttributes = getSkinAttributes(closestMesh.geometry);
+    assert.ok(closestAttributes);
+    const closestRootVertex = readVertexSkinWeights(closestAttributes, 0);
+    assert.ok(closestRootVertex);
+    assert.equal(closestRootVertex.weights.filter((weight) => weight > 1e-6).length, 2);
+
+    const branchMesh = makeAutoskinMesh();
+    autoSkinSkinnedMeshWeights(branchMesh, branchMesh.skeleton, {
+      algorithm: 'selected-branch',
+      restrictToBoneIndices: new Set([1]),
+    });
+    const branchAttributes = getSkinAttributes(branchMesh.geometry);
+    assert.ok(branchAttributes);
+    const branchRootVertex = readVertexSkinWeights(branchAttributes, 0);
+    assert.ok(branchRootVertex);
+    assert.deepEqual(branchRootVertex.indices, [1, 0, 0, 0]);
+    assert.deepEqual(branchRootVertex.weights, [1, 0, 0, 0]);
+
+    const normalOptions = resolveSkinAutoWeightOptions({
+      algorithm: 'distance-normal',
+      normalWeighting: 0.75,
+      blendAmount: 0.5,
+    });
+    assert.equal(normalOptions.algorithm, 'distance-normal');
+    assert.equal(normalOptions.normalWeighting, 0.75);
+    assert.equal(normalOptions.blendAmount, 0.5);
+  });
+
+  it('auto skins a single brush vertex with blend amount', () => {
+    const mesh = makeAutoskinMesh();
+    const attributes = getSkinAttributes(mesh.geometry);
+    assert.ok(attributes);
+    const before = readVertexSkinWeights(attributes, 1);
+    assert.ok(before);
+
+    const result = autoSkinSkinnedMeshVertexWeights(mesh, mesh.skeleton, 1, {
+      algorithm: 'nearest-bone',
+      blendAmount: 0.5,
+    });
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.changed, true);
+    const after = readVertexSkinWeights(attributes, 1);
+    assert.ok(after);
+    assert.ok(after.weights[1] > before.weights[1]);
+    assert.ok(Math.abs(weightsTotal(after.weights) - 1) < 1e-6);
   });
 
   it('sets an existing bone slot and preserves normalized four-bone weights', () => {

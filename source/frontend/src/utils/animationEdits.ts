@@ -46,7 +46,7 @@ const cloneKey = (key: EditableBoneKeyframe): EditableBoneKeyframe => ({
   interpolation: key.interpolation,
 });
 
-const cloneAnimationEditState = (state: AnimationEditState): AnimationEditState => {
+export const cloneAnimationEditState = (state: AnimationEditState): AnimationEditState => {
   const editsByClip: AnimationEditState['editsByClip'] = {};
   for (const [clipName, boneEdits] of Object.entries(state.editsByClip)) {
     editsByClip[clipName] = {};
@@ -62,6 +62,58 @@ const cloneAnimationEditState = (state: AnimationEditState): AnimationEditState 
     editsByClip,
     dirtyClipNames: [...state.dirtyClipNames],
   };
+};
+
+const sameNumber = (left: number, right: number): boolean => Math.abs(left - right) <= TIME_EPSILON;
+
+const sameKey = (left: EditableBoneKeyframe | null, right: EditableBoneKeyframe | null): boolean => {
+  if (!left || !right) return left === right;
+  return (
+    sameNumber(left.time, right.time)
+    && left.interpolation === right.interpolation
+    && left.position.every((value, index) => sameNumber(value, right.position[index]))
+    && left.quaternion.every((value, index) => sameNumber(value, right.quaternion[index]))
+  );
+};
+
+const sameStringSet = (left: string[], right: string[]): boolean => {
+  if (left.length !== right.length) return false;
+  const rightSet = new Set(right);
+  return left.every((value) => rightSet.has(value));
+};
+
+export const sameAnimationEditState = (
+  left: AnimationEditState,
+  right: AnimationEditState,
+): boolean => {
+  if (left.interpolation !== right.interpolation) return false;
+  if ((left.selectedKeyTime === null) !== (right.selectedKeyTime === null)) return false;
+  if (
+    left.selectedKeyTime !== null
+    && right.selectedKeyTime !== null
+    && !sameNumber(left.selectedKeyTime, right.selectedKeyTime)
+  ) {
+    return false;
+  }
+  if (!sameKey(left.clipboard, right.clipboard)) return false;
+  if (!sameStringSet(left.dirtyClipNames, right.dirtyClipNames)) return false;
+
+  const clipNames = new Set([...Object.keys(left.editsByClip), ...Object.keys(right.editsByClip)]);
+  for (const clipName of clipNames) {
+    const leftClip = left.editsByClip[clipName] ?? {};
+    const rightClip = right.editsByClip[clipName] ?? {};
+    const boneNames = new Set([...Object.keys(leftClip), ...Object.keys(rightClip)]);
+    for (const boneName of boneNames) {
+      const leftKeys = leftClip[boneName] ?? [];
+      const rightKeys = rightClip[boneName] ?? [];
+      if (leftKeys.length !== rightKeys.length) return false;
+      for (let index = 0; index < leftKeys.length; index += 1) {
+        if (!sameKey(leftKeys[index], rightKeys[index])) return false;
+      }
+    }
+  }
+
+  return true;
 };
 
 export const getClipKey = (clip: THREE.AnimationClip, index: number): string => clip.name || `clip_${index}`;

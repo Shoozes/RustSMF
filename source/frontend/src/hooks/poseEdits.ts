@@ -20,16 +20,38 @@ export interface PoseBoneEdit {
   dx: number;
   dy: number;
   dRotZ: number;
+  dirty?: boolean;
+  hasScale?: boolean;
 }
 
 export type PoseEditMap = Record<string, PoseBoneEdit>;
 
 export function emptyPoseEdit(): PoseBoneEdit {
-  return { dx: 0, dy: 0, dRotZ: 0 };
+  return { dx: 0, dy: 0, dRotZ: 0, dirty: false, hasScale: false };
 }
 
 export function hasPoseEdits(edits: PoseEditMap): boolean {
-  return Object.values(edits).some((edit) => edit.dx !== 0 || edit.dy !== 0 || edit.dRotZ !== 0);
+  return Object.values(edits).some((edit) => (
+    edit.dirty === true
+    || edit.dx !== 0
+    || edit.dy !== 0
+    || edit.dRotZ !== 0
+  ));
+}
+
+export function hasUnsupportedPoseScaleEdits(edits: PoseEditMap): boolean {
+  return Object.values(edits).some((edit) => edit.hasScale === true);
+}
+
+export function markPoseBoneEdited(
+  current: PoseBoneEdit,
+  options: { hasScale?: boolean } = {},
+): PoseBoneEdit {
+  return {
+    ...current,
+    dirty: true,
+    hasScale: options.hasScale ?? current.hasScale ?? false,
+  };
 }
 
 export function applyNudgeDelta(current: PoseBoneEdit, delta: BoneNudgeDelta): PoseBoneEdit {
@@ -38,6 +60,8 @@ export function applyNudgeDelta(current: PoseBoneEdit, delta: BoneNudgeDelta): P
     dx: current.dx + (delta.x ?? 0),
     dy: current.dy + (delta.y ?? 0),
     dRotZ: current.dRotZ + (delta.rotZ ?? 0),
+    dirty: current.dirty ?? false,
+    hasScale: current.hasScale ?? false,
   };
 }
 
@@ -99,7 +123,7 @@ export function applyPoseEditsToSmf(
   skeleton: THREE.Skeleton
 ): ImportedSmf {
   const editedNames = Object.keys(edits).filter(
-    name => edits[name].dx !== 0 || edits[name].dy !== 0 || edits[name].dRotZ !== 0
+    name => edits[name].dirty === true || edits[name].dx !== 0 || edits[name].dy !== 0 || edits[name].dRotZ !== 0
   );
   if (editedNames.length === 0) return smf;
 

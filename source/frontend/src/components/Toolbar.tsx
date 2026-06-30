@@ -7,6 +7,10 @@ interface ToolbarProps {
   onExport: () => void;
   onExportSmf: () => void;
   onPing: () => void;
+  onUndo: () => void;
+  onRedo: () => void;
+  undoAvailable: boolean;
+  redoAvailable: boolean;
   isLoading: boolean;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   hasModel: boolean;
@@ -43,6 +47,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onExport,
   onExportSmf,
   onPing,
+  onUndo,
+  onRedo,
+  undoAvailable,
+  redoAvailable,
   isLoading,
   onFileChange,
   hasModel,
@@ -171,6 +179,28 @@ const Toolbar: React.FC<ToolbarProps> = ({
           </button>
           <button className="toolbar-action toolbar-action-muted" data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>
             Ping
+          </button>
+        </div>
+        <div className="toolbar-action-group" aria-label="Editor history">
+          <button
+            className="toolbar-action toolbar-action-muted"
+            data-testid="editor-undo-btn"
+            onClick={onUndo}
+            disabled={isLoading || !undoAvailable}
+            title="Undo editor transaction"
+            type="button"
+          >
+            Undo
+          </button>
+          <button
+            className="toolbar-action toolbar-action-muted"
+            data-testid="editor-redo-btn"
+            onClick={onRedo}
+            disabled={isLoading || !redoAvailable}
+            title="Redo editor transaction"
+            type="button"
+          >
+            Redo
           </button>
         </div>
       </div>

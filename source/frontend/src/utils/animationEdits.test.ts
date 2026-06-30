@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {
   applyAnimationEditsToClips,
   applyAnimationEditsToImportedSmf,
+  cloneAnimationEditState,
   deleteAnimationEditBones,
   deleteAnimationKeyframe,
   getCurrentClipKey,
@@ -11,6 +12,7 @@ import {
   makeAnimationEditState,
   makeKeyframeFromBone,
   renameAnimationEditBone,
+  sameAnimationEditState,
   setAnimationInterpolation,
   upsertAnimationKeyframe,
 } from './animationEdits';
@@ -173,4 +175,21 @@ test('getCurrentClipKey falls back safely for missing clips and zero-duration cl
   const zero = new THREE.AnimationClip('Zero', 0, []);
   assert.equal(getCurrentClipKey([zero], 'Missing'), 'Zero');
   assert.equal(getCurrentClipKey([], 'Missing'), '');
+});
+
+test('animation edit snapshots clone deeply and compare by value for history', () => {
+  const original = upsertAnimationKeyframe(makeAnimationEditState(), 'Walk', 'Root', {
+    time: 0.25,
+    position: [1, 2, 3],
+    quaternion: [0, 0, 0, 1],
+    interpolation: 'linear',
+  });
+  const snapshot = cloneAnimationEditState(original);
+
+  assert.equal(sameAnimationEditState(original, snapshot), true);
+
+  snapshot.editsByClip.Walk.Root[0].position[0] = 9;
+
+  assert.equal(original.editsByClip.Walk.Root[0].position[0], 1);
+  assert.equal(sameAnimationEditState(original, snapshot), false);
 });

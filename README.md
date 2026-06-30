@@ -31,9 +31,10 @@ See run.ps1 help, source/frontend/package.json, source/package.json (workspace),
 
 ## Architecture highlights (modular)
 - App.tsx thin shell
-- useLoadModel.ts: load/export/stale guards/pose persistence/handlers (composes store slices)
-- poseEdits.ts: snapshot/clone/guard/apply helpers (extracted)
-- ThreeViewport.tsx: self-contained three (renderer/orbit/mixer/attach/dispose/raycast/Transform/weight/RAF decoupled via refs)
+- useLoadModel.ts: load/export/stale guards/pose persistence/viewport edit handlers/pose + rig + animation-key undo-redo (composes store slices)
+- poseEdits.ts: snapshot/clone/guard/apply helpers plus dirty/scale flags for viewport pose edits (extracted)
+- editorHistory.ts: shared undo/redo stack helper currently wired for pose, rig edits, selected-bone animation key edits, and Outliner visibility transactions; toolbar/keyboard history also reaches Skin edit snapshots
+- ThreeViewport.tsx: self-contained three (renderer/orbit/mixer/attach/dispose/raycast/Transform/edit-event/weight/RAF decoupled via refs)
 - loaders/: SMF binary (smf.ts + smfBinary.ts with bounded reads/DQ guards/zero-dur), threeToSmf (guarded converter), glb/fbx/obj, coord (swizzles + DQ math, the single source of truth)
 - backend-client/tauri.ts: bridge (native dialog/read/write + browser fallbacks); save returns bool for cancel distinction
 - store/: lightweight slice hooks (no extra deps)
@@ -48,7 +49,7 @@ See run.ps1 help, source/frontend/package.json, source/package.json (workspace),
 - OBJ: load/preview parity only (static focus); export via GLB.
 - Native automation: deterministic Playwright Tauri IPC mocks + Rust cmd tests (real OS dialogs optional later via tauri-driver if needed).
 - Desktop peeks: small header/rig/anim/model validation for .smf status (real FS in Rust; complements full TS loader).
-- Editor modernization: quad layout, pane labels/dividers, grouped Display controls, model-safe wireframe display, endpoint handles, and basic ortho/perspective panes are current preview/editor affordances. Remaining old-editor parity work is autoskin/undo, keyframe authoring, submodel visibility/color cues, and deeper ortho-pane editing controls.
+- Editor modernization: quad layout, pane labels/dividers, grouped Display controls, model-safe wireframe display, viewport selection overlays, endpoint handles, viewport model picking, Outliner multi-select/bulk visibility with undo/redo, viewport transform export tracking, pose undo/redo for nudges/gizmo/endpoint edits, non-SMF rig edit undo/redo, selected-bone animation key undo/redo, SMF scale-edit blocking, skin paint/Auto Paint/Normalize/Auto Skin toolbar undo/redo, Auto Skin algorithm/options, cached skin brush candidate indexing, and basic ortho/perspective panes are current preview/editor affordances. Remaining old-editor parity work is broader viewport click/raycast edge coverage, remaining global shelf actions, clip-level animation polish, and deeper ortho-pane editing controls.
 
 Philosophy (AGENTS.md): Safety, courtesy, show, efficiency. Dynamic/modular over hard-coding. Direct minimal comments. Correctness/readability first. TS React front, Rust backend.
 

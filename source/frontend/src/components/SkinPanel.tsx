@@ -1,4 +1,10 @@
 import * as THREE from 'three';
+import {
+  SKIN_AUTO_WEIGHT_ALGORITHMS,
+  SKIN_AUTO_WEIGHT_ALGORITHM_LABELS,
+  type SkinAutoWeightAlgorithm,
+  type SkinWeightEditMode,
+} from '../utils/skinWeights';
 
 interface SkinPanelProps {
   selected: string;
@@ -11,14 +17,24 @@ interface SkinPanelProps {
   editorMode?: string;
   skinEditHasDirtyState: boolean;
   skinEditBlockReason: string | null;
-  skinPaintMode: 'set' | 'add' | 'subtract';
+  skinPaintMode: SkinWeightEditMode;
+  skinPaintTargetMode: 'vertex' | 'triangle';
   skinPaintRadius: number;
   skinPaintStrength: number;
   skinPaintTarget: number;
-  onSkinPaintModeChange: (next: 'set' | 'add' | 'subtract') => void;
+  skinAutoWeightAlgorithm: SkinAutoWeightAlgorithm;
+  skinAutoWeightPower: number;
+  skinAutoWeightNormalWeighting: number;
+  skinAutoWeightMaxInfluences: number;
+  onSkinPaintModeChange: (next: SkinWeightEditMode) => void;
+  onSkinPaintTargetModeChange: (next: 'vertex' | 'triangle') => void;
   onSkinPaintRadiusChange: (value: number) => void;
   onSkinPaintStrengthChange: (value: number) => void;
   onSkinPaintTargetChange: (value: number) => void;
+  onSkinAutoWeightAlgorithmChange: (next: SkinAutoWeightAlgorithm) => void;
+  onSkinAutoWeightPowerChange: (value: number) => void;
+  onSkinAutoWeightNormalWeightingChange: (value: number) => void;
+  onSkinAutoWeightMaxInfluencesChange: (value: number) => void;
   onUndoSkinPaint: () => void;
   onRedoSkinPaint: () => void;
   onNormalizeSkinWeights: () => void;
@@ -38,13 +54,23 @@ export default function SkinPanel({
   skinEditHasDirtyState,
   skinEditBlockReason,
   skinPaintMode,
+  skinPaintTargetMode,
   skinPaintRadius,
   skinPaintStrength,
   skinPaintTarget,
+  skinAutoWeightAlgorithm,
+  skinAutoWeightPower,
+  skinAutoWeightNormalWeighting,
+  skinAutoWeightMaxInfluences,
   onSkinPaintModeChange,
+  onSkinPaintTargetModeChange,
   onSkinPaintRadiusChange,
   onSkinPaintStrengthChange,
   onSkinPaintTargetChange,
+  onSkinAutoWeightAlgorithmChange,
+  onSkinAutoWeightPowerChange,
+  onSkinAutoWeightNormalWeightingChange,
+  onSkinAutoWeightMaxInfluencesChange,
   onUndoSkinPaint,
   onRedoSkinPaint,
   onNormalizeSkinWeights,
@@ -57,6 +83,9 @@ export default function SkinPanel({
   const hasSkeleton = !!skeleton && skeleton.bones.length > 0;
   const isPaintEnabled = selectedBonePresent && hasSkeleton;
   const sliderDisabled = !isPaintEnabled;
+  const powerOptionActive = ['inverse-segment-distance', 'distance-power', 'distance-normal', 'selected-branch'].includes(skinAutoWeightAlgorithm);
+  const normalOptionActive = ['inverse-segment-distance', 'distance-normal'].includes(skinAutoWeightAlgorithm);
+  const maxInfluenceOptionActive = ['inverse-segment-distance', 'distance-power', 'distance-normal', 'selected-branch'].includes(skinAutoWeightAlgorithm);
 
   return (
     <div className="inspector" data-testid="skin-workspace-panel" data-editor-mode={editorMode}>
@@ -123,6 +152,14 @@ export default function SkinPanel({
           >
             Subtract
           </button>
+          <button
+            data-testid="skin-paint-mode-auto"
+            className={`px-1 py-0 text-xs ${skinPaintMode === 'auto' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
+            disabled={!isPaintEnabled}
+            onClick={() => onSkinPaintModeChange('auto')}
+          >
+            Auto
+          </button>
         </div>
         <div className="flex gap-1 mb-2">
           <button
@@ -159,6 +196,79 @@ export default function SkinPanel({
           >
             Auto Skin
           </button>
+        </div>
+        <div className="grid gap-1.5 text-[10px] mb-2" data-testid="skin-autoskin-options">
+          <label className="flex items-center justify-between gap-2 text-slate-400">
+            <span>Brush target</span>
+            <select
+              data-testid="skin-paint-target-mode"
+              value={skinPaintTargetMode}
+              disabled={!isPaintEnabled}
+              onChange={(e) => onSkinPaintTargetModeChange(e.target.value as 'vertex' | 'triangle')}
+              className="w-40 bg-slate-800 border border-slate-700 px-1 py-0.5 text-slate-200"
+            >
+              <option value="vertex">Vertex</option>
+              <option value="triangle">Triangle</option>
+            </select>
+          </label>
+          <label className="flex items-center justify-between gap-2 text-slate-400">
+            <span>Algorithm</span>
+            <select
+              data-testid="skin-autoskin-algorithm"
+              value={skinAutoWeightAlgorithm}
+              disabled={!hasSkeleton}
+              onChange={(e) => onSkinAutoWeightAlgorithmChange(e.target.value as SkinAutoWeightAlgorithm)}
+              className="w-40 bg-slate-800 border border-slate-700 px-1 py-0.5 text-slate-200"
+            >
+              {SKIN_AUTO_WEIGHT_ALGORITHMS.map((algorithm) => (
+                <option key={algorithm} value={algorithm}>
+                  {SKIN_AUTO_WEIGHT_ALGORITHM_LABELS[algorithm]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex items-center justify-between gap-2 text-slate-400">
+            <span>Power</span>
+            <input
+              data-testid="skin-autoskin-power"
+              type="range"
+              min="1"
+              max="8"
+              step="0.5"
+              value={skinAutoWeightPower}
+              disabled={!hasSkeleton || !powerOptionActive}
+              onChange={(e) => onSkinAutoWeightPowerChange(Number(e.target.value))}
+              className="w-40"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-2 text-slate-400">
+            <span>Normal</span>
+            <input
+              data-testid="skin-autoskin-normal-weighting"
+              type="range"
+              min="0"
+              max="1"
+              step="0.05"
+              value={skinAutoWeightNormalWeighting}
+              disabled={!hasSkeleton || !normalOptionActive}
+              onChange={(e) => onSkinAutoWeightNormalWeightingChange(Number(e.target.value))}
+              className="w-40"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-2 text-slate-400">
+            <span>Max</span>
+            <input
+              data-testid="skin-autoskin-max-influences"
+              type="range"
+              min="1"
+              max="4"
+              step="1"
+              value={skinAutoWeightMaxInfluences}
+              disabled={!hasSkeleton || !maxInfluenceOptionActive}
+              onChange={(e) => onSkinAutoWeightMaxInfluencesChange(Number(e.target.value))}
+              className="w-40"
+            />
+          </label>
         </div>
         <div className="grid gap-1.5 text-[10px]">
           <label className="flex items-center justify-between gap-2 text-slate-400">

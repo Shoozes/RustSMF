@@ -4,10 +4,15 @@ import type { ModelOutlinerItem } from '../utils/modelOutliner';
 interface OutlinerProps {
   clipsCount: number;
   items: ModelOutlinerItem[];
-  selectedItemId: string;
+  selectedItemIds: string[];
   onSelectScene: () => void;
-  onSelectItem: (id: string) => void;
+  onSelectItem: (id: string, options?: { additive?: boolean; toggle?: boolean }) => void;
   onToggleVisibility: (id: string) => void;
+  onSelectAll: () => void;
+  onClearSelection: () => void;
+  onHideSelected: () => void;
+  onHideUnselected: () => void;
+  onUnhideAll: () => void;
 }
 
 const getKindLabel = (kind: ModelOutlinerItem['kind']): string => {
@@ -19,12 +24,21 @@ const getKindLabel = (kind: ModelOutlinerItem['kind']): string => {
 const Outliner: React.FC<OutlinerProps> = ({
   clipsCount,
   items,
-  selectedItemId,
+  selectedItemIds,
   onSelectScene,
   onSelectItem,
   onToggleVisibility,
+  onSelectAll,
+  onClearSelection,
+  onHideSelected,
+  onHideUnselected,
+  onUnhideAll,
 }) => {
   const meshCount = items.filter((item) => item.kind !== 'group').length;
+  const selectedSet = new Set(selectedItemIds);
+  const selectedCount = selectedItemIds.length;
+  const hasItems = items.length > 0;
+  const hasSelection = selectedCount > 0;
 
   return (
     <div data-testid="outliner" className="sidebar">
@@ -45,25 +59,49 @@ const Outliner: React.FC<OutlinerProps> = ({
       {clipsCount > 0 && (
         <div className="outliner-meta">+ {clipsCount} Animation Clips</div>
       )}
+      {hasItems && (
+        <div className="outliner-actions" aria-label="Outliner selection actions">
+          <button type="button" data-testid="outliner-select-all-btn" onClick={onSelectAll}>
+            All
+          </button>
+          <button type="button" data-testid="outliner-clear-selection-btn" onClick={onClearSelection} disabled={!hasSelection}>
+            Clear
+          </button>
+          <button type="button" data-testid="outliner-hide-selected-btn" onClick={onHideSelected} disabled={!hasSelection}>
+            Hide sel
+          </button>
+          <button type="button" data-testid="outliner-hide-unselected-btn" onClick={onHideUnselected} disabled={!hasSelection}>
+            Hide other
+          </button>
+          <button type="button" data-testid="outliner-unhide-all-btn" onClick={onUnhideAll}>
+            Show all
+          </button>
+          <span data-testid="outliner-selection-count">{selectedCount} selected</span>
+        </div>
+      )}
       <div className="outliner-list" data-testid="outliner-submodel-list">
         {items.length === 0 ? (
           <div className="outliner-empty">No model loaded</div>
         ) : (
           items.map((item, index) => {
-            const selected = selectedItemId === item.id;
+            const selected = selectedSet.has(item.id);
             return (
               <div
                 key={item.id}
                 className={`outliner-item ${selected ? 'outliner-item-selected' : ''} ${item.visible ? '' : 'outliner-item-hidden'}`}
                 data-testid={`outliner-submodel-${index}`}
                 data-kind={item.kind}
+                data-selected={selected ? 'true' : 'false'}
                 data-visible={item.visible ? 'true' : 'false'}
                 style={{ paddingLeft: `${6 + item.depth * 12}px` }}
               >
                 <button
                   type="button"
                   className="outliner-name-btn"
-                  onClick={() => onSelectItem(item.id)}
+                  onClick={(event) => onSelectItem(item.id, {
+                    additive: event.shiftKey,
+                    toggle: event.ctrlKey || event.metaKey,
+                  })}
                   title={`${getKindLabel(item.kind)}: ${item.name}`}
                 >
                   <span

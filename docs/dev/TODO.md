@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-30 (display parity and diagnostics cleanup)
+Last reviewed: 2026-06-30 (skin Auto Paint/indexing and round-2 interaction backlog)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -54,24 +54,89 @@ Each active item should answer:
   - Decide whether ortho panes should support all bone selection/edit actions or a deliberate subset.
 - Acceptance: Rapid layout/mode switching in single and quad states never drops bone selection, scrub continuity, endpoint-hover state, or pane labels in e2e.
 
-### P1: Add viewport-only legacy SMF shader/display parity
+### P1: Complete viewport click/raycast event parity
 
-- What: Keep legacy SMF display parity current without mutating export materials.
-- Why: The old editor's shader/display shelf included lit SMF viewport materials, skinning-point feedback, and selection overlays; RustSMF now has viewport-only implementations for the first two, but selection overlay parity is still incomplete.
-- Where: `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/legacySmfLighting.ts`, `source/frontend/src/utils/skinPointOverlay.ts`, `source/frontend/tests/smoke.spec.ts`, `source/frontend/tests/visual.spec.ts`, old shader refs under `docs/references/old-src/shaders/`.
-- When: After DQ safety and source-map cleanup; before claiming old-editor display parity.
+- What: Make viewport selection, drag, paint, endpoint, transform, and orbit gestures a single tested interaction contract instead of scattered pointer branches.
+- Why: Current viewport bone helper picking, endpoint dragging, and skin-paint ray hits work, but old-editor behavior also relied on explicit ray-sphere node selection, ray-plane movement, click-near keyframe/timeline selection, and predictable left/right/mode-specific clicks. As features accumulate, accidental gesture conflicts are the highest-risk show-floor bug class.
+- Where: `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/viewportInteractionRouter.ts`, `source/frontend/src/utils/viewportLayout.ts`, `source/frontend/src/utils/modernSkeletonHelper.ts`, `source/frontend/src/utils/skinPointOverlay.ts`, `source/frontend/src/components/Timeline.tsx`, `source/frontend/tests/smoke.spec.ts`, `source/frontend/tests/visual.spec.ts`, old refs `docs/references/old-src/scripts/animeditor_perform_actions/animeditor_perform_actions.gml`, `docs/references/old-src/scripts/rigeditor_press_buttons/rigeditor_press_buttons.gml`, and `docs/references/old-src/scripts/skineditor_paint_vertices/skineditor_paint_vertices.gml`.
+- When: Before adding more viewport authoring tools.
 - How:
-  - Port behavior, not GameMaker shader code, into Three-compatible viewport-only materials/overlays.
-  - Keep generated display materials backed up/restored/disposed separately from loaded model/export state.
-  - Treat the old DQ shader as a CPU/math oracle for SMF correctness before attempting any GPU skinning replacement.
+  - Extract a small viewport interaction controller or pure hit-contract helper that returns intent: select bone, drag endpoint, paint skin, orbit, context action, or no-op.
+  - Preserve current click thresholds and pane-aware camera picking while making precision-mode differences explicit.
+  - Treat right-click/pan/context behavior as a first-class decision instead of incidental orbit behavior.
+  - Keep skin paint disabled unless a real selected bone and skinned mesh target are present.
 - Subtasks:
-  - Done: replace the old `Flat` label with a `Legacy` display toggle backed by viewport-only material clones.
-  - Done: add `legacySmfLighting.ts` for diffuse/specular/rim display using current Three geometry, UVs, maps, and skinning.
-  - Done: add smoke coverage that toggles legacy mode and verifies `data-shader-mode="legacy-smf"` with nonblank render coverage.
-  - Done: add `skinPointOverlay.ts` and a Display-menu `Skin pts` toggle for skinned vertex points colored by selected-bone influence.
-  - Add selection overlay parity inspired by `docs/references/old-src/shaders/sh_selection`.
-  - Reference old `sh_smf_animate`, `sh_smf_static`, `sh_grid`, `sh_skinning_points`, and `sh_selection` while preserving GLB/SMF export material fidelity.
-- Acceptance: Legacy display mode remains visibly distinct from flat shading, restores original materials on disable/export, and selection overlay parity has browser visual coverage.
+  - Done: add typed viewport bone-transform edit events for TransformControls and endpoint drags, route them into pose dirty state, and expose endpoint-drag smoke coverage for app-state propagation.
+  - Done: add `viewportInteractionRouter.ts` with table-driven owner decisions for Model/Rig/Skin/Animate/Export pointer-down events, unit coverage, and `data-pointer-owner` smoke telemetry.
+  - Source-map old ray-sphere/ray-plane actions into a click/drag matrix for rig, skin, animate, and model modes.
+  - Done: add model/submodel viewport picking for `model-select` owner, including empty-click clear, right-click context readiness, and Shift/Ctrl multi-select behavior through the shared Outliner selection model.
+  - Add tests that short clicks select bones, drags do not accidentally select, endpoint drags pause/restore TransformControls, and skin paint does not orbit/select.
+  - Add quad/ortho coverage for pickable pane boundaries, high-DPI mouse coordinates, and pointer cancel/window-up cleanup.
+  - Decide whether skin point overlays are display-only or can select/paint nearest vertices; document and test the chosen behavior.
+- Acceptance: A table-driven interaction contract and e2e smoke prove each supported click/drag path mutates only the intended state in single, quad, perspective, and ortho contexts.
+
+### P1: Make Animate-mode viewport transforms author keyframes
+
+- What: Route Animate workspace TransformControls and selected-bone viewport edits into the current animation keyframe edit layer instead of mutating bind pose.
+- Why: Rig-mode transforms and pose preview now have export tracking, but Animate mode still needs the old editor behavior where moving/rotating a node at the current time updates or creates the selected keyframe.
+- Where: `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/components/AnimatePanel.tsx`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/utils/animationEdits.ts`, `source/frontend/tests/smoke.spec.ts`.
+- When: Before adding richer animation handles, IK-style movement, or transform-children controls.
+- How:
+  - Use the existing viewport transform edit event and `editorMode` to branch Rig/Pose behavior from Animate behavior.
+  - Upsert selected-bone position/quaternion keys at the current timeline time when Animate owns the transform.
+  - Keep Skin/View/Export modes from writing animation keys.
+  - Record the edit through the shared animation history snapshot path.
+- Acceptance: Smoke can select a bone in Animate mode, move/rotate it in the viewport, observe dirty animation state and a marker at current time, undo/redo the key edit, and export/check the edited clip path.
+
+### P1: Add app-level authoring undo/redo transactions
+
+- What: Extend undo/redo beyond skin-paint strokes into a shared authoring transaction layer for every model/rig/animation mutation that should be reversible.
+- Why: Pose nudges/gizmo/endpoint drags, non-SMF rig rename/reparent/create/delete, selected-bone animation key edits, Outliner visibility, and Skin edit snapshots now have toolbar/keyboard history, but the app still needs a current mutator inventory so future authoring surfaces stay reversible or explicitly classified. The old app called `undo_save(...)` for autoskin, set bone influence, insert/delete/detach nodes, IK move, drag node, and local/global rotate actions.
+- Where: `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/hooks/poseEdits.ts`, `source/frontend/src/utils/editorHistory.ts`, `source/frontend/src/utils/rigEdits.ts`, `source/frontend/src/utils/animationEdits.ts`, `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/components/Inspector.tsx`, `source/frontend/src/components/RigPanel.tsx`, `source/frontend/src/components/AnimatePanel.tsx`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/tests/smoke.spec.ts`, `source/frontend/tests/native.spec.ts`, old refs `docs/references/old-src/scripts/undo_save/undo_save.gml`, `docs/references/old-src/scripts/undo_load/undo_load.gml`, `docs/references/old-src/scripts/skineditor_press_buttons/skineditor_press_buttons.gml`, `docs/references/old-src/scripts/rigeditor_press_buttons/rigeditor_press_buttons.gml`, and `docs/references/old-src/scripts/animeditor_perform_actions/animeditor_perform_actions.gml`.
+- When: Before shipping broader rig/animation authoring as show-ready.
+- How:
+  - Define typed transaction categories for skin, rig, pose, transform, endpoint, and animation edits.
+  - Collapse pointer drags into one transaction per completed drag/stroke instead of one entry per move event.
+  - Keep display-only toggles, selection-only changes, playback/scrub state, and canceled saves out of destructive-edit history unless UX intentionally says otherwise.
+  - Keep redo invalidation deterministic after any new committed edit.
+- Subtasks:
+  - Done: mark absolute viewport transform edits as pose edits so SMF-source TransformControls/endpoint changes are not silently lost on export.
+  - Done: refuse SMF scale mode in the UI and block recorded non-identity pose scale during SMF export/roundtrip.
+  - Done: add `editorHistory.ts` with bounded undo/redo stacks and unit coverage.
+  - Done: wrap quick nudges, TransformControls changes, and endpoint drags with before/after pose snapshots that restore Three bone transforms, selected bone, and the SMF pose edit map.
+  - Done: add toolbar Undo/Redo plus Ctrl+Z/Ctrl+Y for pose transactions, with generated-skinned smoke coverage.
+  - Inventory every current mutator and mark it undoable, selection-only, display-only, or intentionally irreversible.
+  - Done: wrap rig rename/reparent/create/delete with reversible snapshots covering skeleton bones, inverses, skin indices, animation tracks, pose edits, selected bone, and selected skin-paint state.
+  - Done: add animation key Insert/Update/Delete/Paste undo/redo before clip-level CRUD expands, with shared history snapshots and smoke coverage.
+  - Done: fold existing skin paint/Normalize/Auto Skin history into the toolbar/keyboard command surface without losing stroke/batch snapshot behavior.
+  - Done: add Outliner visibility undo/redo for individual and bulk visibility transactions through toolbar buttons and Ctrl+Z/Ctrl+Y.
+- Acceptance: Unit and e2e coverage can perform each mutating authoring action, undo it, redo it, then export/check without stale dirty state, broken skeleton references, or mismatched selected-bone state.
+
+### P2: Add non-SMF rig tool modes
+
+- What: Expand the Rig workspace from form-based rename/reparent/create/delete into explicit tool modes: select, add child, move, rotate, detach-toggle, spin rig, and snap-aware placement.
+- Why: The old rig editor supported click-driven node add/move/rotate/detach workflows; RustSMF currently has safe non-SMF structural edits but not the expected viewport tool row or ortho-pane add behavior.
+- Where: `source/frontend/src/components/RigPanel.tsx`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/rigEdits.ts`, `source/frontend/src/utils/rigEdits.test.ts`, `source/frontend/tests/smoke.spec.ts`.
+- When: After current pose/rig history remains green, and before claiming rig workspace parity beyond safe form edits.
+- How:
+  - Add a compact Rig Tool control row and store active tool state in app/editor state.
+  - Keep SMF-source structural mutation blocked; non-SMF tools must preserve skeleton validity and skin indices.
+  - Implement add-child by ortho empty-click projection, detach-toggle while preserving world transform, rotate/move as history-backed transactions, and spin-rig only for non-SMF roots.
+  - Share snap-to-grid settings with future animation movement tools.
+- Acceptance: Unit tests prove add-child, detach, and spin preserve valid skeleton/skin references; smoke creates a child from an ortho pane and undo restores the previous rig.
+
+### P2: Add timeline lane interactions and clip CRUD
+
+- What: Add old-editor timeline and clip-level editing affordances that are still missing: lane click scrub, marker drag-to-time, double-click insert, snap modifiers, clip rename/duplicate/delete/reorder, loop toggle, and sample multiplier.
+- Why: Selected-bone key Insert/Update/Delete/Copy/Paste is implemented, but clip-level authoring and timeline gesture behavior remain underbuilt compared with the old animation tab.
+- Where: `source/frontend/src/components/Timeline.tsx`, `source/frontend/src/components/AnimatePanel.tsx`, `source/frontend/src/utils/animationTimeline.ts`, `source/frontend/src/utils/animationEdits.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/smoke.spec.ts`.
+- When: After Animate-mode viewport transforms write keyframes and before adding more animation handle/IK features.
+- How:
+  - Keep pure clip/keyframe transforms in `animationEdits.ts` / `animationTimeline.ts` with unit coverage.
+  - Add lane gesture handlers for scrub/select/drag/double-click while preserving playback state.
+  - Add clip operations with guards for deleting the last clip and deterministic current-clip fallback.
+  - Add `quadratic` interpolation as metadata first if runtime preview must approximate with linear tracks.
+- Acceptance: Unit tests cover clip rename/duplicate/delete/reorder and keyframe time moves; smoke double-clicks the lane to insert, drags a marker, and undo/redo restores the key time.
 
 ### P2: Complete SMF-aware rig editing parity
 
@@ -87,7 +152,26 @@ Each active item should answer:
   - Decide whether SMF-source node names stay display-only, become metadata-only, or rewrite SMF node records.
   - Add detach/head-node compatibility controls only after old-source source-map review.
   - Add mirror/reset helpers only with pure tests for hierarchy and skin/animation safety.
+  - Include snap-to-grid movement semantics if rig/animation move tools adopt old ray-plane behavior.
 - Acceptance: SMF-source rig controls either remain explicitly blocked with clear UX, or ship with tests proving they cannot corrupt node-index, skin, or animation fidelity.
+
+### P2: Fill global shelf and Outliner action gaps
+
+- What: Bring missing old global shelf/model-list actions into the modern toolbar/outliner where they still make sense.
+- Why: Current Outliner has display-only visibility toggles and material color cues, but old editor workflows included select all, hide selected, hide unselected, unhide all, merge same textures, culling, texture repeat/filter, snap-to-grid, and include-textures policy controls.
+- Where: `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/components/Outliner.tsx`, `source/frontend/src/utils/modelOutliner.ts`, `source/frontend/src/utils/textureCompat.ts`, `source/frontend/src/loaders/threeToSmf.ts`, `source/frontend/tests/smoke.spec.ts`, old refs `docs/references/old-src/scripts/common_add_buttons/common_add_buttons.gml` and `docs/references/old-src/scripts/combine_textures/combine_textures.gml`.
+- When: After selection/interaction parity is stable enough that submodel selection has a clear target model.
+- How:
+  - Split display-only actions from export-affecting actions.
+  - Keep culling/repeat/filter as viewport/material preview state unless export semantics are explicit.
+  - Treat merge-by-texture and include-textures as guarded export/preflight decisions, not silent model mutation.
+  - Reuse existing texture diagnostics for warnings and status copy.
+- Subtasks:
+  - Done: add Outliner multi-select and bulk visibility actions for Select All, Clear, Hide selected, Hide unselected, and Show all, with browser smoke coverage.
+  - Add snap-to-grid setting shared by rig/animation movement tools after those tools have transactions.
+  - Decide whether texture repeat/filter toggles are preview-only, persisted metadata, or export-blocking incompatibility.
+  - Document merge same textures as either unsupported, preview-only, or a tested conversion pipeline with undo.
+- Acceptance: Each global/outliner action either ships with browser coverage and clear export behavior or remains an explicit TODO with the reason it is deferred.
 
 ### P2: Complete workspace transition and continuity coverage
 

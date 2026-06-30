@@ -1,0 +1,58 @@
+import assert from 'node:assert/strict';
+import { describe, it } from 'node:test';
+import {
+  resolvePointerDownOwner,
+  type ViewportInteractionContext,
+  type ViewportInteractionOwner,
+} from './viewportInteractionRouter';
+
+const baseContext: ViewportInteractionContext = {
+  editorMode: 'view',
+  button: 0,
+  hasModel: true,
+  hasSkeleton: true,
+  hasSelectedBone: false,
+  isPrecisionMode: false,
+  isPickingViewport: true,
+  hitEndpointHandle: false,
+  hitTransformControl: false,
+};
+
+const owner = (override: Partial<ViewportInteractionContext>): ViewportInteractionOwner => {
+  return resolvePointerDownOwner({ ...baseContext, ...override });
+};
+
+describe('viewportInteractionRouter', () => {
+  it('rejects non-model and non-picking viewport events', () => {
+    assert.equal(owner({ hasModel: false }), 'none');
+    assert.equal(owner({ isPickingViewport: false }), 'none');
+  });
+
+  it('routes non-left buttons to orbit in editable viewports', () => {
+    assert.equal(owner({ button: 2, editorMode: 'rig' }), 'orbit');
+  });
+
+  it('routes model workspace clicks to model selection', () => {
+    assert.equal(owner({ editorMode: 'view' }), 'model-select');
+  });
+
+  it('routes rig clicks by endpoint hit before bone selection', () => {
+    assert.equal(owner({ editorMode: 'rig', isPrecisionMode: true, hitEndpointHandle: true }), 'rig-endpoint-drag');
+    assert.equal(owner({ editorMode: 'rig', isPrecisionMode: false, hitEndpointHandle: true }), 'rig-select');
+    assert.equal(owner({ editorMode: 'rig', hasSkeleton: false }), 'none');
+  });
+
+  it('routes skin clicks to paint only when a bone is selected', () => {
+    assert.equal(owner({ editorMode: 'skin', hasSelectedBone: true }), 'skin-paint');
+    assert.equal(owner({ editorMode: 'skin', hasSelectedBone: false }), 'rig-select');
+  });
+
+  it('routes animate clicks between transform handles and bone selection', () => {
+    assert.equal(owner({ editorMode: 'animate', hitTransformControl: true }), 'animate-transform');
+    assert.equal(owner({ editorMode: 'animate', hitTransformControl: false }), 'animate-select');
+  });
+
+  it('keeps export workspace read-only for left clicks', () => {
+    assert.equal(owner({ editorMode: 'export' }), 'none');
+  });
+});

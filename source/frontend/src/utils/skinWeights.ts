@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { ModelSourceFormat } from './modelFormat';
 
-export type SkinWeightEditMode = 'set' | 'add' | 'subtract';
+export type SkinWeightEditMode = 'set' | 'add' | 'subtract' | 'auto';
 
 export interface VertexSkinWeights {
   indices: [number, number, number, number];
@@ -28,6 +28,28 @@ export interface SkinEditHistoryEntry {
   after: SkinVertexSnapshot[];
 }
 
+export const SKIN_AUTO_WEIGHT_ALGORITHMS = [
+  'inverse-segment-distance',
+  'nearest-segment',
+  'distance-power',
+  'distance-normal',
+  'nearest-bone',
+  'closest-two',
+  'selected-branch',
+] as const;
+
+export type SkinAutoWeightAlgorithm = typeof SKIN_AUTO_WEIGHT_ALGORITHMS[number];
+
+export const SKIN_AUTO_WEIGHT_ALGORITHM_LABELS: Record<SkinAutoWeightAlgorithm, string> = {
+  'inverse-segment-distance': 'Inverse segment distance',
+  'nearest-segment': 'Nearest segment',
+  'distance-power': 'Distance power',
+  'distance-normal': 'Distance + normals',
+  'nearest-bone': 'Nearest bone',
+  'closest-two': 'Closest two',
+  'selected-branch': 'Selected branch',
+};
+
 export type SkinWeightEditFailureReason =
   | 'missing-skin-attributes'
   | 'invalid-vertex'
@@ -52,8 +74,21 @@ export interface SkinAttributePair {
 }
 
 export interface SkinAutoWeightOptions {
+  algorithm?: SkinAutoWeightAlgorithm;
   power?: number;
   normalWeighting?: number;
+  maxInfluences?: number;
+  blendAmount?: number;
+  restrictToBoneIndices?: Set<number>;
+}
+
+export interface ResolvedSkinAutoWeightOptions {
+  algorithm: SkinAutoWeightAlgorithm;
+  power: number;
+  normalWeighting: number;
+  maxInfluences: number;
+  blendAmount: number;
+  restrictToBoneIndices?: Set<number>;
 }
 
 export interface SkinMeshWeightEditSummary {
@@ -69,6 +104,34 @@ function clamp01(value: number): number {
 function clampPositive(value: number, fallback: number): number {
   if (!Number.isFinite(value) || value <= 0) return fallback;
   return value;
+}
+
+function clampIntegerRange(value: number, min: number, max: number, fallback: number): number {
+  if (!Number.isFinite(value)) return fallback;
+  return Math.min(max, Math.max(min, Math.round(value)));
+}
+
+function isSkinAutoWeightAlgorithm(value: string | undefined): value is SkinAutoWeightAlgorithm {
+  return !!value && (SKIN_AUTO_WEIGHT_ALGORITHMS as readonly string[]).includes(value);
+}
+
+export function resolveSkinAutoWeightOptions(
+  options: SkinAutoWeightOptions = {},
+): ResolvedSkinAutoWeightOptions {
+  const restrictToBoneIndices = options.restrictToBoneIndices && options.restrictToBoneIndices.size > 0
+    ? new Set([...options.restrictToBoneIndices].filter((index) => Number.isInteger(index) && index >= 0))
+    : undefined;
+
+  return {
+    algorithm: isSkinAutoWeightAlgorithm(options.algorithm)
+      ? options.algorithm
+      : 'inverse-segment-distance',
+    power: Math.min(8, Math.max(1, clampPositive(options.power ?? 2, 2))),
+    normalWeighting: clamp01(options.normalWeighting ?? 0),
+    maxInfluences: clampIntegerRange(options.maxInfluences ?? 4, 1, 4, 4),
+    blendAmount: clamp01(options.blendAmount ?? 1),
+    restrictToBoneIndices,
+  };
 }
 
 function cloneVertex(vertex: VertexSkinWeights): VertexSkinWeights {
@@ -284,11 +347,15 @@ function getBoneSegment(bone: THREE.Bone, skeleton: THREE.Skeleton): { start: TH
   return { start: bonePosition, end: bonePosition };
 }
 
-function makeWeightedVertex(entries: Array<{ boneIndex: number; weight: number }>): VertexSkinWeights | null {
+function makeWeightedVertex(
+  entries: Array<{ boneIndex: number; weight: number }>,
+  maxInfluences = 4,
+): VertexSkinWeights | null {
+  const influenceCount = clampIntegerRange(maxInfluences, 1, 4, 4);
   const strongest = entries
     .filter((entry) => Number.isInteger(entry.boneIndex) && entry.boneIndex >= 0 && Number.isFinite(entry.weight) && entry.weight > 0)
     .sort((left, right) => right.weight - left.weight)
-    .slice(0, 4);
+    .slice(0, influenceCount);
 
   if (strongest.length === 0) return null;
 
@@ -302,23 +369,92 @@ function makeWeightedVertex(entries: Array<{ boneIndex: number; weight: number }
   return normalizeVertexSkinWeights({ indices, weights });
 }
 
-export function autoSkinSkinnedMeshWeights(
+interface AutoWeightSegment {
+  boneIndex: number;
+  start: THREE.Vector3;
+  end: THREE.Vector3;
+}
+
+interface WeightedCandidate {
+  boneIndex: number;
+  distance: number;
+  normalFactor: number;
+}
+
+interface SkinAutoWeightContext {
+  mesh: THREE.SkinnedMesh;
+  attributes: SkinAttributePair;
+  position: THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
+  normal: THREE.BufferAttribute | THREE.InterleavedBufferAttribute | undefined;
+  normalMatrix: THREE.Matrix3;
+  modelSize: number;
+  segments: AutoWeightSegment[];
+  resolved: ResolvedSkinAutoWeightOptions;
+}
+
+function normalizedAutoAlgorithm(
+  algorithm: SkinAutoWeightAlgorithm,
+): 'distance-power' | 'distance-normal' | 'nearest-bone' | 'closest-two' | 'selected-branch' {
+  if (algorithm === 'inverse-segment-distance') return 'distance-normal';
+  if (algorithm === 'nearest-segment') return 'nearest-bone';
+  return algorithm;
+}
+
+export function makeAutoWeightEntries(
+  candidates: WeightedCandidate[],
+  options: ResolvedSkinAutoWeightOptions,
+): Array<{ boneIndex: number; weight: number }> {
+  const algorithm = normalizedAutoAlgorithm(options.algorithm);
+  const sorted = candidates
+    .filter((candidate) => (
+      Number.isInteger(candidate.boneIndex)
+      && candidate.boneIndex >= 0
+      && Number.isFinite(candidate.distance)
+      && candidate.distance >= 0
+    ))
+    .sort((left, right) => left.distance - right.distance);
+
+  if (sorted.length === 0) return [];
+
+  if (algorithm === 'nearest-bone') {
+    return [{ boneIndex: sorted[0].boneIndex, weight: 1 }];
+  }
+
+  if (algorithm === 'closest-two') {
+    return sorted.slice(0, 2).map((candidate) => ({
+      boneIndex: candidate.boneIndex,
+      weight: 1 / Math.max(candidate.distance, 1e-6),
+    }));
+  }
+
+  return sorted.slice(0, options.maxInfluences).map((candidate) => {
+    const normalFactor = algorithm === 'distance-normal'
+      ? THREE.MathUtils.lerp(1, candidate.normalFactor, options.normalWeighting)
+      : 1;
+    const modifiedDistance = Math.max(candidate.distance * normalFactor, 1e-6);
+    return {
+      boneIndex: candidate.boneIndex,
+      weight: 1 / Math.pow(modifiedDistance, options.power),
+    };
+  });
+}
+
+function createSkinAutoWeightContext(
   mesh: THREE.SkinnedMesh,
   skeleton: THREE.Skeleton,
   options: SkinAutoWeightOptions = {},
-): SkinMeshWeightEditSummary {
+): SkinAutoWeightContext | null {
   const attributes = getSkinAttributes(mesh.geometry);
   const position = mesh.geometry.getAttribute('position');
   if (!attributes || !position || position.itemSize < 3 || skeleton.bones.length === 0) {
-    return { touchedVertices: 0, changedVertices: 0 };
+    return null;
   }
 
   mesh.updateMatrixWorld(true);
   skeleton.bones.forEach((bone) => bone.updateMatrixWorld(true));
 
-  const power = Math.max(1, clampPositive(options.power ?? 2, 2));
-  const normalWeighting = clamp01(options.normalWeighting ?? 0);
-  const normal = mesh.geometry.getAttribute('normal');
+  const resolved = resolveSkinAutoWeightOptions(options);
+  const normal = mesh.geometry.getAttribute('normal') ?? undefined;
   const normalMatrix = new THREE.Matrix3().getNormalMatrix(mesh.matrixWorld);
   const modelBox = new THREE.Box3().setFromObject(mesh);
   const modelSize = Math.max(
@@ -327,54 +463,151 @@ export function autoSkinSkinnedMeshWeights(
     modelBox.max.z - modelBox.min.z,
     1e-6,
   );
+  const segments = skeleton.bones.flatMap((bone, boneIndex) => {
+    if (resolved.restrictToBoneIndices && !resolved.restrictToBoneIndices.has(boneIndex)) {
+      return [];
+    }
+    return [{ boneIndex, ...getBoneSegment(bone, skeleton) }];
+  });
 
-  const segments = skeleton.bones.map((bone, boneIndex) => ({
-    boneIndex,
-    ...getBoneSegment(bone, skeleton),
-  }));
+  if (segments.length === 0) return null;
 
-  const vertexPosition = new THREE.Vector3();
-  const worldPosition = new THREE.Vector3();
+  return {
+    mesh,
+    attributes,
+    position,
+    normal,
+    normalMatrix,
+    modelSize,
+    segments,
+    resolved,
+  };
+}
+
+function computeAutoSkinVertexWeights(
+  context: SkinAutoWeightContext,
+  vertexIndex: number,
+): VertexSkinWeights | null {
+  if (vertexIndex < 0 || vertexIndex >= context.position.count) return null;
+
+  const local = new THREE.Vector3().fromBufferAttribute(context.position, vertexIndex);
+  const worldPosition = local.applyMatrix4(context.mesh.matrixWorld);
+
   const vertexNormal = new THREE.Vector3();
+  if (context.normal && context.normal.itemSize >= 3 && vertexIndex < context.normal.count) {
+    vertexNormal.fromBufferAttribute(context.normal, vertexIndex).applyMatrix3(context.normalMatrix).normalize();
+  }
+
+  const candidates = context.segments.map((segment) => {
+    const closest = segmentClosestPoint(worldPosition, segment.start, segment.end);
+    const distance = Math.max(1 + (64 * distanceToSegment(worldPosition, segment.start, segment.end) / context.modelSize), 1e-6);
+    const awayVector = worldPosition.clone().sub(closest);
+    const awayFromBone = vertexNormal.lengthSq() > 0 && awayVector.lengthSq() > 1e-12
+      ? 2 - awayVector.normalize().dot(vertexNormal)
+      : 1;
+    return {
+      boneIndex: segment.boneIndex,
+      distance,
+      normalFactor: awayFromBone,
+    };
+  });
+
+  return makeWeightedVertex(makeAutoWeightEntries(candidates, context.resolved), context.resolved.maxInfluences);
+}
+
+function blendVertexWeights(
+  current: VertexSkinWeights,
+  target: VertexSkinWeights,
+  blendAmount: number,
+  maxInfluences: number,
+): VertexSkinWeights | null {
+  const blend = clamp01(blendAmount);
+  if (blend >= 1) return target;
+
+  const weightsByBone = new Map<number, number>();
+  current.indices.forEach((boneIndex, slot) => {
+    const weight = current.weights[slot] * (1 - blend);
+    if (weight > 0) weightsByBone.set(boneIndex, (weightsByBone.get(boneIndex) ?? 0) + weight);
+  });
+  target.indices.forEach((boneIndex, slot) => {
+    const weight = target.weights[slot] * blend;
+    if (weight > 0) weightsByBone.set(boneIndex, (weightsByBone.get(boneIndex) ?? 0) + weight);
+  });
+
+  return makeWeightedVertex(
+    [...weightsByBone.entries()].map(([boneIndex, weight]) => ({ boneIndex, weight })),
+    maxInfluences,
+  );
+}
+
+export function autoSkinSkinnedMeshWeights(
+  mesh: THREE.SkinnedMesh,
+  skeleton: THREE.Skeleton,
+  options: SkinAutoWeightOptions = {},
+): SkinMeshWeightEditSummary {
+  const context = createSkinAutoWeightContext(mesh, skeleton, options);
+  if (!context) {
+    return { touchedVertices: 0, changedVertices: 0 };
+  }
+
   let touchedVertices = 0;
   let changedVertices = 0;
 
-  for (let vertexIndex = 0; vertexIndex < position.count; vertexIndex += 1) {
-    const current = readVertexSkinWeights(attributes, vertexIndex);
+  for (let vertexIndex = 0; vertexIndex < context.position.count; vertexIndex += 1) {
+    const current = readVertexSkinWeights(context.attributes, vertexIndex);
     if (!current) continue;
 
-    vertexPosition.fromBufferAttribute(position, vertexIndex);
-    worldPosition.copy(vertexPosition).applyMatrix4(mesh.matrixWorld);
-    if (normal && normal.itemSize >= 3 && vertexIndex < normal.count) {
-      vertexNormal.fromBufferAttribute(normal, vertexIndex).applyMatrix3(normalMatrix).normalize();
-    } else {
-      vertexNormal.set(0, 0, 0);
-    }
-
-    const entries = segments.map((segment) => {
-      const closest = segmentClosestPoint(worldPosition, segment.start, segment.end);
-      const distance = Math.max(distanceToSegment(worldPosition, segment.start, segment.end), 1e-6);
-      const awayFromBone = vertexNormal.lengthSq() > 0
-        ? 2 - worldPosition.clone().sub(closest).normalize().dot(vertexNormal)
-        : 1;
-      const modifiedDistance = 1 + 64 * distance * THREE.MathUtils.lerp(1, awayFromBone, normalWeighting) / modelSize;
-      return {
-        boneIndex: segment.boneIndex,
-        weight: 1 / Math.pow(Math.max(modifiedDistance, 1e-6), power),
-      };
-    });
-
-    const next = makeWeightedVertex(entries);
+    const target = computeAutoSkinVertexWeights(context, vertexIndex);
+    const next = target
+      ? blendVertexWeights(current, target, context.resolved.blendAmount, context.resolved.maxInfluences)
+      : null;
     if (!next) continue;
 
     touchedVertices += 1;
     if (!sameVertexSkinWeights(current, next, 1e-5)) {
-      writeVertexSkinWeights(attributes, vertexIndex, next);
+      writeVertexSkinWeights(context.attributes, vertexIndex, next);
       changedVertices += 1;
     }
   }
 
   return { touchedVertices, changedVertices };
+}
+
+export function autoSkinSkinnedMeshVertexWeights(
+  mesh: THREE.SkinnedMesh,
+  skeleton: THREE.Skeleton,
+  vertexIndex: number,
+  options: SkinAutoWeightOptions = {},
+): SkinWeightEditResult {
+  const context = createSkinAutoWeightContext(mesh, skeleton, options);
+  if (!context) {
+    return { ok: false, reason: 'missing-skin-attributes' };
+  }
+
+  const current = readVertexSkinWeights(context.attributes, vertexIndex);
+  if (!current) {
+    return { ok: false, reason: 'invalid-vertex' };
+  }
+
+  const target = computeAutoSkinVertexWeights(context, vertexIndex);
+  const next = target
+    ? blendVertexWeights(current, target, context.resolved.blendAmount, context.resolved.maxInfluences)
+    : null;
+  if (!next) {
+    return { ok: false, reason: 'invalid-bone' };
+  }
+
+  const changed = !sameVertexSkinWeights(current, next, 1e-5);
+  if (changed) {
+    writeVertexSkinWeights(context.attributes, vertexIndex, next);
+  }
+
+  return {
+    ok: true,
+    vertex: next,
+    slot: 0,
+    changed,
+  };
 }
 
 function isSkinnedMesh(obj: THREE.Object3D): obj is THREE.SkinnedMesh {
