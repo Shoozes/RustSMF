@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 import type { AnimationTimelineSummary } from '../utils/animationTimeline';
-import type { AnimationInterpolation } from '../utils/animationEdits';
+import type { AnimationInterpolation, AnimationSnapStep } from '../utils/animationEdits';
 
 interface AnimatePanelProps {
   clips: THREE.AnimationClip[];
@@ -16,12 +16,14 @@ interface AnimatePanelProps {
   selectedKeyTime: number | null;
   clipboardHasKeyframe: boolean;
   interpolation: AnimationInterpolation;
+  snapStep: AnimationSnapStep;
   onInsertKeyframe: () => void;
   onUpdateKeyframe: () => void;
   onDeleteKeyframe: () => void;
   onCopyKeyframe: () => void;
   onPasteKeyframe: () => void;
   onInterpolationChange: (next: AnimationInterpolation) => void;
+  onSnapStepChange: (next: AnimationSnapStep) => void;
   onRenameClip: (nextName: string) => void;
   onDuplicateClip: () => void;
   onDeleteClip: () => void;
@@ -43,12 +45,14 @@ export default function AnimatePanel({
   selectedKeyTime,
   clipboardHasKeyframe,
   interpolation,
+  snapStep,
   onInsertKeyframe,
   onUpdateKeyframe,
   onDeleteKeyframe,
   onCopyKeyframe,
   onPasteKeyframe,
   onInterpolationChange,
+  onSnapStepChange,
   onRenameClip,
   onDuplicateClip,
   onDeleteClip,
@@ -208,18 +212,36 @@ export default function AnimatePanel({
           Paste
         </button>
       </div>
-      <label className="animate-interpolation">
-        <span>Interpolation</span>
-        <select
-          data-testid="animation-interpolation-select"
-          value={interpolation}
-          disabled={!hasEditableSelection}
-          onChange={(event) => onInterpolationChange(event.target.value as AnimationInterpolation)}
-        >
-          <option value="linear">Linear</option>
-          <option value="step">Step</option>
-        </select>
-      </label>
+      <div className="animate-authoring-settings">
+        <label>
+          <span>Interpolation</span>
+          <select
+            data-testid="animation-interpolation-select"
+            value={interpolation}
+            disabled={!hasEditableSelection}
+            onChange={(event) => onInterpolationChange(event.target.value as AnimationInterpolation)}
+          >
+            <option value="linear">Linear</option>
+            <option value="step">Step</option>
+          </select>
+        </label>
+        <label>
+          <span>Snap</span>
+          <select
+            data-testid="animation-snap-step-select"
+            value={snapStep}
+            disabled={!hasActiveClip}
+            onChange={(event) => onSnapStepChange(Number(event.target.value) as AnimationSnapStep)}
+          >
+            <option value="0">Off</option>
+            <option value="0.01">0.01s</option>
+            <option value="0.05">0.05s</option>
+            <option value="0.1">0.10s</option>
+            <option value="0.25">0.25s</option>
+            <option value="0.5">0.50s</option>
+          </select>
+        </label>
+      </div>
     </div>
   );
 }

@@ -1082,32 +1082,34 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await page.getByTestId('mode-tab-animate').click({ force: true });
     await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
     await pausePlaybackIfRunning(page);
+    await page.getByTestId('animation-snap-step-select').selectOption('0.1');
+    await expect(page.getByTestId('status-text')).toContainText(/Animation snap set to 0\.10s/i);
     await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '2');
 
     await clickTimelineLaneAt(page, 0.75, 2);
     await expect(page.getByTestId('status-text')).toContainText(/Inserted animation keyframe for FixtureTip/i);
     await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '3');
-    await expect(page.getByTestId('animation-selected-key')).not.toContainText('none');
-    await expect(page.getByTestId('time-display')).toContainText(/0\.[3-4]/);
+    await expect(page.getByTestId('animation-selected-key')).toContainText('0.40s');
+    await expect(page.getByTestId('time-display')).toContainText(/0\.40/);
 
     await dragSelectedTimelineMarkerTo(page, 0.55);
     await expect(page.getByTestId('status-text')).toContainText(/Moved animation keyframe for FixtureTip/i);
     await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '3');
-    await expect(page.getByTestId('animation-selected-key')).toContainText(/0\.2[7-8]s/);
-    await expect(page.getByTestId('time-display')).toContainText(/0\.2[7-8]/);
+    await expect(page.getByTestId('animation-selected-key')).toContainText('0.30s');
+    await expect(page.getByTestId('time-display')).toContainText(/0\.30/);
 
     await clickTimelineLaneAt(page, 0.25);
     await expect(page.getByTestId('animation-selected-key')).toContainText('none');
-    await expect(page.getByTestId('time-display')).toContainText(/0\.1/);
+    await expect(page.getByTestId('time-display')).toContainText(/0\.10/);
 
     await page.getByTestId('editor-undo-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Undid move animation keyframe for FixtureTip/i);
     await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '3');
-    await expect(page.getByTestId('animation-selected-key')).toContainText(/0\.3[7-8]s/);
+    await expect(page.getByTestId('animation-selected-key')).toContainText('0.40s');
 
     await page.getByTestId('editor-redo-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Redid move animation keyframe for FixtureTip/i);
-    await expect(page.getByTestId('animation-selected-key')).toContainText(/0\.2[7-8]s/);
+    await expect(page.getByTestId('animation-selected-key')).toContainText('0.30s');
     await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '3');
   });
 

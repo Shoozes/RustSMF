@@ -11,6 +11,9 @@ import {
 import { findEffectiveBoneParentIndex } from '../loaders/smfRig';
 
 export type AnimationInterpolation = 'linear' | 'step';
+export type AnimationSnapStep = 0 | 0.01 | 0.05 | 0.1 | 0.25 | 0.5;
+
+export const ANIMATION_SNAP_STEPS: readonly AnimationSnapStep[] = [0, 0.01, 0.05, 0.1, 0.25, 0.5];
 
 export interface EditableBoneKeyframe {
   time: number;
@@ -171,6 +174,25 @@ export const moveAnimationClip = (
 const normalizeTime = (time: number): number => {
   if (!Number.isFinite(time)) return 0;
   return Math.max(0, Math.round(time * 10000) / 10000);
+};
+
+export const normalizeAnimationSnapStep = (value: number): AnimationSnapStep => {
+  const match = ANIMATION_SNAP_STEPS.find((step) => Math.abs(step - value) < TIME_EPSILON);
+  return match ?? 0;
+};
+
+export const snapAnimationTime = (
+  time: number,
+  snapStep: AnimationSnapStep,
+  duration = Number.MAX_SAFE_INTEGER,
+): number => {
+  const normalizedTime = normalizeTime(time);
+  const step = normalizeAnimationSnapStep(snapStep);
+  const snapped = step > 0
+    ? normalizeTime(Math.round(normalizedTime / step) * step)
+    : normalizedTime;
+  const maxTime = Number.isFinite(duration) ? Math.max(0, duration) : Number.MAX_SAFE_INTEGER;
+  return Math.min(maxTime, Math.max(0, snapped));
 };
 
 const keyMatchesTime = (key: EditableBoneKeyframe, time: number): boolean => {

@@ -208,6 +208,7 @@ export default function App() {
     animationAuthoredKeyTimes,
     animationClipboardHasKeyframe,
     animationInterpolation,
+    animationSnapStep,
     insertAnimationKeyframe,
     insertAnimationKeyframeAtTime,
     updateAnimationKeyframe,
@@ -217,6 +218,7 @@ export default function App() {
     selectAnimationKeyframeTime,
     moveSelectedAnimationKeyframe,
     changeAnimationInterpolation,
+    changeAnimationSnapStep,
   } = useLoadModel({ allocateHistoryOrder });
 
   const [outlinerRevision, setOutlinerRevision] = useState(0);
@@ -606,12 +608,14 @@ export default function App() {
           selectedKeyTime={animationSelectedKeyTime}
           clipboardHasKeyframe={animationClipboardHasKeyframe}
           interpolation={animationInterpolation}
+          snapStep={animationSnapStep}
           onInsertKeyframe={insertAnimationKeyframe}
           onUpdateKeyframe={updateAnimationKeyframe}
           onDeleteKeyframe={deleteSelectedAnimationKeyframe}
           onCopyKeyframe={copySelectedAnimationKeyframe}
           onPasteKeyframe={pasteAnimationKeyframe}
           onInterpolationChange={changeAnimationInterpolation}
+          onSnapStepChange={changeAnimationSnapStep}
           onRenameClip={renameCurrentAnimationClip}
           onDuplicateClip={duplicateCurrentAnimationClip}
           onDeleteClip={deleteCurrentAnimationClip}

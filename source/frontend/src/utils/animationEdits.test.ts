@@ -16,10 +16,12 @@ import {
   makeUniqueAnimationClipName,
   moveAnimationClip,
   moveAnimationKeyframe,
+  normalizeAnimationSnapStep,
   renameAnimationEditBone,
   renameAnimationEditClip,
   sameAnimationEditState,
   setAnimationInterpolation,
+  snapAnimationTime,
   upsertAnimationKeyframe,
 } from './animationEdits';
 import type { ImportedSmf } from '../loaders/smf';
@@ -271,6 +273,16 @@ test('moveAnimationClip reorders cloned clips and keeps out-of-range moves stabl
   const unchanged = moveAnimationClip(clips, 'Idle', -1);
   assert.deepEqual(unchanged.map((clip) => clip.name), ['Idle', 'Walk', 'Run']);
   assert.notEqual(unchanged[0], clips[0]);
+});
+
+test('animation snap helpers normalize supported steps and clamp snapped times', () => {
+  assert.equal(normalizeAnimationSnapStep(0.1), 0.1);
+  assert.equal(normalizeAnimationSnapStep(0.2), 0);
+  assert.equal(snapAnimationTime(0.37, 0, 1), 0.37);
+  assert.equal(snapAnimationTime(0.37, 0.1, 1), 0.4);
+  assert.equal(snapAnimationTime(0.62, 0.25, 1), 0.5);
+  assert.equal(snapAnimationTime(1.9, 0.5, 1), 1);
+  assert.equal(snapAnimationTime(-0.2, 0.1, 1), 0);
 });
 
 test('deleteAnimationEditBones removes authored keys and marks affected clips dirty', () => {

@@ -65,14 +65,17 @@ import {
   makeKeyframeFromBone,
   moveAnimationClip,
   moveAnimationKeyframe,
+  normalizeAnimationSnapStep,
   renameAnimationEditClip,
   renameAnimationEditBone,
   sameAnimationEditState,
   selectAnimationKeyframe,
   setAnimationInterpolation,
+  snapAnimationTime,
   upsertAnimationKeyframe,
   type AnimationEditState,
   type AnimationInterpolation,
+  type AnimationSnapStep,
   type EditableBoneKeyframe,
 } from '../utils/animationEdits';
 import { createChildBone, deleteBoneBranch, reparentBonePreserveWorldTransform, removeAnimationClipBoneNames, retargetAnimationClipBoneNames, validateBoneRename } from '../utils/rigEdits';
@@ -479,6 +482,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const [skinAutoWeightPower, setSkinAutoWeightPower] = useState(2);
   const [skinAutoWeightNormalWeighting, setSkinAutoWeightNormalWeighting] = useState(0);
   const [skinAutoWeightMaxInfluences, setSkinAutoWeightMaxInfluences] = useState(4);
+  const [animationSnapStep, setAnimationSnapStep] = useState<AnimationSnapStep>(0);
 
   const [sourceFormat, setSourceFormat] = useState('');
   const [smfRoundtripReport, setSmfRoundtripReport] = useState<SmfRoundtripReport | null>(null);
@@ -1603,13 +1607,13 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     moveCurrentAnimationClip(1);
   }, [moveCurrentAnimationClip]);
 
-  const clampPlaybackTime = useCallback((t: number) => (
-    Math.max(0, Math.min(t, playbackRef.current.duration || 0))
-  ), [playbackRef]);
+  const snapPlaybackTime = useCallback((time: number): number => (
+    snapAnimationTime(time, animationSnapStep, playbackRef.current.duration || 0)
+  ), [animationSnapStep, playbackRef]);
 
   const onScrub = useCallback((t: number) => {
-    playbackRef.current.scrub(clampPlaybackTime(t));
-  }, [clampPlaybackTime, playbackRef]);
+    playbackRef.current.scrub(snapPlaybackTime(t));
+  }, [playbackRef, snapPlaybackTime]);
 
   const setSpeed = useCallback((s: number) => {
     playback.setPlaybackSpeed(s);
@@ -1655,7 +1659,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     if (!context) return;
     const state = animationEditStateRef.current;
     const before = cloneAnimationEditState(state);
-    const keyTime = clampPlaybackTime(time);
+    const keyTime = snapPlaybackTime(time);
     const key = makeKeyframeFromBone(
       context.bone,
       keyTime,
@@ -1669,7 +1673,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     );
     playbackRef.current.scrub(keyTime);
     applyAnimationEditState(next, `Inserted animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
-  }, [applyAnimationEditState, clampPlaybackTime, getActiveAnimationEditContext, playbackRef, pushAnimationHistory]);
+  }, [applyAnimationEditState, getActiveAnimationEditContext, playbackRef, pushAnimationHistory, snapPlaybackTime]);
 
   const insertAnimationKeyframe = useCallback(() => {
     insertAnimationKeyframeAtTime(playbackRef.current.currentTime);
@@ -1680,7 +1684,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     if (!context) return;
     const state = animationEditStateRef.current;
     const before = cloneAnimationEditState(state);
-    const time = state.selectedKeyTime ?? playbackRef.current.currentTime;
+    const time = state.selectedKeyTime ?? snapPlaybackTime(playbackRef.current.currentTime);
     const key = makeKeyframeFromBone(context.bone, time, state.interpolation);
     const next = upsertAnimationKeyframe(state, context.clipName, context.boneName, key);
     pushAnimationHistory(
@@ -1689,14 +1693,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       next,
     );
     applyAnimationEditState(next, `Updated animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
-  }, [applyAnimationEditState, getActiveAnimationEditContext, playbackRef, pushAnimationHistory]);
+  }, [applyAnimationEditState, getActiveAnimationEditContext, playbackRef, pushAnimationHistory, snapPlaybackTime]);
 
   const deleteSelectedAnimationKeyframe = useCallback(() => {
     const context = getActiveAnimationEditContext();
     if (!context) return;
     const state = animationEditStateRef.current;
     const before = cloneAnimationEditState(state);
-    const time = state.selectedKeyTime ?? playbackRef.current.currentTime;
+    const time = state.selectedKeyTime ?? snapPlaybackTime(playbackRef.current.currentTime);
     const next = deleteAnimationKeyframe(state, context.clipName, context.boneName, time);
     pushAnimationHistory(
       `delete animation keyframe for ${context.boneName} near ${time.toFixed(2)}s`,
@@ -1704,20 +1708,20 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       next,
     );
     applyAnimationEditState(next, `Deleted animation keyframe for ${context.boneName} near ${time.toFixed(2)}s.`);
-  }, [applyAnimationEditState, getActiveAnimationEditContext, playbackRef, pushAnimationHistory]);
+  }, [applyAnimationEditState, getActiveAnimationEditContext, playbackRef, pushAnimationHistory, snapPlaybackTime]);
 
   const copySelectedAnimationKeyframe = useCallback(() => {
     const context = getActiveAnimationEditContext();
     if (!context) return;
     const state = animationEditStateRef.current;
-    const time = state.selectedKeyTime ?? playbackRef.current.currentTime;
+    const time = state.selectedKeyTime ?? snapPlaybackTime(playbackRef.current.currentTime);
     const edited = getEditedKeyframe(state, context.clipName, context.boneName, time);
     const key: EditableBoneKeyframe = edited ?? makeKeyframeFromBone(context.bone, time, state.interpolation);
     const next = copyAnimationKeyframe(state, key);
     animationEditStateRef.current = next;
     setAnimationEditState(next);
     ui.setStatus(`Copied animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
-  }, [getActiveAnimationEditContext, playbackRef, ui]);
+  }, [getActiveAnimationEditContext, playbackRef, snapPlaybackTime, ui]);
 
   const pasteAnimationKeyframe = useCallback(() => {
     const context = getActiveAnimationEditContext();
@@ -1728,7 +1732,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       return;
     }
     const before = cloneAnimationEditState(state);
-    const time = playbackRef.current.currentTime;
+    const time = snapPlaybackTime(playbackRef.current.currentTime);
     const key: EditableBoneKeyframe = {
       ...state.clipboard,
       time,
@@ -1740,7 +1744,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       next,
     );
     applyAnimationEditState(next, `Pasted animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
-  }, [applyAnimationEditState, getActiveAnimationEditContext, playbackRef, pushAnimationHistory, ui]);
+  }, [applyAnimationEditState, getActiveAnimationEditContext, playbackRef, pushAnimationHistory, snapPlaybackTime, ui]);
 
   const selectAnimationKeyframeTime = useCallback((time: number | null) => {
     const next = selectAnimationKeyframe(animationEditStateRef.current, time);
@@ -1759,7 +1763,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
 
     const before = cloneAnimationEditState(state);
-    const nextTime = clampPlaybackTime(toTime);
+    const nextTime = snapPlaybackTime(toTime);
     const next = moveAnimationKeyframe(state, context.clipName, context.boneName, fromTime, nextTime);
     const moved = pushAnimationHistory(
       `move animation keyframe for ${context.boneName} to ${nextTime.toFixed(2)}s`,
@@ -1775,10 +1779,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     applyAnimationEditState(next, `Moved animation keyframe for ${context.boneName} to ${nextTime.toFixed(2)}s.`);
   }, [
     applyAnimationEditState,
-    clampPlaybackTime,
     getActiveAnimationEditContext,
     playbackRef,
     pushAnimationHistory,
+    snapPlaybackTime,
     ui,
   ]);
 
@@ -1795,6 +1799,12 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     );
     applyAnimationEditState(next, `Animation interpolation set to ${interpolation}.`);
   }, [applyAnimationEditState, getActiveAnimationEditContext, pushAnimationHistory]);
+
+  const changeAnimationSnapStep = useCallback((step: AnimationSnapStep) => {
+    const next = normalizeAnimationSnapStep(step);
+    setAnimationSnapStep(next);
+    ui.setStatus(next > 0 ? `Animation snap set to ${next.toFixed(2)}s.` : 'Animation snap disabled.');
+  }, [ui]);
 
   const animationAuthoredKeyTimes = useMemo(() => {
     const boneName = ui.selected;
@@ -2079,7 +2089,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         ? active.before
         : cloneAnimationEditState(animationEditStateRef.current);
       const state = animationEditStateRef.current;
-      const key = makeKeyframeFromBone(bone, playbackRef.current.currentTime, state.interpolation);
+      const key = makeKeyframeFromBone(bone, snapPlaybackTime(playbackRef.current.currentTime), state.interpolation);
       const next = upsertAnimationKeyframe(state, clipName, event.boneName, key);
       const label = `viewport animation keyframe for ${event.boneName} at ${key.time.toFixed(2)}s`;
       const pushed = pushAnimationHistory(label, before, next);
@@ -2135,6 +2145,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     model.skeleton,
     playbackRef,
     pushAnimationHistory,
+    snapPlaybackTime,
     pushPoseHistory,
     recordPoseBoneEdit,
     sourceFormat,
@@ -2629,6 +2640,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     animationAuthoredKeyTimes,
     animationClipboardHasKeyframe: !!animationEditState.clipboard,
     animationInterpolation: animationEditState.interpolation,
+    animationSnapStep,
     insertAnimationKeyframe,
     insertAnimationKeyframeAtTime,
     updateAnimationKeyframe,
@@ -2638,6 +2650,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     selectAnimationKeyframeTime,
     moveSelectedAnimationKeyframe,
     changeAnimationInterpolation,
+    changeAnimationSnapStep,
     viewportLayout: ui.viewportLayout,
     setViewportLayout: ui.setViewportLayout,
     gridEnabled: ui.gridEnabled,
