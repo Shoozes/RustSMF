@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 import type { AnimationTimelineSummary } from '../utils/animationTimeline';
 import type { AnimationInterpolation } from '../utils/animationEdits';
@@ -21,6 +22,9 @@ interface AnimatePanelProps {
   onCopyKeyframe: () => void;
   onPasteKeyframe: () => void;
   onInterpolationChange: (next: AnimationInterpolation) => void;
+  onRenameClip: (nextName: string) => void;
+  onDuplicateClip: () => void;
+  onDeleteClip: () => void;
   editorMode?: string;
 }
 
@@ -43,12 +47,26 @@ export default function AnimatePanel({
   onCopyKeyframe,
   onPasteKeyframe,
   onInterpolationChange,
+  onRenameClip,
+  onDuplicateClip,
+  onDeleteClip,
   editorMode = 'animate',
 }: AnimatePanelProps) {
   const clipCount = clips.length;
   const selectedKeyframeCount = timelineSummary.selectedKeyframeTimes.length;
   const allKeyframeCount = timelineSummary.keyframeTimes.length;
   const hasEditableSelection = !!selectedBoneName && !!currentClipName;
+  const hasActiveClip = !!currentClipName;
+  const canDeleteClip = clipCount > 1 && hasActiveClip;
+  const [draftClipName, setDraftClipName] = useState(currentClipName);
+
+  useEffect(() => {
+    setDraftClipName(currentClipName);
+  }, [currentClipName]);
+
+  const submitRename = () => {
+    onRenameClip(draftClipName);
+  };
 
   return (
     <div className="inspector" data-testid="animate-workspace-panel" data-editor-mode={editorMode}>
@@ -79,6 +97,49 @@ export default function AnimatePanel({
         <div data-testid="animation-selected-key">Selected key: <span>{selectedKeyTime === null ? 'none' : `${selectedKeyTime.toFixed(2)}s`}</span></div>
         <div>Playback: <span>{isPlaying ? 'Playing' : 'Paused'}</span></div>
         <div>Time: <span>{currentTime.toFixed(2)} / {duration.toFixed(2)}s</span></div>
+      </div>
+      <div className="animate-clip-tools" data-testid="animate-clip-tools">
+        <label>
+          <span>Clip name</span>
+          <input
+            data-testid="animation-clip-name-input"
+            value={draftClipName}
+            disabled={!hasActiveClip}
+            onChange={(event) => setDraftClipName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                submitRename();
+              }
+            }}
+          />
+        </label>
+        <div className="animate-clip-actions">
+          <button
+            type="button"
+            data-testid="animation-rename-clip-btn"
+            disabled={!hasActiveClip || draftClipName.trim().length === 0}
+            onClick={submitRename}
+          >
+            Rename
+          </button>
+          <button
+            type="button"
+            data-testid="animation-duplicate-clip-btn"
+            disabled={!hasActiveClip}
+            onClick={onDuplicateClip}
+          >
+            Duplicate
+          </button>
+          <button
+            type="button"
+            data-testid="animation-delete-clip-btn"
+            disabled={!canDeleteClip}
+            onClick={onDeleteClip}
+          >
+            Delete
+          </button>
+        </div>
       </div>
       <div className="animate-keyframe-tools" data-testid="animate-keyframe-tools">
         <button

@@ -130,6 +130,9 @@ export default function App() {
     setupKeyboard,
     togglePlay,
     changeClip,
+    renameCurrentAnimationClip,
+    duplicateCurrentAnimationClip,
+    deleteCurrentAnimationClip,
     onScrub,
     setSpeed,
     pingRust,
@@ -607,6 +610,9 @@ export default function App() {
           onCopyKeyframe={copySelectedAnimationKeyframe}
           onPasteKeyframe={pasteAnimationKeyframe}
           onInterpolationChange={changeAnimationInterpolation}
+          onRenameClip={renameCurrentAnimationClip}
+          onDuplicateClip={duplicateCurrentAnimationClip}
+          onDeleteClip={deleteCurrentAnimationClip}
           editorMode={editorMode}
         />
       );

@@ -5,14 +5,18 @@ import {
   applyAnimationEditsToClips,
   applyAnimationEditsToImportedSmf,
   cloneAnimationEditState,
+  deleteAnimationEditClip,
   deleteAnimationEditBones,
   deleteAnimationKeyframe,
+  duplicateAnimationEditClip,
   getCurrentClipKey,
   hasDirtyAnimationEdits,
   makeAnimationEditState,
   makeKeyframeFromBone,
+  makeUniqueAnimationClipName,
   moveAnimationKeyframe,
   renameAnimationEditBone,
+  renameAnimationEditClip,
   sameAnimationEditState,
   setAnimationInterpolation,
   upsertAnimationKeyframe,
@@ -153,6 +157,40 @@ test('applyAnimationEditsToImportedSmf carries dirty clip key times into SMF sou
   assert.notEqual(result, source);
 });
 
+test('applyAnimationEditsToImportedSmf rebuilds renamed and duplicated clip lists', () => {
+  const dq = new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]);
+  const source: ImportedSmf = {
+    meshes: [],
+    textures: [],
+    bones: [{ index: 0, parent: 0, isBone: 1, dq, axis: [0, 1, 0] }],
+    animations: [{
+      name: 'Walk',
+      duration: 1,
+      times: [0, 1],
+      frames: [[dq], [dq]],
+      nodeCount: 1,
+      loop: 1,
+      interpolation: 1,
+      sampleFrameMultiplier: 1,
+      lockedBones: [],
+    }],
+  };
+  const boneName = 'SMF_Node_0';
+  const renamed = new THREE.AnimationClip('Walk Copy', 1, [
+    new THREE.VectorKeyframeTrack(`${boneName}.position`, [0, 1], [0, 0, 0, 1, 0, 0]),
+    new THREE.QuaternionKeyframeTrack(`${boneName}.quaternion`, [0, 1], [0, 0, 0, 1, 0, 0, 0, 1]),
+  ]);
+  const duplicated = renamed.clone();
+  duplicated.name = 'Walk Copy 2';
+  const state = duplicateAnimationEditClip(makeAnimationEditState(), 'Walk Copy', 'Walk Copy 2');
+
+  const result = applyAnimationEditsToImportedSmf(source, [renamed, duplicated], state);
+
+  assert.deepEqual(result.animations.map((animation) => animation.name), ['Walk Copy', 'Walk Copy 2']);
+  assert.equal(result.animations.length, 2);
+  assert.equal(result.animations[1].frames.length, 2);
+});
+
 test('makeKeyframeFromBone and interpolation helpers preserve supported metadata', () => {
   const bone = new THREE.Bone();
   bone.position.set(1, 2, 3);
@@ -182,6 +220,37 @@ test('renameAnimationEditBone moves authored keys to the new bone name', () => {
   assert.equal(renamed.editsByClip.Walk.Spine.length, 1);
   assert.deepEqual(renamed.editsByClip.Walk.Spine[0].position, [1, 2, 3]);
   assert.equal(state.editsByClip.Walk.Root.length, 1);
+});
+
+test('clip edit helpers rename, duplicate, delete, and allocate unique names', () => {
+  let state = upsertAnimationKeyframe(makeAnimationEditState(), 'Walk', 'Root', {
+    time: 0,
+    position: [1, 2, 3],
+    quaternion: [0, 0, 0, 1],
+    interpolation: 'linear',
+  });
+  state = renameAnimationEditClip(state, 'Walk', 'Run');
+
+  assert.equal(state.editsByClip.Walk, undefined);
+  assert.equal(state.editsByClip.Run.Root.length, 1);
+  assert.equal(state.dirtyClipNames.includes('Run'), true);
+
+  const duplicated = duplicateAnimationEditClip(state, 'Run', 'Run Copy');
+  assert.equal(duplicated.editsByClip['Run Copy'].Root.length, 1);
+  assert.notEqual(duplicated.editsByClip['Run Copy'].Root, duplicated.editsByClip.Run.Root);
+  assert.equal(duplicated.dirtyClipNames.includes('Run Copy'), true);
+
+  const deleted = deleteAnimationEditClip(duplicated, 'Run');
+  assert.equal(deleted.editsByClip.Run, undefined);
+  assert.equal(deleted.editsByClip['Run Copy'].Root.length, 1);
+  assert.equal(deleted.selectedKeyTime, null);
+
+  const clips = [
+    new THREE.AnimationClip('Run', 1, []),
+    new THREE.AnimationClip('Run 2', 1, []),
+  ];
+  assert.equal(makeUniqueAnimationClipName(clips, 'Run'), 'Run 3');
+  assert.equal(makeUniqueAnimationClipName(clips, 'Run', 'Run'), 'Run');
 });
 
 test('deleteAnimationEditBones removes authored keys and marks affected clips dirty', () => {

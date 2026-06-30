@@ -571,6 +571,44 @@ html, body, #root {
   color: #cbd5e1;
 }
 
+.animate-clip-tools {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #334155;
+}
+
+.animate-clip-tools label {
+  display: grid;
+  gap: 4px;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.animate-clip-tools input {
+  min-width: 0;
+  height: 28px;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 11px;
+}
+
+.animate-clip-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.animate-clip-actions button {
+  min-width: 0;
+  height: 28px;
+  padding: 0 5px;
+  font-size: 10px;
+}
+
 .animate-keyframe-tools {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

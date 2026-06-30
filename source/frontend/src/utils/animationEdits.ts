@@ -127,6 +127,28 @@ export const getCurrentClipKey = (
   return clips[0] ? getClipKey(clips[0], 0) : '';
 };
 
+export const makeUniqueAnimationClipName = (
+  clips: THREE.AnimationClip[],
+  requestedName: string,
+  ignoredName = '',
+): string => {
+  const baseName = requestedName.trim() || 'Clip';
+  const usedNames = new Set(
+    clips
+      .map((clip, index) => getClipKey(clip, index))
+      .filter((name) => name !== ignoredName),
+  );
+  if (!usedNames.has(baseName)) return baseName;
+
+  let suffix = 2;
+  let candidate = `${baseName} ${suffix}`;
+  while (usedNames.has(candidate)) {
+    suffix += 1;
+    candidate = `${baseName} ${suffix}`;
+  }
+  return candidate;
+};
+
 const normalizeTime = (time: number): number => {
   if (!Number.isFinite(time)) return 0;
   return Math.max(0, Math.round(time * 10000) / 10000);
@@ -264,6 +286,69 @@ export const renameAnimationEditBone = (
       .sort((left, right) => left.time - right.time);
     delete clipEdits[oldBoneName];
   }
+  return next;
+};
+
+export const renameAnimationEditClip = (
+  state: AnimationEditState,
+  oldClipName: string,
+  newClipName: string,
+): AnimationEditState => {
+  if (!oldClipName || !newClipName || oldClipName === newClipName) {
+    return cloneAnimationEditState(state);
+  }
+
+  const next = cloneAnimationEditState(state);
+  const existing = next.editsByClip[oldClipName];
+  if (existing) {
+    const destination = next.editsByClip[newClipName] ?? {};
+    next.editsByClip[newClipName] = {
+      ...destination,
+      ...existing,
+    };
+    delete next.editsByClip[oldClipName];
+  }
+
+  next.dirtyClipNames = Array.from(new Set([
+    ...next.dirtyClipNames.map((clipName) => (clipName === oldClipName ? newClipName : clipName)),
+    newClipName,
+  ]));
+  return next;
+};
+
+export const duplicateAnimationEditClip = (
+  state: AnimationEditState,
+  sourceClipName: string,
+  duplicateClipName: string,
+): AnimationEditState => {
+  if (!sourceClipName || !duplicateClipName || sourceClipName === duplicateClipName) {
+    return cloneAnimationEditState(state);
+  }
+
+  const next = cloneAnimationEditState(state);
+  const sourceEdits = next.editsByClip[sourceClipName];
+  if (sourceEdits) {
+    next.editsByClip[duplicateClipName] = {};
+    for (const [boneName, keys] of Object.entries(sourceEdits)) {
+      next.editsByClip[duplicateClipName][boneName] = keys.map(cloneKey);
+    }
+  } else {
+    delete next.editsByClip[duplicateClipName];
+  }
+  markDirty(next, duplicateClipName);
+  return next;
+};
+
+export const deleteAnimationEditClip = (
+  state: AnimationEditState,
+  clipName: string,
+): AnimationEditState => {
+  if (!clipName) return cloneAnimationEditState(state);
+
+  const next = cloneAnimationEditState(state);
+  delete next.editsByClip[clipName];
+  next.dirtyClipNames = next.dirtyClipNames.filter((name) => name !== clipName);
+  next.selectedKeyTime = null;
   return next;
 };
 
@@ -657,6 +742,7 @@ const buildSmfAnimationFromClip = (
 
   return {
     ...sourceAnimation,
+    name: clip.name || sourceAnimation.name,
     duration: Math.max(sourceAnimation.duration, clip.duration, times[times.length - 1] ?? 0),
     times,
     frames,
@@ -669,10 +755,42 @@ export const applyAnimationEditsToImportedSmf = (
   editedClips: THREE.AnimationClip[],
   state: AnimationEditState,
 ): ImportedSmf => {
-  if (!hasDirtyAnimationEdits(state)) return source;
+  const sourceAnimations = source.animations;
+  const sourceByName = new Map(sourceAnimations.map((animation, index) => [animation.name || `clip_${index}`, animation]));
+  const clipListChanged = editedClips.length !== sourceAnimations.length
+    || editedClips.some((clip, index) => getClipKey(clip, index) !== (sourceAnimations[index]?.name || `clip_${index}`));
+  if (!hasDirtyAnimationEdits(state) && !clipListChanged) return source;
 
   const result = cloneImportedSmf(source);
-  result.animations = result.animations.map((animation, index) => {
+  const makeFallbackAnimation = (clipName: string): ImportedSmf['animations'][number] => ({
+    name: clipName,
+    duration: 0,
+    times: [],
+    frames: [],
+    nodeCount: source.bones.length,
+    loop: 1,
+    interpolation: 1,
+    sampleFrameMultiplier: 1,
+    lockedBones: [],
+  });
+
+  if (clipListChanged) {
+    result.animations = editedClips.map((clip, index) => {
+      const clipName = getClipKey(clip, index);
+      const sourceAnimation = sourceByName.get(clipName)
+        ?? sourceAnimations[index]
+        ?? sourceAnimations[0]
+        ?? makeFallbackAnimation(clipName);
+      const rebuilt = buildSmfAnimationFromClip(source, sourceAnimation, clip);
+      return {
+        ...rebuilt,
+        name: clipName,
+      };
+    });
+    return result;
+  }
+
+  result.animations = sourceAnimations.map((animation, index) => {
     const clipName = animation.name || `clip_${index}`;
     if (!state.dirtyClipNames.includes(clipName)) return animation;
     const clip = editedClips.find((candidate, clipIndex) => getClipKey(candidate, clipIndex) === clipName);

@@ -52,15 +52,19 @@ import {
   applyAnimationEditsToImportedSmf,
   cloneAnimationEditState,
   copyAnimationKeyframe,
+  deleteAnimationEditClip,
   deleteAnimationEditBones,
   deleteAnimationKeyframe,
+  duplicateAnimationEditClip,
   getClipKey,
   getCurrentClipKey,
   getEditedKeyframe,
   hasDirtyAnimationEdits,
   makeAnimationEditState,
+  makeUniqueAnimationClipName,
   makeKeyframeFromBone,
   moveAnimationKeyframe,
+  renameAnimationEditClip,
   renameAnimationEditBone,
   sameAnimationEditState,
   selectAnimationKeyframe,
@@ -171,6 +175,13 @@ interface ActiveAnimationTransformHistory {
   before: AnimationEditState;
 }
 
+interface AnimationWorkspaceHistorySnapshot {
+  baseClips: THREE.AnimationClip[];
+  animationEditState: AnimationEditState;
+  currentClipName: string;
+  currentTime: number;
+}
+
 interface RigBoneHistorySnapshot {
   bone: THREE.Bone;
   name: string;
@@ -202,6 +213,7 @@ interface RigHistorySnapshot {
 type EditorHistorySnapshot =
   | { kind: 'pose'; value: PoseHistorySnapshot }
   | { kind: 'animation'; value: AnimationEditState }
+  | { kind: 'animation-workspace'; value: AnimationWorkspaceHistorySnapshot }
   | { kind: 'rig'; value: RigHistorySnapshot };
 
 const POSE_HISTORY_EPSILON = 1e-6;
@@ -255,6 +267,40 @@ const samePoseSnapshot = (left: PoseHistorySnapshot, right: PoseHistorySnapshot)
 };
 
 const cloneAnimationClips = (clips: THREE.AnimationClip[]): THREE.AnimationClip[] => clips.map((clip) => clip.clone());
+
+const sameAnimationClip = (left: THREE.AnimationClip, right: THREE.AnimationClip, index: number): boolean => {
+  if (getClipKey(left, index) !== getClipKey(right, index)) return false;
+  if (Math.abs(left.duration - right.duration) > POSE_HISTORY_EPSILON) return false;
+  if (left.tracks.length !== right.tracks.length) return false;
+
+  return left.tracks.every((track, trackIndex) => {
+    const other = right.tracks[trackIndex];
+    return !!other
+      && track.name === other.name
+      && sameNumberArray(Array.from(track.times), Array.from(other.times))
+      && sameNumberArray(Array.from(track.values), Array.from(other.values));
+  });
+};
+
+const sameAnimationWorkspaceSnapshot = (
+  left: AnimationWorkspaceHistorySnapshot,
+  right: AnimationWorkspaceHistorySnapshot,
+): boolean => {
+  if (left.currentClipName !== right.currentClipName) return false;
+  if (Math.abs(left.currentTime - right.currentTime) > POSE_HISTORY_EPSILON) return false;
+  if (!sameAnimationEditState(left.animationEditState, right.animationEditState)) return false;
+  if (left.baseClips.length !== right.baseClips.length) return false;
+  return left.baseClips.every((clip, index) => sameAnimationClip(clip, right.baseClips[index], index));
+};
+
+const cloneAnimationWorkspaceSnapshot = (
+  snapshot: AnimationWorkspaceHistorySnapshot,
+): AnimationWorkspaceHistorySnapshot => ({
+  baseClips: cloneAnimationClips(snapshot.baseClips),
+  animationEditState: cloneAnimationEditState(snapshot.animationEditState),
+  currentClipName: snapshot.currentClipName,
+  currentTime: snapshot.currentTime,
+});
 
 const getAttributeComponent = (
   attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
@@ -621,6 +667,13 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     };
   }, [model.skeleton, ui.selected]);
 
+  const captureAnimationWorkspaceSnapshot = useCallback((): AnimationWorkspaceHistorySnapshot => ({
+    baseClips: cloneAnimationClips(baseClipsRef.current),
+    animationEditState: cloneAnimationEditState(animationEditStateRef.current),
+    currentClipName: playbackRef.current.currentClipName,
+    currentTime: playbackRef.current.currentTime,
+  }), [playbackRef]);
+
   const applyPoseSnapshot = useCallback((snapshot: PoseHistorySnapshot): boolean => {
     const skeleton = model.skeleton;
     if (!skeleton) return false;
@@ -697,6 +750,21 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     return true;
   }, [commitAnimationEditState, commitSkinEditState, model.root, model.skeleton, ui]);
 
+  const applyAnimationWorkspaceSnapshot = useCallback((snapshot: AnimationWorkspaceHistorySnapshot): boolean => {
+    baseClipsRef.current = cloneAnimationClips(snapshot.baseClips);
+    commitAnimationEditState(snapshot.animationEditState);
+    const editedClips = applyAnimationEditsToClips(baseClipsRef.current, snapshot.animationEditState);
+    const activeClipName = getCurrentClipKey(editedClips, snapshot.currentClipName);
+    const activeClip = editedClips.find((clip, index) => getClipKey(clip, index) === activeClipName) ?? editedClips[0];
+    if (!activeClip) return false;
+
+    const nextTime = Math.max(0, Math.min(snapshot.currentTime, activeClip.duration || 0));
+    playbackRef.current.setCurrentClipName(activeClipName);
+    playbackRef.current.setDuration(activeClip.duration);
+    playbackRef.current.setCurrentTime(nextTime);
+    return true;
+  }, [commitAnimationEditState, playbackRef]);
+
   const pushPoseHistory = useCallback((
     label: string,
     before: PoseHistorySnapshot,
@@ -754,6 +822,25 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     return true;
   }, [allocateHistoryOrder, refreshEditorHistoryAvailability]);
 
+  const pushAnimationWorkspaceHistory = useCallback((
+    label: string,
+    before: AnimationWorkspaceHistorySnapshot,
+    after: AnimationWorkspaceHistorySnapshot,
+  ) => {
+    if (sameAnimationWorkspaceSnapshot(before, after)) return false;
+
+    editorHistoryRef.current = pushEditorHistory(editorHistoryRef.current, {
+      id: `animation-workspace-${editorHistoryIdRef.current += 1}`,
+      label,
+      domain: 'animation',
+      before: { kind: 'animation-workspace', value: cloneAnimationWorkspaceSnapshot(before) },
+      after: { kind: 'animation-workspace', value: cloneAnimationWorkspaceSnapshot(after) },
+      order: allocateHistoryOrder(),
+    });
+    refreshEditorHistoryAvailability();
+    return true;
+  }, [allocateHistoryOrder, refreshEditorHistoryAvailability]);
+
   const undoEditorHistory = useCallback(() => {
     const result = popUndo(editorHistoryRef.current, allocateHistoryOrder());
     editorHistoryRef.current = result.state;
@@ -771,6 +858,11 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       }
     } else if (result.entry.domain === 'animation' && result.entry.before.kind === 'animation') {
       commitAnimationEditState(result.entry.before.value);
+    } else if (result.entry.domain === 'animation' && result.entry.before.kind === 'animation-workspace') {
+      if (!applyAnimationWorkspaceSnapshot(result.entry.before.value)) {
+        ui.setStatus(`Undo skipped: ${result.entry.label} animation clip target is missing.`);
+        return;
+      }
     } else if (result.entry.domain === 'rig' && result.entry.before.kind === 'rig') {
       if (!applyRigSnapshot(result.entry.before.value)) {
         ui.setStatus(`Undo skipped: ${result.entry.label} rig target is missing.`);
@@ -782,7 +874,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
 
     ui.setStatus(`Undid ${result.entry.label}.`);
-  }, [allocateHistoryOrder, applyPoseSnapshot, applyRigSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
+  }, [allocateHistoryOrder, applyAnimationWorkspaceSnapshot, applyPoseSnapshot, applyRigSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
 
   const redoEditorHistory = useCallback(() => {
     const result = popRedo(editorHistoryRef.current, allocateHistoryOrder());
@@ -801,6 +893,11 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       }
     } else if (result.entry.domain === 'animation' && result.entry.after.kind === 'animation') {
       commitAnimationEditState(result.entry.after.value);
+    } else if (result.entry.domain === 'animation' && result.entry.after.kind === 'animation-workspace') {
+      if (!applyAnimationWorkspaceSnapshot(result.entry.after.value)) {
+        ui.setStatus(`Redo skipped: ${result.entry.label} animation clip target is missing.`);
+        return;
+      }
     } else if (result.entry.domain === 'rig' && result.entry.after.kind === 'rig') {
       if (!applyRigSnapshot(result.entry.after.value)) {
         ui.setStatus(`Redo skipped: ${result.entry.label} rig target is missing.`);
@@ -812,7 +909,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
 
     ui.setStatus(`Redid ${result.entry.label}.`);
-  }, [allocateHistoryOrder, applyPoseSnapshot, applyRigSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
+  }, [allocateHistoryOrder, applyAnimationWorkspaceSnapshot, applyPoseSnapshot, applyRigSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
 
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
@@ -1359,6 +1456,109 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const changeClip = useCallback((clip: THREE.AnimationClip) => {
     playback.selectClip(clip.name || 'clip', clip.duration);
   }, [playback]);
+
+  const renameCurrentAnimationClip = useCallback((requestedName: string) => {
+    const clips = baseClipsRef.current;
+    if (clips.length === 0) {
+      ui.setStatus('Load an animated model before renaming clips.');
+      return;
+    }
+
+    const currentClipName = getCurrentClipKey(clips, playbackRef.current.currentClipName);
+    const clipIndex = clips.findIndex((clip, index) => getClipKey(clip, index) === currentClipName);
+    if (clipIndex < 0) {
+      ui.setStatus('No animation clip is active for rename.');
+      return;
+    }
+
+    const nextName = makeUniqueAnimationClipName(clips, requestedName, currentClipName);
+    if (nextName === currentClipName) {
+      ui.setStatus('Animation clip name is unchanged.');
+      return;
+    }
+
+    const before = captureAnimationWorkspaceSnapshot();
+    const nextBaseClips = cloneAnimationClips(clips);
+    nextBaseClips[clipIndex].name = nextName;
+    const nextAnimationState = renameAnimationEditClip(animationEditStateRef.current, currentClipName, nextName);
+    const after: AnimationWorkspaceHistorySnapshot = {
+      baseClips: nextBaseClips,
+      animationEditState: nextAnimationState,
+      currentClipName: nextName,
+      currentTime: playbackRef.current.currentTime,
+    };
+    pushAnimationWorkspaceHistory(`rename animation clip ${currentClipName} to ${nextName}`, before, after);
+    applyAnimationWorkspaceSnapshot(after);
+    ui.setStatus(`Renamed animation clip ${currentClipName} to ${nextName}.`);
+  }, [applyAnimationWorkspaceSnapshot, captureAnimationWorkspaceSnapshot, playbackRef, pushAnimationWorkspaceHistory, ui]);
+
+  const duplicateCurrentAnimationClip = useCallback(() => {
+    const clips = baseClipsRef.current;
+    if (clips.length === 0) {
+      ui.setStatus('Load an animated model before duplicating clips.');
+      return;
+    }
+
+    const currentClipName = getCurrentClipKey(clips, playbackRef.current.currentClipName);
+    const clipIndex = clips.findIndex((clip, index) => getClipKey(clip, index) === currentClipName);
+    const sourceClip = clips[clipIndex];
+    if (!sourceClip) {
+      ui.setStatus('No animation clip is active for duplicate.');
+      return;
+    }
+
+    const nextName = makeUniqueAnimationClipName(clips, `${currentClipName} Copy`);
+    const before = captureAnimationWorkspaceSnapshot();
+    const duplicatedClip = sourceClip.clone();
+    duplicatedClip.name = nextName;
+    const nextBaseClips = cloneAnimationClips(clips);
+    nextBaseClips.splice(clipIndex + 1, 0, duplicatedClip);
+    const nextAnimationState = duplicateAnimationEditClip(animationEditStateRef.current, currentClipName, nextName);
+    const after: AnimationWorkspaceHistorySnapshot = {
+      baseClips: nextBaseClips,
+      animationEditState: nextAnimationState,
+      currentClipName: nextName,
+      currentTime: playbackRef.current.currentTime,
+    };
+    pushAnimationWorkspaceHistory(`duplicate animation clip ${currentClipName}`, before, after);
+    applyAnimationWorkspaceSnapshot(after);
+    ui.setStatus(`Duplicated animation clip ${currentClipName} as ${nextName}.`);
+  }, [applyAnimationWorkspaceSnapshot, captureAnimationWorkspaceSnapshot, playbackRef, pushAnimationWorkspaceHistory, ui]);
+
+  const deleteCurrentAnimationClip = useCallback(() => {
+    const clips = baseClipsRef.current;
+    if (clips.length === 0) {
+      ui.setStatus('Load an animated model before deleting clips.');
+      return;
+    }
+    if (clips.length === 1) {
+      ui.setStatus('Cannot delete the last animation clip.');
+      return;
+    }
+
+    const currentClipName = getCurrentClipKey(clips, playbackRef.current.currentClipName);
+    const clipIndex = clips.findIndex((clip, index) => getClipKey(clip, index) === currentClipName);
+    if (clipIndex < 0) {
+      ui.setStatus('No animation clip is active for delete.');
+      return;
+    }
+
+    const before = captureAnimationWorkspaceSnapshot();
+    const nextBaseClips = cloneAnimationClips(clips);
+    nextBaseClips.splice(clipIndex, 1);
+    const fallbackIndex = Math.min(clipIndex, nextBaseClips.length - 1);
+    const fallbackClipName = getClipKey(nextBaseClips[fallbackIndex], fallbackIndex);
+    const nextAnimationState = deleteAnimationEditClip(animationEditStateRef.current, currentClipName);
+    const after: AnimationWorkspaceHistorySnapshot = {
+      baseClips: nextBaseClips,
+      animationEditState: nextAnimationState,
+      currentClipName: fallbackClipName,
+      currentTime: playbackRef.current.currentTime,
+    };
+    pushAnimationWorkspaceHistory(`delete animation clip ${currentClipName}`, before, after);
+    applyAnimationWorkspaceSnapshot(after);
+    ui.setStatus(`Deleted animation clip ${currentClipName}.`);
+  }, [applyAnimationWorkspaceSnapshot, captureAnimationWorkspaceSnapshot, playbackRef, pushAnimationWorkspaceHistory, ui]);
 
   const clampPlaybackTime = useCallback((t: number) => (
     Math.max(0, Math.min(t, playbackRef.current.duration || 0))
@@ -2332,6 +2532,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     setupKeyboard,
     togglePlay,
     changeClip,
+    renameCurrentAnimationClip,
+    duplicateCurrentAnimationClip,
+    deleteCurrentAnimationClip,
     onScrub,
     setSpeed,
     pingRust,

@@ -1111,6 +1111,52 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '3');
   });
 
+  test('animation clip tools duplicate, rename, delete, and undo workspace changes', async ({ page }) => {
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
+    await pausePlaybackIfRunning(page);
+
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
+    await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
+    await expect(page.getByTestId('animation-delete-clip-btn')).toBeDisabled();
+
+    await page.getByTestId('animation-duplicate-clip-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Duplicated animation clip FixtureBend as FixtureBend Copy/i);
+    await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend Copy');
+    await expect(page.getByTestId('animation-delete-clip-btn')).toBeEnabled();
+    await expect(page.getByTestId('clip-item-1')).toContainText(/FixtureBend Copy/);
+
+    await page.getByTestId('animation-clip-name-input').fill('Hero Bend');
+    await page.getByTestId('animation-rename-clip-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Renamed animation clip FixtureBend Copy to Hero Bend/i);
+    await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Hero Bend');
+    await expect(page.getByTestId('clip-item-1')).toContainText(/Hero Bend/);
+
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid rename animation clip FixtureBend Copy to Hero Bend/i);
+    await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend Copy');
+
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid rename animation clip FixtureBend Copy to Hero Bend/i);
+    await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Hero Bend');
+
+    await page.getByTestId('animation-delete-clip-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Deleted animation clip Hero Bend/i);
+    await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
+    await expect(page.getByTestId('animation-delete-clip-btn')).toBeDisabled();
+    await expect(page.getByTestId('clip-item-1')).toBeHidden();
+
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid delete animation clip Hero Bend/i);
+    await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Hero Bend');
+    await expect(page.getByTestId('animation-delete-clip-btn')).toBeEnabled();
+  });
+
   test('endpoint drag works in rig mode across single and quad layouts', async ({ page }) => {
     test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
 
