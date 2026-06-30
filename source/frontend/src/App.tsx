@@ -203,6 +203,7 @@ export default function App() {
     animationClipboardHasKeyframe,
     animationInterpolation,
     insertAnimationKeyframe,
+    insertAnimationKeyframeAtTime,
     updateAnimationKeyframe,
     deleteSelectedAnimationKeyframe,
     copySelectedAnimationKeyframe,
@@ -825,6 +826,7 @@ export default function App() {
           keyframeTimes={timelineKeyframeTimes}
           selectedKeyTime={animationSelectedKeyTime}
           onSelectKeyframe={selectAnimationKeyframeTime}
+          onInsertKeyframeAtTime={insertAnimationKeyframeAtTime}
           disabled={model.clips.length === 0}
         />
       )}

@@ -198,6 +198,27 @@ const setRangeValue = async (page: Page, testId: string, value: number): Promise
   await page.waitForTimeout(20);
 };
 
+const clickTimelineLaneAt = async (
+  page: Page,
+  ratio: number,
+  clickCount: 1 | 2 = 1,
+): Promise<void> => {
+  const lane = page.getByTestId('timeline-keyframe-lane');
+  const box = await lane.boundingBox();
+  if (!box) {
+    throw new Error('Timeline keyframe lane is not visible.');
+  }
+
+  const x = box.x + box.width * Math.min(1, Math.max(0, ratio));
+  const y = box.y + box.height / 2;
+  if (clickCount === 2) {
+    await page.mouse.dblclick(x, y);
+  } else {
+    await page.mouse.click(x, y);
+  }
+  await page.waitForTimeout(80);
+};
+
 const openViewportDisplayMenu = async (page: Page): Promise<void> => {
   const panel = page.getByTestId('viewport-display-menu-panel');
   if (!(await panel.isVisible())) {
@@ -1014,6 +1035,46 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await page.getByTestId('editor-redo-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Redid Nudge FixtureTip/i);
     await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+  });
+
+  test('timeline lane click scrubs and double-click inserts selected-bone keyframes', async ({ page }) => {
+    await page.goto('/');
+
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
+    await pausePlaybackIfRunning(page);
+
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    const inspector = page.getByTestId('inspector');
+    const boneEntry = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    await expect(boneEntry).toBeVisible();
+    await boneEntry.click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
+
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
+    await pausePlaybackIfRunning(page);
+    await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '2');
+
+    await clickTimelineLaneAt(page, 0.75, 2);
+    await expect(page.getByTestId('status-text')).toContainText(/Inserted animation keyframe for FixtureTip/i);
+    await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '3');
+    await expect(page.getByTestId('animation-selected-key')).not.toContainText('none');
+    await expect(page.getByTestId('time-display')).toContainText(/0\.[3-4]/);
+
+    await clickTimelineLaneAt(page, 0.25);
+    await expect(page.getByTestId('animation-selected-key')).toContainText('none');
+    await expect(page.getByTestId('time-display')).toContainText(/0\.1/);
+
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid insert animation keyframe for FixtureTip/i);
+    await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '2');
+
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid insert animation keyframe for FixtureTip/i);
+    await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '3');
   });
 
   test('endpoint drag works in rig mode across single and quad layouts', async ({ page }) => {

@@ -1359,9 +1359,13 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     playback.selectClip(clip.name || 'clip', clip.duration);
   }, [playback]);
 
+  const clampPlaybackTime = useCallback((t: number) => (
+    Math.max(0, Math.min(t, playbackRef.current.duration || 0))
+  ), [playbackRef]);
+
   const onScrub = useCallback((t: number) => {
-    playbackRef.current.scrub(Math.max(0, Math.min(t, playbackRef.current.duration || 0)));
-  }, [playbackRef]);
+    playbackRef.current.scrub(clampPlaybackTime(t));
+  }, [clampPlaybackTime, playbackRef]);
 
   const setSpeed = useCallback((s: number) => {
     playback.setPlaybackSpeed(s);
@@ -1402,14 +1406,15 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
   }, [commitAnimationEditState, ui]);
 
-  const insertAnimationKeyframe = useCallback(() => {
+  const insertAnimationKeyframeAtTime = useCallback((time: number) => {
     const context = getActiveAnimationEditContext();
     if (!context) return;
     const state = animationEditStateRef.current;
     const before = cloneAnimationEditState(state);
+    const keyTime = clampPlaybackTime(time);
     const key = makeKeyframeFromBone(
       context.bone,
-      playbackRef.current.currentTime,
+      keyTime,
       state.interpolation,
     );
     const next = upsertAnimationKeyframe(state, context.clipName, context.boneName, key);
@@ -1418,8 +1423,13 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       before,
       next,
     );
+    playbackRef.current.scrub(keyTime);
     applyAnimationEditState(next, `Inserted animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
-  }, [applyAnimationEditState, getActiveAnimationEditContext, playbackRef, pushAnimationHistory]);
+  }, [applyAnimationEditState, clampPlaybackTime, getActiveAnimationEditContext, playbackRef, pushAnimationHistory]);
+
+  const insertAnimationKeyframe = useCallback(() => {
+    insertAnimationKeyframeAtTime(playbackRef.current.currentTime);
+  }, [insertAnimationKeyframeAtTime, playbackRef]);
 
   const updateAnimationKeyframe = useCallback(() => {
     const context = getActiveAnimationEditContext();
@@ -2328,6 +2338,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     animationClipboardHasKeyframe: !!animationEditState.clipboard,
     animationInterpolation: animationEditState.interpolation,
     insertAnimationKeyframe,
+    insertAnimationKeyframeAtTime,
     updateAnimationKeyframe,
     deleteSelectedAnimationKeyframe,
     copySelectedAnimationKeyframe,

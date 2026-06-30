@@ -301,6 +301,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
   // Ref for onTimeUpdate to decouple RAF reporting from setup effect deps (timing/robustness: avoids re-init of scene/RAF if fn identity ever shifts; mirrors bone pick ref pattern)
   const onTimeUpdateRef = useRef(onTimeUpdate);
+  const playbackStateRef = useRef({ isPlaying, currentTime });
 
   const applyViewportLayout = (nextLayout: ViewportLayout) => {
     const camera = cameraRef.current;
@@ -1367,8 +1368,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         const action = currentActionRef.current;
         const report = onTimeUpdateRef.current;
         if (action && report) {
-          // Always report for scrubber sync (even when paused, last known time)
-          report(action.time);
+          // While paused, parent playback state is the source of truth; reporting stale action.time can race scrubs.
+          report(playbackStateRef.current.isPlaying ? action.time : playbackStateRef.current.currentTime);
         }
       }
       // Force hierarchy/skin update after anim (helps SMF and skinned visual correctness on play/scrub)
@@ -1663,6 +1664,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   }, []);
   // Sync onTimeUpdate ref (for stable RAF time reporting without setup effect re-runs)
   useEffect(() => { onTimeUpdateRef.current = onTimeUpdate; }, [onTimeUpdate]);
+  useEffect(() => {
+    playbackStateRef.current = { isPlaying, currentTime };
+  }, [isPlaying, currentTime]);
 
   // Sync selected bone name ref (for animate loop + highlight without stale closures)
   useEffect(() => { selectedBoneNameRef.current = selectedBoneName; }, [selectedBoneName]);

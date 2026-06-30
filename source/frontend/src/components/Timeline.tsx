@@ -11,7 +11,8 @@ interface TimelineProps {
   playbackSpeed: number;
   keyframeTimes?: number[];
   selectedKeyTime?: number | null;
-  onSelectKeyframe?: (time: number) => void;
+  onSelectKeyframe?: (time: number | null) => void;
+  onInsertKeyframeAtTime?: (time: number) => void;
   disabled?: boolean;
 }
 
@@ -27,10 +28,18 @@ const Timeline: React.FC<TimelineProps> = ({
   keyframeTimes = [],
   selectedKeyTime = null,
   onSelectKeyframe,
+  onInsertKeyframeAtTime,
   disabled = false,
 }) => {
   const safeDuration = duration || 1;
   const markerTimes = keyframeTimes.slice(0, 80);
+  const resolveLaneTime = (event: React.MouseEvent<HTMLDivElement>): number => {
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const ratio = bounds.width > 0
+      ? Math.min(1, Math.max(0, (event.clientX - bounds.left) / bounds.width))
+      : 0;
+    return Math.max(0, Math.min(duration || 0, ratio * safeDuration));
+  };
 
   return (
     <div data-testid="timeline" className="timeline">
@@ -69,6 +78,20 @@ const Timeline: React.FC<TimelineProps> = ({
         className="timeline-keyframe-lane"
         data-testid="timeline-keyframe-lane"
         data-keyframe-count={keyframeTimes.length}
+        aria-label="Animation keyframe lane"
+        role="presentation"
+        onClick={(event) => {
+          if (disabled) return;
+          const time = resolveLaneTime(event);
+          onSelectKeyframe?.(null);
+          onScrub(time);
+        }}
+        onDoubleClick={(event) => {
+          if (disabled || !onInsertKeyframeAtTime) return;
+          const time = resolveLaneTime(event);
+          onScrub(time);
+          onInsertKeyframeAtTime(time);
+        }}
       >
         <div
           className="timeline-keyframe-progress"
@@ -85,10 +108,12 @@ const Timeline: React.FC<TimelineProps> = ({
             aria-pressed={selectedKeyTime !== null && Math.abs(selectedKeyTime - time) < 0.0001}
             title={`${time.toFixed(2)}s`}
             disabled={disabled}
-            onClick={() => {
+            onClick={(event) => {
+              event.stopPropagation();
               onSelectKeyframe?.(time);
               onScrub(time);
             }}
+            onDoubleClick={(event) => event.stopPropagation()}
           />
         ))}
       </div>
