@@ -137,6 +137,8 @@ export default function App() {
     setRigOpacity,
     rigThicknessScale,
     setRigThicknessScale,
+    skinPointOverlayEnabled,
+    setSkinPointOverlayEnabled,
     shaderEnabled,
     setShaderEnabled,
     perspectiveEnabled,
@@ -336,6 +338,8 @@ export default function App() {
         setRigOpacity={setRigOpacity}
         rigThicknessScale={rigThicknessScale}
         setRigThicknessScale={setRigThicknessScale}
+        skinPointOverlayEnabled={skinPointOverlayEnabled}
+        setSkinPointOverlayEnabled={setSkinPointOverlayEnabled}
         shaderEnabled={shaderEnabled}
         setShaderEnabled={setShaderEnabled}
         perspectiveEnabled={perspectiveEnabled}
@@ -402,6 +406,7 @@ export default function App() {
             boneIndexLabelsEnabled={boneIndexLabelsEnabled}
             rigOpacity={rigOpacity}
             rigThicknessScale={rigThicknessScale}
+            skinPointOverlayEnabled={skinPointOverlayEnabled}
             shaderEnabled={shaderEnabled}
             perspectiveEnabled={perspectiveEnabled}
             modelOpacity={modelOpacity}

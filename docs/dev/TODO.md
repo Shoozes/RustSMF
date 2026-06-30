@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-29 (integrity/doc consolidation)
+Last reviewed: 2026-06-30 (display parity and diagnostics cleanup)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -31,7 +31,8 @@ Each active item should answer:
   - Compare bind pose, inverse bind, parent transforms, DQ normalization, frame endpoint sampling, and coordinate swizzles.
   - Keep diagnostics honest while tightening math; do not relax thresholds without evidence.
 - Subtasks:
-  - Add a targeted unit or diagnostic helper that prints per-bone max pose deltas with bone names and frame endpoints.
+  - Done: guard `dqNormalize` so zero/NaN/Infinity rotation parts fall back to identity and unit tests prove finite output.
+  - Done: add bounded worst-pose-delta details to the roundtrip report and Export workspace, including animation/frame/bone, parent/isBone parity, and per-component deltas.
   - Add one regression fixture/assertion for a known real-sample mismatch once root cause is isolated.
   - Update the pitfall ledger only if the investigation finds a repeated conversion hazard.
 - Acceptance: A failing real-sample pose check is either fixed with a regression test or documented as a deliberate unsupported/tolerance-bound case with specific diagnostics.
@@ -52,6 +53,25 @@ Each active item should answer:
   - Add visual checks that quad labels/dividers do not overlap tool overlays at narrow widths beyond the current loaded/narrow shell checks.
   - Decide whether ortho panes should support all bone selection/edit actions or a deliberate subset.
 - Acceptance: Rapid layout/mode switching in single and quad states never drops bone selection, scrub continuity, endpoint-hover state, or pane labels in e2e.
+
+### P1: Add viewport-only legacy SMF shader/display parity
+
+- What: Keep legacy SMF display parity current without mutating export materials.
+- Why: The old editor's shader/display shelf included lit SMF viewport materials, skinning-point feedback, and selection overlays; RustSMF now has viewport-only implementations for the first two, but selection overlay parity is still incomplete.
+- Where: `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/legacySmfLighting.ts`, `source/frontend/src/utils/skinPointOverlay.ts`, `source/frontend/tests/smoke.spec.ts`, `source/frontend/tests/visual.spec.ts`, old shader refs under `docs/references/old-src/shaders/`.
+- When: After DQ safety and source-map cleanup; before claiming old-editor display parity.
+- How:
+  - Port behavior, not GameMaker shader code, into Three-compatible viewport-only materials/overlays.
+  - Keep generated display materials backed up/restored/disposed separately from loaded model/export state.
+  - Treat the old DQ shader as a CPU/math oracle for SMF correctness before attempting any GPU skinning replacement.
+- Subtasks:
+  - Done: replace the old `Flat` label with a `Legacy` display toggle backed by viewport-only material clones.
+  - Done: add `legacySmfLighting.ts` for diffuse/specular/rim display using current Three geometry, UVs, maps, and skinning.
+  - Done: add smoke coverage that toggles legacy mode and verifies `data-shader-mode="legacy-smf"` with nonblank render coverage.
+  - Done: add `skinPointOverlay.ts` and a Display-menu `Skin pts` toggle for skinned vertex points colored by selected-bone influence.
+  - Add selection overlay parity inspired by `docs/references/old-src/shaders/sh_selection`.
+  - Reference old `sh_smf_animate`, `sh_smf_static`, `sh_grid`, `sh_skinning_points`, and `sh_selection` while preserving GLB/SMF export material fidelity.
+- Acceptance: Legacy display mode remains visibly distinct from flat shading, restores original materials on disable/export, and selection overlay parity has browser visual coverage.
 
 ### P2: Complete SMF-aware rig editing parity
 

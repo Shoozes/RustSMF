@@ -83,6 +83,7 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
     assert.equal(report.vertexNormalMaxDelta, 0);
     assert.equal(report.meshBoundsMaxDelta, 0);
     assert.ok(report.bonePoseSamplesChecked > 0);
+    assert.deepStrictEqual(report.poseDeltaDetails, []);
   });
 
   it('fails when vertex position/normal data drifts after roundtrip', () => {
@@ -134,6 +135,70 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
     assert.ok(report.bonePoseMaxDelta > 0.009);
     assert.ok(report.checks.some((check) => check.code === 'SMF_ROUNDTRIP_FIRST_POSE_DELTA'));
     assert.ok(report.messages.some((line) => line.includes('pose delta exceeds tolerance')));
+    assert.equal(report.poseDeltaDetails.length, 1);
+    const detail = report.poseDeltaDetails[0];
+    assert.equal(detail.animationIndex, 0);
+    assert.equal(detail.animationName, 'Idle');
+    assert.equal(detail.frameIndex, 0);
+    assert.equal(detail.frameLabel, 'first');
+    assert.equal(detail.boneIndex, 0);
+    assert.equal(detail.beforeParent, -1);
+    assert.equal(detail.afterParent, -1);
+    assert.equal(detail.beforeIsBone, 1);
+    assert.equal(detail.afterIsBone, 1);
+    assert.equal(detail.maxComponentDelta, report.bonePoseMaxDelta);
+    assert.equal(detail.componentDeltas.length, 8);
+    assert.ok(Math.abs(detail.componentDeltas[0] - 0.01) < 1e-6);
+    assert.ok(detail.componentDeltas.slice(1).every((delta) => delta === 0));
+  });
+
+  it('keeps only the top 20 pose delta detail rows', () => {
+    const before = makeImportedSmf();
+    const boneCount = 25;
+    const bones = Array.from({ length: boneCount }, (_, index) => ({
+      index,
+      parent: index === 0 ? -1 : index - 1,
+      isBone: 1,
+      dq: new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]),
+      axis: [0, 1, 0] as [number, number, number],
+    }));
+    const beforeFrames = [
+      Array.from({ length: boneCount }, () => new Float32Array([0, 0, 0, 1, 0, 0, 0, 0])),
+    ];
+    const afterFrames = [
+      Array.from({ length: boneCount }, (_, index) => (
+        new Float32Array([(index + 1) / 1000, 0, 0, 1, 0, 0, 0, 0])
+      )),
+    ];
+    const expandedBefore: ImportedSmf = {
+      ...before,
+      bones,
+      animations: [
+        {
+          ...before.animations[0],
+          times: [0],
+          frames: beforeFrames,
+          nodeCount: boneCount,
+        },
+      ],
+    };
+    const expandedAfter: ImportedSmf = {
+      ...expandedBefore,
+      animations: [
+        {
+          ...expandedBefore.animations[0],
+          frames: afterFrames,
+        },
+      ],
+    };
+
+    const report = compareSmfRoundtrip(expandedBefore, expandedAfter);
+    assert.equal(report.poseDeltaDetails.length, 20);
+    assert.equal(report.poseDeltaDetails[0].boneIndex, 24);
+    assert.equal(report.poseDeltaDetails[19].boneIndex, 5);
+    assert.ok(report.poseDeltaDetails.every((detail, index, list) => (
+      index === 0 || list[index - 1].maxComponentDelta >= detail.maxComponentDelta
+    )));
   });
 
   it('fails when geometry bounds drift beyond tolerance', () => {
@@ -181,6 +246,7 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
     const parsed = JSON.parse(JSON.stringify(compareSmfRoundtrip(before, after))) as {
       status: string;
       checks: Array<{ code: string; level: string; label: string }>;
+      poseDeltaDetails: Array<{ animationName: string; frameLabel: string; boneIndex: number; componentDeltas: number[] }>;
     };
 
     assert.strictEqual(parsed.status, 'failed');
@@ -189,5 +255,10 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
       && check.level === 'error'
       && check.label === 'Animation pose'
     )));
+    assert.equal(parsed.poseDeltaDetails[0].animationName, 'Idle');
+    assert.equal(parsed.poseDeltaDetails[0].frameLabel, 'first');
+    assert.equal(parsed.poseDeltaDetails[0].boneIndex, 0);
+    assert.equal(parsed.poseDeltaDetails[0].componentDeltas.length, 8);
+    assert.ok(Math.abs(parsed.poseDeltaDetails[0].componentDeltas[0] - 0.01) < 1e-6);
   });
 });

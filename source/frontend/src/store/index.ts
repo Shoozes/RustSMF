@@ -38,6 +38,7 @@ export interface UiState {
   boneIndexLabelsEnabled: boolean;
   rigOpacity: number;
   rigThicknessScale: number;
+  skinPointOverlayEnabled: boolean;
   gridEnabled: boolean;
   axesEnabled: boolean;
   wireframeEnabled: boolean;
@@ -102,6 +103,7 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
   const [boneIndexLabelsEnabled, setBoneIndexLabelsEnabled] = useState<boolean>(initial.boneIndexLabelsEnabled ?? false);
   const [rigOpacity, setRigOpacity] = useState<number>(initial.rigOpacity ?? 1);
   const [rigThicknessScale, setRigThicknessScale] = useState<number>(initial.rigThicknessScale ?? 1);
+  const [skinPointOverlayEnabled, setSkinPointOverlayEnabled] = useState<boolean>(initial.skinPointOverlayEnabled ?? false);
   const [gridEnabled, setGridEnabled] = useState<boolean>(initial.gridEnabled ?? true);
   const [axesEnabled, setAxesEnabled] = useState<boolean>(initial.axesEnabled ?? true);
   const [wireframeEnabled, setWireframeEnabled] = useState<boolean>(initial.wireframeEnabled ?? false);
@@ -122,6 +124,7 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
     boneIndexLabelsEnabled, setBoneIndexLabelsEnabled,
     rigOpacity, setRigOpacity,
     rigThicknessScale, setRigThicknessScale,
+    skinPointOverlayEnabled, setSkinPointOverlayEnabled,
     gridEnabled, setGridEnabled,
     axesEnabled, setAxesEnabled,
     wireframeEnabled, setWireframeEnabled,

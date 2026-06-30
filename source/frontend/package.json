@@ -12,7 +12,7 @@
     "check:entry-chunks": "node scripts/check-entry-chunks.mjs",
     "preview": "vite preview",
     "lint": "eslint .",
-    "test:unit": "tsx --test src/loaders/coord.test.ts src/loaders/fbx.test.ts src/loaders/threeToSmf.test.ts src/loaders/smfDiagnostics.test.ts src/utils/modelFormat.test.ts src/utils/skinWeights.test.ts src/utils/rigValidation.test.ts src/utils/rigEdits.test.ts src/utils/viewportLayout.test.ts src/utils/textureCompat.test.ts src/utils/modelOutliner.test.ts src/utils/animationTimeline.test.ts src/utils/animationEdits.test.ts",
+    "test:unit": "tsx --test src/loaders/coord.test.ts src/loaders/fbx.test.ts src/loaders/threeToSmf.test.ts src/loaders/smfDiagnostics.test.ts src/utils/modelFormat.test.ts src/utils/skinWeights.test.ts src/utils/rigValidation.test.ts src/utils/rigEdits.test.ts src/utils/viewportLayout.test.ts src/utils/textureCompat.test.ts src/utils/modelOutliner.test.ts src/utils/animationTimeline.test.ts src/utils/animationEdits.test.ts src/utils/legacySmfLighting.test.ts src/utils/skinPointOverlay.test.ts",
     "test:e2e": "playwright test",
     "test:visual-strict": "node scripts/run-strict-visuals.mjs",
     "test:visual-update": "node scripts/run-strict-visuals.mjs --update-snapshots",

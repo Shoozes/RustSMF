@@ -47,6 +47,22 @@ export interface SmfRoundtripCheck {
   target?: string;
 }
 
+export type SmfPoseDeltaFrameLabel = 'first' | 'middle' | 'last';
+
+export interface SmfPoseDeltaDetail {
+  animationIndex: number;
+  animationName: string;
+  frameIndex: number;
+  frameLabel: SmfPoseDeltaFrameLabel;
+  boneIndex: number;
+  beforeParent: number;
+  afterParent: number;
+  beforeIsBone: number;
+  afterIsBone: number;
+  maxComponentDelta: number;
+  componentDeltas: number[];
+}
+
 export interface SmfRoundtripReport {
   ok: boolean;
   status: SmfRoundtripStatus;
@@ -58,8 +74,11 @@ export interface SmfRoundtripReport {
   bonePoseMaxDelta: number;
   meshBoundsMaxDelta: number;
   bonePoseSamplesChecked: number;
+  poseDeltaDetails: SmfPoseDeltaDetail[];
   messages: string[];
 }
+
+const MAX_POSE_DELTA_DETAILS = 20;
 
 function maxDelta(a: Float32Array, b: Float32Array, offset = 1): number {
   const length = Math.min(a.length, b.length);
@@ -85,6 +104,30 @@ function maxQuatDelta(a: Float32Array, b: Float32Array): number {
     }
   }
   return max;
+}
+
+function poseFrameLabel(frameIndex: number, frameCount: number): SmfPoseDeltaFrameLabel {
+  if (frameIndex === 0) return 'first';
+  if (frameIndex === frameCount - 1) return 'last';
+  return 'middle';
+}
+
+function componentDeltas(a: Float32Array, b: Float32Array): number[] {
+  const length = Math.min(a.length, b.length);
+  const deltas: number[] = [];
+  for (let i = 0; i < length; i++) {
+    deltas.push(Math.abs(a[i] - b[i]));
+  }
+  return deltas;
+}
+
+function pushPoseDeltaDetail(details: SmfPoseDeltaDetail[], detail: SmfPoseDeltaDetail): void {
+  if (detail.maxComponentDelta <= 0) return;
+  details.push(detail);
+  details.sort((a, b) => b.maxComponentDelta - a.maxComponentDelta);
+  if (details.length > MAX_POSE_DELTA_DETAILS) {
+    details.length = MAX_POSE_DELTA_DETAILS;
+  }
 }
 
 function computeBounds(positions: Float32Array): [number, number, number, number, number, number] | null {
@@ -168,6 +211,7 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
   let bonePoseMaxDelta = 0;
   let meshBoundsMaxDelta = 0;
   let bonePoseSamplesChecked = 0;
+  const poseDeltaDetails: SmfPoseDeltaDetail[] = [];
   let countMismatchCount = 0;
   let geometryMismatchCount = 0;
   let boundsMismatchCount = 0;
@@ -348,6 +392,21 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
         if (poseDelta > bonePoseMaxDelta) {
           bonePoseMaxDelta = poseDelta;
         }
+        const beforeNode = beforeSmf.bones[boneIndex];
+        const afterNode = afterSmf.bones[boneIndex];
+        pushPoseDeltaDetail(poseDeltaDetails, {
+          animationIndex: a,
+          animationName: beforeAnim.name || afterAnim.name || `animation ${a}`,
+          frameIndex,
+          frameLabel: poseFrameLabel(frameIndex, frameCount),
+          boneIndex,
+          beforeParent: beforeNode?.parent ?? -1,
+          afterParent: afterNode?.parent ?? -1,
+          beforeIsBone: beforeNode?.isBone ?? 0,
+          afterIsBone: afterNode?.isBone ?? 0,
+          maxComponentDelta: poseDelta,
+          componentDeltas: componentDeltas(beforeBone, afterBone),
+        });
         if (frameIndex === 0 || frameIndex === frameCount - 1) {
           if (poseDelta > poseTolerance) {
             const position = frameIndex === 0 ? 'first' : 'last';
@@ -507,6 +566,7 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
     bonePoseMaxDelta,
     meshBoundsMaxDelta,
     bonePoseSamplesChecked,
+    poseDeltaDetails,
     messages,
   };
 }

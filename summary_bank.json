@@ -112,7 +112,7 @@
     },
     "feature__model_loading_export": {
       "description": "User-facing load, preview, edit-preview, and export flow across SMF, GLB/GLTF, FBX, and OBJ.",
-      "status": "core connected; SMF high-fid + live pose export; dedicated Export as SMF preserves SMF-source fidelity; guarded non-SMF skinned SMF export wired and covered by generated skinned GLB e2e; true FBX-source export writes binary FBX 7500 through vendored FBXExporter-threejs and has static header + load roundtrip unit coverage; structured SMF diagnostics now preflight non-SMF SMF export, render ready/blocked state, and expose structured roundtrip check rows for count/geometry/bounds/animation pose in ExportPanel; static FBX fixture covers basic parser dispatch; overlapping open results guarded with stable seq refs; browser input/drop overlap has explicit e2e race coverage with delayed input read and synthetic drop read; desktop open reads binary bytes for all path-backed model formats while preserving `.smf` desktop validation first; native open/load/export overlap remains covered in mocked Tauri; SMF head-dummy hierarchy walk is cycle-safe for self-parent root heads, inverse binds refresh world matrices before calculateInverses, and animation tracks skip non-scene heads so real .smf load clears without missing-target warnings; source-format detection is centralized in `source/frontend/src/utils/modelFormat.ts` with explicit unsupported-format fail-fast behavior; loader clips contract is direct; tauri client is cached; Tauri env/path casts, load/export error catches, and GLB/FBX skinned traversal are typed; `check-production-any.mjs` prevents broad production any casts from returning.",
+      "status": "core connected; SMF high-fid + live pose export; dedicated Export as SMF preserves SMF-source fidelity; guarded non-SMF skinned SMF export wired and covered by generated skinned GLB e2e; true FBX-source export writes binary FBX 7500 through vendored FBXExporter-threejs and has static header + load roundtrip unit coverage; structured SMF diagnostics now preflight non-SMF SMF export, render ready/blocked state, and expose structured roundtrip check rows plus bounded worst-pose-delta details for count/geometry/bounds/animation pose in ExportPanel; static FBX fixture covers basic parser dispatch; overlapping open results guarded with stable seq refs; browser input/drop overlap has explicit e2e race coverage with delayed input read and synthetic drop read; desktop open reads binary bytes for all path-backed model formats while preserving `.smf` desktop validation first; native open/load/export overlap remains covered in mocked Tauri; SMF head-dummy hierarchy walk is cycle-safe for self-parent root heads, inverse binds refresh world matrices before calculateInverses, and animation tracks skip non-scene heads so real .smf load clears without missing-target warnings; source-format detection is centralized in `source/frontend/src/utils/modelFormat.ts` with explicit unsupported-format fail-fast behavior; loader clips contract is direct; tauri client is cached; Tauri env/path casts, load/export error catches, and GLB/FBX skinned traversal are typed; `check-production-any.mjs` prevents broad production any casts from returning.",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -143,7 +143,7 @@
     },
     "feature__smf_export_diagnostics": {
       "description": "Structured SMF export preflight for non-SMF skinned sources plus compact Export workspace diagnostics.",
-      "status": "implemented for structured compatibility checks, report saving, and material/texture warnings: missing skeleton and scale tracks block export; missing UVs/normals warn; missing skinIndex/skinWeight blocks skinned export; non-POT textures, multiple material slots, and multiple texture maps warn without blocking GLB fidelity export; ExportPanel shows texture map type/name/mesh/material slot/resolution/source/POT status; in-memory roundtrip reports now include status plus check rows/codes for counts, geometry, bounds, animation timing/metadata, and first/last-frame pose; generated skinned GLB smoke asserts ready diagnostics, texture summary rows, and pass checks, static OBJ smoke asserts blocked diagnostics, and report JSON serialization is unit-covered.",
+      "status": "implemented for structured compatibility checks, report saving, and material/texture warnings: missing skeleton and scale tracks block export; missing UVs/normals warn; missing skinIndex/skinWeight blocks skinned export; non-POT textures, multiple material slots, and multiple texture maps warn without blocking GLB fidelity export; ExportPanel shows texture map type/name/mesh/material slot/resolution/source/POT status; in-memory roundtrip reports now include status plus check rows/codes for counts, geometry, bounds, animation timing/metadata, first/last-frame pose, and bounded worst-pose-delta details with animation/frame/bone parent/isBone/component deltas; generated skinned GLB smoke asserts ready diagnostics, texture summary rows, and pass checks, static OBJ smoke asserts blocked diagnostics, and report JSON serialization is unit-covered.",
       "paths": [
         "docs/dev/APP_STATE.md",
         "docs/dev/TODO.md",
@@ -169,7 +169,7 @@
     },
     "feature__modern_editor_workspaces": {
       "description": "Modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, active single/quad viewport layout, model-safe wireframe display, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
-      "status": "Editor workspace shell and quad/shared layout are active; constrained-width mode tabs now use a scrollable row and deterministic post-load smoke coverage; the top toolbar is grouped into file, workspace, layout/camera, and compact Display-menu controls; quad view has pane dividers/labels plus e2e overlay assertions; single-view Ortho framing and Display menu visuals are covered by smoke/visual tests. Skin-weight edit helpers, typed dirty-state model, selected-bone set/add/subtract viewport paint, brush telemetry, undo/redo stroke checkpoints, full-model Normalize and Auto Skin batch actions, continuity checks, and supported SMF dirty-export serialization are active. Rig mode now has validation report rows plus non-SMF selected-bone rename with animation-track/authored-key retargeting, selected-bone reparent with cycle validation/world-transform preservation, selected-bone create-child with Skeleton inverse/buffer initialization, and selected-bone delete with weighted-skin-reference guards plus index/animation cleanup. Outliner submodel visibility/color cues, imported/authored timeline keyframe markers, selected-bone keyframe edit state, Insert/Update/Delete/Copy/Paste animation controls, and structured Export cockpit roundtrip check rows are active. Remaining old-editor parity is deeper animation polish, SMF head-node-aware metadata edits, rig detach/connect and mirror/reset helpers, real-SMF strict pose roundtrip cleanup, and deeper precision controls while preserving shared model root continuity.",
+      "status": "Editor workspace shell and quad/shared layout are active; constrained-width mode tabs now use a scrollable row and deterministic post-load smoke coverage; the top toolbar is grouped into file, workspace, layout/camera, and compact Display-menu controls; quad view has pane dividers/labels plus e2e overlay assertions; single-view Ortho framing and Display menu visuals are covered by smoke/visual tests. Skin-weight edit helpers, typed dirty-state model, selected-bone set/add/subtract viewport paint, brush telemetry, undo/redo stroke checkpoints, full-model Normalize and Auto Skin batch actions, continuity checks, and supported SMF dirty-export serialization are active. Rig mode now has validation report rows plus non-SMF selected-bone rename with animation-track/authored-key retargeting, selected-bone reparent with cycle validation/world-transform preservation, selected-bone create-child with Skeleton inverse/buffer initialization, and selected-bone delete with weighted-skin-reference guards plus index/animation cleanup. Outliner submodel visibility/color cues, imported/authored timeline keyframe markers, selected-bone keyframe edit state, Insert/Update/Delete/Copy/Paste animation controls, structured Export cockpit roundtrip check rows, viewport-only Legacy SMF-lit display material clones, and Skin pts skinned vertex overlays are active. Remaining old-editor parity is selection overlay display parity, deeper animation clip polish, SMF head-node-aware metadata edits, rig detach/connect and mirror/reset helpers, real-SMF strict pose roundtrip cleanup, and deeper precision controls while preserving shared model root continuity.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
@@ -200,6 +200,10 @@
         "source/frontend/src/utils/rigEdits.test.ts",
         "source/frontend/src/utils/rigValidation.ts",
         "source/frontend/src/utils/rigValidation.test.ts",
+        "source/frontend/src/utils/legacySmfLighting.ts",
+        "source/frontend/src/utils/legacySmfLighting.test.ts",
+        "source/frontend/src/utils/skinPointOverlay.ts",
+        "source/frontend/src/utils/skinPointOverlay.test.ts",
         "source/frontend/src/utils/skinWeights.ts",
         "source/frontend/src/utils/skinWeights.test.ts",
         "source/frontend/src/utils/viewportLayout.ts",
@@ -216,7 +220,7 @@
     },
     "workflow__old_editor_parity_source_map": {
       "description": "Focused old GameMaker reference map for adapting RustSMF workspaces, display toggles, skin paint, animation keyframes, and viewport precision behavior without recreating old chrome verbatim.",
-      "status": "active backlog; current RustSMF has single/quad layout, single-view Ortho, pane labels/dividers, grouped Display-menu controls, model-safe wireframe display, Outliner submodel visibility/color cues, endpoint handles, Rig validation/rename/reparent/create/delete, skin paint undo/redo stroke checkpoints, autoskin/normalize batch tools, imported/authored timeline keyframe markers, selected-bone animation keyframe authoring, structured Export cockpit checks, and playback/pose-edit affordances. Remaining mapped work is deeper animation polish, SMF head-node-aware rig metadata edits, rig detach/connect and mirror/reset helpers, real-SMF strict pose roundtrip cleanup, and deeper ortho-pane interaction parity.",
+      "status": "active backlog; current RustSMF has single/quad layout, single-view Ortho, pane labels/dividers, grouped Display-menu controls, model-safe wireframe display, Legacy SMF-lit viewport display materials, Skin pts skinned vertex overlays, Outliner submodel visibility/color cues, endpoint handles, Rig validation/rename/reparent/create/delete for non-SMF sources, skin paint undo/redo stroke checkpoints, autoskin/normalize batch tools, imported/authored timeline keyframe markers, selected-bone animation keyframe authoring, structured Export cockpit checks, and playback/pose-edit affordances. Remaining mapped work is selection overlay display parity, deeper animation clip polish, SMF head-node-aware rig metadata edits, rig detach/connect and mirror/reset helpers, real-SMF strict pose roundtrip cleanup, and deeper ortho-pane interaction parity.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
@@ -239,7 +243,17 @@
         "docs/references/old-src/scripts/rigeditor_*/*.gml",
         "docs/references/old-src/scripts/smf_anim/smf_anim.gml",
         "docs/references/old-src/scripts/smf_rig/smf_rig.gml",
-        "docs/references/old-src/scripts/Utility/Utility.gml"
+        "docs/references/old-src/scripts/Utility/Utility.gml",
+        "docs/references/old-src/shaders/sh_smf_animate/sh_smf_animate.vsh",
+        "docs/references/old-src/shaders/sh_smf_animate/sh_smf_animate.fsh",
+        "docs/references/old-src/shaders/sh_smf_static/sh_smf_static.vsh",
+        "docs/references/old-src/shaders/sh_smf_static/sh_smf_static.fsh",
+        "docs/references/old-src/shaders/sh_grid/sh_grid.vsh",
+        "docs/references/old-src/shaders/sh_grid/sh_grid.fsh",
+        "docs/references/old-src/shaders/sh_skinning_points/sh_skinning_points.vsh",
+        "docs/references/old-src/shaders/sh_skinning_points/sh_skinning_points.fsh",
+        "docs/references/old-src/shaders/sh_selection/sh_selection.vsh",
+        "docs/references/old-src/shaders/sh_selection/sh_selection.fsh"
       ],
       "notes": [
         "Keep display-only toggles separate from data-mutating commands.",
@@ -286,7 +300,7 @@
     },
     "subsystem__smf_format_and_fidelity": {
       "description": "SMF binary parsing/export, coordinate swizzles, dual-quaternion math, roundtrip fidelity, and old reference format material. Internal binary helpers (bytes + bounded R/W) live in smfBinary.ts (shared, barrel exposes bytesToArrayBuffer plus BinaryReader/BinaryWriter).",
-      "status": "SMF source roundtrip and visual coherence verified; SMF loader treats rig DQs as world bind transforms with true inverse binds and local animation tracks; SMF export guards zero-duration animation normalized times; non-SMF exact SMF export wired and covered by generated skinned GLB e2e; smfBinary canonical; smfRig preserves explicit SMF head nodes for export and provides buildRigHierarchy for Three: skips heads on attach/skel with cycle-safe effective is-bone ancestor lookup, updates world matrices before inverse binds, and keeps animation tracks on real scene bones only; constructed lists stay direct; names SMF_Node for roundtrips",
+      "status": "SMF source roundtrip and visual coherence verified; SMF loader treats rig DQs as world bind transforms with true inverse binds and local animation tracks; SMF export guards zero-duration animation normalized times and invalid DQ normalization now falls back to identity for zero/NaN/Infinity rotation parts; non-SMF exact SMF export wired and covered by generated skinned GLB e2e; smfBinary canonical; smfRig preserves explicit SMF head nodes for export and provides buildRigHierarchy for Three: skips heads on attach/skel with cycle-safe effective is-bone ancestor lookup, updates world matrices before inverse binds, and keeps animation tracks on real scene bones only; constructed lists stay direct; names SMF_Node for roundtrips",
       "paths": [
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/loaders/smfBinary.ts",

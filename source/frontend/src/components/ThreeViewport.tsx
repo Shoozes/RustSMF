@@ -6,6 +6,8 @@ import { restoreWeightPreview, applyWeightPreviewForBone } from '../utils/weight
 import { findClosestBone, DEFAULT_MAX_BONE_PICK_DIST, findBoneByName } from '../utils/bonePicker';
 import type { SkinWeightEditMode } from '../utils/skinWeights';
 import { useBoneLabelsWithScale } from '../utils/useBoneLabels';
+import { createLegacySmfMaterial } from '../utils/legacySmfLighting';
+import { createSkinPointOverlays, disposeSkinPointOverlays } from '../utils/skinPointOverlay';
 import {
   makeBoneHighlightMarker,
   updateHighlightPosition,
@@ -42,11 +44,13 @@ type MaterialWithMap = THREE.Material & {
   map?: THREE.Texture | null;
 };
 
-type MaterialWithFlatShading = MaterialWithMap & {
-  flatShading?: boolean;
-};
-
 type TransformControlsDraggingEvent = { value: boolean };
+
+type MeshMaterialEntry = {
+  mesh: THREE.Mesh;
+  materials: THREE.Material[];
+  materialWasArray: boolean;
+};
 
 const isObject3D = (value: unknown): value is THREE.Object3D => value instanceof THREE.Object3D;
 const transformControlsAsObject3D = (controls: TransformControls): THREE.Object3D =>
@@ -57,8 +61,6 @@ const isDraggingEvent = (event: unknown): event is TransformControlsDraggingEven
 const isSkinnedMesh = (obj: THREE.Object3D): obj is THREE.SkinnedMesh => obj.type === 'SkinnedMesh' || (obj as THREE.SkinnedMesh).isSkinnedMesh === true;
 
 const isMaterialWithMap = (material: THREE.Material): material is MaterialWithMap => 'map' in material;
-
-const isMaterialWithFlatShading = (material: THREE.Material): material is MaterialWithFlatShading => 'flatShading' in material;
 
 // Self-contained ThreeViewport.
 // Owns: renderer, scene (base lights+grid+axes), camera, SimpleOrbit controls, RAF loop, model attach,
@@ -90,6 +92,7 @@ interface ThreeViewportProps {
   boneIndexLabelsEnabled?: boolean;
   rigOpacity?: number;
   rigThicknessScale?: number;
+  skinPointOverlayEnabled?: boolean;
   shaderEnabled?: boolean;
   perspectiveEnabled?: boolean;
   modelOpacity?: number;
@@ -128,6 +131,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   boneIndexLabelsEnabled = false,
   rigOpacity = 1,
   rigThicknessScale = 1,
+  skinPointOverlayEnabled = false,
   shaderEnabled = false,
   perspectiveEnabled = true,
   modelOpacity = 1,
@@ -166,8 +170,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const materialTextureBackupRef = useRef<Map<string, THREE.Texture | null>>(new Map());
   const materialOpacityBackupRef = useRef<Map<string, number>>(new Map());
   const materialTransparentBackupRef = useRef<Map<string, boolean>>(new Map());
-  const materialShaderBackupRef = useRef<Map<string, boolean | undefined>>(new Map());
-  const meshMaterialsRef = useRef<Map<string, { mesh: THREE.Mesh; materials: THREE.Material[] }>>(new Map());
+  const meshMaterialsRef = useRef<Map<string, MeshMaterialEntry>>(new Map());
+  const legacyShaderMaterialsRef = useRef<Map<string, THREE.Material>>(new Map());
   const onPaintSkinVerticesRef = useRef(onPaintSkinVertices);
   const onSkinPaintStrokeStartRef = useRef(onSkinPaintStrokeStart);
   const onSkinPaintStrokeEndRef = useRef(onSkinPaintStrokeEnd);
@@ -205,6 +209,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const boneHighlightRef = useRef<THREE.Object3D | null>(null);
   const boneEndpointHandleRef = useRef<THREE.Object3D | null>(null);
   const boneHoverMarkerRef = useRef<THREE.Object3D | null>(null);
+  const skinPointOverlaysRef = useRef<THREE.Points[]>([]);
   const hoveredBoneNameRef = useRef<string | null>(null);
   const skinBrushMarkerRef = useRef<THREE.Object3D | null>(null);
   const skinPaintHitCountRef = useRef(0);
@@ -333,73 +338,148 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     return meshes;
   };
 
+  const clearSkinPointOverlays = (): void => {
+    disposeSkinPointOverlays(skinPointOverlaysRef.current);
+    skinPointOverlaysRef.current = [];
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.dataset.skinPointOverlayCount = '0';
+    }
+  };
+
+  const rebuildSkinPointOverlays = (): void => {
+    clearSkinPointOverlays();
+    const canvas = canvasRef.current;
+    if (!skinPointOverlayEnabled || !attachedModelRef.current) {
+      return;
+    }
+    skinPointOverlaysRef.current = createSkinPointOverlays(attachedModelRef.current, {
+      selectedBoneName: selectedBoneNameRef.current,
+    });
+    if (canvas) {
+      canvas.dataset.skinPointOverlayCount = String(skinPointOverlaysRef.current.length);
+    }
+  };
+
   const captureTextureMaterials = (object: THREE.Object3D | null): void => {
     if (!object) return;
+    disposeLegacyShaderMaterials();
     meshMaterialsRef.current.clear();
     materialTextureBackupRef.current.clear();
     materialOpacityBackupRef.current.clear();
     materialTransparentBackupRef.current.clear();
-    materialShaderBackupRef.current.clear();
     object.traverse((obj) => {
       if (!(obj instanceof THREE.Mesh)) return;
+      const materialWasArray = Array.isArray(obj.material);
       const materials = Array.isArray(obj.material)
         ? obj.material
         : [obj.material];
       const normalized = materials.filter((m): m is THREE.Material => !!m);
       if (normalized.length > 0) {
-        meshMaterialsRef.current.set(obj.uuid, { mesh: obj, materials: normalized });
+        meshMaterialsRef.current.set(obj.uuid, { mesh: obj, materials: normalized, materialWasArray });
         normalized.forEach((material) => {
           if (!materialTextureBackupRef.current.has(material.uuid)) {
             materialTextureBackupRef.current.set(material.uuid, isMaterialWithMap(material) ? material.map ?? null : null);
             materialOpacityBackupRef.current.set(material.uuid, material.opacity);
             materialTransparentBackupRef.current.set(material.uuid, material.transparent);
-            if (isMaterialWithFlatShading(material) && Object.prototype.hasOwnProperty.call(material, 'flatShading')) {
-              materialShaderBackupRef.current.set(material.uuid, material.flatShading);
-            }
           }
         });
       }
     });
   };
 
+  const disposeLegacyShaderMaterials = (): void => {
+    legacyShaderMaterialsRef.current.forEach((material) => {
+      material.dispose();
+    });
+    legacyShaderMaterialsRef.current.clear();
+  };
+
+  const restoreOriginalMaterials = (): void => {
+    meshMaterialsRef.current.forEach(({ mesh, materials, materialWasArray }) => {
+      if (materials.length === 0) return;
+      mesh.material = materialWasArray ? [...materials] : materials[0];
+    });
+  };
+
+  const applyTextureToMaterial = (
+    material: THREE.Material,
+    sourceMaterialUuid: string,
+    enabled: boolean,
+  ): void => {
+    if (!isMaterialWithMap(material)) return;
+    const mapValue = materialTextureBackupRef.current.get(sourceMaterialUuid);
+    if (typeof mapValue === 'undefined') return;
+    material.map = enabled ? mapValue : null;
+    material.needsUpdate = true;
+  };
+
   const applyTextureEnabled = (enabled: boolean): void => {
     meshMaterialsRef.current.forEach(({ materials }) => {
       for (const material of materials) {
-        if (!isMaterialWithMap(material)) continue;
-        const mapValue = materialTextureBackupRef.current.get(material.uuid);
-        if (typeof mapValue === 'undefined') continue;
-        material.map = enabled ? mapValue : null;
-        material.needsUpdate = true;
+        applyTextureToMaterial(material, material.uuid, enabled);
+        const legacyMaterial = legacyShaderMaterialsRef.current.get(material.uuid);
+        if (legacyMaterial) {
+          applyTextureToMaterial(legacyMaterial, material.uuid, enabled);
+        }
       }
     });
   };
 
   const applyShaderEnabled = (enabled: boolean): void => {
-    meshMaterialsRef.current.forEach(({ materials }) => {
-      for (const material of materials) {
-        if (!isMaterialWithFlatShading(material) || !Object.prototype.hasOwnProperty.call(material, 'flatShading')) continue;
-        if (typeof material.flatShading !== 'undefined') {
-          material.flatShading = enabled;
+    if (!enabled) {
+      restoreOriginalMaterials();
+      disposeLegacyShaderMaterials();
+      applyTextureEnabled(textureEnabled);
+      applyModelOpacity(modelOpacity);
+      return;
+    }
+
+    meshMaterialsRef.current.forEach(({ mesh, materials, materialWasArray }) => {
+      const displayMaterials = materials.map((material) => {
+        let legacyMaterial = legacyShaderMaterialsRef.current.get(material.uuid);
+        if (!legacyMaterial) {
+          legacyMaterial = createLegacySmfMaterial(material, {
+            mapEnabled: textureEnabled,
+            opacity: modelOpacity,
+          });
+          legacyShaderMaterialsRef.current.set(material.uuid, legacyMaterial);
         }
-        material.needsUpdate = true;
-      }
+        return legacyMaterial;
+      });
+      if (displayMaterials.length === 0) return;
+      mesh.material = materialWasArray ? displayMaterials : displayMaterials[0];
     });
+    applyTextureEnabled(textureEnabled);
+    applyModelOpacity(modelOpacity);
+  };
+
+  const applyOpacityToMaterial = (
+    material: THREE.Material,
+    sourceMaterialUuid: string,
+    opacity: number,
+  ): void => {
+    const defaultOpacity = materialOpacityBackupRef.current.get(sourceMaterialUuid);
+    if (typeof defaultOpacity === 'undefined') return;
+    material.opacity = opacity;
+    if (opacity < 1) {
+      material.transparent = true;
+    } else {
+      const defaultTransparent = materialTransparentBackupRef.current.get(sourceMaterialUuid);
+      material.transparent = defaultTransparent ?? false;
+    }
+    material.needsUpdate = true;
   };
 
   const applyModelOpacity = (value: number): void => {
     const opacity = clamp01(value);
     meshMaterialsRef.current.forEach(({ materials }) => {
       for (const material of materials) {
-        const defaultOpacity = materialOpacityBackupRef.current.get(material.uuid);
-        if (typeof defaultOpacity === 'undefined') continue;
-        material.opacity = opacity;
-        if (opacity < 1) {
-          material.transparent = true;
-        } else {
-          const defaultTransparent = materialTransparentBackupRef.current.get(material.uuid);
-          material.transparent = defaultTransparent ?? false;
+        applyOpacityToMaterial(material, material.uuid, opacity);
+        const legacyMaterial = legacyShaderMaterialsRef.current.get(material.uuid);
+        if (legacyMaterial) {
+          applyOpacityToMaterial(legacyMaterial, material.uuid, opacity);
         }
-        material.needsUpdate = true;
       }
     });
   };
@@ -790,6 +870,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         if (paintVertices.length > 0) {
           onSkinPaintStrokeStartRef.current?.();
           onPaintSkinVerticesRef.current?.(paintVertices);
+          rebuildSkinPointOverlays();
           skinPaintActiveRef.current = true;
           canvas.style.cursor = 'crosshair';
           cursorModeRef.current = 'crosshair';
@@ -909,6 +990,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         updateBrushMarker(getBrushCenterForPaint(event), skinPaintRadiusRef.current);
         if (paintVertices.length > 0) {
           onPaintSkinVerticesRef.current?.(paintVertices);
+          rebuildSkinPointOverlays();
         }
         return;
       }
@@ -1080,6 +1162,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         disposeThreeObject(boneHighlightRef.current);
         boneHighlightRef.current = null;
       }
+      clearSkinPointOverlays();
+      restoreOriginalMaterials();
+      disposeLegacyShaderMaterials();
       wireframeMaterialRef.current?.dispose();
       wireframeMaterialRef.current = null;
       renderer.dispose();
@@ -1209,6 +1294,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       restoreTransformControlsAfterEndpointDrag();
       const tc = transformControlsRef.current;
       const scene = sceneRef.current;
+      clearSkinPointOverlays();
       if (tc) {
         tc.detach();
         if (scene && isObject3D(tc)) scene.remove(tc);
@@ -1234,6 +1320,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
   // Sync selected bone name ref (for animate loop + highlight without stale closures)
   useEffect(() => { selectedBoneNameRef.current = selectedBoneName; }, [selectedBoneName]);
+
+  useEffect(() => {
+    rebuildSkinPointOverlays();
+  }, [skinPointOverlayEnabled, root, selectedBoneName]);
 
   // Bone labels management (extracted hook for modularity)
   const markerScale = isPrecisionMode ? 2 : 1;
@@ -1420,16 +1510,20 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const scene = sceneRef.current;
     if (!scene) return;
 
-    materialTextureBackupRef.current.clear();
-    meshMaterialsRef.current.clear();
-
     // Dispose + remove previous attached model + helper (use shared util)
     const prev = attachedModelRef.current;
     if (prev) {
+      clearSkinPointOverlays();
+      restoreOriginalMaterials();
+      disposeLegacyShaderMaterials();
       scene.remove(prev);
       disposeThreeObject(prev);
       attachedModelRef.current = null;
     }
+    materialTextureBackupRef.current.clear();
+    materialOpacityBackupRef.current.clear();
+    materialTransparentBackupRef.current.clear();
+    meshMaterialsRef.current.clear();
     if (skeletonHelperRef.current) {
       scene.remove(skeletonHelperRef.current);
       skeletonHelperRef.current.dispose?.();
@@ -1457,6 +1551,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     scene.add(root);
     attachedModelRef.current = root;
     captureTextureMaterials(root);
+    rebuildSkinPointOverlays();
     if (!textureEnabled) {
       applyTextureEnabled(false);
     }
@@ -1529,11 +1624,14 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         data-axes-enabled={axesEnabled ? 'true' : 'false'}
         data-texture-enabled={textureEnabled ? 'true' : 'false'}
         data-shader-enabled={shaderEnabled ? 'true' : 'false'}
+        data-shader-mode={shaderEnabled ? 'legacy-smf' : 'standard'}
         data-perspective-enabled={perspectiveEnabled ? 'true' : 'false'}
         data-bone-index-labels-enabled={boneIndexLabelsEnabled ? 'true' : 'false'}
         data-rig-opacity={rigOpacity}
         data-model-opacity={modelOpacity}
         data-rig-thickness-scale={rigThicknessScale}
+        data-skin-points-enabled={skinPointOverlayEnabled ? 'true' : 'false'}
+        data-skin-point-overlay-count={skinPointOverlaysRef.current.length}
       />
       {viewportLayout === 'quad' && (
         <div className="quad-pane-overlay" data-testid="quad-pane-overlay" aria-hidden="true">

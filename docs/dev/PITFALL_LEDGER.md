@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-19 (viewport toolbar/ortho audit; strict-port Playwright invocation pitfall recorded).
+Last reviewed: 2026-06-30 (invalid DQ normalization guard).
 
 ### Q: What pitfall are we preventing?
 
@@ -324,11 +324,12 @@ Last reviewed: 2026-06-19 (viewport toolbar/ortho audit; strict-port Playwright 
 
 **Solutions tried:**
 1. `58/100` Let low-level `DataView` and float math fail naturally, result: failures were hard to interpret and could serialize NaN/Infinity.
-2. `90/100` Add bounded reads, identity fallback for invalid DQs, safe normalized animation time, and targeted unit tests, result: parser/export failures are finite and actionable.
+2. `90/100` Add bounded reads and safe normalized animation time, result: parser failures and zero-duration animation export became finite and actionable.
+3. `94/100` Add `dqNormalize` identity fallback for zero/NaN/Infinity rotation parts plus invalid-DQ unit coverage, result: DQ export math cannot serialize non-finite values from malformed rotation parts.
 
 **Current solution:** Binary reads throw `Unexpected end of SMF binary...`; invalid DQs normalize to identity; zero-duration animations write normalized time `0`.
 
-**Effectiveness:** `90/100`, durable for malformed input and partial conversion work. It does not prove future non-SMF-to-SMF animation fidelity by itself.
+**Effectiveness:** `94/100`, durable for malformed input and partial conversion work. It does not prove future non-SMF-to-SMF animation fidelity by itself.
 
 **Relevance check:** Current. Exact GLB/FBX-to-SMF work will stress DQ construction and animation timing.
 

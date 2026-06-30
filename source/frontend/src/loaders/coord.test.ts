@@ -70,6 +70,21 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
     assert.ok(Math.abs(len - 1) < 1e-6);
   });
 
+  it('normalize falls back to identity for zero or invalid DQ rotation parts', () => {
+    const fixtures = [
+      new Float32Array([0, 0, 0, 0, 0, 0, 0, 0]),
+      new Float32Array([Number.NaN, 0, 0, 0, 1, 2, 3, 4]),
+      new Float32Array([Number.POSITIVE_INFINITY, 0, 0, 0, 1, 2, 3, 4]),
+    ];
+
+    for (const fixture of fixtures) {
+      const normalized = dqNormalize(fixture);
+
+      assert.deepStrictEqual(Array.from(normalized), [0, 0, 0, 1, 0, 0, 0, 0]);
+      assert.ok(Array.from(normalized).every(Number.isFinite));
+    }
+  });
+
   // Golden numeric tests (Task 5): tight tolerances for DQ identity, rotations, sign/parent-zero cases.
   // Visuals + loose roundtrips hide handedness/parent-space drift; these are boundary proof.
   // Values chosen for known identity/rot; use ref math (smf_dq_math) + current impl as source of truth for now.
@@ -82,9 +97,8 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
       assert.ok(Math.abs(m2[i] - 1) < 1e-6, `diag drift at ${i}`); // 1e-9 too strict for some paths; 1e-6 safe golden
     }
     // basic qr norm check (w component after norm)
-    const qr = dq.slice(0,4);
-    dqNormalize(qr as any);
-    assert.ok(Math.abs(qr[3]) > 0.99);
+    const normalized = dqNormalize(new Float32Array([dq[0], dq[1], dq[2], dq[3], 0, 0, 0, 0]));
+    assert.ok(Math.abs(normalized[3]) > 0.99);
   });
 
   it('parent-zero vs parent transform numeric (p=0 uses direct, no inv drift)', () => {
@@ -105,7 +119,7 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
     const m2 = dqToMatrix(dq1);
     const dq2 = dqCreateFromMatrix(m2);
     const fixed = dqFlipSign(dq2, dq1);
-    const nfixed = dqNormalize(fixed.slice(0,4) as any); // qr part
+    const nfixed = dqNormalize(new Float32Array([fixed[0], fixed[1], fixed[2], fixed[3], 0, 0, 0, 0])); // qr part
     const dot = nfixed[0]*dq1[0] + nfixed[1]*dq1[1] + nfixed[2]*dq1[2] + nfixed[3]*dq1[3];
     assert.ok(Math.abs(dot) > 0.99, 'roundtrip + flip/norm should match hemisphere (qr)');
   });

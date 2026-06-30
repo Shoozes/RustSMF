@@ -23,6 +23,7 @@ export default function ExportPanel({
   const warnings = smfDiagnosticReport.diagnostics.filter((item) => item.level === 'warning').length;
   const materialTextures = smfDiagnosticReport.materialTextures ?? [];
   const roundtripStatus = smfRoundtripReport?.status ?? null;
+  const poseDeltaDetails = smfRoundtripReport?.poseDeltaDetails ?? [];
   const roundtripStatusText =
     roundtripStatus === 'passed'
       ? 'Roundtrip passed'
@@ -137,6 +138,31 @@ export default function ExportPanel({
             <div className="smf-roundtrip-summary">
               max vertex delta {smfRoundtripReport.vertexPositionMaxDelta.toFixed(6)} / normal delta {smfRoundtripReport.vertexNormalMaxDelta.toFixed(6)} / bounds delta {smfRoundtripReport.meshBoundsMaxDelta.toFixed(6)} / bone pose delta {smfRoundtripReport.bonePoseMaxDelta.toFixed(6)} (samples {smfRoundtripReport.bonePoseSamplesChecked})
             </div>
+            {poseDeltaDetails.length > 0 && (
+              <>
+                <div className="smf-roundtrip-check-heading">Worst pose deltas</div>
+                <ul className="smf-diagnostics-list smf-roundtrip-pose-deltas" data-testid="smf-pose-delta-details">
+                  {poseDeltaDetails.map((detail) => (
+                    <li
+                      key={`${detail.animationIndex}-${detail.frameIndex}-${detail.boneIndex}-${detail.maxComponentDelta}`}
+                      className="smf-diagnostic smf-roundtrip-check smf-roundtrip-check-warning"
+                      data-testid="smf-pose-delta-row"
+                    >
+                      <span className="smf-diagnostic-code">{detail.maxComponentDelta.toFixed(6)}</span>
+                      <span>
+                        {detail.animationName} {detail.frameLabel} frame {detail.frameIndex}, bone {detail.boneIndex}
+                      </span>
+                      <span className="smf-diagnostic-target">
+                        parent {detail.beforeParent}{'->'}{detail.afterParent}, isBone {detail.beforeIsBone}{'->'}{detail.afterIsBone}
+                      </span>
+                      <span>
+                        {detail.componentDeltas.map((delta, index) => `c${index}:${delta.toFixed(6)}`).join(' ')}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
             <div className="smf-roundtrip-check-heading">Compatibility checks</div>
             <ul className="smf-diagnostics-list smf-roundtrip-checks" data-testid="smf-roundtrip-check-list">
               {smfRoundtripReport.checks.map((check) => (

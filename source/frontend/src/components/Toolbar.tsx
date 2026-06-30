@@ -28,6 +28,8 @@ interface ToolbarProps {
   setRigOpacity: (opacity: number) => void;
   rigThicknessScale: number;
   setRigThicknessScale: (scale: number) => void;
+  skinPointOverlayEnabled: boolean;
+  setSkinPointOverlayEnabled: (enabled: boolean) => void;
   shaderEnabled: boolean;
   setShaderEnabled: (enabled: boolean) => void;
   perspectiveEnabled: boolean;
@@ -62,6 +64,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
   setRigOpacity,
   rigThicknessScale,
   setRigThicknessScale,
+  skinPointOverlayEnabled,
+  setSkinPointOverlayEnabled,
   shaderEnabled,
   setShaderEnabled,
   perspectiveEnabled,
@@ -108,8 +112,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
     },
     {
       testId: 'viewport-shader-toggle',
-      label: 'Flat',
-      title: 'Toggle flat-shaded viewport shader',
+      label: 'Legacy',
+      title: 'Toggle legacy SMF-lit viewport material',
       active: shaderEnabled,
       onClick: () => setShaderEnabled(!shaderEnabled),
     },
@@ -140,6 +144,13 @@ const Toolbar: React.FC<ToolbarProps> = ({
       title: 'Toggle rig thickness',
       active: rigThicknessScale !== 1,
       onClick: () => setRigThicknessScale(rigThicknessScale === 1 ? 0.45 : 1),
+    },
+    {
+      testId: 'viewport-skin-points-toggle',
+      label: 'Skin pts',
+      title: 'Toggle skinned vertex point overlay',
+      active: skinPointOverlayEnabled,
+      onClick: () => setSkinPointOverlayEnabled(!skinPointOverlayEnabled),
     },
   ];
   const viewportControlsDisabled = isLoading || !hasModel;

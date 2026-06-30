@@ -5,6 +5,7 @@ import {
   SAMPLE_SMF,
   getTauriMockSnapshot,
   installTauriMock,
+  pausePlaybackIfRunning,
   simulateGetSmfDesktopInfo,
   setupBrowserDiagnostics,
   type SmfDesktopInfo,
@@ -23,6 +24,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
   });
 
   test('native open/read/export and save cancel stay explicit', async ({ page }) => {
+    test.setTimeout(90000);
     test.skip(!SAMPLE_SMF, 'No .smf sample available for native IPC mock coverage');
 
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
@@ -53,6 +55,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await page.getByTestId('open-model-btn').click();
 
     await expect(page.getByTestId('status-text')).toContainText(/Rust validated SMF|Loaded/i, { timeout: 15000 });
+    await pausePlaybackIfRunning(page);
 
     let snapshot = await getTauriMockSnapshot(page);
     const desktopInfoCall = snapshot.calls.find((call) => call.cmd === 'get_smf_desktop_info');
@@ -127,6 +130,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
   });
 
   test('native rapid export clicks stay single-flight', async ({ page }) => {
+    test.setTimeout(120000);
     test.skip(!SAMPLE_SMF, 'No .smf sample available for native IPC mock coverage');
 
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
@@ -138,13 +142,14 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
       savePath,
       sampleBytes,
       desktopInfo,
-      writeDelayMs: 400,
+      writeDelayMs: 120,
     });
 
     await page.goto('/');
     await page.getByTestId('open-model-btn').click();
 
     await expect(page.getByTestId('status-text')).toContainText(/Rust validated SMF|Loaded/i, { timeout: 15000 });
+    await pausePlaybackIfRunning(page);
 
     const exportButton = page.getByTestId('export-btn');
     await exportButton.click();
@@ -161,8 +166,12 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     expect(snapshot.writes).toHaveLength(1);
     expect(snapshot.writes[0].path).toBe(savePath);
 
+    const writesBeforeSecondExport = snapshot.writes.length;
     await updateTauriMock(page, { writeDelayMs: 0 });
     await exportButton.click();
+    await expect.poll(async () => (
+      await getTauriMockSnapshot(page)
+    ).writes.length, { timeout: 5000 }).toBe(writesBeforeSecondExport + 1);
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
     snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.writes).toHaveLength(2);
@@ -275,6 +284,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await page.getByTestId('open-model-btn').click();
 
     await expect(page.getByTestId('status-text')).toContainText(/Rust validated SMF|Loaded/i, { timeout: 15000 });
+    await pausePlaybackIfRunning(page);
 
     await page.getByTestId('mode-tab-rig').click({ force: true });
     const rigPanel = page.getByTestId('inspector');

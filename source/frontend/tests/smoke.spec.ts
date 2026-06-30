@@ -225,6 +225,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(canvas).toHaveAttribute('data-bone-index-labels-enabled', 'false');
     await expect(canvas).toHaveAttribute('data-rig-opacity', '1');
     await expect(canvas).toHaveAttribute('data-rig-thickness-scale', '1');
+    await expect(canvas).toHaveAttribute('data-skin-points-enabled', 'false');
+    await expect(canvas).toHaveAttribute('data-skin-point-overlay-count', '0');
     await expect(page.getByTestId('viewport-layout-single')).toBeDisabled();
     await expect(page.getByTestId('viewport-layout-quad')).toBeDisabled();
     await expect(page.getByTestId('viewport-wireframe-toggle')).toBeDisabled();
@@ -237,6 +239,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('viewport-model-opacity-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-rig-opacity-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-rig-thickness-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-skin-points-toggle')).toBeDisabled();
 
     // Timeline and outliner present
     await expect(page.getByTestId('timeline')).toBeVisible();
@@ -257,6 +260,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('viewport-model-opacity-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-rig-opacity-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-rig-thickness-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-skin-points-toggle')).toBeDisabled();
 
   const assertModeActive = async (mode: 'view' | 'rig' | 'skin' | 'animate' | 'export'): Promise<void> => {
     const tab = page.getByTestId(`mode-tab-${mode}`);
@@ -275,6 +279,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('viewport-model-opacity-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-rig-opacity-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-rig-thickness-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-skin-points-toggle')).toBeDisabled();
     const statusText = await page.getByTestId('status-text').textContent();
     expect(statusText).toContain('Three.js viewport ready');
     };
@@ -367,6 +372,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const boneIndexBtn = page.getByTestId('viewport-bone-index-toggle');
     const rigOpacityBtn = page.getByTestId('viewport-rig-opacity-toggle');
     const rigThicknessBtn = page.getByTestId('viewport-rig-thickness-toggle');
+    const skinPointsBtn = page.getByTestId('viewport-skin-points-toggle');
     const modelOpacityBtn = page.getByTestId('viewport-model-opacity-toggle');
     const canvas = page.getByTestId('three-canvas');
     await expect(wireframeBtn).toBeEnabled();
@@ -379,6 +385,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(textureBtn).toHaveAttribute('aria-pressed', 'true');
     await expect(shaderBtn).toBeEnabled();
     await expect(shaderBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(shaderBtn).toContainText('Legacy');
     await expect(perspectiveBtn).toBeEnabled();
     await expect(perspectiveBtn).toHaveAttribute('aria-pressed', 'true');
     await expect(modelOpacityBtn).toBeEnabled();
@@ -389,15 +396,20 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(rigOpacityBtn).toHaveAttribute('aria-pressed', 'false');
     await expect(rigThicknessBtn).toBeEnabled();
     await expect(rigThicknessBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(skinPointsBtn).toBeEnabled();
+    await expect(skinPointsBtn).toHaveAttribute('aria-pressed', 'false');
     await expect(canvas).toHaveAttribute('data-grid-enabled', 'true');
     await expect(canvas).toHaveAttribute('data-axes-enabled', 'true');
     await expect(canvas).toHaveAttribute('data-texture-enabled', 'true');
     await expect(canvas).toHaveAttribute('data-shader-enabled', 'false');
+    await expect(canvas).toHaveAttribute('data-shader-mode', 'standard');
     await expect(canvas).toHaveAttribute('data-perspective-enabled', 'true');
     await expect(canvas).toHaveAttribute('data-model-opacity', '1');
     await expect(canvas).toHaveAttribute('data-bone-index-labels-enabled', 'false');
     await expect(canvas).toHaveAttribute('data-rig-opacity', '1');
     await expect(canvas).toHaveAttribute('data-rig-thickness-scale', '1');
+    await expect(canvas).toHaveAttribute('data-skin-points-enabled', 'false');
+    await expect(canvas).toHaveAttribute('data-skin-point-overlay-count', '0');
     await openViewportDisplayMenu(page);
     await wireframeBtn.click();
     await expect(wireframeBtn).toHaveAttribute('aria-pressed', 'true');
@@ -414,6 +426,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await shaderBtn.click();
     await expect(shaderBtn).toHaveAttribute('aria-pressed', 'true');
     await expect(canvas).toHaveAttribute('data-shader-enabled', 'true');
+    await expect(canvas).toHaveAttribute('data-shader-mode', 'legacy-smf');
     await perspectiveBtn.click();
     await expect(perspectiveBtn).toHaveAttribute('aria-pressed', 'false');
     await expect(canvas).toHaveAttribute('data-perspective-enabled', 'false');
@@ -429,6 +442,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await rigThicknessBtn.click();
     await expect(rigThicknessBtn).toHaveAttribute('aria-pressed', 'true');
     await expect(canvas).toHaveAttribute('data-rig-thickness-scale', '0.45');
+    await skinPointsBtn.click();
+    await expect(skinPointsBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(canvas).toHaveAttribute('data-skin-points-enabled', 'true');
+    await expect(canvas).toHaveAttribute('data-skin-point-overlay-count', /[1-9]\d*/);
     await expectRenderedScreenshot(page.getByTestId('viewport-container'), 2500);
     await wireframeBtn.click();
     await expect(canvas).toHaveAttribute('data-wireframe-enabled', 'false');
@@ -447,9 +464,14 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await rigThicknessBtn.click();
     await expect(rigThicknessBtn).toHaveAttribute('aria-pressed', 'false');
     await expect(canvas).toHaveAttribute('data-rig-thickness-scale', '1');
+    await skinPointsBtn.click();
+    await expect(skinPointsBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(canvas).toHaveAttribute('data-skin-points-enabled', 'false');
+    await expect(canvas).toHaveAttribute('data-skin-point-overlay-count', '0');
     await shaderBtn.click();
     await expect(shaderBtn).toHaveAttribute('aria-pressed', 'false');
     await expect(canvas).toHaveAttribute('data-shader-enabled', 'false');
+    await expect(canvas).toHaveAttribute('data-shader-mode', 'standard');
     await perspectiveBtn.click();
     await expect(perspectiveBtn).toHaveAttribute('aria-pressed', 'true');
     await expect(canvas).toHaveAttribute('data-perspective-enabled', 'true');

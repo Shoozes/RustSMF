@@ -286,8 +286,9 @@ export function useLoadModel() {
     setSourceFormat('');
     commitSkinEditState(makeSkinEditState('', ''));
     clearSkinHistory();
-    setAnimationEditState(makeAnimationEditState());
-    animationEditStateRef.current = makeAnimationEditState();
+    const emptyAnimationState = makeAnimationEditState();
+    setAnimationEditState(emptyAnimationState);
+    animationEditStateRef.current = emptyAnimationState;
     poseEditsRef.current = {};
     setPoseEditHasDirtyState(false);
     setSmfRoundtripReport(null);
@@ -1492,6 +1493,8 @@ export function useLoadModel() {
     setRigOpacity: ui.setRigOpacity,
     rigThicknessScale: ui.rigThicknessScale,
     setRigThicknessScale: ui.setRigThicknessScale,
+    skinPointOverlayEnabled: ui.skinPointOverlayEnabled,
+    setSkinPointOverlayEnabled: ui.setSkinPointOverlayEnabled,
     shaderEnabled: ui.shaderEnabled,
     setShaderEnabled: ui.setShaderEnabled,
     perspectiveEnabled: ui.perspectiveEnabled,

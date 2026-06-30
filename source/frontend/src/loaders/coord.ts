@@ -115,14 +115,43 @@ export function dqNegate(dq: Float32Array, dst = new Float32Array(8)): Float32Ar
 }
 
 export function dqNormalize(dq: Float32Array, dst = dq): Float32Array {
-  const invLen = 1 / Math.hypot(dq[0], dq[1], dq[2], dq[3]);
-  dst[0] = dq[0] * invLen; dst[1] = dq[1] * invLen;
-  dst[2] = dq[2] * invLen; dst[3] = dq[3] * invLen;
-  const d = dst[0] * dq[4] + dst[1] * dq[5] + dst[2] * dq[6] + dst[3] * dq[7];
-  dst[4] = (dq[4] - dst[0] * d) * invLen;
-  dst[5] = (dq[5] - dst[1] * d) * invLen;
-  dst[6] = (dq[6] - dst[2] * d) * invLen;
-  dst[7] = (dq[7] - dst[3] * d) * invLen;
+  const len = Math.hypot(dq[0], dq[1], dq[2], dq[3]);
+
+  if (!Number.isFinite(len) || len <= 1e-8) {
+    dst[0] = 0;
+    dst[1] = 0;
+    dst[2] = 0;
+    dst[3] = 1;
+    dst[4] = 0;
+    dst[5] = 0;
+    dst[6] = 0;
+    dst[7] = 0;
+    return dst;
+  }
+
+  const invLen = 1 / len;
+
+  const qrX = dq[0] * invLen;
+  const qrY = dq[1] * invLen;
+  const qrZ = dq[2] * invLen;
+  const qrW = dq[3] * invLen;
+
+  const qdX = Number.isFinite(dq[4]) ? dq[4] : 0;
+  const qdY = Number.isFinite(dq[5]) ? dq[5] : 0;
+  const qdZ = Number.isFinite(dq[6]) ? dq[6] : 0;
+  const qdW = Number.isFinite(dq[7]) ? dq[7] : 0;
+
+  const dualDotRaw = qrX * qdX + qrY * qdY + qrZ * qdZ + qrW * qdW;
+  const dualDot = Number.isFinite(dualDotRaw) ? dualDotRaw : 0;
+
+  dst[0] = qrX;
+  dst[1] = qrY;
+  dst[2] = qrZ;
+  dst[3] = qrW;
+  dst[4] = (qdX - qrX * dualDot) * invLen;
+  dst[5] = (qdY - qrY * dualDot) * invLen;
+  dst[6] = (qdZ - qrZ * dualDot) * invLen;
+  dst[7] = (qdW - qrW * dualDot) * invLen;
   return dst;
 }
 

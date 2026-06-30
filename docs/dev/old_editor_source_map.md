@@ -51,12 +51,13 @@ Sources used:
     - timeline sampling updates model sample pose.
   - `animeditor_draw_timeline` and helper scripts define keyframe rail visuals (`KEYFRAMEADDBLANK`, `KEYFRAMEINSERT`, etc.) with node-specific sample updates.
   - Current implementation status in RustSMF:
-    - `Timeline` currently supports playback/scrub/clip list.
-    - Animation edit data model + timeline keyframe editor not yet implemented; these scripts are source of truth for intended affordances.
+    - `Timeline` supports playback/scrub/clip list plus imported/authored keyframe markers.
+    - `AnimatePanel` and `useLoadModel` support selected-bone Insert/Update/Delete/Copy/Paste keyframe authoring for position/quaternion tracks, interpolation state, dirty tracking, runtime clip rebuild, and supported SMF export/check paths.
+    - Remaining parity is clip-level polish: rename/duplicate/reorder/delete, loop metadata editing, frame/sample multiplier UI, click-near keyframe selection, drag-to-time, and broader clip CRUD.
 
 - Risk notes to preserve:
   - old behavior supports clip operations (move, rename, duplicate, delete, copy/paste) while selecting keyframes by timeline proximity.
-  - interpolation modes were explicit (`keyframe`, `linear`, `quadratic`); RustSMF currently only has run-time local interpolation from imported clips.
+  - interpolation modes were explicit (`keyframe`, `linear`, `quadratic`); RustSMF currently exposes supported edit interpolation, but legacy clip-wide controls and frame multiplier behavior still need explicit mapping.
 
 ## 3) Rig editor parity
 
@@ -71,8 +72,10 @@ Sources used:
     - ortho-assisted bone add,
     - endpoint/selection-centric rigging flow.
   - Current implementation status in RustSMF:
-    - selection, visibility of bone hierarchy, and endpoint drag are implemented.
-    - full rig editor mutation model (add/delete/reparent + validation + undo) remains to be implemented.
+    - Selection, hierarchy visibility, validation rows, endpoint drag, and non-SMF rename/reparent/create-child/delete are implemented.
+    - Non-SMF rig edits validate cycles, self-parenting, root/weighted delete hazards, and retarget or clean animation/pose/skin state.
+    - SMF-source structural mutation remains deliberately blocked to preserve node-index, parent-index, `isBone`, head-node, skin-index, and DQ export fidelity.
+    - Remaining parity is SMF-source metadata-only aliases, detach/connect, mirror/reset helpers, and explicit undo/transaction boundaries.
 
 ## 4) Global shell/settings parity
 
@@ -82,8 +85,16 @@ Sources used:
   - autosave/undo/redo, file (save/save as/export SMF), and undo-stack semantics.
 - Current implementation status in RustSMF:
   - Core workspace mode switches and a modern toolbar are implemented.
-  - wireframe + grid/axes/bone label toggles are partially implemented.
-  - texture/material/submodel visibility shelves are pending.
+  - Wireframe, grid, axes, texture visibility, bone-index labels, perspective/ortho, rig opacity/thickness, model opacity, and display-only submodel visibility are implemented.
+  - The `Legacy` display toggle now swaps in viewport-only SMF-lit material clones with diffuse/specular/rim behavior and restores original materials on disable so export material fidelity is not mutated.
+  - The `Skin pts` display toggle now adds a viewport-only skinned vertex point overlay colored by selected-bone influence.
+  - Remaining shader/display parity is selection overlay behavior. Use these old shader references:
+    - `docs/references/old-src/shaders/sh_smf_animate/sh_smf_animate.vsh` and `.fsh`
+    - `docs/references/old-src/shaders/sh_smf_static/sh_smf_static.vsh` and `.fsh`
+    - `docs/references/old-src/shaders/sh_grid/sh_grid.vsh` and `.fsh`
+    - `docs/references/old-src/shaders/sh_skinning_points/sh_skinning_points.vsh` and `.fsh`
+    - `docs/references/old-src/shaders/sh_selection/sh_selection.vsh` and `.fsh`
+  - Missing global shelf items include culling, texture repeat/filter, snap-to-grid, include-textures policy, selection overlay parity, and bulk submodel actions such as select all, hide selected/unselected, unhide all, and merge same textures.
 
 ## 5) Integration rule for downstream TODO items
 
