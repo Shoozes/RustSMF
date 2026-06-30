@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import ThreeViewport, { type ViewportObjectSelectEvent } from './components/ThreeViewport'
+import ThreeViewport, { type BoneTransformOwner, type ViewportObjectSelectEvent } from './components/ThreeViewport'
 import Timeline from './components/Timeline'
 import Outliner from './components/Outliner'
 import Inspector from './components/Inspector'
@@ -56,7 +56,7 @@ const WORKSPACE_BY_MODE: Record<EditorMode, WorkspaceProfile> = {
     showTimeline: true,
     showClipList: true,
     showBonePanel: true,
-    showTransformControls: true,
+    showTransformControls: false,
     showWeightSection: true,
     boneLabelsEnabledByDefault: false,
   },
@@ -98,6 +98,11 @@ const WORKSPACE_BY_MODE: Record<EditorMode, WorkspaceProfile> = {
 // Logic extracted to useLoadModel hook (load/export/handlers + tauri lazy) + store slices + focused components.
 // Drop and bone selection handlers now provided by hook for further modularity.
 export default function App() {
+  const historyOrderRef = useRef(0);
+  const allocateHistoryOrder = useCallback(() => {
+    historyOrderRef.current += 1;
+    return historyOrderRef.current;
+  }, []);
   const {
     ui,
     model,
@@ -120,6 +125,8 @@ export default function App() {
     redoEditorHistory,
     editorUndoAvailable,
     editorRedoAvailable,
+    editorUndoOrder,
+    editorRedoOrder,
     setupKeyboard,
     togglePlay,
     changeClip,
@@ -163,6 +170,8 @@ export default function App() {
     autoSkinWeights,
     skinUndoAvailable,
     skinRedoAvailable,
+    skinUndoOrder,
+    skinRedoOrder,
     editorMode,
     setEditorMode,
     viewportLayout,
@@ -200,7 +209,7 @@ export default function App() {
     pasteAnimationKeyframe,
     selectAnimationKeyframeTime,
     changeAnimationInterpolation,
-  } = useLoadModel();
+  } = useLoadModel({ allocateHistoryOrder });
 
   const [outlinerRevision, setOutlinerRevision] = useState(0);
   const [selectedOutlinerIds, setSelectedOutlinerIds] = useState<string[]>([]);
@@ -208,8 +217,16 @@ export default function App() {
   const outlinerHistoryIdRef = useRef(0);
   const [outlinerUndoAvailable, setOutlinerUndoAvailable] = useState(false);
   const [outlinerRedoAvailable, setOutlinerRedoAvailable] = useState(false);
+  const [outlinerUndoOrder, setOutlinerUndoOrder] = useState(0);
+  const [outlinerRedoOrder, setOutlinerRedoOrder] = useState(0);
 
   const workspace = WORKSPACE_BY_MODE[editorMode];
+  const boneTransformOwner: BoneTransformOwner =
+    editorMode === 'rig' || editorMode === 'skin'
+      ? 'pose'
+      : editorMode === 'animate'
+        ? 'animation'
+        : 'disabled';
   const shouldShowBoneLabels = showBoneLabels || workspace.boneLabelsEnabledByDefault;
   const hasModel = !!model.root;
   const hasSkinnedModel = !!model.skeleton && model.skeleton.bones.length > 0;
@@ -240,6 +257,8 @@ export default function App() {
   const refreshOutlinerHistoryAvailability = useCallback(() => {
     setOutlinerUndoAvailable(outlinerHistoryRef.current.undo.length > 0);
     setOutlinerRedoAvailable(outlinerHistoryRef.current.redo.length > 0);
+    setOutlinerUndoOrder(outlinerHistoryRef.current.undo.at(-1)?.order ?? 0);
+    setOutlinerRedoOrder(outlinerHistoryRef.current.redo.at(-1)?.redoOrder ?? 0);
   }, []);
   const captureOutlinerVisibilitySnapshot = useCallback((): OutlinerVisibilitySnapshot => {
     const visibleById: Record<string, boolean> = {};
@@ -285,12 +304,13 @@ export default function App() {
       domain: 'outliner',
       before,
       after,
+      order: allocateHistoryOrder(),
     });
     refreshOutlinerHistoryAvailability();
     return true;
-  }, [refreshOutlinerHistoryAvailability]);
+  }, [allocateHistoryOrder, refreshOutlinerHistoryAvailability]);
   const undoOutlinerVisibility = useCallback((): boolean => {
-    const result = popUndo(outlinerHistoryRef.current);
+    const result = popUndo(outlinerHistoryRef.current, allocateHistoryOrder());
     if (!result.entry) return false;
 
     outlinerHistoryRef.current = result.state;
@@ -298,9 +318,9 @@ export default function App() {
     refreshOutlinerHistoryAvailability();
     ui.setStatus(`Undid ${result.entry.label}${changed > 0 ? ` (${changed} visibility change${changed === 1 ? '' : 's'})` : ''}.`);
     return true;
-  }, [applyOutlinerVisibilitySnapshot, refreshOutlinerHistoryAvailability, ui]);
+  }, [allocateHistoryOrder, applyOutlinerVisibilitySnapshot, refreshOutlinerHistoryAvailability, ui]);
   const redoOutlinerVisibility = useCallback((): boolean => {
-    const result = popRedo(outlinerHistoryRef.current);
+    const result = popRedo(outlinerHistoryRef.current, allocateHistoryOrder());
     if (!result.entry) return false;
 
     outlinerHistoryRef.current = result.state;
@@ -308,37 +328,75 @@ export default function App() {
     refreshOutlinerHistoryAvailability();
     ui.setStatus(`Redid ${result.entry.label}${changed > 0 ? ` (${changed} visibility change${changed === 1 ? '' : 's'})` : ''}.`);
     return true;
-  }, [applyOutlinerVisibilitySnapshot, refreshOutlinerHistoryAvailability, ui]);
-  const undoSkinEditorHistory = useCallback((): boolean => {
-    if (editorMode !== 'skin' || !skinUndoAvailable) return false;
-    undoSkinPaint();
-    return true;
-  }, [editorMode, skinUndoAvailable, undoSkinPaint]);
-  const redoSkinEditorHistory = useCallback((): boolean => {
-    if (editorMode !== 'skin' || !skinRedoAvailable) return false;
-    redoSkinPaint();
-    return true;
-  }, [editorMode, redoSkinPaint, skinRedoAvailable]);
-  const undoRigAnimateEditorHistory = useCallback((): boolean => {
-    if ((editorMode !== 'rig' && editorMode !== 'animate') || !editorUndoAvailable) return false;
-    undoEditorHistory();
-    return true;
-  }, [editorMode, editorUndoAvailable, undoEditorHistory]);
-  const redoRigAnimateEditorHistory = useCallback((): boolean => {
-    if ((editorMode !== 'rig' && editorMode !== 'animate') || !editorRedoAvailable) return false;
-    redoEditorHistory();
-    return true;
-  }, [editorMode, editorRedoAvailable, redoEditorHistory]);
-  const handleEditorUndo = useCallback(() => {
-    if (!undoSkinEditorHistory() && !undoRigAnimateEditorHistory() && !undoOutlinerVisibility()) {
+  }, [allocateHistoryOrder, applyOutlinerVisibilitySnapshot, refreshOutlinerHistoryAvailability, ui]);
+  const handleEditorUndo = useCallback((): boolean => {
+    const candidates = [
+      editorUndoAvailable ? { domain: 'editor' as const, order: editorUndoOrder } : null,
+      skinUndoAvailable ? { domain: 'skin' as const, order: skinUndoOrder } : null,
+      outlinerUndoAvailable ? { domain: 'outliner' as const, order: outlinerUndoOrder } : null,
+    ].filter((candidate): candidate is { domain: 'editor' | 'skin' | 'outliner'; order: number } => !!candidate);
+    const latest = candidates.reduce<{ domain: 'editor' | 'skin' | 'outliner'; order: number } | null>((best, candidate) => (
+      !best || candidate.order > best.order ? candidate : best
+    ), null);
+
+    if (latest?.domain === 'editor') {
       undoEditorHistory();
+      return true;
+    } else if (latest?.domain === 'skin') {
+      undoSkinPaint();
+      return true;
+    } else if (latest?.domain === 'outliner') {
+      undoOutlinerVisibility();
+      return true;
+    } else {
+      undoEditorHistory();
+      return true;
     }
-  }, [undoEditorHistory, undoOutlinerVisibility, undoRigAnimateEditorHistory, undoSkinEditorHistory]);
-  const handleEditorRedo = useCallback(() => {
-    if (!redoSkinEditorHistory() && !redoRigAnimateEditorHistory() && !redoOutlinerVisibility()) {
+  }, [
+    editorUndoAvailable,
+    editorUndoOrder,
+    outlinerUndoAvailable,
+    outlinerUndoOrder,
+    skinUndoAvailable,
+    skinUndoOrder,
+    undoEditorHistory,
+    undoOutlinerVisibility,
+    undoSkinPaint,
+  ]);
+  const handleEditorRedo = useCallback((): boolean => {
+    const candidates = [
+      editorRedoAvailable ? { domain: 'editor' as const, order: editorRedoOrder } : null,
+      skinRedoAvailable ? { domain: 'skin' as const, order: skinRedoOrder } : null,
+      outlinerRedoAvailable ? { domain: 'outliner' as const, order: outlinerRedoOrder } : null,
+    ].filter((candidate): candidate is { domain: 'editor' | 'skin' | 'outliner'; order: number } => !!candidate);
+    const latest = candidates.reduce<{ domain: 'editor' | 'skin' | 'outliner'; order: number } | null>((best, candidate) => (
+      !best || candidate.order > best.order ? candidate : best
+    ), null);
+
+    if (latest?.domain === 'editor') {
       redoEditorHistory();
+      return true;
+    } else if (latest?.domain === 'skin') {
+      redoSkinPaint();
+      return true;
+    } else if (latest?.domain === 'outliner') {
+      redoOutlinerVisibility();
+      return true;
+    } else {
+      redoEditorHistory();
+      return true;
     }
-  }, [redoEditorHistory, redoOutlinerVisibility, redoRigAnimateEditorHistory, redoSkinEditorHistory]);
+  }, [
+    editorRedoAvailable,
+    editorRedoOrder,
+    outlinerRedoAvailable,
+    outlinerRedoOrder,
+    redoEditorHistory,
+    redoOutlinerVisibility,
+    redoSkinPaint,
+    skinRedoAvailable,
+    skinRedoOrder,
+  ]);
   const applyOutlinerSelection = useCallback((
     id: string,
     options: { additive?: boolean; toggle?: boolean } = {},
@@ -569,18 +627,14 @@ export default function App() {
   // Setup keyboard once
   useEffect(() => {
     const cleanup = setupKeyboard({
-      undo: () => undoSkinEditorHistory() || undoRigAnimateEditorHistory() || undoOutlinerVisibility(),
-      redo: () => redoSkinEditorHistory() || redoRigAnimateEditorHistory() || redoOutlinerVisibility(),
+      undo: handleEditorUndo,
+      redo: handleEditorRedo,
     });
     return cleanup;
   }, [
-    redoOutlinerVisibility,
-    redoRigAnimateEditorHistory,
-    redoSkinEditorHistory,
+    handleEditorRedo,
+    handleEditorUndo,
     setupKeyboard,
-    undoOutlinerVisibility,
-    undoRigAnimateEditorHistory,
-    undoSkinEditorHistory,
   ]);
 
   useEffect(() => {
@@ -605,8 +659,8 @@ export default function App() {
         onPing={pingRust}
         onUndo={handleEditorUndo}
         onRedo={handleEditorRedo}
-        undoAvailable={editorUndoAvailable || outlinerUndoAvailable || (editorMode === 'skin' && skinUndoAvailable)}
-        redoAvailable={editorRedoAvailable || outlinerRedoAvailable || (editorMode === 'skin' && skinRedoAvailable)}
+        undoAvailable={editorUndoAvailable || outlinerUndoAvailable || skinUndoAvailable}
+        redoAvailable={editorRedoAvailable || outlinerRedoAvailable || skinRedoAvailable}
         isLoading={ui.isLoading}
         onFileChange={handleFileInputChange}
         hasModel={hasModel}
@@ -697,6 +751,7 @@ export default function App() {
             weightPreviewEnabled={showWeightPreview}
             transformMode={transformMode}
             onSetTransformMode={setTransformMode}
+            boneTransformOwner={boneTransformOwner}
             boneLabelsEnabled={shouldShowBoneLabels}
             editorMode={editorMode}
             viewportLayout={viewportLayout}

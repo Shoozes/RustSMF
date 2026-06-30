@@ -48,6 +48,23 @@ describe('editorHistory', () => {
     assert.equal(redo.state.redo.length, 0);
   });
 
+  it('tracks separate undo and redo chronology metadata', () => {
+    const pushed = pushEditorHistory(makeEditorHistory<Snapshot>(), {
+      ...entry('1', 0, 1),
+      order: 10,
+    });
+
+    const undo = popUndo(pushed, 20);
+    assert.equal(undo.entry?.order, 10);
+    assert.equal(undo.state.redo.at(-1)?.order, 10);
+    assert.equal(undo.state.redo.at(-1)?.redoOrder, 20);
+
+    const redo = popRedo(undo.state, 30);
+    assert.equal(redo.entry?.redoOrder, 20);
+    assert.equal(redo.state.undo.at(-1)?.order, 30);
+    assert.equal(redo.state.undo.at(-1)?.redoOrder, undefined);
+  });
+
   it('enforces the configured stack limit', () => {
     const state = ['1', '2', '3'].reduce(
       (current, id, index) => pushEditorHistory(current, entry(id, index, index + 1)),

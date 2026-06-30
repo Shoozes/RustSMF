@@ -83,9 +83,9 @@ export default function SkinPanel({
   const hasSkeleton = !!skeleton && skeleton.bones.length > 0;
   const isPaintEnabled = selectedBonePresent && hasSkeleton;
   const sliderDisabled = !isPaintEnabled;
-  const powerOptionActive = ['inverse-segment-distance', 'distance-power', 'distance-normal', 'selected-branch'].includes(skinAutoWeightAlgorithm);
-  const normalOptionActive = ['inverse-segment-distance', 'distance-normal'].includes(skinAutoWeightAlgorithm);
-  const maxInfluenceOptionActive = ['inverse-segment-distance', 'distance-power', 'distance-normal', 'selected-branch'].includes(skinAutoWeightAlgorithm);
+  const powerOptionActive = ['segment-inverse-distance', 'segment-distance-normal', 'selected-branch'].includes(skinAutoWeightAlgorithm);
+  const normalOptionActive = skinAutoWeightAlgorithm === 'segment-distance-normal';
+  const maxInfluenceOptionActive = ['segment-inverse-distance', 'segment-distance-normal', 'selected-branch'].includes(skinAutoWeightAlgorithm);
 
   return (
     <div className="inspector" data-testid="skin-workspace-panel" data-editor-mode={editorMode}>

@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-30 (skin Auto Paint/indexing and round-2 interaction backlog)
+Last reviewed: 2026-06-30 (round-3 skin paint/indexing, transform ownership, and global history-order fixes)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -70,7 +70,12 @@ Each active item should answer:
   - Done: add `viewportInteractionRouter.ts` with table-driven owner decisions for Model/Rig/Skin/Animate/Export pointer-down events, unit coverage, and `data-pointer-owner` smoke telemetry.
   - Source-map old ray-sphere/ray-plane actions into a click/drag matrix for rig, skin, animate, and model modes.
   - Done: add model/submodel viewport picking for `model-select` owner, including empty-click clear, right-click context readiness, and Shift/Ctrl multi-select behavior through the shared Outliner selection model.
+  - Done: make Skin paint miss rays no-op instead of falling back to the model center, with selected-bone empty-space smoke coverage proving no dirty skin edit is created.
+  - Done: add skinned-world brush indexing for active Skin paint queries so posed/animated vertices are not missed before world-space/depth filtering.
+  - Done: rename Auto Skin/Auto Paint algorithms to precise canonical ids, keep legacy ids normalized, and make nearest segment vs nearest bone origin genuinely distinct.
+  - Done: remove shallow TransformControls pointer-down ownership from `viewportInteractionRouter`; TransformControls now report owner/attached/dragging telemetry separately from pointer owner routing.
   - Add tests that short clicks select bones, drags do not accidentally select, endpoint drags pause/restore TransformControls, and skin paint does not orbit/select.
+  - Add a stable browser-level TransformControls handle-drag test if Playwright can target the Three gizmo without brittle screen-coordinate probing.
   - Add quad/ortho coverage for pickable pane boundaries, high-DPI mouse coordinates, and pointer cancel/window-up cleanup.
   - Decide whether skin point overlays are display-only or can select/paint nearest vertices; document and test the chosen behavior.
 - Acceptance: A table-driven interaction contract and e2e smoke prove each supported click/drag path mutates only the intended state in single, quad, perspective, and ortho contexts.
@@ -82,11 +87,12 @@ Each active item should answer:
 - Where: `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/components/AnimatePanel.tsx`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/utils/animationEdits.ts`, `source/frontend/tests/smoke.spec.ts`.
 - When: Before adding richer animation handles, IK-style movement, or transform-children controls.
 - How:
-  - Use the existing viewport transform edit event and `editorMode` to branch Rig/Pose behavior from Animate behavior.
-  - Upsert selected-bone position/quaternion keys at the current timeline time when Animate owns the transform.
-  - Keep Skin/View/Export modes from writing animation keys.
-  - Record the edit through the shared animation history snapshot path.
-- Acceptance: Smoke can select a bone in Animate mode, move/rotate it in the viewport, observe dirty animation state and a marker at current time, undo/redo the key edit, and export/check the edited clip path.
+  - Done: add explicit `boneTransformOwner` routing so Rig/Skin transforms are pose-owned, Animate transforms are animation-owned, and View/Export are disabled.
+  - Done: extend typed viewport transform edit events with owner metadata and canvas owner/attached/dragging telemetry.
+  - Done: upsert selected-bone position/quaternion keys at the current timeline time when Animate owns a transform event, without marking pose edits.
+  - Done: record Animate-owned viewport transform edits through the shared animation history snapshot path.
+  - Done: detach TransformControls in View/Export and hide View-mode transform buttons so read-only modes cannot mutate bones.
+- Acceptance: Current smoke verifies Rig `pose`, Animate `animation`, and Export `disabled` ownership plus existing animation key undo/redo/export behavior. A direct Playwright drag of the Three TransformControls handle remains a test-hardening follow-up because stable gizmo targeting is not yet available.
 
 ### P1: Add app-level authoring undo/redo transactions
 
@@ -110,6 +116,8 @@ Each active item should answer:
   - Done: add animation key Insert/Update/Delete/Paste undo/redo before clip-level CRUD expands, with shared history snapshots and smoke coverage.
   - Done: fold existing skin paint/Normalize/Auto Skin history into the toolbar/keyboard command surface without losing stroke/batch snapshot behavior.
   - Done: add Outliner visibility undo/redo for individual and bulk visibility transactions through toolbar buttons and Ctrl+Z/Ctrl+Y.
+  - Done: add shared chronological ordering across editor, Skin, and Outliner stacks so global toolbar/Ctrl+Z/Ctrl+Y Undo/Redo follows newest transaction order across workspace changes.
+  - Keep a physical single-stack history coordinator under consideration only if future mutators need cross-domain transaction grouping beyond the current ordered stack routing.
 - Acceptance: Unit and e2e coverage can perform each mutating authoring action, undo it, redo it, then export/check without stale dirty state, broken skeleton references, or mismatched selected-bone state.
 
 ### P2: Add non-SMF rig tool modes

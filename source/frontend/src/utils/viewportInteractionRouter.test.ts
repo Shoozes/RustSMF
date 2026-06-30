@@ -15,7 +15,6 @@ const baseContext: ViewportInteractionContext = {
   isPrecisionMode: false,
   isPickingViewport: true,
   hitEndpointHandle: false,
-  hitTransformControl: false,
 };
 
 const owner = (override: Partial<ViewportInteractionContext>): ViewportInteractionOwner => {
@@ -47,9 +46,9 @@ describe('viewportInteractionRouter', () => {
     assert.equal(owner({ editorMode: 'skin', hasSelectedBone: false }), 'rig-select');
   });
 
-  it('routes animate clicks between transform handles and bone selection', () => {
-    assert.equal(owner({ editorMode: 'animate', hitTransformControl: true }), 'animate-transform');
-    assert.equal(owner({ editorMode: 'animate', hitTransformControl: false }), 'animate-select');
+  it('routes animate pointer-downs to selection; TransformControls owns drag events separately', () => {
+    assert.equal(owner({ editorMode: 'animate' }), 'animate-select');
+    assert.equal(owner({ editorMode: 'animate', hasSkeleton: false }), 'none');
   });
 
   it('keeps export workspace read-only for left clicks', () => {

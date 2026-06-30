@@ -26,27 +26,34 @@ export interface SkinEditHistoryEntry {
   afterState: SkinEditState;
   before: SkinVertexSnapshot[];
   after: SkinVertexSnapshot[];
+  order?: number;
+  redoOrder?: number;
 }
 
 export const SKIN_AUTO_WEIGHT_ALGORITHMS = [
-  'inverse-segment-distance',
+  'segment-inverse-distance',
+  'segment-distance-normal',
   'nearest-segment',
-  'distance-power',
-  'distance-normal',
-  'nearest-bone',
-  'closest-two',
+  'nearest-bone-origin',
+  'closest-two-segments',
   'selected-branch',
 ] as const;
 
 export type SkinAutoWeightAlgorithm = typeof SKIN_AUTO_WEIGHT_ALGORITHMS[number];
 
+export type LegacySkinAutoWeightAlgorithm =
+  | 'inverse-segment-distance'
+  | 'distance-power'
+  | 'distance-normal'
+  | 'nearest-bone'
+  | 'closest-two';
+
 export const SKIN_AUTO_WEIGHT_ALGORITHM_LABELS: Record<SkinAutoWeightAlgorithm, string> = {
-  'inverse-segment-distance': 'Inverse segment distance',
+  'segment-inverse-distance': 'Segment inverse distance',
+  'segment-distance-normal': 'Segment distance + normals',
   'nearest-segment': 'Nearest segment',
-  'distance-power': 'Distance power',
-  'distance-normal': 'Distance + normals',
-  'nearest-bone': 'Nearest bone',
-  'closest-two': 'Closest two',
+  'nearest-bone-origin': 'Nearest bone origin',
+  'closest-two-segments': 'Closest two segments',
   'selected-branch': 'Selected branch',
 };
 
@@ -74,7 +81,7 @@ export interface SkinAttributePair {
 }
 
 export interface SkinAutoWeightOptions {
-  algorithm?: SkinAutoWeightAlgorithm;
+  algorithm?: SkinAutoWeightAlgorithm | LegacySkinAutoWeightAlgorithm;
   power?: number;
   normalWeighting?: number;
   maxInfluences?: number;
@@ -115,6 +122,17 @@ function isSkinAutoWeightAlgorithm(value: string | undefined): value is SkinAuto
   return !!value && (SKIN_AUTO_WEIGHT_ALGORITHMS as readonly string[]).includes(value);
 }
 
+export function normalizeSkinAutoWeightAlgorithm(
+  value: SkinAutoWeightOptions['algorithm'],
+): SkinAutoWeightAlgorithm {
+  if (isSkinAutoWeightAlgorithm(value)) return value;
+  if (value === 'inverse-segment-distance' || value === 'distance-power') return 'segment-inverse-distance';
+  if (value === 'distance-normal') return 'segment-distance-normal';
+  if (value === 'nearest-bone') return 'nearest-segment';
+  if (value === 'closest-two') return 'closest-two-segments';
+  return 'segment-inverse-distance';
+}
+
 export function resolveSkinAutoWeightOptions(
   options: SkinAutoWeightOptions = {},
 ): ResolvedSkinAutoWeightOptions {
@@ -123,9 +141,7 @@ export function resolveSkinAutoWeightOptions(
     : undefined;
 
   return {
-    algorithm: isSkinAutoWeightAlgorithm(options.algorithm)
-      ? options.algorithm
-      : 'inverse-segment-distance',
+    algorithm: normalizeSkinAutoWeightAlgorithm(options.algorithm),
     power: Math.min(8, Math.max(1, clampPositive(options.power ?? 2, 2))),
     normalWeighting: clamp01(options.normalWeighting ?? 0),
     maxInfluences: clampIntegerRange(options.maxInfluences ?? 4, 1, 4, 4),
@@ -371,13 +387,15 @@ function makeWeightedVertex(
 
 interface AutoWeightSegment {
   boneIndex: number;
+  origin: THREE.Vector3;
   start: THREE.Vector3;
   end: THREE.Vector3;
 }
 
 interface WeightedCandidate {
   boneIndex: number;
-  distance: number;
+  segmentDistance: number;
+  originDistance: number;
   normalFactor: number;
 }
 
@@ -392,46 +410,44 @@ interface SkinAutoWeightContext {
   resolved: ResolvedSkinAutoWeightOptions;
 }
 
-function normalizedAutoAlgorithm(
-  algorithm: SkinAutoWeightAlgorithm,
-): 'distance-power' | 'distance-normal' | 'nearest-bone' | 'closest-two' | 'selected-branch' {
-  if (algorithm === 'inverse-segment-distance') return 'distance-normal';
-  if (algorithm === 'nearest-segment') return 'nearest-bone';
-  return algorithm;
-}
-
 export function makeAutoWeightEntries(
   candidates: WeightedCandidate[],
   options: ResolvedSkinAutoWeightOptions,
 ): Array<{ boneIndex: number; weight: number }> {
-  const algorithm = normalizedAutoAlgorithm(options.algorithm);
   const sorted = candidates
     .filter((candidate) => (
       Number.isInteger(candidate.boneIndex)
       && candidate.boneIndex >= 0
-      && Number.isFinite(candidate.distance)
-      && candidate.distance >= 0
+      && Number.isFinite(candidate.segmentDistance)
+      && candidate.segmentDistance >= 0
+      && Number.isFinite(candidate.originDistance)
+      && candidate.originDistance >= 0
     ))
-    .sort((left, right) => left.distance - right.distance);
+    .sort((left, right) => left.segmentDistance - right.segmentDistance);
 
   if (sorted.length === 0) return [];
 
-  if (algorithm === 'nearest-bone') {
+  if (options.algorithm === 'nearest-segment') {
     return [{ boneIndex: sorted[0].boneIndex, weight: 1 }];
   }
 
-  if (algorithm === 'closest-two') {
+  if (options.algorithm === 'nearest-bone-origin') {
+    const nearestOrigin = [...sorted].sort((left, right) => left.originDistance - right.originDistance)[0];
+    return [{ boneIndex: nearestOrigin.boneIndex, weight: 1 }];
+  }
+
+  if (options.algorithm === 'closest-two-segments') {
     return sorted.slice(0, 2).map((candidate) => ({
       boneIndex: candidate.boneIndex,
-      weight: 1 / Math.max(candidate.distance, 1e-6),
+      weight: 1 / Math.max(candidate.segmentDistance, 1e-6),
     }));
   }
 
   return sorted.slice(0, options.maxInfluences).map((candidate) => {
-    const normalFactor = algorithm === 'distance-normal'
+    const normalFactor = options.algorithm === 'segment-distance-normal'
       ? THREE.MathUtils.lerp(1, candidate.normalFactor, options.normalWeighting)
       : 1;
-    const modifiedDistance = Math.max(candidate.distance * normalFactor, 1e-6);
+    const modifiedDistance = Math.max(candidate.segmentDistance * normalFactor, 1e-6);
     return {
       boneIndex: candidate.boneIndex,
       weight: 1 / Math.pow(modifiedDistance, options.power),
@@ -467,7 +483,7 @@ function createSkinAutoWeightContext(
     if (resolved.restrictToBoneIndices && !resolved.restrictToBoneIndices.has(boneIndex)) {
       return [];
     }
-    return [{ boneIndex, ...getBoneSegment(bone, skeleton) }];
+    return [{ boneIndex, origin: getBoneWorldPosition(bone), ...getBoneSegment(bone, skeleton) }];
   });
 
   if (segments.length === 0) return null;
@@ -507,7 +523,8 @@ function computeAutoSkinVertexWeights(
       : 1;
     return {
       boneIndex: segment.boneIndex,
-      distance,
+      segmentDistance: distance,
+      originDistance: Math.max(1 + (64 * worldPosition.distanceTo(segment.origin) / context.modelSize), 1e-6),
       normalFactor: awayFromBone,
     };
   });

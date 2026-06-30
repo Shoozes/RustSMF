@@ -40,8 +40,8 @@ import {
   type ViewportInteractionOwner,
 } from '../utils/viewportInteractionRouter';
 import {
-  buildSkinBrushIndex,
-  querySkinBrushIndex,
+  buildSkinnedWorldBrushIndex,
+  querySkinBrushWorldIndex,
   type SkinBrushIndex,
   type SkinBrushVertexRef,
 } from '../utils/skinBrushIndex';
@@ -80,9 +80,12 @@ export type BoneTransformEditSource = 'transform-controls' | 'endpoint-drag';
 
 export type BoneTransformEditPhase = 'start' | 'change' | 'end';
 
+export type BoneTransformOwner = 'disabled' | 'pose' | 'animation';
+
 export interface BoneTransformEditEvent {
   phase: BoneTransformEditPhase;
   source: BoneTransformEditSource;
+  owner: BoneTransformOwner;
   boneName: string;
   position: [number, number, number];
   quaternion: [number, number, number, number];
@@ -132,6 +135,7 @@ interface ThreeViewportProps {
   weightPreviewEnabled?: boolean;
   transformMode?: 'translate' | 'rotate' | 'scale';
   onSetTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => boolean | void;
+  boneTransformOwner?: BoneTransformOwner;
   boneLabelsEnabled?: boolean;
   editorMode?: EditorMode;
   viewportLayout?: ViewportLayout;
@@ -178,6 +182,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   weightPreviewEnabled = false,
   transformMode = 'translate',
   onSetTransformMode,
+  boneTransformOwner = 'disabled',
   boneLabelsEnabled = false,
   editorMode = 'view',
   viewportLayout = 'single',
@@ -267,6 +272,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const onObjectContextMenuRef = useRef(onObjectContextMenu);
   const onBoneTransformEditRef = useRef(onBoneTransformEdit);
   const onSetTransformModeRef = useRef(onSetTransformMode);
+  const boneTransformOwnerRef = useRef<BoneTransformOwner>(boneTransformOwner);
   const skeletonRefForPick = useRef(skeleton);
 
   // For selected bone 3D highlight marker (visual feedback when list or raycast selects a bone)
@@ -278,13 +284,20 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const selectionOverlaysRef = useRef<SelectionOverlay[]>([]);
   const hoveredBoneNameRef = useRef<string | null>(null);
   const skinBrushMarkerRef = useRef<THREE.Object3D | null>(null);
-  const skinBrushIndicesRef = useRef<Map<string, SkinBrushIndex>>(new Map());
   const skinPaintHitCountRef = useRef(0);
   const skinCandidateCountRef = useRef(0);
   const skinTotalVertexCountRef = useRef(0);
   const lastSkinPaintMsRef = useRef(0);
   const transformControlsDraggingRef = useRef(false);
   const selectedObjectIdKey = selectedObjectIds.join('|');
+
+  const setTransformOwnerTelemetry = (attached: boolean): void => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.dataset.transformOwner = boneTransformOwnerRef.current;
+    canvas.dataset.transformAttached = attached ? 'true' : 'false';
+    canvas.dataset.transformDragging = transformControlsDraggingRef.current ? 'true' : 'false';
+  };
 
   // Ref for onTimeUpdate to decouple RAF reporting from setup effect deps (timing/robustness: avoids re-init of scene/RAF if fn identity ever shifts; mirrors bone pick ref pattern)
   const onTimeUpdateRef = useRef(onTimeUpdate);
@@ -410,24 +423,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     return meshes;
   };
 
-  const getSkinBrushIndex = (mesh: THREE.SkinnedMesh, brushRadius: number): SkinBrushIndex => {
+  const getSkinnedWorldBrushIndex = (mesh: THREE.SkinnedMesh, brushRadius: number): SkinBrushIndex => {
     const desiredCellSize = Math.max(0.01, Math.min(Math.max(brushRadius / 2, 0.01), boundsRef.current.maxDim / 16));
-    const existing = skinBrushIndicesRef.current.get(mesh.uuid);
-    if (existing && Math.abs(existing.cellSize - desiredCellSize) <= desiredCellSize * 0.25) {
-      return existing;
-    }
-    const next = buildSkinBrushIndex(mesh, desiredCellSize);
-    skinBrushIndicesRef.current.set(mesh.uuid, next);
-    return next;
-  };
-
-  const getLocalBrushRadius = (mesh: THREE.Object3D, worldRadius: number): number => {
-    const scale = mesh.getWorldScale(new THREE.Vector3());
-    const minScale = Math.max(
-      Math.min(Math.abs(scale.x) || 1, Math.abs(scale.y) || 1, Math.abs(scale.z) || 1),
-      1e-6,
-    );
-    return worldRadius / minScale;
+    return buildSkinnedWorldBrushIndex(mesh, desiredCellSize);
   };
 
   const shouldApplySkinPaintNow = (): boolean => {
@@ -658,6 +656,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     bone: THREE.Bone | null,
   ): void => {
     if (!bone?.name) return;
+    const owner = boneTransformOwnerRef.current;
+    if (owner === 'disabled') return;
 
     bone.updateMatrix();
     bone.updateMatrixWorld(true);
@@ -665,6 +665,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     onBoneTransformEditRef.current?.({
       phase,
       source,
+      owner,
       boneName: bone.name,
       position: [bone.position.x, bone.position.y, bone.position.z],
       quaternion: [bone.quaternion.x, bone.quaternion.y, bone.quaternion.z, bone.quaternion.w],
@@ -675,6 +676,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     if (canvas) {
       canvas.dataset.boneTransformPhase = phase;
       canvas.dataset.boneTransformSource = source;
+      canvas.dataset.boneTransformOwner = owner;
       canvas.dataset.boneTransformBone = bone.name;
     }
   };
@@ -938,12 +940,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (paintMeshes.length === 0) return empty;
 
       const hits = raycasterRef.current.intersectObjects(paintMeshes, false);
-      const fallbackCenter = attachedModelRef.current
-        ? new THREE.Box3().setFromObject(attachedModelRef.current).getCenter(new THREE.Vector3())
-        : null;
-      if (!fallbackCenter && hits.length === 0) return empty;
+      const firstHit = hits[0];
+      if (!firstHit?.point) return empty;
 
-      const brushCenter = hits[0]?.point ?? fallbackCenter!;
+      const brushCenter = firstHit.point.clone();
       const brushRadius = Math.max(0.0001, skinPaintRadiusRef.current);
       const brushRadiusSq = brushRadius * brushRadius;
       const strength = skinPaintStrengthRef.current;
@@ -1016,14 +1016,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         if (!positionAttr) continue;
         if (!mesh.geometry.getAttribute('skinIndex') || !mesh.geometry.getAttribute('skinWeight')) continue;
 
-        const index = getSkinBrushIndex(mesh, brushRadius);
+        const index = getSkinnedWorldBrushIndex(mesh, brushRadius);
         totalVertexCount += index.vertexCount;
         if (targetMode === 'triangle' && brushRadius < 0.5) {
           continue;
         }
-        const localCenter = mesh.worldToLocal(brushCenter.clone());
-        const localRadius = getLocalBrushRadius(mesh, brushRadius);
-        const candidates = querySkinBrushIndex(index, localCenter, localRadius);
+        const candidates = querySkinBrushWorldIndex(index, brushCenter, brushRadius);
         candidateCount += candidates.length;
         for (const candidate of candidates) {
           addCandidate(mesh, candidate);
@@ -1102,8 +1100,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         return hits[0].point.clone();
       }
 
-      const fallback = new THREE.Box3().setFromObject(attachedModelRef.current).getCenter(new THREE.Vector3());
-      return fallback;
+      return null;
     };
 
     const getBrushTelemetry = (count: number, candidateCount = 0, totalVertexCount = 0): void => {
@@ -1128,14 +1125,6 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       return result;
     };
 
-    const hitTransformControl = (): boolean => {
-      const controls = transformControlsRef.current;
-      if (!controls || !transformTargetRef.current || !canvasRef.current) return false;
-      const controlsObject = transformControlsAsObject3D(controls);
-      if (!controls.enabled || !controlsObject.visible) return false;
-      return transformControlsDraggingRef.current;
-    };
-
     const setPointerOwnerTelemetry = (owner: ViewportInteractionOwner): void => {
       canvas.dataset.pointerOwner = owner;
       canvas.dataset.pointerMode = editorModeRef.current;
@@ -1155,7 +1144,6 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         isPrecisionMode: isPrecisionModeRef.current,
         isPickingViewport: isInPickingViewport(event.clientX, event.clientY),
         hitEndpointHandle: !!endpointState,
-        hitTransformControl: hitTransformControl(),
       });
       setPointerOwnerTelemetry(owner);
       return owner;
@@ -1588,6 +1576,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => { onObjectContextMenuRef.current = onObjectContextMenu; }, [onObjectContextMenu]);
   useEffect(() => { onBoneTransformEditRef.current = onBoneTransformEdit; }, [onBoneTransformEdit]);
   useEffect(() => { onSetTransformModeRef.current = onSetTransformMode; }, [onSetTransformMode]);
+  useEffect(() => {
+    boneTransformOwnerRef.current = boneTransformOwner;
+    setTransformOwnerTelemetry(!!transformTargetRef.current);
+  }, [boneTransformOwner]);
   useEffect(() => { skeletonRefForPick.current = skeleton; }, [skeleton]);
   useEffect(() => { onPaintSkinVerticesRef.current = onPaintSkinVertices; }, [onPaintSkinVertices]);
   useEffect(() => { onSkinPaintStrokeStartRef.current = onSkinPaintStrokeStart; }, [onSkinPaintStrokeStart]);
@@ -1813,13 +1805,20 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       transformControlsDraggingRef.current = false;
     }
 
-    if (!selectedBoneName || !skeleton) {
+    if (boneTransformOwner === 'disabled' || !selectedBoneName || !skeleton) {
       transformTargetRef.current = null;
+      transformControlsRef.current?.detach();
+      setTransformOwnerTelemetry(false);
       return;
     }
 
     const bone = findBoneByName(skeleton, selectedBoneName);
-    if (!bone) return;
+    if (!bone) {
+      transformTargetRef.current = null;
+      transformControlsRef.current?.detach();
+      setTransformOwnerTelemetry(false);
+      return;
+    }
     transformTargetRef.current = bone;
 
     let tc = transformControlsRef.current;
@@ -1844,6 +1843,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         if (isDraggingEvent(event)) {
           transformControlsDraggingRef.current = event.value;
           orbitRef.current.enabled = !event.value;
+          setTransformOwnerTelemetry(!!transformTargetRef.current);
           emitBoneTransformEdit(event.value ? 'start' : 'end', 'transform-controls', transformTargetRef.current);
         }
       });
@@ -1860,10 +1860,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
     try {
       tc.attach(bone);
+      setTransformOwnerTelemetry(true);
     } catch (e) {
       // same benign skew case
     }
-  }, [selectedBoneName, skeleton]);
+  }, [boneTransformOwner, selectedBoneName, skeleton]);
 
   // Attach/replace model root + skeleton helper + create internal mixer when root prop changes.
   // IMPORTANT: deps ONLY loaded scene objects (root/skeleton). Never include playback props (isPlaying/currentTime/currentClipName/playbackSpeed)
@@ -1874,7 +1875,6 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const scene = sceneRef.current;
     if (!scene) return;
 
-    skinBrushIndicesRef.current.clear();
     skinCandidateCountRef.current = 0;
     skinTotalVertexCountRef.current = 0;
 
@@ -2004,6 +2004,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         data-skin-candidate-count={skinCandidateCountRef.current}
         data-skin-total-vertex-count={skinTotalVertexCountRef.current}
         data-skin-paint-target-mode={skinPaintTargetMode}
+        data-transform-owner={boneTransformOwner}
+        data-transform-attached={transformTargetRef.current ? 'true' : 'false'}
+        data-transform-dragging={transformControlsDraggingRef.current ? 'true' : 'false'}
       />
       {viewportLayout === 'quad' && (
         <div className="quad-pane-overlay" data-testid="quad-pane-overlay" aria-hidden="true">

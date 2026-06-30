@@ -27,7 +27,7 @@ Sources used:
     - Autoskin path computes distance-to-bone and normal weighting, then normalizes to 255 weight sum.
   - Current implementation status in RustSMF:
     - `SkinPanel` provides mode/target/strength/radius controls.
-    - Auto Skin and Auto Paint share implemented algorithm/options controls: inverse segment distance, nearest segment, distance power, distance + normals, nearest bone, closest two, selected branch, power, normal weighting, and max influences.
+    - Auto Skin and Auto Paint share implemented algorithm/options controls: segment inverse distance, segment distance + normals, nearest segment, nearest bone origin, closest two segments, selected branch, power, normal weighting, and max influences. Legacy algorithm ids normalize to the canonical names.
     - `ThreeViewport` executes pointer hit + brush writes through `skinWeights` helpers with mode gating, cached brush candidate indexing, projected-depth rejection, 50 fps drag throttling, and vertex/triangle brush targets.
     - Export and UI now preserve dirtied skin edits; legacy paint behavior without selected bone remains blocked.
 

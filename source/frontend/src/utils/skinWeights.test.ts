@@ -80,6 +80,35 @@ function makeAutoskinMesh(): THREE.SkinnedMesh {
   return mesh;
 }
 
+function makeOriginVsSegmentMesh(): THREE.SkinnedMesh {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute([
+    9, 0.1, 0,
+  ], 3));
+  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute([
+    0, 0, 0, 0,
+  ], 4));
+  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute([
+    1, 0, 0, 0,
+  ], 4));
+
+  const mesh = new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial());
+  const root = new THREE.Bone();
+  root.name = 'Root';
+  root.position.set(0, 0, 0);
+  const longTip = new THREE.Bone();
+  longTip.name = 'LongTip';
+  longTip.position.set(10, 0, 0);
+  root.add(longTip);
+  const originNear = new THREE.Bone();
+  originNear.name = 'OriginNear';
+  originNear.position.set(9, 1, 0);
+  mesh.add(root);
+  mesh.add(originNear);
+  mesh.bind(new THREE.Skeleton([root, longTip, originNear]));
+  return mesh;
+}
+
 function weightsTotal(weights: readonly number[]): number {
   return weights.reduce((sum, weight) => sum + weight, 0);
 }
@@ -135,7 +164,7 @@ describe('skinWeights', () => {
   it('auto skins vertices from inverse distance to bone segments', () => {
     const mesh = makeAutoskinMesh();
     const summary = autoSkinSkinnedMeshWeights(mesh, mesh.skeleton, {
-      algorithm: 'inverse-segment-distance',
+      algorithm: 'segment-inverse-distance',
       power: 2,
       normalWeighting: 0,
       maxInfluences: 4,
@@ -157,12 +186,12 @@ describe('skinWeights', () => {
 
   it('auto skin options clamp and limit max influences', () => {
     assert.deepEqual(resolveSkinAutoWeightOptions({
-      algorithm: 'inverse-segment-distance',
+      algorithm: 'segment-inverse-distance',
       power: Number.NaN,
       normalWeighting: 2,
       maxInfluences: 99,
     }), {
-      algorithm: 'inverse-segment-distance',
+      algorithm: 'segment-inverse-distance',
       power: 2,
       normalWeighting: 1,
       maxInfluences: 4,
@@ -172,7 +201,7 @@ describe('skinWeights', () => {
 
     const mesh = makeAutoskinMesh();
     const summary = autoSkinSkinnedMeshWeights(mesh, mesh.skeleton, {
-      algorithm: 'inverse-segment-distance',
+      algorithm: 'segment-inverse-distance',
       maxInfluences: 1,
     });
     const attributes = getSkinAttributes(mesh.geometry);
@@ -186,7 +215,7 @@ describe('skinWeights', () => {
   it('nearest-segment auto skin is a distinct implemented algorithm', () => {
     const inverseMesh = makeAutoskinMesh();
     autoSkinSkinnedMeshWeights(inverseMesh, inverseMesh.skeleton, {
-      algorithm: 'inverse-segment-distance',
+      algorithm: 'segment-inverse-distance',
       maxInfluences: 4,
     });
     const inverseAttributes = getSkinAttributes(inverseMesh.geometry);
@@ -208,10 +237,10 @@ describe('skinWeights', () => {
     assert.deepEqual(nearestRootVertex.weights, [1, 0, 0, 0]);
   });
 
-  it('distance-normal, closest-two, nearest-bone, and selected-branch algorithms are implemented', () => {
+  it('segment-distance-normal, closest-two-segments, nearest-bone-origin, and selected-branch algorithms are implemented', () => {
     const nearestMesh = makeAutoskinMesh();
     autoSkinSkinnedMeshWeights(nearestMesh, nearestMesh.skeleton, {
-      algorithm: 'nearest-bone',
+      algorithm: 'nearest-bone-origin',
     });
     const nearestAttributes = getSkinAttributes(nearestMesh.geometry);
     assert.ok(nearestAttributes);
@@ -221,7 +250,7 @@ describe('skinWeights', () => {
 
     const closestMesh = makeAutoskinMesh();
     autoSkinSkinnedMeshWeights(closestMesh, closestMesh.skeleton, {
-      algorithm: 'closest-two',
+      algorithm: 'closest-two-segments',
     });
     const closestAttributes = getSkinAttributes(closestMesh.geometry);
     assert.ok(closestAttributes);
@@ -242,13 +271,44 @@ describe('skinWeights', () => {
     assert.deepEqual(branchRootVertex.weights, [1, 0, 0, 0]);
 
     const normalOptions = resolveSkinAutoWeightOptions({
-      algorithm: 'distance-normal',
+      algorithm: 'segment-distance-normal',
       normalWeighting: 0.75,
       blendAmount: 0.5,
     });
-    assert.equal(normalOptions.algorithm, 'distance-normal');
+    assert.equal(normalOptions.algorithm, 'segment-distance-normal');
     assert.equal(normalOptions.normalWeighting, 0.75);
     assert.equal(normalOptions.blendAmount, 0.5);
+  });
+
+  it('nearest segment and nearest bone origin can choose different influences', () => {
+    const segmentMesh = makeOriginVsSegmentMesh();
+    autoSkinSkinnedMeshWeights(segmentMesh, segmentMesh.skeleton, {
+      algorithm: 'nearest-segment',
+    });
+    const segmentAttributes = getSkinAttributes(segmentMesh.geometry);
+    assert.ok(segmentAttributes);
+    const segmentVertex = readVertexSkinWeights(segmentAttributes, 0);
+    assert.ok(segmentVertex);
+
+    const originMesh = makeOriginVsSegmentMesh();
+    autoSkinSkinnedMeshWeights(originMesh, originMesh.skeleton, {
+      algorithm: 'nearest-bone-origin',
+    });
+    const originAttributes = getSkinAttributes(originMesh.geometry);
+    assert.ok(originAttributes);
+    const originVertex = readVertexSkinWeights(originAttributes, 0);
+    assert.ok(originVertex);
+
+    assert.equal(segmentVertex.indices[0], 1);
+    assert.equal(originVertex.indices[0], 2);
+  });
+
+  it('normalizes legacy auto-weight algorithm names to canonical names', () => {
+    assert.equal(resolveSkinAutoWeightOptions({ algorithm: 'inverse-segment-distance' }).algorithm, 'segment-inverse-distance');
+    assert.equal(resolveSkinAutoWeightOptions({ algorithm: 'distance-power' }).algorithm, 'segment-inverse-distance');
+    assert.equal(resolveSkinAutoWeightOptions({ algorithm: 'distance-normal' }).algorithm, 'segment-distance-normal');
+    assert.equal(resolveSkinAutoWeightOptions({ algorithm: 'nearest-bone' }).algorithm, 'nearest-segment');
+    assert.equal(resolveSkinAutoWeightOptions({ algorithm: 'closest-two' }).algorithm, 'closest-two-segments');
   });
 
   it('auto skins a single brush vertex with blend amount', () => {
@@ -259,7 +319,7 @@ describe('skinWeights', () => {
     assert.ok(before);
 
     const result = autoSkinSkinnedMeshVertexWeights(mesh, mesh.skeleton, 1, {
-      algorithm: 'nearest-bone',
+      algorithm: 'nearest-segment',
       blendAmount: 0.5,
     });
 

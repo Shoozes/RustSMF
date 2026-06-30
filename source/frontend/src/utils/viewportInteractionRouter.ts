@@ -7,8 +7,7 @@ export type ViewportInteractionOwner =
   | 'rig-select'
   | 'rig-endpoint-drag'
   | 'skin-paint'
-  | 'animate-select'
-  | 'animate-transform';
+  | 'animate-select';
 
 export interface ViewportInteractionContext {
   editorMode: EditorMode;
@@ -19,7 +18,6 @@ export interface ViewportInteractionContext {
   isPrecisionMode: boolean;
   isPickingViewport: boolean;
   hitEndpointHandle: boolean;
-  hitTransformControl: boolean;
 }
 
 export function resolvePointerDownOwner(ctx: ViewportInteractionContext): ViewportInteractionOwner {
@@ -36,7 +34,6 @@ export function resolvePointerDownOwner(ctx: ViewportInteractionContext): Viewpo
   }
 
   if (ctx.editorMode === 'animate') {
-    if (ctx.hitTransformControl) return 'animate-transform';
     return ctx.hasSkeleton ? 'animate-select' : 'none';
   }
 

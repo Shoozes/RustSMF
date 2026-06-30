@@ -82,6 +82,10 @@ interface KeyboardEditorHistoryHandlers {
   redo?: () => boolean;
 }
 
+interface UseLoadModelOptions {
+  allocateHistoryOrder?: () => number;
+}
+
 let cachedTauriClient: TauriClient | null = null;
 const getTauriClient = async (): Promise<TauriClient> => {
   if (cachedTauriClient) return cachedTauriClient;
@@ -158,6 +162,12 @@ interface ActivePoseTransformHistory {
   source: BoneTransformEditEvent['source'];
   boneName: string;
   before: PoseHistorySnapshot;
+}
+
+interface ActiveAnimationTransformHistory {
+  source: BoneTransformEditEvent['source'];
+  boneName: string;
+  before: AnimationEditState;
 }
 
 interface RigBoneHistorySnapshot {
@@ -355,12 +365,23 @@ const errorMessage = (error: unknown): string => {
  * This further thins App.tsx (orchestrator only).
  * Preserves all previous behavior.
  */
-export function useLoadModel() {
+export function useLoadModel(options: UseLoadModelOptions = {}) {
   const ui = useUiSlice();
   const model = useModelSlice();
   const playback = usePlaybackSlice();
   const playbackRef = useRef(playback);
   useEffect(() => { playbackRef.current = playback }, [playback]);
+  const allocateHistoryOrderRef = useRef(options.allocateHistoryOrder);
+  const localHistoryOrderRef = useRef(0);
+  useEffect(() => {
+    allocateHistoryOrderRef.current = options.allocateHistoryOrder;
+  }, [options.allocateHistoryOrder]);
+  const allocateHistoryOrder = useCallback(() => {
+    const externalAllocator = allocateHistoryOrderRef.current;
+    if (externalAllocator) return externalAllocator();
+    localHistoryOrderRef.current += 1;
+    return localHistoryOrderRef.current;
+  }, []);
 
   // Keep raw ImportedSmf for high-fidelity SMF export roundtrips
   const lastSmfDataRef = useRef<ImportedSmf | null>(null);
@@ -374,8 +395,11 @@ export function useLoadModel() {
   const editorHistoryRef = useRef<EditorHistoryState<EditorHistorySnapshot>>(makeEditorHistory());
   const editorHistoryIdRef = useRef(0);
   const activePoseTransformHistoryRef = useRef<ActivePoseTransformHistory | null>(null);
+  const activeAnimationTransformHistoryRef = useRef<ActiveAnimationTransformHistory | null>(null);
   const [editorUndoAvailable, setEditorUndoAvailable] = useState(false);
   const [editorRedoAvailable, setEditorRedoAvailable] = useState(false);
+  const [editorUndoOrder, setEditorUndoOrder] = useState(0);
+  const [editorRedoOrder, setEditorRedoOrder] = useState(0);
   const baseClipsRef = useRef<THREE.AnimationClip[]>([]);
   const [animationEditState, setAnimationEditState] = useState<AnimationEditState>(() => makeAnimationEditState());
   const animationEditStateRef = useRef<AnimationEditState>(animationEditState);
@@ -395,13 +419,15 @@ export function useLoadModel() {
   const activeSkinStrokeRef = useRef<SkinStrokeDraft | null>(null);
   const [skinUndoAvailable, setSkinUndoAvailable] = useState(false);
   const [skinRedoAvailable, setSkinRedoAvailable] = useState(false);
+  const [skinUndoOrder, setSkinUndoOrder] = useState(0);
+  const [skinRedoOrder, setSkinRedoOrder] = useState(0);
 
   const [skinPaintMode, setSkinPaintMode] = useState<SkinWeightEditMode>('set');
   const [skinPaintTargetMode, setSkinPaintTargetMode] = useState<'vertex' | 'triangle'>('vertex');
   const [skinPaintRadius, setSkinPaintRadius] = useState(0.2);
   const [skinPaintStrength, setSkinPaintStrength] = useState(0.2);
   const [skinPaintTarget, setSkinPaintTarget] = useState(1);
-  const [skinAutoWeightAlgorithm, setSkinAutoWeightAlgorithm] = useState<SkinAutoWeightAlgorithm>('inverse-segment-distance');
+  const [skinAutoWeightAlgorithm, setSkinAutoWeightAlgorithm] = useState<SkinAutoWeightAlgorithm>('segment-inverse-distance');
   const [skinAutoWeightPower, setSkinAutoWeightPower] = useState(2);
   const [skinAutoWeightNormalWeighting, setSkinAutoWeightNormalWeighting] = useState(0);
   const [skinAutoWeightMaxInfluences, setSkinAutoWeightMaxInfluences] = useState(4);
@@ -498,6 +524,8 @@ export function useLoadModel() {
   const refreshSkinHistoryAvailability = useCallback(() => {
     setSkinUndoAvailable(skinUndoStackRef.current.length > 0);
     setSkinRedoAvailable(skinRedoStackRef.current.length > 0);
+    setSkinUndoOrder(skinUndoStackRef.current.at(-1)?.order ?? 0);
+    setSkinRedoOrder(skinRedoStackRef.current.at(-1)?.redoOrder ?? 0);
   }, []);
 
   const commitSkinEditState = useCallback((next: SkinEditState) => {
@@ -528,11 +556,14 @@ export function useLoadModel() {
   const refreshEditorHistoryAvailability = useCallback(() => {
     setEditorUndoAvailable(editorHistoryRef.current.undo.length > 0);
     setEditorRedoAvailable(editorHistoryRef.current.redo.length > 0);
+    setEditorUndoOrder(editorHistoryRef.current.undo.at(-1)?.order ?? 0);
+    setEditorRedoOrder(editorHistoryRef.current.redo.at(-1)?.redoOrder ?? 0);
   }, []);
 
   const clearEditorHistory = useCallback(() => {
     editorHistoryRef.current = makeEditorHistory();
     activePoseTransformHistoryRef.current = null;
+    activeAnimationTransformHistoryRef.current = null;
     refreshEditorHistoryAvailability();
   }, [refreshEditorHistoryAvailability]);
 
@@ -678,10 +709,11 @@ export function useLoadModel() {
       domain: 'pose',
       before: { kind: 'pose', value: before },
       after: { kind: 'pose', value: after },
+      order: allocateHistoryOrder(),
     });
     refreshEditorHistoryAvailability();
     return true;
-  }, [refreshEditorHistoryAvailability]);
+  }, [allocateHistoryOrder, refreshEditorHistoryAvailability]);
 
   const pushRigHistory = useCallback((
     label: string,
@@ -696,10 +728,11 @@ export function useLoadModel() {
       domain: 'rig',
       before: { kind: 'rig', value: before },
       after: { kind: 'rig', value: after },
+      order: allocateHistoryOrder(),
     });
     refreshEditorHistoryAvailability();
     return true;
-  }, [refreshEditorHistoryAvailability]);
+  }, [allocateHistoryOrder, refreshEditorHistoryAvailability]);
 
   const pushAnimationHistory = useCallback((
     label: string,
@@ -714,13 +747,14 @@ export function useLoadModel() {
       domain: 'animation',
       before: { kind: 'animation', value: cloneAnimationEditState(before) },
       after: { kind: 'animation', value: cloneAnimationEditState(after) },
+      order: allocateHistoryOrder(),
     });
     refreshEditorHistoryAvailability();
     return true;
-  }, [refreshEditorHistoryAvailability]);
+  }, [allocateHistoryOrder, refreshEditorHistoryAvailability]);
 
   const undoEditorHistory = useCallback(() => {
-    const result = popUndo(editorHistoryRef.current);
+    const result = popUndo(editorHistoryRef.current, allocateHistoryOrder());
     editorHistoryRef.current = result.state;
     refreshEditorHistoryAvailability();
 
@@ -747,10 +781,10 @@ export function useLoadModel() {
     }
 
     ui.setStatus(`Undid ${result.entry.label}.`);
-  }, [applyPoseSnapshot, applyRigSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
+  }, [allocateHistoryOrder, applyPoseSnapshot, applyRigSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
 
   const redoEditorHistory = useCallback(() => {
-    const result = popRedo(editorHistoryRef.current);
+    const result = popRedo(editorHistoryRef.current, allocateHistoryOrder());
     editorHistoryRef.current = result.state;
     refreshEditorHistoryAvailability();
 
@@ -777,7 +811,7 @@ export function useLoadModel() {
     }
 
     ui.setStatus(`Redid ${result.entry.label}.`);
-  }, [applyPoseSnapshot, applyRigSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
+  }, [allocateHistoryOrder, applyPoseSnapshot, applyRigSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
 
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
@@ -1709,6 +1743,57 @@ export function useLoadModel() {
   }, [capturePoseSnapshot, model.skeleton, pushPoseHistory]);
 
   const handleBoneTransformEdit = useCallback((event: BoneTransformEditEvent) => {
+    if (event.owner === 'disabled') return;
+
+    if (event.owner === 'animation') {
+      if (event.phase === 'start') {
+        activeAnimationTransformHistoryRef.current = {
+          source: event.source,
+          boneName: event.boneName,
+          before: cloneAnimationEditState(animationEditStateRef.current),
+        };
+        return;
+      }
+
+      if (event.phase === 'change') return;
+
+      const skeleton = model.skeleton;
+      if (!skeleton || baseClipsRef.current.length === 0) {
+        activeAnimationTransformHistoryRef.current = null;
+        ui.setStatus('Load a skinned animated model before editing keyframes.');
+        return;
+      }
+
+      const bone = findBoneByName(skeleton, event.boneName);
+      if (!bone) {
+        activeAnimationTransformHistoryRef.current = null;
+        ui.setStatus('Selected item is not an editable animation bone.');
+        return;
+      }
+
+      const clipName = getCurrentClipKey(baseClipsRef.current, playbackRef.current.currentClipName);
+      if (!clipName) {
+        activeAnimationTransformHistoryRef.current = null;
+        ui.setStatus('No animation clip is active for keyframe editing.');
+        return;
+      }
+
+      const active = activeAnimationTransformHistoryRef.current;
+      const before = active?.boneName === event.boneName && active.source === event.source
+        ? active.before
+        : cloneAnimationEditState(animationEditStateRef.current);
+      const state = animationEditStateRef.current;
+      const key = makeKeyframeFromBone(bone, playbackRef.current.currentTime, state.interpolation);
+      const next = upsertAnimationKeyframe(state, clipName, event.boneName, key);
+      const label = `viewport animation keyframe for ${event.boneName} at ${key.time.toFixed(2)}s`;
+      const pushed = pushAnimationHistory(label, before, next);
+      applyAnimationEditState(next, pushed
+        ? `Recorded viewport animation keyframe for ${event.boneName} at ${key.time.toFixed(2)}s.`
+        : `Viewport animation keyframe for ${event.boneName} was unchanged.`);
+      activeAnimationTransformHistoryRef.current = null;
+      return;
+    }
+
     if (event.phase === 'start') {
       activePoseTransformHistoryRef.current = {
         source: event.source,
@@ -1748,7 +1833,17 @@ export function useLoadModel() {
         ui.setStatus(`Recorded ${event.source === 'endpoint-drag' ? 'endpoint drag' : 'transform'} pose edit for ${event.boneName}.`);
       }
     }
-  }, [capturePoseSnapshot, pushPoseHistory, recordPoseBoneEdit, sourceFormat, ui]);
+  }, [
+    applyAnimationEditState,
+    capturePoseSnapshot,
+    model.skeleton,
+    playbackRef,
+    pushAnimationHistory,
+    pushPoseHistory,
+    recordPoseBoneEdit,
+    sourceFormat,
+    ui,
+  ]);
 
   const beginSkinPaintStroke = useCallback(() => {
     if (activeSkinStrokeRef.current) return;
@@ -1786,12 +1881,13 @@ export function useLoadModel() {
       afterState: cloneSkinEditState(skinEditStateRef.current),
       before,
       after,
+      order: allocateHistoryOrder(),
     };
 
     skinUndoStackRef.current = [...skinUndoStackRef.current.slice(-49), entry];
     skinRedoStackRef.current = [];
     refreshSkinHistoryAvailability();
-  }, [model.root, refreshSkinHistoryAvailability]);
+  }, [allocateHistoryOrder, model.root, refreshSkinHistoryAvailability]);
 
   const undoSkinPaint = useCallback(() => {
     if (activeSkinStrokeRef.current) {
@@ -1810,12 +1906,15 @@ export function useLoadModel() {
     }
 
     skinUndoStackRef.current = skinUndoStackRef.current.slice(0, -1);
-    skinRedoStackRef.current = [...skinRedoStackRef.current.slice(-49), entry];
+    skinRedoStackRef.current = [
+      ...skinRedoStackRef.current.slice(-49),
+      { ...entry, redoOrder: allocateHistoryOrder() },
+    ];
     commitSkinEditState(cloneSkinEditState(entry.beforeState));
     model.skeleton?.update();
     refreshSkinHistoryAvailability();
     ui.setStatus(`Undid skin edit (${restored} vertices restored).`);
-  }, [model.root, model.skeleton, ui, endSkinPaintStroke, commitSkinEditState, refreshSkinHistoryAvailability]);
+  }, [allocateHistoryOrder, model.root, model.skeleton, ui, endSkinPaintStroke, commitSkinEditState, refreshSkinHistoryAvailability]);
 
   const redoSkinPaint = useCallback(() => {
     if (activeSkinStrokeRef.current) {
@@ -1834,12 +1933,15 @@ export function useLoadModel() {
     }
 
     skinRedoStackRef.current = skinRedoStackRef.current.slice(0, -1);
-    skinUndoStackRef.current = [...skinUndoStackRef.current.slice(-49), entry];
+    skinUndoStackRef.current = [
+      ...skinUndoStackRef.current.slice(-49),
+      { ...entry, order: allocateHistoryOrder(), redoOrder: undefined },
+    ];
     commitSkinEditState(cloneSkinEditState(entry.afterState));
     model.skeleton?.update();
     refreshSkinHistoryAvailability();
     ui.setStatus(`Redid skin edit (${restored} vertices restored).`);
-  }, [model.root, model.skeleton, ui, endSkinPaintStroke, commitSkinEditState, refreshSkinHistoryAvailability]);
+  }, [allocateHistoryOrder, model.root, model.skeleton, ui, endSkinPaintStroke, commitSkinEditState, refreshSkinHistoryAvailability]);
 
   const captureAllSkinSnapshots = useCallback((meshes: THREE.SkinnedMesh[]) => {
     return meshes.flatMap((mesh) => {
@@ -1889,13 +1991,14 @@ export function useLoadModel() {
       afterState: cloneSkinEditState(nextState),
       before,
       after,
+      order: allocateHistoryOrder(),
     };
     skinUndoStackRef.current = [...skinUndoStackRef.current.slice(-49), entry];
     skinRedoStackRef.current = [];
     model.skeleton?.update();
     refreshSkinHistoryAvailability();
     return changed;
-  }, [commitSkinEditState, model.root, model.skeleton, refreshSkinHistoryAvailability, ui]);
+  }, [allocateHistoryOrder, commitSkinEditState, model.root, model.skeleton, refreshSkinHistoryAvailability, ui]);
 
   const normalizeSkinWeights = useCallback(() => {
     if (activeSkinStrokeRef.current) {
@@ -1969,7 +2072,7 @@ export function useLoadModel() {
     }, { touchedVertices: 0, changedVertices: 0 });
     const changed = commitSkinBatchEdit(beforeState, before, 'Auto skin');
     if (changed > 0) {
-      const optionText = autoWeightOptions.algorithm === 'inverse-segment-distance'
+      const optionText = ['segment-inverse-distance', 'segment-distance-normal', 'selected-branch'].includes(autoWeightOptions.algorithm)
         ? `${SKIN_AUTO_WEIGHT_ALGORITHM_LABELS[autoWeightOptions.algorithm]}, power ${autoWeightOptions.power}, normal ${autoWeightOptions.normalWeighting}, max ${autoWeightOptions.maxInfluences}`
         : SKIN_AUTO_WEIGHT_ALGORITHM_LABELS[autoWeightOptions.algorithm];
       ui.setStatus(`Auto skinned ${changed} vertices across ${meshes.length} skinned mesh${meshes.length === 1 ? '' : 'es'} (${optionText}).`);
@@ -2171,6 +2274,8 @@ export function useLoadModel() {
     redoEditorHistory,
     editorUndoAvailable,
     editorRedoAvailable,
+    editorUndoOrder,
+    editorRedoOrder,
     setupKeyboard,
     togglePlay,
     changeClip,
@@ -2215,6 +2320,8 @@ export function useLoadModel() {
     autoSkinWeights,
     skinUndoAvailable,
     skinRedoAvailable,
+    skinUndoOrder,
+    skinRedoOrder,
     poseEditHasDirtyState,
     animationEditHasDirtyState,
     animationSelectedKeyTime: animationEditState.selectedKeyTime,
