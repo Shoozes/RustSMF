@@ -644,7 +644,8 @@ html, body, #root {
   font-size: 10px;
 }
 
-.animate-authoring-settings select {
+.animate-authoring-settings select,
+.animate-authoring-settings input[type="number"] {
   height: 28px;
   min-width: 0;
   border: 1px solid #475569;
@@ -652,6 +653,19 @@ html, body, #root {
   background: #334155;
   color: #e2e8f0;
   font-size: 11px;
+}
+
+.animate-authoring-settings .animate-loop-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+}
+
+.animate-authoring-settings .animate-loop-toggle input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
 }
 
 button {

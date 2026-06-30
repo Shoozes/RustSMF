@@ -1126,10 +1126,33 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
     await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
     await expect(page.getByTestId('animation-delete-clip-btn')).toBeDisabled();
+    await expect(page.getByTestId('animation-loop-toggle')).toBeChecked();
+    await expect(page.getByTestId('animation-sample-multiplier-input')).toHaveValue('1');
+
+    await page.getByTestId('animation-loop-toggle').uncheck({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Animation clip FixtureBend loop disabled/i);
+    await page.getByTestId('animation-sample-multiplier-input').fill('3');
+    await expect(page.getByTestId('status-text')).toContainText(/sample frame multiplier set to 3/i);
+    await expect(page.getByTestId('animation-sample-multiplier-input')).toHaveValue('3');
+
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid set animation clip FixtureBend sample frame multiplier to 3/i);
+    await expect(page.getByTestId('animation-sample-multiplier-input')).toHaveValue('1');
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid set animation clip FixtureBend loop off/i);
+    await expect(page.getByTestId('animation-loop-toggle')).toBeChecked();
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid set animation clip FixtureBend loop off/i);
+    await expect(page.getByTestId('animation-loop-toggle')).not.toBeChecked();
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid set animation clip FixtureBend sample frame multiplier to 3/i);
+    await expect(page.getByTestId('animation-sample-multiplier-input')).toHaveValue('3');
 
     await page.getByTestId('animation-duplicate-clip-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Duplicated animation clip FixtureBend as FixtureBend Copy/i);
     await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend Copy');
+    await expect(page.getByTestId('animation-loop-toggle')).not.toBeChecked();
+    await expect(page.getByTestId('animation-sample-multiplier-input')).toHaveValue('3');
     await expect(page.getByTestId('animation-delete-clip-btn')).toBeEnabled();
     await expect(page.getByTestId('clip-item-1')).toContainText(/FixtureBend Copy/);
 

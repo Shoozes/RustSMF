@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 import type { AnimationTimelineSummary } from '../utils/animationTimeline';
-import type { AnimationInterpolation, AnimationSnapStep } from '../utils/animationEdits';
+import type { AnimationClipMetadata, AnimationInterpolation, AnimationSnapStep } from '../utils/animationEdits';
 
 interface AnimatePanelProps {
   clips: THREE.AnimationClip[];
@@ -17,6 +17,7 @@ interface AnimatePanelProps {
   clipboardHasKeyframe: boolean;
   interpolation: AnimationInterpolation;
   snapStep: AnimationSnapStep;
+  clipMetadata: AnimationClipMetadata;
   onInsertKeyframe: () => void;
   onUpdateKeyframe: () => void;
   onDeleteKeyframe: () => void;
@@ -24,6 +25,8 @@ interface AnimatePanelProps {
   onPasteKeyframe: () => void;
   onInterpolationChange: (next: AnimationInterpolation) => void;
   onSnapStepChange: (next: AnimationSnapStep) => void;
+  onClipLoopChange: (next: boolean) => void;
+  onClipSampleFrameMultiplierChange: (next: number) => void;
   onRenameClip: (nextName: string) => void;
   onDuplicateClip: () => void;
   onDeleteClip: () => void;
@@ -46,6 +49,7 @@ export default function AnimatePanel({
   clipboardHasKeyframe,
   interpolation,
   snapStep,
+  clipMetadata,
   onInsertKeyframe,
   onUpdateKeyframe,
   onDeleteKeyframe,
@@ -53,6 +57,8 @@ export default function AnimatePanel({
   onPasteKeyframe,
   onInterpolationChange,
   onSnapStepChange,
+  onClipLoopChange,
+  onClipSampleFrameMultiplierChange,
   onRenameClip,
   onDuplicateClip,
   onDeleteClip,
@@ -213,6 +219,29 @@ export default function AnimatePanel({
         </button>
       </div>
       <div className="animate-authoring-settings">
+        <label className="animate-loop-toggle">
+          <input
+            type="checkbox"
+            data-testid="animation-loop-toggle"
+            checked={clipMetadata.loop}
+            disabled={!hasActiveClip}
+            onChange={(event) => onClipLoopChange(event.target.checked)}
+          />
+          <span>Loop</span>
+        </label>
+        <label>
+          <span>Sample x</span>
+          <input
+            type="number"
+            data-testid="animation-sample-multiplier-input"
+            min="1"
+            max="255"
+            step="1"
+            value={clipMetadata.sampleFrameMultiplier}
+            disabled={!hasActiveClip}
+            onChange={(event) => onClipSampleFrameMultiplierChange(Number(event.target.value))}
+          />
+        </label>
         <label>
           <span>Interpolation</span>
           <select

@@ -4,11 +4,13 @@ import * as THREE from 'three';
 import {
   applyAnimationEditsToClips,
   applyAnimationEditsToImportedSmf,
+  applyAnimationMetadataToImportedSmf,
   cloneAnimationEditState,
   deleteAnimationEditClip,
   deleteAnimationEditBones,
   deleteAnimationKeyframe,
   duplicateAnimationEditClip,
+  getAnimationClipMetadata,
   getCurrentClipKey,
   hasDirtyAnimationEdits,
   makeAnimationEditState,
@@ -20,6 +22,8 @@ import {
   renameAnimationEditBone,
   renameAnimationEditClip,
   sameAnimationEditState,
+  setAnimationClipLoop,
+  setAnimationClipSampleFrameMultiplier,
   setAnimationInterpolation,
   snapAnimationTime,
   upsertAnimationKeyframe,
@@ -254,6 +258,69 @@ test('clip edit helpers rename, duplicate, delete, and allocate unique names', (
   ];
   assert.equal(makeUniqueAnimationClipName(clips, 'Run'), 'Run 3');
   assert.equal(makeUniqueAnimationClipName(clips, 'Run', 'Run'), 'Run');
+});
+
+test('clip metadata helpers preserve loop and sample multiplier through clip edits', () => {
+  let state = setAnimationClipLoop(makeAnimationEditState(), 'Walk', false, {
+    loop: true,
+    sampleFrameMultiplier: 2,
+  });
+  state = setAnimationClipSampleFrameMultiplier(state, 'Walk', 7.7);
+
+  assert.deepEqual(getAnimationClipMetadata(state, 'Walk'), {
+    loop: false,
+    sampleFrameMultiplier: 8,
+  });
+  assert.equal(state.dirtyClipNames.includes('Walk'), true);
+
+  const renamed = renameAnimationEditClip(state, 'Walk', 'Run');
+  assert.equal(renamed.metadataByClip.Walk, undefined);
+  assert.deepEqual(getAnimationClipMetadata(renamed, 'Run'), {
+    loop: false,
+    sampleFrameMultiplier: 8,
+  });
+
+  const duplicated = duplicateAnimationEditClip(renamed, 'Run', 'Run Copy');
+  assert.deepEqual(getAnimationClipMetadata(duplicated, 'Run Copy'), {
+    loop: false,
+    sampleFrameMultiplier: 8,
+  });
+  assert.notEqual(duplicated.metadataByClip.Run, duplicated.metadataByClip['Run Copy']);
+
+  const deleted = deleteAnimationEditClip(duplicated, 'Run');
+  assert.equal(deleted.metadataByClip.Run, undefined);
+  assert.deepEqual(getAnimationClipMetadata(deleted, 'Run Copy'), {
+    loop: false,
+    sampleFrameMultiplier: 8,
+  });
+});
+
+test('applyAnimationMetadataToImportedSmf applies metadata without rebuilding keyframes', () => {
+  const dq = new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]);
+  const source: ImportedSmf = {
+    meshes: [],
+    textures: [],
+    bones: [{ index: 0, parent: 0, isBone: 1, dq, axis: [0, 1, 0] }],
+    animations: [{
+      name: 'Walk',
+      duration: 1,
+      times: [0, 1],
+      frames: [[dq], [dq]],
+      nodeCount: 1,
+      loop: 1,
+      interpolation: 1,
+      sampleFrameMultiplier: 1,
+      lockedBones: [],
+    }],
+  };
+  const loopState = setAnimationClipLoop(makeAnimationEditState(), 'Walk', false);
+  const state = setAnimationClipSampleFrameMultiplier(loopState, 'Walk', 3);
+  const result = applyAnimationMetadataToImportedSmf(source, state);
+
+  assert.notEqual(result, source);
+  assert.equal(result.animations[0].loop, 0);
+  assert.equal(result.animations[0].sampleFrameMultiplier, 3);
+  assert.deepEqual(result.animations[0].times, [0, 1]);
 });
 
 test('moveAnimationClip reorders cloned clips and keeps out-of-range moves stable', () => {

@@ -15,6 +15,11 @@ export type AnimationSnapStep = 0 | 0.01 | 0.05 | 0.1 | 0.25 | 0.5;
 
 export const ANIMATION_SNAP_STEPS: readonly AnimationSnapStep[] = [0, 0.01, 0.05, 0.1, 0.25, 0.5];
 
+export interface AnimationClipMetadata {
+  loop: boolean;
+  sampleFrameMultiplier: number;
+}
+
 export interface EditableBoneKeyframe {
   time: number;
   position: [number, number, number];
@@ -27,6 +32,7 @@ export interface AnimationEditState {
   clipboard: EditableBoneKeyframe | null;
   interpolation: AnimationInterpolation;
   editsByClip: Record<string, Record<string, EditableBoneKeyframe[]>>;
+  metadataByClip: Record<string, AnimationClipMetadata>;
   dirtyClipNames: string[];
 }
 
@@ -37,6 +43,7 @@ export const makeAnimationEditState = (): AnimationEditState => ({
   clipboard: null,
   interpolation: 'linear',
   editsByClip: {},
+  metadataByClip: {},
   dirtyClipNames: [],
 });
 
@@ -58,11 +65,17 @@ export const cloneAnimationEditState = (state: AnimationEditState): AnimationEdi
     }
   }
 
+  const metadataByClip: AnimationEditState['metadataByClip'] = {};
+  for (const [clipName, metadata] of Object.entries(state.metadataByClip)) {
+    metadataByClip[clipName] = { ...metadata };
+  }
+
   return {
     selectedKeyTime: state.selectedKeyTime,
     clipboard: state.clipboard ? cloneKey(state.clipboard) : null,
     interpolation: state.interpolation,
     editsByClip,
+    metadataByClip,
     dirtyClipNames: [...state.dirtyClipNames],
   };
 };
@@ -85,6 +98,14 @@ const sameStringSet = (left: string[], right: string[]): boolean => {
   return left.every((value) => rightSet.has(value));
 };
 
+const sameMetadata = (
+  left: AnimationClipMetadata | undefined,
+  right: AnimationClipMetadata | undefined,
+): boolean => {
+  if (!left || !right) return left === right;
+  return left.loop === right.loop && left.sampleFrameMultiplier === right.sampleFrameMultiplier;
+};
+
 export const sameAnimationEditState = (
   left: AnimationEditState,
   right: AnimationEditState,
@@ -100,6 +121,10 @@ export const sameAnimationEditState = (
   }
   if (!sameKey(left.clipboard, right.clipboard)) return false;
   if (!sameStringSet(left.dirtyClipNames, right.dirtyClipNames)) return false;
+  const metadataClipNames = new Set([...Object.keys(left.metadataByClip), ...Object.keys(right.metadataByClip)]);
+  for (const clipName of metadataClipNames) {
+    if (!sameMetadata(left.metadataByClip[clipName], right.metadataByClip[clipName])) return false;
+  }
 
   const clipNames = new Set([...Object.keys(left.editsByClip), ...Object.keys(right.editsByClip)]);
   for (const clipName of clipNames) {
@@ -203,6 +228,54 @@ const markDirty = (state: AnimationEditState, clipName: string): void => {
   if (!state.dirtyClipNames.includes(clipName)) {
     state.dirtyClipNames.push(clipName);
   }
+};
+
+export const normalizeSampleFrameMultiplier = (value: number): number => {
+  if (!Number.isFinite(value)) return 1;
+  return Math.min(255, Math.max(1, Math.round(value)));
+};
+
+export const makeAnimationClipMetadata = (
+  metadata?: Partial<AnimationClipMetadata> | null,
+): AnimationClipMetadata => ({
+  loop: metadata?.loop ?? true,
+  sampleFrameMultiplier: normalizeSampleFrameMultiplier(metadata?.sampleFrameMultiplier ?? 1),
+});
+
+export const getAnimationClipMetadata = (
+  state: AnimationEditState,
+  clipName: string,
+  fallback?: Partial<AnimationClipMetadata> | null,
+): AnimationClipMetadata => makeAnimationClipMetadata(state.metadataByClip[clipName] ?? fallback);
+
+export const setAnimationClipLoop = (
+  state: AnimationEditState,
+  clipName: string,
+  loop: boolean,
+  fallback?: Partial<AnimationClipMetadata> | null,
+): AnimationEditState => {
+  if (!clipName) return cloneAnimationEditState(state);
+  const next = cloneAnimationEditState(state);
+  const metadata = getAnimationClipMetadata(next, clipName, fallback);
+  metadata.loop = loop;
+  next.metadataByClip[clipName] = metadata;
+  markDirty(next, clipName);
+  return next;
+};
+
+export const setAnimationClipSampleFrameMultiplier = (
+  state: AnimationEditState,
+  clipName: string,
+  sampleFrameMultiplier: number,
+  fallback?: Partial<AnimationClipMetadata> | null,
+): AnimationEditState => {
+  if (!clipName) return cloneAnimationEditState(state);
+  const next = cloneAnimationEditState(state);
+  const metadata = getAnimationClipMetadata(next, clipName, fallback);
+  metadata.sampleFrameMultiplier = normalizeSampleFrameMultiplier(sampleFrameMultiplier);
+  next.metadataByClip[clipName] = metadata;
+  markDirty(next, clipName);
+  return next;
 };
 
 export const makeKeyframeFromBone = (
@@ -349,6 +422,11 @@ export const renameAnimationEditClip = (
     };
     delete next.editsByClip[oldClipName];
   }
+  const metadata = next.metadataByClip[oldClipName];
+  if (metadata) {
+    next.metadataByClip[newClipName] = { ...metadata };
+    delete next.metadataByClip[oldClipName];
+  }
 
   next.dirtyClipNames = Array.from(new Set([
     ...next.dirtyClipNames.map((clipName) => (clipName === oldClipName ? newClipName : clipName)),
@@ -376,6 +454,10 @@ export const duplicateAnimationEditClip = (
   } else {
     delete next.editsByClip[duplicateClipName];
   }
+  const metadata = next.metadataByClip[sourceClipName];
+  if (metadata) {
+    next.metadataByClip[duplicateClipName] = { ...metadata };
+  }
   markDirty(next, duplicateClipName);
   return next;
 };
@@ -388,6 +470,7 @@ export const deleteAnimationEditClip = (
 
   const next = cloneAnimationEditState(state);
   delete next.editsByClip[clipName];
+  delete next.metadataByClip[clipName];
   next.dirtyClipNames = next.dirtyClipNames.filter((name) => name !== clipName);
   next.selectedKeyTime = null;
   return next;
@@ -791,6 +874,34 @@ const buildSmfAnimationFromClip = (
   };
 };
 
+const applyAnimationMetadata = (
+  animation: ImportedSmf['animations'][number],
+  metadata?: AnimationClipMetadata,
+): ImportedSmf['animations'][number] => {
+  if (!metadata) return animation;
+  return {
+    ...animation,
+    loop: metadata.loop ? 1 : 0,
+    sampleFrameMultiplier: normalizeSampleFrameMultiplier(metadata.sampleFrameMultiplier),
+  };
+};
+
+export const applyAnimationMetadataToImportedSmf = (
+  source: ImportedSmf,
+  state: AnimationEditState,
+): ImportedSmf => {
+  const metadataEntries = Object.entries(state.metadataByClip);
+  if (metadataEntries.length === 0) return source;
+
+  const metadataByClip = new Map(metadataEntries);
+  const result = cloneImportedSmf(source);
+  result.animations = result.animations.map((animation, index) => {
+    const clipName = animation.name || `clip_${index}`;
+    return applyAnimationMetadata(animation, metadataByClip.get(clipName));
+  });
+  return result;
+};
+
 export const applyAnimationEditsToImportedSmf = (
   source: ImportedSmf,
   editedClips: THREE.AnimationClip[],
@@ -824,7 +935,7 @@ export const applyAnimationEditsToImportedSmf = (
         ?? makeFallbackAnimation(clipName);
       const rebuilt = buildSmfAnimationFromClip(source, sourceAnimation, clip);
       return {
-        ...rebuilt,
+        ...applyAnimationMetadata(rebuilt, state.metadataByClip[clipName]),
         name: clipName,
       };
     });
@@ -835,8 +946,8 @@ export const applyAnimationEditsToImportedSmf = (
     const clipName = animation.name || `clip_${index}`;
     if (!state.dirtyClipNames.includes(clipName)) return animation;
     const clip = editedClips.find((candidate, clipIndex) => getClipKey(candidate, clipIndex) === clipName);
-    if (!clip) return animation;
-    return buildSmfAnimationFromClip(source, animation, clip);
+    if (!clip) return applyAnimationMetadata(animation, state.metadataByClip[clipName]);
+    return applyAnimationMetadata(buildSmfAnimationFromClip(source, animation, clip), state.metadataByClip[clipName]);
   });
   return result;
 };

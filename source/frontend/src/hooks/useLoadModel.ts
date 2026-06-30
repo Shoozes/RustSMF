@@ -50,12 +50,14 @@ import {
 import {
   applyAnimationEditsToClips,
   applyAnimationEditsToImportedSmf,
+  applyAnimationMetadataToImportedSmf,
   cloneAnimationEditState,
   copyAnimationKeyframe,
   deleteAnimationEditClip,
   deleteAnimationEditBones,
   deleteAnimationKeyframe,
   duplicateAnimationEditClip,
+  getAnimationClipMetadata,
   getClipKey,
   getCurrentClipKey,
   getEditedKeyframe,
@@ -70,9 +72,12 @@ import {
   renameAnimationEditBone,
   sameAnimationEditState,
   selectAnimationKeyframe,
+  setAnimationClipLoop,
+  setAnimationClipSampleFrameMultiplier,
   setAnimationInterpolation,
   snapAnimationTime,
   upsertAnimationKeyframe,
+  type AnimationClipMetadata,
   type AnimationEditState,
   type AnimationInterpolation,
   type AnimationSnapStep,
@@ -1240,11 +1245,12 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       throw new SmfConversionError(`${blockingDiagnostic.code}: ${blockingDiagnostic.message}${detail}`);
     }
 
-    return buildImportedSmfFromThree({
+    const converted = buildImportedSmfFromThree({
       skeleton,
       skinnedMeshes,
       clips: model.clips,
     });
+    return applyAnimationMetadataToImportedSmf(converted, animationEditStateRef.current);
   }, [model.clips, model.root, model.skeleton]);
 
   const handleRunSmfRoundtripCheck = useCallback(async () => {
@@ -1654,6 +1660,77 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
   }, [commitAnimationEditState, ui]);
 
+  const getSourceAnimationClipMetadata = useCallback((clipName: string): AnimationClipMetadata => {
+    const sourceAnimation = lastSmfDataRef.current?.animations.find((animation, index) => (
+      (animation.name || `clip_${index}`) === clipName
+    ));
+    return {
+      loop: (sourceAnimation?.loop ?? 1) !== 0,
+      sampleFrameMultiplier: sourceAnimation?.sampleFrameMultiplier ?? 1,
+    };
+  }, []);
+
+  const getActiveAnimationClipMetadataContext = useCallback((): {
+    clipName: string;
+    fallback: AnimationClipMetadata;
+  } | null => {
+    const clips = baseClipsRef.current;
+    if (clips.length === 0) {
+      ui.setStatus('Load an animated model before editing clip metadata.');
+      return null;
+    }
+
+    const clipName = getCurrentClipKey(clips, playbackRef.current.currentClipName);
+    if (!clipName) {
+      ui.setStatus('No animation clip is active for metadata editing.');
+      return null;
+    }
+
+    return {
+      clipName,
+      fallback: getSourceAnimationClipMetadata(clipName),
+    };
+  }, [getSourceAnimationClipMetadata, playbackRef, ui]);
+
+  const changeAnimationClipLoop = useCallback((loop: boolean) => {
+    const context = getActiveAnimationClipMetadataContext();
+    if (!context) return;
+
+    const before = cloneAnimationEditState(animationEditStateRef.current);
+    const next = setAnimationClipLoop(
+      animationEditStateRef.current,
+      context.clipName,
+      loop,
+      context.fallback,
+    );
+    pushAnimationHistory(
+      `set animation clip ${context.clipName} loop ${loop ? 'on' : 'off'}`,
+      before,
+      next,
+    );
+    applyAnimationEditState(next, `Animation clip ${context.clipName} loop ${loop ? 'enabled' : 'disabled'}.`);
+  }, [applyAnimationEditState, getActiveAnimationClipMetadataContext, pushAnimationHistory]);
+
+  const changeAnimationClipSampleFrameMultiplier = useCallback((value: number) => {
+    const context = getActiveAnimationClipMetadataContext();
+    if (!context) return;
+
+    const before = cloneAnimationEditState(animationEditStateRef.current);
+    const next = setAnimationClipSampleFrameMultiplier(
+      animationEditStateRef.current,
+      context.clipName,
+      value,
+      context.fallback,
+    );
+    const metadata = getAnimationClipMetadata(next, context.clipName, context.fallback);
+    pushAnimationHistory(
+      `set animation clip ${context.clipName} sample frame multiplier to ${metadata.sampleFrameMultiplier}`,
+      before,
+      next,
+    );
+    applyAnimationEditState(next, `Animation clip ${context.clipName} sample frame multiplier set to ${metadata.sampleFrameMultiplier}.`);
+  }, [applyAnimationEditState, getActiveAnimationClipMetadataContext, pushAnimationHistory]);
+
   const insertAnimationKeyframeAtTime = useCallback((time: number) => {
     const context = getActiveAnimationEditContext();
     if (!context) return;
@@ -1813,6 +1890,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     if (!clipName) return [];
     return (animationEditState.editsByClip[clipName]?.[boneName] ?? []).map((key) => key.time);
   }, [animationEditState, playback.currentClipName, ui.selected]);
+
+  const animationClipMetadata = useMemo(() => {
+    const clipName = getCurrentClipKey(model.clips, playback.currentClipName);
+    if (!clipName) {
+      return getAnimationClipMetadata(animationEditState, '', null);
+    }
+    return getAnimationClipMetadata(animationEditState, clipName, getSourceAnimationClipMetadata(clipName));
+  }, [animationEditState, getSourceAnimationClipMetadata, model.clips, playback.currentClipName]);
 
   const pingRust = useCallback(async () => {
     try {
@@ -2641,6 +2726,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     animationClipboardHasKeyframe: !!animationEditState.clipboard,
     animationInterpolation: animationEditState.interpolation,
     animationSnapStep,
+    animationClipMetadata,
     insertAnimationKeyframe,
     insertAnimationKeyframeAtTime,
     updateAnimationKeyframe,
@@ -2651,6 +2737,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     moveSelectedAnimationKeyframe,
     changeAnimationInterpolation,
     changeAnimationSnapStep,
+    changeAnimationClipLoop,
+    changeAnimationClipSampleFrameMultiplier,
     viewportLayout: ui.viewportLayout,
     setViewportLayout: ui.setViewportLayout,
     gridEnabled: ui.gridEnabled,

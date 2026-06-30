@@ -133,10 +133,10 @@ Each active item should answer:
   - Share snap-to-grid settings with future animation movement tools.
 - Acceptance: Unit tests prove add-child, detach, and spin preserve valid skeleton/skin references; smoke creates a child from an ortho pane and undo restores the previous rig.
 
-### P2: Complete animation clip metadata controls
+### P2: Complete remaining animation interpolation parity
 
-- What: Add old-editor clip-level metadata affordances that are still missing: loop toggle, sample multiplier, and any remaining clip metadata controls.
-- Why: Selected-bone key Insert/Update/Delete/Copy/Paste, lane click/double-click insertion, authored marker drag-to-time, active-clip rename/duplicate/delete/reorder, and snap-step authoring are implemented, but sample/loop controls remain underbuilt compared with the old animation tab.
+- What: Decide and implement the remaining old-editor animation interpolation parity, especially `quadratic` metadata/runtime behavior.
+- Why: Selected-bone key Insert/Update/Delete/Copy/Paste, lane click/double-click insertion, authored marker drag-to-time, active-clip rename/duplicate/delete/reorder, snap-step authoring, loop toggle, and sample multiplier controls are implemented; quadratic interpolation remains the main old-animation-tab metadata gap.
 - Where: `source/frontend/src/components/Timeline.tsx`, `source/frontend/src/components/AnimatePanel.tsx`, `source/frontend/src/utils/animationTimeline.ts`, `source/frontend/src/utils/animationEdits.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/smoke.spec.ts`.
 - When: After Animate-mode viewport transforms write keyframes and before adding more animation handle/IK features.
 - How:
@@ -146,9 +146,9 @@ Each active item should answer:
   - Done: add active-clip rename, duplicate, and guarded delete with deterministic current-clip fallback, toolbar/Ctrl+Z/Ctrl+Y history integration, and SMF-source clip-list export rebuilding for renamed/duplicated/deleted clips.
   - Done: add active-clip reorder with undo/redo, deterministic current-clip retention, boundary-disabled Move Up/Move Down controls, and SMF-source export order preservation.
   - Done: add animation snap-step controls for authoring/scrub times, with shared snapping for insert, paste, marker drag, and Animate-owned viewport key creation.
-  - Add sample metadata controls and loop toggle.
+  - Done: add active-clip loop toggle and sample frame multiplier controls with undo/redo, copied/renamed clip metadata retention, and SMF-source/non-SMF-to-SMF export metadata preservation.
   - Add `quadratic` interpolation as metadata first if runtime preview must approximate with linear tracks.
-- Acceptance: Unit tests cover clip rename/duplicate/delete/reorder, snap-step helpers, and SMF-source clip-list export rebuilding; remaining work is complete when sample/loop controls have smoke coverage once those UI states ship.
+- Acceptance: Unit tests cover clip rename/duplicate/delete/reorder, snap-step helpers, metadata helpers, and SMF-source clip-list export rebuilding; smoke covers active-clip loop/sample controls and undo/redo; remaining work is complete when quadratic interpolation behavior is explicit in UI/export/tests or intentionally deferred with format limits.
 
 ### P2: Complete SMF-aware rig editing parity
 
