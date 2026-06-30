@@ -63,6 +63,7 @@ import {
   makeAnimationEditState,
   makeUniqueAnimationClipName,
   makeKeyframeFromBone,
+  moveAnimationClip,
   moveAnimationKeyframe,
   renameAnimationEditClip,
   renameAnimationEditBone,
@@ -1560,6 +1561,48 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     ui.setStatus(`Deleted animation clip ${currentClipName}.`);
   }, [applyAnimationWorkspaceSnapshot, captureAnimationWorkspaceSnapshot, playbackRef, pushAnimationWorkspaceHistory, ui]);
 
+  const moveCurrentAnimationClip = useCallback((direction: -1 | 1) => {
+    const clips = baseClipsRef.current;
+    if (clips.length < 2) {
+      ui.setStatus('Load at least two animation clips before reordering clips.');
+      return;
+    }
+
+    const currentClipName = getCurrentClipKey(clips, playbackRef.current.currentClipName);
+    const clipIndex = clips.findIndex((clip, index) => getClipKey(clip, index) === currentClipName);
+    if (clipIndex < 0) {
+      ui.setStatus('No animation clip is active for reorder.');
+      return;
+    }
+
+    const targetIndex = clipIndex + direction;
+    if (targetIndex < 0 || targetIndex >= clips.length) {
+      ui.setStatus(`Animation clip ${currentClipName} is already ${direction < 0 ? 'first' : 'last'}.`);
+      return;
+    }
+
+    const before = captureAnimationWorkspaceSnapshot();
+    const nextBaseClips = moveAnimationClip(clips, currentClipName, direction);
+    const after: AnimationWorkspaceHistorySnapshot = {
+      baseClips: nextBaseClips,
+      animationEditState: cloneAnimationEditState(animationEditStateRef.current),
+      currentClipName,
+      currentTime: playbackRef.current.currentTime,
+    };
+    const label = `${direction < 0 ? 'move up' : 'move down'} animation clip ${currentClipName}`;
+    pushAnimationWorkspaceHistory(label, before, after);
+    applyAnimationWorkspaceSnapshot(after);
+    ui.setStatus(`Moved animation clip ${currentClipName} ${direction < 0 ? 'up' : 'down'}.`);
+  }, [applyAnimationWorkspaceSnapshot, captureAnimationWorkspaceSnapshot, playbackRef, pushAnimationWorkspaceHistory, ui]);
+
+  const moveCurrentAnimationClipUp = useCallback(() => {
+    moveCurrentAnimationClip(-1);
+  }, [moveCurrentAnimationClip]);
+
+  const moveCurrentAnimationClipDown = useCallback(() => {
+    moveCurrentAnimationClip(1);
+  }, [moveCurrentAnimationClip]);
+
   const clampPlaybackTime = useCallback((t: number) => (
     Math.max(0, Math.min(t, playbackRef.current.duration || 0))
   ), [playbackRef]);
@@ -2535,6 +2578,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     renameCurrentAnimationClip,
     duplicateCurrentAnimationClip,
     deleteCurrentAnimationClip,
+    moveCurrentAnimationClipUp,
+    moveCurrentAnimationClipDown,
     onScrub,
     setSpeed,
     pingRust,

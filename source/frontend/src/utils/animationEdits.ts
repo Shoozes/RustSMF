@@ -149,6 +149,25 @@ export const makeUniqueAnimationClipName = (
   return candidate;
 };
 
+export const moveAnimationClip = (
+  clips: THREE.AnimationClip[],
+  clipName: string,
+  direction: -1 | 1,
+): THREE.AnimationClip[] => {
+  const sourceIndex = clips.findIndex((clip, index) => getClipKey(clip, index) === clipName);
+  if (sourceIndex < 0) return clips.map((clip) => clip.clone());
+
+  const targetIndex = sourceIndex + direction;
+  if (targetIndex < 0 || targetIndex >= clips.length) {
+    return clips.map((clip) => clip.clone());
+  }
+
+  const next = clips.map((clip) => clip.clone());
+  const [moved] = next.splice(sourceIndex, 1);
+  next.splice(targetIndex, 0, moved);
+  return next;
+};
+
 const normalizeTime = (time: number): number => {
   if (!Number.isFinite(time)) return 0;
   return Math.max(0, Math.round(time * 10000) / 10000);

@@ -1136,6 +1136,29 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Renamed animation clip FixtureBend Copy to Hero Bend/i);
     await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Hero Bend');
     await expect(page.getByTestId('clip-item-1')).toContainText(/Hero Bend/);
+    await expect(page.getByTestId('animation-move-clip-down-btn')).toBeDisabled();
+    await expect(page.getByTestId('animation-move-clip-up-btn')).toBeEnabled();
+
+    await page.getByTestId('animation-move-clip-up-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Moved animation clip Hero Bend up/i);
+    await expect(page.getByTestId('clip-item-0')).toContainText(/Hero Bend/);
+    await expect(page.getByTestId('clip-item-1')).toContainText(/^FixtureBend/);
+    await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Hero Bend');
+    await expect(page.getByTestId('animation-move-clip-up-btn')).toBeDisabled();
+    await expect(page.getByTestId('animation-move-clip-down-btn')).toBeEnabled();
+
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid move up animation clip Hero Bend/i);
+    await expect(page.getByTestId('clip-item-1')).toContainText(/Hero Bend/);
+    await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Hero Bend');
+
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid move up animation clip Hero Bend/i);
+    await expect(page.getByTestId('clip-item-0')).toContainText(/Hero Bend/);
+
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid move up animation clip Hero Bend/i);
+    await expect(page.getByTestId('clip-item-1')).toContainText(/Hero Bend/);
 
     await page.getByTestId('editor-undo-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Undid rename animation clip FixtureBend Copy to Hero Bend/i);
@@ -1143,8 +1166,6 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await page.getByTestId('editor-redo-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Redid rename animation clip FixtureBend Copy to Hero Bend/i);
-    await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Hero Bend');
-
     await page.getByTestId('animation-delete-clip-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Deleted animation clip Hero Bend/i);
     await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');

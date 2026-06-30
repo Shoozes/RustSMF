@@ -602,7 +602,14 @@ html, body, #root {
   gap: 5px;
 }
 
-.animate-clip-actions button {
+.animate-clip-reorder-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.animate-clip-actions button,
+.animate-clip-reorder-actions button {
   min-width: 0;
   height: 28px;
   padding: 0 5px;

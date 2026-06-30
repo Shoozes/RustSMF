@@ -14,6 +14,7 @@ import {
   makeAnimationEditState,
   makeKeyframeFromBone,
   makeUniqueAnimationClipName,
+  moveAnimationClip,
   moveAnimationKeyframe,
   renameAnimationEditBone,
   renameAnimationEditClip,
@@ -251,6 +252,25 @@ test('clip edit helpers rename, duplicate, delete, and allocate unique names', (
   ];
   assert.equal(makeUniqueAnimationClipName(clips, 'Run'), 'Run 3');
   assert.equal(makeUniqueAnimationClipName(clips, 'Run', 'Run'), 'Run');
+});
+
+test('moveAnimationClip reorders cloned clips and keeps out-of-range moves stable', () => {
+  const clips = [
+    new THREE.AnimationClip('Idle', 1, []),
+    new THREE.AnimationClip('Walk', 1, []),
+    new THREE.AnimationClip('Run', 1, []),
+  ];
+
+  const movedUp = moveAnimationClip(clips, 'Run', -1);
+  assert.deepEqual(movedUp.map((clip) => clip.name), ['Idle', 'Run', 'Walk']);
+  assert.notEqual(movedUp[1], clips[2]);
+
+  const movedDown = moveAnimationClip(movedUp, 'Idle', 1);
+  assert.deepEqual(movedDown.map((clip) => clip.name), ['Run', 'Idle', 'Walk']);
+
+  const unchanged = moveAnimationClip(clips, 'Idle', -1);
+  assert.deepEqual(unchanged.map((clip) => clip.name), ['Idle', 'Walk', 'Run']);
+  assert.notEqual(unchanged[0], clips[0]);
 });
 
 test('deleteAnimationEditBones removes authored keys and marks affected clips dirty', () => {

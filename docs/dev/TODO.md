@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-30 (animation clip CRUD, timeline marker interaction, skin paint/indexing, transform ownership, and global history-order fixes)
+Last reviewed: 2026-06-30 (animation clip CRUD/reorder, timeline marker interaction, skin paint/indexing, transform ownership, and global history-order fixes)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -133,10 +133,10 @@ Each active item should answer:
   - Share snap-to-grid settings with future animation movement tools.
 - Acceptance: Unit tests prove add-child, detach, and spin preserve valid skeleton/skin references; smoke creates a child from an ortho pane and undo restores the previous rig.
 
-### P2: Complete timeline snap controls, clip reorder, and clip metadata
+### P2: Complete timeline snap controls and clip metadata
 
-- What: Add old-editor timeline and clip-level editing affordances that are still missing: snap modifiers, clip reorder, loop toggle, sample multiplier, and any remaining clip metadata controls.
-- Why: Selected-bone key Insert/Update/Delete/Copy/Paste, lane click/double-click insertion, authored marker drag-to-time, and active-clip rename/duplicate/delete are implemented, but reorder and snap/sample controls remain underbuilt compared with the old animation tab.
+- What: Add old-editor timeline and clip-level editing affordances that are still missing: snap modifiers, loop toggle, sample multiplier, and any remaining clip metadata controls.
+- Why: Selected-bone key Insert/Update/Delete/Copy/Paste, lane click/double-click insertion, authored marker drag-to-time, and active-clip rename/duplicate/delete/reorder are implemented, but snap/sample/loop controls remain underbuilt compared with the old animation tab.
 - Where: `source/frontend/src/components/Timeline.tsx`, `source/frontend/src/components/AnimatePanel.tsx`, `source/frontend/src/utils/animationTimeline.ts`, `source/frontend/src/utils/animationEdits.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/smoke.spec.ts`.
 - When: After Animate-mode viewport transforms write keyframes and before adding more animation handle/IK features.
 - How:
@@ -144,10 +144,10 @@ Each active item should answer:
   - Done: add lane click-to-scrub and double-click selected-bone key insertion while preserving paused playback state and undo/redo history.
   - Done: add authored marker drag-to-time with a single undoable transaction per completed drag.
   - Done: add active-clip rename, duplicate, and guarded delete with deterministic current-clip fallback, toolbar/Ctrl+Z/Ctrl+Y history integration, and SMF-source clip-list export rebuilding for renamed/duplicated/deleted clips.
-  - Add clip reorder with undo/redo and deterministic current-clip retention.
+  - Done: add active-clip reorder with undo/redo, deterministic current-clip retention, boundary-disabled Move Up/Move Down controls, and SMF-source export order preservation.
   - Add snap controls/modifiers and sample metadata controls.
   - Add `quadratic` interpolation as metadata first if runtime preview must approximate with linear tracks.
-- Acceptance: Unit tests cover clip rename/duplicate/delete and SMF-source clip-list export rebuilding; remaining work is complete when reorder has unit/smoke coverage and snap/sample controls have smoke coverage once those UI states ship.
+- Acceptance: Unit tests cover clip rename/duplicate/delete/reorder and SMF-source clip-list export rebuilding; remaining work is complete when snap/sample/loop controls have smoke coverage once those UI states ship.
 
 ### P2: Complete SMF-aware rig editing parity
 

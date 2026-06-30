@@ -25,6 +25,8 @@ interface AnimatePanelProps {
   onRenameClip: (nextName: string) => void;
   onDuplicateClip: () => void;
   onDeleteClip: () => void;
+  onMoveClipUp: () => void;
+  onMoveClipDown: () => void;
   editorMode?: string;
 }
 
@@ -50,14 +52,19 @@ export default function AnimatePanel({
   onRenameClip,
   onDuplicateClip,
   onDeleteClip,
+  onMoveClipUp,
+  onMoveClipDown,
   editorMode = 'animate',
 }: AnimatePanelProps) {
   const clipCount = clips.length;
+  const activeClipIndex = clips.findIndex((clip, index) => (clip.name || `clip_${index}`) === currentClipName);
   const selectedKeyframeCount = timelineSummary.selectedKeyframeTimes.length;
   const allKeyframeCount = timelineSummary.keyframeTimes.length;
   const hasEditableSelection = !!selectedBoneName && !!currentClipName;
   const hasActiveClip = !!currentClipName;
   const canDeleteClip = clipCount > 1 && hasActiveClip;
+  const canMoveClipUp = hasActiveClip && activeClipIndex > 0;
+  const canMoveClipDown = hasActiveClip && activeClipIndex >= 0 && activeClipIndex < clipCount - 1;
   const [draftClipName, setDraftClipName] = useState(currentClipName);
 
   useEffect(() => {
@@ -138,6 +145,24 @@ export default function AnimatePanel({
             onClick={onDeleteClip}
           >
             Delete
+          </button>
+        </div>
+        <div className="animate-clip-reorder-actions">
+          <button
+            type="button"
+            data-testid="animation-move-clip-up-btn"
+            disabled={!canMoveClipUp}
+            onClick={onMoveClipUp}
+          >
+            Move Up
+          </button>
+          <button
+            type="button"
+            data-testid="animation-move-clip-down-btn"
+            disabled={!canMoveClipDown}
+            onClick={onMoveClipDown}
+          >
+            Move Down
           </button>
         </div>
       </div>

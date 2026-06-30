@@ -133,6 +133,8 @@ export default function App() {
     renameCurrentAnimationClip,
     duplicateCurrentAnimationClip,
     deleteCurrentAnimationClip,
+    moveCurrentAnimationClipUp,
+    moveCurrentAnimationClipDown,
     onScrub,
     setSpeed,
     pingRust,
@@ -613,6 +615,8 @@ export default function App() {
           onRenameClip={renameCurrentAnimationClip}
           onDuplicateClip={duplicateCurrentAnimationClip}
           onDeleteClip={deleteCurrentAnimationClip}
+          onMoveClipUp={moveCurrentAnimationClipUp}
+          onMoveClipDown={moveCurrentAnimationClipDown}
           editorMode={editorMode}
         />
       );
