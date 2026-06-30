@@ -219,6 +219,32 @@ const clickTimelineLaneAt = async (
   await page.waitForTimeout(80);
 };
 
+const dragSelectedTimelineMarkerTo = async (page: Page, ratio: number): Promise<void> => {
+  const lane = page.getByTestId('timeline-keyframe-lane');
+  const laneBox = await lane.boundingBox();
+  if (!laneBox) {
+    throw new Error('Timeline keyframe lane is not visible.');
+  }
+
+  const marker = page.locator('.timeline-keyframe-marker-selected').first();
+  await expect(marker).toBeVisible();
+  await expect(marker).toHaveAttribute('data-draggable-keyframe', 'true');
+  const markerBox = await marker.boundingBox();
+  if (!markerBox) {
+    throw new Error('Selected timeline marker is not visible.');
+  }
+
+  const startX = markerBox.x + markerBox.width / 2;
+  const startY = markerBox.y + markerBox.height / 2;
+  const targetX = laneBox.x + laneBox.width * Math.min(1, Math.max(0, ratio));
+  const targetY = laneBox.y + laneBox.height / 2;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down({ button: 'left' });
+  await page.mouse.move(targetX, targetY, { steps: 8 });
+  await page.mouse.up({ button: 'left' });
+  await page.waitForTimeout(120);
+};
+
 const openViewportDisplayMenu = async (page: Page): Promise<void> => {
   const panel = page.getByTestId('viewport-display-menu-panel');
   if (!(await panel.isVisible())) {
@@ -1064,16 +1090,24 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('animation-selected-key')).not.toContainText('none');
     await expect(page.getByTestId('time-display')).toContainText(/0\.[3-4]/);
 
+    await dragSelectedTimelineMarkerTo(page, 0.55);
+    await expect(page.getByTestId('status-text')).toContainText(/Moved animation keyframe for FixtureTip/i);
+    await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '3');
+    await expect(page.getByTestId('animation-selected-key')).toContainText(/0\.2[7-8]s/);
+    await expect(page.getByTestId('time-display')).toContainText(/0\.2[7-8]/);
+
     await clickTimelineLaneAt(page, 0.25);
     await expect(page.getByTestId('animation-selected-key')).toContainText('none');
     await expect(page.getByTestId('time-display')).toContainText(/0\.1/);
 
     await page.getByTestId('editor-undo-btn').click({ force: true });
-    await expect(page.getByTestId('status-text')).toContainText(/Undid insert animation keyframe for FixtureTip/i);
-    await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '2');
+    await expect(page.getByTestId('status-text')).toContainText(/Undid move animation keyframe for FixtureTip/i);
+    await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '3');
+    await expect(page.getByTestId('animation-selected-key')).toContainText(/0\.3[7-8]s/);
 
     await page.getByTestId('editor-redo-btn').click({ force: true });
-    await expect(page.getByTestId('status-text')).toContainText(/Redid insert animation keyframe for FixtureTip/i);
+    await expect(page.getByTestId('status-text')).toContainText(/Redid move animation keyframe for FixtureTip/i);
+    await expect(page.getByTestId('animation-selected-key')).toContainText(/0\.2[7-8]s/);
     await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '3');
   });
 

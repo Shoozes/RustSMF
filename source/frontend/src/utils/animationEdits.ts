@@ -307,6 +307,43 @@ export const getEditedKeyframe = (
   return key ? cloneKey(key) : null;
 };
 
+export const moveAnimationKeyframe = (
+  state: AnimationEditState,
+  clipName: string,
+  boneName: string,
+  fromTime: number,
+  toTime: number,
+): AnimationEditState => {
+  const next = cloneAnimationEditState(state);
+  const clipEdits = next.editsByClip[clipName];
+  const boneKeys = clipEdits?.[boneName];
+  if (!boneKeys) return next;
+
+  const sourceIndex = boneKeys.findIndex((candidate) => keyMatchesTime(candidate, fromTime));
+  if (sourceIndex < 0) return next;
+
+  const normalizedToTime = normalizeTime(toTime);
+  const source = boneKeys[sourceIndex];
+  if (keyMatchesTime(source, normalizedToTime)) {
+    next.selectedKeyTime = source.time;
+    return next;
+  }
+
+  const moved = cloneKey({ ...source, time: normalizedToTime });
+  const withoutSource = boneKeys.filter((_, index) => index !== sourceIndex);
+  const destinationIndex = withoutSource.findIndex((candidate) => keyMatchesTime(candidate, normalizedToTime));
+  if (destinationIndex >= 0) {
+    withoutSource[destinationIndex] = moved;
+  } else {
+    withoutSource.push(moved);
+  }
+  withoutSource.sort((left, right) => left.time - right.time);
+  clipEdits[boneName] = withoutSource;
+  next.selectedKeyTime = normalizedToTime;
+  markDirty(next, clipName);
+  return next;
+};
+
 const sampleTrackComponent = (
   values: ArrayLike<number>,
   times: ArrayLike<number>,

@@ -200,6 +200,7 @@ export default function App() {
     poseEditHasDirtyState,
     animationEditHasDirtyState,
     animationSelectedKeyTime,
+    animationAuthoredKeyTimes,
     animationClipboardHasKeyframe,
     animationInterpolation,
     insertAnimationKeyframe,
@@ -209,6 +210,7 @@ export default function App() {
     copySelectedAnimationKeyframe,
     pasteAnimationKeyframe,
     selectAnimationKeyframeTime,
+    moveSelectedAnimationKeyframe,
     changeAnimationInterpolation,
   } = useLoadModel({ allocateHistoryOrder });
 
@@ -824,9 +826,11 @@ export default function App() {
           onSpeedChange={setSpeed}
           playbackSpeed={playback.playbackSpeed}
           keyframeTimes={timelineKeyframeTimes}
+          draggableKeyframeTimes={animationAuthoredKeyTimes}
           selectedKeyTime={animationSelectedKeyTime}
           onSelectKeyframe={selectAnimationKeyframeTime}
           onInsertKeyframeAtTime={insertAnimationKeyframeAtTime}
+          onMoveKeyframe={moveSelectedAnimationKeyframe}
           disabled={model.clips.length === 0}
         />
       )}

@@ -60,6 +60,7 @@ import {
   hasDirtyAnimationEdits,
   makeAnimationEditState,
   makeKeyframeFromBone,
+  moveAnimationKeyframe,
   renameAnimationEditBone,
   sameAnimationEditState,
   selectAnimationKeyframe,
@@ -1504,6 +1505,40 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     setAnimationEditState(next);
   }, []);
 
+  const moveSelectedAnimationKeyframe = useCallback((fromTime: number, toTime: number) => {
+    const context = getActiveAnimationEditContext();
+    if (!context) return;
+    const state = animationEditStateRef.current;
+    const source = getEditedKeyframe(state, context.clipName, context.boneName, fromTime);
+    if (!source) {
+      ui.setStatus('Only authored animation keyframes can be dragged. Insert or update a keyframe first.');
+      return;
+    }
+
+    const before = cloneAnimationEditState(state);
+    const nextTime = clampPlaybackTime(toTime);
+    const next = moveAnimationKeyframe(state, context.clipName, context.boneName, fromTime, nextTime);
+    const moved = pushAnimationHistory(
+      `move animation keyframe for ${context.boneName} to ${nextTime.toFixed(2)}s`,
+      before,
+      next,
+    );
+    if (!moved) {
+      playbackRef.current.scrub(nextTime);
+      return;
+    }
+
+    playbackRef.current.scrub(nextTime);
+    applyAnimationEditState(next, `Moved animation keyframe for ${context.boneName} to ${nextTime.toFixed(2)}s.`);
+  }, [
+    applyAnimationEditState,
+    clampPlaybackTime,
+    getActiveAnimationEditContext,
+    playbackRef,
+    pushAnimationHistory,
+    ui,
+  ]);
+
   const changeAnimationInterpolation = useCallback((interpolation: AnimationInterpolation) => {
     const context = getActiveAnimationEditContext();
     const before = cloneAnimationEditState(animationEditStateRef.current);
@@ -1517,6 +1552,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     );
     applyAnimationEditState(next, `Animation interpolation set to ${interpolation}.`);
   }, [applyAnimationEditState, getActiveAnimationEditContext, pushAnimationHistory]);
+
+  const animationAuthoredKeyTimes = useMemo(() => {
+    const boneName = ui.selected;
+    if (!boneName || boneName === 'Scene') return [];
+    const clipName = getCurrentClipKey(baseClipsRef.current, playback.currentClipName);
+    if (!clipName) return [];
+    return (animationEditState.editsByClip[clipName]?.[boneName] ?? []).map((key) => key.time);
+  }, [animationEditState, playback.currentClipName, ui.selected]);
 
   const pingRust = useCallback(async () => {
     try {
@@ -2335,6 +2378,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     poseEditHasDirtyState,
     animationEditHasDirtyState,
     animationSelectedKeyTime: animationEditState.selectedKeyTime,
+    animationAuthoredKeyTimes,
     animationClipboardHasKeyframe: !!animationEditState.clipboard,
     animationInterpolation: animationEditState.interpolation,
     insertAnimationKeyframe,
@@ -2344,6 +2388,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     copySelectedAnimationKeyframe,
     pasteAnimationKeyframe,
     selectAnimationKeyframeTime,
+    moveSelectedAnimationKeyframe,
     changeAnimationInterpolation,
     viewportLayout: ui.viewportLayout,
     setViewportLayout: ui.setViewportLayout,

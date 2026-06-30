@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-30 (timeline lane interaction, skin paint/indexing, transform ownership, and global history-order fixes)
+Last reviewed: 2026-06-30 (timeline marker interaction, skin paint/indexing, transform ownership, and global history-order fixes)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -133,19 +133,19 @@ Each active item should answer:
   - Share snap-to-grid settings with future animation movement tools.
 - Acceptance: Unit tests prove add-child, detach, and spin preserve valid skeleton/skin references; smoke creates a child from an ortho pane and undo restores the previous rig.
 
-### P2: Complete timeline marker interactions and clip CRUD
+### P2: Complete timeline snap controls and clip CRUD
 
-- What: Add old-editor timeline and clip-level editing affordances that are still missing: marker drag-to-time, snap modifiers, clip rename/duplicate/delete/reorder, loop toggle, and sample multiplier.
-- Why: Selected-bone key Insert/Update/Delete/Copy/Paste plus lane click/double-click insertion are implemented, but clip-level authoring and marker movement remain underbuilt compared with the old animation tab.
+- What: Add old-editor timeline and clip-level editing affordances that are still missing: snap modifiers, clip rename/duplicate/delete/reorder, loop toggle, and sample multiplier.
+- Why: Selected-bone key Insert/Update/Delete/Copy/Paste, lane click/double-click insertion, and authored marker drag-to-time are implemented, but clip-level authoring and snap/sample controls remain underbuilt compared with the old animation tab.
 - Where: `source/frontend/src/components/Timeline.tsx`, `source/frontend/src/components/AnimatePanel.tsx`, `source/frontend/src/utils/animationTimeline.ts`, `source/frontend/src/utils/animationEdits.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/smoke.spec.ts`.
 - When: After Animate-mode viewport transforms write keyframes and before adding more animation handle/IK features.
 - How:
   - Keep pure clip/keyframe transforms in `animationEdits.ts` / `animationTimeline.ts` with unit coverage.
   - Done: add lane click-to-scrub and double-click selected-bone key insertion while preserving paused playback state and undo/redo history.
-  - Add marker drag-to-time with a single undoable transaction per completed drag.
+  - Done: add authored marker drag-to-time with a single undoable transaction per completed drag.
   - Add clip operations with guards for deleting the last clip and deterministic current-clip fallback.
   - Add `quadratic` interpolation as metadata first if runtime preview must approximate with linear tracks.
-- Acceptance: Unit tests cover clip rename/duplicate/delete/reorder and keyframe time moves; smoke drags a marker and undo/redo restores the key time.
+- Acceptance: Unit tests cover clip rename/duplicate/delete/reorder; smoke covers snap/sample controls once those UI states ship.
 
 ### P2: Complete SMF-aware rig editing parity
 

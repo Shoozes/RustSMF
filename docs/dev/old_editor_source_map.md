@@ -52,9 +52,9 @@ Sources used:
     - timeline sampling updates model sample pose.
   - `animeditor_draw_timeline` and helper scripts define keyframe rail visuals (`KEYFRAMEADDBLANK`, `KEYFRAMEINSERT`, etc.) with node-specific sample updates.
   - Current implementation status in RustSMF:
-    - `Timeline` supports playback/scrub/clip list plus imported/authored keyframe markers, lane click-to-scrub, and double-click selected-bone key insertion.
+    - `Timeline` supports playback/scrub/clip list plus imported/authored keyframe markers, lane click-to-scrub, double-click selected-bone key insertion, and authored marker drag-to-time.
     - `AnimatePanel` and `useLoadModel` support selected-bone Insert/Update/Delete/Copy/Paste keyframe authoring for position/quaternion tracks, interpolation state, dirty tracking, runtime clip rebuild, toolbar/Ctrl+Z/Ctrl+Y undo-redo, and supported SMF export/check paths.
-    - Remaining parity is clip-level polish: rename/duplicate/reorder/delete, loop metadata editing, frame/sample multiplier UI, marker drag-to-time, snap modifiers, and broader clip CRUD.
+    - Remaining parity is clip-level polish: rename/duplicate/reorder/delete, loop metadata editing, frame/sample multiplier UI, snap modifiers, and broader clip CRUD.
 
 - Risk notes to preserve:
   - old behavior supports clip operations (move, rename, duplicate, delete, copy/paste) while selecting keyframes by timeline proximity.

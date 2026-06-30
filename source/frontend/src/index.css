@@ -518,6 +518,10 @@ html, body, #root {
   background: #a16207;
 }
 
+.timeline-keyframe-marker[data-draggable-keyframe="true"] {
+  cursor: ew-resize;
+}
+
 .timeline-keyframe-marker-selected {
   border-color: #67e8f9;
   background: #0e7490;

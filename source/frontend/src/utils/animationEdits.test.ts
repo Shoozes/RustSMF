@@ -11,6 +11,7 @@ import {
   hasDirtyAnimationEdits,
   makeAnimationEditState,
   makeKeyframeFromBone,
+  moveAnimationKeyframe,
   renameAnimationEditBone,
   sameAnimationEditState,
   setAnimationInterpolation,
@@ -55,6 +56,40 @@ test('animation edit helpers insert, replace, sort, and delete selected-bone key
   assert.deepEqual(
     deleted.editsByClip[clipName][boneName].map((key) => key.time),
     [1],
+  );
+});
+
+test('moveAnimationKeyframe retimes authored keys and replaces destination collisions', () => {
+  const clipName = 'Walk';
+  const boneName = 'Root';
+  let state = upsertAnimationKeyframe(makeAnimationEditState(), clipName, boneName, {
+    time: 0.25,
+    position: [1, 0, 0],
+    quaternion: [0, 0, 0, 1],
+    interpolation: 'linear',
+  });
+  state = upsertAnimationKeyframe(state, clipName, boneName, {
+    time: 0.75,
+    position: [2, 0, 0],
+    quaternion: [0, 0, 0, 1],
+    interpolation: 'step',
+  });
+
+  const moved = moveAnimationKeyframe(state, clipName, boneName, 0.25, 0.5);
+  assert.deepEqual(
+    moved.editsByClip[clipName][boneName].map((key) => [key.time, key.position[0], key.interpolation]),
+    [
+      [0.5, 1, 'linear'],
+      [0.75, 2, 'step'],
+    ],
+  );
+  assert.equal(moved.selectedKeyTime, 0.5);
+  assert.equal(moved.dirtyClipNames.includes(clipName), true);
+
+  const replaced = moveAnimationKeyframe(moved, clipName, boneName, 0.5, 0.75);
+  assert.deepEqual(
+    replaced.editsByClip[clipName][boneName].map((key) => [key.time, key.position[0], key.interpolation]),
+    [[0.75, 1, 'linear']],
   );
 });
 
