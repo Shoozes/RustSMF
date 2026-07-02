@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-07-02 (integrity/backlog review; strict importable-SMF pose roundtrip cleanup, animation clip metadata controls, rapid single/quad viewport continuity coverage, click-vs-drag viewport selection guards, endpoint/skin-paint gesture isolation, pointer-cancel cleanup, and deterministic high-DPI pane hit math are current; active TODO completion conditions use explicit Done when wording)
+Last reviewed: 2026-07-02 (integrity/backlog review; strict importable-SMF pose roundtrip cleanup, animation clip metadata controls, rapid single/quad viewport continuity coverage, click-vs-drag viewport selection guards, endpoint/skin-paint gesture isolation, pointer-cancel cleanup, deterministic high-DPI pane hit math, and Skin pts display-only no-pick behavior are current; active TODO completion conditions use explicit Done when wording)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -64,7 +64,7 @@ Each active item should answer:
   - Done: add pointer-cancel cleanup coverage for active endpoint drag and Skin paint gestures.
   - Done: make internal quad pane boundaries deterministic with half-open hit boxes while preserving inclusive outer canvas edges.
   - Add broader quad/ortho browser coverage for pane-specific pick behavior and window-up cleanup.
-  - Decide whether skin point overlays are display-only or can select/paint nearest vertices; document and test the chosen behavior.
+  - Done: decide Skin pts overlays are display-only, mark them with no-pick metadata, disable their raycast path, and cover that contract in `skinPointOverlay.test.ts`.
 - Done when: A table-driven interaction contract and e2e smoke prove each supported click/drag path mutates only the intended state in single, quad, perspective, and ortho contexts.
 
 ### P1: Make Animate-mode viewport transforms author keyframes

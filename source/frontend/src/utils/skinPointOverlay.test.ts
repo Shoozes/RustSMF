@@ -47,6 +47,8 @@ describe('skinPointOverlay', () => {
 
     assert.ok(overlay);
     assert.equal(overlay.userData.skinPointOverlay, true);
+    assert.equal(overlay.userData.displayOnly, true);
+    assert.equal(overlay.userData.interactionTarget, false);
     assert.equal(overlay.userData.sourceMeshUuid, mesh.uuid);
     assert.equal(overlay.userData.sourceVertexCount, 4);
     assert.equal(overlay.userData.pointCount, 4);
@@ -54,6 +56,19 @@ describe('skinPointOverlay', () => {
     assert.equal(colors.count, 4);
     assert.ok(colors.getX(1) > colors.getX(0), 'selected-bone weight increases red channel');
     assert.ok(colors.getZ(1) < colors.getZ(0), 'selected-bone weight decreases blue channel');
+  });
+
+  it('is display-only and cannot be raycast-picked', () => {
+    const mesh = makeSkinnedMesh();
+    const overlay = createSkinPointOverlay(mesh);
+
+    assert.ok(overlay);
+    const raycaster = new THREE.Raycaster(
+      new THREE.Vector3(0, 0, 1),
+      new THREE.Vector3(0, 0, -1),
+    );
+
+    assert.deepEqual(raycaster.intersectObject(overlay, true), []);
   });
 
   it('caps large overlays by sampling vertices', () => {

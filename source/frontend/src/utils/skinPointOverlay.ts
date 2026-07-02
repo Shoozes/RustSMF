@@ -78,8 +78,11 @@ export function createSkinPointOverlay(
   points.name = `${mesh.name || 'skinned mesh'} skin point overlay`;
   points.frustumCulled = false;
   points.renderOrder = 20;
+  points.raycast = (): void => {};
   points.userData = {
     skinPointOverlay: true,
+    displayOnly: true,
+    interactionTarget: false,
     sourceMeshUuid: mesh.uuid,
     selectedBoneName: options.selectedBoneName ?? '',
     sourceVertexCount: position.count,
