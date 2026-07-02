@@ -29,11 +29,25 @@ const fileToBase64 = (filePath: string): string => fs.readFileSync(filePath).toS
 
 type RelativePoint = { x: number; y: number };
 
+const dispatchWindowPointerCancel = async (page: Page): Promise<void> => {
+  await page.evaluate(() => {
+    window.dispatchEvent(new PointerEvent('pointercancel', {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 1,
+      pointerType: 'mouse',
+      button: 0,
+      buttons: 0,
+    }));
+  });
+};
+
 const dragEndpointHandle = async (
   page: Page,
   selectedBone: string,
   points?: RelativePoint[],
   onActiveDrag?: () => Promise<void>,
+  finish: 'release' | 'cancel' = 'release',
 ): Promise<boolean> => {
   const canvas = page.getByTestId('three-canvas');
   const box = await canvas.boundingBox();
@@ -64,6 +78,12 @@ const dragEndpointHandle = async (
     const active = await canvas.getAttribute('data-endpoint-drag');
     if (active === 'active') {
       await onActiveDrag?.();
+      if (finish === 'cancel') {
+        await dispatchWindowPointerCancel(page);
+        await page.mouse.up({ button: 'left' }).catch(() => {});
+        await waitForNoActiveEndpointDrag();
+        return true;
+      }
     }
     await page.mouse.up({ button: 'left' });
     await page.waitForTimeout(30);
@@ -119,6 +139,12 @@ const dragEndpointHandle = async (
     const active = await canvas.getAttribute('data-endpoint-drag');
     if (active === 'active') {
       await onActiveDrag?.();
+      if (finish === 'cancel') {
+        await dispatchWindowPointerCancel(page);
+        await page.mouse.up({ button: 'left' }).catch(() => {});
+        await waitForNoActiveEndpointDrag();
+        return true;
+      }
     }
     await page.mouse.up({ button: 'left' });
     await page.waitForTimeout(30);
@@ -193,6 +219,51 @@ const paintOnMeshInViewport = async (page: Page): Promise<boolean> => {
     if (hover === 'active' && hitCount > 0) {
       return true;
     }
+  }
+
+  return false;
+};
+
+const cancelPaintOnMeshInViewport = async (page: Page): Promise<boolean> => {
+  const canvas = page.getByTestId('three-canvas');
+  const box = await canvas.boundingBox();
+  if (!box) return false;
+
+  const targets: RelativePoint[] = [
+    { x: 50, y: 50 },
+    { x: 55, y: 55 },
+    { x: 60, y: 60 },
+    { x: 45, y: 55 },
+    { x: 50, y: 65 },
+    { x: 60, y: 70 },
+    { x: 40, y: 60 },
+    { x: 70, y: 60 },
+  ];
+
+  for (const target of targets) {
+    const x = box.x + (box.width * target.x) / 100;
+    const y = box.y + (box.height * target.y) / 100;
+    await page.mouse.move(x, y);
+    await page.mouse.down({ button: 'left' });
+    await page.mouse.move(x + 16, y + 12);
+    await page.waitForTimeout(80);
+
+    const active = await canvas.getAttribute('data-skin-paint-active');
+    if (active === 'active') {
+      await dispatchWindowPointerCancel(page);
+      await page.mouse.up({ button: 'left' }).catch(() => {});
+      await page.waitForFunction(
+        () => {
+          const el = document.querySelector<HTMLElement>('[data-testid="three-canvas"]');
+          return el?.dataset.skinPaintActive !== 'active';
+        },
+        undefined,
+        { timeout: 1200 },
+      );
+      return true;
+    }
+
+    await page.mouse.up({ button: 'left' }).catch(() => {});
   }
 
   return false;
@@ -1294,6 +1365,15 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(singleCanvas).toHaveAttribute('data-pointer-owner', 'rig-endpoint-drag');
     await expect(singleCanvas).toHaveAttribute('data-bone-transform-source', 'endpoint-drag');
     await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'true');
+
+    const canceledDrag = await dragEndpointHandle(page, selectedBone, undefined, async () => {
+      await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'false');
+      await expect(singleCanvas).toHaveAttribute('data-endpoint-drag', 'active');
+    }, 'cancel');
+    expect(canceledDrag).toBe(true);
+    await expect(singleCanvas).not.toHaveAttribute('data-endpoint-drag', 'active');
+    await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'true');
+
     await page.getByTestId('mode-tab-animate').click({ force: true });
     await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
     await page.getByTestId('mode-tab-rig').click({ force: true });
@@ -1880,6 +1960,39 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(reason).toHaveCount(0);
     await page.getByTestId('export-smf-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
+  });
+
+  test('skin paint pointer cancel clears active gesture state', async ({ page }) => {
+    await page.goto('/');
+
+    await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+
+    await page.getByTestId('mode-tab-skin').click({ force: true });
+    await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+
+    const inspector = page.getByTestId('inspector');
+    const bone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
+    await expect(bone).toBeVisible();
+    await bone.click({ force: true });
+    await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureRoot');
+
+    await page.getByTestId('skin-paint-mode-add').click({ force: true }).catch(() => {});
+    await setRangeValue(page, 'skin-paint-target', 1);
+    await setRangeValue(page, 'skin-paint-radius', 1);
+    await setRangeValue(page, 'skin-paint-strength', 1);
+
+    const canvas = page.getByTestId('three-canvas');
+    expect(await cancelPaintOnMeshInViewport(page)).toBe(true);
+    await expect(canvas).toHaveAttribute('data-pointer-owner', 'skin-paint');
+    expect(await canvas.getAttribute('data-pointer-owner')).not.toBe('orbit');
+    await expect(canvas).not.toHaveAttribute('data-skin-paint-active', 'active');
+    await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureRoot');
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
+
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: false');
+    await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureRoot');
   });
 
   test('skin paint updates edit state and exports SMF', async ({ page }) => {

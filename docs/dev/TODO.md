@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-07-02 (integrity/backlog review; strict importable-SMF pose roundtrip cleanup, animation clip metadata controls, rapid single/quad viewport continuity coverage, click-vs-drag viewport selection guards, and endpoint/skin-paint gesture isolation coverage are current; active TODO completion conditions use explicit Done when wording)
+Last reviewed: 2026-07-02 (integrity/backlog review; strict importable-SMF pose roundtrip cleanup, animation clip metadata controls, rapid single/quad viewport continuity coverage, click-vs-drag viewport selection guards, endpoint/skin-paint gesture isolation, and pointer-cancel cleanup coverage are current; active TODO completion conditions use explicit Done when wording)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -61,7 +61,8 @@ Each active item should answer:
   - Done: add browser smoke coverage proving Rig-mode left drags and right-drag orbit gestures preserve the selected bone instead of selecting accidentally.
   - Done: add tests that endpoint drags pause/restore TransformControls telemetry, and skin paint does not orbit or change selected bone state.
   - Add a stable browser-level TransformControls handle-drag test if Playwright can target the Three gizmo without brittle screen-coordinate probing.
-  - Add quad/ortho coverage for pickable pane boundaries, high-DPI mouse coordinates, and pointer cancel/window-up cleanup.
+  - Done: add pointer-cancel cleanup coverage for active endpoint drag and Skin paint gestures.
+  - Add quad/ortho coverage for pickable pane boundaries, high-DPI mouse coordinates, and window-up cleanup.
   - Decide whether skin point overlays are display-only or can select/paint nearest vertices; document and test the chosen behavior.
 - Done when: A table-driven interaction contract and e2e smoke prove each supported click/drag path mutates only the intended state in single, quad, perspective, and ortho contexts.
 
