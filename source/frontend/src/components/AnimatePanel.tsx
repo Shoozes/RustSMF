@@ -252,6 +252,7 @@ export default function AnimatePanel({
           >
             <option value="linear">Linear</option>
             <option value="step">Step</option>
+            <option value="quadratic">Quadratic</option>
           </select>
         </label>
         <label>

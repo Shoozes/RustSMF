@@ -10,10 +10,15 @@ import {
 } from '../loaders/coord';
 import { findEffectiveBoneParentIndex } from '../loaders/smfRig';
 
-export type AnimationInterpolation = 'linear' | 'step';
+export type AnimationInterpolation = 'linear' | 'step' | 'quadratic';
 export type AnimationSnapStep = 0 | 0.01 | 0.05 | 0.1 | 0.25 | 0.5;
 
 export const ANIMATION_SNAP_STEPS: readonly AnimationSnapStep[] = [0, 0.01, 0.05, 0.1, 0.25, 0.5];
+export const SMF_ANIMATION_INTERPOLATION: Record<AnimationInterpolation, number> = {
+  step: 0,
+  linear: 1,
+  quadratic: 2,
+};
 
 export interface AnimationClipMetadata {
   loop: boolean;
@@ -218,6 +223,16 @@ export const snapAnimationTime = (
     : normalizedTime;
   const maxTime = Number.isFinite(duration) ? Math.max(0, duration) : Number.MAX_SAFE_INTEGER;
   return Math.min(maxTime, Math.max(0, snapped));
+};
+
+export const animationInterpolationToSmf = (interpolation: AnimationInterpolation): number => {
+  return SMF_ANIMATION_INTERPOLATION[interpolation];
+};
+
+export const smfInterpolationToAnimation = (interpolation: number | null | undefined): AnimationInterpolation => {
+  if (interpolation === SMF_ANIMATION_INTERPOLATION.step) return 'step';
+  if (interpolation === SMF_ANIMATION_INTERPOLATION.quadratic) return 'quadratic';
+  return 'linear';
 };
 
 const keyMatchesTime = (key: EditableBoneKeyframe, time: number): boolean => {
@@ -704,6 +719,7 @@ const makeTracksForBone = (
   const interpolation = sorted.some((key) => key.interpolation === 'step')
     ? THREE.InterpolateDiscrete
     : THREE.InterpolateLinear;
+  // Three.js tracks do not have a quadratic mode; quadratic remains SMF export metadata and previews linearly.
   positionTrack.setInterpolation(interpolation);
   quaternionTrack.setInterpolation(interpolation);
   return [positionTrack, quaternionTrack];
@@ -877,13 +893,38 @@ const buildSmfAnimationFromClip = (
 const applyAnimationMetadata = (
   animation: ImportedSmf['animations'][number],
   metadata?: AnimationClipMetadata,
+  interpolation?: AnimationInterpolation | null,
 ): ImportedSmf['animations'][number] => {
-  if (!metadata) return animation;
+  if (!metadata && !interpolation) return animation;
   return {
     ...animation,
-    loop: metadata.loop ? 1 : 0,
-    sampleFrameMultiplier: normalizeSampleFrameMultiplier(metadata.sampleFrameMultiplier),
+    ...(metadata ? {
+      loop: metadata.loop ? 1 : 0,
+      sampleFrameMultiplier: normalizeSampleFrameMultiplier(metadata.sampleFrameMultiplier),
+    } : {}),
+    ...(interpolation ? { interpolation: animationInterpolationToSmf(interpolation) } : {}),
   };
+};
+
+const getAuthoredClipInterpolation = (
+  state: AnimationEditState,
+  clipName: string,
+): AnimationInterpolation | null => {
+  const clipEdits = state.editsByClip[clipName];
+  if (!clipEdits) return null;
+
+  let found: AnimationInterpolation | null = null;
+  for (const keys of Object.values(clipEdits)) {
+    for (const key of keys) {
+      if (key.interpolation === 'quadratic') return 'quadratic';
+      if (key.interpolation === 'step') {
+        found = 'step';
+      } else if (!found) {
+        found = 'linear';
+      }
+    }
+  }
+  return found;
 };
 
 export const applyAnimationMetadataToImportedSmf = (
@@ -935,7 +976,7 @@ export const applyAnimationEditsToImportedSmf = (
         ?? makeFallbackAnimation(clipName);
       const rebuilt = buildSmfAnimationFromClip(source, sourceAnimation, clip);
       return {
-        ...applyAnimationMetadata(rebuilt, state.metadataByClip[clipName]),
+        ...applyAnimationMetadata(rebuilt, state.metadataByClip[clipName], getAuthoredClipInterpolation(state, clipName)),
         name: clipName,
       };
     });
@@ -946,8 +987,9 @@ export const applyAnimationEditsToImportedSmf = (
     const clipName = animation.name || `clip_${index}`;
     if (!state.dirtyClipNames.includes(clipName)) return animation;
     const clip = editedClips.find((candidate, clipIndex) => getClipKey(candidate, clipIndex) === clipName);
-    if (!clip) return applyAnimationMetadata(animation, state.metadataByClip[clipName]);
-    return applyAnimationMetadata(buildSmfAnimationFromClip(source, animation, clip), state.metadataByClip[clipName]);
+    const interpolation = getAuthoredClipInterpolation(state, clipName);
+    if (!clip) return applyAnimationMetadata(animation, state.metadataByClip[clipName], interpolation);
+    return applyAnimationMetadata(buildSmfAnimationFromClip(source, animation, clip), state.metadataByClip[clipName], interpolation);
   });
   return result;
 };

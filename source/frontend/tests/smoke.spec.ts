@@ -1284,6 +1284,9 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(canvas).toHaveAttribute('data-transform-attached', 'true');
     await expect(page.getByTestId('animation-insert-key-btn')).toBeEnabled();
     await page.getByTestId('animation-interpolation-select').selectOption('step');
+    await expect(page.getByTestId('status-text')).toContainText(/Animation interpolation set to step/i);
+    await page.getByTestId('animation-interpolation-select').selectOption('quadratic');
+    await expect(page.getByTestId('status-text')).toContainText(/Animation interpolation set to quadratic/i);
     await page.getByTestId('animation-insert-key-btn').click();
     await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
     await expect(page.getByTestId('animation-selected-key')).not.toContainText('none');

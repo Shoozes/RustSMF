@@ -5,6 +5,7 @@ import {
   applyAnimationEditsToClips,
   applyAnimationEditsToImportedSmf,
   applyAnimationMetadataToImportedSmf,
+  animationInterpolationToSmf,
   cloneAnimationEditState,
   deleteAnimationEditClip,
   deleteAnimationEditBones,
@@ -25,6 +26,7 @@ import {
   setAnimationClipLoop,
   setAnimationClipSampleFrameMultiplier,
   setAnimationInterpolation,
+  smfInterpolationToAnimation,
   snapAnimationTime,
   upsertAnimationKeyframe,
 } from './animationEdits';
@@ -115,7 +117,7 @@ test('applyAnimationEditsToClips creates position/quaternion tracks and preserve
     time: 0.5,
     position: [0.5, 1, 0],
     quaternion: [0, 0, 0, 1],
-    interpolation: 'linear',
+    interpolation: 'quadratic',
   });
 
   const [edited] = applyAnimationEditsToClips([base], state);
@@ -123,6 +125,7 @@ test('applyAnimationEditsToClips creates position/quaternion tracks and preserve
 
   assert.ok(posTrack, 'edited position track exists');
   assert.deepEqual(Array.from(posTrack!.times), [0, 0.5, 1]);
+  assert.equal(posTrack!.getInterpolation(), THREE.InterpolateLinear);
   assert.equal(edited.duration, 1);
 });
 
@@ -153,7 +156,7 @@ test('applyAnimationEditsToImportedSmf carries dirty clip key times into SMF sou
     time: 0.5,
     position: [0.5, 0, 0],
     quaternion: [0, 0, 0, 1],
-    interpolation: 'linear',
+    interpolation: 'quadratic',
   });
   const editedClips = applyAnimationEditsToClips([base], state);
   const result = applyAnimationEditsToImportedSmf(source, editedClips, state);
@@ -161,6 +164,7 @@ test('applyAnimationEditsToImportedSmf carries dirty clip key times into SMF sou
   assert.deepEqual(result.animations[0].times, [0, 0.5, 1]);
   assert.equal(result.animations[0].frames.length, 3);
   assert.equal(result.animations[0].frames[1].length, 1);
+  assert.equal(result.animations[0].interpolation, 2);
   assert.notEqual(result, source);
 });
 
@@ -207,10 +211,14 @@ test('makeKeyframeFromBone and interpolation helpers preserve supported metadata
   assert.equal(key.time, 0.3333);
   assert.deepEqual(key.position, [1, 2, 3]);
   assert.equal(key.interpolation, 'step');
+  assert.equal(animationInterpolationToSmf('step'), 0);
+  assert.equal(animationInterpolationToSmf('linear'), 1);
+  assert.equal(animationInterpolationToSmf('quadratic'), 2);
+  assert.equal(smfInterpolationToAnimation(2), 'quadratic');
 
   const state = upsertAnimationKeyframe(makeAnimationEditState(), 'Walk', 'Bone', key);
-  const next = setAnimationInterpolation(state, 'linear', 'Walk', 'Bone');
-  assert.equal(next.editsByClip.Walk.Bone[0].interpolation, 'linear');
+  const next = setAnimationInterpolation(state, 'quadratic', 'Walk', 'Bone');
+  assert.equal(next.editsByClip.Walk.Bone[0].interpolation, 'quadratic');
 });
 
 test('renameAnimationEditBone moves authored keys to the new bone name', () => {
