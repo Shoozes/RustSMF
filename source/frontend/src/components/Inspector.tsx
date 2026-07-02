@@ -2,14 +2,7 @@ import React from 'react';
 import * as THREE from 'three';
 import type { BoneNudgeDelta } from '../hooks/poseEdits';
 import type { EditorMode } from '../store';
-
-function isBone(child: THREE.Object3D): child is THREE.Bone {
-  return (child as THREE.Bone).isBone === true;
-}
-
-function getRootBones(bones: THREE.Bone[]): THREE.Bone[] {
-  return bones.filter((bone) => !bone.parent || !bones.includes(bone.parent as THREE.Bone));
-}
+import { getRigRootBones, isRigBone, isRigBoneDetached } from '../utils/rigHierarchy';
 
 interface InspectorProps {
   selected: string;
@@ -17,6 +10,7 @@ interface InspectorProps {
   currentClipName: string;
   onChangeClip: (clip: THREE.AnimationClip) => void;
   skeleton?: THREE.Skeleton;
+  displayBones?: THREE.Bone[];
   onSelectBone?: (boneName: string) => void;
   showWeightPreview?: boolean;
   onToggleWeightPreview?: () => void;
@@ -37,6 +31,7 @@ const Inspector: React.FC<InspectorProps> = ({
   currentClipName,
   onChangeClip,
   skeleton,
+  displayBones,
   onSelectBone,
   showWeightPreview = false,
   onToggleWeightPreview,
@@ -52,16 +47,17 @@ const Inspector: React.FC<InspectorProps> = ({
 }) => {
   // State for collapsible bone hierarchy (starts with top-level roots expanded for usability)
   const [expandedBones, setExpandedBones] = React.useState<Set<string>>(new Set());
+  const visibleBones = displayBones && displayBones.length > 0
+    ? displayBones
+    : skeleton?.bones ?? [];
+  const visibleBoneSet = React.useMemo(() => new Set(visibleBones), [visibleBones]);
+  const rootBones = getRigRootBones(visibleBones);
+  const rootBoneUuidKey = rootBones.map((bone) => bone.uuid).join('|');
 
   // Reset expanded on skeleton change (e.g., new model load) to avoid stale state
   React.useEffect(() => {
-    if (skeleton && skeleton.bones.length > 0) {
-      const roots = getRootBones(skeleton.bones);
-      setExpandedBones(new Set(roots.map((bone) => bone.uuid)));
-    } else {
-      setExpandedBones(new Set());
-    }
-  }, [skeleton]);
+    setExpandedBones(new Set(rootBoneUuidKey ? rootBoneUuidKey.split('|') : []));
+  }, [rootBoneUuidKey]);
 
   const toggleBone = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -75,15 +71,20 @@ const Inspector: React.FC<InspectorProps> = ({
   // Recursive renderer for proper bone hierarchy tree (nested <ul><li>, collapsible, depth indent, follows .children)
   const renderBoneTree = (bone: THREE.Bone, depth: number): React.ReactNode => {
     const isSelected = selected === bone.name;
-    const childBones = bone.children.filter(isBone);
+    const childBones = bone.children.filter((child): child is THREE.Bone => (
+      isRigBone(child) && visibleBoneSet.has(child)
+    ));
     const hasChildren = childBones.length > 0;
     const isExpanded = expandedBones.has(bone.uuid);
+    const isDetached = isRigBoneDetached(bone, skeleton);
     return (
-      <li key={bone.name || depth} className="list-none">
+      <li key={bone.uuid} className="list-none">
         <div
           className={`cursor-pointer px-1 rounded hover:bg-slate-700 ${isSelected ? 'bg-slate-600' : ''}`}
           onClick={() => onSelectBone && onSelectBone(bone.name)}
           style={{ paddingLeft: `${depth * 12}px` }}
+          data-testid={`bone-tree-item-${bone.name || bone.uuid}`}
+          data-rig-bone-detached={isDetached ? 'true' : 'false'}
         >
           {hasChildren && (
             <span
@@ -94,6 +95,7 @@ const Inspector: React.FC<InspectorProps> = ({
             </span>
           )}
           {bone.name}
+          {isDetached && <span className="ml-1 text-slate-500">(detached)</span>}
         </div>
         {hasChildren && isExpanded && (
           <ul className="pl-0 m-0">
@@ -130,9 +132,9 @@ const Inspector: React.FC<InspectorProps> = ({
             ))}
           </div>
         )}
-        {showBonePanel && skeleton && skeleton.bones.length > 0 && (
+        {showBonePanel && visibleBones.length > 0 && (
           <div className="mt-3">
-            <div className="panel-title">Bones ({skeleton.bones.length})</div>
+            <div className="panel-title">Bones ({visibleBones.length})</div>
             {onToggleBoneLabels && (
               <button
                 data-testid="labels-toggle-btn"
@@ -144,7 +146,7 @@ const Inspector: React.FC<InspectorProps> = ({
             )}
             <div className="max-h-24 overflow-auto text-[10px]">
               <ul className="pl-0 m-0 list-none">
-                {getRootBones(skeleton.bones).map((root) => renderBoneTree(root, 0))}
+                {rootBones.map((root) => renderBoneTree(root, 0))}
               </ul>
             </div>
           </div>

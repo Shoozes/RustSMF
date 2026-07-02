@@ -1,6 +1,28 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-07-02 (SMF head-node export and DQ sign-equivalent diagnostics).
+Last reviewed: 2026-07-02 (viewport layout hit-test timing, SMF head-node export, and DQ sign-equivalent diagnostics).
+
+### Q: What pitfall are we preventing?
+
+**What:** Quad-mode UI can display `data-viewport-layout="quad"` while pointer hit-testing still uses stale single-view viewport specs, so immediate ortho-pane clicks no-op or route as perspective.
+
+**Why it happened:** The canvas layout prop updated during React render, but `viewportRef` was refreshed in a normal effect. Under parallel Playwright load, the Rig Add child smoke clicked after the DOM attribute changed but before the effect updated hit specs.
+
+**Where:** `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/tests/smoke.spec.ts` generated-skinned Rig Add child flow.
+
+**How to catch it:** Run the related smoke slice with default workers: `npx playwright test tests/smoke.spec.ts -g "generated skinned GLB load and SMF/GLB export path|viewport layout toggle works in single/quad modes|endpoint drag works in rig mode across single and quad layouts|skin paint updates edit state and exports SMF|animation keyframe authoring updates selected-bone clips and SMF checks"`.
+
+**Solutions tried:**
+1. `65/100` Make Rig Add child own ortho placement before bone selection, result: focused generated-skinned smoke passed alone but still failed under the related parallel smoke slice.
+2. `93/100` Refresh viewport specs with `useLayoutEffect` for layout/camera changes, result: the parallel related smoke slice passed.
+
+**Current solution:** Layout-critical viewport specs are updated in a layout effect before users/tests can interact with the rendered quad state; Rig Add child also records placement result telemetry.
+
+**Effectiveness:** `93/100`, durable. The exact single-pass-green/parallel-red failure was reproduced, then the related parallel smoke slice passed.
+
+**Relevance check:** Current. Any future change to viewport layout, camera toggles, pane hit math, or pointer routing can reintroduce stale ref timing.
+
+**Next prevention step:** Keep layout/pane smoke in the related slice whenever `ThreeViewport` layout timing or `viewportLayout.ts` contracts change.
 
 ### Q: What pitfall are we preventing?
 

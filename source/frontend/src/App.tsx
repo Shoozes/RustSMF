@@ -14,6 +14,7 @@ import { supportedModelFormatsLabel } from './utils/modelFormat'
 import { collectModelOutlinerItems } from './utils/modelOutliner'
 import { getClipByName, summarizeAnimationTimeline } from './utils/animationTimeline'
 import { validateRig } from './utils/rigValidation'
+import { collectRigDeformBoneNames, collectRigHierarchyBones } from './utils/rigHierarchy'
 import {
   makeEditorHistory,
   popRedo,
@@ -118,7 +119,16 @@ export default function App() {
     renameSelectedBone,
     reparentSelectedBone,
     createChildForSelectedBone,
+    createChildForSelectedBoneAtWorld,
+    moveRigBoneToWorld,
+    rotateRigBoneAroundAxis,
+    setSelectedBoneDetached,
+    spinRigAroundAxis,
     deleteSelectedBone,
+    rigToolMode,
+    setRigToolMode,
+    rigSnapStep,
+    setRigSnapStep,
     handleBoneTransformEdit,
     onNudgeBone,
     undoEditorHistory,
@@ -243,7 +253,9 @@ export default function App() {
   const shouldShowBoneLabels = showBoneLabels || workspace.boneLabelsEnabledByDefault;
   const hasModel = !!model.root;
   const hasSkinnedModel = !!model.skeleton && model.skeleton.bones.length > 0;
-  const rigBoneNames = model.skeleton?.bones.map((bone) => bone.name).filter(Boolean) ?? [];
+  const rigHierarchyBones = collectRigHierarchyBones(model.root, model.skeleton);
+  const rigDeformBoneNames = collectRigDeformBoneNames(model.skeleton);
+  const selectedIsDeformBone = rigDeformBoneNames.includes(ui.selected);
   const selectedBoneName = useMemo(() => {
     return model.skeleton?.bones.some((bone) => bone.name === ui.selected) ? ui.selected : '';
   }, [model.skeleton, ui.selected]);
@@ -545,13 +557,20 @@ export default function App() {
       return (
         <RigPanel
           selected={ui.selected}
-          boneNames={rigBoneNames}
+          deformBoneNames={rigDeformBoneNames}
+          selectedIsDeformBone={selectedIsDeformBone}
           report={rigValidationReport}
           sourceFormat={sourceFormat}
           onRenameSelectedBone={renameSelectedBone}
           onReparentSelectedBone={reparentSelectedBone}
           onCreateChildBone={createChildForSelectedBone}
+          onSetSelectedBoneDetached={setSelectedBoneDetached}
+          onSpinRig={spinRigAroundAxis}
           onDeleteSelectedBone={deleteSelectedBone}
+          rigToolMode={rigToolMode}
+          onRigToolModeChange={setRigToolMode}
+          rigSnapStep={rigSnapStep}
+          onRigSnapStepChange={setRigSnapStep}
           editorMode={editorMode}
         />
       );
@@ -768,6 +787,9 @@ export default function App() {
             onClearObjectSelection={handleClearObjectSelection}
             onObjectContextMenu={handleViewportObjectContextMenu}
             onBoneTransformEdit={handleBoneTransformEdit}
+            onCreateRigChildAtWorld={createChildForSelectedBoneAtWorld}
+            onMoveRigBoneToWorld={moveRigBoneToWorld}
+            onRotateRigBone={rotateRigBoneAroundAxis}
             selectedBoneName={ui.selected}
             selectedObjectIds={selectedOutlinerIds}
             selectionOverlayRevision={outlinerRevision}
@@ -776,6 +798,7 @@ export default function App() {
             onSetTransformMode={setTransformMode}
             boneTransformOwner={boneTransformOwner}
             boneLabelsEnabled={shouldShowBoneLabels}
+            rigToolMode={rigToolMode}
             editorMode={editorMode}
             viewportLayout={viewportLayout}
             wireframeEnabled={ui.wireframeEnabled}
@@ -818,6 +841,7 @@ export default function App() {
           currentClipName={playback.currentClipName}
           onChangeClip={changeClip}
           skeleton={model.skeleton}
+          displayBones={rigHierarchyBones}
           onSelectBone={handleSelectBone}
           showWeightPreview={workspace.showWeightSection ? showWeightPreview : false}
           onToggleWeightPreview={workspace.showWeightSection ? toggleWeightPreview : undefined}

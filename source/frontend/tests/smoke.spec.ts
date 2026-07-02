@@ -25,6 +25,8 @@ const parseSelectedBone = (statusText: string | null): string => {
   return match?.[1]?.trim() ?? '';
 };
 
+const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const fileToBase64 = (filePath: string): string => fs.readFileSync(filePath).toString('base64');
 
 type RelativePoint = { x: number; y: number };
@@ -179,11 +181,15 @@ const paintInViewport = async (
   return true;
 };
 
-const paintOnMeshInViewport = async (page: Page): Promise<boolean> => {
+const paintOnMeshInViewport = async (
+  page: Page,
+  options?: { requireDirty?: boolean },
+): Promise<boolean> => {
   const canvas = page.getByTestId('three-canvas');
   const box = await canvas.boundingBox();
   if (!box) return false;
 
+  const quadProbePercents = [12, 25, 38, 62, 75, 88];
   const targets: RelativePoint[] = [
     { x: 50, y: 50 },
     { x: 55, y: 55 },
@@ -204,6 +210,7 @@ const paintOnMeshInViewport = async (page: Page): Promise<boolean> => {
     { x: 40, y: 70 },
     { x: 50, y: 70 },
     { x: 70, y: 70 },
+    ...quadProbePercents.flatMap((x) => quadProbePercents.map((y) => ({ x, y }))),
   ];
 
   for (const target of targets) {
@@ -217,11 +224,47 @@ const paintOnMeshInViewport = async (page: Page): Promise<boolean> => {
     const hitCount = Number(await canvas.getAttribute('data-skin-paint-hit-count'));
     const hover = await canvas.getAttribute('data-skin-brush-hover');
     if (hover === 'active' && hitCount > 0) {
+      if (options?.requireDirty) {
+        try {
+          await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true', { timeout: 300 });
+          return true;
+        } catch {
+          continue;
+        }
+      }
       return true;
     }
   }
 
   return false;
+};
+
+const clickPickableBoneInViewport = async (
+  page: Page,
+  expectedOwner: string,
+): Promise<{ bone: string; paneRole: string } | null> => {
+  const canvas = page.getByTestId('three-canvas');
+  const box = await canvas.boundingBox();
+  if (!box) return null;
+
+  const probes = [12, 25, 38, 50, 62, 75, 88];
+  for (const y of probes) {
+    for (const x of probes) {
+      const screenX = box.x + (box.width * x) / 100;
+      const screenY = box.y + (box.height * y) / 100;
+      await page.mouse.click(screenX, screenY);
+      await page.waitForTimeout(40);
+
+      const owner = await canvas.getAttribute('data-pointer-owner');
+      const bone = (await canvas.getAttribute('data-viewport-picked-bone')) ?? '';
+      const paneRole = (await canvas.getAttribute('data-viewport-pane-role')) ?? '';
+      if (owner === expectedOwner && bone && paneRole) {
+        return { bone, paneRole };
+      }
+    }
+  }
+
+  return null;
 };
 
 const cancelPaintOnMeshInViewport = async (page: Page): Promise<boolean> => {
@@ -347,6 +390,38 @@ const setViewportLayout = async (page: Page, layout: 'single' | 'quad'): Promise
   }
 
   await page.waitForTimeout(120);
+};
+
+const dragRigMoveInOrthoPane = async (page: Page): Promise<void> => {
+  const canvas = page.getByTestId('three-canvas');
+  const box = await canvas.boundingBox();
+  if (!box) {
+    throw new Error('Viewport canvas is not visible.');
+  }
+
+  const startX = box.x + box.width * 0.18;
+  const startY = box.y + box.height * 0.18;
+  await page.mouse.move(startX, startY);
+  await page.mouse.down({ button: 'left' });
+  await page.mouse.move(box.x + box.width * 0.32, box.y + box.height * 0.26, { steps: 8 });
+  await page.waitForTimeout(80);
+  await page.mouse.up({ button: 'left' });
+};
+
+const dragRigRotateInOrthoPane = async (page: Page): Promise<void> => {
+  const canvas = page.getByTestId('three-canvas');
+  const box = await canvas.boundingBox();
+  if (!box) {
+    throw new Error('Viewport canvas is not visible.');
+  }
+
+  const centerX = box.x + box.width * 0.25;
+  const centerY = box.y + box.height * 0.25;
+  await page.mouse.move(centerX + box.width * 0.08, centerY);
+  await page.mouse.down({ button: 'left' });
+  await page.mouse.move(centerX, centerY + box.height * 0.08, { steps: 8 });
+  await page.waitForTimeout(80);
+  await page.mouse.up({ button: 'left' });
 };
 
 // Basic smoke tests for the RustSMF shell + model loading.
@@ -872,15 +947,47 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const box = await canvas.boundingBox();
     if (box) {
       const points = [
-        { x: box.x + box.width * 0.25, y: box.y + box.height * 0.25 },
-        { x: box.x + box.width * 0.75, y: box.y + box.height * 0.25 },
-        { x: box.x + box.width * 0.25, y: box.y + box.height * 0.75 },
-        { x: box.x + box.width * 0.75, y: box.y + box.height * 0.75 },
+        { role: 'top', x: box.x + box.width * 0.25, y: box.y + box.height * 0.25, minX: 0.05, maxX: 0.45, minY: 0.05, maxY: 0.45 },
+        { role: 'perspective', x: box.x + box.width * 0.75, y: box.y + box.height * 0.25, minX: 0.55, maxX: 0.95, minY: 0.05, maxY: 0.45 },
+        { role: 'front', x: box.x + box.width * 0.25, y: box.y + box.height * 0.75, minX: 0.05, maxX: 0.45, minY: 0.55, maxY: 0.95 },
+        { role: 'side', x: box.x + box.width * 0.75, y: box.y + box.height * 0.75, minX: 0.55, maxX: 0.95, minY: 0.55, maxY: 0.95 },
       ];
       for (const p of points) {
         await page.mouse.click(p.x, p.y);
+        await expect(canvas).toHaveAttribute('data-viewport-pane-role', p.role);
+        await expect(canvas).toHaveAttribute('data-pointer-owner', /rig-select|rig-endpoint-drag/);
+        expect(parseSelectedBone(await page.getByTestId('status-text').textContent())).toBeTruthy();
         await page.waitForTimeout(40);
       }
+
+      let panesWithSelectableBone = 0;
+      for (const pane of points) {
+        let hit: { x: number; y: number; bone: string } | null = null;
+        for (const relY of [pane.minY, (pane.minY + pane.maxY) / 2, pane.maxY]) {
+          for (const relX of [pane.minX, (pane.minX + pane.maxX) / 2, pane.maxX]) {
+            const x = box.x + box.width * relX;
+            const y = box.y + box.height * relY;
+            await page.mouse.move(x, y);
+            await page.waitForTimeout(30);
+            const bone = (await canvas.getAttribute('data-hovered-bone')) ?? '';
+            if (bone) {
+              hit = { x, y, bone };
+              break;
+            }
+          }
+          if (hit) break;
+        }
+        if (!hit) continue;
+
+        await page.mouse.click(hit.x, hit.y);
+        await expect(canvas).toHaveAttribute('data-viewport-pane-role', pane.role);
+        await expect(canvas).toHaveAttribute('data-pointer-owner', /rig-select|rig-endpoint-drag/);
+        const pickedBone = (await canvas.getAttribute('data-viewport-picked-bone')) ?? '';
+        if (!pickedBone) continue;
+        panesWithSelectableBone += 1;
+        await expect(page.getByTestId('status-text')).toContainText(new RegExp(`Selected:\\s*${escapeRegex(pickedBone)}`));
+      }
+      expect(panesWithSelectableBone).toBeGreaterThan(0);
       await expect(canvas).toBeVisible();
     }
 
@@ -1031,7 +1138,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await setRangeValue(page, 'skin-paint-target', 1);
     await setRangeValue(page, 'skin-paint-radius', 1);
     await setRangeValue(page, 'skin-paint-strength', 1);
-    expect(await paintOnMeshInViewport(page)).toBe(true);
+    expect(await paintOnMeshInViewport(page, { requireDirty: true })).toBe(true);
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
 
     await withBrowserFileArrayBufferDelay(page, {
@@ -1381,6 +1488,9 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await setViewportLayout(page, 'quad');
     const quadDragOk = await dragEndpointHandle(page, selectedBone);
     expect(quadDragOk).toBe(true);
+    await expect(singleCanvas).toHaveAttribute('data-viewport-pane-role', 'perspective');
+    await expect(singleCanvas).toHaveAttribute('data-pointer-owner', 'rig-endpoint-drag');
+    await expect(singleCanvas).toHaveAttribute('data-bone-transform-source', 'endpoint-drag');
 
     await setViewportLayout(page, 'single');
     await expect(singleCanvas).not.toHaveAttribute('data-endpoint-drag', 'active');
@@ -1422,6 +1532,12 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(canvas).toHaveAttribute('data-transform-owner', 'animation');
     await expect(canvas).toHaveAttribute('data-transform-attached', 'true');
     await expect(page.getByTestId('animation-insert-key-btn')).toBeEnabled();
+    await setViewportLayout(page, 'quad');
+    const animatePick = await clickPickableBoneInViewport(page, 'animate-select');
+    expect(animatePick).toBeTruthy();
+    await expect(canvas).toHaveAttribute('data-viewport-pane-role', animatePick!.paneRole);
+    await expect(canvas).toHaveAttribute('data-viewport-picked-bone', animatePick!.bone);
+    await expect(page.getByTestId('status-text')).toContainText(new RegExp(`Selected:\\s*${escapeRegex(animatePick!.bone)}`));
     await page.getByTestId('animation-interpolation-select').selectOption('step');
     await expect(page.getByTestId('status-text')).toContainText(/Animation interpolation set to step/i);
     await page.getByTestId('animation-interpolation-select').selectOption('quadratic');
@@ -1431,6 +1547,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('animation-selected-key')).not.toContainText('none');
     await expect(page.getByTestId('status-text')).toContainText(/Inserted animation keyframe/i);
     await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
+    await setViewportLayout(page, 'single');
 
     await page.getByTestId('editor-undo-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Undid insert animation keyframe/i);
@@ -1822,6 +1939,76 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(tipBoneEntry).toBeVisible();
     await tipBoneEntry.click({ force: true });
 
+    await setViewportLayout(page, 'quad');
+    await page.getByTestId('rig-tool-add-child').click({ force: true });
+    await expect(page.getByTestId('rig-tool-add-child')).toHaveClass(/bg-emerald-500/);
+    const rigCanvas = page.getByTestId('three-canvas');
+    await expect(rigCanvas).toHaveAttribute('data-rig-tool-mode', 'add-child');
+    await page.getByTestId('rig-snap-step').selectOption('0.25');
+    await expect(page.getByTestId('status-text')).toContainText(/Rig snap set to 0.25 units/i);
+    const rigCanvasBox = await rigCanvas.boundingBox();
+    expect(rigCanvasBox).toBeTruthy();
+    await page.mouse.click(
+      rigCanvasBox!.x + rigCanvasBox!.width * 0.12,
+      rigCanvasBox!.y + rigCanvasBox!.height * 0.12,
+    );
+    await expect(page.getByTestId('status-text')).toContainText(/Created child bone FixtureTip_child under FixtureTip from (top|front|side) pane with 0.25 snap/i);
+    await expect(rigCanvas).toHaveAttribute('data-rig-add-child-pane-role', /top|front|side/);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await expect(inspector).toContainText(/Selected\s*FixtureTip_child/i);
+
+    await page.getByTestId('rig-tool-move').click({ force: true });
+    await expect(page.getByTestId('rig-tool-move')).toHaveClass(/bg-emerald-500/);
+    await expect(rigCanvas).toHaveAttribute('data-rig-tool-mode', 'move');
+    await dragRigMoveInOrthoPane(page);
+    await expect(page.getByTestId('status-text')).toContainText(/Moved rig bone FixtureTip_child from (top|front|side) pane with 0.25 snap/i);
+    await expect(rigCanvas).not.toHaveAttribute('data-rig-move', 'active');
+    await expect(rigCanvas).not.toHaveAttribute('data-rig-move-pane-role', /top|front|side/);
+    await expect(inspector).toContainText(/Selected\s*FixtureTip_child/i);
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid move rig bone FixtureTip_child/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await expect(inspector).toContainText(/Selected\s*FixtureTip_child/i);
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid move rig bone FixtureTip_child/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await expect(inspector).toContainText(/Selected\s*FixtureTip_child/i);
+
+    await page.getByTestId('rig-tool-rotate').click({ force: true });
+    await expect(page.getByTestId('rig-tool-rotate')).toHaveClass(/bg-emerald-500/);
+    await expect(rigCanvas).toHaveAttribute('data-rig-tool-mode', 'rotate');
+    await dragRigRotateInOrthoPane(page);
+    await expect(page.getByTestId('status-text')).toContainText(/Rotated rig bone FixtureTip_child from (top|front|side) pane/i);
+    await expect(rigCanvas).not.toHaveAttribute('data-rig-rotate', 'active');
+    await expect(rigCanvas).not.toHaveAttribute('data-rig-rotate-pane-role', /top|front|side/);
+    await expect(inspector).toContainText(/Selected\s*FixtureTip_child/i);
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid rotate rig bone FixtureTip_child/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid rotate rig bone FixtureTip_child/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid rotate rig bone FixtureTip_child/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid move rig bone FixtureTip_child/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid create rig bone FixtureTip_child/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('2');
+    await expect(inspector).toContainText(/Selected\s*FixtureTip/i);
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid create rig bone FixtureTip_child/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await expect(inspector).toContainText(/Selected\s*FixtureTip_child/i);
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid create rig bone FixtureTip_child/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('2');
+    await page.getByTestId('rig-tool-select').click({ force: true });
+    await expect(page.getByTestId('rig-tool-select')).toHaveClass(/bg-emerald-500/);
+    await setViewportLayout(page, 'single');
+
     await page.getByTestId('rig-create-child-input').fill('FixtureExtra');
     await page.getByTestId('rig-create-child-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Created child bone FixtureExtra under FixtureTip/i);
@@ -1843,6 +2030,45 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Undid reparent rig bone FixtureExtra under FixtureSpine/i);
     await page.getByTestId('editor-redo-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Redid reparent rig bone FixtureExtra under FixtureSpine/i);
+
+    await expect(page.getByTestId('rig-detach-toggle-btn')).toHaveAttribute('data-rig-detach-mode', 'detach');
+    await page.getByTestId('rig-detach-toggle-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Detached FixtureExtra from the deform skeleton/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('2');
+    await expect(page.getByTestId('bone-tree-item-FixtureExtra')).toHaveAttribute('data-rig-bone-detached', 'true');
+    await expect(page.getByTestId('rig-detached-selection-note')).toBeVisible();
+    await expect(page.getByTestId('rig-rename-btn')).toBeDisabled();
+    await expect(page.getByTestId('rig-detach-toggle-btn')).toHaveAttribute('data-rig-detach-mode', 'connect');
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid detach rig bone FixtureExtra/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await expect(page.getByTestId('bone-tree-item-FixtureExtra')).toHaveAttribute('data-rig-bone-detached', 'false');
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid detach rig bone FixtureExtra/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('2');
+    await page.getByTestId('rig-detach-toggle-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Connected FixtureExtra to the deform skeleton/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await expect(page.getByTestId('bone-tree-item-FixtureExtra')).toHaveAttribute('data-rig-bone-detached', 'false');
+    await expect(page.getByTestId('rig-detach-toggle-btn')).toHaveAttribute('data-rig-detach-mode', 'detach');
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid connect rig bone FixtureExtra/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('2');
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid connect rig bone FixtureExtra/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+
+    await page.getByTestId('rig-spin-z-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Spun rig Z 90 degrees/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await expect(inspector).toContainText(/Selected\s*FixtureExtra/i);
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid spin rig Z/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
+    await expect(inspector).toContainText(/Selected\s*FixtureExtra/i);
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid spin rig Z/i);
+    await expect(page.getByTestId('rig-bone-count')).toContainText('3');
 
     await page.getByTestId('transform-x-btn').click({ force: true });
     await page.getByTestId('rig-delete-bone-btn').click({ force: true });
@@ -2040,8 +2266,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: false');
     await expect(selectedInspectorValue).toHaveText('FixtureRoot');
 
-    expect(await paintOnMeshInViewport(page)).toBe(true);
+    await setViewportLayout(page, 'quad');
+    expect(await paintOnMeshInViewport(page, { requireDirty: true })).toBe(true);
     await expect(paintCanvas).toHaveAttribute('data-pointer-owner', 'skin-paint');
+    await expect(paintCanvas).toHaveAttribute('data-viewport-pane-role', /top|perspective|front|side/);
     expect(await paintCanvas.getAttribute('data-pointer-owner')).not.toBe('orbit');
     await expect(selectedInspectorValue).toHaveText('FixtureRoot');
     await expect(paintCanvas).toHaveAttribute('data-skin-brush-hover', 'active');
@@ -2059,6 +2287,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('skin-paint-redo-btn')).toBeDisabled();
     await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
     await expect(page.getByTestId('editor-redo-btn')).toBeDisabled();
+    await setViewportLayout(page, 'single');
 
     await page.getByTestId('editor-undo-btn').click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Undid skin edit/i);

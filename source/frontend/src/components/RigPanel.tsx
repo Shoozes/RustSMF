@@ -1,15 +1,23 @@
 import { useEffect, useState } from 'react';
+import { RIG_SNAP_STEPS, type RigSpinAxis, type RigToolMode } from '../utils/rigEdits';
 import type { RigValidationReport } from '../utils/rigValidation';
 
 interface RigPanelProps {
   report: RigValidationReport;
   selected: string;
-  boneNames: string[];
+  deformBoneNames: string[];
+  selectedIsDeformBone: boolean;
   sourceFormat: string;
   onRenameSelectedBone: (nextName: string) => void;
   onReparentSelectedBone: (parentName: string) => void;
   onCreateChildBone: (name: string) => void;
+  onSetSelectedBoneDetached: (detached: boolean) => void;
+  onSpinRig: (axis: RigSpinAxis) => void;
   onDeleteSelectedBone: () => void;
+  rigToolMode: RigToolMode;
+  onRigToolModeChange: (mode: RigToolMode) => void;
+  rigSnapStep: number;
+  onRigSnapStepChange: (step: number) => void;
   editorMode?: string;
 }
 
@@ -22,22 +30,31 @@ function statusClass(status: RigValidationReport['status']): string {
 export default function RigPanel({
   report,
   selected,
-  boneNames,
+  deformBoneNames,
+  selectedIsDeformBone,
   sourceFormat,
   onRenameSelectedBone,
   onReparentSelectedBone,
   onCreateChildBone,
+  onSetSelectedBoneDetached,
+  onSpinRig,
   onDeleteSelectedBone,
+  rigToolMode,
+  onRigToolModeChange,
+  rigSnapStep,
+  onRigSnapStepChange,
   editorMode = 'rig',
 }: RigPanelProps) {
   const visibleIssues = report.issues.slice(0, 6);
   const [renameValue, setRenameValue] = useState(selected === 'Scene' ? '' : selected);
   const [createValue, setCreateValue] = useState(selected && selected !== 'Scene' ? `${selected}_child` : '');
   const [parentValue, setParentValue] = useState('');
-  const canRename = !!selected && selected !== 'Scene' && report.boneCount > 0 && sourceFormat !== 'smf';
+  const canRename = !!selected && selected !== 'Scene' && selectedIsDeformBone && report.boneCount > 0 && sourceFormat !== 'smf';
   const canCreateChild = canRename;
-  const parentOptions = boneNames.filter((name) => name && name !== selected);
+  const parentOptions = deformBoneNames.filter((name) => name && name !== selected);
   const canReparent = canRename && parentOptions.length > 0;
+  const canChangeDetachState = !!selected && selected !== 'Scene' && report.boneCount > 0 && sourceFormat !== 'smf';
+  const canSpinRig = report.boneCount > 0 && sourceFormat !== 'smf';
 
   useEffect(() => {
     setRenameValue(selected === 'Scene' ? '' : selected);
@@ -65,6 +82,57 @@ export default function RigPanel({
         </div>
       </div>
       <div className="mt-2 border-t border-slate-700 pt-2">
+        <div className="text-slate-400 text-[10px] mb-1">Tool</div>
+        <div className="grid grid-cols-4 gap-1 mb-2" data-testid="rig-tool-row">
+          <button
+            data-testid="rig-tool-select"
+            className={`px-1 py-0.5 text-xs ${rigToolMode === 'select' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
+            onClick={() => onRigToolModeChange('select')}
+          >
+            Select
+          </button>
+          <button
+            data-testid="rig-tool-add-child"
+            className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'add-child' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
+            disabled={!canCreateChild}
+            onClick={() => onRigToolModeChange('add-child')}
+          >
+            Add child
+          </button>
+          <button
+            data-testid="rig-tool-move"
+            className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'move' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
+            disabled={!canCreateChild}
+            onClick={() => onRigToolModeChange('move')}
+          >
+            Move
+          </button>
+          <button
+            data-testid="rig-tool-rotate"
+            className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'rotate' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
+            disabled={!canCreateChild}
+            onClick={() => onRigToolModeChange('rotate')}
+          >
+            Rotate
+          </button>
+        </div>
+        <label className="flex items-center gap-1 mb-2 text-[10px] text-slate-400">
+          <span className="shrink-0">Snap</span>
+          <select
+            data-testid="rig-snap-step"
+            value={String(rigSnapStep)}
+            disabled={sourceFormat === 'smf'}
+            onChange={(event) => onRigSnapStepChange(Number(event.target.value))}
+            className="min-w-0 flex-1 bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100 disabled:text-slate-500"
+            aria-label="Rig snap step"
+          >
+            {RIG_SNAP_STEPS.map((step) => (
+              <option key={step} value={String(step)}>
+                {step === 0 ? 'Off' : `${step} units`}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="text-slate-400 text-[10px] mb-1">Edit</div>
         <div className="flex gap-1 mb-2">
           <input
@@ -132,9 +200,37 @@ export default function RigPanel({
         >
           Delete Selected
         </button>
+        <button
+          data-testid="rig-detach-toggle-btn"
+          data-rig-detach-mode={selectedIsDeformBone ? 'detach' : 'connect'}
+          className="mt-1 w-full px-1 py-0.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 disabled:opacity-50"
+          disabled={!canChangeDetachState}
+          onClick={() => onSetSelectedBoneDetached(selectedIsDeformBone)}
+        >
+          {selectedIsDeformBone ? 'Detach Selected' : 'Connect Selected'}
+        </button>
+        <div className="mt-2 text-slate-400 text-[10px] mb-1">Spin</div>
+        <div className="grid grid-cols-3 gap-1 mb-2" data-testid="rig-spin-row">
+          {(['x', 'y', 'z'] as const).map((axis) => (
+            <button
+              key={axis}
+              data-testid={`rig-spin-${axis}-btn`}
+              className="px-1 py-0.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 disabled:opacity-50"
+              disabled={!canSpinRig}
+              onClick={() => onSpinRig(axis)}
+            >
+              {axis.toUpperCase()}
+            </button>
+          ))}
+        </div>
         {sourceFormat === 'smf' && (
           <div className="text-[10px] text-slate-500 mb-2">
             SMF source nodes keep indexed names for fidelity export.
+          </div>
+        )}
+        {selected && selected !== 'Scene' && !selectedIsDeformBone && sourceFormat !== 'smf' && (
+          <div data-testid="rig-detached-selection-note" className="text-[10px] text-slate-500 mb-2">
+            Detached hierarchy node is visible for selection; deform edits stay gated until the node is connected.
           </div>
         )}
         <div className="text-slate-400 text-[10px] mb-1">Validation</div>

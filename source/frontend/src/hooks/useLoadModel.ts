@@ -16,7 +16,7 @@ import {
   clonePoseEditMap,
   applyPoseEditsToSmf,
 } from './poseEdits';
-import type { BoneTransformEditEvent } from '../components/ThreeViewport';
+import type { BoneTransformEditEvent, RigMoveEditEvent, RigRotateEditEvent } from '../components/ThreeViewport';
 import { findBoneByName } from '../utils/bonePicker';
 import { createSeqGuard } from '../utils/seqGuard';
 import { detectModelFormat, supportedModelFormatsLabel, type ModelSourceFormat } from '../utils/modelFormat';
@@ -83,7 +83,24 @@ import {
   type AnimationSnapStep,
   type EditableBoneKeyframe,
 } from '../utils/animationEdits';
-import { createChildBone, deleteBoneBranch, reparentBonePreserveWorldTransform, removeAnimationClipBoneNames, retargetAnimationClipBoneNames, validateBoneRename } from '../utils/rigEdits';
+import {
+  createChildBone,
+  deleteBoneBranch,
+  moveBoneToWorldPosition,
+  normalizeRigSnapStep,
+  reparentBonePreserveWorldTransform,
+  removeAnimationClipBoneNames,
+  rotateBoneAroundWorldAxis,
+  setBoneDetached,
+  spinRig,
+  retargetAnimationClipBoneNames,
+  snapRigWorldPosition,
+  validateBoneRename,
+  type RigSpinAxis,
+  type RigToolMode,
+} from '../utils/rigEdits';
+import { collectRigHierarchyBones } from '../utils/rigHierarchy';
+import type { ViewportRole } from '../utils/viewportLayout';
 
 type LoadedModelResult =
   | Awaited<ReturnType<typeof buildSmfScene>>
@@ -140,6 +157,11 @@ const clampPositive = (value: number, minimum = 0, maximum = Number.MAX_SAFE_INT
   return Math.min(maximum, Math.max(minimum, value));
 };
 
+const formatRigSnapStep = (value: number): string => {
+  const normalized = normalizeRigSnapStep(value);
+  return normalized > 0 ? Number(normalized.toFixed(2)).toString() : 'off';
+};
+
 const collectSkinnedMeshById = (
   root: THREE.Object3D | null,
   meshId: string,
@@ -184,6 +206,17 @@ interface ActiveAnimationTransformHistory {
   before: AnimationEditState;
 }
 
+interface ActiveRigMoveHistory {
+  boneName: string;
+  before: RigHistorySnapshot | null;
+}
+
+interface ActiveRigRotateHistory {
+  boneName: string;
+  paneRole: ViewportRole;
+  before: RigHistorySnapshot | null;
+}
+
 interface AnimationWorkspaceHistorySnapshot {
   baseClips: THREE.AnimationClip[];
   animationEditState: AnimationEditState;
@@ -196,6 +229,7 @@ interface RigBoneHistorySnapshot {
   name: string;
   parent: THREE.Object3D | null;
   parentBone: THREE.Bone | null;
+  rustsmfDetached: boolean;
   position: [number, number, number];
   quaternion: [number, number, number, number];
   scale: [number, number, number];
@@ -211,6 +245,7 @@ interface RigSkinIndexHistorySnapshot {
 interface RigHistorySnapshot {
   selectedBoneName: string;
   bones: RigBoneHistorySnapshot[];
+  skeletonBones: THREE.Bone[];
   boneInverses: THREE.Matrix4[];
   baseClips: THREE.AnimationClip[];
   animationEditState: AnimationEditState;
@@ -386,6 +421,20 @@ const setRigSnapshotSelection = (
   return snapshot;
 };
 
+const sameRigBoneTransformSnapshot = (
+  left: RigHistorySnapshot | null,
+  right: RigHistorySnapshot | null,
+  boneName: string,
+): boolean => {
+  if (!left || !right || !boneName) return false;
+  const leftBone = left.bones.find((bone) => bone.name === boneName);
+  const rightBone = right.bones.find((bone) => bone.name === boneName);
+  if (!leftBone || !rightBone) return false;
+  return sameNumberArray(leftBone.position, rightBone.position)
+    && sameNumberArray(leftBone.quaternion, rightBone.quaternion)
+    && sameNumberArray(leftBone.scale, rightBone.scale);
+};
+
 const getBoneIndex = (skeleton: THREE.Skeleton | null, boneName: string): number => {
   if (!skeleton || !boneName) return -1;
   const index = skeleton.bones.findIndex((bone) => bone.name === boneName);
@@ -407,6 +456,22 @@ const getBoneBranchIndices = (skeleton: THREE.Skeleton, boneName: string): Set<n
   };
   visit(root);
   return branch;
+};
+
+const makeUniqueChildBoneName = (
+  skeleton: THREE.Skeleton,
+  parentName: string,
+  root?: THREE.Object3D | null,
+): string => {
+  const existing = new Set(collectRigHierarchyBones(root ?? null, skeleton).map((bone) => bone.name).filter(Boolean));
+  const cleanParent = parentName && parentName !== 'Scene' ? parentName : 'Bone';
+  const base = `${cleanParent}_child`;
+  if (!existing.has(base)) return base;
+  for (let index = 2; index < 1000; index += 1) {
+    const candidate = `${base}_${index}`;
+    if (!existing.has(candidate)) return candidate;
+  }
+  return `${base}_${Date.now()}`;
 };
 
 const errorMessage = (error: unknown): string => {
@@ -452,6 +517,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const editorHistoryIdRef = useRef(0);
   const activePoseTransformHistoryRef = useRef<ActivePoseTransformHistory | null>(null);
   const activeAnimationTransformHistoryRef = useRef<ActiveAnimationTransformHistory | null>(null);
+  const activeRigMoveHistoryRef = useRef<ActiveRigMoveHistory | null>(null);
+  const activeRigRotateHistoryRef = useRef<ActiveRigRotateHistory | null>(null);
   const [editorUndoAvailable, setEditorUndoAvailable] = useState(false);
   const [editorRedoAvailable, setEditorRedoAvailable] = useState(false);
   const [editorUndoOrder, setEditorUndoOrder] = useState(0);
@@ -468,6 +535,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
   // Bone labels toggle (3D name sprites in viewport for debug/selection aid). Off by default for perf.
   const [showBoneLabels, setShowBoneLabels] = useState(false);
+  const [rigToolMode, setRigToolMode] = useState<RigToolMode>('select');
+  const [rigSnapStep, setRigSnapStep] = useState(0);
   const [skinEditState, setSkinEditState] = useState<SkinEditState>(() => makeSkinEditState());
   const skinEditStateRef = useRef<SkinEditState>(skinEditState);
   const skinUndoStackRef = useRef<SkinEditHistoryEntry[]>([]);
@@ -621,26 +690,31 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     editorHistoryRef.current = makeEditorHistory();
     activePoseTransformHistoryRef.current = null;
     activeAnimationTransformHistoryRef.current = null;
+    activeRigMoveHistoryRef.current = null;
+    activeRigRotateHistoryRef.current = null;
     refreshEditorHistoryAvailability();
   }, [refreshEditorHistoryAvailability]);
 
   const captureRigSnapshot = useCallback((): RigHistorySnapshot | null => {
     const skeleton = model.skeleton;
     if (!skeleton || !model.root) return null;
+    const hierarchyBones = collectRigHierarchyBones(model.root, skeleton);
 
     return {
       selectedBoneName: ui.selected,
-      bones: skeleton.bones.map((bone) => ({
+      bones: hierarchyBones.map((bone) => ({
         bone,
         name: bone.name,
         parent: bone.parent,
         parentBone: bone.parent && (bone.parent as THREE.Bone).isBone === true
           ? bone.parent as THREE.Bone
           : null,
+        rustsmfDetached: bone.userData.rustsmfDetached === true,
         position: [bone.position.x, bone.position.y, bone.position.z],
         quaternion: [bone.quaternion.x, bone.quaternion.y, bone.quaternion.z, bone.quaternion.w],
         scale: [bone.scale.x, bone.scale.y, bone.scale.z],
       })),
+      skeletonBones: [...skeleton.bones],
       boneInverses: skeleton.boneInverses.map((inverse) => inverse.clone()),
       baseClips: cloneAnimationClips(baseClipsRef.current),
       animationEditState: cloneAnimationEditState(animationEditStateRef.current),
@@ -722,7 +796,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     if (!skeleton || !root) return false;
 
     const snapshotBones = new Set(snapshot.bones.map((boneSnapshot) => boneSnapshot.bone));
-    for (const bone of [...skeleton.bones]) {
+    for (const bone of collectRigHierarchyBones(root)) {
       if (!snapshotBones.has(bone)) {
         bone.parent?.remove(bone);
       }
@@ -734,6 +808,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       bone.position.fromArray(boneSnapshot.position);
       bone.quaternion.fromArray(boneSnapshot.quaternion);
       bone.scale.fromArray(boneSnapshot.scale);
+      bone.userData.rustsmfDetached = boneSnapshot.rustsmfDetached;
       bone.updateMatrix();
     }
 
@@ -745,7 +820,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
 
     root.updateMatrixWorld(true);
-    skeleton.bones = snapshot.bones.map((boneSnapshot) => boneSnapshot.bone);
+    skeleton.bones = [...snapshot.skeletonBones];
     skeleton.boneInverses = snapshot.boneInverses.map((inverse) => inverse.clone());
     skeleton.init();
     skeleton.update();
@@ -1935,6 +2010,27 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     });
   }, [ui, commitSkinEditState]);
 
+  const changeRigToolMode = useCallback((next: RigToolMode) => {
+    setRigToolMode(next);
+    if (next === 'add-child') {
+      ui.setStatus('Rig add-child tool active. Click an empty Top/Front/Side pane to create a child under the selected bone.');
+      return;
+    }
+    if (next === 'move') {
+      ui.setStatus('Rig move tool active. Drag in a Top/Front/Side pane to move the selected bone.');
+      return;
+    }
+    ui.setStatus('Rig select tool active.');
+  }, [ui]);
+
+  const changeRigSnapStep = useCallback((next: number) => {
+    const normalized = normalizeRigSnapStep(next);
+    setRigSnapStep(normalized);
+    ui.setStatus(normalized > 0
+      ? `Rig snap set to ${formatRigSnapStep(normalized)} units.`
+      : 'Rig snap disabled.');
+  }, [ui]);
+
   const renameSelectedBone = useCallback((requestedName: string) => {
     const skeleton = model.skeleton;
     const oldName = ui.selected;
@@ -2045,6 +2141,242 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     );
     ui.setStatus(`Created child bone ${result.bone.name} under ${parentName}.`);
   }, [captureRigSnapshot, commitSkinEditState, model.skeleton, pushRigHistory, sourceFormat, ui]);
+
+  const createChildForSelectedBoneAtWorld = useCallback((event: {
+    worldPosition: THREE.Vector3;
+    paneRole: ViewportRole;
+  }): boolean => {
+    const skeleton = model.skeleton;
+    const parentName = ui.selected;
+    if (sourceFormat === 'smf') {
+      ui.setStatus('SMF-source child creation is blocked until head-node compatibility editing is explicit.');
+      return false;
+    }
+    if (!skeleton) {
+      ui.setStatus('Load a skinned model before creating child bones.');
+      return false;
+    }
+    if (!parentName || parentName === 'Scene') {
+      ui.setStatus('Select a parent bone before creating a child.');
+      return false;
+    }
+
+    const before = captureRigSnapshot();
+    const childName = makeUniqueChildBoneName(skeleton, parentName, model.root);
+    const worldPosition = snapRigWorldPosition(event.worldPosition, rigSnapStep);
+    const result = createChildBone(skeleton, parentName, childName, { worldPosition });
+    if (!result.ok) {
+      ui.setStatus(result.message);
+      return false;
+    }
+
+    commitSkinEditState({
+      ...skinEditStateRef.current,
+      selectedBoneName: result.bone.name,
+    });
+    ui.setSelected(result.bone.name);
+    pushRigHistory(
+      `create rig bone ${result.bone.name}`,
+      before,
+      setRigSnapshotSelection(captureRigSnapshot(), result.bone.name),
+    );
+    ui.setStatus(`Created child bone ${result.bone.name} under ${parentName} from ${event.paneRole} pane${rigSnapStep > 0 ? ` with ${formatRigSnapStep(rigSnapStep)} snap` : ''}.`);
+    return true;
+  }, [captureRigSnapshot, commitSkinEditState, model.root, model.skeleton, pushRigHistory, rigSnapStep, sourceFormat, ui]);
+
+  const moveRigBoneToWorld = useCallback((event: RigMoveEditEvent): boolean => {
+    const skeleton = model.skeleton;
+    if (sourceFormat === 'smf') {
+      activeRigMoveHistoryRef.current = null;
+      ui.setStatus('SMF-source rig moving is blocked until head-node compatibility editing is explicit.');
+      return false;
+    }
+    if (!skeleton) {
+      activeRigMoveHistoryRef.current = null;
+      ui.setStatus('Load a skinned model before moving bones.');
+      return false;
+    }
+    if (!event.boneName || event.boneName === 'Scene') {
+      activeRigMoveHistoryRef.current = null;
+      ui.setStatus('Select a rig bone before moving.');
+      return false;
+    }
+
+    if (event.phase === 'start') {
+      activeRigMoveHistoryRef.current = {
+        boneName: event.boneName,
+        before: captureRigSnapshot(),
+      };
+      ui.setSelected(event.boneName);
+      return true;
+    }
+
+    const worldPosition = snapRigWorldPosition(event.worldPosition, rigSnapStep);
+    const result = moveBoneToWorldPosition(skeleton, event.boneName, worldPosition);
+    if (!result.ok) {
+      if (event.phase === 'end') {
+        activeRigMoveHistoryRef.current = null;
+      }
+      ui.setStatus(result.message);
+      return false;
+    }
+
+    commitSkinEditState({
+      ...skinEditStateRef.current,
+      selectedBoneName: result.bone.name,
+    });
+    ui.setSelected(result.bone.name);
+
+    if (event.phase === 'change') {
+      return true;
+    }
+
+    const active = activeRigMoveHistoryRef.current;
+    const before = active?.boneName === event.boneName ? active.before : captureRigSnapshot();
+    const after = setRigSnapshotSelection(captureRigSnapshot(), result.bone.name);
+    if (sameRigBoneTransformSnapshot(before, after, result.bone.name)) {
+      activeRigMoveHistoryRef.current = null;
+      ui.setStatus(`Rig bone ${result.bone.name} move was unchanged.`);
+      return true;
+    }
+    const pushed = pushRigHistory(
+      `move rig bone ${result.bone.name}`,
+      before,
+      after,
+    );
+    activeRigMoveHistoryRef.current = null;
+    ui.setStatus(pushed
+      ? `Moved rig bone ${result.bone.name} from ${event.paneRole} pane${rigSnapStep > 0 ? ` with ${formatRigSnapStep(rigSnapStep)} snap` : ''}.`
+      : `Rig bone ${result.bone.name} move was unchanged.`);
+    return true;
+  }, [captureRigSnapshot, commitSkinEditState, model.skeleton, pushRigHistory, rigSnapStep, sourceFormat, ui]);
+
+  const rotateRigBoneAroundAxis = useCallback((event: RigRotateEditEvent): boolean => {
+    const skeleton = model.skeleton;
+    if (sourceFormat === 'smf') {
+      activeRigRotateHistoryRef.current = null;
+      ui.setStatus('SMF-source rig rotation is blocked until head-node compatibility editing is explicit.');
+      return false;
+    }
+    if (!skeleton) {
+      activeRigRotateHistoryRef.current = null;
+      ui.setStatus('Load a skinned model before rotating bones.');
+      return false;
+    }
+    if (!event.boneName || event.boneName === 'Scene') {
+      activeRigRotateHistoryRef.current = null;
+      ui.setStatus('Select a rig bone before rotating.');
+      return false;
+    }
+
+    if (event.phase === 'start') {
+      activeRigRotateHistoryRef.current = {
+        boneName: event.boneName,
+        paneRole: event.paneRole,
+        before: captureRigSnapshot(),
+      };
+      ui.setSelected(event.boneName);
+      return true;
+    }
+
+    if (event.phase === 'change') {
+      const result = rotateBoneAroundWorldAxis(skeleton, event.boneName, event.worldAxis, event.angleRadians);
+      if (!result.ok) {
+        ui.setStatus(result.message);
+        return false;
+      }
+      commitSkinEditState({
+        ...skinEditStateRef.current,
+        selectedBoneName: result.bone.name,
+      });
+      ui.setSelected(result.bone.name);
+      return true;
+    }
+
+    const active = activeRigRotateHistoryRef.current;
+    const boneName = active?.boneName === event.boneName ? active.boneName : event.boneName;
+    const before = active?.boneName === event.boneName ? active.before : captureRigSnapshot();
+    const after = setRigSnapshotSelection(captureRigSnapshot(), boneName);
+    if (sameRigBoneTransformSnapshot(before, after, boneName)) {
+      activeRigRotateHistoryRef.current = null;
+      ui.setStatus(`Rig bone ${boneName} rotation was unchanged.`);
+      return true;
+    }
+    const pushed = pushRigHistory(
+      `rotate rig bone ${boneName}`,
+      before,
+      after,
+    );
+    activeRigRotateHistoryRef.current = null;
+    ui.setStatus(pushed
+      ? `Rotated rig bone ${boneName} from ${event.paneRole} pane.`
+      : `Rig bone ${boneName} rotation was unchanged.`);
+    return true;
+  }, [captureRigSnapshot, commitSkinEditState, model.skeleton, pushRigHistory, sourceFormat, ui]);
+
+  const setSelectedBoneDetached = useCallback((detached: boolean) => {
+    const skeleton = model.skeleton;
+    const boneName = ui.selected;
+    if (sourceFormat === 'smf') {
+      ui.setStatus('SMF-source detach/connect is blocked until head-node compatibility editing is explicit.');
+      return;
+    }
+    if (!skeleton || !model.root) {
+      ui.setStatus('Load a skinned model before changing rig detach state.');
+      return;
+    }
+    if (!boneName || boneName === 'Scene') {
+      ui.setStatus('Select a rig bone before changing detach state.');
+      return;
+    }
+
+    const before = captureRigSnapshot();
+    const result = setBoneDetached(skeleton, boneName, detached, collectSkinnedMeshes(model.root));
+    if (!result.ok) {
+      ui.setStatus(result.message);
+      return;
+    }
+
+    commitSkinEditState({
+      ...skinEditStateRef.current,
+      selectedBoneName: result.detached ? '' : result.bone.name,
+    });
+    ui.setSelected(result.bone.name);
+    pushRigHistory(
+      `${result.detached ? 'detach' : 'connect'} rig bone ${result.bone.name}`,
+      before,
+      setRigSnapshotSelection(captureRigSnapshot(), result.bone.name),
+    );
+    ui.setStatus(result.detached
+      ? `Detached ${result.bone.name} from the deform skeleton.`
+      : `Connected ${result.bone.name} to the deform skeleton.`);
+  }, [captureRigSnapshot, commitSkinEditState, model.root, model.skeleton, pushRigHistory, sourceFormat, ui]);
+
+  const spinRigAroundAxis = useCallback((axis: RigSpinAxis) => {
+    const skeleton = model.skeleton;
+    if (sourceFormat === 'smf') {
+      ui.setStatus('SMF-source rig spin is blocked until head-node compatibility editing is explicit.');
+      return;
+    }
+    if (!skeleton) {
+      ui.setStatus('Load a skinned model before spinning the rig.');
+      return;
+    }
+
+    const before = captureRigSnapshot();
+    const result = spinRig(skeleton, axis);
+    if (!result.ok) {
+      ui.setStatus(result.message);
+      return;
+    }
+
+    pushRigHistory(
+      `spin rig ${result.axis.toUpperCase()}`,
+      before,
+      setRigSnapshotSelection(captureRigSnapshot(), ui.selected),
+    );
+    ui.setStatus(`Spun rig ${result.axis.toUpperCase()} 90 degrees.`);
+  }, [captureRigSnapshot, model.skeleton, pushRigHistory, sourceFormat, ui]);
 
   const deleteSelectedBone = useCallback(() => {
     const skeleton = model.skeleton;
@@ -2659,7 +2991,16 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     renameSelectedBone,
     reparentSelectedBone,
     createChildForSelectedBone,
+    createChildForSelectedBoneAtWorld,
+    moveRigBoneToWorld,
+    rotateRigBoneAroundAxis,
+    setSelectedBoneDetached,
+    spinRigAroundAxis,
     deleteSelectedBone,
+    rigToolMode,
+    setRigToolMode: changeRigToolMode,
+    rigSnapStep,
+    setRigSnapStep: changeRigSnapStep,
     handleBoneTransformEdit,
     onNudgeBone,
     undoEditorHistory,

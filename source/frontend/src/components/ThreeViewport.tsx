@@ -1,10 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { SimpleOrbit } from '../utils/SimpleOrbit';
 import { disposeThreeObject } from '../utils/threeDisposal';
 import { restoreWeightPreview, applyWeightPreviewForBone } from '../utils/weightPreview';
 import { findClosestBone, DEFAULT_MAX_BONE_PICK_DIST, findBoneByName } from '../utils/bonePicker';
 import type { SkinWeightEditMode } from '../utils/skinWeights';
+import type { RigToolMode } from '../utils/rigEdits';
 import { useBoneLabelsWithScale } from '../utils/useBoneLabels';
 import { createLegacySmfMaterial } from '../utils/legacySmfLighting';
 import { createSkinPointOverlays, disposeSkinPointOverlays } from '../utils/skinPointOverlay';
@@ -33,6 +34,7 @@ import {
   refreshOrthoCameras as updateOrthoCameras,
   refreshViewportSpecs as buildViewportSpecs,
   type ModelBounds,
+  type ViewportRole,
   type ViewportSpec,
 } from '../utils/viewportLayout';
 import {
@@ -55,6 +57,24 @@ type EndpointDragState = {
   plane: THREE.Plane;
   localOffset: THREE.Vector3;
   parentInverse: THREE.Matrix4;
+};
+
+type RigMoveDragState = {
+  boneName: string;
+  bone: THREE.Bone;
+  paneRole: ViewportRole;
+  plane: THREE.Plane;
+  localOffset: THREE.Vector3;
+};
+
+type RigRotateDragState = {
+  boneName: string;
+  bone: THREE.Bone;
+  paneRole: ViewportRole;
+  plane: THREE.Plane;
+  axis: THREE.Vector3;
+  center: THREE.Vector3;
+  previousVector: THREE.Vector3;
 };
 
 type MaterialWithMap = THREE.Material & {
@@ -91,6 +111,25 @@ export interface BoneTransformEditEvent {
   position: [number, number, number];
   quaternion: [number, number, number, number];
   scale: [number, number, number];
+}
+
+export type RigMoveEditPhase = 'start' | 'change' | 'end';
+
+export interface RigMoveEditEvent {
+  phase: RigMoveEditPhase;
+  boneName: string;
+  worldPosition: THREE.Vector3;
+  paneRole: ViewportRole;
+}
+
+export type RigRotateEditPhase = 'start' | 'change' | 'end';
+
+export interface RigRotateEditEvent {
+  phase: RigRotateEditPhase;
+  boneName: string;
+  worldAxis: THREE.Vector3;
+  angleRadians: number;
+  paneRole: ViewportRole;
 }
 
 export interface ViewportObjectSelectEvent {
@@ -130,6 +169,9 @@ interface ThreeViewportProps {
   onClearObjectSelection?: () => void;
   onObjectContextMenu?: (event: ViewportObjectSelectEvent) => void;
   onBoneTransformEdit?: (event: BoneTransformEditEvent) => void;
+  onCreateRigChildAtWorld?: (event: { worldPosition: THREE.Vector3; paneRole: ViewportRole }) => boolean | void;
+  onMoveRigBoneToWorld?: (event: RigMoveEditEvent) => boolean | void;
+  onRotateRigBone?: (event: RigRotateEditEvent) => boolean | void;
   selectedBoneName?: string;
   selectedObjectIds?: string[];
   selectionOverlayRevision?: number;
@@ -138,6 +180,7 @@ interface ThreeViewportProps {
   onSetTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => boolean | void;
   boneTransformOwner?: BoneTransformOwner;
   boneLabelsEnabled?: boolean;
+  rigToolMode?: RigToolMode;
   editorMode?: EditorMode;
   viewportLayout?: ViewportLayout;
   wireframeEnabled?: boolean;
@@ -177,6 +220,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   onClearObjectSelection,
   onObjectContextMenu,
   onBoneTransformEdit,
+  onCreateRigChildAtWorld,
+  onMoveRigBoneToWorld,
+  onRotateRigBone,
   selectedBoneName,
   selectedObjectIds = [],
   selectionOverlayRevision = 0,
@@ -185,6 +231,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   onSetTransformMode,
   boneTransformOwner = 'disabled',
   boneLabelsEnabled = false,
+  rigToolMode = 'select',
   editorMode = 'view',
   viewportLayout = 'single',
   wireframeEnabled = false,
@@ -250,6 +297,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const cursorModeRef = useRef<string>('default');
   const isPrecisionModeRef = useRef(false);
   const endpointDragRef = useRef<EndpointDragState | null>(null);
+  const rigMoveDragRef = useRef<RigMoveDragState | null>(null);
+  const rigRotateDragRef = useRef<RigRotateDragState | null>(null);
   const skinPaintActiveRef = useRef(false);
 
   // TransformControls for selected bone (Cycle 3 editor polish). Attached to the live THREE.Bone when selectedBoneName changes.
@@ -272,12 +321,16 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const onClearObjectSelectionRef = useRef(onClearObjectSelection);
   const onObjectContextMenuRef = useRef(onObjectContextMenu);
   const onBoneTransformEditRef = useRef(onBoneTransformEdit);
+  const onCreateRigChildAtWorldRef = useRef(onCreateRigChildAtWorld);
+  const onMoveRigBoneToWorldRef = useRef(onMoveRigBoneToWorld);
+  const onRotateRigBoneRef = useRef(onRotateRigBone);
   const onSetTransformModeRef = useRef(onSetTransformMode);
   const boneTransformOwnerRef = useRef<BoneTransformOwner>(boneTransformOwner);
   const skeletonRefForPick = useRef(skeleton);
 
   // For selected bone 3D highlight marker (visual feedback when list or raycast selects a bone)
   const selectedBoneNameRef = useRef(selectedBoneName);
+  const rigToolModeRef = useRef<RigToolMode>(rigToolMode);
   const boneHighlightRef = useRef<THREE.Object3D | null>(null);
   const boneEndpointHandleRef = useRef<THREE.Object3D | null>(null);
   const boneHoverMarkerRef = useRef<THREE.Object3D | null>(null);
@@ -732,6 +785,149 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     return true;
   };
 
+  const updateRigMoveTelemetry = (state: RigMoveDragState, worldPosition: THREE.Vector3): void => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.dataset.rigMove = 'active';
+    canvas.dataset.rigMovePaneRole = state.paneRole;
+    canvas.dataset.rigMoveBone = state.boneName;
+    canvas.dataset.rigMoveX = worldPosition.x.toFixed(4);
+    canvas.dataset.rigMoveY = worldPosition.y.toFixed(4);
+    canvas.dataset.rigMoveZ = worldPosition.z.toFixed(4);
+  };
+
+  const clearRigMoveTelemetry = (): void => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    delete canvas.dataset.rigMove;
+    delete canvas.dataset.rigMovePaneRole;
+    delete canvas.dataset.rigMoveBone;
+    delete canvas.dataset.rigMoveX;
+    delete canvas.dataset.rigMoveY;
+    delete canvas.dataset.rigMoveZ;
+  };
+
+  const updateRigRotateTelemetry = (state: RigRotateDragState, angleRadians: number): void => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.dataset.rigRotate = 'active';
+    canvas.dataset.rigRotatePaneRole = state.paneRole;
+    canvas.dataset.rigRotateBone = state.boneName;
+    canvas.dataset.rigRotateAngle = angleRadians.toFixed(4);
+  };
+
+  const clearRigRotateTelemetry = (): void => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    delete canvas.dataset.rigRotate;
+    delete canvas.dataset.rigRotatePaneRole;
+    delete canvas.dataset.rigRotateBone;
+    delete canvas.dataset.rigRotateAngle;
+  };
+
+  const getRigMoveWorldPositionFromPointer = (
+    event: PointerEvent,
+    state: RigMoveDragState,
+    viewport: ViewportSpec,
+  ): THREE.Vector3 | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const mouse = getMouseForViewport(event.clientX, event.clientY, viewport, rect);
+    raycasterRef.current.setFromCamera(mouse, viewport.camera);
+    const hit = raycasterRef.current.ray.intersectPlane(state.plane, new THREE.Vector3());
+    if (!hit) return null;
+    return hit.sub(state.localOffset);
+  };
+
+  const updateRigMoveFromPointer = (event: PointerEvent, state: RigMoveDragState): boolean => {
+    const pick = pickViewportCamera(event.clientX, event.clientY);
+    if (!pick || pick.viewport.role !== state.paneRole) return false;
+
+    const worldPosition = getRigMoveWorldPositionFromPointer(event, state, pick.viewport);
+    if (!worldPosition) return false;
+
+    const moved = onMoveRigBoneToWorldRef.current?.({
+      phase: 'change',
+      boneName: state.boneName,
+      worldPosition,
+      paneRole: state.paneRole,
+    });
+    if (moved === false) return false;
+
+    updateRigMoveTelemetry(state, worldPosition);
+    return true;
+  };
+
+  const getRigRotateVectorFromPointer = (
+    event: PointerEvent,
+    state: RigRotateDragState,
+    viewport: ViewportSpec,
+  ): THREE.Vector3 | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const mouse = getMouseForViewport(event.clientX, event.clientY, viewport, rect);
+    raycasterRef.current.setFromCamera(mouse, viewport.camera);
+    const hit = raycasterRef.current.ray.intersectPlane(state.plane, new THREE.Vector3());
+    if (!hit) return null;
+    const vector = hit.sub(state.center);
+    return vector.lengthSq() > 1e-10 ? vector.normalize() : null;
+  };
+
+  const updateRigRotateFromPointer = (event: PointerEvent, state: RigRotateDragState): boolean => {
+    const pick = pickViewportCamera(event.clientX, event.clientY);
+    if (!pick || pick.viewport.role !== state.paneRole) return false;
+
+    const nextVector = getRigRotateVectorFromPointer(event, state, pick.viewport);
+    if (!nextVector) return false;
+    const cross = new THREE.Vector3().crossVectors(state.previousVector, nextVector);
+    const signedSin = cross.dot(state.axis);
+    const angleRadians = Math.atan2(signedSin, state.previousVector.dot(nextVector));
+    if (!Number.isFinite(angleRadians) || Math.abs(angleRadians) < 1e-5) return false;
+
+    const rotated = onRotateRigBoneRef.current?.({
+      phase: 'change',
+      boneName: state.boneName,
+      worldAxis: state.axis,
+      angleRadians,
+      paneRole: state.paneRole,
+    });
+    if (rotated === false) return false;
+
+    state.previousVector.copy(nextVector);
+    updateRigRotateTelemetry(state, angleRadians);
+    return true;
+  };
+
+  const getRigChildPlacementFromPointer = (
+    event: PointerEvent,
+  ): { worldPosition: THREE.Vector3; paneRole: ViewportRole } | null => {
+    if (editorModeRef.current !== 'rig' || rigToolModeRef.current !== 'add-child') return null;
+
+    const parentName = selectedBoneNameRef.current;
+    const skel = skeletonRefForPick.current;
+    const parentBone = parentName && skel ? findBoneByName(skel, parentName) : null;
+    if (!parentBone) return null;
+
+    const pick = pickViewportCamera(event.clientX, event.clientY);
+    if (!pick || pick.viewport.role === 'perspective' || !canvasRef.current) return null;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const mouse = getMouseForViewport(event.clientX, event.clientY, pick.viewport, rect);
+    raycasterRef.current.setFromCamera(mouse, pick.camera);
+
+    const parentWorld = parentBone.getWorldPosition(new THREE.Vector3());
+    const normal = pick.camera.getWorldDirection(new THREE.Vector3());
+    const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(normal, parentWorld);
+    const worldPosition = raycasterRef.current.ray.intersectPlane(plane, new THREE.Vector3());
+    if (!worldPosition) return null;
+
+    return { worldPosition, paneRole: pick.viewport.role };
+  };
+
   // One-time base scene + renderer + orbit + RAF + resize + internal R key reset
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -843,6 +1039,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // Ignore drag/long-press paths to avoid accidental selection during orbit/transform interaction.
     const buildEndpointDragState = (event: PointerEvent): EndpointDragState | null => {
       if (editorModeRef.current !== 'rig') return null;
+      if (rigToolModeRef.current !== 'select') return null;
       if (!isPrecisionModeRef.current) return null;
 
       const selected = selectedBoneNameRef.current;
@@ -899,6 +1096,74 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       };
     };
 
+    const buildRigMoveDragState = (event: PointerEvent): RigMoveDragState | null => {
+      if (editorModeRef.current !== 'rig' || rigToolModeRef.current !== 'move') return null;
+
+      const selected = selectedBoneNameRef.current;
+      if (!selected || selected === 'Scene') return null;
+
+      const skel = skeletonRefForPick.current;
+      const bone = skel ? findBoneByName(skel, selected) : null;
+      if (!bone) return null;
+
+      const pick = pickViewportCamera(event.clientX, event.clientY);
+      if (!pick || pick.viewport.role === 'perspective') return null;
+
+      const boneWorld = bone.getWorldPosition(new THREE.Vector3());
+      const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(
+        pick.camera.getWorldDirection(new THREE.Vector3()),
+        boneWorld,
+      );
+      const initialState: RigMoveDragState = {
+        boneName: selected,
+        bone,
+        paneRole: pick.viewport.role,
+        plane,
+        localOffset: new THREE.Vector3(),
+      };
+      const worldPosition = getRigMoveWorldPositionFromPointer(event, initialState, pick.viewport);
+      if (!worldPosition) return null;
+
+      return {
+        ...initialState,
+        localOffset: worldPosition.sub(boneWorld),
+      };
+    };
+
+    const buildRigRotateDragState = (event: PointerEvent): RigRotateDragState | null => {
+      if (editorModeRef.current !== 'rig' || rigToolModeRef.current !== 'rotate') return null;
+
+      const selected = selectedBoneNameRef.current;
+      if (!selected || selected === 'Scene') return null;
+
+      const skel = skeletonRefForPick.current;
+      const bone = skel ? findBoneByName(skel, selected) : null;
+      if (!bone) return null;
+
+      const pick = pickViewportCamera(event.clientX, event.clientY);
+      if (!pick || pick.viewport.role === 'perspective') return null;
+
+      const center = bone.getWorldPosition(new THREE.Vector3());
+      const axis = pick.camera.getWorldDirection(new THREE.Vector3()).normalize();
+      const plane = new THREE.Plane().setFromNormalAndCoplanarPoint(axis, center);
+      const initialState: RigRotateDragState = {
+        boneName: selected,
+        bone,
+        paneRole: pick.viewport.role,
+        plane,
+        axis,
+        center,
+        previousVector: new THREE.Vector3(1, 0, 0),
+      };
+      const previousVector = getRigRotateVectorFromPointer(event, initialState, pick.viewport);
+      if (!previousVector) return null;
+
+      return {
+        ...initialState,
+        previousVector,
+      };
+    };
+
     const startEndpointDrag = (state: EndpointDragState): void => {
       endpointDragRef.current = state;
       emitBoneTransformEdit('start', 'endpoint-drag', state.bone);
@@ -920,6 +1185,82 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (canvas.dataset.endpointDrag) {
         delete canvas.dataset.endpointDrag;
       }
+      canvas.style.cursor = 'default';
+      cursorModeRef.current = 'default';
+      hoveredBoneNameRef.current = null;
+      canvas.dataset.hoveredBone = '';
+    };
+
+    const startRigMoveDrag = (state: RigMoveDragState, event: PointerEvent): boolean => {
+      const initialWorldPosition = state.bone.getWorldPosition(new THREE.Vector3());
+      const accepted = onMoveRigBoneToWorldRef.current?.({
+        phase: 'start',
+        boneName: state.boneName,
+        worldPosition: initialWorldPosition,
+        paneRole: state.paneRole,
+      });
+      if (accepted === false) return false;
+
+      rigMoveDragRef.current = state;
+      orbitRef.current.enabled = false;
+      canvas.style.cursor = 'grabbing';
+      cursorModeRef.current = 'grabbing';
+      updateRigMoveTelemetry(state, initialWorldPosition);
+      updateRigMoveFromPointer(event, state);
+      return true;
+    };
+
+    const endRigMoveDrag = () => {
+      const dragState = rigMoveDragRef.current;
+      if (dragState) {
+        onMoveRigBoneToWorldRef.current?.({
+          phase: 'end',
+          boneName: dragState.boneName,
+          worldPosition: dragState.bone.getWorldPosition(new THREE.Vector3()),
+          paneRole: dragState.paneRole,
+        });
+        rigMoveDragRef.current = null;
+      }
+      orbitRef.current.enabled = true;
+      clearRigMoveTelemetry();
+      canvas.style.cursor = 'default';
+      cursorModeRef.current = 'default';
+      hoveredBoneNameRef.current = null;
+      canvas.dataset.hoveredBone = '';
+    };
+
+    const startRigRotateDrag = (state: RigRotateDragState): boolean => {
+      const accepted = onRotateRigBoneRef.current?.({
+        phase: 'start',
+        boneName: state.boneName,
+        worldAxis: state.axis,
+        angleRadians: 0,
+        paneRole: state.paneRole,
+      });
+      if (accepted === false) return false;
+
+      rigRotateDragRef.current = state;
+      orbitRef.current.enabled = false;
+      canvas.style.cursor = 'grabbing';
+      cursorModeRef.current = 'grabbing';
+      updateRigRotateTelemetry(state, 0);
+      return true;
+    };
+
+    const endRigRotateDrag = () => {
+      const dragState = rigRotateDragRef.current;
+      if (dragState) {
+        onRotateRigBoneRef.current?.({
+          phase: 'end',
+          boneName: dragState.boneName,
+          worldAxis: dragState.axis,
+          angleRadians: 0,
+          paneRole: dragState.paneRole,
+        });
+        rigRotateDragRef.current = null;
+      }
+      orbitRef.current.enabled = true;
+      clearRigRotateTelemetry();
       canvas.style.cursor = 'default';
       cursorModeRef.current = 'default';
       hoveredBoneNameRef.current = null;
@@ -1129,9 +1470,17 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       return result;
     };
 
-    const setPointerOwnerTelemetry = (owner: ViewportInteractionOwner): void => {
+    const setPointerOwnerTelemetry = (
+      owner: ViewportInteractionOwner,
+      paneRole: ViewportRole | null = null,
+    ): void => {
       canvas.dataset.pointerOwner = owner;
       canvas.dataset.pointerMode = editorModeRef.current;
+      if (paneRole) {
+        canvas.dataset.viewportPaneRole = paneRole;
+      } else {
+        delete canvas.dataset.viewportPaneRole;
+      }
     };
 
     const resolvePointerOwner = (
@@ -1139,6 +1488,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       endpointState: EndpointDragState | null,
     ): ViewportInteractionOwner => {
       const activeSkeleton = skeletonRefForPick.current;
+      const activeViewport = getViewportAt(event.clientX, event.clientY, true);
       const owner = resolvePointerDownOwner({
         editorMode: editorModeRef.current,
         button: event.button,
@@ -1146,10 +1496,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         hasSkeleton: !!activeSkeleton && activeSkeleton.bones.length > 0,
         hasSelectedBone: hasValidSkinPaintTarget(),
         isPrecisionMode: isPrecisionModeRef.current,
-        isPickingViewport: isInPickingViewport(event.clientX, event.clientY),
+        isPickingViewport: !!activeViewport,
         hitEndpointHandle: !!endpointState,
       });
-      setPointerOwnerTelemetry(owner);
+      setPointerOwnerTelemetry(owner, activeViewport?.role ?? null);
       return owner;
     };
 
@@ -1163,6 +1513,21 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         startEndpointDrag(endpointState);
         pointerDownRef.current = null;
         return;
+      }
+
+      if (owner === 'rig-select' && rigToolModeRef.current === 'move') {
+        const rigMoveState = buildRigMoveDragState(event);
+        if (rigMoveState && startRigMoveDrag(rigMoveState, event)) {
+          pointerDownRef.current = null;
+          return;
+        }
+      }
+      if (owner === 'rig-select' && rigToolModeRef.current === 'rotate') {
+        const rigRotateState = buildRigRotateDragState(event);
+        if (rigRotateState && startRigRotateDrag(rigRotateState)) {
+          pointerDownRef.current = null;
+          return;
+        }
       }
 
       if (owner === 'skin-paint') {
@@ -1205,6 +1570,16 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         pointerDownRef.current = null;
         return;
       }
+      if (rigMoveDragRef.current) {
+        endRigMoveDrag();
+        pointerDownRef.current = null;
+        return;
+      }
+      if (rigRotateDragRef.current) {
+        endRigRotateDrag();
+        pointerDownRef.current = null;
+        return;
+      }
       if (skinPaintActiveRef.current) {
         skinPaintActiveRef.current = false;
         onSkinPaintStrokeEndRef.current?.();
@@ -1229,7 +1604,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (!clickOwner) return;
 
       if (clickOwner === 'model-select') {
-        setPointerOwnerTelemetry('model-select');
+        setPointerOwnerTelemetry('model-select', getViewportAt(event.clientX, event.clientY, true)?.role ?? null);
         const objectHit = pickViewportObject(event);
         if (objectHit) {
           onSelectObjectRef.current?.(objectHit);
@@ -1245,17 +1620,56 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         return;
       }
 
-      const cb = onSelectBoneRef.current;
-      if (!cb) return;
+      if (clickOwner === 'rig-select' && rigToolModeRef.current === 'add-child') {
+        const placement = getRigChildPlacementFromPointer(event);
+        if (placement) {
+          const created = onCreateRigChildAtWorldRef.current?.(placement);
+          if (created === false) {
+            canvas.dataset.rigAddChildResult = 'blocked';
+            return;
+          }
+          canvas.dataset.rigAddChildResult = 'created';
+          canvas.dataset.rigAddChildPaneRole = placement.paneRole;
+          canvas.dataset.rigAddChildX = placement.worldPosition.x.toFixed(4);
+          canvas.dataset.rigAddChildY = placement.worldPosition.y.toFixed(4);
+          canvas.dataset.rigAddChildZ = placement.worldPosition.z.toFixed(4);
+          return;
+        }
+        canvas.dataset.rigAddChildResult = 'miss';
+      }
+
       const closestName = pickBoneName(event, pickDistanceRef.current);
       if (closestName) {
-        cb(closestName);
+        canvas.dataset.viewportPickedBone = closestName;
+        onSelectBoneRef.current?.(closestName);
+        return;
+      }
+
+      delete canvas.dataset.viewportPickedBone;
+
+      if (clickOwner === 'rig-select' && rigToolModeRef.current === 'add-child') {
+        delete canvas.dataset.rigAddChildPaneRole;
+        delete canvas.dataset.rigAddChildX;
+        delete canvas.dataset.rigAddChildY;
+        delete canvas.dataset.rigAddChildZ;
+      } else {
+        delete canvas.dataset.rigAddChildResult;
+        delete canvas.dataset.rigAddChildPaneRole;
+        delete canvas.dataset.rigAddChildX;
+        delete canvas.dataset.rigAddChildY;
+        delete canvas.dataset.rigAddChildZ;
       }
     };
 
     const onWindowPointerUp = () => {
       if (endpointDragRef.current) {
         endEndpointDrag();
+      }
+      if (rigMoveDragRef.current) {
+        endRigMoveDrag();
+      }
+      if (rigRotateDragRef.current) {
+        endRigRotateDrag();
       }
       if (skinPaintActiveRef.current) {
         skinPaintActiveRef.current = false;
@@ -1275,6 +1689,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const onWindowPointerCancel = () => {
       if (endpointDragRef.current) {
         endEndpointDrag();
+      }
+      if (rigMoveDragRef.current) {
+        endRigMoveDrag();
+      }
+      if (rigRotateDragRef.current) {
+        endRigRotateDrag();
       }
       if (skinPaintActiveRef.current) {
         skinPaintActiveRef.current = false;
@@ -1301,6 +1721,24 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         }
         const moved = updateDragFromEndpoint(event, dragState, dragPick.viewport);
         if (moved) {
+          hoveredBoneNameRef.current = dragState.boneName;
+          canvas.dataset.hoveredBone = dragState.boneName;
+        }
+        return;
+      }
+      if (rigMoveDragRef.current) {
+        const dragState = rigMoveDragRef.current;
+        const moved = updateRigMoveFromPointer(event, dragState);
+        if (moved) {
+          hoveredBoneNameRef.current = dragState.boneName;
+          canvas.dataset.hoveredBone = dragState.boneName;
+        }
+        return;
+      }
+      if (rigRotateDragRef.current) {
+        const dragState = rigRotateDragRef.current;
+        const rotated = updateRigRotateFromPointer(event, dragState);
+        if (rotated) {
           hoveredBoneNameRef.current = dragState.boneName;
           canvas.dataset.hoveredBone = dragState.boneName;
         }
@@ -1490,6 +1928,16 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         orbitRef.current.enabled = true;
         endpointDragRef.current = null;
       }
+      if (rigMoveDragRef.current) {
+        orbitRef.current.enabled = true;
+        rigMoveDragRef.current = null;
+        clearRigMoveTelemetry();
+      }
+      if (rigRotateDragRef.current) {
+        orbitRef.current.enabled = true;
+        rigRotateDragRef.current = null;
+        clearRigRotateTelemetry();
+      }
       restoreTransformControlsAfterEndpointDrag();
       detachOrbit();
       canvas.style.cursor = 'default';
@@ -1512,7 +1960,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // onTimeUpdate (and onSelectBone/skeleton) kept via refs to avoid re-creating renderer/scene/RAF/ listeners on every parent render.
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     applyViewportLayout(viewportLayout);
   }, [viewportLayout, perspectiveEnabled]);
 
@@ -1582,6 +2030,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => { onClearObjectSelectionRef.current = onClearObjectSelection; }, [onClearObjectSelection]);
   useEffect(() => { onObjectContextMenuRef.current = onObjectContextMenu; }, [onObjectContextMenu]);
   useEffect(() => { onBoneTransformEditRef.current = onBoneTransformEdit; }, [onBoneTransformEdit]);
+  useEffect(() => { onCreateRigChildAtWorldRef.current = onCreateRigChildAtWorld; }, [onCreateRigChildAtWorld]);
+  useEffect(() => { onMoveRigBoneToWorldRef.current = onMoveRigBoneToWorld; }, [onMoveRigBoneToWorld]);
+  useEffect(() => { onRotateRigBoneRef.current = onRotateRigBone; }, [onRotateRigBone]);
   useEffect(() => { onSetTransformModeRef.current = onSetTransformMode; }, [onSetTransformMode]);
   useEffect(() => {
     boneTransformOwnerRef.current = boneTransformOwner;
@@ -1597,6 +2048,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => { skinPaintStrengthRef.current = skinPaintStrength; }, [skinPaintStrength]);
   useEffect(() => { skinPaintTargetRef.current = skinPaintTarget; }, [skinPaintTarget]);
   useEffect(() => { editorModeRef.current = editorMode; }, [editorMode]);
+  useEffect(() => { rigToolModeRef.current = rigToolMode; }, [rigToolMode]);
   useEffect(() => {
     if (editorMode !== 'skin') {
       const canvas = canvasRef.current;
@@ -2017,6 +2469,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         data-transform-owner={boneTransformOwner}
         data-transform-attached={transformTargetRef.current ? 'true' : 'false'}
         data-transform-dragging={transformControlsDraggingRef.current ? 'true' : 'false'}
+        data-rig-tool-mode={rigToolMode}
       />
       {viewportLayout === 'quad' && (
         <div className="quad-pane-overlay" data-testid="quad-pane-overlay" aria-hidden="true">

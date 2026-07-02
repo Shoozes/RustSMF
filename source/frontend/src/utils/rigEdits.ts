@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 
+export type RigToolMode = 'select' | 'add-child' | 'move' | 'rotate';
+
 export type RigRenameFailureReason =
   | 'no-selected-bone'
   | 'empty-name'
@@ -48,8 +50,67 @@ export type RigDeleteResult =
   | { ok: true; deletedNames: string[]; indexMap: Map<number, number> }
   | { ok: false; reason: RigDeleteFailureReason; message: string };
 
+export type RigMoveFailureReason =
+  | 'no-selected-bone'
+  | 'missing-bone'
+  | 'invalid-position';
+
+export type RigMoveResult =
+  | { ok: true; bone: THREE.Bone }
+  | { ok: false; reason: RigMoveFailureReason; message: string };
+
+export type RigDetachFailureReason =
+  | 'no-selected-bone'
+  | 'missing-bone'
+  | 'root-bone'
+  | 'already-detached'
+  | 'already-attached';
+
+export type RigDetachResult =
+  | { ok: true; bone: THREE.Bone; detached: boolean; indexMap: Map<number, number> }
+  | { ok: false; reason: RigDetachFailureReason; message: string };
+
+export type RigSpinAxis = 'x' | 'y' | 'z';
+
+export type RigSpinFailureReason =
+  | 'missing-skeleton'
+  | 'empty-skeleton'
+  | 'invalid-axis'
+  | 'invalid-angle';
+
+export type RigSpinResult =
+  | { ok: true; axis: RigSpinAxis; angleRadians: number; boneCount: number }
+  | { ok: false; reason: RigSpinFailureReason; message: string };
+
+export type RigRotateFailureReason =
+  | 'no-selected-bone'
+  | 'missing-bone'
+  | 'invalid-axis'
+  | 'invalid-angle';
+
+export type RigRotateResult =
+  | { ok: true; bone: THREE.Bone; angleRadians: number }
+  | { ok: false; reason: RigRotateFailureReason; message: string };
+
 const BONE_NAME_PATTERN = /^[A-Za-z0-9_.:-]+$/;
 const SKIN_WEIGHT_EPSILON = 1e-6;
+export const RIG_SNAP_STEPS = [0, 0.05, 0.1, 0.25, 0.5, 1] as const;
+
+export function normalizeRigSnapStep(value: number): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return RIG_SNAP_STEPS.find((step) => Math.abs(step - value) <= 1e-6) ?? 0;
+}
+
+export function snapRigWorldPosition(worldPosition: THREE.Vector3, snapStep: number): THREE.Vector3 {
+  const normalizedStep = normalizeRigSnapStep(snapStep);
+  if (normalizedStep <= 0) return worldPosition.clone();
+
+  return new THREE.Vector3(
+    Math.round(worldPosition.x / normalizedStep) * normalizedStep,
+    Math.round(worldPosition.y / normalizedStep) * normalizedStep,
+    Math.round(worldPosition.z / normalizedStep) * normalizedStep,
+  );
+}
 
 export function validateBoneRename(
   skeleton: THREE.Skeleton | null | undefined,
@@ -74,7 +135,7 @@ export function validateBoneRename(
       message: 'Bone names may contain letters, numbers, underscore, dash, dot, and colon.',
     };
   }
-  if (skeleton.bones.some((bone) => bone.name === nextName)) {
+  if (collectSkeletonHierarchyBones(skeleton).some((bone) => bone.name === nextName)) {
     return { ok: false, reason: 'duplicate-name', message: `A bone named ${nextName} already exists.` };
   }
   return { ok: true, name: nextName };
@@ -151,6 +212,45 @@ function findBone(skeleton: THREE.Skeleton | null | undefined, name: string): TH
   return skeleton.bones.find((bone) => bone.name === name) ?? null;
 }
 
+function collectSkeletonHierarchyBones(skeleton: THREE.Skeleton | null | undefined): THREE.Bone[] {
+  if (!skeleton) return [];
+  const roots: THREE.Bone[] = [];
+  for (const bone of skeleton.bones) {
+    let root = bone;
+    while (root.parent && (root.parent as THREE.Bone).isBone === true) {
+      root = root.parent as THREE.Bone;
+    }
+    if (!roots.includes(root)) {
+      roots.push(root);
+    }
+  }
+
+  const bones: THREE.Bone[] = [];
+  for (const root of roots) {
+    root.traverse((object) => {
+      if ((object as THREE.Bone).isBone === true && !bones.includes(object as THREE.Bone)) {
+        bones.push(object as THREE.Bone);
+      }
+    });
+  }
+  return bones;
+}
+
+function findHierarchyBone(skeleton: THREE.Skeleton | null | undefined, name: string): THREE.Bone | null {
+  if (!skeleton || !name || name === 'Scene') return null;
+  return collectSkeletonHierarchyBones(skeleton).find((bone) => bone.name === name) ?? null;
+}
+
+function hasHierarchyBoneName(skeleton: THREE.Skeleton, name: string): boolean {
+  return collectSkeletonHierarchyBones(skeleton).some((bone) => bone.name === name);
+}
+
+function rigSpinAxisVector(axis: RigSpinAxis): THREE.Vector3 {
+  if (axis === 'x') return new THREE.Vector3(1, 0, 0);
+  if (axis === 'y') return new THREE.Vector3(0, 1, 0);
+  return new THREE.Vector3(0, 0, 1);
+}
+
 function validateNewBoneName(
   skeleton: THREE.Skeleton,
   requestedName: string,
@@ -166,7 +266,7 @@ function validateNewBoneName(
       message: 'Bone names may contain letters, numbers, underscore, dash, dot, and colon.',
     };
   }
-  if (skeleton.bones.some((bone) => bone.name === nextName)) {
+  if (hasHierarchyBoneName(skeleton, nextName)) {
     return { ok: false, reason: 'duplicate-name', message: `A bone named ${nextName} already exists.` };
   }
   return { ok: true, name: nextName };
@@ -259,6 +359,27 @@ function remapSkinnedMeshBoneIndices(
   }
 }
 
+function rewriteSkinnedMeshBoneIndices(
+  meshes: readonly THREE.SkinnedMesh[],
+  rewrite: (index: number, slotWeight: number) => number,
+): void {
+  for (const mesh of meshes) {
+    const attributes = getSkinAttributes(mesh);
+    if (!attributes) continue;
+    const vertexCount = Math.min(attributes.skinIndex.count, attributes.skinWeight.count);
+    for (let vertexIndex = 0; vertexIndex < vertexCount; vertexIndex += 1) {
+      const indices = skinAttributeValues(attributes.skinIndex, vertexIndex).map((value) => Math.max(0, Math.trunc(value)));
+      const weights = skinAttributeValues(attributes.skinWeight, vertexIndex);
+      const next = indices.map((index, slot) => rewrite(index, weights[slot]));
+      attributes.skinIndex.setX(vertexIndex, next[0]);
+      attributes.skinIndex.setY(vertexIndex, next[1]);
+      attributes.skinIndex.setZ(vertexIndex, next[2]);
+      attributes.skinIndex.setW(vertexIndex, next[3]);
+    }
+    attributes.skinIndex.needsUpdate = true;
+  }
+}
+
 export function validateBoneReparent(
   skeleton: THREE.Skeleton | null | undefined,
   boneName: string,
@@ -335,6 +456,7 @@ export function createChildBone(
   skeleton: THREE.Skeleton,
   parentName: string,
   requestedName: string,
+  options: { worldPosition?: THREE.Vector3 } = {},
 ): RigCreateChildResult {
   const validation = validateCreateChildBone(skeleton, parentName, requestedName);
   if (!validation.ok) return validation;
@@ -342,9 +464,16 @@ export function createChildBone(
   const { name, parent } = validation;
   const bone = new THREE.Bone();
   bone.name = name;
-  bone.position.set(0, 0.25, 0);
   parent.add(bone);
   parent.updateMatrixWorld(true);
+
+  if (options.worldPosition) {
+    bone.position.copy(parent.worldToLocal(options.worldPosition.clone()));
+  } else {
+    bone.position.set(0, 0.25, 0);
+  }
+
+  bone.updateMatrix();
   bone.updateMatrixWorld(true);
 
   skeleton.bones.push(bone);
@@ -353,6 +482,211 @@ export function createChildBone(
   skeleton.update();
 
   return { ok: true, bone, parent };
+}
+
+export function moveBoneToWorldPosition(
+  skeleton: THREE.Skeleton | null | undefined,
+  boneName: string,
+  worldPosition: THREE.Vector3,
+): RigMoveResult {
+  if (!skeleton || !boneName || boneName === 'Scene') {
+    return { ok: false, reason: 'no-selected-bone', message: 'Select a bone before moving.' };
+  }
+  if (!Number.isFinite(worldPosition.x) || !Number.isFinite(worldPosition.y) || !Number.isFinite(worldPosition.z)) {
+    return { ok: false, reason: 'invalid-position', message: 'Cannot move bone to a non-finite position.' };
+  }
+
+  const bone = findBone(skeleton, boneName);
+  if (!bone) {
+    return { ok: false, reason: 'missing-bone', message: `Bone ${boneName} is not in the current skeleton.` };
+  }
+
+  const parent = bone.parent;
+  if (parent) {
+    parent.updateMatrixWorld(true);
+    bone.position.copy(parent.worldToLocal(worldPosition.clone()));
+  } else {
+    bone.position.copy(worldPosition);
+  }
+  bone.updateMatrix();
+  bone.updateMatrixWorld(true);
+
+  skeleton.calculateInverses();
+  skeleton.init();
+  skeleton.update();
+
+  return { ok: true, bone };
+}
+
+export function rotateBoneAroundWorldAxis(
+  skeleton: THREE.Skeleton | null | undefined,
+  boneName: string,
+  worldAxis: THREE.Vector3,
+  angleRadians: number,
+): RigRotateResult {
+  if (!skeleton || !boneName || boneName === 'Scene') {
+    return { ok: false, reason: 'no-selected-bone', message: 'Select a bone before rotating.' };
+  }
+  if (
+    !Number.isFinite(worldAxis.x)
+    || !Number.isFinite(worldAxis.y)
+    || !Number.isFinite(worldAxis.z)
+    || worldAxis.lengthSq() <= 1e-12
+  ) {
+    return { ok: false, reason: 'invalid-axis', message: 'Rig rotate axis must be finite and non-zero.' };
+  }
+  if (!Number.isFinite(angleRadians)) {
+    return { ok: false, reason: 'invalid-angle', message: 'Rig rotate angle must be finite.' };
+  }
+
+  const bone = findBone(skeleton, boneName);
+  if (!bone) {
+    return { ok: false, reason: 'missing-bone', message: `Bone ${boneName} is not in the current skeleton.` };
+  }
+
+  bone.updateMatrixWorld(true);
+  const boneWorld = bone.matrixWorld.clone();
+  const boneOrigin = bone.getWorldPosition(new THREE.Vector3());
+  const rotation = new THREE.Matrix4()
+    .makeTranslation(boneOrigin.x, boneOrigin.y, boneOrigin.z)
+    .multiply(new THREE.Matrix4().makeRotationAxis(worldAxis.clone().normalize(), angleRadians))
+    .multiply(new THREE.Matrix4().makeTranslation(-boneOrigin.x, -boneOrigin.y, -boneOrigin.z));
+  const nextWorld = rotation.multiply(boneWorld);
+  const parentWorld = bone.parent?.matrixWorld ?? new THREE.Matrix4();
+  const localMatrix = parentWorld.clone().invert().multiply(nextWorld);
+  localMatrix.decompose(bone.position, bone.quaternion, bone.scale);
+  bone.updateMatrix();
+  bone.updateMatrixWorld(true);
+
+  skeleton.calculateInverses();
+  skeleton.init();
+  skeleton.update();
+
+  return { ok: true, bone, angleRadians };
+}
+
+export function setBoneDetached(
+  skeleton: THREE.Skeleton | null | undefined,
+  boneName: string,
+  detached: boolean,
+  skinnedMeshes: readonly THREE.SkinnedMesh[] = [],
+): RigDetachResult {
+  if (!skeleton || !boneName || boneName === 'Scene') {
+    return { ok: false, reason: 'no-selected-bone', message: 'Select a bone before changing detach state.' };
+  }
+
+  const bone = findHierarchyBone(skeleton, boneName);
+  if (!bone) {
+    return { ok: false, reason: 'missing-bone', message: `Bone ${boneName} is not in the current skeleton hierarchy.` };
+  }
+
+  const currentIndex = skeleton.bones.indexOf(bone);
+  const isCurrentlyAttached = currentIndex >= 0;
+  if (detached && !isCurrentlyAttached) {
+    return { ok: false, reason: 'already-detached', message: `Bone ${boneName} is already detached.` };
+  }
+  if (!detached && isCurrentlyAttached) {
+    return { ok: false, reason: 'already-attached', message: `Bone ${boneName} is already attached.` };
+  }
+
+  if (detached) {
+    if (currentIndex <= 0 || !bone.parent || (bone.parent as THREE.Bone).isBone !== true) {
+      return { ok: false, reason: 'root-bone', message: 'Root bones cannot be detached from the deform skeleton.' };
+    }
+
+    const attachedChild = bone.children.find((child) => (
+      (child as THREE.Bone).isBone === true && skeleton.bones.includes(child as THREE.Bone)
+    )) as THREE.Bone | undefined;
+    const parentBone = bone.parent as THREE.Bone;
+    const parentIndex = skeleton.bones.indexOf(parentBone);
+    const replacementIndex = attachedChild
+      ? Math.max(0, skeleton.bones.indexOf(attachedChild) - 1)
+      : Math.max(0, parentIndex);
+    const indexMap = new Map<number, number>();
+    skeleton.bones.forEach((candidate, oldIndex) => {
+      if (candidate !== bone) {
+        indexMap.set(oldIndex, oldIndex > currentIndex ? oldIndex - 1 : oldIndex);
+      }
+    });
+
+    rewriteSkinnedMeshBoneIndices(skinnedMeshes, (index, weight) => {
+      if (index === currentIndex) return Math.abs(weight) > SKIN_WEIGHT_EPSILON ? replacementIndex : 0;
+      return indexMap.get(index) ?? index;
+    });
+
+    skeleton.bones.splice(currentIndex, 1);
+    skeleton.boneInverses.splice(currentIndex, 1);
+    bone.userData.rustsmfDetached = true;
+    skeleton.init();
+    skeleton.update();
+    return { ok: true, bone, detached: true, indexMap };
+  }
+
+  const hierarchyBones = collectSkeletonHierarchyBones(skeleton);
+  const hierarchyIndex = hierarchyBones.indexOf(bone);
+  const insertIndex = Math.max(
+    0,
+    hierarchyBones.slice(0, hierarchyIndex).filter((candidate) => skeleton.bones.includes(candidate)).length,
+  );
+  const indexMap = new Map<number, number>();
+  skeleton.bones.forEach((_, oldIndex) => {
+    indexMap.set(oldIndex, oldIndex >= insertIndex ? oldIndex + 1 : oldIndex);
+  });
+
+  rewriteSkinnedMeshBoneIndices(skinnedMeshes, (index) => indexMap.get(index) ?? index);
+  bone.updateMatrixWorld(true);
+  skeleton.bones.splice(insertIndex, 0, bone);
+  skeleton.boneInverses.splice(insertIndex, 0, bone.matrixWorld.clone().invert());
+  bone.userData.rustsmfDetached = false;
+  skeleton.init();
+  skeleton.update();
+  return { ok: true, bone, detached: false, indexMap };
+}
+
+export function spinRig(
+  skeleton: THREE.Skeleton | null | undefined,
+  axis: RigSpinAxis,
+  angleRadians = -Math.PI / 2,
+): RigSpinResult {
+  if (!skeleton) {
+    return { ok: false, reason: 'missing-skeleton', message: 'Load a rig before spinning.' };
+  }
+  if (axis !== 'x' && axis !== 'y' && axis !== 'z') {
+    return { ok: false, reason: 'invalid-axis', message: 'Rig spin axis must be x, y, or z.' };
+  }
+
+  const bones = collectSkeletonHierarchyBones(skeleton);
+  if (bones.length === 0) {
+    return { ok: false, reason: 'empty-skeleton', message: 'Cannot spin an empty rig.' };
+  }
+  if (!Number.isFinite(angleRadians)) {
+    return { ok: false, reason: 'invalid-angle', message: 'Rig spin angle must be finite.' };
+  }
+
+  const rotation = new THREE.Matrix4().makeRotationAxis(rigSpinAxisVector(axis), angleRadians);
+  bones.forEach((bone) => bone.updateMatrixWorld(true));
+
+  const nextWorld = new Map<THREE.Bone, THREE.Matrix4>();
+  for (const bone of bones) {
+    nextWorld.set(bone, rotation.clone().multiply(bone.matrixWorld));
+  }
+
+  for (const bone of bones) {
+    const parent = bone.parent;
+    const parentWorld = parent && (parent as THREE.Bone).isBone === true && nextWorld.has(parent as THREE.Bone)
+      ? nextWorld.get(parent as THREE.Bone)!
+      : parent?.matrixWorld ?? new THREE.Matrix4();
+    const localMatrix = parentWorld.clone().invert().multiply(nextWorld.get(bone)!);
+    localMatrix.decompose(bone.position, bone.quaternion, bone.scale);
+    bone.updateMatrix();
+  }
+
+  bones.forEach((bone) => bone.updateMatrixWorld(true));
+  skeleton.calculateInverses();
+  skeleton.init();
+  skeleton.update();
+
+  return { ok: true, axis, angleRadians, boneCount: bones.length };
 }
 
 export function deleteBoneBranch(
