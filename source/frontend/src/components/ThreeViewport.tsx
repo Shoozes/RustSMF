@@ -690,6 +690,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     tc.enabled = false;
     transformControlsAsObject3D(tc).visible = false;
     tc.detach();
+    setTransformOwnerTelemetry(false);
   };
 
   const restoreTransformControlsAfterEndpointDrag = () => {
@@ -701,6 +702,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       tc.attach(transformTargetRef.current);
     }
     isTransformControlsPausedForEndpointRef.current = false;
+    setTransformOwnerTelemetry(!!transformTargetRef.current);
   };
 
   const updateDragFromEndpoint = (event: PointerEvent, state: EndpointDragState, viewport: ViewportSpec): boolean => {

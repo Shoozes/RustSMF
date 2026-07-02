@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-07-02 (integrity/backlog review; strict importable-SMF pose roundtrip cleanup, animation clip metadata controls, rapid single/quad viewport continuity coverage, and click-vs-drag viewport selection guards are current; active TODO completion conditions use explicit Done when wording)
+Last reviewed: 2026-07-02 (integrity/backlog review; strict importable-SMF pose roundtrip cleanup, animation clip metadata controls, rapid single/quad viewport continuity coverage, click-vs-drag viewport selection guards, and endpoint/skin-paint gesture isolation coverage are current; active TODO completion conditions use explicit Done when wording)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -59,7 +59,7 @@ Each active item should answer:
   - Done: remove shallow TransformControls pointer-down ownership from `viewportInteractionRouter`; TransformControls now report owner/attached/dragging telemetry separately from pointer owner routing.
   - Done: extract and test the pointer-up click contract so short clicks can select, while drags, long presses, button mismatches, and out-of-pane releases cannot accidentally select.
   - Done: add browser smoke coverage proving Rig-mode left drags and right-drag orbit gestures preserve the selected bone instead of selecting accidentally.
-  - Add tests that endpoint drags pause/restore TransformControls, and skin paint does not orbit/select.
+  - Done: add tests that endpoint drags pause/restore TransformControls telemetry, and skin paint does not orbit or change selected bone state.
   - Add a stable browser-level TransformControls handle-drag test if Playwright can target the Three gizmo without brittle screen-coordinate probing.
   - Add quad/ortho coverage for pickable pane boundaries, high-DPI mouse coordinates, and pointer cancel/window-up cleanup.
   - Decide whether skin point overlays are display-only or can select/paint nearest vertices; document and test the chosen behavior.
