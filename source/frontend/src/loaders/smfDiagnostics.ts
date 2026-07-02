@@ -94,7 +94,7 @@ function maxDelta(a: Float32Array, b: Float32Array, offset = 1): number {
   return Math.max(max, remainder);
 }
 
-function maxQuatDelta(a: Float32Array, b: Float32Array): number {
+function maxDirectDelta(a: Float32Array, b: Float32Array): number {
   const length = Math.min(a.length, b.length);
   let max = 0;
   for (let i = 0; i < length; i++) {
@@ -106,6 +106,22 @@ function maxQuatDelta(a: Float32Array, b: Float32Array): number {
   return max;
 }
 
+function maxNegatedDelta(a: Float32Array, b: Float32Array): number {
+  const length = Math.min(a.length, b.length);
+  let max = 0;
+  for (let i = 0; i < length; i++) {
+    const delta = Math.abs(a[i] + b[i]);
+    if (delta > max) {
+      max = delta;
+    }
+  }
+  return max;
+}
+
+function maxDualQuaternionDelta(a: Float32Array, b: Float32Array): number {
+  return Math.min(maxDirectDelta(a, b), maxNegatedDelta(a, b));
+}
+
 function poseFrameLabel(frameIndex: number, frameCount: number): SmfPoseDeltaFrameLabel {
   if (frameIndex === 0) return 'first';
   if (frameIndex === frameCount - 1) return 'last';
@@ -114,9 +130,10 @@ function poseFrameLabel(frameIndex: number, frameCount: number): SmfPoseDeltaFra
 
 function componentDeltas(a: Float32Array, b: Float32Array): number[] {
   const length = Math.min(a.length, b.length);
+  const useNegated = maxNegatedDelta(a, b) < maxDirectDelta(a, b);
   const deltas: number[] = [];
   for (let i = 0; i < length; i++) {
-    deltas.push(Math.abs(a[i] - b[i]));
+    deltas.push(Math.abs(a[i] - (useNegated ? -b[i] : b[i])));
   }
   return deltas;
 }
@@ -386,7 +403,7 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
         const afterBone = afterAnim.frames[frameIndex]?.[boneIndex];
         if (!beforeBone || !afterBone) continue;
 
-        const poseDelta = maxQuatDelta(beforeBone, afterBone);
+        const poseDelta = maxDualQuaternionDelta(beforeBone, afterBone);
         bonePoseSamplesChecked += 1;
 
         if (poseDelta > bonePoseMaxDelta) {

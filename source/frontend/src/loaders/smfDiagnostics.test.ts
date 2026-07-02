@@ -1,7 +1,53 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { compareSmfRoundtrip } from './smfDiagnostics';
-import type { ImportedSmf } from './smf';
+import { exportSMFToBuffer, importSMF, type ImportedSmf } from './smf';
+import { bytesToArrayBuffer } from './smfBinary';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function installImageTestPolyfill(): void {
+  const g = globalThis as any;
+  if (!g.Image) {
+    g.Image = class {
+      src = '';
+      width = 1;
+      height = 1;
+    };
+  }
+  if (!g.document) {
+    g.document = {
+      createElement(tag: string) {
+        if (tag !== 'canvas') {
+          throw new Error(`Unsupported test element: ${tag}`);
+        }
+        return {
+          width: 1,
+          height: 1,
+          getContext() {
+            return {
+              createImageData(width: number, height: number) {
+                return { data: new Uint8ClampedArray(width * height * 4) };
+              },
+              putImageData() {},
+              drawImage() {},
+              getImageData(_sx = 0, _sy = 0, width = 1, height = 1) {
+                return { data: new Uint8ClampedArray(width * height * 4) };
+              },
+            };
+          },
+          toDataURL() {
+            return 'data:image/png;base64,';
+          },
+        };
+      },
+    };
+  }
+}
 
 function makeImportedSmf(): ImportedSmf {
   return {
@@ -152,6 +198,27 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
     assert.ok(detail.componentDeltas.slice(1).every((delta) => delta === 0));
   });
 
+  it('treats negated dual quaternions as the same pose', () => {
+    const before = makeImportedSmf();
+    const after = {
+      ...before,
+      animations: [
+        {
+          ...before.animations[0],
+          frames: before.animations[0].frames.map((frame) => (
+            frame.map((dq) => new Float32Array(Array.from(dq, (value) => -value)))
+          )),
+        },
+      ],
+    };
+
+    const report = compareSmfRoundtrip(before, after);
+
+    assert.strictEqual(report.ok, true);
+    assert.strictEqual(report.bonePoseMaxDelta, 0);
+    assert.deepStrictEqual(report.poseDeltaDetails, []);
+  });
+
   it('keeps only the top 20 pose delta detail rows', () => {
     const before = makeImportedSmf();
     const boneCount = 25;
@@ -260,5 +327,24 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
     assert.equal(parsed.poseDeltaDetails[0].boneIndex, 0);
     assert.equal(parsed.poseDeltaDetails[0].componentDeltas.length, 8);
     assert.ok(Math.abs(parsed.poseDeltaDetails[0].componentDeltas[0] - 0.01) < 1e-6);
+  });
+
+  it('passes import/export/reimport diagnostics for real SMF samples with head nodes and sign flips', () => {
+    installImageTestPolyfill();
+    const sampleFiles = [
+      path.resolve(__dirname, '../../../tests/mixamo_smf_baldguy.smf'),
+      path.resolve(__dirname, '../../../../docs/references/old-src/datafiles/SMF/spider_TEST.smf'),
+    ].filter((file) => fs.existsSync(file));
+
+    assert.ok(sampleFiles.length > 0, 'expected at least one real SMF fixture');
+
+    for (const sampleFile of sampleFiles) {
+      const imported = importSMF(bytesToArrayBuffer(fs.readFileSync(sampleFile)));
+      const reimported = importSMF(bytesToArrayBuffer(exportSMFToBuffer(imported)));
+      const report = compareSmfRoundtrip(imported, reimported);
+
+      assert.strictEqual(report.status, 'passed', `${path.basename(sampleFile)}: ${report.messages.join('; ')}`);
+      assert.strictEqual(report.ok, true);
+    }
   });
 });

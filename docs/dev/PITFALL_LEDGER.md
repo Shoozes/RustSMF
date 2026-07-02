@@ -1,6 +1,28 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-06-30 (invalid DQ normalization guard).
+Last reviewed: 2026-07-02 (SMF head-node export and DQ sign-equivalent diagnostics).
+
+### Q: What pitfall are we preventing?
+
+**What:** SMF-source export and diagnostics can falsely fail or corrupt strict roundtrip checks when prebuilt non-bone/head nodes are treated as synthetic identities or when sign-equivalent DQs are compared component-for-component.
+
+**Why it happened:** The exporter preserved SMF-sourced node ordering but still filled `isBone=0` head nodes with identity rig/frame DQs. Separately, `compareSmfRoundtrip` compared raw DQ components even though a dual quaternion and its full negation represent the same pose.
+
+**Where:** `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/smfDiagnostics.ts`, `source/frontend/src/loaders/smfDiagnostics.test.ts`, `source/frontend/tests/mixamo_smf_baldguy.smf`, `docs/references/old-src/datafiles/SMF/spider_TEST.smf`.
+
+**How to catch it:** Run `npm --workspace frontend run test:unit -- smfDiagnostics`; the real-fixture diagnostic test exports and reimports `mixamo_smf_baldguy.smf` plus `spider_TEST.smf` and expects strict structured roundtrip status `passed`.
+
+**Solutions tried:**
+1. `45/100` Compare raw DQ components and identity-fill head nodes, result: geometry stayed exact but strict pose diagnostics reported large false or real export-induced deltas.
+2. `94/100` Preserve source rig/frame DQs for any node with source data, and compare DQs in the equivalent sign hemisphere, result: importable real fixtures pass strict diagnostics with regression coverage.
+
+**Current solution:** `exportSMFToBuffer` writes preserved source DQs for prebuilt head nodes instead of identity fallback, and `compareSmfRoundtrip` computes pose deltas using the smaller direct-vs-negated DQ distance while still reporting component deltas in the chosen equivalent hemisphere.
+
+**Effectiveness:** `94/100`, durable. It is verified by focused unit coverage over both a head-node old-source fixture and a sign-flipping Mixamo SMF fixture, and it protects a core export cockpit route.
+
+**Relevance check:** Current. SMF-source fidelity and structured diagnostics remain active app surfaces, and future rig/export edits can easily reintroduce identity head-node fallback or raw DQ comparisons.
+
+**Next prevention step:** Keep real import/export/reimport diagnostic fixtures in the unit gate whenever SMF node-list, animation frame, or DQ comparison code changes.
 
 ### Q: What pitfall are we preventing?
 

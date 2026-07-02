@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-07-02 (integrity/backlog review; animation clip metadata controls are current, and active TODO completion conditions now use explicit Done when wording)
+Last reviewed: 2026-07-02 (integrity/backlog review; strict importable-SMF pose roundtrip cleanup and animation clip metadata controls are current, and active TODO completion conditions use explicit Done when wording)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -19,23 +19,6 @@ Each active item should answer:
 - Done when: completion criteria.
 
 ## Active Backlog
-
-### P1: Resolve strict SMF pose roundtrip mismatches
-
-- What: Root-cause and reduce strict first/last-frame pose-delta mismatches reported by the Export workspace for real imported SMF samples.
-- Why: The export cockpit now classifies pose failures, but release confidence depends on knowing whether remaining deltas are conversion tolerance, source ambiguity, or a real coordinate/DQ bug.
-- Where: `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/coord.ts`, `source/frontend/src/loaders/smfDiagnostics.ts`, `source/frontend/src/loaders/coord.test.ts`, `source/frontend/tests/smoke.spec.ts`, real SMF fixtures under `docs/references/old-src/datafiles/SMF/`.
-- When: Before claiming release-level SMF animation fidelity or widening SMF export claims beyond current diagnostics.
-- How:
-  - Build a focused fixture matrix for one passing generated skinned path and one failing real SMF path.
-  - Compare bind pose, inverse bind, parent transforms, DQ normalization, frame endpoint sampling, and coordinate swizzles.
-  - Keep diagnostics honest while tightening math; do not relax thresholds without evidence.
-- Subtasks:
-  - Done: guard `dqNormalize` so zero/NaN/Infinity rotation parts fall back to identity and unit tests prove finite output.
-  - Done: add bounded worst-pose-delta details to the roundtrip report and Export workspace, including animation/frame/bone, parent/isBone parity, and per-component deltas.
-  - Add one regression fixture/assertion for a known real-sample mismatch once root cause is isolated.
-  - Update the pitfall ledger only if the investigation finds a repeated conversion hazard.
-- Done when: A failing real-sample pose check is either fixed with a regression test or documented as a deliberate unsupported/tolerance-bound case with specific diagnostics.
 
 ### P1: Finish precision-editor parity in quad/ortho workflows
 

@@ -4,14 +4,14 @@ Last reviewed: 2026-07-02
 
 ## Scope
 
-Repo/app integrity pass focused on current-state docs, active backlog shape, summary-bank routing, incomplete logic markers, import/export surfaces, async/race risk notes, and verification posture.
+Repo/app integrity pass focused on current-state docs, active backlog shape, summary-bank routing, incomplete logic markers, import/export surfaces, async/race risk notes, and verification posture. Latest implementation slice resolved the importable real-SMF strict pose roundtrip mismatch class.
 
 ## Current Findings
 
 - Docs needing update: `docs/dev/TODO.md` needed the latest clip metadata state reflected in its review line and explicit `Done when` completion wording. `docs/dev/review.md` was referenced by repo stewardship guidance but did not exist.
 - Summary bank: `summary_bank.json` validated cleanly before edits. It needed one route update so future review/stewardship tasks load this snapshot with the other state/backlog docs.
 - Code scan: no production `TODO`, `FIXME`, `stub`, `todo!`, or `unimplemented!` implementation gaps were found under active source. Remaining `expect` hits are Rust app/test bootstrap paths already covered by Rust checks; no immediate broken import/export issue was found.
-- Edge-case backlog: active TODOs already cover the main risk classes: SMF pose roundtrip mismatches, viewport click/raycast parity, quad/ortho precision, async race coverage, typed interop boundaries, and workerized SMF import/export.
+- Edge-case backlog: active TODOs already cover the main risk classes: viewport click/raycast parity, quad/ortho precision, async race coverage, typed interop boundaries, SMF-aware rig-editing policy, rig tool modes, and workerized SMF import/export.
 - Redundancy: root README still carried dated progress narration that duplicates durable docs; it should stay a concise index plus command surface.
 
 ## Directions
@@ -23,4 +23,4 @@ Repo/app integrity pass focused on current-state docs, active backlog shape, sum
 
 ## Next Best Task
 
-Pick the highest active user-facing risk from `docs/dev/TODO.md`: strict SMF pose roundtrip root-cause work or viewport click/raycast parity, depending on whether the next session is export-fidelity or editor-interaction focused.
+Pick the highest active user-facing risk from `docs/dev/TODO.md`: viewport click/raycast parity or quad/ortho precision, depending on whether the next session is interaction-contract or precision-editor focused.

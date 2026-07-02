@@ -499,12 +499,13 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
 
   nodeList.forEach((n) => {
     let dq: Float32Array;
-    if (n.isHead) {
+    const sourceDq = importedBones[n.boneIndex]?.dq;
+    if (sourceDq) {
+      dq = sourceDq.slice();
+      dq = dqNegate(dqNormalize(dq));
+    } else {
       dq = new Float32Array(8);
       dq[3] = 1;
-    } else {
-      dq = importedBones[n.boneIndex].dq.slice();
-      dq = dqNegate(dqNormalize(dq));
     }
 
     dq.forEach(v => rW.f32(v));
@@ -545,11 +546,12 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
 
       nodeList.forEach((n, ni) => {
         let dq: Float32Array;
-        if (n.isHead) {
-          dq = new Float32Array(8); dq[3] = 1;
-        } else {
-          const srcDq = frameDqs[n.boneIndex] || new Float32Array(8);
+        const srcDq = frameDqs[n.boneIndex];
+        if (srcDq) {
           dq = buildDQForExport(srcDq, prevDQs[ni]);
+        } else {
+          dq = new Float32Array(8);
+          dq[3] = 1;
         }
         dq.forEach(v => aW.f32(v));
         prevDQs[ni] = dq;
