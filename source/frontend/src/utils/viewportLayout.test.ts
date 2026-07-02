@@ -95,4 +95,52 @@ describe('viewportLayout', () => {
     assert.ok(Math.abs(mouse.x - 0) < 0.0001);
     assert.ok(Math.abs(mouse.y - 0) < 0.0001);
   });
+
+  it('uses deterministic half-open internal pane boundaries with inclusive outer edges', () => {
+    const perspective = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+    const cameras = orthoCameras();
+    const panes = refreshViewportSpecs(801, 601, 'quad', DEFAULT_VIEWPORT_BOUNDS, perspective, cameras, true);
+    const rect = { left: 10, top: 20, width: 801, height: 601 } as DOMRect;
+
+    assert.equal(getViewportAt(panes, rect, 10, 621)?.role, 'front');
+    assert.equal(getViewportAt(panes, rect, 410, 621)?.role, 'side');
+    assert.equal(getViewportAt(panes, rect, 10, 321)?.role, 'top');
+    assert.equal(getViewportAt(panes, rect, 410, 321)?.role, 'perspective');
+
+    assert.equal(getViewportAt(panes, rect, 811, 621)?.role, 'side');
+    assert.equal(getViewportAt(panes, rect, 811, 20)?.role, 'perspective');
+    assert.equal(getViewportAt(panes, rect, 812, 20), null);
+    assert.equal(getViewportAt(panes, rect, 811, 19), null);
+  });
+
+  it('keeps high-DPI-style fractional CSS coordinates independent from backing pixel ratio', () => {
+    const camera = new THREE.PerspectiveCamera();
+    const viewport: ViewportSpec = {
+      camera,
+      x: 50,
+      y: 25,
+      width: 200,
+      height: 150,
+      isPickingCamera: true,
+      role: 'perspective',
+    };
+    const rect = { left: 10.5, top: 20.25, width: 500.5, height: 300.5 } as DOMRect;
+
+    const centerX = rect.left + viewport.x + viewport.width / 2;
+    const centerY = rect.top + rect.height - viewport.y - viewport.height / 2;
+    assert.equal(getViewportAt([viewport], rect, centerX, centerY, true)?.role, 'perspective');
+
+    const mouse = getMouseForViewport(centerX, centerY, viewport, rect);
+    assert.ok(Math.abs(mouse.x) < 0.0001);
+    assert.ok(Math.abs(mouse.y) < 0.0001);
+
+    const nearTopRight = getMouseForViewport(
+      rect.left + viewport.x + viewport.width - 0.25,
+      rect.top + rect.height - viewport.y - viewport.height + 0.25,
+      viewport,
+      rect,
+    );
+    assert.ok(nearTopRight.x > 0.99 && nearTopRight.x < 1);
+    assert.ok(nearTopRight.y > 0.99 && nearTopRight.y < 1);
+  });
 });

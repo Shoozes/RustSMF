@@ -138,8 +138,14 @@ export function getViewportAt(
 
   const localX = x - rect.left;
   const localYFromBottom = rect.height - (y - rect.top);
+  const maxX = Math.max(...viewports.map((v) => v.x + v.width));
+  const maxY = Math.max(...viewports.map((v) => v.y + v.height));
   const match = viewports.find((v) => {
-    return localX >= v.x && localX <= v.x + v.width && localYFromBottom >= v.y && localYFromBottom <= v.y + v.height;
+    const right = v.x + v.width;
+    const top = v.y + v.height;
+    const withinX = localX >= v.x && (localX < right || (right === maxX && localX <= right));
+    const withinY = localYFromBottom >= v.y && (localYFromBottom < top || (top === maxY && localYFromBottom <= top));
+    return withinX && withinY;
   });
   if (!match) return null;
   if (requirePicking && !match.isPickingCamera) return null;

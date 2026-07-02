@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-07-02 (integrity/backlog review; strict importable-SMF pose roundtrip cleanup, animation clip metadata controls, rapid single/quad viewport continuity coverage, click-vs-drag viewport selection guards, endpoint/skin-paint gesture isolation, and pointer-cancel cleanup coverage are current; active TODO completion conditions use explicit Done when wording)
+Last reviewed: 2026-07-02 (integrity/backlog review; strict importable-SMF pose roundtrip cleanup, animation clip metadata controls, rapid single/quad viewport continuity coverage, click-vs-drag viewport selection guards, endpoint/skin-paint gesture isolation, pointer-cancel cleanup, and deterministic high-DPI pane hit math are current; active TODO completion conditions use explicit Done when wording)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -31,7 +31,7 @@ Each active item should answer:
   - Keep model/shared-root continuity unchanged.
   - Add regression tests before changing drag, hover, pane selection, label scaling, or DPR handling.
 - Subtasks:
-  - Add high-DPR/browser-pixel coverage if renderer sizing or canvas pixel-ratio logic changes.
+  - Done: add high-DPI/browser-pixel style coverage for fractional CSS coordinates and deterministic pane-boundary hit tests in shared viewport math.
   - Done: add faster single-to-quad-to-single switching tests around selected bone, hover state, endpoint telemetry, and scrub time.
   - Add visual checks that quad labels/dividers do not overlap tool overlays at narrow widths beyond the current loaded/narrow shell checks.
   - Decide whether ortho panes should support all bone selection/edit actions or a deliberate subset.
@@ -62,7 +62,8 @@ Each active item should answer:
   - Done: add tests that endpoint drags pause/restore TransformControls telemetry, and skin paint does not orbit or change selected bone state.
   - Add a stable browser-level TransformControls handle-drag test if Playwright can target the Three gizmo without brittle screen-coordinate probing.
   - Done: add pointer-cancel cleanup coverage for active endpoint drag and Skin paint gestures.
-  - Add quad/ortho coverage for pickable pane boundaries, high-DPI mouse coordinates, and window-up cleanup.
+  - Done: make internal quad pane boundaries deterministic with half-open hit boxes while preserving inclusive outer canvas edges.
+  - Add broader quad/ortho browser coverage for pane-specific pick behavior and window-up cleanup.
   - Decide whether skin point overlays are display-only or can select/paint nearest vertices; document and test the chosen behavior.
 - Done when: A table-driven interaction contract and e2e smoke prove each supported click/drag path mutates only the intended state in single, quad, perspective, and ortho contexts.
 
