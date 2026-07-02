@@ -20,6 +20,24 @@ export interface ViewportInteractionContext {
   hitEndpointHandle: boolean;
 }
 
+export interface ViewportPointerDownSnapshot {
+  x: number;
+  y: number;
+  time: number;
+  button: number;
+  owner: ViewportInteractionOwner;
+}
+
+export interface ViewportPointerUpContext {
+  x: number;
+  y: number;
+  time: number;
+  button: number;
+  isPickingViewport: boolean;
+  maxMovePx?: number;
+  maxElapsedMs?: number;
+}
+
 export function resolvePointerDownOwner(ctx: ViewportInteractionContext): ViewportInteractionOwner {
   if (!ctx.hasModel || !ctx.isPickingViewport) return 'none';
   if (ctx.button !== 0) return 'orbit';
@@ -42,4 +60,24 @@ export function resolvePointerDownOwner(ctx: ViewportInteractionContext): Viewpo
   }
 
   return 'none';
+}
+
+export function resolvePointerClickOwner(
+  down: ViewportPointerDownSnapshot | null,
+  up: ViewportPointerUpContext,
+): ViewportInteractionOwner | null {
+  if (!down) return null;
+  if (down.button !== 0 || up.button !== 0) return null;
+  if (down.button !== up.button) return null;
+  if (!up.isPickingViewport) return null;
+
+  const maxMovePx = up.maxMovePx ?? 6;
+  const maxElapsedMs = up.maxElapsedMs ?? 350;
+  const movedPx = Math.hypot(up.x - down.x, up.y - down.y);
+  const elapsedMs = Math.max(0, up.time - down.time);
+
+  if (movedPx > maxMovePx) return null;
+  if (elapsedMs > maxElapsedMs) return null;
+
+  return down.owner;
 }

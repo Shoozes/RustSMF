@@ -1550,6 +1550,25 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await page.waitForTimeout(80);
     await expect(canvas).toHaveAttribute('data-pointer-owner', 'rig-select');
     await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
+    const selectedAfterClick = parseSelectedBone(await page.getByTestId('status-text').textContent());
+    expect(selectedAfterClick).toBeTruthy();
+
+    const canvasBox = await canvas.boundingBox();
+    expect(canvasBox).toBeTruthy();
+    await page.mouse.move(canvasBox!.x + 90, canvasBox!.y + 90);
+    await page.mouse.down({ button: 'left' });
+    await page.mouse.move(canvasBox!.x + 120, canvasBox!.y + 124);
+    await page.mouse.up({ button: 'left' });
+    await page.waitForTimeout(60);
+    expect(parseSelectedBone(await page.getByTestId('status-text').textContent())).toBe(selectedAfterClick);
+
+    await page.mouse.move(canvasBox!.x + 130, canvasBox!.y + 130);
+    await page.mouse.down({ button: 'right' });
+    await page.mouse.move(canvasBox!.x + 160, canvasBox!.y + 150);
+    await page.mouse.up({ button: 'right' });
+    await page.waitForTimeout(60);
+    await expect(canvas).toHaveAttribute('data-pointer-owner', 'orbit');
+    expect(parseSelectedBone(await page.getByTestId('status-text').textContent())).toBe(selectedAfterClick);
 
     // Confirm inspector reflects bones (rig info indirectly via count)
     await expect(inspector).toContainText(/Bones \(\d+\)/i);

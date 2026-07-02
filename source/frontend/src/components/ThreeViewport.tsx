@@ -36,6 +36,7 @@ import {
   type ViewportSpec,
 } from '../utils/viewportLayout';
 import {
+  resolvePointerClickOwner,
   resolvePointerDownOwner,
   type ViewportInteractionOwner,
 } from '../utils/viewportInteractionRouter';
@@ -1216,13 +1217,16 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
       const down = pointerDownRef.current;
       pointerDownRef.current = null;
-      if (!down || down.button !== 0 || event.button !== 0) return;
-      const elapsed = performance.now() - down.time;
-      const movedPx = Math.hypot(event.clientX - down.x, event.clientY - down.y);
-      if (movedPx > 6 || elapsed > 350) return;
-      if (!isInPickingViewport(event.clientX, event.clientY)) return;
+      const clickOwner = resolvePointerClickOwner(down, {
+        x: event.clientX,
+        y: event.clientY,
+        time: performance.now(),
+        button: event.button,
+        isPickingViewport: isInPickingViewport(event.clientX, event.clientY),
+      });
+      if (!clickOwner) return;
 
-      if (down.owner === 'model-select') {
+      if (clickOwner === 'model-select') {
         setPointerOwnerTelemetry('model-select');
         const objectHit = pickViewportObject(event);
         if (objectHit) {
@@ -1235,7 +1239,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         return;
       }
 
-      if (down.owner !== 'rig-select' && down.owner !== 'animate-select') {
+      if (clickOwner !== 'rig-select' && clickOwner !== 'animate-select') {
         return;
       }
 
