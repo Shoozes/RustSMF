@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-07-02 (integrity/backlog review; strict importable-SMF pose roundtrip cleanup and animation clip metadata controls are current, and active TODO completion conditions use explicit Done when wording)
+Last reviewed: 2026-07-02 (integrity/backlog review; strict importable-SMF pose roundtrip cleanup, animation clip metadata controls, and rapid single/quad viewport continuity coverage are current; active TODO completion conditions use explicit Done when wording)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -32,7 +32,7 @@ Each active item should answer:
   - Add regression tests before changing drag, hover, pane selection, label scaling, or DPR handling.
 - Subtasks:
   - Add high-DPR/browser-pixel coverage if renderer sizing or canvas pixel-ratio logic changes.
-  - Add faster single-to-quad-to-single switching tests around selected bone, hover state, endpoint telemetry, and scrub time.
+  - Done: add faster single-to-quad-to-single switching tests around selected bone, hover state, endpoint telemetry, and scrub time.
   - Add visual checks that quad labels/dividers do not overlap tool overlays at narrow widths beyond the current loaded/narrow shell checks.
   - Decide whether ortho panes should support all bone selection/edit actions or a deliberate subset.
 - Done when: Rapid layout/mode switching in single and quad states never drops bone selection, scrub continuity, endpoint-hover state, or pane labels in e2e.

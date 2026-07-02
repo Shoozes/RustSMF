@@ -733,6 +733,50 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(singleBtn).toBeEnabled();
     await expect(quadBtn).toBeEnabled();
 
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    const inspector = page.getByTestId('inspector');
+    const boneEntry = inspector
+      .locator('li > div')
+      .filter({ hasText: /SMF_Node_\d+/ })
+      .first();
+    await expect(boneEntry).toBeVisible({ timeout: 8000 });
+    await boneEntry.click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
+    const selectedBefore = parseSelectedBone(await page.getByTestId('status-text').textContent());
+    expect(selectedBefore).toBeTruthy();
+    await pausePlaybackIfRunning(page);
+    await setRangeValue(page, 'scrub-slider', 0.2);
+    const scrubBefore = await page.getByTestId('time-display').textContent();
+
+    const canvas = page.getByTestId('three-canvas');
+    const expectEndpointTelemetry = async (): Promise<{ x: number; y: number }> => {
+      await expect.poll(async () => {
+        const x = Number(await canvas.getAttribute('data-endpoint-x'));
+        const y = Number(await canvas.getAttribute('data-endpoint-y'));
+        return Number.isFinite(x) && Number.isFinite(y);
+      }, { timeout: 3000 }).toBe(true);
+      return {
+        x: Number(await canvas.getAttribute('data-endpoint-x')),
+        y: Number(await canvas.getAttribute('data-endpoint-y')),
+      };
+    };
+    const hoverEndpoint = async (): Promise<string> => {
+      const endpoint = await expectEndpointTelemetry();
+      await page.mouse.move(endpoint.x, endpoint.y);
+      await page.waitForTimeout(60);
+      return (await canvas.getAttribute('data-hovered-bone')) ?? '';
+    };
+
+    const hoveredBefore = await hoverEndpoint();
+    expect(hoveredBefore === '' || hoveredBefore === selectedBefore).toBe(true);
+
+    await setViewportLayout(page, 'quad');
+    await setViewportLayout(page, 'single');
+    await setViewportLayout(page, 'quad');
+    await setViewportLayout(page, 'single');
+    await expect(page.getByTestId('status-text')).toContainText(new RegExp(`Selected:\\s*${selectedBefore.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`));
+    expect(await page.getByTestId('time-display').textContent()).toBe(scrubBefore);
+
     await setViewportLayout(page, 'quad');
     await expect(page.getByTestId('viewport-container')).toBeVisible();
     await expect(page.getByTestId('quad-pane-overlay')).toBeVisible();
@@ -740,11 +784,13 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('quad-pane-label-3d')).toContainText('3D');
     await expect(page.getByTestId('quad-pane-label-front')).toContainText('Front');
     await expect(page.getByTestId('quad-pane-label-side')).toContainText('Side');
+    const hoveredAfter = await hoverEndpoint();
+    expect(hoveredAfter === '' || hoveredAfter === selectedBefore).toBe(true);
+    expect(await page.getByTestId('time-display').textContent()).toBe(scrubBefore);
     await expectRenderedScreenshot(page.getByTestId('viewport-container'), 2500);
 
     // Quad mode is now wired for deterministic per-pane interaction: each panel is clickable and should not
     // throw selection errors while raycast/orbit filters route the active pane behavior.
-    const canvas = page.getByTestId('three-canvas');
     const box = await canvas.boundingBox();
     if (box) {
       const points = [
