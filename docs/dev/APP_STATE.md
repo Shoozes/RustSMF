@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-06-30 (animation clip metadata controls, snap controls, clip CRUD/reorder, timeline marker interaction, skin paint/indexing, transform ownership, and global history-order fixes).
+Last reviewed: 2026-07-02 (repo integrity docs/backlog review plus current animation clip metadata controls, snap controls, clip CRUD/reorder, timeline marker interaction, skin paint/indexing, transform ownership, and global history-order fixes).
 
 ## Current Product State
 
@@ -86,7 +86,7 @@ Core flow:
   - `python scripts/verify-context-bank.py`
   - `npm audit --omit=optional`
 - E2E web-server path: `npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort` (not Vite dev).
-- Last successful command set (core): verify, browser-only test:e2e (`-NoGenEye`), test:visual-strict, and context-bank checks on 2026-06-30.
+- Last successful command set (core): verify, browser-only test:e2e (`-NoGenEye`), test:visual-strict, and context-bank checks on 2026-07-02.
 
 ## Current Limits
 
@@ -102,6 +102,7 @@ Core flow:
 
 - Docs index and policy: `docs/README.md`, `docs/dev/README.md`, `docs/research-inbox/README.md`.
 - Active backlog: `docs/dev/TODO.md`.
+- Latest review snapshot: `docs/dev/review.md`.
 - Regression prevention: `docs/dev/PITFALL_LEDGER.md`.
 - Test coverage map: `source/frontend/tests/README.md`.
 - Context groups: `summary_bank.json`.

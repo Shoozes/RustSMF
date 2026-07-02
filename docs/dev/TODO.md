@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-06-30 (animation snap controls, clip CRUD/reorder, timeline marker interaction, skin paint/indexing, transform ownership, and global history-order fixes)
+Last reviewed: 2026-07-02 (integrity/backlog review; animation clip metadata controls are current, and active TODO completion conditions now use explicit Done when wording)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -16,7 +16,7 @@ Each active item should answer:
 - When: sequencing trigger, dependency, or priority timing.
 - How: implementation approach.
 - Subtasks: smaller work units that can be completed and tested independently.
-- Acceptance: done criteria.
+- Done when: completion criteria.
 
 ## Active Backlog
 
@@ -35,7 +35,7 @@ Each active item should answer:
   - Done: add bounded worst-pose-delta details to the roundtrip report and Export workspace, including animation/frame/bone, parent/isBone parity, and per-component deltas.
   - Add one regression fixture/assertion for a known real-sample mismatch once root cause is isolated.
   - Update the pitfall ledger only if the investigation finds a repeated conversion hazard.
-- Acceptance: A failing real-sample pose check is either fixed with a regression test or documented as a deliberate unsupported/tolerance-bound case with specific diagnostics.
+- Done when: A failing real-sample pose check is either fixed with a regression test or documented as a deliberate unsupported/tolerance-bound case with specific diagnostics.
 
 ### P1: Finish precision-editor parity in quad/ortho workflows
 
@@ -52,7 +52,7 @@ Each active item should answer:
   - Add faster single-to-quad-to-single switching tests around selected bone, hover state, endpoint telemetry, and scrub time.
   - Add visual checks that quad labels/dividers do not overlap tool overlays at narrow widths beyond the current loaded/narrow shell checks.
   - Decide whether ortho panes should support all bone selection/edit actions or a deliberate subset.
-- Acceptance: Rapid layout/mode switching in single and quad states never drops bone selection, scrub continuity, endpoint-hover state, or pane labels in e2e.
+- Done when: Rapid layout/mode switching in single and quad states never drops bone selection, scrub continuity, endpoint-hover state, or pane labels in e2e.
 
 ### P1: Complete viewport click/raycast event parity
 
@@ -78,7 +78,7 @@ Each active item should answer:
   - Add a stable browser-level TransformControls handle-drag test if Playwright can target the Three gizmo without brittle screen-coordinate probing.
   - Add quad/ortho coverage for pickable pane boundaries, high-DPI mouse coordinates, and pointer cancel/window-up cleanup.
   - Decide whether skin point overlays are display-only or can select/paint nearest vertices; document and test the chosen behavior.
-- Acceptance: A table-driven interaction contract and e2e smoke prove each supported click/drag path mutates only the intended state in single, quad, perspective, and ortho contexts.
+- Done when: A table-driven interaction contract and e2e smoke prove each supported click/drag path mutates only the intended state in single, quad, perspective, and ortho contexts.
 
 ### P1: Make Animate-mode viewport transforms author keyframes
 
@@ -92,7 +92,7 @@ Each active item should answer:
   - Done: upsert selected-bone position/quaternion keys at the current timeline time when Animate owns a transform event, without marking pose edits.
   - Done: record Animate-owned viewport transform edits through the shared animation history snapshot path.
   - Done: detach TransformControls in View/Export and hide View-mode transform buttons so read-only modes cannot mutate bones.
-- Acceptance: Current smoke verifies Rig `pose`, Animate `animation`, and Export `disabled` ownership plus existing animation key undo/redo/export behavior. A direct Playwright drag of the Three TransformControls handle remains a test-hardening follow-up because stable gizmo targeting is not yet available.
+- Done when: Current smoke verifies Rig `pose`, Animate `animation`, and Export `disabled` ownership plus existing animation key undo/redo/export behavior. A direct Playwright drag of the Three TransformControls handle remains a test-hardening follow-up because stable gizmo targeting is not yet available.
 
 ### P1: Add app-level authoring undo/redo transactions
 
@@ -118,7 +118,7 @@ Each active item should answer:
   - Done: add Outliner visibility undo/redo for individual and bulk visibility transactions through toolbar buttons and Ctrl+Z/Ctrl+Y.
   - Done: add shared chronological ordering across editor, Skin, and Outliner stacks so global toolbar/Ctrl+Z/Ctrl+Y Undo/Redo follows newest transaction order across workspace changes.
   - Keep a physical single-stack history coordinator under consideration only if future mutators need cross-domain transaction grouping beyond the current ordered stack routing.
-- Acceptance: Unit and e2e coverage can perform each mutating authoring action, undo it, redo it, then export/check without stale dirty state, broken skeleton references, or mismatched selected-bone state.
+- Done when: Unit and e2e coverage can perform each mutating authoring action, undo it, redo it, then export/check without stale dirty state, broken skeleton references, or mismatched selected-bone state.
 
 ### P2: Add non-SMF rig tool modes
 
@@ -131,7 +131,7 @@ Each active item should answer:
   - Keep SMF-source structural mutation blocked; non-SMF tools must preserve skeleton validity and skin indices.
   - Implement add-child by ortho empty-click projection, detach-toggle while preserving world transform, rotate/move as history-backed transactions, and spin-rig only for non-SMF roots.
   - Share snap-to-grid settings with future animation movement tools.
-- Acceptance: Unit tests prove add-child, detach, and spin preserve valid skeleton/skin references; smoke creates a child from an ortho pane and undo restores the previous rig.
+- Done when: Unit tests prove add-child, detach, and spin preserve valid skeleton/skin references; smoke creates a child from an ortho pane and undo restores the previous rig.
 
 ### P2: Complete remaining animation interpolation parity
 
@@ -148,7 +148,7 @@ Each active item should answer:
   - Done: add animation snap-step controls for authoring/scrub times, with shared snapping for insert, paste, marker drag, and Animate-owned viewport key creation.
   - Done: add active-clip loop toggle and sample frame multiplier controls with undo/redo, copied/renamed clip metadata retention, and SMF-source/non-SMF-to-SMF export metadata preservation.
   - Add `quadratic` interpolation as metadata first if runtime preview must approximate with linear tracks.
-- Acceptance: Unit tests cover clip rename/duplicate/delete/reorder, snap-step helpers, metadata helpers, and SMF-source clip-list export rebuilding; smoke covers active-clip loop/sample controls and undo/redo; remaining work is complete when quadratic interpolation behavior is explicit in UI/export/tests or intentionally deferred with format limits.
+- Done when: Unit tests cover clip rename/duplicate/delete/reorder, snap-step helpers, metadata helpers, and SMF-source clip-list export rebuilding; smoke covers active-clip loop/sample controls and undo/redo; remaining work is complete when quadratic interpolation behavior is explicit in UI/export/tests or intentionally deferred with format limits.
 
 ### P2: Complete SMF-aware rig editing parity
 
@@ -165,7 +165,7 @@ Each active item should answer:
   - Add detach/head-node compatibility controls only after old-source source-map review.
   - Add mirror/reset helpers only with pure tests for hierarchy and skin/animation safety.
   - Include snap-to-grid movement semantics if rig/animation move tools adopt old ray-plane behavior.
-- Acceptance: SMF-source rig controls either remain explicitly blocked with clear UX, or ship with tests proving they cannot corrupt node-index, skin, or animation fidelity.
+- Done when: SMF-source rig controls either remain explicitly blocked with clear UX, or ship with tests proving they cannot corrupt node-index, skin, or animation fidelity.
 
 ### P2: Fill global shelf and Outliner action gaps
 
@@ -183,7 +183,7 @@ Each active item should answer:
   - Add snap-to-grid setting shared by rig/animation movement tools after those tools have transactions.
   - Decide whether texture repeat/filter toggles are preview-only, persisted metadata, or export-blocking incompatibility.
   - Document merge same textures as either unsupported, preview-only, or a tested conversion pipeline with undo.
-- Acceptance: Each global/outliner action either ships with browser coverage and clear export behavior or remains an explicit TODO with the reason it is deferred.
+- Done when: Each global/outliner action either ships with browser coverage and clear export behavior or remains an explicit TODO with the reason it is deferred.
 
 ### P2: Complete workspace transition and continuity coverage
 
@@ -199,7 +199,7 @@ Each active item should answer:
   - Add transition assertions around mode + layout continuity for panel visibility, export status, and playback scrub timing.
   - Add negative transition case: no model loaded + mode switch + disabled layout/display controls.
   - Keep existing dirty skin/animation continuity and canceled-save coverage current as panels change.
-- Acceptance: Smoke plus a dedicated transition slice demonstrates no accidental reload, status reset, stale export state, or dirty-edit loss across workspace switches.
+- Done when: Smoke plus a dedicated transition slice demonstrates no accidental reload, status reset, stale export state, or dirty-edit loss across workspace switches.
 
 ### P2: Expand async race contract coverage across all load/export entrypoints
 
@@ -215,7 +215,7 @@ Each active item should answer:
   - Add browser export-overlap assertions if the download/export path becomes fully mockable.
   - Keep shared delayed-read/drop helpers isolated in `smoke-helpers.ts`.
   - Add stale worker-response coverage if SMF import/export is workerized.
-- Acceptance: No stale root, selection, status, error, dirty skin edit, or dirty animation edit writes are visible after a newer operation has started.
+- Done when: No stale root, selection, status, error, dirty skin edit, or dirty animation edit writes are visible after a newer operation has started.
 
 ### P2: Tighten typed interop boundaries
 
@@ -234,7 +234,7 @@ Each active item should answer:
   - Done: unknown-error formatter in `useLoadModel` and typed GLB/FBX skinned-mesh traversal.
   - Done: add `check:production-any` to the frontend and repo verification path so new production `any` casts fail before merge.
   - Re-audit `ThreeViewport.tsx` casts after any TransformControls or endpoint drag refactor.
-- Acceptance: Frontend typecheck and test typecheck pass, and production `as any` use is either eliminated or isolated in named bridge/library boundary helpers.
+- Done when: Frontend typecheck and test typecheck pass, and production `as any` use is either eliminated or isolated in named bridge/library boundary helpers.
 
 ### P3: Workerize heavy SMF import/export and large-file progress
 
@@ -251,7 +251,7 @@ Each active item should answer:
   - Transfer buffers instead of copying.
   - Add generated large-sample tests or a bounded stress fixture if feasible.
   - Keep stale-operation seq guards active across worker responses.
-- Acceptance: Large SMF work does not block the UI thread, and stale worker results cannot overwrite newer model state.
+- Done when: Large SMF work does not block the UI thread, and stale worker results cannot overwrite newer model state.
 
 ### P2: Maintain launch/task-guard completeness
 
@@ -267,7 +267,7 @@ Each active item should answer:
   - Review launch contract matrix after any run script edit.
   - Review GenEye-backed and browser-only e2e docs after wrapper changes.
   - Keep `run.ps1 -Task verify` as the documented repo health gate.
-- Acceptance: New launcher/verify edits include matching docs and summary-bank updates with no stale-path references.
+- Done when: New launcher/verify edits include matching docs and summary-bank updates with no stale-path references.
 
 ### P2: Maintain modular-doc integrity and reduce review debt
 
@@ -286,7 +286,7 @@ Each active item should answer:
   - Update APP_STATE only when current behavior changes.
   - Update summary_bank when paths move or feature ownership changes.
   - Run `python scripts/verify-context-bank.py` after any context-bank edit.
-- Acceptance: A quick pass shows no duplicate dated recaps, no stale current-state claims, and no invalid summary-bank paths.
+- Done when: A quick pass shows no duplicate dated recaps, no stale current-state claims, and no invalid summary-bank paths.
 
 ## Notes
 

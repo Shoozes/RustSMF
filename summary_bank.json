@@ -47,14 +47,15 @@
   },
   "groups": {
     "docs__state_backlog": {
-      "description": "Current app state, active paired backlog, docs policy, and durable regression-prevention notes. Keep concise; do not append repeated pass logs.",
-      "status": "Current docs policy: active backlog (`docs/dev/TODO.md`), state (`docs/dev/APP_STATE.md`), pitfall ledger, and summary bank registry are authoritative; avoid dated pass duplication.",
+      "description": "Current app state, active paired backlog, latest review snapshot, docs policy, and durable regression-prevention notes. Keep concise; do not append repeated pass logs.",
+      "status": "Current docs policy: active backlog (`docs/dev/TODO.md`), state (`docs/dev/APP_STATE.md`), review snapshot (`docs/dev/review.md`), pitfall ledger, and summary bank registry are authoritative; avoid dated pass duplication.",
       "paths": [
         "README.md",
         "docs/README.md",
         "docs/dev/README.md",
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
+        "docs/dev/review.md",
         "docs/dev/PITFALL_LEDGER.md",
         "docs/dev/GENEYE_FEEDBACK.md",
         "docs/research-inbox/README.md",
