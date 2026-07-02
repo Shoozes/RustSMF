@@ -1,4 +1,4 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 import {
   SAMPLE_SMF,
   expectRenderedScreenshot,
@@ -14,10 +14,45 @@ type ViewportCase = {
   screenshotMinBytes: number;
 };
 
+type Rect = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  width: number;
+  height: number;
+};
+
 const VIEWPORTS: ViewportCase[] = [
   { name: 'desktop', width: 1280, height: 720, screenshotMinBytes: 3000 },
   { name: 'narrow', width: 390, height: 844, screenshotMinBytes: 2200 },
 ];
+
+async function getRequiredRect(locator: Locator): Promise<Rect> {
+  const rect = await locator.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    return {
+      left: bounds.left,
+      top: bounds.top,
+      right: bounds.right,
+      bottom: bounds.bottom,
+      width: bounds.width,
+      height: bounds.height,
+    };
+  });
+  expect(rect.width).toBeGreaterThan(0);
+  expect(rect.height).toBeGreaterThan(0);
+  return rect;
+}
+
+function rectsOverlap(a: Rect, b: Rect, padding = 0): boolean {
+  return !(
+    a.right <= b.left + padding
+    || a.left >= b.right - padding
+    || a.bottom <= b.top + padding
+    || a.top >= b.bottom - padding
+  );
+}
 
 async function expectNoHorizontalOverflow(page: Page): Promise<void> {
   const metrics = await page.evaluate(() => ({
@@ -31,6 +66,31 @@ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
 async function expectNoCriticalBrowserErrors(page: Page): Promise<void> {
   const critical = getBrowserErrors(page).filter((entry) => entry.includes('ERROR'));
   expect(critical).toEqual([]);
+}
+
+async function expectQuadLabelsClearOfOverlays(page: Page): Promise<void> {
+  const viewport = await getRequiredRect(page.getByTestId('viewport-container'));
+  const displayPanel = await getRequiredRect(page.getByTestId('viewport-display-menu-panel'));
+  const verticalDivider = await getRequiredRect(page.locator('.quad-pane-line-v'));
+  const horizontalDivider = await getRequiredRect(page.locator('.quad-pane-line-h'));
+
+  const labels = [
+    page.getByTestId('quad-pane-label-top'),
+    page.getByTestId('quad-pane-label-3d'),
+    page.getByTestId('quad-pane-label-front'),
+    page.getByTestId('quad-pane-label-side'),
+  ];
+
+  for (const label of labels) {
+    const rect = await getRequiredRect(label);
+    expect(rect.left).toBeGreaterThanOrEqual(viewport.left);
+    expect(rect.right).toBeLessThanOrEqual(viewport.right);
+    expect(rect.top).toBeGreaterThanOrEqual(viewport.top);
+    expect(rect.bottom).toBeLessThanOrEqual(viewport.bottom);
+    expect(rectsOverlap(rect, displayPanel)).toBe(false);
+    expect(rectsOverlap(rect, verticalDivider, 2)).toBe(false);
+    expect(rectsOverlap(rect, horizontalDivider, 2)).toBe(false);
+  }
 }
 
 test.describe('RustSMF visual confirmations', () => {
@@ -104,6 +164,30 @@ test.describe('RustSMF visual confirmations', () => {
     await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-perspective-enabled', 'false');
     await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000);
 
+    await expectNoHorizontalOverflow(page);
+    await expectNoCriticalBrowserErrors(page);
+  });
+
+  test('narrow quad pane labels stay clear of display overlay controls', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf test model available for narrow quad overlay confirmation');
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips/i);
+    await pausePlaybackIfRunning(page);
+
+    await page.getByTestId('viewport-layout-quad').click();
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-layout', 'quad');
+    await expect(page.getByTestId('quad-pane-overlay')).toBeVisible();
+
+    await page.getByTestId('viewport-display-menu-button').click();
+    await expect(page.getByTestId('viewport-display-menu-panel')).toBeVisible();
+
+    await expectQuadLabelsClearOfOverlays(page);
+    await expectRenderedScreenshot(page.getByTestId('viewport-container'), 2200);
     await expectNoHorizontalOverflow(page);
     await expectNoCriticalBrowserErrors(page);
   });

@@ -861,11 +861,20 @@ button:active {
     width: 100%;
   }
 
+  .viewport-display-menu[open] {
+    flex-basis: 100%;
+  }
+
+  .viewport-display-menu[open] .toolbar-menu-summary {
+    width: fit-content;
+  }
+
   .toolbar-menu-panel {
-    left: 0;
-    right: auto;
+    position: static;
+    box-sizing: border-box;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: min(360px, calc(100vw - 16px));
+    width: 100%;
+    margin-top: 6px;
   }
 
   .main-area {

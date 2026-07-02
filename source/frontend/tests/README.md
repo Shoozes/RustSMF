@@ -6,7 +6,7 @@ Current coverage:
 - `src/loaders/fbx.test.ts`: Unit coverage for true binary FBX export bytes and a static FBX export -> `loadFBX` roundtrip.
 - `tests/helpers/skinned-glb-fixture.ts`: Generated self-authored skinned GLB fixture for non-SMF skinned load, guarded SMF export, material texture summary rows, and GLB export coverage.
 - `tests/test.fbx`: Self-authored static ASCII FBX fixture for FBX loader coverage.
-- `tests/visual.spec.ts`: Browser Playwright visual confirmations for desktop/narrow shell layout, horizontal overflow, nonblank viewport rendering, loaded SMF visual state, compact Display menu behavior, and single-view Ortho rendering.
+- `tests/visual.spec.ts`: Browser Playwright visual confirmations for desktop/narrow shell layout, horizontal overflow, nonblank viewport rendering, loaded SMF visual state, compact Display menu behavior, narrow quad label/divider overlap safety, and single-view Ortho rendering.
 - `tests/native.spec.ts`: Deterministic Tauri IPC mock coverage for native open/read/status, path-based non-SMF desktop binary reads, save/write, cancel behavior, dirty skin/animation edit preservation across canceled saves, and delayed-write rapid-export overlap (single-flight save guard).
 - Rust native tests in `source/src-tauri/src/smf_core.rs` and `source/src-tauri/src/main.rs` cover desktop SMF header parsing, malformed versions, missing null terminators, invalid section offsets, count widths, and real-sample peeks when a sample is present.
 
