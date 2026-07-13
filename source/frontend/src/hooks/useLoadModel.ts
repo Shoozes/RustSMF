@@ -1280,6 +1280,31 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     });
   }, [ui, model, withExportBusy]);
 
+  const handleExportGlb = useCallback(async () => {
+    await withExportBusy('Export as GLB', async () => {
+      try {
+        const rootToExport = model.root;
+        if (!rootToExport) {
+          ui.setStatus('Nothing to export as GLB.');
+          return;
+        }
+
+        ui.setStatus('Exporting current model as GLB...');
+        const buf = await exportGLB(rootToExport, model.clips);
+        const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.glb');
+        if (!ok) {
+          ui.setStatus('Export canceled.');
+          return;
+        }
+        ui.setStatus('Exported .glb (animations included when present).');
+      } catch (e: unknown) {
+        const msg = errorMessage(e);
+        ui.setErrorMsg(`GLB export error: ${msg}`);
+        ui.setStatus(`GLB export error: ${msg}`);
+      }
+    });
+  }, [ui, model, withExportBusy]);
+
   const buildCurrentSmfExportCandidate = useCallback((): ImportedSmf | null => {
     const smfData = lastSmfDataRef.current;
     const skeleton = model.skeleton;
@@ -2982,6 +3007,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     clearLoadedModel,
     handleOpen,
     handleExport,
+    handleExportGlb,
     handleExportSmf,
     handleRunSmfRoundtripCheck,
     handleSaveSmfDiagnosticReport,

@@ -452,6 +452,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     // Key controls
     await expect(page.getByTestId('open-model-btn')).toBeVisible();
     await expect(page.getByTestId('export-btn')).toBeVisible();
+    await expect(page.getByTestId('export-glb-btn')).toBeVisible();
     await expect(page.getByTestId('export-smf-btn')).toBeVisible();
     await expect(page.getByTestId('ping-rust-btn')).toBeVisible();
 
@@ -562,6 +563,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await assertModeActive('export');
     await expect(page.getByTestId('export-workspace-panel')).toBeVisible();
     await expect(page.getByTestId('export-btn')).toBeEnabled();
+    await expect(page.getByTestId('export-glb-btn')).toBeEnabled();
     await expect(page.getByTestId('export-smf-btn')).toBeEnabled();
 
     const criticalErrors = getBrowserErrors(page).filter((e: string) => e.includes('ERROR'));
@@ -1630,6 +1632,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await exportBtn.click();
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.(smf|glb)/i, { timeout: 5000 });
     await expect(page.getByTestId('status-text')).toContainText(/pose edit/i);
+    await page.getByTestId('export-glb-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb/i, { timeout: 5000 });
     await setRangeValue(page, 'scrub-slider', 0);
 
     // Basic visual: screenshot viewport after load + bone interaction (nonblank render regression smoke).
@@ -1689,6 +1693,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await page.goto('/');
     await page.getByTestId('export-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Nothing to export/i);
+    await page.getByTestId('export-glb-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Nothing to export as GLB/i);
     await page.getByTestId('export-smf-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/No model loaded for SMF export|Nothing to export as SMF/i);
 

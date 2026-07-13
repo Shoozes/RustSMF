@@ -110,6 +110,7 @@ export default function App() {
     playback,
     handleOpen,
     handleExport,
+    handleExportGlb,
     handleExportSmf,
     handleRunSmfRoundtripCheck,
     handleSaveSmfDiagnosticReport,
@@ -697,6 +698,7 @@ export default function App() {
       <Toolbar
         onOpen={handleOpen}
         onExport={handleExport}
+        onExportGlb={handleExportGlb}
         onExportSmf={handleExportSmf}
         onPing={pingRust}
         onUndo={handleEditorUndo}

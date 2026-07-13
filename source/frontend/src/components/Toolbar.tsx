@@ -5,6 +5,7 @@ import { SUPPORTED_MODEL_ACCEPT } from '../utils/modelFormat';
 interface ToolbarProps {
   onOpen: () => void;
   onExport: () => void;
+  onExportGlb: () => void;
   onExportSmf: () => void;
   onPing: () => void;
   onUndo: () => void;
@@ -45,6 +46,7 @@ interface ToolbarProps {
 const Toolbar: React.FC<ToolbarProps> = ({
   onOpen,
   onExport,
+  onExportGlb,
   onExportSmf,
   onPing,
   onUndo,
@@ -173,6 +175,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
           </button>
           <button className="toolbar-action" data-testid="export-btn" onClick={onExport} disabled={isLoading}>
             Export
+          </button>
+          <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading}>
+            GLB
           </button>
           <button className="toolbar-action" data-testid="export-smf-btn" onClick={onExportSmf} disabled={isLoading}>
             SMF

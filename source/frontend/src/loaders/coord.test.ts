@@ -142,6 +142,51 @@ import fs from 'fs';
 
 const SMF_DIR = path.resolve(__dirname, '../../../docs/references/old-src/datafiles/SMF');
 
+describe('SMF animation conversion', () => {
+  it('derives GLB locals from stored world poses while skipping non-deform nodes', () => {
+    const identity = new THREE.Matrix4();
+    const parentBind = new THREE.Matrix4().makeTranslation(1, 0, 0);
+    const headBind = new THREE.Matrix4().makeTranslation(2, 0, 0);
+    const childBind = new THREE.Matrix4().makeTranslation(4, 0, 0);
+    const childPose = new THREE.Matrix4().makeTranslation(6, 0, 0);
+    const fixture: ImportedSmf = {
+      meshes: [],
+      textures: [],
+      bones: [
+        { index: 0, parent: 0, isBone: 0, dq: dqCreateFromMatrix(identity.elements), axis: [0, 1, 0] },
+        { index: 1, parent: 0, isBone: 1, dq: dqCreateFromMatrix(parentBind.elements), axis: [0, 1, 0] },
+        { index: 2, parent: 1, isBone: 0, dq: dqCreateFromMatrix(headBind.elements), axis: [0, 1, 0] },
+        { index: 3, parent: 2, isBone: 1, dq: dqCreateFromMatrix(childBind.elements), axis: [0, 1, 0] },
+      ],
+      animations: [{
+        name: 'child_move',
+        duration: 1,
+        times: [0],
+        frames: [[
+          dqCreateFromMatrix(identity.elements),
+          dqCreateFromMatrix(parentBind.elements),
+          dqCreateFromMatrix(headBind.elements),
+          dqCreateFromMatrix(childPose.elements),
+        ]],
+        nodeCount: 4,
+        loop: 1,
+        interpolation: 1,
+        sampleFrameMultiplier: 1,
+        lockedBones: [],
+      }],
+    };
+
+    const loaded = buildThreeScene(fixture);
+    const child = loaded.skeleton.bones.find((bone) => bone.name === 'SMF_Node_3');
+    const positionTrack = loaded.clips[0].tracks.find((track) => track.name === 'SMF_Node_3.position');
+
+    assert.ok(child);
+    assert.ok(positionTrack);
+    assert.ok(Math.abs(child.position.x - 3) < 1e-5, 'bind local should skip the non-deform head');
+    assert.ok(Math.abs(positionTrack.values[0] - 5) < 1e-5, 'pose local should use the effective bone parent');
+  });
+});
+
 function installImageTestPolyfill() {
   const g = globalThis as any;
   if (!g.Image) {
@@ -718,6 +763,57 @@ describe('smf export roundtrip (data-driven)', () => {
       }
     }
     assert.ok(checked > 0, 'expected real SMF sample to contain skinned vertices');
+  });
+
+  it('real SMF walk animation keeps the skinned model within a bounded pose', () => {
+    const sampleFile = path.resolve(__dirname, '../../tests/mixamo_smf_baldguy.smf');
+    if (!fs.existsSync(sampleFile)) return;
+    installImageTestPolyfill();
+
+    const imported = importSMF(bytesToArrayBuffer(fs.readFileSync(sampleFile)));
+    const loaded = buildThreeScene(imported);
+    const walk = loaded.clips.find((clip) => clip.name === 'Walk');
+    assert.ok(walk, 'expected real SMF sample to contain the Walk clip');
+
+    const bindBounds = new THREE.Box3();
+    loaded.root.updateMatrixWorld(true);
+    const bindBonePositions = new Map(loaded.skeleton.bones.map((bone) => [
+      bone.name,
+      bone.getWorldPosition(new THREE.Vector3()),
+    ]));
+    for (const mesh of loaded.skinnedMeshes) {
+      const position = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+      for (let i = 0; i < position.count; i++) {
+        bindBounds.expandByPoint(new THREE.Vector3().fromBufferAttribute(position, i));
+      }
+    }
+
+    loaded.mixer.clipAction(walk).play();
+    loaded.mixer.update(1 / 60);
+    loaded.root.updateMatrixWorld(true);
+
+    const animatedBounds = new THREE.Box3();
+    for (const mesh of loaded.skinnedMeshes) {
+      mesh.skeleton.update();
+      const position = mesh.geometry.getAttribute('position') as THREE.BufferAttribute;
+      for (let i = 0; i < position.count; i++) {
+        const skinned = new THREE.Vector3().fromBufferAttribute(position, i);
+        mesh.applyBoneTransform(i, skinned);
+        animatedBounds.expandByPoint(skinned);
+      }
+    }
+
+    const bindSize = bindBounds.getSize(new THREE.Vector3()).length();
+    const animatedSize = animatedBounds.getSize(new THREE.Vector3()).length();
+    const largestBoneMoves = loaded.skeleton.bones.map((bone) => ({
+      name: bone.name,
+      distance: bone.getWorldPosition(new THREE.Vector3()).distanceTo(bindBonePositions.get(bone.name)!),
+    })).sort((a, b) => b.distance - a.distance).slice(0, 3);
+    assert.ok(Number.isFinite(animatedSize), 'animated bounds must remain finite');
+    assert.ok(
+      animatedSize < bindSize * 2,
+      `animated bounds expanded from ${bindSize} to ${animatedSize}; largest bone moves: ${JSON.stringify(largestBoneMoves)}`
+    );
   });
 });
 
