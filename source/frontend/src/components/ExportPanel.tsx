@@ -1,10 +1,13 @@
 import type { SmfDiagnosticReport, SmfRoundtripReport } from '../loaders';
+import { LEGACY_SHELF_DECISIONS, getTextureExportPolicies } from '../utils/materialPolicy';
+import { findDuplicateTextureGroups, type TextureSummary } from '../utils/textureCompat';
 
 interface ExportPanelProps {
   sourceFormat: string;
   hasSkeleton: boolean;
   editorMode?: string;
   smfDiagnosticReport: SmfDiagnosticReport;
+  materialTextures: TextureSummary[];
   smfRoundtripReport: SmfRoundtripReport | null;
   onRunSmfRoundtripCheck: () => void;
   onSaveSmfDiagnosticReport: () => void;
@@ -15,13 +18,15 @@ export default function ExportPanel({
   hasSkeleton,
   editorMode = 'export',
   smfDiagnosticReport,
+  materialTextures,
   smfRoundtripReport,
   onRunSmfRoundtripCheck,
   onSaveSmfDiagnosticReport,
 }: ExportPanelProps) {
   const errors = smfDiagnosticReport.diagnostics.filter((item) => item.level === 'error').length;
   const warnings = smfDiagnosticReport.diagnostics.filter((item) => item.level === 'warning').length;
-  const materialTextures = smfDiagnosticReport.materialTextures ?? [];
+  const texturePolicies = getTextureExportPolicies(sourceFormat);
+  const duplicateTextureGroups = findDuplicateTextureGroups(materialTextures);
   const roundtripStatus = smfRoundtripReport?.status ?? null;
   const poseDeltaDetails = smfRoundtripReport?.poseDeltaDetails ?? [];
   const roundtripStatusText =
@@ -50,6 +55,40 @@ export default function ExportPanel({
       </div>
       <div className="text-[10px] text-slate-500 mt-1">
         GLB remains the default fidelity path for runtime/scale/material-heavy workflows.
+      </div>
+      <div className="smf-material-textures" data-testid="texture-export-policy-panel">
+        <div className="smf-diagnostics-title">Texture export policy</div>
+        <div className="smf-diagnostics-summary">
+          Repeat/filter and Tex are viewport previews. GLB/FBX export restores source materials and samplers; SMF follows the binary policy below.
+        </div>
+        <ul className="smf-diagnostics-list">
+          {texturePolicies.map((policy) => (
+            <li
+              key={policy.action}
+              className={`smf-diagnostic ${policy.texturePolicy === 'omitted' ? 'smf-diagnostic-warning' : 'smf-diagnostic-info'}`}
+              data-testid="texture-export-policy-row"
+              data-export-action={policy.action.toLowerCase()}
+              data-export-format={policy.format.toLowerCase()}
+              data-texture-policy={policy.texturePolicy}
+            >
+              <span className="smf-diagnostic-code">{policy.action} to {policy.format}</span>
+              <span>{policy.texturePolicy}</span>
+              <span className="smf-diagnostic-target">{policy.detail}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div className="smf-material-textures" data-testid="legacy-material-policy-panel">
+        <div className="smf-diagnostics-title">Legacy shelf decisions</div>
+        <ul className="smf-diagnostics-list">
+          {LEGACY_SHELF_DECISIONS.map((item) => (
+            <li key={item.action} className="smf-diagnostic smf-diagnostic-info" data-testid="legacy-material-policy-row">
+              <span className="smf-diagnostic-code">{item.action}</span>
+              <span>{item.decision}</span>
+              <span className="smf-diagnostic-target">{item.reason}</span>
+            </li>
+          ))}
+        </ul>
       </div>
       <div
         className="smf-diagnostics"
@@ -103,6 +142,24 @@ export default function ExportPanel({
         ) : (
           <div className="smf-diagnostics-summary" data-testid="smf-material-textures-empty">
             No skinned-mesh texture maps detected.
+          </div>
+        )}
+        <div className="smf-diagnostics-title mt-2">Shared texture preflight</div>
+        {duplicateTextureGroups.length > 0 ? (
+          <ul className="smf-diagnostics-list" data-testid="duplicate-texture-groups">
+            {duplicateTextureGroups.map((group) => (
+              <li key={group.source} className="smf-diagnostic smf-diagnostic-info" data-testid="duplicate-texture-group-row">
+                <span className="smf-diagnostic-code">{group.uses.length} uses</span>
+                <span>{group.textureNames.join(', ')}</span>
+                <span className="smf-diagnostic-target">
+                  Shared reference detected; no destructive geometry/material merge is applied.
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <div className="smf-diagnostics-summary" data-testid="duplicate-texture-groups-empty">
+            No cross-material shared texture candidates detected.
           </div>
         )}
       </div>

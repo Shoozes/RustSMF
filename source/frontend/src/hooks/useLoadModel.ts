@@ -20,6 +20,7 @@ import type { BoneTransformEditEvent, RigIkEditEvent, RigMoveEditEvent, RigRotat
 import { findBoneByName } from '../utils/bonePicker';
 import { createSeqGuard } from '../utils/seqGuard';
 import { detectModelFormat, supportedModelFormatsLabel, type ModelSourceFormat } from '../utils/modelFormat';
+import { summarizeObjectTextures } from '../utils/textureCompat';
 import {
   makeSkinEditState,
   type SkinEditState,
@@ -637,6 +638,11 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       },
     ]);
   }, [model.root, model.skeleton, model.clips, sourceFormat]);
+
+  const materialTextureSummaries = useMemo(
+    () => model.root ? summarizeObjectTextures(model.root) : [],
+    [model.root],
+  );
 
   useEffect(() => {
     skinEditStateRef.current = skinEditState;
@@ -3249,6 +3255,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     showBoneLabels,
     toggleBoneLabels,
     smfDiagnosticReport,
+    materialTextureSummaries,
     smfRoundtripReport,
     sourceFormat,
     skinEditHasDirtyState,
@@ -3310,6 +3317,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     setAxesEnabled: ui.setAxesEnabled,
     textureEnabled: ui.textureEnabled,
     setTextureEnabled: ui.setTextureEnabled,
+    textureRepeatPreviewEnabled: ui.textureRepeatPreviewEnabled,
+    setTextureRepeatPreviewEnabled: ui.setTextureRepeatPreviewEnabled,
+    textureFilterPreview: ui.textureFilterPreview,
+    setTextureFilterPreview: ui.setTextureFilterPreview,
     boneIndexLabelsEnabled: ui.boneIndexLabelsEnabled,
     setBoneIndexLabelsEnabled: ui.setBoneIndexLabelsEnabled,
     rigOpacity: ui.rigOpacity,

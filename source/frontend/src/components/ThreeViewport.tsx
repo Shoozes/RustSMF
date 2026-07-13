@@ -11,6 +11,12 @@ import { useBoneLabelsWithScale } from '../utils/useBoneLabels';
 import { createLegacySmfMaterial } from '../utils/legacySmfLighting';
 import { createSkinPointOverlays, disposeSkinPointOverlays } from '../utils/skinPointOverlay';
 import {
+  registerMaterialPreviewRoot,
+  unregisterMaterialPreviewRoot,
+  updateMaterialPreview,
+  type TextureFilterPreview,
+} from '../utils/materialPreview';
+import {
   createSelectionOverlays,
   disposeSelectionOverlays,
   updateSelectionOverlays,
@@ -210,6 +216,8 @@ interface ThreeViewportProps {
   gridEnabled?: boolean;
   axesEnabled?: boolean;
   textureEnabled?: boolean;
+  textureRepeatPreviewEnabled?: boolean;
+  textureFilterPreview?: TextureFilterPreview;
   boneIndexLabelsEnabled?: boolean;
   rigOpacity?: number;
   rigThicknessScale?: number;
@@ -262,6 +270,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   gridEnabled = true,
   axesEnabled = true,
   textureEnabled = true,
+  textureRepeatPreviewEnabled = false,
+  textureFilterPreview = 'source',
   boneIndexLabelsEnabled = false,
   rigOpacity = 1,
   rigThicknessScale = 1,
@@ -735,6 +745,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
   const captureTextureMaterials = (object: THREE.Object3D | null): void => {
     if (!object) return;
+    registerMaterialPreviewRoot(object);
     disposeLegacyShaderMaterials();
     meshMaterialsRef.current.clear();
     materialTextureBackupRef.current.clear();
@@ -787,9 +798,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   };
 
   const applyTextureEnabled = (enabled: boolean): void => {
+    if (attachedModelRef.current) {
+      updateMaterialPreview(attachedModelRef.current, { textureEnabled: enabled });
+    }
     meshMaterialsRef.current.forEach(({ materials }) => {
       for (const material of materials) {
-        applyTextureToMaterial(material, material.uuid, enabled);
         const legacyMaterial = legacyShaderMaterialsRef.current.get(material.uuid);
         if (legacyMaterial) {
           applyTextureToMaterial(legacyMaterial, material.uuid, enabled);
@@ -833,8 +846,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   ): void => {
     const defaultOpacity = materialOpacityBackupRef.current.get(sourceMaterialUuid);
     if (typeof defaultOpacity === 'undefined') return;
-    material.opacity = opacity;
-    if (opacity < 1) {
+    material.opacity = defaultOpacity * opacity;
+    if (material.opacity < 1) {
       material.transparent = true;
     } else {
       const defaultTransparent = materialTransparentBackupRef.current.get(sourceMaterialUuid);
@@ -845,9 +858,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
   const applyModelOpacity = (value: number): void => {
     const opacity = clamp01(value);
+    if (attachedModelRef.current) {
+      updateMaterialPreview(attachedModelRef.current, { modelOpacity: opacity });
+    }
     meshMaterialsRef.current.forEach(({ materials }) => {
       for (const material of materials) {
-        applyOpacityToMaterial(material, material.uuid, opacity);
         const legacyMaterial = legacyShaderMaterialsRef.current.get(material.uuid);
         if (legacyMaterial) {
           applyOpacityToMaterial(legacyMaterial, material.uuid, opacity);
@@ -2315,6 +2330,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       clearSkinPointOverlays();
       restoreOriginalMaterials();
       disposeLegacyShaderMaterials();
+      if (attachedModelRef.current) {
+        unregisterMaterialPreviewRoot(attachedModelRef.current);
+      }
       wireframeMaterialRef.current?.dispose();
       wireframeMaterialRef.current = null;
       renderer.dispose();
@@ -2512,6 +2530,14 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => {
     applyTextureEnabled(textureEnabled);
   }, [textureEnabled, root]);
+
+  useEffect(() => {
+    if (!attachedModelRef.current) return;
+    updateMaterialPreview(attachedModelRef.current, {
+      repeatTextures: textureRepeatPreviewEnabled,
+      textureFilter: textureFilterPreview,
+    });
+  }, [textureRepeatPreviewEnabled, textureFilterPreview, root]);
 
   useEffect(() => {
     applyShaderEnabled(shaderEnabled);
@@ -2730,6 +2756,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       clearSkinPointOverlays();
       restoreOriginalMaterials();
       disposeLegacyShaderMaterials();
+      unregisterMaterialPreviewRoot(prev);
       scene.remove(prev);
       disposeThreeObject(prev);
       attachedModelRef.current = null;
@@ -2766,11 +2793,13 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     attachedModelRef.current = root;
     captureTextureMaterials(root);
     rebuildSkinPointOverlays();
-    if (!textureEnabled) {
-      applyTextureEnabled(false);
-    }
+    updateMaterialPreview(root, {
+      textureEnabled,
+      modelOpacity,
+      repeatTextures: textureRepeatPreviewEnabled,
+      textureFilter: textureFilterPreview,
+    });
     applyShaderEnabled(shaderEnabled);
-    applyModelOpacity(modelOpacity);
 
     // Auto frame camera + orbit to model (fixes giant/tiny uploads; uses bbox, no model scale to preserve skin/bind)
     const box = new THREE.Box3().setFromObject(root);
@@ -2837,6 +2866,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         data-grid-enabled={gridEnabled ? 'true' : 'false'}
         data-axes-enabled={axesEnabled ? 'true' : 'false'}
         data-texture-enabled={textureEnabled ? 'true' : 'false'}
+        data-texture-repeat-preview={textureRepeatPreviewEnabled ? 'true' : 'false'}
+        data-texture-filter-preview={textureFilterPreview}
         data-shader-enabled={shaderEnabled ? 'true' : 'false'}
         data-shader-mode={shaderEnabled ? 'legacy-smf' : 'standard'}
         data-perspective-enabled={perspectiveEnabled ? 'true' : 'false'}

@@ -82,7 +82,7 @@ Sources used:
     - Pose-level Undo/Redo is implemented for quick nudges, bind reset, TransformControls moves, and endpoint drags through a shared editor-history helper.
     - Non-SMF rig rename/reparent/create/move/delete Undo/Redo snapshots restore skeleton bones, parent links, inverse binds, skin indices, base clips, authored animation edits, pose edits, selected bone, and selected skin-paint state.
     - Viewport pointer ownership is now routed through a pure helper before mutation, so the explicit Rig Endpoint tool, Rig/Animate bone select, Skin paint gating, View-mode model/submodel selection, and Export read-only clicks have explicit owners; TransformControls keeps separate helper/axis/drag ownership telemetry.
-    - View-mode model/submodel viewport picking now syncs with Outliner selection. The SMF metadata/reset decision and non-SMF rotate/spin helpers are complete; remaining mapped work is global shelf/material policy and deeper rig tool modes.
+    - View-mode model/submodel viewport picking now syncs with Outliner selection. The SMF metadata/reset decision, non-SMF rotate/spin helpers, and global shelf/material policy are complete; remaining mapped work is deeper rig/ortho tool modes.
 
 ## 4) Global shell/settings parity
 
@@ -103,7 +103,7 @@ Sources used:
     - `docs/references/old-src/shaders/sh_skinning_points/sh_skinning_points.vsh` and `.fsh`
     - `docs/references/old-src/shaders/sh_selection/sh_selection.vsh` and `.fsh`
   - Outliner bulk Select All, Clear, Hide selected, Hide unselected, and Show all are implemented as display-only visibility actions, and visibility mutations use toolbar/Ctrl+Z/Ctrl+Y undo-redo.
-  - Missing global shelf items include culling, texture repeat/filter, snap-to-grid, include-textures policy, and merge same textures.
+  - Global shelf/material policy is resolved: repeat wrapping and source/nearest/linear filtering are viewport-only previews; source samplers and material assignments are restored during export; Rig and Animate own separate snap units; include-textures behavior is format-owned and visible in Export; and merge-same-textures is a shared-texture preflight rather than the legacy destructive geometry merge. Culling remains owned by the modern viewport rather than this material policy.
   - Global undo/redo covers current pose, Rig, Animate, Skin, and Outliner mutators through ordered domain histories. `source/frontend/tests/README.md` owns the current mutator inventory; new authoring actions must join an undoable row or be explicitly classified as non-destructive.
 
 ## 5) Viewport click/drag interaction matrix

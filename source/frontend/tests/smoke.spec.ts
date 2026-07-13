@@ -29,6 +29,19 @@ const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]
 
 const fileToBase64 = (filePath: string): string => fs.readFileSync(filePath).toString('base64');
 
+interface GlbJsonSummary {
+  images?: unknown[];
+  textures?: unknown[];
+}
+
+const readGlbJson = (bytes: Buffer): GlbJsonSummary => {
+  expect(bytes.toString('utf8', 0, 4)).toBe('glTF');
+  const jsonLength = bytes.readUInt32LE(12);
+  const jsonType = bytes.toString('utf8', 16, 20);
+  expect(jsonType).toBe('JSON');
+  return JSON.parse(bytes.toString('utf8', 20, 20 + jsonLength)) as GlbJsonSummary;
+};
+
 type RelativePoint = { x: number; y: number };
 
 const dispatchWindowPointerCancel = async (page: Page): Promise<void> => {
@@ -552,6 +565,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('viewport-grid-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-axes-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-texture-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-texture-repeat-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-texture-filter-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-bone-index-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-shader-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-perspective-toggle')).toBeDisabled();
@@ -573,6 +588,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('viewport-layout-quad')).toBeDisabled();
     await expect(page.getByTestId('viewport-wireframe-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-texture-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-texture-repeat-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-texture-filter-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-bone-index-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-shader-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-perspective-toggle')).toBeDisabled();
@@ -592,6 +609,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('viewport-grid-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-axes-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-texture-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-texture-repeat-toggle')).toBeDisabled();
+    await expect(page.getByTestId('viewport-texture-filter-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-bone-index-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-shader-toggle')).toBeDisabled();
     await expect(page.getByTestId('viewport-perspective-toggle')).toBeDisabled();
@@ -726,6 +745,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const gridBtn = page.getByTestId('viewport-grid-toggle');
     const axesBtn = page.getByTestId('viewport-axes-toggle');
     const textureBtn = page.getByTestId('viewport-texture-toggle');
+    const textureRepeatBtn = page.getByTestId('viewport-texture-repeat-toggle');
+    const textureFilterBtn = page.getByTestId('viewport-texture-filter-toggle');
     const shaderBtn = page.getByTestId('viewport-shader-toggle');
     const perspectiveBtn = page.getByTestId('viewport-perspective-toggle');
     const boneIndexBtn = page.getByTestId('viewport-bone-index-toggle');
@@ -753,6 +774,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(axesBtn).toHaveAttribute('aria-pressed', 'true');
     await expect(textureBtn).toBeEnabled();
     await expect(textureBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(textureRepeatBtn).toBeEnabled();
+    await expect(textureRepeatBtn).toHaveAttribute('aria-pressed', 'false');
+    await expect(textureFilterBtn).toBeEnabled();
+    await expect(textureFilterBtn).toHaveAttribute('aria-pressed', 'false');
     await expect(shaderBtn).toBeEnabled();
     await expect(shaderBtn).toHaveAttribute('aria-pressed', 'false');
     await expect(shaderBtn).toContainText('Legacy');
@@ -771,6 +796,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(canvas).toHaveAttribute('data-grid-enabled', 'true');
     await expect(canvas).toHaveAttribute('data-axes-enabled', 'true');
     await expect(canvas).toHaveAttribute('data-texture-enabled', 'true');
+    await expect(canvas).toHaveAttribute('data-texture-repeat-preview', 'false');
+    await expect(canvas).toHaveAttribute('data-texture-filter-preview', 'source');
     await expect(canvas).toHaveAttribute('data-shader-enabled', 'false');
     await expect(canvas).toHaveAttribute('data-shader-mode', 'standard');
     await expect(canvas).toHaveAttribute('data-perspective-enabled', 'true');
@@ -793,6 +820,13 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await textureBtn.click();
     await expect(textureBtn).toHaveAttribute('aria-pressed', 'false');
     await expect(canvas).toHaveAttribute('data-texture-enabled', 'false');
+    await textureRepeatBtn.click();
+    await expect(textureRepeatBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(canvas).toHaveAttribute('data-texture-repeat-preview', 'true');
+    await textureFilterBtn.click();
+    await expect(canvas).toHaveAttribute('data-texture-filter-preview', 'nearest');
+    await textureFilterBtn.click();
+    await expect(canvas).toHaveAttribute('data-texture-filter-preview', 'linear');
     await shaderBtn.click();
     await expect(shaderBtn).toHaveAttribute('aria-pressed', 'true');
     await expect(canvas).toHaveAttribute('data-shader-enabled', 'true');
@@ -825,6 +859,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(canvas).toHaveAttribute('data-axes-enabled', 'true');
     await textureBtn.click();
     await expect(canvas).toHaveAttribute('data-texture-enabled', 'true');
+    await textureRepeatBtn.click();
+    await expect(canvas).toHaveAttribute('data-texture-repeat-preview', 'false');
+    await textureFilterBtn.click();
+    await expect(canvas).toHaveAttribute('data-texture-filter-preview', 'source');
     await boneIndexBtn.click();
     await expect(boneIndexBtn).toHaveAttribute('aria-pressed', 'false');
     await expect(canvas).toHaveAttribute('data-bone-index-labels-enabled', 'false');
@@ -917,6 +955,10 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await exportTab.click({ force: true });
     await page.waitForTimeout(20);
     await expect(page.getByTestId('export-workspace-panel')).toBeVisible();
+    const smfPolicyPanel = page.getByTestId('texture-export-policy-panel');
+    await expect(smfPolicyPanel.locator('[data-export-action="export"]')).toHaveAttribute('data-export-format', 'smf');
+    await expect(smfPolicyPanel.locator('[data-export-action="export"]')).toHaveAttribute('data-texture-policy', 'embedded');
+    await expect(smfPolicyPanel.locator('[data-export-action="smf"]')).toHaveAttribute('data-texture-policy', 'embedded');
     await viewTab.click({ force: true });
     await page.waitForTimeout(20);
     await expect(page.getByTestId('skin-workspace-panel')).toBeHidden();
@@ -2399,7 +2441,29 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture-texture\.glb|bones: 2|clips: 1/i);
 
+    await openViewportDisplayMenu(page);
+    await page.getByTestId('viewport-texture-toggle').click();
+    await page.getByTestId('viewport-texture-repeat-toggle').click();
+    await page.getByTestId('viewport-texture-filter-toggle').click();
+    await page.getByTestId('viewport-texture-filter-toggle').click();
+    await page.getByTestId('viewport-shader-toggle').click();
+    await page.getByTestId('viewport-model-opacity-toggle').click();
+    const canvas = page.getByTestId('three-canvas');
+    await expect(canvas).toHaveAttribute('data-texture-enabled', 'false');
+    await expect(canvas).toHaveAttribute('data-texture-repeat-preview', 'true');
+    await expect(canvas).toHaveAttribute('data-texture-filter-preview', 'linear');
+    await expect(canvas).toHaveAttribute('data-shader-enabled', 'true');
+    await expect(canvas).toHaveAttribute('data-model-opacity', '0.35');
+
     await page.getByTestId('mode-tab-export').click({ force: true });
+    const policyPanel = page.getByTestId('texture-export-policy-panel');
+    await expect(policyPanel).toBeVisible();
+    await expect(policyPanel.getByTestId('texture-export-policy-row')).toHaveCount(3);
+    await expect(policyPanel.locator('[data-export-action="export"]')).toHaveAttribute('data-export-format', 'glb');
+    await expect(policyPanel.locator('[data-export-action="glb"]')).toHaveAttribute('data-texture-policy', 'embedded');
+    await expect(policyPanel.locator('[data-export-action="smf"]')).toHaveAttribute('data-texture-policy', 'omitted');
+    await expect(page.getByTestId('legacy-material-policy-row')).toHaveCount(3);
+    await expect(page.getByTestId('legacy-material-policy-panel')).toContainText(/workspace snap|Preflight only|Resolved by format/i);
     const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
     await expect(diagnosticsPanel).toBeVisible();
     await expect(diagnosticsPanel).toHaveAttribute('data-smf-can-export', 'true');
@@ -2413,6 +2477,22 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(textureRows.first()).toContainText(/FixtureSkinnedMesh/);
     await expect(textureRows.first()).toContainText(/3x2/);
     await expect(textureRows.first()).toContainText(/non-POT/);
+    await expect(page.getByTestId('duplicate-texture-groups-empty')).toBeVisible();
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByTestId('export-glb-btn').click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe('exported_model.glb');
+    const downloadPath = await download.path();
+    expect(downloadPath).not.toBeNull();
+    const exportedGlb = readGlbJson(fs.readFileSync(downloadPath!));
+    expect(exportedGlb.images?.length).toBe(1);
+    expect(exportedGlb.textures?.length).toBe(1);
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb/i, { timeout: 5000 });
+    await expect(canvas).toHaveAttribute('data-texture-enabled', 'false');
+    await expect(canvas).toHaveAttribute('data-texture-repeat-preview', 'true');
+    await expect(canvas).toHaveAttribute('data-texture-filter-preview', 'linear');
+    await expect(canvas).toHaveAttribute('data-shader-enabled', 'true');
 
     await page.getByTestId('export-smf-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });

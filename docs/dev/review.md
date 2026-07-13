@@ -4,7 +4,7 @@ Last reviewed: 2026-07-13
 
 ## Scope
 
-Focused implementation and integrity review for SMF Rig edit policy, bind reset, head-node/world-pose export, skin-index roundtrip fidelity, and the existing IK/TransformControls ownership contract.
+Focused implementation and integrity review for viewport/material policy, source-safe export boundaries, and the remaining workspace/async continuity backlog.
 
 ## Current Findings
 
@@ -13,17 +13,10 @@ Focused implementation and integrity review for SMF Rig edit policy, bind reset,
 - SMF pose export now serializes edited children from rig-space `matrixWorld`, which preserves effective-parent semantics across skipped head nodes.
 - The review fixture exposed and fixed a skin contract mismatch: export had converted deform-order skin indices into full node IDs. Export now writes deform-order indices unchanged, and diagnostics fail on skin-index or out-of-tolerance weight drift.
 - Real-SMF unit and browser evidence covers policy gating, bind reset, dirty state, undo/redo, node/head/skin/animation identity, and export/reimport. The completed SMF-aware Rig parity task has moved out of the active backlog.
+- The old global material shelf is resolved. Rig and Animate retain scoped snap because they use different units; repeat/wrap and filter are labeled viewport previews; merge-same-textures is a non-mutating shared-texture preflight; and texture inclusion is stated per Export/GLB/SMF action.
+- GLB and FBX exporters now enter a source-material boundary for the full asynchronous export. Tex, Mesh fade, Legacy material, sampler overrides, and Skin weight colors cannot leak into saved assets, and the preview is restored after completion.
 
 ## Next Tasks
-
-### Global shelf and material policy
-
-- What: Finish or retire global snap, texture repeat/filter, merge-same-textures, and include-textures actions.
-- Why: These actions can blur preview-only sampler state with export-affecting material conversion.
-- Where: `Toolbar.tsx`, `Outliner.tsx`, `textureCompat.ts`, `threeToSmf.ts`, Export preflight UI, and old `common_add_buttons`/`combine_textures` references.
-- When: Next old-editor parity slice.
-- How: Keep preview state non-destructive, require validated undo for conversion, and make per-format texture inclusion explicit.
-- Done when: Every mapped shelf action ships with clear preview/export semantics and browser proof or is deliberately absent with a format/ownership reason.
 
 ### Workspace transition and async continuity
 
@@ -36,8 +29,7 @@ Focused implementation and integrity review for SMF Rig edit policy, bind reset,
 
 ## Verification
 
-- Focused SMF/Rig units pass 68/68, including real-fixture pose export/reimport identity and diagnostic skin-drift failure coverage.
-- App and test typechecks pass.
-- Focused browser policy/reset/undo/roundtrip flow passes 1/1.
-- Full `pwsh -File run.ps1 -Task verify` passed with 179/179 units, context validation, lint, app/test typechecks, production-any guard, build/chunk checks, and Rust cargo check.
-- Browser-only `pwsh -File run.ps1 -Task test:e2e -NoGenEye` passed 43/43, including the new real-SMF policy/reset/roundtrip flow.
+- Focused material policy/isolation/texture units pass 12/12, including async source restoration, root replacement, duplicate-use grouping, and static-plus-skinned model summaries.
+- Focused browser evidence passes 2/2 for real-SMF format policy and textured-GLB export under active preview overrides.
+- Full `pwsh -File run.ps1 -Task verify` passed with 187/187 units, zero-warning context validation, lint, app/test typechecks, production-any guard, build/chunk checks, and Rust cargo check.
+- Browser-only `pwsh -File run.ps1 -Task test:e2e -NoGenEye` passed 43/43, including downloaded GLB image/texture proof and preview restoration.

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { FBXExporter } from '../vendor/FBXExporter.js';
+import { withSourceMaterialState } from '../utils/materialPreview';
 
 // Basic FBX loader, mirroring glb.ts structure for consistency.
 // Supports skinned meshes if present in FBX.
@@ -70,14 +71,16 @@ export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoa
 }
 
 export async function exportFBX(root: THREE.Group, clips: THREE.AnimationClip[] = []): Promise<Uint8Array> {
-  const exporter = new FBXExporter();
-  const blob = await exporter.parse(root, {
-    animations: clips,
-    embedImages: typeof document !== 'undefined',
-    exportMaterials: true,
-    exportSkin: true,
-    onlyVisible: true,
-    scale: 1,
+  return withSourceMaterialState(root, async () => {
+    const exporter = new FBXExporter();
+    const blob = await exporter.parse(root, {
+      animations: clips,
+      embedImages: typeof document !== 'undefined',
+      exportMaterials: true,
+      exportSkin: true,
+      onlyVisible: true,
+      scale: 1,
+    });
+    return new Uint8Array(await blob.arrayBuffer());
   });
-  return new Uint8Array(await blob.arrayBuffer());
 }

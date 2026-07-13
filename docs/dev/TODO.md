@@ -6,21 +6,6 @@ This file contains executable work only. Every task must identify What, Why, Whe
 
 ## Active Backlog
 
-### P2: Resolve remaining global shelf and material-policy actions
-
-- What: Finish or explicitly retire the remaining old shelf actions: global snap, texture repeat/filter, merge-same-textures, and include-textures export policy.
-- Why: Selection and visibility actions are complete, but ambiguous material actions can silently change preview/export fidelity or imply unsupported persistence.
-- Where: `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/components/Outliner.tsx`, `source/frontend/src/utils/textureCompat.ts`, `source/frontend/src/loaders/threeToSmf.ts`, export preflight UI, tests, and old `common_add_buttons`/`combine_textures` references.
-- When: After the SMF metadata decision and before claiming broader old-editor shelf parity.
-- How: Separate display-only sampler previews from export-affecting conversion; reuse texture diagnostics and never mutate/merge materials silently.
-- Subtasks:
-  - Decide whether global snap adds value beyond the current Rig-scoped snap and future Animate movement tools.
-  - Implement repeat/filter as clearly labeled preview state or retire it with the target-format reason.
-  - Implement merge-same-textures only as an undoable, validated conversion; otherwise expose a preflight recommendation instead of a mutation button.
-  - Make include-textures behavior explicit per GLB/FBX/OBJ/SMF export path.
-- Done when: Each old shelf action either ships with clear preview/export semantics and browser coverage or is deliberately absent with a documented format/ownership reason; no inert or misleading control remains.
-- Verification: Texture compatibility units, browser control/export assertions, roundtrip validation for affected formats, full verify, and e2e.
-
 ### P2: Complete workspace transition and continuity coverage
 
 - What: Prove model, selection, scrub, status, layout, and dirty-state continuity across all workspace transitions.

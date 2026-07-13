@@ -143,8 +143,8 @@
       "files": []
     },
     "feature__smf_export_diagnostics": {
-      "description": "Structured SMF export preflight for non-SMF skinned sources plus compact Export workspace diagnostics.",
-      "status": "implemented for structured compatibility checks, report saving, and material/texture warnings: missing skeleton/skin data and scale tracks block export; missing UVs/normals warn; non-POT or complex material layouts warn; ExportPanel shows texture provenance and roundtrip rows for counts, geometry, bounds, exact skin indices, 8-bit skin-weight tolerance, animation timing/metadata, sign-equivalent first/last-frame DQ pose, and bounded worst-pose details. A real head-node regression now fails if deform-order skin identity drifts, closing the prior false-pass gap.",
+      "description": "Structured SMF export preflight, format-owned texture policy, and source-safe material preview/export boundaries.",
+      "status": "Structured compatibility checks, report saving, material/texture warnings, shared-texture preflight, exact skin/pose roundtrip rows, and per-action texture embedding policy are active. GLB/FBX export restores source assignments, materials, samplers, and weight-color state for the full async call, so viewport previews cannot alter saved assets.",
       "paths": [
         "docs/dev/APP_STATE.md",
         "docs/dev/TODO.md",
@@ -154,23 +154,32 @@
         "source/frontend/src/loaders/threeToSmf.test.ts",
         "source/frontend/src/utils/textureCompat.ts",
         "source/frontend/src/utils/textureCompat.test.ts",
+        "source/frontend/src/utils/materialPreview.ts",
+        "source/frontend/src/utils/materialPreview.test.ts",
+        "source/frontend/src/utils/materialPolicy.ts",
+        "source/frontend/src/utils/materialPolicy.test.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/components/ExportPanel.tsx",
+        "source/frontend/src/components/ThreeViewport.tsx",
+        "source/frontend/src/components/Toolbar.tsx",
+        "source/frontend/src/loaders/glb.ts",
+        "source/frontend/src/loaders/fbx.ts",
         "source/frontend/src/App.tsx",
         "source/frontend/src/index.css",
         "source/frontend/tests/smoke.spec.ts",
         "source/frontend/tests/helpers/skinned-glb-fixture.ts",
-        "source/frontend/tests/README.md"
+        "source/frontend/tests/README.md",
+        "docs/dev/PITFALL_LEDGER.md"
       ],
       "next_steps": [
-        "Decide whether richer material layouts should remain warning-only, block SMF export, or offer a split/export action.",
-        "Add a compact texture/material detail panel only if the Export cockpit list becomes too dense."
+        "Keep future exporter-visible previews inside the source-state boundary and extend downloaded-asset evidence for new material channels.",
+        "Only add texture atlas or geometry merge mutation with explicit ownership, undo, skin/material validation, and roundtrip proof."
       ],
       "files": []
     },
     "feature__modern_editor_workspaces": {
       "description": "Modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, active single/quad viewport layout, model-safe wireframe display, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
-      "status": "Editor workspaces, single/quad/Ortho layout, responsive toolbar/display controls, routed View/Rig/Skin/Animate/Export input ownership, Outliner visibility/history, Skin authoring, animation authoring, non-SMF Rig structure tools, explicit Endpoint/IK, and direct TransformControls history ownership are active and browser-covered. SMF Rig policy is now complete: rename is unavailable because the format stores no name, detach/connect remains structural, mirror is absent without legacy command or pairing metadata, and inverse-bind local reset is enabled with undo/redo and real-fixture roundtrip proof. Remaining parity is material/shelf policy, transition/race hardening, typed interop cleanup, and deeper pane-camera controls.",
+      "status": "Editor workspaces, single/quad/Ortho layout, responsive toolbar/display controls, routed View/Rig/Skin/Animate/Export input ownership, Outliner visibility/history, Skin authoring, animation authoring, non-SMF Rig structure tools, explicit Endpoint/IK, and direct TransformControls history ownership are active and browser-covered. SMF Rig and material shelf policies are complete with scoped snap, viewport-only sampler previews, source-safe export, non-mutating shared-texture preflight, and per-format texture rules. Remaining parity is transition/race hardening, typed interop cleanup, and deeper pane-camera controls.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
@@ -266,7 +275,7 @@
     },
     "workflow__old_editor_parity_source_map": {
       "description": "Focused old GameMaker reference map for adapting RustSMF workspaces, display toggles, skin paint, animation keyframes, and viewport precision behavior without recreating old chrome verbatim.",
-      "status": "active reference; current RustSMF covers workspace/layout/display routing, View selection, Outliner history, Skin and Animate authoring, non-SMF Rig structural tools, explicit Select/Endpoint/IK ownership, pane-aware Add/Move/Rotate, and structured Export checks. The SMF Rig source-map decision is closed: no persisted rename field, legacy detach/connect is structural, no owned mirror command or pairing metadata exists, and selected-bone bind reset is safely inverse-bind-derived. Remaining mapped work is material/shelf policy, transition/race hardening, and deeper ortho-pane interaction parity.",
+      "status": "active reference; current RustSMF covers workspace/layout/display routing, View selection, Outliner history, Skin and Animate authoring, non-SMF Rig structural tools, explicit Select/Endpoint/IK ownership, pane-aware Add/Move/Rotate, and structured Export checks. SMF Rig and global shelf/material decisions are closed with format-specific reasons, scoped snap, viewport-only sampler previews, source-safe export, and non-mutating texture reuse preflight. Remaining mapped work is transition/race hardening and deeper ortho-pane interaction parity.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
@@ -948,6 +957,26 @@
       ],
       "current_solution": "Toolbar mode tabs now occupy a full-width scrollable row under 800px; layout buttons are disabled until a model exists and `App` forces no-model layout back to single. `smoke.spec.ts` includes a 360px post-load mode cycle that clicks Model/Rig/Skin/Animate/Export without forced clicks and verifies selected-bone plus scrub continuity.",
       "next_prevention": "Keep constrained-width mode coverage whenever toolbar layout, mode state, or panel mount behavior changes.",
+      "files": []
+    },
+    "issue__viewport_preview_export_leak": {
+      "description": "Viewport-only material, sampler, Legacy, opacity, or weight-color state can alter GLB/FBX output when exporters consume the live mounted root.",
+      "status": "fixed 2026-07-13; root-scoped source state is restored for the full async exporter call and active preview state is reapplied only while the same root remains mounted",
+      "last_seen": "2026-07-13",
+      "paths": [
+        "source/frontend/src/utils/materialPreview.ts",
+        "source/frontend/src/utils/materialPreview.test.ts",
+        "source/frontend/src/utils/materialPolicy.ts",
+        "source/frontend/src/components/ThreeViewport.tsx",
+        "source/frontend/src/loaders/glb.ts",
+        "source/frontend/src/loaders/fbx.ts",
+        "source/frontend/tests/smoke.spec.ts",
+        "source/frontend/tests/README.md",
+        "docs/dev/PITFALL_LEDGER.md",
+        "docs/dev/APP_STATE.md"
+      ],
+      "current_solution": "Use one source/preview registry for original mesh assignments, material/texture state, and geometry colors; exporters restore the source during awaited serialization, while diagnostics read source materials directly.",
+      "next_prevention": "Route every new exporter-visible preview channel through materialPreview and retain the textured downloaded-GLB smoke with all overrides active.",
       "files": []
     },
     "issue__export_inflight_guard": {

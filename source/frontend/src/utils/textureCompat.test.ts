@@ -1,7 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as THREE from 'three';
-import { inspectMeshMaterialCompatibility, summarizeMeshTextures } from './textureCompat';
+import { findDuplicateTextureGroups, inspectMeshMaterialCompatibility, summarizeMeshTextures, summarizeObjectTextures } from './textureCompat';
 
 function makeSkinnedQuadMesh(material: THREE.Material | THREE.Material[]): THREE.SkinnedMesh {
   const geometry = new THREE.PlaneGeometry(1, 1);
@@ -61,5 +61,33 @@ describe('textureCompat.inspectMeshMaterialCompatibility', () => {
     assert.equal(summaries[0].height, 2);
     assert.equal(summaries[0].isPowerOfTwo, false);
     assert.match(summaries[0].source, /^three-source:/);
+  });
+
+  it('reports a shared texture only when it crosses material owners', () => {
+    const sharedMaterial = makeTexturedMaterial(4, 4);
+    const first = makeSkinnedQuadMesh(sharedMaterial);
+    first.name = 'First';
+    const second = makeSkinnedQuadMesh(sharedMaterial);
+    second.name = 'Second';
+    const summaries = [...summarizeMeshTextures(first), ...summarizeMeshTextures(second)];
+    const groups = findDuplicateTextureGroups(summaries);
+
+    assert.equal(groups.length, 1);
+    assert.equal(groups[0].uses.length, 2);
+    assert.deepEqual(groups[0].uses.map((use) => use.meshName), ['First', 'Second']);
+    assert.equal(findDuplicateTextureGroups(summaries.slice(0, 1)).length, 0);
+  });
+
+  it('summarizes static and skinned meshes from a complete model root', () => {
+    const root = new THREE.Group();
+    const material = makeTexturedMaterial(4, 4);
+    root.add(new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material));
+    root.children[0].name = 'StaticMesh';
+    root.add(makeSkinnedQuadMesh(material));
+
+    assert.deepEqual(
+      summarizeObjectTextures(root).map((summary) => summary.meshName),
+      ['StaticMesh', 'DiagnosticMesh'],
+    );
   });
 });

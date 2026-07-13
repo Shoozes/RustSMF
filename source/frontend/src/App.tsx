@@ -160,6 +160,7 @@ export default function App() {
     showBoneLabels,
     toggleBoneLabels,
     smfDiagnosticReport,
+    materialTextureSummaries,
     smfRoundtripReport,
     skinEditHasDirtyState,
     skinEditBlockReason,
@@ -202,6 +203,10 @@ export default function App() {
     setAxesEnabled,
     textureEnabled,
     setTextureEnabled,
+    textureRepeatPreviewEnabled,
+    setTextureRepeatPreviewEnabled,
+    textureFilterPreview,
+    setTextureFilterPreview,
     boneIndexLabelsEnabled,
     setBoneIndexLabelsEnabled,
     rigOpacity,
@@ -665,6 +670,7 @@ export default function App() {
           hasSkeleton={hasSkinnedModel}
           editorMode={editorMode}
           smfDiagnosticReport={smfDiagnosticReport}
+          materialTextures={materialTextureSummaries}
           smfRoundtripReport={smfRoundtripReport}
           onRunSmfRoundtripCheck={handleRunSmfRoundtripCheck}
           onSaveSmfDiagnosticReport={handleSaveSmfDiagnosticReport}
@@ -727,6 +733,10 @@ export default function App() {
         setAxesEnabled={setAxesEnabled}
         textureEnabled={textureEnabled}
         setTextureEnabled={setTextureEnabled}
+        textureRepeatPreviewEnabled={textureRepeatPreviewEnabled}
+        setTextureRepeatPreviewEnabled={setTextureRepeatPreviewEnabled}
+        textureFilterPreview={textureFilterPreview}
+        setTextureFilterPreview={setTextureFilterPreview}
         boneIndexLabelsEnabled={boneIndexLabelsEnabled}
         setBoneIndexLabelsEnabled={setBoneIndexLabelsEnabled}
         rigOpacity={rigOpacity}
@@ -815,6 +825,8 @@ export default function App() {
             gridEnabled={gridEnabled}
             axesEnabled={axesEnabled}
             textureEnabled={textureEnabled}
+            textureRepeatPreviewEnabled={textureRepeatPreviewEnabled}
+            textureFilterPreview={textureFilterPreview}
             boneIndexLabelsEnabled={boneIndexLabelsEnabled}
             rigOpacity={rigOpacity}
             rigThicknessScale={rigThicknessScale}

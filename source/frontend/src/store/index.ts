@@ -9,6 +9,7 @@
 import { useState, useCallback } from 'react';
 import * as THREE from 'three';
 import { supportedModelFormatsLabel } from '../utils/modelFormat';
+import type { TextureFilterPreview } from '../utils/materialPreview';
 
 export interface LoadedModelState {
   root: THREE.Group | null;
@@ -35,6 +36,8 @@ export interface UiState {
   editorMode: EditorMode;
   viewportLayout: ViewportLayout;
   textureEnabled: boolean;
+  textureRepeatPreviewEnabled: boolean;
+  textureFilterPreview: TextureFilterPreview;
   boneIndexLabelsEnabled: boolean;
   rigOpacity: number;
   rigThicknessScale: number;
@@ -100,6 +103,8 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
   const [editorMode, setEditorMode] = useState<EditorMode>(initial.editorMode ?? 'view');
   const [viewportLayout, setViewportLayout] = useState<ViewportLayout>(initial.viewportLayout ?? 'single');
   const [textureEnabled, setTextureEnabled] = useState<boolean>(initial.textureEnabled ?? true);
+  const [textureRepeatPreviewEnabled, setTextureRepeatPreviewEnabled] = useState<boolean>(initial.textureRepeatPreviewEnabled ?? false);
+  const [textureFilterPreview, setTextureFilterPreview] = useState<TextureFilterPreview>(initial.textureFilterPreview ?? 'source');
   const [boneIndexLabelsEnabled, setBoneIndexLabelsEnabled] = useState<boolean>(initial.boneIndexLabelsEnabled ?? false);
   const [rigOpacity, setRigOpacity] = useState<number>(initial.rigOpacity ?? 1);
   const [rigThicknessScale, setRigThicknessScale] = useState<number>(initial.rigThicknessScale ?? 1);
@@ -121,6 +126,8 @@ export function useUiSlice(initial: Partial<UiState> = {}) {
     editorMode, setEditorMode,
     viewportLayout, setViewportLayout,
     textureEnabled, setTextureEnabled,
+    textureRepeatPreviewEnabled, setTextureRepeatPreviewEnabled,
+    textureFilterPreview, setTextureFilterPreview,
     boneIndexLabelsEnabled, setBoneIndexLabelsEnabled,
     rigOpacity, setRigOpacity,
     rigThicknessScale, setRigThicknessScale,

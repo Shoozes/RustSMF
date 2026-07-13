@@ -1,6 +1,7 @@
 import React from 'react';
 import type { EditorMode, ViewportLayout } from '../store';
 import { SUPPORTED_MODEL_ACCEPT } from '../utils/modelFormat';
+import type { TextureFilterPreview } from '../utils/materialPreview';
 
 interface ToolbarProps {
   onOpen: () => void;
@@ -27,6 +28,10 @@ interface ToolbarProps {
   setAxesEnabled: (enabled: boolean) => void;
   textureEnabled: boolean;
   setTextureEnabled: (enabled: boolean) => void;
+  textureRepeatPreviewEnabled: boolean;
+  setTextureRepeatPreviewEnabled: (enabled: boolean) => void;
+  textureFilterPreview: TextureFilterPreview;
+  setTextureFilterPreview: (filter: TextureFilterPreview) => void;
   boneIndexLabelsEnabled: boolean;
   setBoneIndexLabelsEnabled: (enabled: boolean) => void;
   rigOpacity: number;
@@ -68,6 +73,10 @@ const Toolbar: React.FC<ToolbarProps> = ({
   setAxesEnabled,
   textureEnabled,
   setTextureEnabled,
+  textureRepeatPreviewEnabled,
+  setTextureRepeatPreviewEnabled,
+  textureFilterPreview,
+  setTextureFilterPreview,
   boneIndexLabelsEnabled,
   setBoneIndexLabelsEnabled,
   rigOpacity,
@@ -83,6 +92,11 @@ const Toolbar: React.FC<ToolbarProps> = ({
   modelOpacity,
   setModelOpacity,
 }) => {
+  const nextTextureFilter: Record<TextureFilterPreview, TextureFilterPreview> = {
+    source: 'nearest',
+    nearest: 'linear',
+    linear: 'source',
+  };
   const modes: EditorMode[] = ['view', 'rig', 'skin', 'animate', 'export'];
   const modeLabels: Record<EditorMode, string> = {
     view: 'Model',
@@ -116,9 +130,23 @@ const Toolbar: React.FC<ToolbarProps> = ({
     {
       testId: 'viewport-texture-toggle',
       label: 'Tex',
-      title: 'Toggle texture maps',
+      title: 'Toggle texture maps in the viewport only',
       active: textureEnabled,
       onClick: () => setTextureEnabled(!textureEnabled),
+    },
+    {
+      testId: 'viewport-texture-repeat-toggle',
+      label: textureRepeatPreviewEnabled ? 'Wrap repeat' : 'Wrap source',
+      title: 'Toggle repeat wrapping preview; export always uses the source sampler',
+      active: textureRepeatPreviewEnabled,
+      onClick: () => setTextureRepeatPreviewEnabled(!textureRepeatPreviewEnabled),
+    },
+    {
+      testId: 'viewport-texture-filter-toggle',
+      label: `Filter ${textureFilterPreview}`,
+      title: 'Cycle source, nearest, and linear filtering previews; export always uses the source sampler',
+      active: textureFilterPreview !== 'source',
+      onClick: () => setTextureFilterPreview(nextTextureFilter[textureFilterPreview]),
     },
     {
       testId: 'viewport-shader-toggle',

@@ -1,6 +1,37 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-07-13 (verified SMF Rig policy/bind reset, rig-space pose export, deform-index skin roundtrip, TransformControls/Endpoint/IK ownership, GLB recovery export, and DQ sign-equivalent diagnostics).
+Last reviewed: 2026-07-13 (verified source-safe material previews, texture export policy, SMF Rig/IK ownership, deform-index skin roundtrip, GLB recovery export, and DQ sign-equivalent diagnostics).
+
+### Q: What pitfall are we preventing?
+
+**What:** Viewport-only material and weight-preview state can leak into GLB/FBX exports when the exporter consumes the same live Three.js root mounted by the renderer.
+
+**Context and constraints:** RustSMF intentionally shares one root across preview, authoring, diagnostics, and export so skeleton and animation references stay coherent. Tex-off, Mesh fade, Legacy lighting, repeat/filter overrides, and selected-bone weight colors must remain display-only without cloning or rebinding the skinned model.
+
+**Why it happened:** The viewport backed up maps and opacity but applied the preview directly to source materials, and Legacy mode replaced `mesh.material`. GLB/FBX exporters read that live assignment asynchronously. The weight preview also added a geometry color attribute and enabled vertex colors. Restoring only when a toggle was disabled or a root was unloaded left export timing unprotected.
+
+**Where:** `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/materialPreview.ts`, `source/frontend/src/utils/weightPreview.ts`, `source/frontend/src/loaders/glb.ts`, `source/frontend/src/loaders/fbx.ts`, `source/frontend/src/utils/materialPreview.test.ts`, and `source/frontend/tests/smoke.spec.ts`.
+
+**Evidence:** Source inspection showed `applyTextureEnabled(false)` assigning `material.map = null`, opacity changing the source material, and Legacy assigning a clone directly to each mesh before `GLTFExporter.parseAsync(root)`. The focused material tests now prove source assignment/map/opacity/vertex-color/wrap/filter state during an awaited operation and preview restoration afterward. The generated textured-GLB browser test activates all preview modes together and confirms the downloaded GLB still has one image and one texture.
+
+**Developer story:** The old shelf mapping began as a UI-policy task. Tracing each control through the current exporter showed the Tex button was not merely ambiguous copy: it could change saved output. Centralizing source snapshots solved map/opacity/sampler restoration, but the same review exposed Legacy material assignment and Skin weight colors as equivalent leaks. The boundary was widened to the complete exporter-visible material/color state and held for the full asynchronous call. A root-identity check prevents a stale exporter completion from reapplying preview state after unload.
+
+**How to catch it:** Run `npx tsx --test src/utils/materialPreview.test.ts src/utils/materialPolicy.test.ts src/utils/textureCompat.test.ts`, then `npx playwright test tests/smoke.spec.ts --grep "generated skinned GLB with material layout warnings" --workers=1` from `source/frontend`. Require image/texture records in the downloaded GLB while every preview override remains active.
+
+**Solutions tried:**
+1. `28/100` Keep per-control backups and restore only on toggle/unload, result: normal preview switching worked but export could observe the modified live root.
+2. `78/100` Restore maps, opacity, samplers, and mesh assignments around export, result: material previews were isolated but Skin weight colors remained exporter-visible.
+3. `97/100` Use one root-scoped async source boundary covering assignments, material/texture state, geometry colors, and root replacement, result: unit and real browser download proofs pass while the live preview is restored.
+
+**Current solution:** `materialPreview.ts` captures source-owned state once per mounted root. GLB and FBX export restore it for the whole awaited exporter operation and reapply the captured preview only when that root remains registered. Texture diagnostics also read registered source materials instead of the current display assignment.
+
+**Decision rationale:** A source boundary preserves the single-root skeleton/animation ownership model and applies uniformly to current and future preview controls. Cloning the whole skinned root was rejected because it would split live bone/edit references; documenting controls as “preview” without an export guard would not enforce the contract.
+
+**Effectiveness:** `97/100`, durable. The fix is modular, exporter-wide, handles async completion and root replacement, and is proved by both state-level units and a textured downloaded asset.
+
+**Relevance check:** Current. Any new Display material, geometry overlay, exporter, or worker boundary can reintroduce the leak if it bypasses this source-state contract.
+
+**Next prevention step:** Require every future exporter-visible preview to register its source state with the same boundary and extend the downloaded-asset smoke when a new material channel is added.
 
 ### Q: What pitfall are we preventing?
 

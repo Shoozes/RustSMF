@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { SkinnedMesh, Material } from 'three';
 
 import type { SmfDiagnostic, SmfDiagnosticLevel } from '../loaders/smfDiagnostics';
+import { getSourceMaterials } from './materialPreview';
 
 export interface TextureDiagnostic {
   level: SmfDiagnosticLevel;
@@ -19,6 +20,12 @@ export interface TextureSummary {
   height: number | null;
   source: string;
   isPowerOfTwo: boolean | null;
+}
+
+export interface DuplicateTextureGroup {
+  source: string;
+  textureNames: string[];
+  uses: Array<Pick<TextureSummary, 'meshName' | 'materialIndex' | 'mapType'>>;
 }
 
 interface MaterialTextureMap {
@@ -111,7 +118,7 @@ function dedupeTextureEntries(entries: MaterialTextureMap[]): MaterialTextureMap
 
 export function inspectMeshMaterialCompatibility(mesh: SkinnedMesh): TextureDiagnostic[] {
   const diagnostics: TextureDiagnostic[] = [];
-  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+  const materials = getSourceMaterials(mesh);
   const meshName = mesh.name || 'mesh';
 
   if (materials.length > 1) {
@@ -170,8 +177,8 @@ export function inspectMeshMaterialCompatibility(mesh: SkinnedMesh): TextureDiag
   return diagnostics;
 }
 
-export function summarizeMeshTextures(mesh: SkinnedMesh): TextureSummary[] {
-  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+export function summarizeMeshTextures(mesh: THREE.Mesh): TextureSummary[] {
+  const materials = getSourceMaterials(mesh);
   const meshName = mesh.name || 'mesh';
   const summaries: TextureSummary[] = [];
 
@@ -193,6 +200,32 @@ export function summarizeMeshTextures(mesh: SkinnedMesh): TextureSummary[] {
   });
 
   return summaries;
+}
+
+export function summarizeObjectTextures(root: THREE.Object3D): TextureSummary[] {
+  const summaries: TextureSummary[] = [];
+  root.traverse((node) => {
+    if (!(node as THREE.Mesh).isMesh) return;
+    summarizeMeshTextures(node as THREE.Mesh).forEach((summary) => summaries.push(summary));
+  });
+  return summaries;
+}
+
+export function findDuplicateTextureGroups(summaries: TextureSummary[]): DuplicateTextureGroup[] {
+  const groups = new Map<string, TextureSummary[]>();
+  summaries.forEach((summary) => {
+    const entries = groups.get(summary.source) ?? [];
+    entries.push(summary);
+    groups.set(summary.source, entries);
+  });
+
+  return [...groups.entries()]
+    .filter(([, entries]) => new Set(entries.map((item) => `${item.meshName}:${item.materialIndex}`)).size > 1)
+    .map(([source, entries]) => ({
+      source,
+      textureNames: [...new Set(entries.map((item) => item.textureName))],
+      uses: entries.map(({ meshName, materialIndex, mapType }) => ({ meshName, materialIndex, mapType })),
+    }));
 }
 
 export function toSmfDiagnosticList(

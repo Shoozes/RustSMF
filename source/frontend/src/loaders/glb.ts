@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { withSourceMaterialState } from '../utils/materialPreview';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { disposeThreeObject } from '../utils/threeDisposal';
@@ -115,10 +116,12 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
  * No new dependencies. The produced buffer is a valid .glb that roundtrips via loadGLB.
  */
 export async function exportGLB(root: THREE.Group, clips: THREE.AnimationClip[] = []): Promise<Uint8Array> {
-  const { GLTFExporter } = await import('three/examples/jsm/exporters/GLTFExporter.js');
-  const exporter = new GLTFExporter();
-  const result = await exporter.parseAsync(root, { binary: true, animations: clips });
-  return new Uint8Array(result as ArrayBuffer);
+  return withSourceMaterialState(root, async () => {
+    const { GLTFExporter } = await import('three/examples/jsm/exporters/GLTFExporter.js');
+    const exporter = new GLTFExporter();
+    const result = await exporter.parseAsync(root, { binary: true, animations: clips });
+    return new Uint8Array(result as ArrayBuffer);
+  });
 }
 
 export interface GlbRoundtripSummary {
