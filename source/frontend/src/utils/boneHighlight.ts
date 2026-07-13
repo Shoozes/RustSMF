@@ -36,6 +36,7 @@ export function makeBoneEndpointHandle(scale = 1): THREE.Group {
     new THREE.MeshBasicMaterial({ color: 0x60a5fa, depthTest: false, transparent: true, opacity: 0.45 })
   );
   core.position.set(0, 0, 0);
+  core.userData = { isEndpointDragHandle: true, endpointRole: 'core' };
   group.add(core);
 
   const endpointGeo = new THREE.SphereGeometry(endpointRadius, 12, 12);
@@ -45,16 +46,20 @@ export function makeBoneEndpointHandle(scale = 1): THREE.Group {
   const end = new THREE.Mesh(endpointGeo, endpointMat.clone());
   start.position.set(0, -endpointOffset, 0);
   end.position.set(0, endpointOffset, 0);
+  start.userData = { isEndpointDragHandle: true, endpointRole: 'start' };
+  end.userData = { isEndpointDragHandle: true, endpointRole: 'end' };
   group.add(start, end);
 
   const lineGeo = new THREE.BufferGeometry().setFromPoints([
     new THREE.Vector3(0, -endpointOffset, 0),
     new THREE.Vector3(0, endpointOffset, 0),
   ]);
-  group.add(new THREE.Line(
+  const connector = new THREE.Line(
     lineGeo,
     new THREE.LineBasicMaterial({ color: 0x7dd3fc, transparent: true, opacity: 0.75 })
-  ));
+  );
+  connector.userData = { isEndpointConnector: true };
+  group.add(connector);
 
   group.userData = { isEndpointHandle: true, markerScale };
 

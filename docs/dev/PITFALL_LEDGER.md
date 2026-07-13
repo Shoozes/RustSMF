@@ -1,6 +1,37 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-07-13 (verified explicit Rig IK, head-motion attribution, GLB recovery export, SMF serialized-world-pose handling, viewport layout hit-test timing, head-node export, and DQ sign-equivalent diagnostics).
+Last reviewed: 2026-07-13 (verified TransformControls helper ownership, explicit Endpoint routing, Rig IK, head-motion attribution, GLB recovery export, SMF serialized-world-pose handling, viewport layout hit-test timing, head-node export, and DQ sign-equivalent diagnostics).
+
+### Q: What pitfall are we preventing?
+
+**What:** A Three.js TransformControls controller can appear attached in app state while its visible/pickable gizmo is absent, and a decorative endpoint line can steal pointer ownership from a real gizmo handle.
+
+**Context and constraints:** RustSMF uses Three.js r182, one shared canvas, explicit Rig/Animate history ownership, quad/ortho pane cameras, and a separate old-editor-style endpoint interaction. A drag must mutate exactly one history domain without orbit, endpoint, or selection side effects.
+
+**Why it happened:** Modern `TransformControls` is a `Controls` object, not an `Object3D`; its public `getHelper()` root must be added to the scene. The previous cast-and-add path was swallowed as a supposedly benign Three-instance skew. Separately, endpoint raycasts included the visual connector line, and Three.js line raycasting uses a broad world-space threshold that overlapped gizmo pickers.
+
+**Where:** `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/boneHighlight.ts`, `source/frontend/src/utils/rigEdits.ts`, `source/frontend/src/components/RigPanel.tsx`, and `source/frontend/tests/smoke.spec.ts`.
+
+**Evidence:** The first real-handle smoke reached `data-transform-axis="X"` but stayed `data-transform-dragging="false"` while `data-endpoint-drag="active"`. Mounting `getHelper()` made the gizmo visible; restricting line hits alone still produced endpoint/gizmo ambiguity. The final focused run passed both the real TransformControls ownership test and the single/quad endpoint test sequentially, the six-test visual slice passed with the explicit six-button Rig tool row, and the complete browser suite passed 42/42.
+
+**Developer story:** Inspection of the installed r182 source showed `getHelper()` is the documented scene object. After mounting it, a real drag revealed endpoint precedence. Axis-only priority fixed the gizmo but broke endpoint coverage. Inspecting endpoint geometry and the failure screenshot identified the connector line and overlapping controls as the turning point. The final design separated Select/gizmo, Endpoint, and IK tool ownership and limited the one-camera gizmo to single perspective view.
+
+**How to catch it:** Run `npm run test:e2e -- --grep "endpoint drag works in rig mode|real TransformControls handle" --workers=1` from `source/frontend`, then run `npm run test:e2e -- tests/visual.spec.ts --workers=1`. Assert helper-mounted, axis, dragging, source, phase, and owner telemetry instead of accepting attach state alone.
+
+**Solutions tried:**
+1. `20/100` Cast `TransformControls` to `Object3D` and ignore `scene.add` failures, result: controller state existed but the public helper contract was violated.
+2. `62/100` Let any hovered gizmo axis outrank endpoint fallback, result: real gizmo drag passed but legitimate endpoint drags became ambiguous.
+3. `97/100` Mount `getHelper()`, make connector lines non-owning, expose an explicit Endpoint tool, project real picker geometry for tests, and detach the perspective-camera gizmo in quad/ortho, result: both interaction paths and visual coverage pass without cross-domain dirty state.
+
+**Current solution:** Rig Select and Animate own the mounted TransformControls helper in single perspective view, Endpoint owns only marked cyan sphere meshes, IK owns its labeled target, Skin owns painting with the gizmo detached, and quad/ortho use their pane-aware explicit tools. Real picker geometry supplies stable browser drag coordinates. Endpoint pointer-cancel restores its pre-drag pose snapshot instead of silently committing the interrupted transaction.
+
+**Decision rationale:** Explicit tools match the product's ownership model and remain stable as handle sizes change. Pixel-distance priority or broad fallback raycasts were rejected because they make behavior camera-, scale-, and DPR-dependent.
+
+**Effectiveness:** `97/100`, durable. It uses public Three.js APIs, removes a swallowed failure, adds direct browser proof for Rig pose versus Animate key ownership, preserves endpoint coverage, and prevents unsupported multi-camera gizmo interaction.
+
+**Relevance check:** Current. Any Three.js upgrade, gizmo-camera refactor, new handle geometry, or pointer routing change can reintroduce this class.
+
+**Next prevention step:** Keep the real-handle, endpoint, and Skin paint tests together whenever TransformControls lifecycle, endpoint geometry, viewport cameras, or authoring ownership changes.
 
 ### Q: What pitfall are we preventing?
 

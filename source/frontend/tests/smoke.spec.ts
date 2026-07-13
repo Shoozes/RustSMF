@@ -196,6 +196,42 @@ const dragRigIkTarget = async (
   return true;
 };
 
+const dragTransformHandle = async (page: Page): Promise<string> => {
+  const canvas = page.getByTestId('three-canvas');
+  await expect(canvas).toHaveAttribute('data-transform-helper-mounted', 'true');
+  await expect(canvas).toHaveAttribute('data-transform-handle-mode', 'translate');
+  await expect.poll(async () => {
+    const values = await Promise.all([
+      canvas.getAttribute('data-transform-handle-start-x'),
+      canvas.getAttribute('data-transform-handle-start-y'),
+      canvas.getAttribute('data-transform-handle-end-x'),
+      canvas.getAttribute('data-transform-handle-end-y'),
+    ]);
+    return values.every((value) => value !== null && Number.isFinite(Number(value)));
+  }, { timeout: 3000 }).toBe(true);
+
+  const axis = await canvas.getAttribute('data-transform-handle-axis');
+  const startX = Number(await canvas.getAttribute('data-transform-handle-start-x'));
+  const startY = Number(await canvas.getAttribute('data-transform-handle-start-y'));
+  const endX = Number(await canvas.getAttribute('data-transform-handle-end-x'));
+  const endY = Number(await canvas.getAttribute('data-transform-handle-end-y'));
+  if (!axis || ![startX, startY, endX, endY].every(Number.isFinite)) {
+    throw new Error('TransformControls did not expose a finite real-handle drag path.');
+  }
+
+  await page.mouse.move(startX, startY);
+  await expect(canvas).toHaveAttribute('data-transform-axis', axis);
+  await page.mouse.down({ button: 'left' });
+  await expect(canvas).toHaveAttribute('data-transform-dragging', 'true');
+  await page.mouse.move(endX, endY, { steps: 5 });
+  await expect(canvas).toHaveAttribute('data-bone-transform-source', 'transform-controls');
+  await expect(canvas).toHaveAttribute('data-bone-transform-phase', 'change');
+  await page.mouse.up({ button: 'left' });
+  await expect(canvas).toHaveAttribute('data-transform-dragging', 'false');
+  await expect(canvas).toHaveAttribute('data-bone-transform-phase', 'end');
+  return axis;
+};
+
 const paintInViewport = async (
   page: Page,
   options?: { x?: number; y?: number; dx?: number; dy?: number },
@@ -250,16 +286,17 @@ const paintOnMeshInViewport = async (
   ];
 
   for (const target of targets) {
-    await paintInViewport(page, {
-      x: box.x + (box.width * target.x) / 100,
-      y: box.y + (box.height * target.y) / 100,
-      dx: 16,
-      dy: 12,
-    });
-
+    const x = box.x + (box.width * target.x) / 100;
+    const y = box.y + (box.height * target.y) / 100;
+    await page.mouse.move(x, y);
+    await page.waitForTimeout(25);
     const hitCount = Number(await canvas.getAttribute('data-skin-paint-hit-count'));
     const hover = await canvas.getAttribute('data-skin-brush-hover');
     if (hover === 'active' && hitCount > 0) {
+      await page.mouse.down({ button: 'left' });
+      await page.mouse.move(x + 2, y + 2, { steps: 2 });
+      await page.waitForTimeout(80);
+      await page.mouse.up({ button: 'left' });
       if (options?.requireDirty) {
         try {
           await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true', { timeout: 300 });
@@ -1502,6 +1539,9 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const singleCanvas = page.getByTestId('three-canvas');
     await expect(singleCanvas).toHaveAttribute('data-transform-owner', 'pose');
     await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'true');
+    await page.getByTestId('rig-tool-endpoint').click();
+    await expect(singleCanvas).toHaveAttribute('data-rig-tool-mode', 'endpoint');
+    await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'false');
     const singleDrag = await dragEndpointHandle(page, selectedBone, undefined, async () => {
       await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'false');
       await expect(singleCanvas).toHaveAttribute('data-endpoint-drag', 'active');
@@ -1509,7 +1549,13 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     expect(singleDrag).toBe(true);
     await expect(singleCanvas).toHaveAttribute('data-pointer-owner', 'rig-endpoint-drag');
     await expect(singleCanvas).toHaveAttribute('data-bone-transform-source', 'endpoint-drag');
-    await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'true');
+    await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'false');
+
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
+    await page.getByTestId('mode-tab-rig').click({ force: true });
 
     const canceledDrag = await dragEndpointHandle(page, selectedBone, undefined, async () => {
       await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'false');
@@ -1517,10 +1563,11 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     }, 'cancel');
     expect(canceledDrag).toBe(true);
     await expect(singleCanvas).not.toHaveAttribute('data-endpoint-drag', 'active');
-    await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'true');
+    await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'false');
+    await expect(page.getByTestId('status-text')).toContainText(/Canceled endpoint drag .* restored the prior pose/i);
 
     await page.getByTestId('mode-tab-animate').click({ force: true });
-    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
     await page.getByTestId('mode-tab-rig').click({ force: true });
 
     await setViewportLayout(page, 'quad');
@@ -1532,6 +1579,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await setViewportLayout(page, 'single');
     await expect(singleCanvas).not.toHaveAttribute('data-endpoint-drag', 'active');
+    await page.getByTestId('rig-tool-select').click();
+    await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'true');
   });
 
   test('SMF IK pose drag is constrained, cancelable, atomic, and export-safe', async ({ page }) => {
@@ -1589,6 +1638,58 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb/i, { timeout: 5000 });
     await page.getByTestId('export-smf-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf .*pose edits applied/i, { timeout: 5000 });
+
+    const errors = getBrowserErrors(page).filter((entry) => entry.includes('ERROR'));
+    expect(errors).toEqual([]);
+  });
+
+  test('real TransformControls handle separates Rig pose and Animate key ownership', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await pausePlaybackIfRunning(page);
+
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    const boneEntry = page.getByTestId('inspector')
+      .locator('li > div')
+      .filter({ hasText: /FixtureTip/ })
+      .first();
+    await expect(boneEntry).toBeVisible({ timeout: 8000 });
+    await boneEntry.click({ force: true });
+
+    const canvas = page.getByTestId('three-canvas');
+    await expect(canvas).toHaveAttribute('data-transform-owner', 'pose');
+    const rigAxis = await dragTransformHandle(page);
+    expect(rigAxis).toMatch(/^[XYZ]$/);
+    await expect(canvas).toHaveAttribute('data-bone-transform-owner', 'pose');
+    await expect(page.getByTestId('status-text')).toContainText(/Recorded transform pose edit for FixtureTip/i);
+
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: false');
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid Transform FixtureTip/i);
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
+
+    await expect(canvas).toHaveAttribute('data-transform-owner', 'animation');
+    const animateAxis = await dragTransformHandle(page);
+    expect(animateAxis).toMatch(/^[XYZ]$/);
+    await expect(canvas).toHaveAttribute('data-bone-transform-owner', 'animation');
+    await expect(page.getByTestId('status-text')).toContainText(/Recorded viewport animation keyframe for FixtureTip/i);
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
+
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid viewport animation keyframe for FixtureTip/i);
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: false');
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid viewport animation keyframe for FixtureTip/i);
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
+
+    await page.getByTestId('mode-tab-export').click({ force: true });
+    await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
+    await page.getByTestId('smf-roundtrip-check-btn').click();
+    await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 15000 });
 
     const errors = getBrowserErrors(page).filter((entry) => entry.includes('ERROR'));
     expect(errors).toEqual([]);
@@ -2343,6 +2444,9 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureRoot/i);
     const selectedInspectorValue = page.getByTestId('inspector-selected');
     await expect(selectedInspectorValue).toHaveText('FixtureRoot');
+    const paintCanvas = page.getByTestId('three-canvas');
+    await expect(paintCanvas).toHaveAttribute('data-transform-owner', 'disabled');
+    await expect(paintCanvas).toHaveAttribute('data-transform-attached', 'false');
 
     await page.getByTestId('skin-paint-mode-add').click({ force: true }).catch(() => {});
     await expect(page.getByTestId('skin-paint-mode-add')).toHaveClass(/bg-emerald-500/);
@@ -2353,7 +2457,6 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('skin-paint-radius')).toHaveValue('1');
     await expect(page.getByTestId('skin-paint-strength')).toHaveValue('1');
 
-    const paintCanvas = page.getByTestId('three-canvas');
     const canvasBox = await paintCanvas.boundingBox();
     expect(canvasBox).toBeTruthy();
     await paintInViewport(page, {

@@ -70,6 +70,7 @@ export default function RigPanel({
   const canReparent = canRename && parentOptions.length > 0;
   const canChangeDetachState = !!selected && selected !== 'Scene' && report.boneCount > 0 && sourceFormat !== 'smf';
   const canSpinRig = report.boneCount > 0 && sourceFormat !== 'smf';
+  const canUseEndpoint = selectedIsDeformBone && report.boneCount > 0;
   const canUseIk = selectedIsDeformBone && report.boneCount > 1;
 
   useEffect(() => {
@@ -106,6 +107,15 @@ export default function RigPanel({
             onClick={() => onRigToolModeChange('select')}
           >
             Select
+          </button>
+          <button
+            data-testid="rig-tool-endpoint"
+            className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'endpoint' ? 'bg-sky-400 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
+            disabled={!canUseEndpoint}
+            onClick={() => onRigToolModeChange('endpoint')}
+            title="Drag the selected bone endpoint as one reversible pose edit"
+          >
+            Endpoint
           </button>
           <button
             data-testid="rig-tool-add-child"

@@ -2078,6 +2078,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
   const changeRigToolMode = useCallback((next: RigToolMode) => {
     setRigToolMode(next);
+    if (next === 'endpoint') {
+      ui.setStatus('Rig endpoint tool active. Drag a cyan endpoint sphere; the completed drag is one pose transaction.');
+      return;
+    }
     if (next === 'add-child') {
       ui.setStatus('Rig add-child tool active. Click an empty Top/Front/Side pane to create a child under the selected bone.');
       return;
@@ -2649,6 +2653,22 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const handleBoneTransformEdit = useCallback((event: BoneTransformEditEvent) => {
     if (event.owner === 'disabled') return;
 
+    if (event.phase === 'cancel') {
+      if (event.owner === 'animation') {
+        activeAnimationTransformHistoryRef.current = null;
+        ui.setStatus(`Canceled viewport animation transform for ${event.boneName}.`);
+        return;
+      }
+
+      const active = activePoseTransformHistoryRef.current;
+      if (active?.boneName === event.boneName && active.source === event.source) {
+        applyPoseSnapshot(active.before);
+      }
+      activePoseTransformHistoryRef.current = null;
+      ui.setStatus(`Canceled ${event.source === 'endpoint-drag' ? 'endpoint drag' : 'transform'} for ${event.boneName}; restored the prior pose.`);
+      return;
+    }
+
     if (event.owner === 'animation') {
       if (event.phase === 'start') {
         activeAnimationTransformHistoryRef.current = {
@@ -2739,6 +2759,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
   }, [
     applyAnimationEditState,
+    applyPoseSnapshot,
     capturePoseSnapshot,
     model.skeleton,
     playbackRef,

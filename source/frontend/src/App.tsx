@@ -250,7 +250,7 @@ export default function App() {
 
   const workspace = WORKSPACE_BY_MODE[editorMode];
   const boneTransformOwner: BoneTransformOwner =
-    editorMode === 'rig' || editorMode === 'skin'
+    editorMode === 'rig'
       ? 'pose'
       : editorMode === 'animate'
         ? 'animation'
