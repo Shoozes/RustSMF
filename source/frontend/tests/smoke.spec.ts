@@ -1634,6 +1634,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).toContainText(/pose edit/i);
     await page.getByTestId('export-glb-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb/i, { timeout: 5000 });
+    await expect(page.getByTestId('status-text')).toContainText(/verified \d+ bones, \d+ clips/i);
     await setRangeValue(page, 'scrub-slider', 0);
 
     // Basic visual: screenshot viewport after load + bone interaction (nonblank render regression smoke).

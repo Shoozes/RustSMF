@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-07-02 (integrity/backlog review; strict importable-SMF pose roundtrip cleanup, animation clip metadata controls, rapid single/quad viewport continuity coverage, click-vs-drag viewport selection guards, endpoint/skin-paint gesture isolation, pointer-cancel cleanup, deterministic high-DPI pane hit math, narrow quad overlay visual coverage, quad pane-role pointer telemetry, quad rig-select mutation coverage, quad endpoint-drag pane coverage, quad Skin paint mutation coverage, quad Animate selection/key coverage, and Skin pts display-only no-pick behavior are current; active TODO completion conditions use explicit Done when wording)
+Last reviewed: 2026-07-13 (verified GLB recovery export is current; direct endpoint/TransformControls edits are not mislabeled as IK, and reversible IK posing has an explicit completion contract)
 
 This file is the active backlog. Completed work should stay in:
 - `docs/dev/APP_STATE.md` (current state),
@@ -231,6 +231,20 @@ Each active item should answer:
   - Done: add `check:production-any` to the frontend and repo verification path so new production `any` casts fail before merge.
   - Re-audit `ThreeViewport.tsx` casts after any TransformControls or endpoint drag refactor.
 - Done when: Frontend typecheck and test typecheck pass, and production `as any` use is either eliminated or isolated in named bridge/library boundary helpers.
+
+### P2: Add reversible IK posing only as an explicit rig tool
+
+- What: Add a real chain solver and target handle instead of treating endpoint dragging or TransformControls as IK.
+- Why: The current direct-edit tools are useful but do not preserve chain length, solve parent rotations, expose pole/joint constraints, or establish IK-specific history/export behavior.
+- Where: a focused `source/frontend/src/utils/rigIk.ts`, `RigPanel.tsx`, `ThreeViewport.tsx`, `useLoadModel.ts`, unit tests, and browser smoke.
+- When: After the current direct TransformControls drag test is stable, or when a concrete rig/animation workflow requires chain posing.
+- How:
+  - Implement a pure CCD or FABRIK solver over cloned transforms with explicit model/world target conversion.
+  - Require ordered-chain validation, bounded iterations, tolerance, pole behavior, and per-joint limits before exposing UI.
+  - Commit one undoable history transaction per completed IK drag and restore the entire affected chain on cancel/undo.
+  - Keep SMF structural edits blocked; classify solved rotations as pose or animation edits through the existing owner path and prove the selected export route preserves them.
+  - Add reachable, unreachable, stale-chain, constrained-joint, undo/redo, and export/reimport tests plus a saved visual comparison.
+- Done when: A labeled IK tool reaches a bounded target without changing bone lengths, respects pole/joint constraints, cancels and undo/redoes atomically, survives the intended SMF/GLB export path, and has unit, browser, and reviewed visual proof.
 
 ### P3: Workerize heavy SMF import/export and large-file progress
 

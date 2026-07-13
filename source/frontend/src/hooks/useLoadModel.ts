@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import type * as THREE from 'three';
 import type { OpenResult, SmfDesktopInfo, TauriClient } from '../backend-client/tauri';
-import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, exportFBX, bytesToArrayBuffer, buildImportedSmfFromThree, SmfConversionError, collectSkinnedMeshes, compareSmfRoundtrip, inspectThreeToSmfSource, makeDiagnosticReport } from '../loaders';
+import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, validateExportedGLB, exportFBX, bytesToArrayBuffer, buildImportedSmfFromThree, SmfConversionError, collectSkinnedMeshes, compareSmfRoundtrip, inspectThreeToSmfSource, makeDiagnosticReport } from '../loaders';
 import { applyLiveSkinEditsToImportedSmf } from '../loaders/threeToSmf';
 import type { ImportedSmf, SmfDiagnosticReport, SmfRoundtripReport } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
@@ -1204,6 +1204,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
   }, [ui, loadModel]);
 
+  const buildVerifiedGlb = useCallback(async (root: THREE.Group, clips: THREE.AnimationClip[]) => {
+    ui.setStatus('Exporting current model as GLB...');
+    const bytes = await exportGLB(root, clips);
+    ui.setStatus('Validating exported GLB round-trip...');
+    const summary = await validateExportedGLB(bytes, root, clips);
+    return { bytes, summary };
+  }, [ui]);
+
   const handleExport = useCallback(async () => {
     const smfData = lastSmfDataRef.current;
     await withExportBusy('Export', async () => {
@@ -1264,21 +1272,20 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           }
         }
 
-        ui.setStatus('Exporting current model as GLB...');
-        const buf = await exportGLB(rootToExport, model.clips);
-        const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.glb');
+        const { bytes, summary } = await buildVerifiedGlb(rootToExport, model.clips);
+        const ok = await (await getTauriClient()).saveFile(bytes, 'exported_model.glb');
         if (!ok) {
           ui.setStatus('Export canceled.');
           return;
         }
-        ui.setStatus('Exported .glb (animations included when present).');
+        ui.setStatus(`Exported .glb (verified ${summary.boneCount} bones, ${summary.clipCount} clips).`);
       } catch (e: unknown) {
         const msg = errorMessage(e);
         ui.setErrorMsg(`Export error: ${msg}`);
         ui.setStatus(`Export error: ${msg}`);
       }
     });
-  }, [ui, model, withExportBusy]);
+  }, [ui, model, withExportBusy, buildVerifiedGlb]);
 
   const handleExportGlb = useCallback(async () => {
     await withExportBusy('Export as GLB', async () => {
@@ -1289,21 +1296,20 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           return;
         }
 
-        ui.setStatus('Exporting current model as GLB...');
-        const buf = await exportGLB(rootToExport, model.clips);
-        const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.glb');
+        const { bytes, summary } = await buildVerifiedGlb(rootToExport, model.clips);
+        const ok = await (await getTauriClient()).saveFile(bytes, 'exported_model.glb');
         if (!ok) {
           ui.setStatus('Export canceled.');
           return;
         }
-        ui.setStatus('Exported .glb (animations included when present).');
+        ui.setStatus(`Exported .glb (verified ${summary.boneCount} bones, ${summary.clipCount} clips).`);
       } catch (e: unknown) {
         const msg = errorMessage(e);
         ui.setErrorMsg(`GLB export error: ${msg}`);
         ui.setStatus(`GLB export error: ${msg}`);
       }
     });
-  }, [ui, model, withExportBusy]);
+  }, [ui, model, withExportBusy, buildVerifiedGlb]);
 
   const buildCurrentSmfExportCandidate = useCallback((): ImportedSmf | null => {
     const smfData = lastSmfDataRef.current;

@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-07-02 (viewport layout hit-test timing, SMF head-node export, and DQ sign-equivalent diagnostics).
+Last reviewed: 2026-07-13 (verified GLB recovery export, SMF serialized-world-pose handling, viewport layout hit-test timing, head-node export, and DQ sign-equivalent diagnostics).
 
 ### Q: What pitfall are we preventing?
 
@@ -136,25 +136,35 @@ Last reviewed: 2026-07-02 (viewport layout hit-test timing, SMF head-node export
 
 ### Q: What pitfall are we preventing?
 
-**What:** SMF models can parse successfully with no console errors while the visible mesh is torn apart.
+**What:** SMF models can parse successfully with no console errors while the visible mesh is torn apart, and a GLB export can be saved without proving that its rig and animation structure reload intact.
 
-**Why it happened:** The Three loader treated SMF rig DQs as local bone transforms even though the old GameMaker loader stores bind-pose `WorldDQ`, and animation frames are per-node world poses that must be converted to local parent space. Render geometry also used raw byte weights whose sums can be below 1, while the old dual-quaternion shader normalized blended DQs.
+**Context and constraints:** The old GameMaker example is a positive control for the owned Mixamo SMF. RustSMF must preserve SMF v11 node ordering and world-pose serialization, skip non-deform head/dummy nodes when deriving Three locals, retain all named clips, and fail before save instead of producing a plausible but unverified recovery artifact.
 
-**Where:** `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/coord.test.ts`, `source/frontend/tests/mixamo_smf_baldguy.smf`, old-src reference screenshots in `docs/references/old-src/screenshots/`.
+**Why it happened:** The Three loader once treated SMF rig DQs as local bone transforms even though the file stores bind and animation node poses in rig/world space. Those poses must be converted relative to the nearest effective deform parent, not blindly relative to a skipped head node. Render geometry also used raw byte weights whose sums can be below 1, while the old dual-quaternion shader normalized blended DQs. The GLB save path then trusted exporter completion without reparsing and comparing the produced file.
 
-**How to catch it:** Load `source/frontend/tests/mixamo_smf_baldguy.smf` visually and run `npm --workspace frontend run test:unit`; the bind-pose CPU skinning regression asserts vertices do not drift apart.
+**Where:** `source/frontend/src/loaders/smf.ts`, `smfRig.ts`, `coord.test.ts`, `glb.ts`, `glb.test.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/mixamo_smf_baldguy.smf`, and old-source reference screenshots.
+
+**Evidence:** The same SMF renders correctly in the old platformer. A deliberately wrong local-delta interpretation expanded the real animated bounds from about `29.717` to `96.16`, while the corrected effective-parent path remains below the `2x` bound. A fresh recovery export reloads with 24 deform bones and 12 clips; the GameMaker artifact SHA-256 is `A35D5DCB8474A5C16E184613512D3948DDB00D9B682C25D5D69500AEE7305B5B`.
+
+**Developer story:** Parser success and a narrow synthetic hierarchy initially looked sufficient, but the real animated model exposed a false green. Reading the old writer and loader together established that file frames are rig/world poses even though the old runtime derives local deltas internally. The converter retained effective-deform-parent derivation and real animated-bounds coverage; the export path now reparses bytes and compares finite bindings plus bone, mesh, clip, name, and track structure before opening the save dialog.
+
+**How to catch it:** Run `npm --workspace frontend run test:unit`; the synthetic head-node test pins effective-parent locals, the real Walk test bounds animated skinning, and `glb.test.ts` proves verified export success plus missing-clip and non-finite rejection. Also load the SMF and exported GLB visually before promoting a recovery artifact.
 
 **Solutions tried:**
 1. `45/100` Rely on parser success and screenshot byte-size checks, result: torn meshes still counted as rendered.
-2. `94/100` Build Three bones from SMF world bind matrices, compute inverse bind matrices from real world transforms, convert animation frame world poses to local parent space, normalize render-side weights, and add the CPU bind-pose regression, result: the sample renders as a coherent low-poly character and tests catch recurrence.
+2. `10/100` Treat serialized frames as already-local deltas, result: the focused assumption looked plausible but the real animated model tore apart.
+3. `94/100` Build Three bones from SMF world bind matrices, derive animation locals against effective deform parents, normalize render-side weights, and add real CPU skinning regressions, result: the sample renders coherently and the false-local path fails.
+4. `97/100` Reparse every generic/explicit GLB export before save and require finite targets plus matching rig/animation structure, result: malformed or structurally lossy output is blocked at the app boundary.
 
-**Current solution:** `buildThreeScene` derives local transforms from stored world DQs, uses world inverse binds, converts animation tracks through parent world matrices, and normalizes skin weights for Three rendering while leaving imported SMF data intact for export.
+**Current solution:** `buildThreeScene` derives local transforms from stored world DQs through effective deform parents, uses world inverse binds, and normalizes skin weights without changing imported SMF data. `validateExportedGLB` reparses generated bytes, rejects non-finite or missing animation targets, compares bone/skinned-mesh/clip/name/track counts, disposes the temporary scene, and blocks save on mismatch.
 
-**Effectiveness:** `94/100`, durable. It is verified by unit tests, visual screenshots, and the old source semantics.
+**Decision rationale:** The real fixture is required because a synthetic hierarchy alone did not expose pose explosion. Post-export validation is intentionally structural and finite-value based so it catches broken files without imposing asset-specific motion limits on every user model.
+
+**Effectiveness:** `97/100`, durable. It combines source-contract, real-animation, post-export reparse, browser-flow, and positive-control evidence while keeping asset-specific bounds out of the generic validator.
 
 **Relevance check:** Current. This is a core model-load path and can regress when SMF rig/animation conversion changes.
 
-**Next prevention step:** Add a stricter visual heuristic for loaded SMF bounding boxes or skeleton/mesh coherence if screenshot snapshots become part of the default gate.
+**Next prevention step:** Record converter version/hash alongside promoted recovery assets and keep one reviewed SMF-to-GLB pixel comparison when conversion math changes.
 
 ### Q: What pitfall are we preventing?
 
