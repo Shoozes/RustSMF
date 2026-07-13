@@ -729,3 +729,25 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 **Relevance check:** Current. The canonical Windows launcher path plus direct-launch mjs fallback are the documented expectations; future cross-platform or direct-launch users are intentionally handled as reduced-coverage paths.
 
 **Next prevention step:** Keep explicit reduced-coverage language for direct launches in run.ps1/help and `APP_STATE`/`docs/user`/README, and re-run manual close/re-launch checks when launcher scripts or wrapper logic changes.
+
+### Q: What pitfall are we preventing?
+
+**What:** A workspace continuity test can mistake an intentionally unmounted panel for lost shared state, or fail to observe a real reset while only checking the currently visible panel.
+
+**Why it happened:** The Timeline owns the visible scrub label and is not rendered in Export, even though playback time remains in shared state and continues to drive the viewport. A transition assertion that waits for `time-display` in every mode tests panel presence rather than playback continuity.
+
+**Where:** `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/tests/smoke.spec.ts`, and `source/frontend/tests/native.spec.ts`.
+
+**How to catch it:** Load a generated skinned GLB, create pose/skin/animation dirty state, pause and scrub, select an object and bone, then cycle every workspace through quad and single Ortho. Assert the same model-root UUID and playback value through viewport telemetry, while asserting mode-owned dirty controls only when their panels are mounted. Also change panels after a canceled native save before checking status and dirty state.
+
+**Solutions tried:**
+1. `55/100` Wait for the visible Timeline scrub label in every workspace, result: Export timed out because the Timeline is intentionally absent.
+2. `95/100` Expose read-only model-root and playback telemetry on the persistent viewport canvas and keep panel-specific assertions scoped to mounted modes, result: the matrix distinguishes shared-state continuity from panel lifecycle without changing product state.
+
+**Current solution:** `data-model-root-id` and `data-playback-time` expose the persistent viewport inputs. The browser matrix proves root, object/bone selection, scrub time, export status, three dirty domains, and exclusive Select/Endpoint/IK handles across modes/layouts; native cancel tests prove the same state after subsequent panel changes.
+
+**Effectiveness:** `95/100`, durable. The evidence crosses the exact mount boundaries that previously made continuity ambiguous and retains negative no-model/stale-handle checks.
+
+**Relevance check:** Current. Mode-owned panels will continue to mount and unmount as the workspace grows.
+
+**Next prevention step:** When adding a workspace or moving state between components, assert continuity through the narrowest persistent owner and separately assert the new panel's mount contract.

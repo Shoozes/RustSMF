@@ -547,6 +547,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const canvas = page.getByTestId('three-canvas');
     await expect(canvas).toBeVisible();
     await expect(canvas).toHaveAttribute('data-viewport-layout', 'single');
+    await expect(canvas).toHaveAttribute('data-model-root-id', '');
     await expect(canvas).toHaveAttribute('data-wireframe-enabled', 'false');
     await expect(canvas).toHaveAttribute('data-grid-enabled', 'true');
     await expect(canvas).toHaveAttribute('data-axes-enabled', 'true');
@@ -559,6 +560,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(canvas).toHaveAttribute('data-rig-thickness-scale', '1');
     await expect(canvas).toHaveAttribute('data-skin-points-enabled', 'false');
     await expect(canvas).toHaveAttribute('data-skin-point-overlay-count', '0');
+    await expect(canvas).not.toHaveAttribute('data-endpoint-x');
+    await expect(canvas).not.toHaveAttribute('data-rig-ik-target-screen-x');
     await expect(page.getByTestId('viewport-layout-single')).toBeDisabled();
     await expect(page.getByTestId('viewport-layout-quad')).toBeDisabled();
     await expect(page.getByTestId('viewport-wireframe-toggle')).toBeDisabled();
@@ -584,6 +587,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await page.goto('/');
 
     await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-layout', 'single');
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', '');
     await expect(page.getByTestId('viewport-layout-single')).toBeDisabled();
     await expect(page.getByTestId('viewport-layout-quad')).toBeDisabled();
     await expect(page.getByTestId('viewport-wireframe-toggle')).toBeDisabled();
@@ -620,6 +624,8 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('viewport-skin-points-toggle')).toBeDisabled();
     const statusText = await page.getByTestId('status-text').textContent();
     expect(statusText).toContain('Three.js viewport ready');
+    await expect(page.getByTestId('three-canvas')).not.toHaveAttribute('data-endpoint-x');
+    await expect(page.getByTestId('three-canvas')).not.toHaveAttribute('data-rig-ik-target-screen-x');
     };
 
     await assertModeActive('view');
@@ -1175,6 +1181,115 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     const statusAfter = await page.getByTestId('status-text').textContent();
     expect(parseSelectedBone(statusAfter)).toBe(selectedBefore);
     expect(await page.getByTestId('time-display').textContent()).toBe(scrubBefore);
+  });
+
+  test('workspace transition matrix preserves loaded authoring and tool ownership state', async ({ page }) => {
+    await page.goto('/');
+
+    await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    const canvas = page.getByTestId('three-canvas');
+    const rootId = await canvas.getAttribute('data-model-root-id');
+    expect(rootId).toBeTruthy();
+
+    const selectedSubmodel = page.getByTestId('outliner-submodel-0');
+    await selectedSubmodel.locator('.outliner-name-btn').click();
+    await expect(selectedSubmodel).toHaveAttribute('data-selected', 'true');
+    await expect(page.getByTestId('outliner-selection-count')).toContainText('1 selected');
+
+    await page.getByTestId('mode-tab-rig').click();
+    const boneEntry = page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    await boneEntry.click({ force: true });
+    await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
+    await page.getByTestId('transform-x-btn').click();
+
+    await page.getByTestId('mode-tab-animate').click();
+    await pausePlaybackIfRunning(page);
+    await setRangeValue(page, 'scrub-slider', 0.2);
+    await page.getByTestId('animation-insert-key-btn').click();
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    const scrubState = await canvas.getAttribute('data-playback-time');
+
+    await page.getByTestId('mode-tab-skin').click();
+    await page.getByTestId('skin-paint-mode-add').click();
+    await setRangeValue(page, 'skin-paint-target', 1);
+    await setRangeValue(page, 'skin-paint-radius', 1);
+    await setRangeValue(page, 'skin-paint-strength', 1);
+    expect(await paintOnMeshInViewport(page, { requireDirty: true })).toBe(true);
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
+
+    const expectPair = async (xName: string, yName: string): Promise<void> => {
+      await expect.poll(async () => {
+        const x = Number(await canvas.getAttribute(xName));
+        const y = Number(await canvas.getAttribute(yName));
+        return Number.isFinite(x) && Number.isFinite(y);
+      }).toBe(true);
+    };
+
+    await page.getByTestId('mode-tab-rig').click();
+    await page.getByTestId('rig-tool-select').click();
+    await expect(canvas).toHaveAttribute('data-transform-attached', 'true');
+    await expect(canvas).not.toHaveAttribute('data-endpoint-x');
+    await expect(canvas).not.toHaveAttribute('data-rig-ik-target-screen-x');
+
+    await page.getByTestId('rig-tool-endpoint').click();
+    await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
+    await expectPair('data-endpoint-x', 'data-endpoint-y');
+    await expect(canvas).not.toHaveAttribute('data-rig-ik-target-screen-x');
+    await page.getByTestId('mode-tab-animate').click();
+    await expect(canvas).not.toHaveAttribute('data-endpoint-x');
+    await expect(canvas).not.toHaveAttribute('data-endpoint-drag');
+    await expect(canvas).toHaveAttribute('data-transform-attached', 'true');
+
+    await page.getByTestId('mode-tab-rig').click();
+    await expectPair('data-endpoint-x', 'data-endpoint-y');
+    await page.getByTestId('rig-tool-ik').click();
+    await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
+    await expect(canvas).not.toHaveAttribute('data-endpoint-x');
+    await expectPair('data-rig-ik-target-screen-x', 'data-rig-ik-target-screen-y');
+    await page.getByTestId('mode-tab-skin').click();
+    await expect(canvas).not.toHaveAttribute('data-rig-ik-target-screen-x');
+    await expect(canvas).not.toHaveAttribute('data-rig-ik');
+    await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
+    await page.getByTestId('mode-tab-rig').click();
+    await expectPair('data-rig-ik-target-screen-x', 'data-rig-ik-target-screen-y');
+    await page.getByTestId('rig-tool-select').click();
+    await expect(canvas).not.toHaveAttribute('data-rig-ik-target-screen-x');
+    await expect(canvas).toHaveAttribute('data-transform-attached', 'true');
+
+    const downloadPromise = page.waitForEvent('download');
+    await page.getByTestId('export-glb-btn').click();
+    await downloadPromise;
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb/i, { timeout: 5000 });
+
+    const assertContinuity = async (): Promise<void> => {
+      await expect(canvas).toHaveAttribute('data-model-root-id', rootId!);
+      await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
+      await expect(selectedSubmodel).toHaveAttribute('data-selected', 'true');
+      await expect(canvas).toHaveAttribute('data-playback-time', scrubState!);
+      await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb/i);
+    };
+
+    await setViewportLayout(page, 'quad');
+    for (const mode of ['view', 'rig', 'skin', 'animate', 'export'] as const) {
+      await page.getByTestId(`mode-tab-${mode}`).click();
+      await assertContinuity();
+      if (mode === 'skin') {
+        await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
+      } else if (mode === 'animate') {
+        await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+        await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
+      }
+    }
+
+    await setViewportLayout(page, 'single');
+    await page.getByTestId('viewport-perspective-toggle').click();
+    await expect(canvas).toHaveAttribute('data-perspective-enabled', 'false');
+    for (const mode of ['view', 'animate', 'export'] as const) {
+      await page.getByTestId(`mode-tab-${mode}`).click();
+      await assertContinuity();
+    }
   });
 
   test('latest async load wins between file input and drop', async ({ page }) => {

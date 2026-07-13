@@ -6,21 +6,6 @@ This file contains executable work only. Every task must identify What, Why, Whe
 
 ## Active Backlog
 
-### P2: Complete workspace transition and continuity coverage
-
-- What: Prove model, selection, scrub, status, layout, and dirty-state continuity across all workspace transitions.
-- Why: Rig, Skin, Animate, Export, Display, and layout controls share one model root; transition timing must not reload, reset, hide, or overwrite authoring state.
-- Where: `source/frontend/src/App.tsx`, `source/frontend/src/store/index.ts`, panel components, `source/frontend/src/components/ThreeViewport.tsx`, and `source/frontend/tests/smoke.spec.ts`.
-- When: Before adding another authoring panel or worker boundary.
-- How: Add a compact transition matrix that covers loaded/no-model, single/quad/ortho, paused/scrubbed, and dirty pose/skin/animation states without duplicating existing feature tests.
-- Subtasks:
-  - Assert loaded model identity, selected bone/object, scrub time, export status, and dirty flags across mode plus layout transitions.
-  - Add no-model mode/layout/display negative cases with correctly disabled controls and no stale status.
-  - Assert Select/Endpoint/IK tool transitions attach only their owned handles and leave no stale telemetry.
-  - Retain canceled-save continuity checks as panels change.
-- Done when: The transition matrix shows no accidental reload, stale panel write, lost selection/scrub/status, dirty-edit loss, or unsupported handle attachment.
-- Verification: Focused smoke matrix, visual narrow/quad/ortho checks, full verify, and e2e.
-
 ### P2: Expand async race coverage across load and export entrypoints
 
 - What: Prove stale results cannot commit across picker open, file input, drag/drop, desktop path reads, diagnostic saves, and exports.

@@ -242,6 +242,8 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await page.getByTestId('skin-paint-strength').dispatchEvent('input');
 
     const canvas = page.getByTestId('three-canvas');
+    const rootId = await canvas.getAttribute('data-model-root-id');
+    expect(rootId).toBeTruthy();
     const box = await canvas.boundingBox();
     if (box) {
       const x = box.x + box.width / 2;
@@ -258,6 +260,15 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('status-text')).toContainText('Export canceled.', { timeout: 5000 });
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
     await expect(page.getByTestId('skin-export-block')).toHaveCount(0);
+
+    await page.getByTestId('mode-tab-export').click();
+    await expect(page.getByTestId('status-text')).toContainText('Export canceled.');
+    await expect(canvas).toHaveAttribute('data-model-root-id', rootId!);
+    await page.getByTestId('mode-tab-view').click();
+    await page.getByTestId('mode-tab-skin').click();
+    await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
+    await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureRoot');
+    await expect(page.getByTestId('status-text')).toContainText('Export canceled.');
 
     let snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.writes).toHaveLength(0);
@@ -304,9 +315,19 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await page.getByTestId('animation-insert-key-btn').click();
     await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
+    const rootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+    expect(rootId).toBeTruthy();
+
     await page.getByTestId('export-smf-btn').click();
     await expect(page.getByTestId('status-text')).toContainText('Export canceled.', { timeout: 5000 });
     await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
+
+    await page.getByTestId('mode-tab-export').click();
+    await page.getByTestId('mode-tab-view').click();
+    await page.getByTestId('mode-tab-animate').click();
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', rootId!);
+    await expect(page.getByTestId('status-text')).toContainText('Export canceled.');
 
     let snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.writes).toHaveLength(0);

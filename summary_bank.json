@@ -179,7 +179,7 @@
     },
     "feature__modern_editor_workspaces": {
       "description": "Modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, active single/quad viewport layout, model-safe wireframe display, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
-      "status": "Editor workspaces, single/quad/Ortho layout, responsive toolbar/display controls, routed View/Rig/Skin/Animate/Export input ownership, Outliner visibility/history, Skin authoring, animation authoring, non-SMF Rig structure tools, explicit Endpoint/IK, and direct TransformControls history ownership are active and browser-covered. SMF Rig and material shelf policies are complete with scoped snap, viewport-only sampler previews, source-safe export, non-mutating shared-texture preflight, and per-format texture rules. Remaining parity is transition/race hardening, typed interop cleanup, and deeper pane-camera controls.",
+      "status": "Editor workspaces, single/quad/Ortho layout, responsive toolbar/display controls, routed View/Rig/Skin/Animate/Export input ownership, Outliner visibility/history, Skin authoring, animation authoring, non-SMF Rig structure tools, explicit Endpoint/IK, and direct TransformControls history ownership are active and browser-covered. SMF Rig and material shelf policies are complete with scoped snap, viewport-only sampler previews, source-safe export, non-mutating shared-texture preflight, and per-format texture rules. A loaded-authoring matrix now proves root, selection, playback, status, dirty-state, and handle continuity across all modes and layouts. Remaining parity is async race hardening, typed interop cleanup, and deeper pane-camera controls.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
@@ -926,8 +926,8 @@
     },
     "issue__mode_layout_transition_continuity": {
       "description": "Mode or viewport-layout switches could alter selected-bone/clip scrub state without explicit continuity checks, even when model/model-root state was preserved.",
-      "status": "partially complete: smoke checks cover continuity across normal, medium, constrained-width, and rapid single/quad viewport transitions, including selected bone, scrub time, endpoint telemetry, and endpoint hover state; remaining work is a broader dedicated transition suite around export/status timing and negative no-model panel writes.",
-      "last_seen": "2026-06-18",
+      "status": "completed 2026-07-13",
+      "last_seen": "2026-07-13",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/components/ThreeViewport.tsx",
@@ -936,10 +936,11 @@
         "source/frontend/src/components/ExportPanel.tsx",
         "source/frontend/src/components/Toolbar.tsx",
         "source/frontend/tests/smoke.spec.ts",
+        "source/frontend/tests/native.spec.ts",
         "source/frontend/src/store/index.ts"
       ],
-      "current_solution": "Mode/layout transition semantics are covered in smoke tests with continuity assertions around `Selected` and scrub values; pre-load no-model path now forces single layout by design and keeps layout toggles disabled until a model exists.",
-      "next_prevention": "Keep these continuity assertions with any future workspace/viewport refactor that moves layout selection, selection data flow, or playback control into separate components.",
+      "current_solution": "A generated skinned-GLB matrix proves stable root UUID, selected object/bone, paused playback time, export status, pose/skin/animation dirty state, and exclusive Select/Endpoint/IK telemetry across View/Rig/Skin/Animate/Export plus single/quad/Ortho transitions. No-model controls remain gated with no stale handle telemetry. Native canceled-save tests change panels before reasserting root, selection, status, and dirty state. Read-only viewport telemetry exposes root/playback continuity while mode-owned panels are unmounted.",
+      "next_prevention": "Keep the loaded/no-model matrix and canceled-save panel transitions with any workspace, viewport, playback, or store refactor; use stable shared-state telemetry rather than assuming a mode-owned panel stays mounted.",
       "files": []
     },
     "issue__mode_tab_responsive_regression": {
