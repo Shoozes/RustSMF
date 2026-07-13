@@ -6,6 +6,7 @@ import { restoreWeightPreview, applyWeightPreviewForBone } from '../utils/weight
 import { findClosestBone, DEFAULT_MAX_BONE_PICK_DIST, findBoneByName } from '../utils/bonePicker';
 import type { SkinWeightEditMode } from '../utils/skinWeights';
 import type { RigToolMode } from '../utils/rigEdits';
+import type { RigIkSolveResult } from '../utils/rigIk';
 import { useBoneLabelsWithScale } from '../utils/useBoneLabels';
 import { createLegacySmfMaterial } from '../utils/legacySmfLighting';
 import { createSkinPointOverlays, disposeSkinPointOverlays } from '../utils/skinPointOverlay';
@@ -19,6 +20,7 @@ import {
   makeBoneHighlightMarker,
   updateHighlightPosition,
   makeBoneEndpointHandle,
+  makeRigIkTargetHandle,
   updateEndpointHandle,
   makeBoneHoverMarker,
 } from '../utils/boneHighlight';
@@ -77,6 +79,15 @@ type RigRotateDragState = {
   previousVector: THREE.Vector3;
 };
 
+type RigIkDragState = {
+  boneName: string;
+  paneRole: ViewportRole;
+  plane: THREE.Plane;
+  localOffset: THREE.Vector3;
+  initialTargetWorld: THREE.Vector3;
+  targetWorld: THREE.Vector3;
+};
+
 type MaterialWithMap = THREE.Material & {
   map?: THREE.Texture | null;
 };
@@ -132,6 +143,15 @@ export interface RigRotateEditEvent {
   paneRole: ViewportRole;
 }
 
+export type RigIkEditPhase = 'start' | 'change' | 'end' | 'cancel';
+
+export interface RigIkEditEvent {
+  phase: RigIkEditPhase;
+  boneName: string;
+  targetWorld: THREE.Vector3;
+  paneRole: ViewportRole;
+}
+
 export interface ViewportObjectSelectEvent {
   objectId: string;
   objectName: string;
@@ -172,6 +192,7 @@ interface ThreeViewportProps {
   onCreateRigChildAtWorld?: (event: { worldPosition: THREE.Vector3; paneRole: ViewportRole }) => boolean | void;
   onMoveRigBoneToWorld?: (event: RigMoveEditEvent) => boolean | void;
   onRotateRigBone?: (event: RigRotateEditEvent) => boolean | void;
+  onSolveRigIk?: (event: RigIkEditEvent) => RigIkSolveResult | boolean | void;
   selectedBoneName?: string;
   selectedObjectIds?: string[];
   selectionOverlayRevision?: number;
@@ -223,6 +244,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   onCreateRigChildAtWorld,
   onMoveRigBoneToWorld,
   onRotateRigBone,
+  onSolveRigIk,
   selectedBoneName,
   selectedObjectIds = [],
   selectionOverlayRevision = 0,
@@ -299,6 +321,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const endpointDragRef = useRef<EndpointDragState | null>(null);
   const rigMoveDragRef = useRef<RigMoveDragState | null>(null);
   const rigRotateDragRef = useRef<RigRotateDragState | null>(null);
+  const rigIkDragRef = useRef<RigIkDragState | null>(null);
   const skinPaintActiveRef = useRef(false);
 
   // TransformControls for selected bone (Cycle 3 editor polish). Attached to the live THREE.Bone when selectedBoneName changes.
@@ -324,6 +347,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const onCreateRigChildAtWorldRef = useRef(onCreateRigChildAtWorld);
   const onMoveRigBoneToWorldRef = useRef(onMoveRigBoneToWorld);
   const onRotateRigBoneRef = useRef(onRotateRigBone);
+  const onSolveRigIkRef = useRef(onSolveRigIk);
   const onSetTransformModeRef = useRef(onSetTransformMode);
   const boneTransformOwnerRef = useRef<BoneTransformOwner>(boneTransformOwner);
   const skeletonRefForPick = useRef(skeleton);
@@ -333,6 +357,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const rigToolModeRef = useRef<RigToolMode>(rigToolMode);
   const boneHighlightRef = useRef<THREE.Object3D | null>(null);
   const boneEndpointHandleRef = useRef<THREE.Object3D | null>(null);
+  const rigIkTargetHandleRef = useRef<THREE.Object3D | null>(null);
+  const rigIkTargetWorldRef = useRef<THREE.Vector3 | null>(null);
   const boneHoverMarkerRef = useRef<THREE.Object3D | null>(null);
   const skinPointOverlaysRef = useRef<THREE.Points[]>([]);
   const selectionOverlaysRef = useRef<SelectionOverlay[]>([]);
@@ -415,6 +441,24 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const localYFromBottom = viewport.y + ((projected.y + 1) / 2) * viewport.height;
     canvas.dataset.endpointX = String(Math.round(rect.left + localX));
     canvas.dataset.endpointY = String(Math.round(rect.top + (rect.height - localYFromBottom)));
+  };
+
+  const writeRigIkTargetScreenTelemetry = (worldPosition: THREE.Vector3): void => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const viewport = viewportRef.current.find((spec) => spec.role === 'perspective') ?? viewportRef.current[0];
+    if (!viewport) return;
+    const projected = worldPosition.clone().project(viewport.camera);
+    if (!Number.isFinite(projected.x) || !Number.isFinite(projected.y) || Math.abs(projected.z) > 1) {
+      delete canvas.dataset.rigIkTargetScreenX;
+      delete canvas.dataset.rigIkTargetScreenY;
+      return;
+    }
+    const localX = viewport.x + ((projected.x + 1) / 2) * viewport.width;
+    const localYFromBottom = viewport.y + ((projected.y + 1) / 2) * viewport.height;
+    canvas.dataset.rigIkTargetScreenX = String(Math.round(rect.left + localX));
+    canvas.dataset.rigIkTargetScreenY = String(Math.round(rect.top + (rect.height - localYFromBottom)));
   };
 
   const isPrecisionMode = editorMode === 'rig' || editorMode === 'skin';
@@ -825,6 +869,71 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     delete canvas.dataset.rigRotateAngle;
   };
 
+  const updateRigIkTelemetry = (state: RigIkDragState, result?: RigIkSolveResult | boolean | void): void => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.dataset.rigIk = 'active';
+    canvas.dataset.rigIkPaneRole = state.paneRole;
+    canvas.dataset.rigIkBone = state.boneName;
+    canvas.dataset.rigIkTargetX = state.targetWorld.x.toFixed(4);
+    canvas.dataset.rigIkTargetY = state.targetWorld.y.toFixed(4);
+    canvas.dataset.rigIkTargetZ = state.targetWorld.z.toFixed(4);
+    if (result && typeof result === 'object') {
+      canvas.dataset.rigIkStatus = result.status;
+      canvas.dataset.rigIkDistance = result.distanceToTarget.toFixed(5);
+    }
+  };
+
+  const clearRigIkTelemetry = (): void => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    delete canvas.dataset.rigIk;
+    delete canvas.dataset.rigIkPaneRole;
+    delete canvas.dataset.rigIkBone;
+    delete canvas.dataset.rigIkTargetX;
+    delete canvas.dataset.rigIkTargetY;
+    delete canvas.dataset.rigIkTargetZ;
+  };
+
+  const getRigIkWorldTargetFromPointer = (
+    event: PointerEvent,
+    state: RigIkDragState,
+    viewport: ViewportSpec,
+  ): THREE.Vector3 | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const rect = canvas.getBoundingClientRect();
+    const mouse = getMouseForViewport(event.clientX, event.clientY, viewport, rect);
+    raycasterRef.current.setFromCamera(mouse, viewport.camera);
+    const hit = raycasterRef.current.ray.intersectPlane(state.plane, new THREE.Vector3());
+    return hit ? hit.sub(state.localOffset) : null;
+  };
+
+  const updateRigIkFromPointer = (event: PointerEvent, state: RigIkDragState): boolean => {
+    const pick = pickViewportCamera(event.clientX, event.clientY);
+    if (!pick || pick.viewport.role !== state.paneRole) return false;
+    const targetWorld = getRigIkWorldTargetFromPointer(event, state, pick.viewport);
+    if (!targetWorld) return false;
+    const previousTarget = state.targetWorld.clone();
+    state.targetWorld.copy(targetWorld);
+    rigIkTargetWorldRef.current?.copy(targetWorld);
+    rigIkTargetHandleRef.current?.position.copy(targetWorld);
+    const result = onSolveRigIkRef.current?.({
+      phase: 'change',
+      boneName: state.boneName,
+      targetWorld,
+      paneRole: state.paneRole,
+    });
+    if (result === false) {
+      state.targetWorld.copy(previousTarget);
+      rigIkTargetWorldRef.current?.copy(previousTarget);
+      rigIkTargetHandleRef.current?.position.copy(previousTarget);
+      return false;
+    }
+    updateRigIkTelemetry(state, result);
+    return true;
+  };
+
   const getRigMoveWorldPositionFromPointer = (
     event: PointerEvent,
     state: RigMoveDragState,
@@ -1008,6 +1117,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // Internal key handler for view reset (R) + gizmo modes (T=translate, R=rotate, S=scale when a bone is selected).
     // Mode keys take precedence only while TransformControls has an active target. Space is handled by App.
     const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && rigIkDragRef.current) {
+        e.preventDefault();
+        cancelRigIkDrag();
+        return;
+      }
       const tc = transformControlsRef.current;
       if (tc && transformTargetRef.current) {
         const k = e.key.toLowerCase();
@@ -1164,6 +1278,34 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       };
     };
 
+    const buildRigIkDragState = (event: PointerEvent): RigIkDragState | null => {
+      if (editorModeRef.current !== 'rig' || rigToolModeRef.current !== 'ik') return null;
+      const selected = selectedBoneNameRef.current;
+      const handle = rigIkTargetHandleRef.current;
+      const targetWorld = rigIkTargetWorldRef.current;
+      if (!selected || selected === 'Scene' || !handle || !targetWorld) return null;
+
+      const pick = pickViewportCamera(event.clientX, event.clientY);
+      if (!pick || !canvasRef.current) return null;
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouse = getMouseForViewport(event.clientX, event.clientY, pick.viewport, rect);
+      raycasterRef.current.setFromCamera(mouse, pick.camera);
+      const hit = raycasterRef.current.intersectObject(handle, true)[0]?.point.clone();
+      if (!hit) return null;
+
+      return {
+        boneName: selected,
+        paneRole: pick.viewport.role,
+        plane: new THREE.Plane().setFromNormalAndCoplanarPoint(
+          pick.camera.getWorldDirection(new THREE.Vector3()),
+          targetWorld,
+        ),
+        localOffset: hit.sub(targetWorld),
+        initialTargetWorld: targetWorld.clone(),
+        targetWorld: targetWorld.clone(),
+      };
+    };
+
     const startEndpointDrag = (state: EndpointDragState): void => {
       endpointDragRef.current = state;
       emitBoneTransformEdit('start', 'endpoint-drag', state.bone);
@@ -1265,6 +1407,60 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       cursorModeRef.current = 'default';
       hoveredBoneNameRef.current = null;
       canvas.dataset.hoveredBone = '';
+    };
+
+    const startRigIkDrag = (state: RigIkDragState): boolean => {
+      const accepted = onSolveRigIkRef.current?.({
+        phase: 'start',
+        boneName: state.boneName,
+        targetWorld: state.targetWorld.clone(),
+        paneRole: state.paneRole,
+      });
+      if (accepted === false) return false;
+      delete canvas.dataset.rigIkStatus;
+      delete canvas.dataset.rigIkDistance;
+      rigIkDragRef.current = state;
+      orbitRef.current.enabled = false;
+      canvas.style.cursor = 'grabbing';
+      cursorModeRef.current = 'grabbing';
+      updateRigIkTelemetry(state, accepted);
+      return true;
+    };
+
+    const endRigIkDrag = (): void => {
+      const state = rigIkDragRef.current;
+      if (state) {
+        onSolveRigIkRef.current?.({
+          phase: 'end',
+          boneName: state.boneName,
+          targetWorld: state.targetWorld.clone(),
+          paneRole: state.paneRole,
+        });
+        rigIkDragRef.current = null;
+      }
+      orbitRef.current.enabled = true;
+      clearRigIkTelemetry();
+      canvas.style.cursor = 'default';
+      cursorModeRef.current = 'default';
+    };
+
+    const cancelRigIkDrag = (): void => {
+      const state = rigIkDragRef.current;
+      if (state) {
+        onSolveRigIkRef.current?.({
+          phase: 'cancel',
+          boneName: state.boneName,
+          targetWorld: state.initialTargetWorld.clone(),
+          paneRole: state.paneRole,
+        });
+        rigIkTargetWorldRef.current?.copy(state.initialTargetWorld);
+        rigIkTargetHandleRef.current?.position.copy(state.initialTargetWorld);
+        rigIkDragRef.current = null;
+      }
+      orbitRef.current.enabled = true;
+      clearRigIkTelemetry();
+      canvas.style.cursor = 'default';
+      cursorModeRef.current = 'default';
     };
 
     const collectPaintVertices = (event: PointerEvent): SkinPaintCollection => {
@@ -1486,6 +1682,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const resolvePointerOwner = (
       event: PointerEvent,
       endpointState: EndpointDragState | null,
+      ikState: RigIkDragState | null,
     ): ViewportInteractionOwner => {
       const activeSkeleton = skeletonRefForPick.current;
       const activeViewport = getViewportAt(event.clientX, event.clientY, true);
@@ -1498,6 +1695,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         isPrecisionMode: isPrecisionModeRef.current,
         isPickingViewport: !!activeViewport,
         hitEndpointHandle: !!endpointState,
+        hitIkTargetHandle: !!ikState,
       });
       setPointerOwnerTelemetry(owner, activeViewport?.role ?? null);
       return owner;
@@ -1505,13 +1703,21 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
     const onCanvasPointerDown = (event: PointerEvent) => {
       const endpointState = event.button === 0 ? buildEndpointDragState(event) : null;
-      const owner = resolvePointerOwner(event, endpointState);
+      const ikState = event.button === 0 ? buildRigIkDragState(event) : null;
+      const owner = resolvePointerOwner(event, endpointState, ikState);
       if (owner === 'none' || owner === 'orbit') return;
       if (event.button !== 0) return;
 
       if (owner === 'rig-endpoint-drag' && endpointState) {
         startEndpointDrag(endpointState);
         pointerDownRef.current = null;
+        return;
+      }
+
+      if (owner === 'rig-ik-drag' && ikState) {
+        if (startRigIkDrag(ikState)) {
+          pointerDownRef.current = null;
+        }
         return;
       }
 
@@ -1577,6 +1783,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       }
       if (rigRotateDragRef.current) {
         endRigRotateDrag();
+        pointerDownRef.current = null;
+        return;
+      }
+      if (rigIkDragRef.current) {
+        endRigIkDrag();
         pointerDownRef.current = null;
         return;
       }
@@ -1671,6 +1882,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (rigRotateDragRef.current) {
         endRigRotateDrag();
       }
+      if (rigIkDragRef.current) {
+        endRigIkDrag();
+      }
       if (skinPaintActiveRef.current) {
         skinPaintActiveRef.current = false;
         onSkinPaintStrokeEndRef.current?.();
@@ -1695,6 +1909,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       }
       if (rigRotateDragRef.current) {
         endRigRotateDrag();
+      }
+      if (rigIkDragRef.current) {
+        cancelRigIkDrag();
       }
       if (skinPaintActiveRef.current) {
         skinPaintActiveRef.current = false;
@@ -1741,6 +1958,15 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         if (rotated) {
           hoveredBoneNameRef.current = dragState.boneName;
           canvas.dataset.hoveredBone = dragState.boneName;
+        }
+        return;
+      }
+      if (rigIkDragRef.current) {
+        const state = rigIkDragRef.current;
+        const solved = updateRigIkFromPointer(event, state);
+        if (solved) {
+          hoveredBoneNameRef.current = state.boneName;
+          canvas.dataset.hoveredBone = state.boneName;
         }
         return;
       }
@@ -1838,6 +2064,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
           updateEndpointHandle(endpoint, bone, boneLabelScale);
           writeEndpointScreenTelemetry(bone);
         }
+      }
+      const ikTarget = rigIkTargetWorldRef.current;
+      if (rigIkTargetHandleRef.current && ikTarget) {
+        rigIkTargetHandleRef.current.position.copy(ikTarget);
+        writeRigIkTargetScreenTelemetry(ikTarget);
       }
       const hoverMarker = boneHoverMarkerRef.current;
       if (hoverMarker && skel) {
@@ -1938,6 +2169,17 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         rigRotateDragRef.current = null;
         clearRigRotateTelemetry();
       }
+      if (rigIkDragRef.current) {
+        onSolveRigIkRef.current?.({
+          phase: 'cancel',
+          boneName: rigIkDragRef.current.boneName,
+          targetWorld: rigIkDragRef.current.initialTargetWorld.clone(),
+          paneRole: rigIkDragRef.current.paneRole,
+        });
+        orbitRef.current.enabled = true;
+        rigIkDragRef.current = null;
+        clearRigIkTelemetry();
+      }
       restoreTransformControlsAfterEndpointDrag();
       detachOrbit();
       canvas.style.cursor = 'default';
@@ -2033,6 +2275,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => { onCreateRigChildAtWorldRef.current = onCreateRigChildAtWorld; }, [onCreateRigChildAtWorld]);
   useEffect(() => { onMoveRigBoneToWorldRef.current = onMoveRigBoneToWorld; }, [onMoveRigBoneToWorld]);
   useEffect(() => { onRotateRigBoneRef.current = onRotateRigBone; }, [onRotateRigBone]);
+  useEffect(() => { onSolveRigIkRef.current = onSolveRigIk; }, [onSolveRigIk]);
   useEffect(() => { onSetTransformModeRef.current = onSetTransformMode; }, [onSetTransformMode]);
   useEffect(() => {
     boneTransformOwnerRef.current = boneTransformOwner;
@@ -2108,7 +2351,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         transformTargetRef.current = null;
       }
       if (scene) {
-        [boneHighlightRef.current, boneEndpointHandleRef.current, boneHoverMarkerRef.current, skinBrushMarkerRef.current].forEach(marker => {
+        [boneHighlightRef.current, boneEndpointHandleRef.current, rigIkTargetHandleRef.current, boneHoverMarkerRef.current, skinBrushMarkerRef.current].forEach(marker => {
           if (!marker) return;
           scene.remove(marker);
           disposeThreeObject(marker);
@@ -2116,6 +2359,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       }
       boneHighlightRef.current = null;
       boneEndpointHandleRef.current = null;
+      rigIkTargetHandleRef.current = null;
+      rigIkTargetWorldRef.current = null;
       boneHoverMarkerRef.current = null;
       skinBrushMarkerRef.current = null;
     };
@@ -2187,6 +2432,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     if (boneEndpointHandleRef.current) {
       boneEndpointHandleRef.current = null;
     }
+    detachMarker(rigIkTargetHandleRef.current);
+    if (rigIkTargetHandleRef.current) {
+      rigIkTargetHandleRef.current = null;
+    }
+    rigIkTargetWorldRef.current = null;
     detachMarker(boneHoverMarkerRef.current);
     if (boneHoverMarkerRef.current) {
       boneHoverMarkerRef.current = null;
@@ -2197,6 +2447,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       canvas.dataset.hoveredBone = '';
       delete canvas.dataset.endpointX;
       delete canvas.dataset.endpointY;
+      delete canvas.dataset.rigIkTargetScreenX;
+      delete canvas.dataset.rigIkTargetScreenY;
     }
     if (!skeleton) {
       return;
@@ -2209,11 +2461,19 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         scene.add(group);
         boneHighlightRef.current = group;
         // Keep endpoint-style handles in precision modes to make exact picking easier.
-        if (isPrecisionMode) {
+        if (isPrecisionMode && rigToolMode !== 'ik') {
           const handle = makeBoneEndpointHandle(markerScale);
           updateEndpointHandle(handle, bone, markerScale);
           scene.add(handle);
           boneEndpointHandleRef.current = handle;
+        }
+        if (isPrecisionMode && rigToolMode === 'ik') {
+          const targetWorld = bone.getWorldPosition(new THREE.Vector3());
+          const targetHandle = makeRigIkTargetHandle(markerScale);
+          targetHandle.position.copy(targetWorld);
+          scene.add(targetHandle);
+          rigIkTargetHandleRef.current = targetHandle;
+          rigIkTargetWorldRef.current = targetWorld;
         }
 
         updateHighlightPosition(group, bone); // use extracted util
@@ -2227,7 +2487,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     hoverMarker.visible = false;
     scene.add(hoverMarker);
     boneHoverMarkerRef.current = hoverMarker;
-  }, [selectedBoneName, skeleton, markerScale, isPrecisionMode]);
+  }, [selectedBoneName, skeleton, markerScale, isPrecisionMode, rigToolMode]);
 
   // Weight preview visualization for the selected bone.
   // Delegates to extracted pure helpers in utils/weightPreview.ts.
@@ -2267,7 +2527,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       transformControlsDraggingRef.current = false;
     }
 
-    if (boneTransformOwner === 'disabled' || !selectedBoneName || !skeleton) {
+    const ikOwnsRigInteraction = editorMode === 'rig' && rigToolMode === 'ik';
+    if (boneTransformOwner === 'disabled' || ikOwnsRigInteraction || !selectedBoneName || !skeleton) {
       transformTargetRef.current = null;
       transformControlsRef.current?.detach();
       setTransformOwnerTelemetry(false);
@@ -2326,7 +2587,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     } catch (e) {
       // same benign skew case
     }
-  }, [boneTransformOwner, selectedBoneName, skeleton]);
+  }, [boneTransformOwner, editorMode, rigToolMode, selectedBoneName, skeleton]);
 
   // Attach/replace model root + skeleton helper + create internal mixer when root prop changes.
   // IMPORTANT: deps ONLY loaded scene objects (root/skeleton). Never include playback props (isPlaying/currentTime/currentClipName/playbackSpeed)

@@ -139,6 +139,38 @@ test.describe('RustSMF visual confirmations', () => {
     await expectNoCriticalBrowserErrors(page);
   });
 
+  test('SMF IK tool keeps its target, settings, and posed model visually legible', async ({ page }, testInfo) => {
+    test.skip(!SAMPLE_SMF, 'No .smf test model available for IK visual confirmation');
+
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto('/');
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await pausePlaybackIfRunning(page);
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+
+    const childBone = page.getByTestId('inspector').locator('li li > div').filter({ hasText: /SMF_Node_\d+/ }).first();
+    await expect(childBone).toBeVisible({ timeout: 8000 });
+    await childBone.click({ force: true });
+    await page.getByTestId('rig-tool-ik').click();
+    await page.getByTestId('rig-ik-chain-length').selectOption('1');
+    await expect(page.getByTestId('rig-ik-settings')).toBeVisible();
+
+    const canvas = page.getByTestId('three-canvas');
+    await expect.poll(async () => Number.isFinite(Number(await canvas.getAttribute('data-rig-ik-target-screen-x')))).toBe(true);
+    const x = Number(await canvas.getAttribute('data-rig-ik-target-screen-x'));
+    const y = Number(await canvas.getAttribute('data-rig-ik-target-screen-y'));
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + 32, y + 20, { steps: 4 });
+    await page.mouse.up();
+    await expect(page.getByTestId('rig-ik-result')).toBeVisible();
+    await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000);
+    await page.screenshot({ path: testInfo.outputPath('ik-pose-tool.png'), fullPage: true });
+    await expectNoHorizontalOverflow(page);
+    await expectNoCriticalBrowserErrors(page);
+  });
+
   test('loaded Display menu and single Ortho view stay visually coherent', async ({ page }) => {
     test.skip(!SAMPLE_SMF, 'No .smf test model available for loaded viewport controls confirmation');
 

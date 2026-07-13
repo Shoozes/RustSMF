@@ -130,6 +130,10 @@ export default function App() {
     setRigToolMode,
     rigSnapStep,
     setRigSnapStep,
+    rigIkSettings,
+    setRigIkSettings,
+    rigIkLastResult,
+    solveRigIkPose,
     handleBoneTransformEdit,
     onNudgeBone,
     undoEditorHistory,
@@ -572,6 +576,9 @@ export default function App() {
           onRigToolModeChange={setRigToolMode}
           rigSnapStep={rigSnapStep}
           onRigSnapStepChange={setRigSnapStep}
+          rigIkSettings={rigIkSettings}
+          onRigIkSettingsChange={setRigIkSettings}
+          rigIkLastResult={rigIkLastResult}
           editorMode={editorMode}
         />
       );
@@ -792,6 +799,7 @@ export default function App() {
             onCreateRigChildAtWorld={createChildForSelectedBoneAtWorld}
             onMoveRigBoneToWorld={moveRigBoneToWorld}
             onRotateRigBone={rotateRigBoneAroundAxis}
+            onSolveRigIk={solveRigIkPose}
             selectedBoneName={ui.selected}
             selectedObjectIds={selectedOutlinerIds}
             selectionOverlayRevision={outlinerRevision}

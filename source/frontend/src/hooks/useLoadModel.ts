@@ -16,7 +16,7 @@ import {
   clonePoseEditMap,
   applyPoseEditsToSmf,
 } from './poseEdits';
-import type { BoneTransformEditEvent, RigMoveEditEvent, RigRotateEditEvent } from '../components/ThreeViewport';
+import type { BoneTransformEditEvent, RigIkEditEvent, RigMoveEditEvent, RigRotateEditEvent } from '../components/ThreeViewport';
 import { findBoneByName } from '../utils/bonePicker';
 import { createSeqGuard } from '../utils/seqGuard';
 import { detectModelFormat, supportedModelFormatsLabel, type ModelSourceFormat } from '../utils/modelFormat';
@@ -101,6 +101,15 @@ import {
 } from '../utils/rigEdits';
 import { collectRigHierarchyBones } from '../utils/rigHierarchy';
 import type { ViewportRole } from '../utils/viewportLayout';
+import {
+  DEFAULT_RIG_IK_SETTINGS,
+  createRigIkSession,
+  normalizeRigIkSettings,
+  solveRigIk,
+  type RigIkSession,
+  type RigIkSettings,
+  type RigIkSolveResult,
+} from '../utils/rigIk';
 
 type LoadedModelResult =
   | Awaited<ReturnType<typeof buildSmfScene>>
@@ -217,6 +226,13 @@ interface ActiveRigRotateHistory {
   before: RigHistorySnapshot | null;
 }
 
+interface ActiveRigIkHistory {
+  boneName: string;
+  chainNames: string[];
+  session: RigIkSession;
+  before: PoseHistorySnapshot;
+}
+
 interface AnimationWorkspaceHistorySnapshot {
   baseClips: THREE.AnimationClip[];
   animationEditState: AnimationEditState;
@@ -309,6 +325,14 @@ const samePoseSnapshot = (left: PoseHistorySnapshot, right: PoseHistorySnapshot)
 
   return true;
 };
+
+const samePoseBoneSnapshot = (
+  left: PoseBoneSnapshot | undefined,
+  right: PoseBoneSnapshot | undefined,
+): boolean => !!left && !!right
+  && sameNumberArray(left.position, right.position)
+  && sameNumberArray(left.quaternion, right.quaternion)
+  && sameNumberArray(left.scale, right.scale);
 
 const cloneAnimationClips = (clips: THREE.AnimationClip[]): THREE.AnimationClip[] => clips.map((clip) => clip.clone());
 
@@ -519,6 +543,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const activeAnimationTransformHistoryRef = useRef<ActiveAnimationTransformHistory | null>(null);
   const activeRigMoveHistoryRef = useRef<ActiveRigMoveHistory | null>(null);
   const activeRigRotateHistoryRef = useRef<ActiveRigRotateHistory | null>(null);
+  const activeRigIkHistoryRef = useRef<ActiveRigIkHistory | null>(null);
   const [editorUndoAvailable, setEditorUndoAvailable] = useState(false);
   const [editorRedoAvailable, setEditorRedoAvailable] = useState(false);
   const [editorUndoOrder, setEditorUndoOrder] = useState(0);
@@ -537,6 +562,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const [showBoneLabels, setShowBoneLabels] = useState(false);
   const [rigToolMode, setRigToolMode] = useState<RigToolMode>('select');
   const [rigSnapStep, setRigSnapStep] = useState(0);
+  const [rigIkSettings, setRigIkSettings] = useState<RigIkSettings>(DEFAULT_RIG_IK_SETTINGS);
+  const [rigIkLastResult, setRigIkLastResult] = useState<RigIkSolveResult | null>(null);
+  const rigIkLastResultRef = useRef<RigIkSolveResult | null>(null);
   const [skinEditState, setSkinEditState] = useState<SkinEditState>(() => makeSkinEditState());
   const skinEditStateRef = useRef<SkinEditState>(skinEditState);
   const skinUndoStackRef = useRef<SkinEditHistoryEntry[]>([]);
@@ -692,6 +720,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     activeAnimationTransformHistoryRef.current = null;
     activeRigMoveHistoryRef.current = null;
     activeRigRotateHistoryRef.current = null;
+    activeRigIkHistoryRef.current = null;
     refreshEditorHistoryAvailability();
   }, [refreshEditorHistoryAvailability]);
 
@@ -941,6 +970,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         ui.setStatus(`Undo skipped: ${result.entry.label} target bone is missing.`);
         return;
       }
+      rigIkLastResultRef.current = null;
+      setRigIkLastResult(null);
     } else if (result.entry.domain === 'animation' && result.entry.before.kind === 'animation') {
       commitAnimationEditState(result.entry.before.value);
     } else if (result.entry.domain === 'animation' && result.entry.before.kind === 'animation-workspace') {
@@ -976,6 +1007,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         ui.setStatus(`Redo skipped: ${result.entry.label} target bone is missing.`);
         return;
       }
+      rigIkLastResultRef.current = null;
+      setRigIkLastResult(null);
     } else if (result.entry.domain === 'animation' && result.entry.after.kind === 'animation') {
       commitAnimationEditState(result.entry.after.value);
     } else if (result.entry.domain === 'animation' && result.entry.after.kind === 'animation-workspace') {
@@ -1009,6 +1042,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     animationEditStateRef.current = emptyAnimationState;
     poseEditsRef.current = {};
     setPoseEditHasDirtyState(false);
+    rigIkLastResultRef.current = null;
+    setRigIkLastResult(null);
     setSmfRoundtripReport(null);
     model.clear();
     ui.setSelected('Scene');
@@ -2051,6 +2086,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       ui.setStatus('Rig move tool active. Drag in a Top/Front/Side pane to move the selected bone.');
       return;
     }
+    if (next === 'rotate') {
+      ui.setStatus('Rig rotate tool active. Drag in a Top/Front/Side pane to rotate the selected bone.');
+      return;
+    }
+    if (next === 'ik') {
+      ui.setStatus('Rig IK pose tool active. Drag the labeled IK target; Escape or pointer cancel restores the whole chain.');
+      return;
+    }
     ui.setStatus('Rig select tool active.');
   }, [ui]);
 
@@ -2061,6 +2104,12 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       ? `Rig snap set to ${formatRigSnapStep(normalized)} units.`
       : 'Rig snap disabled.');
   }, [ui]);
+
+  const changeRigIkSettings = useCallback((next: Partial<RigIkSettings>) => {
+    setRigIkSettings((current) => normalizeRigIkSettings({ ...current, ...next }));
+    setRigIkLastResult(null);
+    rigIkLastResultRef.current = null;
+  }, []);
 
   const renameSelectedBone = useCallback((requestedName: string) => {
     const skeleton = model.skeleton;
@@ -2466,6 +2515,107 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     };
     setPoseEditHasDirtyState(hasPoseEdits(poseEditsRef.current));
   }, []);
+
+  const solveRigIkPose = useCallback((event: RigIkEditEvent): RigIkSolveResult | boolean => {
+    const skeleton = model.skeleton;
+    if (!skeleton) {
+      activeRigIkHistoryRef.current = null;
+      ui.setStatus('Load a skinned model before using IK.');
+      return false;
+    }
+
+    if (event.phase === 'start') {
+      const previous = activeRigIkHistoryRef.current;
+      if (previous) {
+        applyPoseSnapshot(previous.before);
+      }
+      const created = createRigIkSession(skeleton, event.boneName, rigIkSettings.chainLength);
+      if (!created.ok) {
+        activeRigIkHistoryRef.current = null;
+        ui.setStatus(created.message);
+        return false;
+      }
+      const chainNames = created.session.chain.map((bone) => bone.name);
+      activeRigIkHistoryRef.current = {
+        boneName: event.boneName,
+        chainNames,
+        session: created.session,
+        before: capturePoseSnapshot(chainNames),
+      };
+      rigIkLastResultRef.current = null;
+      setRigIkLastResult(null);
+      ui.setSelected(event.boneName);
+      return true;
+    }
+
+    const active = activeRigIkHistoryRef.current;
+    if (!active || active.boneName !== event.boneName) {
+      ui.setStatus('IK drag expired because the selected chain changed. Start a new IK drag.');
+      return false;
+    }
+
+    if (event.phase === 'cancel') {
+      applyPoseSnapshot(active.before);
+      activeRigIkHistoryRef.current = null;
+      rigIkLastResultRef.current = null;
+      setRigIkLastResult(null);
+      ui.setStatus(`Canceled IK pose for ${event.boneName}; restored the full chain.`);
+      return true;
+    }
+
+    if (event.phase === 'change') {
+      const result = solveRigIk(skeleton, active.session, event.targetWorld, rigIkSettings);
+      model.root?.updateMatrixWorld(true);
+      rigIkLastResultRef.current = result;
+      setRigIkLastResult((current) => current?.status === result.status ? current : result);
+      if (result.status === 'stale-chain' || result.status === 'invalid-target') {
+        applyPoseSnapshot(active.before);
+        ui.setStatus(result.status === 'stale-chain'
+          ? 'IK canceled because the rig hierarchy changed during the drag.'
+          : 'IK ignored a non-finite target and restored the chain.');
+        activeRigIkHistoryRef.current = null;
+        return false;
+      }
+      return result;
+    }
+
+    const beforeDirty = active.before;
+    const afterBeforeDirty = capturePoseSnapshot(active.chainNames);
+    const changedNames = active.chainNames.filter((name) => (
+      !samePoseBoneSnapshot(beforeDirty.bones[name], afterBeforeDirty.bones[name])
+    ));
+    if (changedNames.length === 0) {
+      activeRigIkHistoryRef.current = null;
+      setRigIkLastResult(rigIkLastResultRef.current);
+      ui.setStatus(`IK pose for ${event.boneName} was unchanged.`);
+      return true;
+    }
+
+    changedNames.forEach((name) => recordPoseBoneEdit(name));
+    const after = capturePoseSnapshot(active.chainNames);
+    const pushed = pushPoseHistory(`IK pose ${event.boneName}`, beforeDirty, after);
+    const result = rigIkLastResultRef.current;
+    setRigIkLastResult(result);
+    activeRigIkHistoryRef.current = null;
+    const outcome = result?.status === 'unreachable'
+      ? 'at maximum reach'
+      : result?.status === 'constrained'
+        ? 'within joint constraints'
+        : 'at the target';
+    ui.setStatus(pushed
+      ? `Recorded IK pose for ${event.boneName} as one ${active.chainNames.length}-bone transaction ${outcome}.`
+      : `IK pose for ${event.boneName} was unchanged.`);
+    return true;
+  }, [
+    applyPoseSnapshot,
+    capturePoseSnapshot,
+    model.root,
+    model.skeleton,
+    pushPoseHistory,
+    recordPoseBoneEdit,
+    rigIkSettings,
+    ui,
+  ]);
 
   // Route bone nudge buttons through pose-edit layer so edits are captured at export time.
   // Applies the delta to the Three.js bone for immediate visual feedback, and records the
@@ -3033,6 +3183,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     setRigToolMode: changeRigToolMode,
     rigSnapStep,
     setRigSnapStep: changeRigSnapStep,
+    rigIkSettings,
+    setRigIkSettings: changeRigIkSettings,
+    rigIkLastResult,
+    solveRigIkPose,
     handleBoneTransformEdit,
     onNudgeBone,
     undoEditorHistory,

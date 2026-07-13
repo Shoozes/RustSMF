@@ -6,6 +6,7 @@ export type ViewportInteractionOwner =
   | 'model-select'
   | 'rig-select'
   | 'rig-endpoint-drag'
+  | 'rig-ik-drag'
   | 'skin-paint'
   | 'animate-select';
 
@@ -18,6 +19,7 @@ export interface ViewportInteractionContext {
   isPrecisionMode: boolean;
   isPickingViewport: boolean;
   hitEndpointHandle: boolean;
+  hitIkTargetHandle: boolean;
 }
 
 export interface ViewportPointerDownSnapshot {
@@ -47,6 +49,7 @@ export function resolvePointerDownOwner(ctx: ViewportInteractionContext): Viewpo
   }
 
   if (ctx.editorMode === 'rig') {
+    if (ctx.isPrecisionMode && ctx.hitIkTargetHandle) return 'rig-ik-drag';
     if (ctx.isPrecisionMode && ctx.hitEndpointHandle) return 'rig-endpoint-drag';
     return ctx.hasSkeleton ? 'rig-select' : 'none';
   }

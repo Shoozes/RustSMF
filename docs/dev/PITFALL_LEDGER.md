@@ -1,6 +1,29 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-07-13 (verified GLB recovery export, SMF serialized-world-pose handling, viewport layout hit-test timing, head-node export, and DQ sign-equivalent diagnostics).
+Last reviewed: 2026-07-13 (verified explicit Rig IK, head-motion attribution, GLB recovery export, SMF serialized-world-pose handling, viewport layout hit-test timing, head-node export, and DQ sign-equivalent diagnostics).
+
+### Q: What pitfall are we preventing?
+
+**What:** Odd head motion can be misdiagnosed as broken IK, and endpoint dragging or TransformControls can be mislabeled as IK even though those paths directly edit one bone. The old demos showed the head behavior before SMF-to-GLB recovery, and RustSMF did not have an IK solver before this slice.
+
+**Why it happened:** A head is downstream of neck/spine rotations, so moving an ancestor correctly moves the head. Separately, the historical SMF bug treated serialized rig/world poses as local deltas and could resolve skipped non-deform head nodes against the wrong parent. Playback ownership can also reapply an animation pose after a manual edit. These are different failure classes and need different evidence.
+
+**Where:** `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/smfRig.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/rigIk.ts`, `source/frontend/src/hooks/useLoadModel.ts`, and the owned Mixamo SMF/old-editor screenshots.
+
+**How to catch it:** First pause playback and identify the selected bone plus pointer owner. `rig-endpoint-drag` and TransformControls are direct edits; only `rig-ik-drag` is chain solving. Compare the unposed real SMF against the old positive-control render, then use the IK unit suite for chain behavior and the real-SMF IK smoke for cancel/history/export behavior.
+
+**Solutions tried:**
+1. `20/100` Attribute any head movement during a viewport drag to IK, result: impossible historically because no solver existed and it hid the stored-world-pose defect.
+2. `94/100` Fix effective-deform-parent world-to-local conversion and retain a real animated-bounds regression, result: the recovered SMF/GLB rig remains coherent.
+3. `96/100` Add a separately labeled, bounded CCD Rig IK tool with joint/pole constraints, explicit `rig-ik-drag` telemetry, whole-chain cancel/undo, and SMF/GLB export proof, result: direct edits and IK now have distinct observable contracts.
+
+**Current solution:** Treat head motion as an ancestry/animation/format diagnosis until `rig-ik-drag` proves the IK path. The SMF loader derives locals from serialized world poses through effective deform parents; the Rig IK tool rotates a validated ancestor chain without changing local bone lengths and records one pose transaction.
+
+**Effectiveness:** `96/100`, durable. Pure tests cover reach, constraints, stale chains, invalid targets, and length invariants; real-SMF browser coverage proves Escape cancel, atomic undo/redo, SMF roundtrip, validated GLB export, and reviewed target/pose visuals.
+
+**Relevance check:** Current. Future keyed IK, mixer ownership, head-node metadata editing, or solver changes can blur these boundaries again.
+
+**Next prevention step:** If keyed IK is added, require an explicit bake-to-animation-key contract and add a head/neck chain fixture before enabling it in Animate mode.
 
 ### Q: What pitfall are we preventing?
 

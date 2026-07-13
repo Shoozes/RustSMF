@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-export type RigToolMode = 'select' | 'add-child' | 'move' | 'rotate';
+export type RigToolMode = 'select' | 'add-child' | 'move' | 'rotate' | 'ik';
 
 export type RigRenameFailureReason =
   | 'no-selected-bone'

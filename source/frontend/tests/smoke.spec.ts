@@ -160,6 +160,42 @@ const dragEndpointHandle = async (
   return false;
 };
 
+const dragRigIkTarget = async (
+  page: Page,
+  finish: 'release' | 'cancel' | 'escape' = 'release',
+): Promise<boolean> => {
+  const canvas = page.getByTestId('three-canvas');
+  await expect.poll(async () => {
+    const x = Number(await canvas.getAttribute('data-rig-ik-target-screen-x'));
+    const y = Number(await canvas.getAttribute('data-rig-ik-target-screen-y'));
+    return Number.isFinite(x) && Number.isFinite(y);
+  }, { timeout: 3000 }).toBe(true);
+
+  const x = Number(await canvas.getAttribute('data-rig-ik-target-screen-x'));
+  const y = Number(await canvas.getAttribute('data-rig-ik-target-screen-y'));
+  await page.mouse.move(x, y);
+  await page.mouse.down({ button: 'left' });
+  await page.mouse.move(x + 36, y + 24, { steps: 4 });
+  await page.waitForTimeout(60);
+  const active = await canvas.getAttribute('data-rig-ik');
+  if (active !== 'active') {
+    await page.mouse.up({ button: 'left' }).catch(() => {});
+    return false;
+  }
+
+  if (finish === 'cancel') {
+    await dispatchWindowPointerCancel(page);
+    await page.mouse.up({ button: 'left' }).catch(() => {});
+  } else if (finish === 'escape') {
+    await page.keyboard.press('Escape');
+    await page.mouse.up({ button: 'left' }).catch(() => {});
+  } else {
+    await page.mouse.up({ button: 'left' });
+  }
+  await expect(canvas).not.toHaveAttribute('data-rig-ik', 'active');
+  return true;
+};
+
 const paintInViewport = async (
   page: Page,
   options?: { x?: number; y?: number; dx?: number; dy?: number },
@@ -1496,6 +1532,66 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
     await setViewportLayout(page, 'single');
     await expect(singleCanvas).not.toHaveAttribute('data-endpoint-drag', 'active');
+  });
+
+  test('SMF IK pose drag is constrained, cancelable, atomic, and export-safe', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
+
+    await page.goto('/');
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await pausePlaybackIfRunning(page);
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+
+    const inspector = page.getByTestId('inspector');
+    const childBone = inspector.locator('li li > div').filter({ hasText: /SMF_Node_\d+/ }).first();
+    await expect(childBone).toBeVisible({ timeout: 8000 });
+    await childBone.click({ force: true });
+
+    const canvas = page.getByTestId('three-canvas');
+    await page.getByTestId('rig-tool-ik').click();
+    await expect(page.getByTestId('rig-tool-ik')).toHaveClass(/bg-amber-400/);
+    await expect(page.getByTestId('rig-ik-settings')).toBeVisible();
+    await page.getByTestId('rig-ik-chain-length').selectOption('1');
+    await page.getByTestId('rig-ik-pole-axis').selectOption('z');
+    await page.getByTestId('rig-ik-joint-limit').selectOption('120');
+    await expect(canvas).toHaveAttribute('data-rig-tool-mode', 'ik');
+    await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
+
+    expect(await dragRigIkTarget(page)).toBe(true);
+    await expect(canvas).toHaveAttribute('data-pointer-owner', 'rig-ik-drag');
+    await expect(canvas).toHaveAttribute('data-rig-ik-status', /reached|unreachable|constrained|iteration-limit/);
+    await expect(page.getByTestId('rig-ik-result')).toBeVisible();
+    await expect(page.getByTestId('status-text')).toContainText(/Recorded IK pose .* one 2-bone transaction/i);
+
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    await page.getByTestId('editor-undo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Undid IK pose/i);
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
+
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    expect(await dragRigIkTarget(page, 'escape')).toBe(true);
+    await expect(page.getByTestId('status-text')).toContainText(/Canceled IK pose .* restored the full chain/i);
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
+
+    await page.getByTestId('editor-redo-btn').click({ force: true });
+    await expect(page.getByTestId('status-text')).toContainText(/Redid IK pose/i);
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+
+    await page.getByTestId('mode-tab-export').click({ force: true });
+    await page.getByTestId('smf-roundtrip-check-btn').click();
+    await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 5000 });
+    await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-status', 'passed');
+
+    await page.getByTestId('export-glb-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb/i, { timeout: 5000 });
+    await page.getByTestId('export-smf-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf .*pose edits applied/i, { timeout: 5000 });
+
+    const errors = getBrowserErrors(page).filter((entry) => entry.includes('ERROR'));
+    expect(errors).toEqual([]);
   });
 
   test('animation keyframe authoring updates selected-bone clips and SMF checks', async ({ page }) => {

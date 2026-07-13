@@ -17,6 +17,7 @@ const baseContext: ViewportInteractionContext = {
   isPrecisionMode: false,
   isPickingViewport: true,
   hitEndpointHandle: false,
+  hitIkTargetHandle: false,
 };
 
 const owner = (override: Partial<ViewportInteractionContext>): ViewportInteractionOwner => {
@@ -38,6 +39,8 @@ describe('viewportInteractionRouter', () => {
   });
 
   it('routes rig clicks by endpoint hit before bone selection', () => {
+    assert.equal(owner({ editorMode: 'rig', isPrecisionMode: true, hitIkTargetHandle: true }), 'rig-ik-drag');
+    assert.equal(owner({ editorMode: 'rig', isPrecisionMode: false, hitIkTargetHandle: true }), 'rig-select');
     assert.equal(owner({ editorMode: 'rig', isPrecisionMode: true, hitEndpointHandle: true }), 'rig-endpoint-drag');
     assert.equal(owner({ editorMode: 'rig', isPrecisionMode: false, hitEndpointHandle: true }), 'rig-select');
     assert.equal(owner({ editorMode: 'rig', hasSkeleton: false }), 'none');

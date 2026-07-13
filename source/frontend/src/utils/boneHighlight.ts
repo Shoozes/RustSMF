@@ -61,6 +61,56 @@ export function makeBoneEndpointHandle(scale = 1): THREE.Group {
   return group;
 }
 
+export function makeRigIkTargetHandle(scale = 1): THREE.Group {
+  const markerScale = Math.max(0.25, scale);
+  const group = new THREE.Group();
+  group.name = 'Rig IK Target';
+  group.userData = { isRigIkTarget: true, markerScale };
+
+  const sphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.07 * markerScale, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xf59e0b, depthTest: false, transparent: true, opacity: 0.9 }),
+  );
+  sphere.userData.isRigIkTarget = true;
+  group.add(sphere);
+
+  const ringMaterial = new THREE.MeshBasicMaterial({
+    color: 0xfbbf24,
+    depthTest: false,
+    transparent: true,
+    opacity: 0.95,
+    side: THREE.DoubleSide,
+  });
+  const ringGeometry = new THREE.RingGeometry(0.11 * markerScale, 0.14 * markerScale, 24);
+  const ringX = new THREE.Mesh(ringGeometry, ringMaterial);
+  ringX.userData.isRigIkTarget = true;
+  const ringY = new THREE.Mesh(ringGeometry.clone(), ringMaterial.clone());
+  ringY.rotation.y = Math.PI / 2;
+  ringY.userData.isRigIkTarget = true;
+  group.add(ringX, ringY);
+
+  const labelCanvas = document.createElement('canvas');
+  labelCanvas.width = 192;
+  labelCanvas.height = 48;
+  const context = labelCanvas.getContext('2d');
+  if (context) {
+    context.fillStyle = 'rgba(15, 23, 42, 0.9)';
+    context.fillRect(0, 0, labelCanvas.width, labelCanvas.height);
+    context.fillStyle = '#fbbf24';
+    context.font = 'bold 24px monospace';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillText('IK TARGET', labelCanvas.width / 2, labelCanvas.height / 2);
+    const texture = new THREE.CanvasTexture(labelCanvas);
+    const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthTest: false, transparent: true }));
+    label.position.set(0, 0.38 * markerScale, 0);
+    label.scale.set(1.6 * markerScale, 0.4 * markerScale, 1);
+    label.userData.isRigIkTarget = true;
+    group.add(label);
+  }
+  return group;
+}
+
 /**
  * Creates a high-contrast hover marker that is visually stronger than the selected marker.
  * Reuses the base selection marker shape, then boosts saturation and opacity for precision modes.

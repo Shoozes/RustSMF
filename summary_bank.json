@@ -48,7 +48,7 @@
   "groups": {
     "docs__state_backlog": {
       "description": "Current app state, active paired backlog, latest review snapshot, docs policy, and durable regression-prevention notes. Keep concise; do not append repeated pass logs.",
-      "status": "Current docs policy: active backlog (`docs/dev/TODO.md`), state (`docs/dev/APP_STATE.md`), review snapshot (`docs/dev/review.md`), pitfall ledger, and summary bank registry are authoritative; 2026-07-02 review snapshot is refreshed after viewport gesture, Skin pts, narrow quad Display-menu, quad pane-role telemetry, quad rig-select mutation, quad endpoint-drag pane, quad Skin paint, quad Animate selection/key coverage, Rig Add child ortho placement, Rig Move, Rig Rotate, Rig snap, Detach/Connect UI smoke coverage, Spin UI smoke coverage, shared rig hierarchy display/deform-edit gating, and viewport layout hit-test timing slices; avoid dated pass duplication.",
+      "status": "Current docs policy: active backlog (`docs/dev/TODO.md`), state (`docs/dev/APP_STATE.md`), concise review snapshot (`docs/dev/review.md`), pitfall ledger, and summary bank registry are authoritative; 2026-07-13 state includes verified SMF/GLB recovery protections and explicit reversible Rig IK, while completed progress narration is consolidated out of the active backlog.",
       "paths": [
         "README.md",
         "docs/README.md",
@@ -228,6 +228,37 @@
         "Rig and skin modes need larger screen-space bone glyphs, labels, endpoint handles, hover/selected states, and adjustable hit radius.",
         "Mode tabs should expose Model, Rig, Skin, Animate, and Export workflows without recreating GameMaker chrome.",
         "GLB/GLTF remains the preferred modern fidelity path; SMF remains a compatibility format with explicit limits."
+      ],
+      "files": []
+    },
+    "feature__rig_ik_pose": {
+      "description": "Explicit reversible Rig IK posing, kept distinct from direct endpoint and TransformControls edits, with SMF/head-motion pitfall routing.",
+      "status": "implemented 2026-07-13; bounded CCD solves a private cloned ancestor chain with tolerance, unreachable clamping, reference-pose joint limits, world-axis pole guidance, stale-chain rejection, unchanged local bone lengths, labeled target drag, whole-chain Escape/pointer-cancel restore, one pose history transaction, SMF export/reimport proof, GLB reparse validation, and reviewed browser visual proof; keyed Animate IK remains intentionally unshipped pending an explicit bake-to-key contract",
+      "paths": [
+        "source/frontend/src/utils/rigIk.ts",
+        "source/frontend/src/utils/rigIk.test.ts",
+        "source/frontend/src/utils/viewportInteractionRouter.ts",
+        "source/frontend/src/utils/viewportInteractionRouter.test.ts",
+        "source/frontend/src/utils/boneHighlight.ts",
+        "source/frontend/src/components/RigPanel.tsx",
+        "source/frontend/src/components/ThreeViewport.tsx",
+        "source/frontend/src/hooks/useLoadModel.ts",
+        "source/frontend/src/App.tsx",
+        "source/frontend/tests/smoke.spec.ts",
+        "source/frontend/tests/visual.spec.ts",
+        "source/frontend/tests/README.md",
+        "docs/dev/APP_STATE.md",
+        "docs/dev/PITFALL_LEDGER.md",
+        "docs/dev/review.md"
+      ],
+      "requirements": [
+        "Only the labeled Rig IK target and rig-ik-drag owner may be described as IK.",
+        "IK changes rotations only; local bone translations and lengths must remain unchanged.",
+        "Cancel and undo restore the complete solved chain, and a completed drag creates one pose transaction.",
+        "SMF structural edits remain blocked; SMF pose and validated GLB export paths preserve solved rotations."
+      ],
+      "next_steps": [
+        "Add keyed IK only with an explicit Animate bake-to-key ownership design and head/neck fixture coverage."
       ],
       "files": []
     },

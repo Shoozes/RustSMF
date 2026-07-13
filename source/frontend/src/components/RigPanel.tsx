@@ -1,5 +1,14 @@
 import { useEffect, useState } from 'react';
 import { RIG_SNAP_STEPS, type RigSpinAxis, type RigToolMode } from '../utils/rigEdits';
+import {
+  RIG_IK_CHAIN_LENGTHS,
+  RIG_IK_ITERATION_OPTIONS,
+  RIG_IK_MAX_ANGLE_OPTIONS,
+  RIG_IK_TOLERANCE_OPTIONS,
+  type RigIkPoleAxis,
+  type RigIkSettings,
+  type RigIkSolveResult,
+} from '../utils/rigIk';
 import type { RigValidationReport } from '../utils/rigValidation';
 
 interface RigPanelProps {
@@ -18,6 +27,9 @@ interface RigPanelProps {
   onRigToolModeChange: (mode: RigToolMode) => void;
   rigSnapStep: number;
   onRigSnapStepChange: (step: number) => void;
+  rigIkSettings: RigIkSettings;
+  onRigIkSettingsChange: (settings: Partial<RigIkSettings>) => void;
+  rigIkLastResult: RigIkSolveResult | null;
   editorMode?: string;
 }
 
@@ -43,6 +55,9 @@ export default function RigPanel({
   onRigToolModeChange,
   rigSnapStep,
   onRigSnapStepChange,
+  rigIkSettings,
+  onRigIkSettingsChange,
+  rigIkLastResult,
   editorMode = 'rig',
 }: RigPanelProps) {
   const visibleIssues = report.issues.slice(0, 6);
@@ -55,6 +70,7 @@ export default function RigPanel({
   const canReparent = canRename && parentOptions.length > 0;
   const canChangeDetachState = !!selected && selected !== 'Scene' && report.boneCount > 0 && sourceFormat !== 'smf';
   const canSpinRig = report.boneCount > 0 && sourceFormat !== 'smf';
+  const canUseIk = selectedIsDeformBone && report.boneCount > 1;
 
   useEffect(() => {
     setRenameValue(selected === 'Scene' ? '' : selected);
@@ -83,7 +99,7 @@ export default function RigPanel({
       </div>
       <div className="mt-2 border-t border-slate-700 pt-2">
         <div className="text-slate-400 text-[10px] mb-1">Tool</div>
-        <div className="grid grid-cols-4 gap-1 mb-2" data-testid="rig-tool-row">
+        <div className="grid grid-cols-3 gap-1 mb-2" data-testid="rig-tool-row">
           <button
             data-testid="rig-tool-select"
             className={`px-1 py-0.5 text-xs ${rigToolMode === 'select' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
@@ -115,7 +131,96 @@ export default function RigPanel({
           >
             Rotate
           </button>
+          <button
+            data-testid="rig-tool-ik"
+            className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'ik' ? 'bg-amber-400 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
+            disabled={!canUseIk}
+            onClick={() => onRigToolModeChange('ik')}
+            title="Pose the selected end effector through a constrained ancestor chain"
+          >
+            IK
+          </button>
         </div>
+        {rigToolMode === 'ik' && (
+          <div className="mb-2 rounded border border-amber-500/40 bg-amber-950/20 p-1" data-testid="rig-ik-settings">
+            <div className="mb-1 text-[10px] text-amber-200">IK pose chain</div>
+            <div className="grid grid-cols-2 gap-1">
+              <label className="text-[10px] text-slate-400">
+                Joints
+                <select
+                  data-testid="rig-ik-chain-length"
+                  value={rigIkSettings.chainLength}
+                  onChange={(event) => onRigIkSettingsChange({ chainLength: Number(event.target.value) })}
+                  className="block w-full bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100"
+                >
+                  {RIG_IK_CHAIN_LENGTHS.map((length) => <option key={length} value={length}>{length}</option>)}
+                </select>
+              </label>
+              <label className="text-[10px] text-slate-400">
+                Pole
+                <select
+                  data-testid="rig-ik-pole-axis"
+                  value={rigIkSettings.poleAxis}
+                  onChange={(event) => onRigIkSettingsChange({ poleAxis: event.target.value as RigIkPoleAxis })}
+                  className="block w-full bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100"
+                >
+                  <option value="none">Off</option>
+                  <option value="x">+X</option>
+                  <option value="-x">-X</option>
+                  <option value="y">+Y</option>
+                  <option value="-y">-Y</option>
+                  <option value="z">+Z</option>
+                  <option value="-z">-Z</option>
+                </select>
+              </label>
+              <label className="text-[10px] text-slate-400">
+                Joint limit
+                <select
+                  data-testid="rig-ik-joint-limit"
+                  value={rigIkSettings.maxJointAngleDegrees}
+                  onChange={(event) => onRigIkSettingsChange({ maxJointAngleDegrees: Number(event.target.value) })}
+                  className="block w-full bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100"
+                >
+                  {RIG_IK_MAX_ANGLE_OPTIONS.map((angle) => <option key={angle} value={angle}>{angle}°</option>)}
+                </select>
+              </label>
+              <label className="text-[10px] text-slate-400">
+                Iterations
+                <select
+                  data-testid="rig-ik-iterations"
+                  value={rigIkSettings.maxIterations}
+                  onChange={(event) => onRigIkSettingsChange({ maxIterations: Number(event.target.value) })}
+                  className="block w-full bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100"
+                >
+                  {RIG_IK_ITERATION_OPTIONS.map((count) => <option key={count} value={count}>{count}</option>)}
+                </select>
+              </label>
+            </div>
+            <label className="mt-1 block text-[10px] text-slate-400">
+              Tolerance
+              <select
+                data-testid="rig-ik-tolerance"
+                value={rigIkSettings.tolerance}
+                onChange={(event) => onRigIkSettingsChange({ tolerance: Number(event.target.value) })}
+                className="block w-full bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100"
+              >
+                {RIG_IK_TOLERANCE_OPTIONS.map((value) => <option key={value} value={value}>{value}</option>)}
+              </select>
+            </label>
+            <div className="mt-1 text-[10px] text-slate-400">
+              Drag the labeled target in any pane. Escape cancels the full chain. Rotations export as pose data; bone lengths stay fixed.
+            </div>
+            {rigIkLastResult && (
+              <div
+                data-testid="rig-ik-result"
+                data-rig-ik-status={rigIkLastResult.status}
+                className="mt-1 text-[10px] text-amber-200"
+              >
+                {rigIkLastResult.status.replace('-', ' ')} · {rigIkLastResult.distanceToTarget.toFixed(4)} target distance
+              </div>
+            )}
+          </div>
+        )}
         <label className="flex items-center gap-1 mb-2 text-[10px] text-slate-400">
           <span className="shrink-0">Snap</span>
           <select
