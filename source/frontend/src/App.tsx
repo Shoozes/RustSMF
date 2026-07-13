@@ -856,7 +856,7 @@ export default function App() {
           showWeightPreview={workspace.showWeightSection ? showWeightPreview : false}
           onToggleWeightPreview={workspace.showWeightSection ? toggleWeightPreview : undefined}
           transformMode={transformMode}
-          onSetTransformMode={workspace.showTransformControls ? setTransformMode : undefined}
+          onSetTransformMode={boneTransformOwner !== 'disabled' ? setTransformMode : undefined}
           onNudgeBone={onNudgeBone}
           showBoneLabels={shouldShowBoneLabels}
           onToggleBoneLabels={toggleBoneLabels}

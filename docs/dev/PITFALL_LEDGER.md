@@ -1,6 +1,68 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-07-13 (verified TransformControls helper ownership, explicit Endpoint routing, Rig IK, head-motion attribution, GLB recovery export, SMF serialized-world-pose handling, viewport layout hit-test timing, head-node export, and DQ sign-equivalent diagnostics).
+Last reviewed: 2026-07-13 (verified SMF Rig policy/bind reset, rig-space pose export, deform-index skin roundtrip, TransformControls/Endpoint/IK ownership, GLB recovery export, and DQ sign-equivalent diagnostics).
+
+### Q: What pitfall are we preventing?
+
+**What:** SMF skin influences can be silently rebound to different bones when deform-order indices are mistaken for full rig-node IDs.
+
+**Context and constraints:** SMF rig arrays include `isBone=0` head/dummy nodes, while mesh skin payloads index only deform bones. RustSMF's runtime skeleton also contains deform bones only. Export/reimport must preserve exact influence identity without structural heuristics.
+
+**Why it happened:** `exportSMFToBuffer` inherited an old converter map from runtime bone order to full node index. The current importer and runtime correctly kept stored skin indices in deform order, so exporting a real head-node fixture shifted every influence after a dummy node. Roundtrip diagnostics compared geometry and pose but not skin payloads, producing a false pass.
+
+**Where:** `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/smfDiagnostics.ts`, `source/frontend/src/hooks/poseEdits.test.ts`, `source/frontend/src/loaders/smfDiagnostics.test.ts`, and `source/frontend/tests/mixamo_smf_baldguy.smf`.
+
+**Evidence:** The new real-fixture preservation assertion failed with original indices such as `16,19,14,15` reimporting as `25,31,23,24`; the offset varied with intervening head nodes. After removing the node-ID remap, the focused 68-test SMF/Rig slice passed, including exact skin arrays and candidate-vs-reimport diagnostics.
+
+**Developer story:** A node/head/skin/animation identity test was added for the SMF Rig parity done condition. Node and animation assertions passed, but skin arrays diverged while the existing diagnostic still reported success. Comparing the current loader with the owned legacy packer separated stored deform order from runtime full-node remapping. The serializer was corrected at the format boundary and the diagnostic gained explicit skin-index and 8-bit weight checks.
+
+**How to catch it:** Run `npx tsx --test src/hooks/poseEdits.test.ts src/loaders/smfDiagnostics.test.ts` from `source/frontend`; require `SMF_ROUNDTRIP_SKINNING_OK`, zero skin-index changes, and exact real-fixture skin arrays after reimport.
+
+**Solutions tried:**
+1. `15/100` Accept the prior roundtrip report, result: false pass because skin identity was not compared.
+2. `35/100` Preserve the full-node remap from the old GLB converter, result: incompatible with the current deform-only runtime and real SMF payload.
+3. `98/100` Keep SMF skin payloads in deform order and make diagnostics fail on index/weight drift, result: exact real-fixture identity plus user-visible regression detection.
+
+**Current solution:** Export writes in-memory deform-order skin indices unchanged. Roundtrip reports expose changed-index count and maximum weight delta, with weights allowed only normal 8-bit quantization tolerance.
+
+**Decision rationale:** The checked-in real SMF fixture, current importer, and deform-only skeleton agree on one contract. Reintroducing full-node IDs or remapping on import would add unnecessary dual representations and risk runtime skinning.
+
+**Effectiveness:** `98/100`, durable. The fix is localized to the serializer, directly proved on a head-node asset, and guarded by both exact and diagnostic tests.
+
+**Relevance check:** Current. Any SMF serializer, head-node, skeleton-order, or skin-edit change crosses this boundary.
+
+**Next prevention step:** Keep skin payload checks in every structured SMF roundtrip and require a head-node fixture before changing node-list or skin-index code.
+
+### Q: What pitfall are we preventing?
+
+**What:** A child SMF pose can export in the wrong space, and a reset button can destroy its bind offset by treating local zero as bind pose.
+
+**Context and constraints:** SMF stores rig/world dual quaternions, runtime Three bones use local transforms, and non-deform head nodes are skipped in the runtime hierarchy. Reset must affect one selected deform bone, remain undoable, and preserve parent/head/skin/animation identity.
+
+**Why it happened:** `applyPoseEditsToSmf` read `bone.matrix`, which is local to the effective deform parent, while the SMF rig record expects world/rig space. The old reset path set position and rotation to zero, which only matches a bind transform by accident and is wrong for most child bones.
+
+**Where:** `source/frontend/src/hooks/poseEdits.ts`, `source/frontend/src/utils/rigEdits.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/components/Inspector.tsx`, and their focused tests.
+
+**Evidence:** A synthetic root/head/child fixture proves the correct edited DQ matches `matrixWorld` and differs from the local matrix. The reset unit poses a parent and child under a transformed scene root, then proves only the child returns to its inverse-bind-derived local transform. The real-SMF browser flow proves dirty, reset, undo, redo, and roundtrip states.
+
+**Developer story:** Source-mapping showed SMF has no writable name metadata and legacy detach is structural, leaving reset as the only safe candidate. Inspecting the existing reset revealed zeroing, and adding a skipped-head child export test exposed local-space serialization. The implementation derived bind world matrices from skeleton inverses, converted them to the selected bone's local space, and changed pose export to rig-space world matrices.
+
+**How to catch it:** Run `npx tsx --test src/hooks/poseEdits.test.ts src/utils/rigEdits.test.ts` and the Playwright test `SMF rig policy gates indexed edits and bind reset is reversible`.
+
+**Solutions tried:**
+1. `10/100` Set selected bone position/rotation to zero, result: destroys legitimate child bind offsets.
+2. `30/100` Serialize the runtime local matrix, result: wrong SMF DQ for nested/effective-parent chains.
+3. `97/100` Derive reset locals from inverse binds and serialize edited SMF DQs from `matrixWorld`, result: bounded single-bone reset and correct head-skipping export.
+
+**Current solution:** `resetBoneToBindPose` validates the selected deform bone and inverse bind, reconstructs bind world/local transforms, and refreshes the skeleton. `applyPoseEditsToSmf` writes rig-space world DQs. Reset clears that bone's pose edit only after success and records one history transaction.
+
+**Decision rationale:** Inverse binds and `matrixWorld` are the existing authoritative runtime evidence. Heuristic zeroing or parent-index reconstruction at the UI layer was rejected because both duplicate loader math and fail under transformed roots/head skips.
+
+**Effectiveness:** `97/100`, durable. Pure, real-fixture, and browser proofs cover space conversion, history, identity, and roundtrip behavior.
+
+**Relevance check:** Current. Any bind-reset, pose-export, effective-parent, or skeleton-inverse change can reintroduce it.
+
+**Next prevention step:** Keep matrix-space assertions explicit in pose tests; never label zeroing as reset or serialize an SMF rig DQ without proving its expected space.
 
 ### Q: What pitfall are we preventing?
 

@@ -89,6 +89,7 @@ import {
   moveBoneToWorldPosition,
   normalizeRigSnapStep,
   reparentBonePreserveWorldTransform,
+  resetBoneToBindPose,
   removeAnimationClipBoneNames,
   rotateBoneAroundWorldAxis,
   setBoneDetached,
@@ -2631,24 +2632,38 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     if (!bone) return;
 
     const before = capturePoseSnapshot([boneName]);
+    if (delta.reset) {
+      const reset = resetBoneToBindPose(skeleton, boneName);
+      if (!reset.ok) {
+        ui.setStatus(reset.message);
+        return;
+      }
+
+      const nextPoseEdits = { ...poseEditsRef.current };
+      delete nextPoseEdits[boneName];
+      poseEditsRef.current = nextPoseEdits;
+      setPoseEditHasDirtyState(hasPoseEdits(nextPoseEdits));
+      const after = capturePoseSnapshot([boneName]);
+      const pushed = pushPoseHistory(`Reset bind pose ${boneName}`, before, after);
+      ui.setStatus(pushed
+        ? `Reset ${boneName} to its bind pose.`
+        : `${boneName} is already at its bind pose.`);
+      return;
+    }
+
     const prev = poseEditsRef.current[boneName] ?? emptyPoseEdit();
     const next = applyNudgeDelta(prev, delta);
     poseEditsRef.current = { ...poseEditsRef.current, [boneName]: next };
     setPoseEditHasDirtyState(hasPoseEdits(poseEditsRef.current));
 
-    if (delta.reset) {
-      bone.position.set(0, 0, 0);
-      bone.rotation.set(0, 0, 0);
-    } else {
-      if (delta.x !== undefined) bone.position.x += delta.x;
-      if (delta.y !== undefined) bone.position.y += delta.y;
-      if (delta.rotZ !== undefined) bone.rotation.z += delta.rotZ;
-    }
+    if (delta.x !== undefined) bone.position.x += delta.x;
+    if (delta.y !== undefined) bone.position.y += delta.y;
+    if (delta.rotZ !== undefined) bone.rotation.z += delta.rotZ;
     bone.updateMatrix();
     skeleton.update();
     const after = capturePoseSnapshot([boneName]);
-    pushPoseHistory(delta.reset ? `Reset pose ${boneName}` : `Nudge ${boneName}`, before, after);
-  }, [capturePoseSnapshot, model.skeleton, pushPoseHistory]);
+    pushPoseHistory(`Nudge ${boneName}`, before, after);
+  }, [capturePoseSnapshot, model.skeleton, pushPoseHistory, ui]);
 
   const handleBoneTransformEdit = useCallback((event: BoneTransformEditEvent) => {
     if (event.owner === 'disabled') return;

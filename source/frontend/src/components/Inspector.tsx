@@ -152,11 +152,13 @@ const Inspector: React.FC<InspectorProps> = ({
           </div>
         )}
 
-        {/* Bone transform controls (Cycle 3: 3D TransformControls gizmo in viewport + quick nudges + mode buttons.
-            3D marker provides visual feedback. Nudge buttons feed the pose-edit layer; edits are captured at SMF export time. */}
+        {/* Quick pose controls write through the pose-edit layer; Rig also owns the viewport gizmo. */}
         {showTransformControls && selected && selected !== 'Scene' && (
           <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
-            <div>Transform for: <span className="font-mono text-amber-300">{selected}</span> (gizmo active in viewport)</div>
+            <div>
+              Pose for: <span className="font-mono text-amber-300">{selected}</span>
+              {editorMode === 'rig' ? ' (Rig Select owns the viewport gizmo)' : ' (viewport gizmo detached)'}
+            </div>
             <button data-testid="transform-x-btn" className="mr-1 mt-0.5 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
               onNudgeBone && onNudgeBone(selected, { x: 0.1 });
             }}> +X </button>
@@ -166,9 +168,9 @@ const Inspector: React.FC<InspectorProps> = ({
             <button data-testid="transform-rot-btn" className="px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
               onNudgeBone && onNudgeBone(selected, { rotZ: 0.2 });
             }}> rot </button>
-            <button data-testid="transform-reset-btn" className="ml-1 px-1 py-0 bg-slate-800 text-xs" onClick={() => {
+            <button data-testid="transform-reset-btn" className="ml-1 px-1 py-0 bg-slate-800 text-xs" title="Restore the selected deform bone local bind transform" onClick={() => {
               onNudgeBone && onNudgeBone(selected, { reset: true });
-            }}> reset </button>
+            }}> bind </button>
             {onToggleWeightPreview && (
               <button
                 data-testid="weight-preview-btn"
@@ -197,7 +199,11 @@ const Inspector: React.FC<InspectorProps> = ({
                 >S</button>
               </div>
             )}
-            <span className="ml-1 text-slate-500">(gizmo + nudges; T/R/S buttons or keys for mode; Space pause anim, anim may override)</span>
+            <span className="ml-1 text-slate-500">
+              {editorMode === 'rig'
+                ? '(gizmo + pose nudges; T/R/S selects mode; pause playback to hold a manual pose)'
+                : '(pose nudges only; Skin owns paint input; pause playback to hold a manual pose)'}
+            </span>
           </div>
         )}
       </div>

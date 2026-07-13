@@ -6,22 +6,6 @@ This file contains executable work only. Every task must identify What, Why, Whe
 
 ## Active Backlog
 
-### P2: Complete SMF-aware rig editing parity
-
-- What: Decide and implement the safe SMF-source metadata/edit layer for rename, detach/connect, mirror, and reset behavior.
-- Why: Existing-node pose rotations export safely, but structural or metadata mutations can corrupt indexed nodes, skipped head dummies, skin indices, or animation targets.
-- Where: `source/frontend/src/loaders/smfRig.ts`, `source/frontend/src/loaders/smf.ts`, `source/frontend/src/utils/rigValidation.ts`, `source/frontend/src/utils/rigEdits.ts`, `source/frontend/src/components/RigPanel.tsx`, real SMF/head-node fixtures, and old Rig scripts/screenshots.
-- When: Next format-authoring slice; complete before exposing another SMF Rig control.
-- How: Preserve indexed identity by default, source-map old semantics, add pure validators/helpers first, and require import/export/reimport evidence before enabling UI.
-- Subtasks:
-  - Classify SMF names as display-only metadata, writable node records, or unsupported, with the exact export consequence.
-  - Source-map old detach/connect, mirror, and reset semantics against current flat-node/effective-parent behavior.
-  - Implement only operations that preserve or intentionally rewrite node, skin, and animation identity with bounded validation.
-  - Keep rejected operations visibly disabled with a format-specific reason; do not leave inert controls.
-  - Add real head-node fixture coverage for every enabled operation.
-- Done when: Every SMF Rig control is either absent/disabled with an exact reason or passes node-index, head-node, skin-index, animation-target, pose, and import/export/reimport assertions.
-- Verification: Focused rig/SMF units, real-fixture roundtrip diagnostics, browser enable/disable/undo behavior, `pwsh -File run.ps1 -Task verify`, and browser e2e.
-
 ### P2: Resolve remaining global shelf and material-policy actions
 
 - What: Finish or explicitly retire the remaining old shelf actions: global snap, texture repeat/filter, merge-same-textures, and include-textures export policy.

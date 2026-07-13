@@ -136,7 +136,7 @@ export default function ExportPanel({
               meshes {smfRoundtripReport.after.meshes}, bones {smfRoundtripReport.after.bones}, clips {smfRoundtripReport.after.animations}
             </div>
             <div className="smf-roundtrip-summary">
-              max vertex delta {smfRoundtripReport.vertexPositionMaxDelta.toFixed(6)} / normal delta {smfRoundtripReport.vertexNormalMaxDelta.toFixed(6)} / bounds delta {smfRoundtripReport.meshBoundsMaxDelta.toFixed(6)} / bone pose delta {smfRoundtripReport.bonePoseMaxDelta.toFixed(6)} (samples {smfRoundtripReport.bonePoseSamplesChecked})
+              max vertex delta {smfRoundtripReport.vertexPositionMaxDelta.toFixed(6)} / normal delta {smfRoundtripReport.vertexNormalMaxDelta.toFixed(6)} / skin index changes {smfRoundtripReport.skinIndexMismatchCount} / skin weight delta {smfRoundtripReport.skinWeightMaxDelta.toFixed(6)} / bounds delta {smfRoundtripReport.meshBoundsMaxDelta.toFixed(6)} / bone pose delta {smfRoundtripReport.bonePoseMaxDelta.toFixed(6)} (samples {smfRoundtripReport.bonePoseSamplesChecked})
             </div>
             {poseDeltaDetails.length > 0 && (
               <>

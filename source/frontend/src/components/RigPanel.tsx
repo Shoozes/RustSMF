@@ -10,6 +10,7 @@ import {
   type RigIkSolveResult,
 } from '../utils/rigIk';
 import type { RigValidationReport } from '../utils/rigValidation';
+import { getSmfRigControlPolicy, listSmfRigPolicies, type SmfRigControl } from '../utils/smfRigPolicy';
 
 interface RigPanelProps {
   report: RigValidationReport;
@@ -61,15 +62,19 @@ export default function RigPanel({
   editorMode = 'rig',
 }: RigPanelProps) {
   const visibleIssues = report.issues.slice(0, 6);
+  const isSmfSource = sourceFormat === 'smf';
+  const smfControlReason = (control: SmfRigControl): string | undefined => (
+    isSmfSource ? getSmfRigControlPolicy(control).reason : undefined
+  );
   const [renameValue, setRenameValue] = useState(selected === 'Scene' ? '' : selected);
   const [createValue, setCreateValue] = useState(selected && selected !== 'Scene' ? `${selected}_child` : '');
   const [parentValue, setParentValue] = useState('');
-  const canRename = !!selected && selected !== 'Scene' && selectedIsDeformBone && report.boneCount > 0 && sourceFormat !== 'smf';
+  const canRename = !!selected && selected !== 'Scene' && selectedIsDeformBone && report.boneCount > 0 && !isSmfSource;
   const canCreateChild = canRename;
   const parentOptions = deformBoneNames.filter((name) => name && name !== selected);
   const canReparent = canRename && parentOptions.length > 0;
-  const canChangeDetachState = !!selected && selected !== 'Scene' && report.boneCount > 0 && sourceFormat !== 'smf';
-  const canSpinRig = report.boneCount > 0 && sourceFormat !== 'smf';
+  const canChangeDetachState = !!selected && selected !== 'Scene' && report.boneCount > 0 && !isSmfSource;
+  const canSpinRig = report.boneCount > 0 && !isSmfSource;
   const canUseEndpoint = selectedIsDeformBone && report.boneCount > 0;
   const canUseIk = selectedIsDeformBone && report.boneCount > 1;
 
@@ -122,6 +127,7 @@ export default function RigPanel({
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'add-child' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!canCreateChild}
             onClick={() => onRigToolModeChange('add-child')}
+            title={smfControlReason('create-child')}
           >
             Add child
           </button>
@@ -130,6 +136,7 @@ export default function RigPanel({
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'move' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!canCreateChild}
             onClick={() => onRigToolModeChange('move')}
+            title={smfControlReason('move')}
           >
             Move
           </button>
@@ -138,6 +145,7 @@ export default function RigPanel({
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'rotate' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!canCreateChild}
             onClick={() => onRigToolModeChange('rotate')}
+            title={smfControlReason('rotate')}
           >
             Rotate
           </button>
@@ -240,6 +248,7 @@ export default function RigPanel({
             onChange={(event) => onRigSnapStepChange(Number(event.target.value))}
             className="min-w-0 flex-1 bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100 disabled:text-slate-500"
             aria-label="Rig snap step"
+            title={smfControlReason('snap')}
           >
             {RIG_SNAP_STEPS.map((step) => (
               <option key={step} value={String(step)}>
@@ -257,12 +266,14 @@ export default function RigPanel({
             onChange={(event) => setRenameValue(event.target.value)}
             className="min-w-0 flex-1 bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100 disabled:text-slate-500"
             aria-label="Bone name"
+            title={smfControlReason('rename')}
           />
           <button
             data-testid="rig-rename-btn"
             className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50"
             disabled={!canRename}
             onClick={() => onRenameSelectedBone(renameValue)}
+            title={smfControlReason('rename')}
           >
             Rename
           </button>
@@ -275,6 +286,7 @@ export default function RigPanel({
             onChange={(event) => setParentValue(event.target.value)}
             className="min-w-0 flex-1 bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100 disabled:text-slate-500"
             aria-label="Parent bone"
+            title={smfControlReason('reparent')}
           >
             {parentOptions.map((name) => (
               <option key={name} value={name}>{name}</option>
@@ -285,6 +297,7 @@ export default function RigPanel({
             className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50"
             disabled={!canReparent || !parentValue}
             onClick={() => onReparentSelectedBone(parentValue)}
+            title={smfControlReason('reparent')}
           >
             Reparent
           </button>
@@ -297,12 +310,14 @@ export default function RigPanel({
             onChange={(event) => setCreateValue(event.target.value)}
             className="min-w-0 flex-1 bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100 disabled:text-slate-500"
             aria-label="New child bone name"
+            title={smfControlReason('create-child')}
           />
           <button
             data-testid="rig-create-child-btn"
             className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50"
             disabled={!canCreateChild}
             onClick={() => onCreateChildBone(createValue)}
+            title={smfControlReason('create-child')}
           >
             Child
           </button>
@@ -312,6 +327,7 @@ export default function RigPanel({
           className="w-full px-1 py-0.5 text-xs bg-rose-950/70 hover:bg-rose-900/80 border border-rose-800/70 text-rose-100 disabled:opacity-50"
           disabled={!canRename}
           onClick={onDeleteSelectedBone}
+          title={smfControlReason('delete')}
         >
           Delete Selected
         </button>
@@ -321,6 +337,7 @@ export default function RigPanel({
           className="mt-1 w-full px-1 py-0.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 disabled:opacity-50"
           disabled={!canChangeDetachState}
           onClick={() => onSetSelectedBoneDetached(selectedIsDeformBone)}
+          title={smfControlReason('detach-connect')}
         >
           {selectedIsDeformBone ? 'Detach Selected' : 'Connect Selected'}
         </button>
@@ -333,14 +350,25 @@ export default function RigPanel({
               className="px-1 py-0.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 disabled:opacity-50"
               disabled={!canSpinRig}
               onClick={() => onSpinRig(axis)}
+              title={smfControlReason('spin')}
             >
               {axis.toUpperCase()}
             </button>
           ))}
         </div>
-        {sourceFormat === 'smf' && (
-          <div className="text-[10px] text-slate-500 mb-2">
-            SMF source nodes keep indexed names for fidelity export.
+        {isSmfSource && (
+          <div className="mb-2 grid gap-1 rounded border border-slate-700 bg-slate-950/40 p-1" data-testid="smf-rig-policy">
+            <div className="text-[10px] text-slate-300">SMF edit policy</div>
+            {listSmfRigPolicies().map((policy) => (
+              <div
+                key={policy.id}
+                data-testid={`smf-rig-policy-${policy.id}`}
+                data-smf-rig-supported={String(policy.supported)}
+                className={`text-[10px] leading-snug ${policy.supported ? 'text-emerald-300' : 'text-slate-500'}`}
+              >
+                <span className="font-medium">{policy.label}:</span> {policy.reason}
+              </div>
+            ))}
           </div>
         )}
         {selected && selected !== 'Scene' && !selectedIsDeformBone && sourceFormat !== 'smf' && (

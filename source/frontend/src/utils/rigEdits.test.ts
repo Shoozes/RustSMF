@@ -7,6 +7,7 @@ import {
   moveBoneToWorldPosition,
   normalizeRigSnapStep,
   reparentBonePreserveWorldTransform,
+  resetBoneToBindPose,
   removeAnimationClipBoneNames,
   rotateBoneAroundWorldAxis,
   setBoneDetached,
@@ -45,6 +46,44 @@ describe('rigEdits', () => {
     assert.equal(validateBoneRename(skeleton, 'Root', 'Tip').ok, false);
     assert.equal(validateBoneRename(skeleton, 'Root', 'Root').ok, false);
     assert.equal(validateBoneRename(skeleton, 'Root', 'bad name').ok, false);
+  });
+
+  it('restores a child local bind pose while its parent remains posed', () => {
+    const scene = new THREE.Group();
+    scene.position.set(4, -2, 1);
+    const root = new THREE.Bone();
+    root.name = 'Root';
+    root.position.set(0.5, 1, -0.25);
+    const tip = new THREE.Bone();
+    tip.name = 'Tip';
+    tip.position.set(0, 2, 0.5);
+    tip.rotation.set(0.1, -0.2, 0.3);
+    root.add(tip);
+    scene.add(root);
+    scene.updateMatrixWorld(true);
+    const skeleton = new THREE.Skeleton([root, tip]);
+    skeleton.calculateInverses();
+    const expectedPosition = tip.position.clone();
+    const expectedQuaternion = tip.quaternion.clone();
+
+    root.rotation.y = 0.7;
+    tip.position.set(5, 6, 7);
+    tip.rotation.set(-0.6, 0.4, -0.2);
+    scene.updateMatrixWorld(true);
+
+    const result = resetBoneToBindPose(skeleton, 'Tip');
+
+    assert.equal(result.ok, true);
+    assert.ok(tip.position.distanceTo(expectedPosition) < 1e-6);
+    assert.ok(1 - Math.abs(tip.quaternion.dot(expectedQuaternion)) < 1e-6);
+    assert.ok(Math.abs(root.rotation.y - 0.7) < 1e-6, 'reset must not change the posed parent');
+  });
+
+  it('rejects bind reset without a selected deform bone or inverse bind', () => {
+    assert.equal(resetBoneToBindPose(null, 'Tip').ok, false);
+    const skeleton = makeSkeleton();
+    skeleton.boneInverses = [];
+    assert.equal(resetBoneToBindPose(skeleton, 'Tip').ok, false);
   });
 
   it('retargets animation tracks that reference a renamed bone', () => {

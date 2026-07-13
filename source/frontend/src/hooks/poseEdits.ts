@@ -136,8 +136,8 @@ export function applyPoseEditsToSmf(
     const threeBone = findBoneByName(skeleton, boneName);
     if (!threeBone) continue;
 
-    threeBone.updateMatrix();
-    const smfMat = threeMatrixToSmf(threeBone.matrix);
+    threeBone.updateWorldMatrix(true, false);
+    const smfMat = threeMatrixToSmf(threeBone.matrixWorld);
     const rawDq = dqCreateFromMatrix(smfMat);
     cloned.bones[smfIdx].dq = dqNegate(rawDq);
   }

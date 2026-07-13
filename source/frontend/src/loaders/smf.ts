@@ -289,8 +289,8 @@ export function buildThreeScene(imported: ImportedSmf): BuiltThreeSmfScene {
     return tex;
   });
 
-  // Skin remap: SMF stores sequential indices into deform bones (order of isBone=1 in flat list).
-  // buildRigHierarchy produces skeleton.bones in exactly that order, so direct copy.
+  // SMF stores sequential indices into deform bones (order of isBone=1 in the flat node list).
+  // buildRigHierarchy produces skeleton.bones in that order, so the in-memory payload stays direct.
   const skinnedMeshes: THREE.SkinnedMesh[] = [];
 
   imported.meshes.forEach((m) => {
@@ -383,10 +383,8 @@ export function buildThreeScene(imported: ImportedSmf): BuiltThreeSmfScene {
  * Handles coord transforms (Y-up data -> Z-up SMF), DQ negate/flip/normalize,
  * nodeList with head nodes for SMF rig convention, winding, skin remap, etc.
  *
- * Note: Follows the reference's known limitations for complex rigs/anim (head/tail bone rotations).
- * Good for basic roundtrips on the samples.
- * Edits (gizmos/nudges in UI) are preview-only; this exports the ImportedSmf as captured at load
- * (or constructed for GLB etc). See useLoadModel handleExport + Inspector notes (Task 6).
+ * The caller supplies a fully prepared ImportedSmf candidate. SMF-source pose, skin, and animation
+ * edit layers are applied in useLoadModel before this serializer runs.
  */
 export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
   const { meshes, textures, bones: importedBones, animations } = imported;
@@ -446,16 +444,6 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
   const mW = new BinaryWriter(modelSize, 'models');
   mW.u8(meshes.length);
 
-  // Build reverse skin map (three isBone index -> SMF node)
-  const reverseSkinMap: number[] = [];
-  let sIdx = 0;
-  importedBones.forEach((b, node) => {
-    if (b.isBone) {
-      reverseSkinMap[sIdx] = node;
-      sIdx++;
-    }
-  });
-
   meshes.forEach(m => {
     const vcount = m.positions.length / 3;
     mW.u32(vcount * 44);
@@ -477,11 +465,9 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
       const pack = (f: number) => Math.round((f + 1) * 127);
       mW.u8(pack(tx)).u8(pack(ty)).u8(pack(tz)).u8(0);
 
-      // Skin indices (map back)
+      // SMF skin indices use deform-bone order, not full node IDs. Head nodes do not consume an index.
       for (let j = 0; j < 4; j++) {
-        const threeIdx = m.skinIndices[v*4 + j];
-        const smfNode = reverseSkinMap[threeIdx] ?? 0;
-        mW.u8(smfNode);
+        mW.u8(m.skinIndices[v*4 + j]);
       }
 
       // Weights (already 0-1, to 0-255)

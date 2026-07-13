@@ -17,6 +17,7 @@ import {
   dqToMatrix,
   dqToLocalTransform,
 } from './coord';
+import { installImageTestPolyfill } from '../test/installImageTestPolyfill';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -186,55 +187,6 @@ describe('SMF animation conversion', () => {
     assert.ok(Math.abs(positionTrack.values[0] - 5) < 1e-5, 'pose local should use the effective bone parent');
   });
 });
-
-function installImageTestPolyfill() {
-  const g = globalThis as any;
-  if (!g.Image) {
-    g.Image = class {
-      src = '';
-      width = 1;
-      height = 1;
-    };
-  }
-  if (!g.document) {
-    g.document = {
-      createElement(tag: string) {
-        if (tag !== 'canvas') {
-          throw new Error(`Unsupported test element: ${tag}`);
-        }
-        return {
-          width: 1,
-          height: 1,
-          getContext() {
-            // Rich 2d ctx stub supporting: SMF texture path (imageData) + makeBoneLabel (text/rect/scale/baseline/DPR)
-            const ctx: any = {
-              createImageData(width: number, height: number) {
-                return { data: new Uint8ClampedArray(width * height * 4) };
-              },
-              putImageData() {},
-              drawImage() {},
-              getImageData(_sx = 0, _sy = 0, width = 1, height = 1) {
-                return { data: new Uint8ClampedArray(width * height * 4) };
-              },
-              scale() {},
-              fillRect() {},
-              fillText(_t: string) {},
-            };
-            // Writable style props assigned in makeBoneLabel
-            ctx.fillStyle = '';
-            ctx.font = '';
-            ctx.textAlign = '';
-            ctx.textBaseline = '';
-            return ctx;
-          },
-          toDataURL() {
-            return 'data:image/png;base64,';
-          },
-        };
-      },
-    };
-  }
-}
 
 describe('smf export roundtrip (data-driven)', () => {
   it('minimal ImportedSmf export -> reimport preserves structure', () => {

@@ -92,6 +92,16 @@ export type RigRotateResult =
   | { ok: true; bone: THREE.Bone; angleRadians: number }
   | { ok: false; reason: RigRotateFailureReason; message: string };
 
+export type RigResetFailureReason =
+  | 'no-selected-bone'
+  | 'missing-bone'
+  | 'missing-bind-transform'
+  | 'invalid-bind-transform';
+
+export type RigResetResult =
+  | { ok: true; bone: THREE.Bone }
+  | { ok: false; reason: RigResetFailureReason; message: string };
+
 const BONE_NAME_PATTERN = /^[A-Za-z0-9_.:-]+$/;
 const SKIN_WEIGHT_EPSILON = 1e-6;
 export const RIG_SNAP_STEPS = [0, 0.05, 0.1, 0.25, 0.5, 1] as const;
@@ -110,6 +120,65 @@ export function snapRigWorldPosition(worldPosition: THREE.Vector3, snapStep: num
     Math.round(worldPosition.y / normalizedStep) * normalizedStep,
     Math.round(worldPosition.z / normalizedStep) * normalizedStep,
   );
+}
+
+export function resetBoneToBindPose(
+  skeleton: THREE.Skeleton | null | undefined,
+  boneName: string,
+): RigResetResult {
+  if (!skeleton || !boneName || boneName === 'Scene') {
+    return { ok: false, reason: 'no-selected-bone', message: 'Select a deform bone before resetting its bind pose.' };
+  }
+
+  const boneIndex = skeleton.bones.findIndex((bone) => bone.name === boneName);
+  if (boneIndex < 0) {
+    return { ok: false, reason: 'missing-bone', message: `Bone ${boneName} is not in the current deform skeleton.` };
+  }
+
+  const boneInverse = skeleton.boneInverses[boneIndex];
+  if (!boneInverse) {
+    return { ok: false, reason: 'missing-bind-transform', message: `Bone ${boneName} has no inverse bind transform.` };
+  }
+
+  const bone = skeleton.bones[boneIndex];
+  const bindWorld = boneInverse.clone().invert();
+  let parentBindWorld: THREE.Matrix4 | null = null;
+  const parent = bone.parent;
+  if (parent && (parent as THREE.Bone).isBone === true) {
+    const parentIndex = skeleton.bones.indexOf(parent as THREE.Bone);
+    const parentInverse = parentIndex >= 0 ? skeleton.boneInverses[parentIndex] : null;
+    if (!parentInverse) {
+      return {
+        ok: false,
+        reason: 'missing-bind-transform',
+        message: `Parent of ${boneName} has no inverse bind transform.`,
+      };
+    }
+    parentBindWorld = parentInverse.clone().invert();
+  } else if (parent) {
+    parent.updateWorldMatrix(true, false);
+    parentBindWorld = parent.matrixWorld.clone();
+  }
+
+  const bindLocal = parentBindWorld
+    ? parentBindWorld.clone().invert().multiply(bindWorld)
+    : bindWorld;
+  const position = new THREE.Vector3();
+  const quaternion = new THREE.Quaternion();
+  const scale = new THREE.Vector3();
+  bindLocal.decompose(position, quaternion, scale);
+  const finite = [...position.toArray(), ...quaternion.toArray(), ...scale.toArray()].every(Number.isFinite);
+  if (!finite || quaternion.lengthSq() <= 1e-12 || Math.abs(scale.x * scale.y * scale.z) <= 1e-12) {
+    return { ok: false, reason: 'invalid-bind-transform', message: `Bone ${boneName} has an invalid inverse bind transform.` };
+  }
+
+  bone.position.copy(position);
+  bone.quaternion.copy(quaternion).normalize();
+  bone.scale.copy(scale);
+  bone.updateMatrix();
+  bone.updateWorldMatrix(true, false);
+  skeleton.update();
+  return { ok: true, bone };
 }
 
 export function validateBoneRename(

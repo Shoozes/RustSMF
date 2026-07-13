@@ -71,6 +71,8 @@ export interface SmfRoundtripReport {
   checks: SmfRoundtripCheck[];
   vertexPositionMaxDelta: number;
   vertexNormalMaxDelta: number;
+  skinIndexMismatchCount: number;
+  skinWeightMaxDelta: number;
   bonePoseMaxDelta: number;
   meshBoundsMaxDelta: number;
   bonePoseSamplesChecked: number;
@@ -225,12 +227,15 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
   const checks: SmfRoundtripCheck[] = [];
   let vertexPositionMaxDelta = 0;
   let vertexNormalMaxDelta = 0;
+  let skinIndexMismatchCount = 0;
+  let skinWeightMaxDelta = 0;
   let bonePoseMaxDelta = 0;
   let meshBoundsMaxDelta = 0;
   let bonePoseSamplesChecked = 0;
   const poseDeltaDetails: SmfPoseDeltaDetail[] = [];
   let countMismatchCount = 0;
   let geometryMismatchCount = 0;
+  let skinningMismatchCount = 0;
   let boundsMismatchCount = 0;
   let timingMismatchCount = 0;
   let poseMismatchCount = 0;
@@ -238,6 +243,7 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
   const poseTolerance = 5e-4;
   const meshBoundsTolerance = 1e-4;
   const frameCountTolerance = 1e-6;
+  const skinWeightTolerance = (1 / 255) + 1e-6;
 
   const pushCheck = (
     level: SmfRoundtripCheckLevel,
@@ -287,12 +293,24 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
     const meshTarget = beforeMesh.name || `mesh ${m}`;
     const meshPosDelta = maxDelta(beforeMesh.positions, afterMesh.positions, 1);
     const meshNormalDelta = maxDelta(beforeMesh.normals, afterMesh.normals, 1);
+    const meshSkinWeightDelta = maxDelta(beforeMesh.skinWeights, afterMesh.skinWeights, 1);
+    const skinIndexLength = Math.min(beforeMesh.skinIndices.length, afterMesh.skinIndices.length);
+    let meshSkinIndexMismatchCount = Math.abs(beforeMesh.skinIndices.length - afterMesh.skinIndices.length);
+    for (let index = 0; index < skinIndexLength; index++) {
+      if (beforeMesh.skinIndices[index] !== afterMesh.skinIndices[index]) {
+        meshSkinIndexMismatchCount += 1;
+      }
+    }
 
     if (meshPosDelta > vertexPositionMaxDelta) {
       vertexPositionMaxDelta = meshPosDelta;
     }
     if (meshNormalDelta > vertexNormalMaxDelta) {
       vertexNormalMaxDelta = meshNormalDelta;
+    }
+    skinIndexMismatchCount += meshSkinIndexMismatchCount;
+    if (meshSkinWeightDelta > skinWeightMaxDelta) {
+      skinWeightMaxDelta = meshSkinWeightDelta;
     }
     const beforeBounds = computeBounds(beforeMesh.positions);
     const afterBounds = computeBounds(afterMesh.positions);
@@ -339,6 +357,24 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
         meshTarget,
       );
     }
+    if (meshSkinIndexMismatchCount > 0) {
+      skinningMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_SKIN_INDEX_DELTA',
+        'Skinning',
+        `mesh ${m} has ${meshSkinIndexMismatchCount} changed skin indices.`,
+        meshTarget,
+      );
+    }
+    if (meshSkinWeightDelta > skinWeightTolerance) {
+      skinningMismatchCount += 1;
+      pushMismatch(
+        'SMF_ROUNDTRIP_SKIN_WEIGHT_DELTA',
+        'Skinning',
+        `mesh ${m} skin weights differ beyond 8-bit export tolerance (${meshSkinWeightDelta.toFixed(6)}).`,
+        meshTarget,
+      );
+    }
   }
 
   if (countToCheck > 0 && geometryMismatchCount === 0) {
@@ -355,6 +391,14 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
       'SMF_ROUNDTRIP_BOUNDS_OK',
       'Bounds',
       'Mesh bounds are within tolerance.',
+    );
+  }
+  if (countToCheck > 0 && skinningMismatchCount === 0) {
+    pushCheck(
+      'pass',
+      'SMF_ROUNDTRIP_SKINNING_OK',
+      'Skinning',
+      'Skin indices match and weights are within 8-bit export tolerance.',
     );
   }
 
@@ -580,6 +624,8 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
     checks,
     vertexPositionMaxDelta,
     vertexNormalMaxDelta,
+    skinIndexMismatchCount,
+    skinWeightMaxDelta,
     bonePoseMaxDelta,
     meshBoundsMaxDelta,
     bonePoseSamplesChecked,

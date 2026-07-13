@@ -77,11 +77,12 @@ Sources used:
     - Non-SMF rig edits validate cycles, self-parenting, root/weighted delete hazards, and retarget or clean animation/pose/skin state.
     - TransformControls and endpoint drags now emit typed viewport edit events into `useLoadModel`, so SMF-source position/rotation pose edits are export-tracked instead of remaining local Three mutations.
     - SMF scale mode is refused in the UI, and any recorded non-identity pose scale blocks SMF export/roundtrip because the DQ path has no scale channel.
-    - SMF-source structural mutation remains deliberately blocked to preserve node-index, parent-index, `isBone`, head-node, skin-index, and DQ export fidelity.
-    - Pose-level Undo/Redo is implemented for quick nudges, TransformControls moves, and endpoint drags through a shared editor-history helper.
+    - SMF-source structural mutation remains deliberately blocked to preserve node-index, parent-index, `isBone`, head-node, skin-index, and DQ export fidelity. Rename is unavailable because SMF stores no persisted name field. Detach/connect is the legacy structural `isBone` plus skin-index rewrite, not a metadata alias. No mirror command exists in the owned Rig source and SMF has no left/right pairing metadata, so mirror is absent rather than heuristic.
+    - SMF bind reset is implemented as an inverse-bind-derived selected-bone local transform restore. It does not zero local transforms, alter parents, or rewrite skin/animation identity.
+    - Pose-level Undo/Redo is implemented for quick nudges, bind reset, TransformControls moves, and endpoint drags through a shared editor-history helper.
     - Non-SMF rig rename/reparent/create/move/delete Undo/Redo snapshots restore skeleton bones, parent links, inverse binds, skin indices, base clips, authored animation edits, pose edits, selected bone, and selected skin-paint state.
     - Viewport pointer ownership is now routed through a pure helper before mutation, so the explicit Rig Endpoint tool, Rig/Animate bone select, Skin paint gating, View-mode model/submodel selection, and Export read-only clicks have explicit owners; TransformControls keeps separate helper/axis/drag ownership telemetry.
-    - View-mode model/submodel viewport picking now syncs with Outliner selection. Remaining parity is SMF-source metadata-only aliases, detach/connect, mirror/reset helpers, rotate/spin helpers, and deeper rig tool modes.
+    - View-mode model/submodel viewport picking now syncs with Outliner selection. The SMF metadata/reset decision and non-SMF rotate/spin helpers are complete; remaining mapped work is global shelf/material policy and deeper rig tool modes.
 
 ## 4) Global shell/settings parity
 
@@ -126,7 +127,7 @@ Policy for the next build slice:
 - Current endpoint drag remains perspective-pane proven until a deliberate ortho endpoint mode is designed.
 - New rig/animation movement tools should follow the non-SMF-only ortho-pane Add child/Move/Rotate contract, with snap support where movement is involved and one undo-redo transaction per completed drag. Detach/connect and spin already have UI exposure, hierarchy visibility, and smoke-proven one-transaction history.
 - New animation move/drag tools must write animation keys, never bind pose, and must commit one transaction on release.
-- SMF-source structural mutation remains blocked unless a separate SMF-safe metadata/edit layer is designed and tested.
+- SMF-source structural mutation remains blocked under the explicit format-policy map. Existing-bone pose edits and local bind reset are the supported SMF Rig mutations; indexed rename/detach/mirror are not silently approximated.
 
 ## 6) Integration rule for downstream TODO items
 

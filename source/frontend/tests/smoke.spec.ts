@@ -1509,6 +1509,56 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await expect(page.getByTestId('animation-delete-clip-btn')).toBeEnabled();
   });
 
+  test('SMF rig policy gates indexed edits and bind reset is reversible', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
+
+    await page.goto('/');
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await pausePlaybackIfRunning(page);
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+
+    const childBone = page.getByTestId('inspector')
+      .locator('li li > div')
+      .filter({ hasText: /SMF_Node_\d+/ })
+      .first();
+    await expect(childBone).toBeVisible({ timeout: 8000 });
+    await childBone.click({ force: true });
+
+    const policy = page.getByTestId('smf-rig-policy');
+    await expect(policy).toBeVisible();
+    await expect(page.getByTestId('smf-rig-policy-rename')).toHaveAttribute('data-smf-rig-supported', 'false');
+    await expect(page.getByTestId('smf-rig-policy-structure')).toContainText(/head nodes.*skin indices.*animation/i);
+    await expect(page.getByTestId('smf-rig-policy-bind-transform')).toContainText(/rig-space rewrite/i);
+    await expect(page.getByTestId('smf-rig-policy-mirror')).toContainText(/no mirror command.*no left\/right pairing/i);
+    await expect(page.getByTestId('smf-rig-policy-reset')).toHaveAttribute('data-smf-rig-supported', 'true');
+    await expect(page.getByTestId('rig-rename-btn')).toBeDisabled();
+    await expect(page.getByTestId('rig-rename-btn')).toHaveAttribute('title', /no persisted name field/i);
+    await expect(page.getByTestId('rig-detach-toggle-btn')).toBeDisabled();
+    await expect(page.getByTestId('rig-detach-toggle-btn')).toHaveAttribute('title', /parent\/isBone records.*head nodes.*skin indices/i);
+    await expect(page.getByTestId('rig-tool-move')).toBeDisabled();
+    await expect(page.getByTestId('rig-tool-move')).toHaveAttribute('title', /coordinated rig-space rewrite/i);
+
+    await page.getByTestId('transform-x-btn').click();
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    await page.getByTestId('mode-tab-export').click({ force: true });
+    await page.getByTestId('smf-roundtrip-check-btn').click();
+    await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 15000 });
+
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    await page.getByTestId('transform-reset-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Reset SMF_Node_\d+ to its bind pose/i);
+    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
+    await page.getByTestId('editor-undo-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Undid Reset bind pose SMF_Node_\d+/i);
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    await page.getByTestId('editor-redo-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Redid Reset bind pose SMF_Node_\d+/i);
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
+  });
+
   test('endpoint drag works in rig mode across single and quad layouts', async ({ page }) => {
     test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
 

@@ -6,48 +6,10 @@ import { fileURLToPath } from 'node:url';
 import { compareSmfRoundtrip } from './smfDiagnostics';
 import { exportSMFToBuffer, importSMF, type ImportedSmf } from './smf';
 import { bytesToArrayBuffer } from './smfBinary';
+import { installImageTestPolyfill } from '../test/installImageTestPolyfill';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-function installImageTestPolyfill(): void {
-  const g = globalThis as any;
-  if (!g.Image) {
-    g.Image = class {
-      src = '';
-      width = 1;
-      height = 1;
-    };
-  }
-  if (!g.document) {
-    g.document = {
-      createElement(tag: string) {
-        if (tag !== 'canvas') {
-          throw new Error(`Unsupported test element: ${tag}`);
-        }
-        return {
-          width: 1,
-          height: 1,
-          getContext() {
-            return {
-              createImageData(width: number, height: number) {
-                return { data: new Uint8ClampedArray(width * height * 4) };
-              },
-              putImageData() {},
-              drawImage() {},
-              getImageData(_sx = 0, _sy = 0, width = 1, height = 1) {
-                return { data: new Uint8ClampedArray(width * height * 4) };
-              },
-            };
-          },
-          toDataURL() {
-            return 'data:image/png;base64,';
-          },
-        };
-      },
-    };
-  }
-}
 
 function makeImportedSmf(): ImportedSmf {
   return {
@@ -127,9 +89,30 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
     assert.ok(report.checks.some((check) => check.code === 'SMF_ROUNDTRIP_ANIMATION_POSE_OK'));
     assert.equal(report.vertexPositionMaxDelta, 0);
     assert.equal(report.vertexNormalMaxDelta, 0);
+    assert.equal(report.skinIndexMismatchCount, 0);
+    assert.equal(report.skinWeightMaxDelta, 0);
     assert.equal(report.meshBoundsMaxDelta, 0);
     assert.ok(report.bonePoseSamplesChecked > 0);
     assert.deepStrictEqual(report.poseDeltaDetails, []);
+  });
+
+  it('fails when skin indices or weights drift after roundtrip', () => {
+    const before = makeImportedSmf();
+    const skinIndices = new Uint16Array(before.meshes[0].skinIndices);
+    const skinWeights = new Float32Array(before.meshes[0].skinWeights);
+    skinIndices[0] = 1;
+    skinWeights[0] = 0.5;
+    const after = {
+      ...before,
+      meshes: [{ ...before.meshes[0], skinIndices, skinWeights }],
+    };
+
+    const report = compareSmfRoundtrip(before, after);
+    assert.equal(report.ok, false);
+    assert.equal(report.skinIndexMismatchCount, 1);
+    assert.ok(report.skinWeightMaxDelta >= 0.5);
+    assert.ok(report.checks.some((check) => check.code === 'SMF_ROUNDTRIP_SKIN_INDEX_DELTA'));
+    assert.ok(report.checks.some((check) => check.code === 'SMF_ROUNDTRIP_SKIN_WEIGHT_DELTA'));
   });
 
   it('fails when vertex position/normal data drifts after roundtrip', () => {
