@@ -373,7 +373,7 @@
     },
     "subsystem__smf_format_and_fidelity": {
       "description": "SMF binary parsing/export, coordinate swizzles, dual-quaternion math, roundtrip fidelity, and old reference format material. Internal binary helpers (bytes + bounded R/W) live in smfBinary.ts (shared, barrel exposes bytesToArrayBuffer plus BinaryReader/BinaryWriter).",
-      "status": "SMF source roundtrip and visual coherence verified; rig DQs are stored/serialized in world space while Three locals resolve through effective deform parents; true inverse binds drive selected-bone bind reset; explicit head nodes and canonical SMF_Node identity remain preserved; skin payloads stay in deform-bone order rather than full node-ID order; structured diagnostics now catch skin index/weight drift; binary bounds, DQ normalization/sign equivalence, zero-duration animation, real-fixture pose/head/skin/animation identity, and non-SMF conversion remain test-covered.",
+      "status": "SMF source roundtrip and visual coherence verified; rig DQs are stored/serialized in world space while Three locals resolve through effective deform parents; true inverse binds drive selected-bone bind reset; explicit head nodes and canonical SMF_Node identity remain preserved; skin payloads stay in deform-bone order rather than full node-ID order; textures remain structured-clone-safe raw RGBA buffers until main-thread DataTexture scene construction; import/export codecs expose monotonic progress; structured diagnostics catch skin index/weight drift; binary bounds, DQ normalization/sign equivalence, zero-duration animation, real-fixture identity, and non-SMF conversion remain test-covered.",
       "paths": [
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/loaders/smfBinary.ts",

@@ -21,6 +21,14 @@ import { buildSmfNodeList, buildRigHierarchy, findEffectiveBoneParentIndex } fro
 
 type Float32Buffer = Float32Array<ArrayBufferLike>;
 type Uint16Buffer = Uint16Array<ArrayBufferLike>;
+type Uint8Buffer = Uint8Array<ArrayBufferLike>;
+
+export interface SmfCodecProgress {
+  phase: 'header' | 'textures' | 'meshes' | 'rig' | 'animations' | 'finalize';
+  percent: number;
+}
+
+export type SmfCodecProgressHandler = (progress: SmfCodecProgress) => void;
 
 export interface ImportedSmf {
   meshes: Array<{
@@ -36,7 +44,12 @@ export interface ImportedSmf {
     skinWeights: Float32Buffer;
     visible: number;
   }>;
-  textures: Array<{ name: string; image: HTMLImageElement; previewUrl: string }>;
+  textures: Array<{
+    name: string;
+    width: number;
+    height: number;
+    pixels: Uint8Buffer;
+  }>;
   bones: Array<{ index: number; parent: number; isBone: number; dq: Float32Buffer; axis: number[] }>;
   animations: Array<{
     name: string;
@@ -52,7 +65,20 @@ export interface ImportedSmf {
   }>;
 }
 
-export function importSMF(buffer: ArrayBuffer): ImportedSmf {
+function makeProgressReporter(handler?: SmfCodecProgressHandler) {
+  let lastPercent = -1;
+  return (phase: SmfCodecProgress['phase'], rawPercent: number): void => {
+    if (!handler) return;
+    const percent = Math.max(lastPercent, Math.min(100, Math.round(rawPercent)));
+    if (percent === lastPercent && percent !== 100) return;
+    lastPercent = percent;
+    handler({ phase, percent });
+  };
+}
+
+export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHandler): ImportedSmf {
+  const report = makeProgressReporter(onProgress);
+  report('header', 0);
   const reader = new BinaryReader(buffer);
 
   const version = reader.strZ();
@@ -61,6 +87,7 @@ export function importSMF(buffer: ArrayBuffer): ImportedSmf {
   if (!isV12 && !isV11) {
     throw new Error(`Unsupported SMF version: ${version}`);
   }
+  report('header', 4);
 
   const offTex = reader.u32();
   const offModel = reader.u32();
@@ -76,21 +103,13 @@ export function importSMF(buffer: ArrayBuffer): ImportedSmf {
     const w = reader.u16();
     const h = reader.u16();
     const size = w * h * 4;
-    const data = new Uint8Array(buffer, reader.off, size);
+    const pixels = new Uint8Array(size);
+    pixels.set(new Uint8Array(buffer, reader.off, size));
     reader.off += size;
-
-    const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = h;
-    const ctx = canvas.getContext('2d')!;
-    const imgData = ctx.createImageData(w, h);
-    imgData.data.set(data);
-    ctx.putImageData(imgData, 0, 0);
-
-    const image = new Image();
-    image.src = canvas.toDataURL('image/png');
-    const previewUrl = image.src;
-    textures.push({ name, image, previewUrl });
+    textures.push({ name, width: w, height: h, pixels });
+    report('textures', 4 + (11 * (i + 1)) / Math.max(1, texCount));
   }
+  report('textures', 15);
 
   // MODEL
   reader.off = offModel;
@@ -130,6 +149,9 @@ export function importSMF(buffer: ArrayBuffer): ImportedSmf {
 
       for (let j = 0; j < 4; j++) skinIndices[v*4 + j] = reader.u8();
       for (let j = 0; j < 4; j++) skinWeights[v*4 + j] = reader.u8() / 255;
+      if (v % Math.max(1, Math.floor(verts / 50)) === 0) {
+        report('meshes', 15 + 45 * (i + (v + 1) / Math.max(1, verts)) / Math.max(1, modelCount));
+      }
     }
 
     const triangles: number[][] = [];
@@ -151,7 +173,9 @@ export function importSMF(buffer: ArrayBuffer): ImportedSmf {
       skinIndices, skinWeights,
       visible
     });
+    report('meshes', 15 + 45 * (i + 1) / Math.max(1, modelCount));
   }
+  report('meshes', 60);
 
   // RIG (bones)
   reader.off = offRig;
@@ -168,7 +192,9 @@ export function importSMF(buffer: ArrayBuffer): ImportedSmf {
     }
     const axis = [reader.f32(), reader.f32(), reader.f32()];
     bones.push({ index: i, parent, isBone, dq, axis });
+    report('rig', 60 + 10 * (i + 1) / Math.max(1, nodeCount));
   }
+  report('rig', 70);
 
   // ANIM
   reader.off = offAnim;
@@ -200,10 +226,12 @@ export function importSMF(buffer: ArrayBuffer): ImportedSmf {
         frameDqs.push(dq);
       }
       frames.push(frameDqs);
+      report('animations', 70 + 29 * (i + (f + 1) / Math.max(1, frameCount)) / Math.max(1, animCount));
     }
     animations.push({ name, duration, times, frames, nodeCount, loop, interpolation: interp, sampleFrameMultiplier: mult, lockedBones });
   }
 
+  report('finalize', 100);
   return { meshes, textures, bones, animations };
 }
 
@@ -283,7 +311,8 @@ export function buildThreeScene(imported: ImportedSmf): BuiltThreeSmfScene {
 
   // Textures
   const threeTextures = imported.textures.map(t => {
-    const tex = new THREE.Texture(t.image);
+    const tex = new THREE.DataTexture(t.pixels, t.width, t.height, THREE.RGBAFormat, THREE.UnsignedByteType);
+    tex.name = t.name;
     tex.flipY = false;
     tex.needsUpdate = true;
     return tex;
@@ -386,7 +415,12 @@ export function buildThreeScene(imported: ImportedSmf): BuiltThreeSmfScene {
  * The caller supplies a fully prepared ImportedSmf candidate. SMF-source pose, skin, and animation
  * edit layers are applied in useLoadModel before this serializer runs.
  */
-export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
+export function exportSMFToBuffer(
+  imported: ImportedSmf,
+  onProgress?: SmfCodecProgressHandler,
+): Uint8Array {
+  const report = makeProgressReporter(onProgress);
+  report('header', 0);
   const { meshes, textures, bones: importedBones, animations } = imported;
 
   // Build nodeList via the extracted rig helper while preserving export behavior and public API.
@@ -399,8 +433,7 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
   let texSize = 1;
   textures.forEach((t, i) => {
     const nm = `texture${i}`;
-    const img = t.image;
-    texSize += nm.length + 1 + 2 + 2 + (img.width * img.height * 4);
+    texSize += nm.length + 1 + 2 + 2 + (t.width * t.height * 4);
   });
 
   // Model size (use flat data, verts from first attr or triangles)
@@ -424,27 +457,28 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
   // Header
   const hW = new BinaryWriter(headerSize, 'header');
   hW.strZ(versionString).u32(0).u32(0).u32(0).u32(0).u32(0);
+  report('header', 5);
 
   // Textures
   const tW = new BinaryWriter(texSize, 'textures');
   tW.u8(textures.length);
   textures.forEach((t, i) => {
     const nm = `texture${i}`;
-    const img = t.image;
-    tW.strZ(nm).u16(img.width).u16(img.height);
-    const cv = document.createElement('canvas');
-    cv.width = img.width; cv.height = img.height;
-    const ctx = cv.getContext('2d')!;
-    ctx.drawImage(img, 0, 0);
-    const data = ctx.getImageData(0, 0, img.width, img.height).data;
-    for (let b = 0; b < data.length; b++) tW.u8(data[b]);
+    const expectedSize = t.width * t.height * 4;
+    if (t.pixels.length !== expectedSize) {
+      throw new Error(`Texture ${t.name || i} has ${t.pixels.length} RGBA bytes; expected ${expectedSize}.`);
+    }
+    tW.strZ(nm).u16(t.width).u16(t.height);
+    for (let b = 0; b < t.pixels.length; b++) tW.u8(t.pixels[b]);
+    report('textures', 5 + 10 * (i + 1) / Math.max(1, textures.length));
   });
+  report('textures', 15);
 
   // Models (reverse the import transforms)
   const mW = new BinaryWriter(modelSize, 'models');
   mW.u8(meshes.length);
 
-  meshes.forEach(m => {
+  meshes.forEach((m, meshIndex) => {
     const vcount = m.positions.length / 3;
     mW.u32(vcount * 44);
 
@@ -474,16 +508,21 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
       for (let j = 0; j < 4; j++) {
         mW.u8(Math.round(m.skinWeights[v*4 + j] * 255));
       }
+      if (v % Math.max(1, Math.floor(vcount / 50)) === 0) {
+        report('meshes', 15 + 40 * (meshIndex + (v + 1) / Math.max(1, vcount)) / Math.max(1, meshes.length));
+      }
     }
 
     mW.strZ('').strZ(m.texIdx >= 0 ? `texture${m.texIdx}` : '').u8(m.visible ? 1 : 0);
+    report('meshes', 15 + 40 * (meshIndex + 1) / Math.max(1, meshes.length));
   });
+  report('meshes', 55);
 
   // Rig (use dqs from imported, with proper export prep)
   const rW = new BinaryWriter(rigSize, 'rig');
   rW.u32(nodeList.length);
 
-  nodeList.forEach((n) => {
+  nodeList.forEach((n, nodeIndex) => {
     let dq: Float32Array;
     const sourceDq = importedBones[n.boneIndex]?.dq;
     if (sourceDq) {
@@ -499,7 +538,9 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
 
     const ax = importedBones[n.boneIndex]?.axis || [0, 1, 0];
     rW.f32(ax[0]).f32(ax[1]).f32(ax[2]);
+    report('rig', 55 + 15 * (nodeIndex + 1) / Math.max(1, nodeList.length));
   });
+  report('rig', 70);
 
   // Anim (use frames dqs directly, with flip)
   const aW = new BinaryWriter(animSize, 'anim');
@@ -510,7 +551,7 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
     return dqFlipSign(d, prev);
   };
 
-  animations.forEach((a) => {
+  animations.forEach((a, animationIndex) => {
     const lbs = a.lockedBones || [];
     aW.strZ(a.name)
       .u8(a.loop ?? 0)
@@ -542,8 +583,10 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
         dq.forEach(v => aW.f32(v));
         prevDQs[ni] = dq;
       });
+      report('animations', 70 + 25 * (animationIndex + (fi + 1) / Math.max(1, a.times.length)) / Math.max(1, animations.length));
     });
   });
+  report('animations', 95);
 
   // Patch header offsets
   const offTex = headerSize;
@@ -570,6 +613,7 @@ export function exportSMFToBuffer(imported: ImportedSmf): Uint8Array {
   let off = 0;
   parts.forEach(p => { out.set(p, off); off += p.length; });
 
+  report('finalize', 100);
   return out;
 }
 

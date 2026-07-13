@@ -195,7 +195,7 @@ describe('smf export roundtrip (data-driven)', () => {
         name: 'test',
         verts: 3,
         triangles: [[0,1,2]],
-        texIdx: -1,
+        texIdx: 0,
         positions: new Float32Array([0,0,0, 1,0,0, 0,1,0]),
         normals: new Float32Array([0,0,1, 0,0,1, 0,0,1]),
         uvs: new Float32Array([0,0, 0,0, 0,0]),
@@ -204,7 +204,12 @@ describe('smf export roundtrip (data-driven)', () => {
         skinWeights: new Float32Array([1,0,0,0, 1,0,0,0, 1,0,0,0]),
         visible: 1
       }],
-      textures: [],
+      textures: [{
+        name: 'single-pixel',
+        width: 1,
+        height: 1,
+        pixels: new Uint8Array([12, 34, 56, 255]),
+      }],
       bones: [{ index: 0, parent: 0, isBone: 1, dq: new Float32Array([0,0,0,1,0,0,0,0]), axis: [0,1,0] }],
       animations: [{
         name: 'testAnim',
@@ -219,12 +224,28 @@ describe('smf export roundtrip (data-driven)', () => {
       }]
     };
 
-    const buf = exportSMFToBuffer(minimal);
-    const reimported = importSMF(bytesToArrayBuffer(buf));
+    const exportProgress: number[] = [];
+    const importProgress: number[] = [];
+    const buf = exportSMFToBuffer(minimal, ({ percent }) => exportProgress.push(percent));
+    const reimported = importSMF(bytesToArrayBuffer(buf), ({ percent }) => importProgress.push(percent));
 
     assert.strictEqual(reimported.meshes.length, 1);
     assert.strictEqual(reimported.bones.length, 1);
     assert.strictEqual(reimported.animations.length, 1);
+    assert.deepStrictEqual(
+      {
+        width: reimported.textures[0].width,
+        height: reimported.textures[0].height,
+        pixels: [...reimported.textures[0].pixels],
+      },
+      { width: 1, height: 1, pixels: [12, 34, 56, 255] },
+    );
+    assert.strictEqual(exportProgress[0], 0);
+    assert.strictEqual(exportProgress.at(-1), 100);
+    assert.strictEqual(importProgress[0], 0);
+    assert.strictEqual(importProgress.at(-1), 100);
+    assert.ok(exportProgress.every((value, index) => index === 0 || value >= exportProgress[index - 1]));
+    assert.ok(importProgress.every((value, index) => index === 0 || value >= importProgress[index - 1]));
     // v12 anim metadata fidelity (Task 3)
     const ra = reimported.animations[0];
     assert.strictEqual(ra.loop, 1);

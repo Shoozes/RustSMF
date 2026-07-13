@@ -98,7 +98,7 @@ export function cloneImportedSmf(smf: ImportedSmf): ImportedSmf {
       skinWeights: new Float32Array(m.skinWeights),
       triangles: m.triangles.map(t => [...t]),
     })),
-    textures: smf.textures.map(t => ({ ...t })),
+    textures: smf.textures.map(t => ({ ...t, pixels: new Uint8Array(t.pixels) })),
     bones: smf.bones.map(b => ({
       ...b,
       dq: new Float32Array(b.dq),

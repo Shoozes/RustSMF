@@ -13,8 +13,9 @@ This file contains executable work only. Every task must identify What, Why, Whe
 - Where: `source/frontend/src/workers/modelWorker.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/loaders/`, Vite worker configuration, and tests.
 - When: Now that SMF edit-layer, async ownership, and typed boundary contracts are stable.
 - How: Start with transferable `ArrayBuffer` import/export messages, preserve desktop read/write ownership, and reuse the existing sequence guard at the worker response boundary.
+- Current foundation: SMF textures are owned RGBA typed arrays rather than DOM images, scene creation uses `DataTexture`, serialization reads the same raw pixels without a canvas roundtrip, and import/export codecs expose monotonic 0-100 progress callbacks. No worker is wired yet.
 - Subtasks:
-  - Define typed import/export request, progress, success, and structured error messages.
+  - Define and wire typed import/export request, progress, success, and structured error messages.
   - Transfer buffers rather than copying them.
   - Add worker lifecycle cleanup and stale-response rejection.
   - Add a generated bounded stress fixture and responsive-progress browser proof.

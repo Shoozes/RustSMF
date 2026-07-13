@@ -773,7 +773,10 @@ const cloneImportedSmf = (source: ImportedSmf): ImportedSmf => ({
     skinWeights: new Float32Array(mesh.skinWeights),
     triangles: mesh.triangles.map((triangle) => [...triangle]),
   })),
-  textures: source.textures.map((texture) => ({ ...texture })),
+  textures: source.textures.map((texture) => ({
+    ...texture,
+    pixels: new Uint8Array(texture.pixels),
+  })),
   bones: source.bones.map((bone) => ({
     ...bone,
     dq: new Float32Array(bone.dq),
