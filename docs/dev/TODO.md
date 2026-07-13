@@ -6,21 +6,6 @@ This file contains executable work only. Every task must identify What, Why, Whe
 
 ## Active Backlog
 
-### P2: Expand async race coverage across load and export entrypoints
-
-- What: Prove stale results cannot commit across picker open, file input, drag/drop, desktop path reads, diagnostic saves, and exports.
-- Why: Existing sequence and single-flight guards are correct for covered paths, but dirty authoring state raises the cost of an untested stale completion.
-- Where: `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/native.spec.ts`, `source/frontend/tests/smoke.spec.ts`, and `source/frontend/tests/helpers/smoke-helpers.ts`.
-- When: Before workerizing SMF operations or changing save orchestration.
-- How: Use deterministic delayed reads/writes and mocked bridge results; keep helpers isolated and assert the complete committed state, not only status text.
-- Subtasks:
-  - Add browser download/export overlap assertions where the save path can be deterministically mocked.
-  - Cover stale error after newer success and stale success after newer error for each mutable entrypoint class.
-  - Assert root, selection, status/error, and pose/skin/animation dirty state remain owned by the newest operation.
-  - Reuse the same sequence contract for future worker responses.
-- Done when: No older completion or error can overwrite any newer root, selection, status, error, dirty edit, or save result across the supported entrypoint matrix.
-- Verification: Native IPC race tests, browser overlap tests, full verify, and e2e.
-
 ### P2: Tighten typed interop boundaries
 
 - What: Eliminate or isolate remaining broad casts at Three.js, loader, Tauri, exporter, and TransformControls boundaries.

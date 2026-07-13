@@ -1325,6 +1325,105 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     }
   });
 
+  test('stale browser read error cannot overwrite a newer successful drop', async ({ page }) => {
+    await page.goto('/');
+
+    const fixture = await createSkinnedGlbFixtureInput();
+    const staleName = 'stale-read-error.glb';
+    const input = page.getByTestId('model-file-input');
+    await withBrowserFileArrayBufferDelay(page, {
+      delayedFileName: staleName,
+      delayMs: 350,
+      rejectMessage: 'delayed stale read failed',
+    });
+
+    try {
+      await input.setInputFiles({ ...fixture, name: staleName });
+      await dispatchSyntheticDrop(page.getByTestId('viewport-container'), {
+        name: 'newer-success.glb',
+        mimeType: fixture.mimeType,
+        base64: fixture.buffer.toString('base64'),
+      });
+
+      await expect(page.getByTestId('status-text')).toContainText('newer-success.glb', { timeout: 15000 });
+      const canvas = page.getByTestId('three-canvas');
+      const rootId = await canvas.getAttribute('data-model-root-id');
+      expect(rootId).toBeTruthy();
+      await page.waitForTimeout(450);
+      await expect(canvas).toHaveAttribute('data-model-root-id', rootId!);
+      await expect(page.getByTestId('status-text')).toContainText('newer-success.glb');
+      await expect(page.getByTestId('error-banner')).toBeHidden();
+    } finally {
+      await restoreBrowserFileArrayBuffer(page);
+    }
+  });
+
+  test('stale browser read success cannot overwrite a newer load error', async ({ page }) => {
+    await page.goto('/');
+
+    const fixture = await createSkinnedGlbFixtureInput();
+    const staleName = 'stale-read-success.glb';
+    const input = page.getByTestId('model-file-input');
+    await input.setInputFiles(fixture);
+    await expect(page.getByTestId('status-text')).toContainText(fixture.name, { timeout: 15000 });
+    const originalRootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+    expect(originalRootId).toBeTruthy();
+    await page.getByTestId('mode-tab-rig').click();
+    await page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first().click({ force: true });
+    await page.getByTestId('transform-x-btn').click();
+    await page.getByTestId('mode-tab-animate').click();
+    await pausePlaybackIfRunning(page);
+    await page.getByTestId('animation-insert-key-btn').click();
+    await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
+    await withBrowserFileArrayBufferDelay(page, {
+      delayedFileName: staleName,
+      delayMs: 350,
+    });
+
+    try {
+      await input.setInputFiles({ ...fixture, name: staleName });
+      await dispatchSyntheticDrop(page.getByTestId('viewport-container'), {
+        name: 'newer-invalid.glb',
+        mimeType: 'model/gltf-binary',
+        base64: Buffer.from('not a glb').toString('base64'),
+      });
+
+      await expect(page.getByTestId('status-text')).toContainText('Load error:', { timeout: 15000 });
+      const failedStatus = await page.getByTestId('status-text').textContent();
+      await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', originalRootId!);
+      await page.waitForTimeout(450);
+      await expect(page.getByTestId('status-text')).toHaveText(failedStatus!);
+      await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', originalRootId!);
+      await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+      await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
+      await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
+      await expect(page.getByTestId('error-banner')).toBeVisible();
+    } finally {
+      await restoreBrowserFileArrayBuffer(page);
+    }
+  });
+
+  test('browser diagnostic and model exports share one save flight', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await page.getByTestId('mode-tab-export').click();
+
+    const downloadNames: string[] = [];
+    page.on('download', (download) => downloadNames.push(download.suggestedFilename()));
+    const firstDownload = page.waitForEvent('download');
+    await page.evaluate(() => {
+      for (const testId of ['save-smf-report-btn', 'export-btn', 'export-glb-btn', 'export-smf-btn']) {
+        document.querySelector<HTMLButtonElement>(`[data-testid="${testId}"]`)?.click();
+      }
+    });
+    await firstDownload;
+    await expect(page.getByTestId('status-text')).toContainText('Saved SMF diagnostic report.', { timeout: 5000 });
+    await page.waitForTimeout(250);
+    expect(downloadNames).toEqual(['rustsmf-smf-report.json']);
+  });
+
   test('skin dirty state resets when stale overlapped load wins from drop', async ({ page }) => {
     test.skip(!SAMPLE_SMF || !SAMPLE_FBX, 'Both .smf and .fbx fixtures are required for async overlap coverage with skin state.');
 
@@ -1418,6 +1517,9 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
     await page.getByTestId('transform-x-btn').click({ force: true }).catch(() => {});
     await page.getByTestId('mode-tab-animate').click({ force: true });
     await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    await pausePlaybackIfRunning(page);
+    await page.getByTestId('animation-insert-key-btn').click();
+    await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
     await withBrowserFileArrayBufferDelay(page, {
       delayedFileName: path.basename(SAMPLE_SMF!),
@@ -1433,6 +1535,7 @@ test.describe('RustSMF basic shell and model flow (Chromium)', () => {
 
       await page.getByTestId('mode-tab-animate').click({ force: true });
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
+      await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: false');
     } finally {
       await restoreBrowserFileArrayBuffer(page);
     }

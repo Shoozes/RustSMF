@@ -129,6 +129,187 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     expect(snapshot.writes).toHaveLength(0);
   });
 
+  test('newer browser load invalidates delayed native picker success and error', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf sample available for native picker race coverage');
+
+    const sampleBytes = readSampleBytes(SAMPLE_SMF);
+    await installTauriMock(page, {
+      openPath: SAMPLE_SMF!,
+      savePath: 'C:\\tmp\\unused-picker-race.smf',
+      sampleBytes,
+      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes)),
+      openDelayMs: 350,
+    });
+
+    await page.goto('/');
+    const input = page.getByTestId('model-file-input');
+    const openButton = page.getByTestId('open-model-btn');
+
+    for (const failOpen of [false, true]) {
+      await updateTauriMock(page, { failOpen });
+      await openButton.click();
+      await expect(page.getByTestId('status-text')).toContainText('Opening file picker');
+      const fixture = await createSkinnedGlbFixtureInput();
+      const newerName = failOpen ? 'newer-after-picker-error.glb' : 'newer-after-picker-success.glb';
+      await input.setInputFiles({ ...fixture, name: newerName });
+      await expect(page.getByTestId('status-text')).toContainText(newerName, { timeout: 15000 });
+      const canvas = page.getByTestId('three-canvas');
+      const rootId = await canvas.getAttribute('data-model-root-id');
+      expect(rootId).toBeTruthy();
+      await page.waitForTimeout(450);
+      await expect(canvas).toHaveAttribute('data-model-root-id', rootId!);
+      await expect(page.getByTestId('status-text')).toContainText(newerName);
+      await expect(page.getByTestId('error-banner')).toBeHidden();
+    }
+
+    await updateTauriMock(page, { failOpen: false });
+    const rootBeforeFailedReplacement = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+    expect(rootBeforeFailedReplacement).toBeTruthy();
+    await openButton.click();
+    await expect(page.getByTestId('status-text')).toContainText('Opening file picker');
+    await input.setInputFiles({
+      name: 'newer-picker-invalid.glb',
+      mimeType: 'model/gltf-binary',
+      buffer: Buffer.from('not a glb'),
+    });
+    await expect(page.getByTestId('status-text')).toContainText('Load error:', { timeout: 15000 });
+    const failedStatus = await page.getByTestId('status-text').textContent();
+    await page.waitForTimeout(450);
+    await expect(page.getByTestId('status-text')).toHaveText(failedStatus!);
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', rootBeforeFailedReplacement!);
+    await expect(page.getByTestId('error-banner')).toBeVisible();
+
+    const snapshot = await getTauriMockSnapshot(page);
+    expect(snapshot.calls.filter((call) => call.cmd === 'plugin:dialog|open')).toHaveLength(3);
+    expect(snapshot.calls.find((call) => call.cmd === 'read_file_binary')).toBeUndefined();
+  });
+
+  test('newer browser result invalidates delayed native path read success and error', async ({ page }) => {
+    test.skip(!SAMPLE_SMF, 'No .smf sample available for native read race coverage');
+
+    const sampleBytes = readSampleBytes(SAMPLE_SMF);
+    await installTauriMock(page, {
+      openPath: SAMPLE_SMF!,
+      savePath: 'C:\\tmp\\unused-read-race.smf',
+      sampleBytes,
+      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes)),
+      readDelayMs: 350,
+    });
+
+    await page.goto('/');
+    const input = page.getByTestId('model-file-input');
+    let readCount = 0;
+    const startNativeRead = async (failRead: boolean): Promise<void> => {
+      await updateTauriMock(page, { failRead });
+      await page.getByTestId('open-model-btn').click();
+      readCount += 1;
+      await expect.poll(async () => (
+        await getTauriMockSnapshot(page)
+      ).calls.filter((call) => call.cmd === 'read_file_binary').length).toBe(readCount);
+    };
+
+    for (const failRead of [false, true]) {
+      await startNativeRead(failRead);
+      const fixture = await createSkinnedGlbFixtureInput();
+      const newerName = failRead ? 'newer-after-read-error.glb' : 'newer-after-read-success.glb';
+      await input.setInputFiles({ ...fixture, name: newerName });
+      await expect(page.getByTestId('status-text')).toContainText(newerName, { timeout: 15000 });
+      const rootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+      expect(rootId).toBeTruthy();
+      await page.waitForTimeout(450);
+      await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', rootId!);
+      await expect(page.getByTestId('status-text')).toContainText(newerName);
+      await expect(page.getByTestId('error-banner')).toBeHidden();
+    }
+
+    const rootBeforeFailedReplacement = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+    expect(rootBeforeFailedReplacement).toBeTruthy();
+    await startNativeRead(false);
+    await input.setInputFiles({
+      name: 'newer-invalid.glb',
+      mimeType: 'model/gltf-binary',
+      buffer: Buffer.from('not a glb'),
+    });
+    await expect(page.getByTestId('status-text')).toContainText('Load error:', { timeout: 15000 });
+    const failedStatus = await page.getByTestId('status-text').textContent();
+    await page.waitForTimeout(450);
+    await expect(page.getByTestId('status-text')).toHaveText(failedStatus!);
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', rootBeforeFailedReplacement!);
+    await expect(page.getByTestId('error-banner')).toBeVisible();
+  });
+
+  test('stale native export success and error cannot overwrite a newer load result', async ({ page }) => {
+    test.setTimeout(90000);
+    test.skip(!SAMPLE_SMF, 'No .smf sample available for native export/load race coverage');
+
+    const sampleBytes = readSampleBytes(SAMPLE_SMF);
+    await installTauriMock(page, {
+      openPath: SAMPLE_SMF!,
+      savePath: 'C:\\tmp\\export-load-race.smf',
+      sampleBytes,
+      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes)),
+      writeDelayMs: 350,
+    });
+
+    await page.goto('/');
+    await page.getByTestId('open-model-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Rust validated SMF|Loaded/i, { timeout: 15000 });
+
+    const input = page.getByTestId('model-file-input');
+    let writeCallCount = 0;
+    const waitForWriteStart = async (): Promise<void> => {
+      writeCallCount += 1;
+      await expect.poll(async () => (
+        await getTauriMockSnapshot(page)
+      ).calls.filter((call) => call.cmd === 'write_file_binary').length, { timeout: 20000 }).toBe(writeCallCount);
+    };
+    const waitForWriteSettle = async (): Promise<void> => {
+      await expect.poll(async () => (
+        await getTauriMockSnapshot(page)
+      ).activeWrites, { timeout: 20000 }).toBe(0);
+    };
+
+    await page.getByTestId('export-btn').click();
+    await waitForWriteStart();
+    let fixture = await createSkinnedGlbFixtureInput();
+    await input.setInputFiles({ ...fixture, name: 'newer-after-export-success.glb' });
+    await expect(page.getByTestId('status-text')).toContainText('newer-after-export-success.glb', { timeout: 15000 });
+    let rootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+    await waitForWriteSettle();
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', rootId!);
+    await expect(page.getByTestId('status-text')).toContainText('newer-after-export-success.glb');
+
+    await updateTauriMock(page, { failWrite: true });
+    await page.getByTestId('export-glb-btn').click();
+    await waitForWriteStart();
+    fixture = await createSkinnedGlbFixtureInput();
+    await input.setInputFiles({ ...fixture, name: 'newer-after-export-error.glb' });
+    await expect(page.getByTestId('status-text')).toContainText('newer-after-export-error.glb', { timeout: 15000 });
+    rootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+    await waitForWriteSettle();
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', rootId!);
+    await expect(page.getByTestId('status-text')).toContainText('newer-after-export-error.glb');
+    await expect(page.getByTestId('error-banner')).toBeHidden();
+
+    await updateTauriMock(page, { failWrite: false });
+    await page.getByTestId('export-glb-btn').click();
+    await waitForWriteStart();
+    const rootBeforeFailedReplacement = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+    expect(rootBeforeFailedReplacement).toBeTruthy();
+    await input.setInputFiles({
+      name: 'newer-invalid-after-export.glb',
+      mimeType: 'model/gltf-binary',
+      buffer: Buffer.from('not a glb'),
+    });
+    await expect(page.getByTestId('status-text')).toContainText('Load error:', { timeout: 15000 });
+    const failedStatus = await page.getByTestId('status-text').textContent();
+    await waitForWriteSettle();
+    await expect(page.getByTestId('status-text')).toHaveText(failedStatus!);
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', rootBeforeFailedReplacement!);
+    await expect(page.getByTestId('error-banner')).toBeVisible();
+    await expect(page.getByTestId('export-btn')).toBeEnabled();
+  });
+
   test('native rapid export clicks stay single-flight', async ({ page }) => {
     test.setTimeout(120000);
     test.skip(!SAMPLE_SMF, 'No .smf sample available for native IPC mock coverage');

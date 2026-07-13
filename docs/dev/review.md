@@ -4,29 +4,29 @@ Last reviewed: 2026-07-13
 
 ## Scope
 
-Focused implementation and integrity review for workspace/layout continuity, shared authoring state, tool ownership, and canceled-save behavior.
+Focused implementation and integrity review for async load/export ownership, atomic replacement, stale completion rejection, and save single-flight behavior.
 
 ## Current Findings
 
-- Workspace changes do not reload the model or overwrite shared authoring state. The generated skinned-GLB matrix preserves one root UUID, selected object and bone, paused playback time, export status, and pose/skin/animation dirty flags through View/Rig/Skin/Animate/Export plus single, quad, and single Ortho transitions.
-- Select, Endpoint, and IK attach only their owned viewport handles. Endpoint/IK coordinates and active-gesture telemetry clear outside their owning tool/workspace; TransformControls attach only in supported Select/Animate perspective paths.
-- No-model mode cycles retain a single layout, disabled display/layout controls, an empty root identity, and no stale Endpoint/IK handle telemetry.
-- Native canceled-save flows preserve skin and animation dirty edits, selected bone, root identity, and cancel status even after changing panels.
-- Export intentionally unmounts Timeline, so visible `time-display` was not a valid all-mode continuity probe. The persistent viewport now exposes read-only root/playback telemetry; this closes a test-observability gap without changing app state ownership.
+- Picker, file input, drop, desktop path read, and loader completion now carry one token created at user intent. A delayed result cannot become artificially newest merely because it enters `loadModel` last.
+- Model replacement is atomic: the current root, selection, and dirty authoring state remain live until a current replacement parses successfully. Failed replacements preserve them; stale parsed roots are explicitly disposed.
+- New load intent invalidates old export UI ownership. GLB/FBX exporter, validation, diagnostic save, SMF save, and generic save paths check freshness after every await, so stale success/error cannot overwrite the newer load's status or error.
+- Save serialization remains global across diagnostic and model actions. Stale export cleanup always releases the save lock but does not clear a newer load's busy state.
+- Deterministic browser/native matrices cover stale success after newer error, stale error after newer success, picker and desktop reads, input/drop, export-versus-load, browser cross-action downloads, canceled saves, root/selection/status/error, and pose/skin/animation dirty ownership.
 
 ## Next Tasks
 
-### Async operation continuity
+### Typed interop boundaries
 
-- What: Close the remaining stale-success/stale-error and overlapping-save cases across load and export entrypoints.
-- Why: Workspace transitions are proven, but asynchronous browser/native completions can still arrive after a newer operation and must not overwrite valid state.
-- Where: `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/smoke.spec.ts`, `source/frontend/tests/native.spec.ts`, and shared smoke helpers.
-- When: Before workerizing SMF import/export or adding another authoring surface.
-- How: Add deterministic delayed-entrypoint tests around the existing sequence and single-flight contracts, asserting the complete committed root, selection, status/error, and dirty state.
-- Done when: No older success or error can overwrite a newer root, selection, status/error, dirty edit, or save result for any supported mutable entrypoint.
+- What: Eliminate or isolate remaining broad casts and external-library type mismatches at Three.js, loader, exporter, Tauri, and disposal boundaries.
+- Why: The async ownership contract is now explicit; loose boundary types are the next source of assumptions that could bypass it during dependency upgrades or worker extraction.
+- Where: `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/hooks/useLoadModel.ts`, loaders/exporters, `ThreeViewport.tsx`, and `threeDisposal.ts`.
+- When: Before workerizing SMF import/export.
+- How: Keep errors `unknown`, introduce narrow named guards/adapters, and document only unavoidable external type skew.
+- Done when: App/test typechecks and production-any pass, with every remaining production cast narrow and justified.
 
 ## Verification
 
-- Focused browser evidence passes 3/3: one loaded-authoring workspace matrix plus both native canceled-save panel-transition paths.
-- Full `pwsh -File run.ps1 -Task verify` passed with 187/187 units, zero-warning context validation, lint, app/test typechecks, production-any guard, build/chunk checks, and Rust cargo check.
-- Browser-only `pwsh -File run.ps1 -Task test:e2e -NoGenEye` passed 44/44 under four-worker concurrency, including the new continuity matrix, no-model negatives, native cancel flows, material export isolation, and existing visual paths.
+- Focused async evidence passes 7/7 under four-worker concurrency, with targeted reruns after strengthening failed-replacement assertions and replacing fixed write sleeps with explicit start/settlement telemetry.
+- Full `pwsh -File run.ps1 -Task verify` passes with 187/187 units, zero-warning context validation, lint, app/test typechecks, production-any guard, build/chunk checks, and Rust cargo check.
+- Browser-only `pwsh -File run.ps1 -Task test:e2e -NoGenEye` passes 50/50 under four-worker concurrency after auditing and fixing one test-only save-start timing assumption.

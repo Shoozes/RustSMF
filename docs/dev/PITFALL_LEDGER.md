@@ -686,26 +686,28 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 ### Q: What pitfall are we preventing?
 
-**What:** Stale file-open or browser file/drop read results can overwrite newer load state.
+**What:** Independently guarded picker, file/drop, loader, and export awaits can each be locally fresh while still being globally stale, allowing an older result to replace or report over a newer user intent.
 
-**Why it happened:** `handleOpen` awaited the dialog result without its own sequence guard. Browser file-input/drop reads checked freshness only on success; an older read rejection could still set error/status after a newer read began.
+**Why it happened:** Picker open and browser file reads used separate counters, so a delayed picker could call `loadModel` after a newer file/drop completed. Export had its own sequence but loads did not invalidate it, and the old implementation cleared the current model before a replacement parsed successfully. Simply invalidating export in `finally` would also have skipped lock release.
 
-**Where:** `source/frontend/src/hooks/useLoadModel.ts`.
+**Where:** `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/smoke.spec.ts`, `source/frontend/tests/native.spec.ts`, and `source/frontend/tests/helpers/smoke-helpers.ts`.
 
-**How to catch it:** Mock two overlapping `openFile()` or browser read promises in a focused hook/component test or native IPC flow, resolve/reject the older one last, and assert it does not mutate status or load the old file.
+**How to catch it:** Deterministically delay and succeed/fail picker open, browser `File.arrayBuffer`, desktop path reads, and native writes. Start a newer success or error before the older promise settles, then assert exact root UUID, selection, status/error, pose/skin/animation dirty state, write count, button recovery, and absence of stale completion text.
+
+**Developer story:** Focused file/drop tests originally suggested the sequence design was complete. Mapping every user entrypoint showed the counters were scoped to implementation branches rather than user intent. Cross-entrypoint tests reproduced the overwrite; export/load overlap then exposed the same ownership problem plus a lock-release hazard. Atomic replacement also fell out of the review because a failed newer load should not destroy a valid edited model.
 
 **Solutions tried:**
-1. `70/100` Rely on `loadSeqRef` inside `loadModel`, result: stale loads were guarded but stale dialog status/error paths were not.
-2. `88/100` Add `openSeqRef` around `openFile()` success and error handling, result: stale dialog results return before mutating state.
-3. `90/100` Add read-sequence checks to browser file-input/drop catch paths, result: stale read failures return before mutating error/status.
+1. `70/100` Guard only inside `loadModel`, result: a late picker or read could enter `loadModel` last and receive a newer token.
+2. `88/100` Use separate picker and file/drop counters, result: same-class races were blocked but cross-entrypoint races remained.
+3. `97/100` Use one load-intent sequence across picker/input/drop/path/loader, invalidate export UI commits when a load begins, check export freshness after each await, release the save lock independently, replace the model only after current parse success, and dispose stale parsed roots, result: delayed success/error matrices pass across all supported entrypoints.
 
-**Current solution:** `handleOpen` increments `openSeqRef`; browser file-input/drop reads increment `fileReadSeqRef`; success and catch paths check the captured sequence before setting status, error, or loading.
+**Current solution:** `beginLoadRequest` advances the shared load sequence and export epoch. All load stages carry the same token; only a current successful parse calls `clearLoadedModel` and commits format/root/state. `withExportBusy` serializes diagnostic/model saves, passes a freshness predicate through exporter/validator/save awaits, suppresses stale UI commits, and always releases its owned lock.
 
-**Effectiveness:** `90/100`, durable for the current async boundaries. A future focused async race test would raise confidence further.
+**Effectiveness:** `97/100`, durable. Browser and native tests cover stale success after newer error, stale error after newer success, atomic failed replacements, dirty-state ownership, cross-action single-flight, and export completion after newer loads.
 
-**Relevance check:** Current. Open dialogs and fallback file inputs are user-facing async boundaries.
+**Relevance check:** Current. The same request/response ownership contract is the required boundary for planned worker messages.
 
-**Next prevention step:** Add a focused overlapping-open/read test if open/load orchestration changes again.
+**Next prevention step:** Reuse the shared load token in worker requests/responses; any new async lifecycle entrypoint must join the delayed success/error matrix before shipping.
 
 ### Q: What pitfall are we preventing?
 

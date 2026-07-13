@@ -176,12 +176,13 @@ export async function expectRenderedScreenshot(
 
 export async function withBrowserFileArrayBufferDelay(
   page: Page,
-  options: { delayedFileName: string; delayMs: number },
+  options: { delayedFileName: string; delayMs: number; rejectMessage?: string },
 ): Promise<void> {
   await page.evaluate((config) => {
     const originalArrayBuffer = File.prototype.arrayBuffer;
     const delayedFile = config.delayedFileName;
     const delayMs = config.delayMs;
+    const rejectMessage = config.rejectMessage;
     let remainingDelayCalls = 1;
 
     File.prototype.arrayBuffer = async function (): Promise<ArrayBuffer> {
@@ -190,6 +191,7 @@ export async function withBrowserFileArrayBufferDelay(
       if (shouldDelay) {
         remainingDelayCalls -= 1;
         await new Promise<void>((resolve) => window.setTimeout(resolve, delayMs));
+        if (rejectMessage) throw new Error(rejectMessage);
       }
       return originalArrayBuffer.call(this) as Promise<ArrayBuffer>;
     };
@@ -301,6 +303,10 @@ export interface TauriMockInit {
   cancelOpen?: boolean;
   cancelSave?: boolean;
   failWrite?: boolean;
+  failOpen?: boolean;
+  failRead?: boolean;
+  openDelayMs?: number;
+  readDelayMs?: number;
   writeDelayMs?: number;
 }
 
@@ -318,6 +324,7 @@ interface TauriMockWrite {
 export interface TauriMockSnapshot {
   calls: TauriMockCall[];
   writes: TauriMockWrite[];
+  activeWrites: number;
 }
 
 interface TauriMockWindow extends Window {
@@ -332,6 +339,7 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
       ...mockInit,
       calls: [],
       writes: [],
+      activeWrites: 0,
     };
     const w = window as TauriMockWindow;
     w.__TAURI__ = {};
@@ -344,26 +352,39 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
         state.calls.push({ cmd, args });
         switch (cmd) {
           case 'plugin:dialog|open':
+            if (typeof state.openDelayMs === 'number' && state.openDelayMs > 0) {
+              await new Promise((resolve) => setTimeout(resolve, state.openDelayMs));
+            }
+            if (state.failOpen) throw new Error('mock open failed');
             return state.cancelOpen ? null : state.openPath;
           case 'plugin:dialog|save':
             return state.cancelSave ? null : state.savePath;
           case 'read_file_binary':
+            if (typeof state.readDelayMs === 'number' && state.readDelayMs > 0) {
+              await new Promise((resolve) => setTimeout(resolve, state.readDelayMs));
+            }
+            if (state.failRead) throw new Error('mock read failed');
             return state.sampleBytes;
           case 'get_smf_desktop_info':
             return state.desktopInfo;
           case 'write_file_binary': {
-            if (state.failWrite) throw new Error('mock write failed');
-            if (typeof state.writeDelayMs === 'number' && state.writeDelayMs > 0) {
-              await new Promise((resolve) => setTimeout(resolve, state.writeDelayMs));
+            state.activeWrites += 1;
+            try {
+              if (typeof state.writeDelayMs === 'number' && state.writeDelayMs > 0) {
+                await new Promise((resolve) => setTimeout(resolve, state.writeDelayMs));
+              }
+              if (state.failWrite) throw new Error('mock write failed');
+              const data = Array.isArray(args?.data) ? args.data as number[] : [];
+              const pathValue = typeof args?.path === 'string' ? args.path : '';
+              state.writes.push({
+                path: pathValue,
+                length: data.length,
+                firstBytes: data.slice(0, 8),
+              });
+              return null;
+            } finally {
+              state.activeWrites -= 1;
             }
-            const data = Array.isArray(args?.data) ? args.data as number[] : [];
-            const pathValue = typeof args?.path === 'string' ? args.path : '';
-            state.writes.push({
-              path: pathValue,
-              length: data.length,
-              firstBytes: data.slice(0, 8),
-            });
-            return null;
           }
           case 'greet':
             return `Hello, ${String(args?.name || 'RustSMF')}!`;
@@ -390,7 +411,12 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
   }, init);
 }
 
-export async function updateTauriMock(page: Page, patch: Partial<Pick<TauriMockInit, 'cancelOpen' | 'cancelSave' | 'failWrite' | 'writeDelayMs'>>): Promise<void> {
+export async function updateTauriMock(
+  page: Page,
+  patch: Partial<Pick<TauriMockInit,
+    'cancelOpen' | 'cancelSave' | 'failOpen' | 'failRead' | 'failWrite' | 'openDelayMs' | 'readDelayMs' | 'writeDelayMs'
+  >>,
+): Promise<void> {
   await page.evaluate((statePatch) => {
     const state = (window as TauriMockWindow).__RUSTSMF_TAURI_MOCK__;
     if (state) Object.assign(state, statePatch);
@@ -403,6 +429,7 @@ export async function getTauriMockSnapshot(page: Page): Promise<TauriMockSnapsho
     return {
       calls: state?.calls ?? [],
       writes: state?.writes ?? [],
+      activeWrites: state?.activeWrites ?? 0,
     };
   });
 }

@@ -19,6 +19,7 @@ import {
 import type { BoneTransformEditEvent, RigIkEditEvent, RigMoveEditEvent, RigRotateEditEvent } from '../components/ThreeViewport';
 import { findBoneByName } from '../utils/bonePicker';
 import { createSeqGuard } from '../utils/seqGuard';
+import { disposeThreeObject } from '../utils/threeDisposal';
 import { detectModelFormat, supportedModelFormatsLabel, type ModelSourceFormat } from '../utils/modelFormat';
 import { summarizeObjectTextures } from '../utils/textureCompat';
 import {
@@ -594,8 +595,6 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   // Editor mode is used by workspace composition and workspace-profile visibility.
   // Stable seq guards prevent stale async results across React re-renders.
   const loadSeqGuardRef = useRef(createSeqGuard());
-  const openSeqGuardRef = useRef(createSeqGuard());
-  const fileReadSeqGuardRef = useRef(createSeqGuard());
   const exportSeqGuardRef = useRef(createSeqGuard());
   const isExportingRef = useRef(false);
 
@@ -656,7 +655,15 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const skinEditBlockReason = useMemo(() => getDirtySkinExportBlockReason(skinEditState), [skinEditState]);
   const animationEditHasDirtyState = useMemo(() => hasDirtyAnimationEdits(animationEditState), [animationEditState]);
 
-  const withExportBusy = useCallback(async (actionLabel: string, action: () => Promise<void>) => {
+  const beginLoadRequest = useCallback(() => {
+    exportSeqGuardRef.current.next();
+    return loadSeqGuardRef.current.next();
+  }, []);
+
+  const withExportBusy = useCallback(async (
+    actionLabel: string,
+    action: (isCurrentExport: () => boolean) => Promise<void>,
+  ) => {
     if (isExportingRef.current) {
       ui.setStatus(`${actionLabel} already in progress. Wait for the current save to finish.`);
       return;
@@ -669,16 +676,15 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     ui.setIsLoading(true);
 
     try {
-      await action();
+      await action(isCurrentExport);
     } catch (e: unknown) {
       if (!isCurrentExport()) return;
       const msg = errorMessage(e);
       ui.setErrorMsg(`${actionLabel} error: ${msg}`);
       ui.setStatus(`${actionLabel} error: ${msg}`);
     } finally {
-      if (!isCurrentExport()) return;
       isExportingRef.current = false;
-      ui.setIsLoading(false);
+      if (isCurrentExport()) ui.setIsLoading(false);
     }
   }, [ui]);
 
@@ -1085,17 +1091,17 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     return parts.join(' | ');
   }, []);
 
-  const loadModel = useCallback(async (res: OpenResult) => {
+  const loadModel = useCallback(async (res: OpenResult, loadSeq: number) => {
     const loadSeqGuard = loadSeqGuardRef.current;
-    const loadSeq = loadSeqGuard.next();
     const isCurrentLoad = () => loadSeqGuard.isCurrent(loadSeq);
-    clearLoadedModel();
+    if (!isCurrentLoad()) return;
     ui.setIsLoading(true);
     ui.clearError();
     ui.setStatus('Loading model...');
 
     try {
       let loaded: LoadedModelResult;
+      let importedSmf: ImportedSmf | null = null;
       const name = res.name || res.path || '';
 
       let data: Uint8Array | undefined = res.data;
@@ -1108,10 +1114,6 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       if (!detectedSourceFormat) {
         throw new Error(`Unsupported model format. Supported formats: ${supportedModelFormatsLabel()}`);
       }
-      lastSourceFormatRef.current = detectedSourceFormat;
-      setSourceFormat(detectedSourceFormat);
-      commitSkinEditState(makeSkinEditState('', detectedSourceFormat));
-
       const fetchSmfDesktopInfo = async (
         path: string,
         tauriClient: TauriClient
@@ -1159,9 +1161,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         if (!data) {
           throw new Error('Could not obtain binary data for .smf (browser provides via input; desktop uses read_file_binary)');
         }
-        const imported = importSMF(bytesToArrayBuffer(data));
-        lastSmfDataRef.current = imported;
-        loaded = buildSmfScene(imported);
+        importedSmf = importSMF(bytesToArrayBuffer(data));
+        loaded = buildSmfScene(importedSmf);
       } else if (detectedSourceFormat === 'fbx') {
         const urlOrBuf: string | ArrayBuffer = data ? bytesToArrayBuffer(data) : (res.path || '');
         loaded = await loadFBX(urlOrBuf);
@@ -1173,7 +1174,16 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         loaded = await loadGLB(urlOrBuf);
       }
 
-      if (!isCurrentLoad()) return;
+      if (!isCurrentLoad()) {
+        disposeThreeObject(loaded.root);
+        return;
+      }
+
+      clearLoadedModel();
+      lastSmfDataRef.current = importedSmf;
+      lastSourceFormatRef.current = detectedSourceFormat;
+      setSourceFormat(detectedSourceFormat);
+      commitSkinEditState(makeSkinEditState('', detectedSourceFormat));
 
       const root = loaded.root;
       const availableClips = loaded.clips || [];
@@ -1222,41 +1232,47 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
   const handleOpen = useCallback(async () => {
     if (ui.isLoading) return;
-    const openSeqGuard = openSeqGuardRef.current;
-    const openSeq = openSeqGuard.next();
+    const loadSeqGuard = loadSeqGuardRef.current;
+    const loadSeq = beginLoadRequest();
     ui.setStatus(`Opening file picker (${supportedModelFormatsLabel()} supported)...`);
     ui.setIsLoading(true);
     try {
       const res: OpenResult | null = await (await getTauriClient()).openFile();
-      if (!openSeqGuard.isCurrent(openSeq)) return;
+      if (!loadSeqGuard.isCurrent(loadSeq)) return;
       if (!res) {
         ui.setStatus('No file selected.');
         return;
       }
-      await loadModel(res);
+      await loadModel(res, loadSeq);
     } catch (e: unknown) {
-      if (!openSeqGuard.isCurrent(openSeq)) return;
+      if (!loadSeqGuard.isCurrent(loadSeq)) return;
       const msg = errorMessage(e);
       ui.setErrorMsg(`Open error: ${msg}`);
       ui.setStatus(`Open error: ${msg}`);
     } finally {
-      if (openSeqGuard.isCurrent(openSeq)) {
+      if (loadSeqGuard.isCurrent(loadSeq)) {
         ui.setIsLoading(false);
       }
     }
-  }, [ui, loadModel]);
+  }, [ui, loadModel, beginLoadRequest]);
 
-  const buildVerifiedGlb = useCallback(async (root: THREE.Group, clips: THREE.AnimationClip[]) => {
+  const buildVerifiedGlb = useCallback(async (
+    root: THREE.Group,
+    clips: THREE.AnimationClip[],
+    isCurrentExport: () => boolean,
+  ) => {
     ui.setStatus('Exporting current model as GLB...');
     const bytes = await exportGLB(root, clips);
+    if (!isCurrentExport()) return null;
     ui.setStatus('Validating exported GLB round-trip...');
     const summary = await validateExportedGLB(bytes, root, clips);
+    if (!isCurrentExport()) return null;
     return { bytes, summary };
   }, [ui]);
 
   const handleExport = useCallback(async () => {
     const smfData = lastSmfDataRef.current;
-    await withExportBusy('Export', async () => {
+    await withExportBusy('Export', async (isCurrentExport) => {
       try {
         if (smfData) {
           if (hasUnsupportedPoseScaleEdits(poseEditsRef.current)) {
@@ -1280,6 +1296,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
           const buf = exportSMFToBuffer(dataToExport);
           const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
+          if (!isCurrentExport()) return;
           if (!ok) {
             ui.setStatus('Export canceled.');
             return;
@@ -1302,7 +1319,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           ui.setStatus('Exporting FBX-loaded model to binary .fbx...');
           try {
             const buf = await exportFBX(rootToExport, model.clips);
+            if (!isCurrentExport()) return;
             const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.fbx');
+            if (!isCurrentExport()) return;
             if (!ok) {
               ui.setStatus('Export canceled.');
               return;
@@ -1310,18 +1329,23 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
             ui.setStatus('Exported .fbx (binary FBX 7500). Re-import to verify fidelity.');
             return;
           } catch (e: unknown) {
+            if (!isCurrentExport()) return;
             ui.setStatus(`FBX export error: ${errorMessage(e)}. Falling back to generic GLB...`);
           }
         }
 
-        const { bytes, summary } = await buildVerifiedGlb(rootToExport, model.clips);
+        const built = await buildVerifiedGlb(rootToExport, model.clips, isCurrentExport);
+        if (!built) return;
+        const { bytes, summary } = built;
         const ok = await (await getTauriClient()).saveFile(bytes, 'exported_model.glb');
+        if (!isCurrentExport()) return;
         if (!ok) {
           ui.setStatus('Export canceled.');
           return;
         }
         ui.setStatus(`Exported .glb (verified ${summary.boneCount} bones, ${summary.clipCount} clips).`);
       } catch (e: unknown) {
+        if (!isCurrentExport()) return;
         const msg = errorMessage(e);
         ui.setErrorMsg(`Export error: ${msg}`);
         ui.setStatus(`Export error: ${msg}`);
@@ -1330,7 +1354,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   }, [ui, model, withExportBusy, buildVerifiedGlb]);
 
   const handleExportGlb = useCallback(async () => {
-    await withExportBusy('Export as GLB', async () => {
+    await withExportBusy('Export as GLB', async (isCurrentExport) => {
       try {
         const rootToExport = model.root;
         if (!rootToExport) {
@@ -1338,14 +1362,18 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           return;
         }
 
-        const { bytes, summary } = await buildVerifiedGlb(rootToExport, model.clips);
+        const built = await buildVerifiedGlb(rootToExport, model.clips, isCurrentExport);
+        if (!built) return;
+        const { bytes, summary } = built;
         const ok = await (await getTauriClient()).saveFile(bytes, 'exported_model.glb');
+        if (!isCurrentExport()) return;
         if (!ok) {
           ui.setStatus('Export canceled.');
           return;
         }
         ui.setStatus(`Exported .glb (verified ${summary.boneCount} bones, ${summary.clipCount} clips).`);
       } catch (e: unknown) {
+        if (!isCurrentExport()) return;
         const msg = errorMessage(e);
         ui.setErrorMsg(`GLB export error: ${msg}`);
         ui.setStatus(`GLB export error: ${msg}`);
@@ -1402,8 +1430,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   }, [model.clips, model.root, model.skeleton]);
 
   const handleRunSmfRoundtripCheck = useCallback(async () => {
-    await withExportBusy('SMF roundtrip check', async () => {
+    await withExportBusy('SMF roundtrip check', async (isCurrentExport) => {
       try {
+        if (!isCurrentExport()) return;
         setSmfRoundtripReport(null);
         ui.clearError();
         ui.setStatus('Running SMF roundtrip check...');
@@ -1426,6 +1455,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           ui.setStatus(`SMF roundtrip mismatch: ${report.messages.join('; ')}`);
         }
       } catch (e: unknown) {
+        if (!isCurrentExport()) return;
         if (e instanceof SmfConversionError) {
           ui.setErrorMsg(`SMF roundtrip blocked: ${e.message}`);
           ui.setStatus(`SMF roundtrip blocked: ${e.message}`);
@@ -1439,7 +1469,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   }, [buildCurrentSmfExportCandidate, ui, withExportBusy]);
 
   const handleSaveSmfDiagnosticReport = useCallback(async () => {
-    await withExportBusy('Save SMF diagnostic report', async () => {
+    await withExportBusy('Save SMF diagnostic report', async (isCurrentExport) => {
       try {
         const payload = {
           sourceFormat: sourceFormat || 'unknown',
@@ -1451,12 +1481,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         const json = JSON.stringify(payload, null, 2);
         const data = new TextEncoder().encode(json);
         const ok = await (await getTauriClient()).saveFile(data, 'rustsmf-smf-report.json');
+        if (!isCurrentExport()) return;
         if (!ok) {
           ui.setStatus('SMF diagnostic report save canceled.');
           return;
         }
         ui.setStatus('Saved SMF diagnostic report.');
       } catch (e: unknown) {
+        if (!isCurrentExport()) return;
         const msg = errorMessage(e);
         ui.setErrorMsg(`Save SMF diagnostic report error: ${msg}`);
         ui.setStatus(`Save SMF diagnostic report error: ${msg}`);
@@ -1467,7 +1499,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   // Dedicated "Export as SMF" handler. SMF sources use the imported-data fidelity path;
   // non-SMF skinned sources use the guarded Three-to-SMF converter.
   const handleExportSmf = useCallback(async () => {
-    await withExportBusy('Export as SMF', async () => {
+    await withExportBusy('Export as SMF', async (isCurrentExport) => {
       try {
         const rootToExport = model.root;
         const skeleton = model.skeleton;
@@ -1492,6 +1524,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           }
           const buf = exportSMFToBuffer(dataToExport);
           const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
+          if (!isCurrentExport()) return;
           if (!ok) {
             ui.setStatus('Export canceled.');
             return;
@@ -1515,12 +1548,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
         const buf = exportSMFToBuffer(imported);
         const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
+        if (!isCurrentExport()) return;
         if (!ok) {
           ui.setStatus('Export canceled.');
           return;
         }
         ui.setStatus('Exported .smf (from GLB/FBX via guarded threeToSmf converter + live pose). Re-import to verify fidelity!');
       } catch (e: unknown) {
+        if (!isCurrentExport()) return;
         if (e instanceof SmfConversionError) {
           ui.setErrorMsg(`SMF export blocked: ${e.message}`);
           ui.setStatus(`SMF export blocked: ${e.message}`);
@@ -1535,22 +1570,24 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const fileReadSeqGuard = fileReadSeqGuardRef.current;
-    const readSeq = fileReadSeqGuard.next();
+    const loadSeqGuard = loadSeqGuardRef.current;
+    const loadSeq = beginLoadRequest();
     ui.setStatus('Loading selected file...');
+    ui.setIsLoading(true);
     try {
       const buf = await file.arrayBuffer();
-      if (!fileReadSeqGuard.isCurrent(readSeq)) return;
-      await loadModel({ name: file.name, data: new Uint8Array(buf) });
+      if (!loadSeqGuard.isCurrent(loadSeq)) return;
+      await loadModel({ name: file.name, data: new Uint8Array(buf) }, loadSeq);
     } catch (err: unknown) {
-      if (!fileReadSeqGuard.isCurrent(readSeq)) return;
+      if (!loadSeqGuard.isCurrent(loadSeq)) return;
       const m = errorMessage(err);
       ui.setErrorMsg(`File load error: ${m}`);
       ui.setStatus(`File load error: ${m}`);
     } finally {
       (e.target as HTMLInputElement).value = '';
+      if (loadSeqGuard.isCurrent(loadSeq)) ui.setIsLoading(false);
     }
-  }, [ui, loadModel]);
+  }, [ui, loadModel, beginLoadRequest]);
 
   // Keyboard handler (can be used in useEffect in App or moved)
   const setupKeyboard = useCallback((historyHandlers: KeyboardEditorHistoryHandlers = {}) => {
@@ -2058,20 +2095,23 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
   // Extracted for modularity: drop handler (mirrors handleFileInputChange but for DataTransfer)
   const handleDrop = useCallback(async (file: File) => {
-    const fileReadSeqGuard = fileReadSeqGuardRef.current;
-    const readSeq = fileReadSeqGuard.next();
+    const loadSeqGuard = loadSeqGuardRef.current;
+    const loadSeq = beginLoadRequest();
     ui.setStatus('Loading dropped file...');
+    ui.setIsLoading(true);
     try {
       const buf = await file.arrayBuffer();
-      if (!fileReadSeqGuard.isCurrent(readSeq)) return;
-      await loadModel({ name: file.name, data: new Uint8Array(buf) });
+      if (!loadSeqGuard.isCurrent(loadSeq)) return;
+      await loadModel({ name: file.name, data: new Uint8Array(buf) }, loadSeq);
     } catch (err: unknown) {
-      if (!fileReadSeqGuard.isCurrent(readSeq)) return;
+      if (!loadSeqGuard.isCurrent(loadSeq)) return;
       const m = errorMessage(err);
       ui.setErrorMsg(`Drop load error: ${m}`);
       ui.setStatus(`Drop load error: ${m}`);
+    } finally {
+      if (loadSeqGuard.isCurrent(loadSeq)) ui.setIsLoading(false);
     }
-  }, [ui, loadModel]);
+  }, [ui, loadModel, beginLoadRequest]);
 
   // Extracted for modularity: bone selection updates UI state + status (used by Inspector + Viewport raycast)
   const handleSelectBone = useCallback((name: string) => {

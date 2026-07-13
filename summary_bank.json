@@ -113,7 +113,7 @@
     },
     "feature__model_loading_export": {
       "description": "User-facing load, preview, edit-preview, and export flow across SMF, GLB/GLTF, FBX, and OBJ, including explicit current-root GLB recovery export with pre-save structural reparse validation.",
-      "status": "core connected; SMF high-fidelity export applies live pose/skin/animation edit layers, serializes edited rig DQs from world space across skipped head nodes, and preserves skin payloads in deform-bone order; dedicated Export as SMF preserves prebuilt head-node rig/frame DQs; guarded non-SMF skinned SMF and validated current-root GLB export are browser-covered; binary FBX 7500 export has static roundtrip units; structured SMF diagnostics cover counts, geometry, bounds, skin indices/8-bit weights, animation timing/metadata, and sign-equivalent pose deltas; real Mixamo and old-source head-node fixtures cover import/export/reimport; load/open/export results retain sequence and single-flight guards; desktop paths read bytes for every supported format; source-format detection and typed bridge/loader boundaries remain centralized and production-any guarded.",
+      "status": "core connected; SMF high-fidelity export applies live pose/skin/animation edit layers, serializes edited rig DQs from world space across skipped head nodes, and preserves skin payloads in deform-bone order; dedicated Export as SMF preserves prebuilt head-node rig/frame DQs; guarded non-SMF skinned SMF and validated current-root GLB export are browser-covered; binary FBX 7500 export has static roundtrip units; structured SMF diagnostics cover counts, geometry, bounds, skin indices/8-bit weights, animation timing/metadata, and sign-equivalent pose deltas; real Mixamo and old-source head-node fixtures cover import/export/reimport; picker/input/drop/path/loader share one latest-intent sequence, successful loads replace atomically, stale parsed roots are disposed, and newer loads invalidate stale export UI commits while diagnostic/model saves remain globally single-flight; desktop paths read bytes for every supported format; source-format detection and typed bridge/loader boundaries remain centralized and production-any guarded.",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -179,7 +179,7 @@
     },
     "feature__modern_editor_workspaces": {
       "description": "Modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, active single/quad viewport layout, model-safe wireframe display, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
-      "status": "Editor workspaces, single/quad/Ortho layout, responsive toolbar/display controls, routed View/Rig/Skin/Animate/Export input ownership, Outliner visibility/history, Skin authoring, animation authoring, non-SMF Rig structure tools, explicit Endpoint/IK, and direct TransformControls history ownership are active and browser-covered. SMF Rig and material shelf policies are complete with scoped snap, viewport-only sampler previews, source-safe export, non-mutating shared-texture preflight, and per-format texture rules. A loaded-authoring matrix now proves root, selection, playback, status, dirty-state, and handle continuity across all modes and layouts. Remaining parity is async race hardening, typed interop cleanup, and deeper pane-camera controls.",
+      "status": "Editor workspaces, single/quad/Ortho layout, responsive toolbar/display controls, routed View/Rig/Skin/Animate/Export input ownership, Outliner visibility/history, Skin authoring, animation authoring, non-SMF Rig structure tools, explicit Endpoint/IK, and direct TransformControls history ownership are active and browser-covered. SMF Rig and material shelf policies are complete with scoped snap, viewport-only sampler previews, source-safe export, non-mutating shared-texture preflight, and per-format texture rules. Loaded-authoring and delayed lifecycle matrices prove root, selection, playback, status/error, dirty-state, handle, and latest-intent continuity. Remaining parity is typed interop cleanup and deeper pane-camera controls.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
@@ -405,7 +405,7 @@
     },
     "subsystem__tauri_bridge_and_rust_peeks": {
       "description": "Tauri native dialog/save/read commands, browser fallbacks, Rust SMF header/section peeks, and desktop status messages.",
-      "status": "native peeks and fallback strings covered; Rust SMF header/section parsing is extracted to `source/src-tauri/src/smf_core.rs` with typed `SmfHeaderSummary`/`SmfDesktopInfo` and tests for valid fixtures, bad versions, missing null terminators, invalid offsets, and count widths; `TauriClient` contract is centralized in `source/frontend/src/backend-client/tauri.ts`; `useLoadModel.ts` uses typed bridge and loader contracts for fewer runtime/typing mismatches; Playwright native IPC mock spec covers open/read/save/write/cancel and now asserts delayed-write single-flight export overlap plus `get_smf_desktop_info` argument + status-contract checks, and non-SMF native path loads are now explicitly exercised via `read_file_binary`; true OS-dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it",
+      "status": "native peeks and fallback strings covered; Rust SMF header/section parsing is extracted to `source/src-tauri/src/smf_core.rs` with typed `SmfHeaderSummary`/`SmfDesktopInfo` and tests for valid fixtures, bad versions, missing null terminators, invalid offsets, and count widths; `TauriClient` contract is centralized in `source/frontend/src/backend-client/tauri.ts`; `useLoadModel.ts` uses typed bridge and loader contracts for fewer runtime/typing mismatches; Playwright native IPC mocks cover delayed picker/read/write success and error, atomic failed replacement, cross-entrypoint latest-intent ownership, global save single-flight, canceled-save continuity, and non-SMF `read_file_binary`; true OS-dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it",
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -701,9 +701,9 @@
       "files": []
     },
     "issue__open_dialog_stale_result": {
-      "description": "Older openFile dialog results or browser file/drop read failures could mutate status/error or call loadModel after a newer operation had started.",
-      "status": "completed 2026-06-18; handleOpen uses openSeqRef and browser file/drop read success/catch paths use fileReadSeqRef before mutation.",
-      "last_seen": "2026-06-18",
+      "description": "Separately guarded picker, browser file/drop, desktop read, loader, and export awaits could each appear locally current while an older cross-entrypoint result overwrote newer root/status/error/dirty state.",
+      "status": "completed 2026-07-13; one load-intent sequence spans picker/input/drop/path/loader, successful replacement is atomic, stale roots are disposed, and newer loads invalidate export UI commits.",
+      "last_seen": "2026-07-13",
       "paths": [
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/backend-client/tauri.ts",
@@ -712,8 +712,8 @@
         "source/frontend/tests/helpers/smoke-helpers.ts",
         "docs/dev/PITFALL_LEDGER.md"
       ],
-      "current_solution": "handleOpen increments `openSeqRef`; browser file-input/drop reads increment `fileReadSeqRef`; stale success/catch paths return before state mutation. Native overlap checks stay in `native.spec.ts`; browser overlap checks added with delayed input reads + synthetic drop reads in `smoke.spec.ts`.",
-      "next_prevention": "Keep overlap checks current if `open`/load orchestration changes or if browser export-save mockability becomes deterministic enough for parity checks.",
+      "current_solution": "`beginLoadRequest` issues one token at user intent and invalidates prior export completion ownership. The token is checked after picker, file read, desktop validation/read, and loader awaits. Only a current parsed result replaces the model; failures preserve the valid root/selection/dirty state and stale parsed roots are disposed. Browser/native delayed success/error matrices assert full committed state.",
+      "next_prevention": "Carry the same token through planned worker messages and add every new lifecycle entrypoint to both stale-success/newer-error and stale-error/newer-success proofs.",
       "files": []
     },
     "issue__desktop_open_non_smf_path_read": {
@@ -982,8 +982,8 @@
     },
     "issue__export_inflight_guard": {
       "description": "Rapid repeated export actions can overlap async save/write operations and leave duplicate writes or stale status/UI state when users interact faster than completion.",
-      "status": "completed 2026-06-18: in-flight save/write is hardened with `isExportingRef` + export sequence guard; UI stays busy until completion and stale completions are ignored.",
-      "last_seen": "2026-06-18",
+      "status": "completed 2026-07-13: all diagnostic/model saves are globally single-flight, freshness is checked after exporter/validator/save awaits, newer loads invalidate old UI commits, and lock release is independent of stale UI ownership.",
+      "last_seen": "2026-07-13",
       "paths": [
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/App.tsx",
@@ -995,8 +995,8 @@
         "source/frontend/tests/native.spec.ts",
         "source/frontend/tests/helpers/smoke-helpers.ts"
       ],
-      "current_solution": "Export handlers call a shared `withExportBusy` wrapper that serializes export calls, uses a per-export sequence token to ignore stale completions, and reuses `ui.isLoading` for toolbar/mode/layout lockout. IPC mock supports `writeDelayMs` and native e2e asserts one write only under rapid clicks.",
-      "next_prevention": "Keep native delayed-write single-flight coverage while export/state transitions evolve.",
+      "current_solution": "Export handlers call shared `withExportBusy`, which serializes diagnostic/model saves and passes a freshness predicate through GLB/FBX export, validation, and save awaits. A newer load advances the export epoch; stale success/error cannot overwrite its status, and `finally` always releases the owned lock without clearing newer loading state. Browser rapid cross-action and native delayed-write tests prove one save flight.",
+      "next_prevention": "Keep cross-action single-flight and export-versus-newer-load success/error coverage when save orchestration or worker export changes.",
       "files": []
     }
   },
