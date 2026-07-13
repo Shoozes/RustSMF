@@ -3,6 +3,7 @@ import { describe, it } from 'node:test';
 import * as THREE from 'three';
 import {
   createRigIkSession,
+  isRigIkPoleAxis,
   isRigIkSessionCurrent,
   normalizeRigIkSettings,
   rigIkLocalLengthsUnchanged,
@@ -25,6 +26,12 @@ function makeChain(): { skeleton: THREE.Skeleton; root: THREE.Bone; middle: THRE
 }
 
 describe('rigIk', () => {
+  it('rejects unsupported pole-axis values at UI and persisted-state boundaries', () => {
+    assert.equal(isRigIkPoleAxis('-y'), true);
+    assert.equal(isRigIkPoleAxis('forward'), false);
+    assert.equal(isRigIkPoleAxis(null), false);
+  });
+
   it('normalizes settings onto supported bounded options', () => {
     assert.deepEqual(normalizeRigIkSettings({
       chainLength: 99,

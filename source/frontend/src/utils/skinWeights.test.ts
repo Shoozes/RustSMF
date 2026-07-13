@@ -9,6 +9,7 @@ import {
   editVertexBoneWeight,
   getDirtySkinExportBlockReason,
   getSkinAttributes,
+  isSkinAutoWeightAlgorithm,
   hasDirtySkinEdits,
   makeSkinEditState,
   markSkinEdit,
@@ -114,6 +115,12 @@ function weightsTotal(weights: readonly number[]): number {
 }
 
 describe('skinWeights', () => {
+  it('rejects unsupported auto-weight algorithm values', () => {
+    assert.equal(isSkinAutoWeightAlgorithm('nearest-segment'), true);
+    assert.equal(isSkinAutoWeightAlgorithm('magic'), false);
+    assert.equal(isSkinAutoWeightAlgorithm(null), false);
+  });
+
   it('reads vertex skin indices and weights from valid attributes', () => {
     const mesh = makeSkinnedMesh();
     const attributes = getSkinAttributes(mesh.geometry);

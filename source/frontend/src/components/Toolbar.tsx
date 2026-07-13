@@ -1,5 +1,5 @@
 import React from 'react';
-import type { EditorMode, ViewportLayout } from '../store';
+import { isEditorMode, type EditorMode, type ViewportLayout } from '../store';
 import { SUPPORTED_MODEL_ACCEPT } from '../utils/modelFormat';
 import type { TextureFilterPreview } from '../utils/materialPreview';
 
@@ -269,7 +269,11 @@ const Toolbar: React.FC<ToolbarProps> = ({
       <select
         data-testid="editor-mode-select"
         value={editorMode}
-        onChange={(e) => setEditorMode(e.target.value as EditorMode)}
+        onChange={(e) => {
+          if (isEditorMode(e.target.value)) {
+            setEditorMode(e.target.value);
+          }
+        }}
         disabled={isLoading}
         className="sr-only"
         title="Editor mode (foundation for quad/mode-specific tools)"

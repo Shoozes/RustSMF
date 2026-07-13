@@ -13,12 +13,17 @@ import { findEffectiveBoneParentIndex } from '../loaders/smfRig';
 export type AnimationInterpolation = 'linear' | 'step' | 'quadratic';
 export type AnimationSnapStep = 0 | 0.01 | 0.05 | 0.1 | 0.25 | 0.5;
 
+export const ANIMATION_INTERPOLATIONS = ['linear', 'step', 'quadratic'] as const;
 export const ANIMATION_SNAP_STEPS: readonly AnimationSnapStep[] = [0, 0.01, 0.05, 0.1, 0.25, 0.5];
 export const SMF_ANIMATION_INTERPOLATION: Record<AnimationInterpolation, number> = {
   step: 0,
   linear: 1,
   quadratic: 2,
 };
+
+export function isAnimationInterpolation(value: unknown): value is AnimationInterpolation {
+  return ANIMATION_INTERPOLATIONS.some((interpolation) => interpolation === value);
+}
 
 export interface AnimationClipMetadata {
   loop: boolean;

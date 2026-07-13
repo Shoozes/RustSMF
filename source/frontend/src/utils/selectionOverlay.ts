@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 
-export type SelectionOverlay = THREE.BoxHelper & {
-  userData: {
-    targetId?: string;
-    targetName?: string;
-  };
-};
+export type SelectionOverlay = THREE.BoxHelper;
+
+export function getSelectionOverlayTargetName(overlay: SelectionOverlay): string {
+  const value = Reflect.get(overlay.userData, 'targetName');
+  return typeof value === 'string' ? value : '';
+}
 
 export function createSelectionOverlays(
   root: THREE.Object3D | null,
@@ -19,7 +19,7 @@ export function createSelectionOverlays(
     const object = root.getObjectByProperty('uuid', id);
     if (!object || object.visible === false) return [];
 
-    const helper = new THREE.BoxHelper(object, color) as SelectionOverlay;
+    const helper = new THREE.BoxHelper(object, color);
     helper.name = `selection-overlay:${object.name || object.type || id}`;
     helper.renderOrder = 1000;
     helper.userData = {

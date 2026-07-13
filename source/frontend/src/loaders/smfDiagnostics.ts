@@ -36,6 +36,16 @@ export interface SmfRoundtripSummary {
   animationFrames: number;
 }
 
+const SMF_ROUNDTRIP_SUMMARY_KEYS: readonly (keyof SmfRoundtripSummary)[] = [
+  'meshes',
+  'textures',
+  'bones',
+  'animations',
+  'vertices',
+  'triangles',
+  'animationFrames',
+];
+
 export type SmfRoundtripStatus = 'passed' | 'warning' | 'failed';
 export type SmfRoundtripCheckLevel = 'pass' | 'warning' | 'error';
 
@@ -265,7 +275,7 @@ export function compareSmfRoundtrip(beforeSmf: ImportedSmf, afterSmf: ImportedSm
     pushCheck('error', code, label, message, target);
   };
 
-  for (const key of Object.keys(before) as (keyof SmfRoundtripSummary)[]) {
+  for (const key of SMF_ROUNDTRIP_SUMMARY_KEYS) {
     if (before[key] !== after[key]) {
       countMismatchCount += 1;
       pushMismatch(

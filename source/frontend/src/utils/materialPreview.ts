@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isThreeMesh } from './threeTypeGuards';
 
 export type TextureFilterPreview = 'source' | 'nearest' | 'linear';
 
@@ -73,21 +74,28 @@ function materialList(material: THREE.Material | THREE.Material[]): THREE.Materi
 
 function materialMap(material: THREE.Material): { hasMap: boolean; map: THREE.Texture | null | undefined } {
   if (!('map' in material)) return { hasMap: false, map: undefined };
+  const value = Reflect.get(material, 'map');
   return {
     hasMap: true,
-    map: (material as THREE.Material & { map?: THREE.Texture | null }).map,
+    map: value instanceof THREE.Texture || value === null ? value : undefined,
   };
 }
 
+function setMaterialMap(material: THREE.Material, map: THREE.Texture | null | undefined): void {
+  Reflect.set(material, 'map', map);
+}
+
 function collectTextures(material: THREE.Material): THREE.Texture[] {
-  const record = material as unknown as Record<string, unknown>;
-  return TEXTURE_KEYS.flatMap((key) => record[key] instanceof THREE.Texture ? [record[key] as THREE.Texture] : []);
+  return TEXTURE_KEYS.flatMap((key) => {
+    const value = Reflect.get(material, key);
+    return value instanceof THREE.Texture ? [value] : [];
+  });
 }
 
 function restoreSourceState(entry: RootMaterialState): void {
   entry.materials.forEach((source) => {
     if (source.hasMap) {
-      (source.material as THREE.Material & { map?: THREE.Texture | null }).map = source.map;
+      setMaterialMap(source.material, source.map);
     }
     source.material.opacity = source.opacity;
     source.material.transparent = source.transparent;
@@ -130,9 +138,9 @@ function applyPreviewState(entry: RootMaterialState): void {
 
   entry.materials.forEach((source) => {
     if (source.hasMap) {
-      (source.material as THREE.Material & { map?: THREE.Texture | null }).map = entry.preview.textureEnabled
+      setMaterialMap(source.material, entry.preview.textureEnabled
         ? source.map
-        : null;
+        : null);
     }
     source.material.opacity = source.opacity * opacityScale;
     source.material.transparent = source.transparent || source.material.opacity < 1;
@@ -163,8 +171,8 @@ export function registerMaterialPreviewRoot(root: THREE.Object3D): void {
   const textureStates = new Map<string, TextureSourceState>();
 
   root.traverse((node) => {
-    if (!(node as THREE.Mesh).isMesh) return;
-    const mesh = node as THREE.Mesh;
+    if (!isThreeMesh(node)) return;
+    const mesh = node;
     const meshState = {
       mesh,
       material: mesh.material,

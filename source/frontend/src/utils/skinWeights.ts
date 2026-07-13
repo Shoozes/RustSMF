@@ -118,8 +118,8 @@ function clampIntegerRange(value: number, min: number, max: number, fallback: nu
   return Math.min(max, Math.max(min, Math.round(value)));
 }
 
-function isSkinAutoWeightAlgorithm(value: string | undefined): value is SkinAutoWeightAlgorithm {
-  return !!value && (SKIN_AUTO_WEIGHT_ALGORITHMS as readonly string[]).includes(value);
+export function isSkinAutoWeightAlgorithm(value: unknown): value is SkinAutoWeightAlgorithm {
+  return SKIN_AUTO_WEIGHT_ALGORITHMS.some((algorithm) => algorithm === value);
 }
 
 export function normalizeSkinAutoWeightAlgorithm(
@@ -152,9 +152,21 @@ export function resolveSkinAutoWeightOptions(
 
 function cloneVertex(vertex: VertexSkinWeights): VertexSkinWeights {
   return {
-    indices: [...vertex.indices] as VertexSkinWeights['indices'],
-    weights: [...vertex.weights] as VertexSkinWeights['weights'],
+    indices: [vertex.indices[0], vertex.indices[1], vertex.indices[2], vertex.indices[3]],
+    weights: [vertex.weights[0], vertex.weights[1], vertex.weights[2], vertex.weights[3]],
   };
+}
+
+function mapWeightTuple(
+  values: VertexSkinWeights['weights'],
+  mapValue: (value: number) => number,
+): VertexSkinWeights['weights'] {
+  return [
+    mapValue(values[0]),
+    mapValue(values[1]),
+    mapValue(values[2]),
+    mapValue(values[3]),
+  ];
 }
 
 function findWritableSlot(vertex: VertexSkinWeights, boneIndex: number): number {
@@ -220,18 +232,18 @@ export function readVertexSkinWeights(
   }
 
   return {
-    indices: [
+    indices: mapWeightTuple([
       attributes.skinIndex.getX(vertexIndex),
       attributes.skinIndex.getY(vertexIndex),
       attributes.skinIndex.getZ(vertexIndex),
       attributes.skinIndex.getW(vertexIndex),
-    ].map((value) => Math.max(0, Math.trunc(value))) as VertexSkinWeights['indices'],
-    weights: [
+    ], (value) => Math.max(0, Math.trunc(value))),
+    weights: mapWeightTuple([
       attributes.skinWeight.getX(vertexIndex),
       attributes.skinWeight.getY(vertexIndex),
       attributes.skinWeight.getZ(vertexIndex),
       attributes.skinWeight.getW(vertexIndex),
-    ].map(clamp01) as VertexSkinWeights['weights'],
+    ], clamp01),
   };
 }
 
@@ -246,7 +258,7 @@ export function sameVertexSkinWeights(
 
 export function normalizeVertexSkinWeights(vertex: VertexSkinWeights): VertexSkinWeights {
   const normalized = cloneVertex(vertex);
-  normalized.weights = normalized.weights.map(clamp01) as VertexSkinWeights['weights'];
+  normalized.weights = mapWeightTuple(normalized.weights, clamp01);
   const total = normalized.weights.reduce((sum, value) => sum + value, 0);
 
   if (total <= 0) {
@@ -254,7 +266,7 @@ export function normalizeVertexSkinWeights(vertex: VertexSkinWeights): VertexSki
     return normalized;
   }
 
-  normalized.weights = normalized.weights.map((value) => value / total) as VertexSkinWeights['weights'];
+  normalized.weights = mapWeightTuple(normalized.weights, (value) => value / total);
   return normalized;
 }
 
@@ -375,8 +387,8 @@ function makeWeightedVertex(
 
   if (strongest.length === 0) return null;
 
-  const indices = [0, 0, 0, 0] as VertexSkinWeights['indices'];
-  const weights = [0, 0, 0, 0] as VertexSkinWeights['weights'];
+  const indices: VertexSkinWeights['indices'] = [0, 0, 0, 0];
+  const weights: VertexSkinWeights['weights'] = [0, 0, 0, 0];
   strongest.forEach((entry, slot) => {
     indices[slot] = entry.boneIndex;
     weights[slot] = entry.weight;

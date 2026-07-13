@@ -1,4 +1,5 @@
 export type ModelSourceFormat = 'smf' | 'glb' | 'fbx' | 'obj';
+export const MODEL_SOURCE_FORMATS = ['smf', 'glb', 'fbx', 'obj'] as const;
 
 export const MODEL_FORMAT_EXTENSIONS: Record<ModelSourceFormat, readonly string[]> = {
   smf: ['.smf'],
@@ -23,7 +24,8 @@ export function getModelExtension(pathOrName: string | null | undefined): string
 
 export function detectModelFormat(pathOrName: string | null | undefined): ModelSourceFormat | '' {
   const ext = getModelExtension(pathOrName);
-  for (const [format, extensions] of Object.entries(MODEL_FORMAT_EXTENSIONS) as Array<[ModelSourceFormat, readonly string[]]>) {
+  for (const format of MODEL_SOURCE_FORMATS) {
+    const extensions = MODEL_FORMAT_EXTENSIONS[format];
     if (extensions.includes(ext)) return format;
   }
   return '';

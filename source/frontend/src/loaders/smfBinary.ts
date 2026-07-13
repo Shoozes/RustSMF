@@ -5,9 +5,10 @@
  * Extracted/moved here during integrity to eliminate duplication across smf.ts, hooks, tauri bridge.
  */
 export function bytesToArrayBuffer(bytes: Uint8Array): ArrayBuffer {
-  const copy = new Uint8Array(bytes.byteLength);
+  const buffer = new ArrayBuffer(bytes.byteLength);
+  const copy = new Uint8Array(buffer);
   copy.set(bytes);
-  return copy.buffer as ArrayBuffer;
+  return buffer;
 }
 
 export class BinaryReader {

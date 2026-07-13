@@ -22,15 +22,9 @@ export function useBoneLabelsWithScale(
   const boneLabelsRef = useRef<THREE.Object3D[]>([]);
 
   useEffect(() => {
-    // cleanup previous (dispose textures + children for no leak)
+    // cleanup previous labels and owned render resources
     boneLabelsRef.current.forEach((label) => {
       if (label.parent) label.parent.remove(label);
-      label.traverse((child) => {
-        if (child instanceof THREE.Sprite) {
-          const m = child.material as THREE.SpriteMaterial;
-          if (m.map) m.map.dispose();
-        }
-      });
       disposeThreeObject(label);
     });
     boneLabelsRef.current = [];
@@ -50,13 +44,6 @@ export function useBoneLabelsWithScale(
     return () => {
       created.forEach((label) => {
         if (label.parent) label.parent.remove(label);
-        // Dispose any sprite textures inside the label group
-        label.traverse((child) => {
-          if (child instanceof THREE.Sprite) {
-            const m = child.material as THREE.SpriteMaterial;
-            if (m.map) m.map.dispose();
-          }
-        });
         disposeThreeObject(label);
       });
     };

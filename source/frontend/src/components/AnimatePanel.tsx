@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import * as THREE from 'three';
 import type { AnimationTimelineSummary } from '../utils/animationTimeline';
-import type { AnimationClipMetadata, AnimationInterpolation, AnimationSnapStep } from '../utils/animationEdits';
+import {
+  isAnimationInterpolation,
+  normalizeAnimationSnapStep,
+  type AnimationClipMetadata,
+  type AnimationInterpolation,
+  type AnimationSnapStep,
+} from '../utils/animationEdits';
 
 interface AnimatePanelProps {
   clips: THREE.AnimationClip[];
@@ -248,7 +254,11 @@ export default function AnimatePanel({
             data-testid="animation-interpolation-select"
             value={interpolation}
             disabled={!hasEditableSelection}
-            onChange={(event) => onInterpolationChange(event.target.value as AnimationInterpolation)}
+            onChange={(event) => {
+              if (isAnimationInterpolation(event.target.value)) {
+                onInterpolationChange(event.target.value);
+              }
+            }}
           >
             <option value="linear">Linear</option>
             <option value="step">Step</option>
@@ -261,7 +271,7 @@ export default function AnimatePanel({
             data-testid="animation-snap-step-select"
             value={snapStep}
             disabled={!hasActiveClip}
-            onChange={(event) => onSnapStepChange(Number(event.target.value) as AnimationSnapStep)}
+            onChange={(event) => onSnapStepChange(normalizeAnimationSnapStep(Number(event.target.value)))}
           >
             <option value="0">Off</option>
             <option value="0.01">0.01s</option>

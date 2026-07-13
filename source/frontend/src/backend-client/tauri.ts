@@ -42,22 +42,15 @@ export interface TauriClient {
   getSmfDesktopInfo: (path: string) => Promise<SmfDesktopInfo>;
 }
 
-interface TauriWindow extends Window {
-  __TAURI__?: unknown;
-  __TAURI_INTERNALS__?: unknown;
-}
-
-type TauriOpenSelection = string | { path?: unknown };
-
 function isTauriEnv(): boolean {
-  const w = window as TauriWindow;
-  return !!(w.__TAURI__ || w.__TAURI_INTERNALS__);
+  return !!(Reflect.get(window, '__TAURI__') || Reflect.get(window, '__TAURI_INTERNALS__'));
 }
 
-function resolveOpenSelectionPath(selection: TauriOpenSelection | null): string {
+function resolveOpenSelectionPath(selection: unknown): string {
   if (typeof selection === 'string') return selection;
-  if (!selection || typeof selection.path !== 'string') return '';
-  return selection.path;
+  if (!selection || typeof selection !== 'object') return '';
+  const path = Reflect.get(selection, 'path');
+  return typeof path === 'string' ? path : '';
 }
 
 export async function openFile(): Promise<OpenResult | null> {
@@ -72,7 +65,7 @@ export async function openFile(): Promise<OpenResult | null> {
         ]
       })
       if (!selected) return null
-      const path = resolveOpenSelectionPath(selected as TauriOpenSelection);
+      const path = resolveOpenSelectionPath(selected);
       if (!path) return null;
       // Desktop returns a path; the load flow calls readBinaryFile when bytes are needed.
       return { path, name: path.split(/[\\/]/).pop() }

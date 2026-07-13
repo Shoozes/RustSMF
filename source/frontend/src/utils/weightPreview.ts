@@ -1,20 +1,30 @@
 import * as THREE from 'three';
+import { isThreeSkinnedMesh } from './threeTypeGuards';
 import { getSkinAttributes, readVertexSkinWeights } from './skinWeights';
 
-type VertexColorMaterial = THREE.Material & { vertexColors?: boolean | undefined };
+type ColorAttribute = THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
+
+function getStoredColorAttribute(mesh: THREE.SkinnedMesh): ColorAttribute | undefined {
+  const value = Reflect.get(mesh.userData, '_origColorAttr');
+  return value instanceof THREE.BufferAttribute || value instanceof THREE.InterleavedBufferAttribute
+    ? value
+    : undefined;
+}
+
+function setMaterialVertexColors(material: THREE.Material, enabled: boolean): void {
+  Reflect.set(material, 'vertexColors', enabled);
+}
 
 function getSkinnedMeshes(root: THREE.Object3D): THREE.SkinnedMesh[] {
   const meshes: THREE.SkinnedMesh[] = [];
   root.traverse((child) => {
-    if ((child as THREE.SkinnedMesh).isSkinnedMesh) {
-      meshes.push(child as THREE.SkinnedMesh);
-    }
+    if (isThreeSkinnedMesh(child)) meshes.push(child);
   });
   return meshes;
 }
 
 function restoreMeshColorState(mesh: THREE.SkinnedMesh, geometry: THREE.BufferGeometry): void {
-  const originalColorAttr = mesh.userData._origColorAttr as THREE.BufferAttribute | undefined;
+  const originalColorAttr = getStoredColorAttribute(mesh);
 
   if (originalColorAttr) {
     geometry.setAttribute('color', originalColorAttr);
@@ -28,8 +38,7 @@ function restoreMeshColorState(mesh: THREE.SkinnedMesh, geometry: THREE.BufferGe
     if (!material) {
       return;
     }
-    const vertexColorMaterial = material as VertexColorMaterial;
-    vertexColorMaterial.vertexColors = false;
+    setMaterialVertexColors(material, false);
     material.needsUpdate = true;
   });
 }
@@ -48,7 +57,7 @@ export function restoreWeightPreview(attachedModel: THREE.Object3D | null): void
 
   const meshes = getSkinnedMeshes(attachedModel);
   meshes.forEach((mesh) => {
-    restoreMeshColorState(mesh, mesh.geometry as THREE.BufferGeometry);
+    restoreMeshColorState(mesh, mesh.geometry);
   });
 }
 
@@ -74,7 +83,7 @@ export function applyWeightPreviewForBone(
 
   const meshes = getSkinnedMeshes(attachedModel);
   meshes.forEach((mesh) => {
-    const geometry = mesh.geometry as THREE.BufferGeometry;
+    const geometry = mesh.geometry;
     const positionAttr = geometry.getAttribute('position');
     if (!positionAttr) {
       return;
@@ -89,7 +98,7 @@ export function applyWeightPreviewForBone(
 
     if (!mesh.userData._origColorAttr && existingColor) {
       if ('clone' in existingColor) {
-        mesh.userData._origColorAttr = existingColor.clone() as THREE.BufferAttribute;
+        mesh.userData._origColorAttr = existingColor.clone();
       }
     }
 
@@ -113,8 +122,7 @@ export function applyWeightPreviewForBone(
       if (!material) {
         return;
       }
-      const vertexColorMaterial = material as VertexColorMaterial;
-      vertexColorMaterial.vertexColors = true;
+      setMaterialVertexColors(material, true);
       material.needsUpdate = true;
     });
   });

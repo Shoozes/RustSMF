@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isThreeMesh, isThreeSkinnedMesh } from './threeTypeGuards';
 
 export type ModelOutlinerItemKind = 'group' | 'mesh' | 'skinnedMesh';
 
@@ -22,7 +23,7 @@ const getFallbackName = (type: string): string => {
 };
 
 const isMeshLike = (object: THREE.Object3D): object is THREE.Mesh | THREE.SkinnedMesh => {
-  return object.type === 'Mesh' || object.type === 'SkinnedMesh';
+  return isThreeMesh(object);
 };
 
 const isGroupLike = (object: THREE.Object3D): boolean => {
@@ -30,8 +31,8 @@ const isGroupLike = (object: THREE.Object3D): boolean => {
 };
 
 const getItemKind = (object: THREE.Object3D): ModelOutlinerItemKind | null => {
-  if (object.type === 'SkinnedMesh') return 'skinnedMesh';
-  if (object.type === 'Mesh') return 'mesh';
+  if (isThreeSkinnedMesh(object)) return 'skinnedMesh';
+  if (isThreeMesh(object)) return 'mesh';
   if (isGroupLike(object)) return 'group';
   return null;
 };
@@ -42,11 +43,10 @@ const getMaterialList = (material: THREE.Material | THREE.Material[] | undefined
 };
 
 const getMaterialColor = (material: THREE.Material | THREE.Material[] | undefined): string | null => {
-  const firstWithColor = getMaterialList(material).find((item) => {
-    return item && 'color' in item && (item as THREE.MeshBasicMaterial).color instanceof THREE.Color;
-  });
-  if (!firstWithColor || !('color' in firstWithColor)) return null;
-  return `#${(firstWithColor as THREE.MeshBasicMaterial).color.getHexString()}`;
+  const color = getMaterialList(material)
+    .map((item) => Reflect.get(item, 'color'))
+    .find((value): value is THREE.Color => value instanceof THREE.Color);
+  return color ? `#${color.getHexString()}` : null;
 };
 
 const getVertexCount = (object: THREE.Object3D): number => {

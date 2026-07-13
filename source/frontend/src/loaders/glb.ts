@@ -3,6 +3,8 @@ import { withSourceMaterialState } from '../utils/materialPreview';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { disposeThreeObject } from '../utils/threeDisposal';
+import { isThreeBone, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
+import { bytesToArrayBuffer } from './smfBinary';
 
 /**
  * GLB / GLTF loader.
@@ -25,14 +27,10 @@ export interface LoadedModel {
 function collectSkeletonBones(root: THREE.Object3D): THREE.Bone[] {
   const bones: THREE.Bone[] = [];
   root.traverse((node: THREE.Object3D) => {
-    if ((node as THREE.Bone).isBone) {
-      bones.push(node as THREE.Bone);
-    }
+    if (isThreeBone(node)) bones.push(node);
   });
   return bones;
 }
-
-const isSkinnedMesh = (obj: THREE.Object3D): obj is THREE.SkinnedMesh => obj.type === 'SkinnedMesh';
 
 export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<LoadedModel> {
   const loader = new GLTFLoader();
@@ -55,7 +53,7 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
   const sceneBones = collectSkeletonBones(scene);
 
   scene.traverse((obj) => {
-    if (!isSkinnedMesh(obj)) {
+    if (!isThreeSkinnedMesh(obj)) {
       return;
     }
     // Ensure we have everything three needs
@@ -120,7 +118,10 @@ export async function exportGLB(root: THREE.Group, clips: THREE.AnimationClip[] 
     const { GLTFExporter } = await import('three/examples/jsm/exporters/GLTFExporter.js');
     const exporter = new GLTFExporter();
     const result = await exporter.parseAsync(root, { binary: true, animations: clips });
-    return new Uint8Array(result as ArrayBuffer);
+    if (!(result instanceof ArrayBuffer)) {
+      throw new Error('GLB exporter returned JSON while binary output was requested.');
+    }
+    return new Uint8Array(result);
   });
 }
 
@@ -138,8 +139,8 @@ function summarizeGlbScene(root: THREE.Object3D, clips: THREE.AnimationClip[], b
   let skinnedMeshCount = 0;
 
   root.traverse((node) => {
-    if ((node as THREE.Bone).isBone) boneCount += 1;
-    if (isSkinnedMesh(node)) skinnedMeshCount += 1;
+    if (isThreeBone(node)) boneCount += 1;
+    if (isThreeSkinnedMesh(node)) skinnedMeshCount += 1;
 
     const transformValues = [
       node.position.x, node.position.y, node.position.z,
@@ -217,7 +218,7 @@ export async function validateExportedGLB(
   }
 
   const expected = summarizeGlbScene(sourceRoot, sourceClips, bytes.byteLength);
-  const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const buffer = bytesToArrayBuffer(bytes);
   const loaded = await loadGLB(buffer);
   try {
     const actual = summarizeGlbScene(loaded.root, loaded.clips, bytes.byteLength);

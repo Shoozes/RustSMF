@@ -1,4 +1,11 @@
 export type SmfRigPolicyId = 'rename' | 'structure' | 'bind-transform' | 'mirror' | 'reset';
+export const SMF_RIG_POLICY_IDS: readonly SmfRigPolicyId[] = [
+  'rename',
+  'structure',
+  'bind-transform',
+  'mirror',
+  'reset',
+];
 
 export interface SmfRigPolicy {
   id: SmfRigPolicyId;
@@ -72,5 +79,5 @@ export function getSmfRigControlPolicy(control: SmfRigControl): SmfRigPolicy {
 }
 
 export function listSmfRigPolicies(): SmfRigPolicy[] {
-  return (Object.keys(SMF_RIG_POLICIES) as SmfRigPolicyId[]).map((id) => SMF_RIG_POLICIES[id]);
+  return SMF_RIG_POLICY_IDS.map((id) => SMF_RIG_POLICIES[id]);
 }

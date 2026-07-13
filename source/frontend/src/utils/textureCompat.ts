@@ -3,6 +3,7 @@ import type { SkinnedMesh, Material } from 'three';
 
 import type { SmfDiagnostic, SmfDiagnosticLevel } from '../loaders/smfDiagnostics';
 import { getSourceMaterials } from './materialPreview';
+import { isThreeMesh } from './threeTypeGuards';
 
 export interface TextureDiagnostic {
   level: SmfDiagnosticLevel;
@@ -41,33 +42,34 @@ function isPowerOfTwo(value: number): boolean {
 }
 
 function textureImageSize(texture: THREE.Texture): { width: number; height: number } | null {
-  const image = texture.image as
-    | HTMLImageElement
-    | HTMLCanvasElement
-    | ImageBitmap
-    | { width?: unknown; height?: unknown }
-    | null
-    | undefined;
+  const image: unknown = texture.image;
+  if (!image || typeof image !== 'object') return null;
 
-  if (!image) return null;
-
-  const width = Number((image as { width?: unknown }).width);
-  const height = Number((image as { height?: unknown }).height);
+  const width = Number(Reflect.get(image, 'width'));
+  const height = Number(Reflect.get(image, 'height'));
   if (!Number.isFinite(width) || !Number.isFinite(height)) return null;
   return { width, height };
 }
 
 function textureImageSource(texture: THREE.Texture): string {
-  const image = texture.image as Record<string, unknown> | null | undefined;
+  const image: unknown = texture.image;
+  if (!image || typeof image !== 'object') {
+    if (texture.source?.uuid) return `three-source:${texture.source.uuid}`;
+    if (texture.uuid) return `three-texture:${texture.uuid}`;
+    return 'runtime texture';
+  }
 
-  const currentSrc = typeof image?.currentSrc === 'string' ? image.currentSrc : '';
+  const currentSrcValue = Reflect.get(image, 'currentSrc');
+  const currentSrc = typeof currentSrcValue === 'string' ? currentSrcValue : '';
   if (currentSrc) return currentSrc;
 
-  const src = typeof image?.src === 'string' ? image.src : '';
+  const srcValue = Reflect.get(image, 'src');
+  const src = typeof srcValue === 'string' ? srcValue : '';
   if (src) return src;
 
-  const dataset = image?.dataset as { source?: unknown } | undefined;
-  const datasetSource = typeof dataset?.source === 'string' ? dataset.source : '';
+  const dataset = Reflect.get(image, 'dataset');
+  const datasetSourceValue = dataset && typeof dataset === 'object' ? Reflect.get(dataset, 'source') : '';
+  const datasetSource = typeof datasetSourceValue === 'string' ? datasetSourceValue : '';
   if (datasetSource) return datasetSource;
 
   if (texture.source?.uuid) return `three-source:${texture.source.uuid}`;
@@ -92,10 +94,9 @@ function addDiagnostic(
 
 function collectTextureMapsFromMaterial(material: Material, materialIndex: number): MaterialTextureMap[] {
   const maps: MaterialTextureMap[] = [];
-  const source = material as unknown as Record<string, unknown>;
 
   POT_KEYS.forEach((key) => {
-    const value = source[key];
+    const value = Reflect.get(material, key);
     if (value instanceof THREE.Texture) {
       maps.push({ materialIndex, mapType: key, texture: value });
     }
@@ -205,8 +206,8 @@ export function summarizeMeshTextures(mesh: THREE.Mesh): TextureSummary[] {
 export function summarizeObjectTextures(root: THREE.Object3D): TextureSummary[] {
   const summaries: TextureSummary[] = [];
   root.traverse((node) => {
-    if (!(node as THREE.Mesh).isMesh) return;
-    summarizeMeshTextures(node as THREE.Mesh).forEach((summary) => summaries.push(summary));
+    if (!isThreeMesh(node)) return;
+    summarizeMeshTextures(node).forEach((summary) => summaries.push(summary));
   });
   return summaries;
 }

@@ -753,3 +753,26 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 **Relevance check:** Current. Mode-owned panels will continue to mount and unmount as the workspace grows.
 
 **Next prevention step:** When adding a workspace or moving state between components, assert continuity through the narrowest persistent owner and separately assert the new panel's mount contract.
+
+### Q: What pitfall are we preventing?
+
+**What:** Broad TypeScript assertions at external boundaries can make malformed Tauri/DOM/exporter values and Three.js API drift look valid, while recursive cleanup can dispose shared GPU resources repeatedly or omit skeleton-owned textures.
+
+**Why it happened:** Production code accumulated local `as THREE.*`, double assertions, event casts, and unvalidated select/export results as library types evolved. The disposer treated each traversal occurrence as unique even when meshes shared geometry, materials, textures, or one skeleton.
+
+**Where:** `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/loaders/`, `source/frontend/src/store/index.ts`, `source/frontend/src/utils/threeTypeGuards.ts`, `source/frontend/src/utils/threeDisposal.ts`, and related focused tests.
+
+**How to catch it:** Run `npm run check:production-any`, app/test typechecks, and search production source for `as unknown as`, `as THREE.`, `@ts-ignore`, and `@ts-expect-error`. Run `npx tsx --test src/store/index.test.ts src/utils/animationEdits.test.ts src/utils/skinWeights.test.ts src/utils/rigIk.test.ts src/utils/threeTypeGuards.test.ts src/utils/threeDisposal.test.ts src/loaders/glb.test.ts`.
+
+**Solutions tried:**
+1. `45/100` Trust component options and Three marker fields with inline assertions, result: concise code but no runtime rejection and fragile dependency-upgrade boundaries.
+2. `80/100` Replace only production `any`, result: the automated gate passed while double assertions and broad library casts still hid assumptions.
+3. `97/100` Validate unknown inputs with named predicates/adapters, use Three r182 public APIs and `instanceof` guards, require binary exporter output at runtime, and deduplicate disposal by resource identity including skeletons, result: focused tests, 195/195 units, and 50/50 browser tests pass.
+
+**Current solution:** The 3rd solution. Shared Three guards own traversal narrowing; Tauri/DOM/settings/export results validate before mutation; safe buffer copies avoid `SharedArrayBuffer` assertions; disposal uses a per-subtree identity set for geometry, skeleton, material, and texture resources.
+
+**Effectiveness:** `97/100`, durable. The runtime guards fail closed, the source scan is explicit, and shared-resource ownership has a regression test.
+
+**Relevance check:** Current. Three.js upgrades, new worker messages, exporter replacements, or new material channels can reintroduce boundary assumptions.
+
+**Next prevention step:** Treat worker messages as untrusted boundary data, reuse the same named guards where applicable, and add new resource types to one disposal adapter plus its identity-deduplication test.

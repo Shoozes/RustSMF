@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { FBXExporter } from '../vendor/FBXExporter.js';
 import { withSourceMaterialState } from '../utils/materialPreview';
+import { isThreeSkinnedMesh } from '../utils/threeTypeGuards';
 
 // Basic FBX loader, mirroring glb.ts structure for consistency.
 // Supports skinned meshes if present in FBX.
@@ -14,8 +15,6 @@ interface FbxLoadedModel {
   clips: THREE.AnimationClip[];
   mixer: THREE.AnimationMixer;
 }
-
-const isSkinnedMesh = (obj: THREE.Object3D): obj is THREE.SkinnedMesh => obj.type === 'SkinnedMesh';
 
 export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoadedModel> {
   const loader = new FBXLoader();
@@ -36,7 +35,7 @@ export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoa
   const allClips: THREE.AnimationClip[] = fbx.animations || [];
 
   root.traverse((obj) => {
-    if (!isSkinnedMesh(obj)) {
+    if (!isThreeSkinnedMesh(obj)) {
       return;
     }
     const geo = obj.geometry;

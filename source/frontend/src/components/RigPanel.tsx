@@ -4,8 +4,8 @@ import {
   RIG_IK_CHAIN_LENGTHS,
   RIG_IK_ITERATION_OPTIONS,
   RIG_IK_MAX_ANGLE_OPTIONS,
+  isRigIkPoleAxis,
   RIG_IK_TOLERANCE_OPTIONS,
-  type RigIkPoleAxis,
   type RigIkSettings,
   type RigIkSolveResult,
 } from '../utils/rigIk';
@@ -179,7 +179,11 @@ export default function RigPanel({
                 <select
                   data-testid="rig-ik-pole-axis"
                   value={rigIkSettings.poleAxis}
-                  onChange={(event) => onRigIkSettingsChange({ poleAxis: event.target.value as RigIkPoleAxis })}
+                  onChange={(event) => {
+                    if (isRigIkPoleAxis(event.target.value)) {
+                      onRigIkSettingsChange({ poleAxis: event.target.value });
+                    }
+                  }}
                   className="block w-full bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100"
                 >
                   <option value="none">Off</option>

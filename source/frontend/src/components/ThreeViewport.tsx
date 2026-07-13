@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { SimpleOrbit } from '../utils/SimpleOrbit';
 import { disposeThreeObject } from '../utils/threeDisposal';
+import { isThreeMesh, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
 import { restoreWeightPreview, applyWeightPreviewForBone } from '../utils/weightPreview';
 import { findClosestBone, DEFAULT_MAX_BONE_PICK_DIST, findBoneByName } from '../utils/bonePicker';
 import type { SkinWeightEditMode } from '../utils/skinWeights';
@@ -19,6 +20,7 @@ import {
 import {
   createSelectionOverlays,
   disposeSelectionOverlays,
+  getSelectionOverlayTargetName,
   updateSelectionOverlays,
   type SelectionOverlay,
 } from '../utils/selectionOverlay';
@@ -171,9 +173,7 @@ export interface ViewportObjectSelectEvent {
 }
 
 const isDraggingEvent = (event: unknown): event is TransformControlsDraggingEvent =>
-  typeof event === 'object' && event !== null && typeof (event as TransformControlsDraggingEvent).value === 'boolean';
-
-const isSkinnedMesh = (obj: THREE.Object3D): obj is THREE.SkinnedMesh => obj.type === 'SkinnedMesh' || (obj as THREE.SkinnedMesh).isSkinnedMesh === true;
+  typeof event === 'object' && event !== null && typeof Reflect.get(event, 'value') === 'boolean';
 
 const isMaterialWithMap = (material: THREE.Material): material is MaterialWithMap => 'map' in material;
 
@@ -632,7 +632,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     if (!root) return [];
     const meshes: THREE.SkinnedMesh[] = [];
     root.traverse((obj: THREE.Object3D) => {
-      if (isSkinnedMesh(obj)) {
+      if (isThreeSkinnedMesh(obj)) {
         meshes.push(obj);
       }
     });
@@ -656,9 +656,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     if (!root) return [];
     const meshes: THREE.Mesh[] = [];
     root.traverseVisible((obj: THREE.Object3D) => {
-      if (obj.type === 'Mesh' || obj.type === 'SkinnedMesh') {
-        meshes.push(obj as THREE.Mesh);
-      }
+      if (isThreeMesh(obj)) meshes.push(obj);
     });
     return meshes;
   };
@@ -737,7 +735,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     if (canvas) {
       canvas.dataset.selectionOverlayCount = String(selectionOverlaysRef.current.length);
       canvas.dataset.selectionOverlayNames = selectionOverlaysRef.current
-        .map((overlay) => overlay.userData.targetName ?? '')
+        .map(getSelectionOverlayTargetName)
         .filter(Boolean)
         .join(',');
     }
@@ -1652,7 +1650,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
       const addTriangleHit = (): void => {
         const hit = hits[0];
-        if (!hit?.face || !isSkinnedMesh(hit.object)) return;
+        if (!hit?.face || !isThreeSkinnedMesh(hit.object)) return;
         const mesh = hit.object;
         const vertices = [hit.face.a, hit.face.b, hit.face.c];
         for (const vertexIndex of vertices) {

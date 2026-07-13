@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isThreeBone } from './threeTypeGuards';
 
 export type RigToolMode = 'select' | 'endpoint' | 'add-child' | 'move' | 'rotate' | 'ik';
 
@@ -144,8 +145,8 @@ export function resetBoneToBindPose(
   const bindWorld = boneInverse.clone().invert();
   let parentBindWorld: THREE.Matrix4 | null = null;
   const parent = bone.parent;
-  if (parent && (parent as THREE.Bone).isBone === true) {
-    const parentIndex = skeleton.bones.indexOf(parent as THREE.Bone);
+  if (isThreeBone(parent)) {
+    const parentIndex = skeleton.bones.indexOf(parent);
     const parentInverse = parentIndex >= 0 ? skeleton.boneInverses[parentIndex] : null;
     if (!parentInverse) {
       return {
@@ -286,8 +287,8 @@ function collectSkeletonHierarchyBones(skeleton: THREE.Skeleton | null | undefin
   const roots: THREE.Bone[] = [];
   for (const bone of skeleton.bones) {
     let root = bone;
-    while (root.parent && (root.parent as THREE.Bone).isBone === true) {
-      root = root.parent as THREE.Bone;
+    while (isThreeBone(root.parent)) {
+      root = root.parent;
     }
     if (!roots.includes(root)) {
       roots.push(root);
@@ -297,8 +298,8 @@ function collectSkeletonHierarchyBones(skeleton: THREE.Skeleton | null | undefin
   const bones: THREE.Bone[] = [];
   for (const root of roots) {
     root.traverse((object) => {
-      if ((object as THREE.Bone).isBone === true && !bones.includes(object as THREE.Bone)) {
-        bones.push(object as THREE.Bone);
+      if (isThreeBone(object) && !bones.includes(object)) {
+        bones.push(object);
       }
     });
   }
@@ -353,8 +354,8 @@ function isDescendantOf(candidate: THREE.Bone, ancestor: THREE.Bone): boolean {
 function collectBoneBranch(root: THREE.Bone): THREE.Bone[] {
   const branch: THREE.Bone[] = [root];
   root.traverse((object) => {
-    if (object !== root && (object as THREE.Bone).isBone === true) {
-      branch.push(object as THREE.Bone);
+    if (object !== root && isThreeBone(object)) {
+      branch.push(object);
     }
   });
   return branch;
@@ -659,14 +660,14 @@ export function setBoneDetached(
   }
 
   if (detached) {
-    if (currentIndex <= 0 || !bone.parent || (bone.parent as THREE.Bone).isBone !== true) {
+    if (currentIndex <= 0 || !isThreeBone(bone.parent)) {
       return { ok: false, reason: 'root-bone', message: 'Root bones cannot be detached from the deform skeleton.' };
     }
 
-    const attachedChild = bone.children.find((child) => (
-      (child as THREE.Bone).isBone === true && skeleton.bones.includes(child as THREE.Bone)
-    )) as THREE.Bone | undefined;
-    const parentBone = bone.parent as THREE.Bone;
+    const attachedChild = bone.children.find((child): child is THREE.Bone => (
+      isThreeBone(child) && skeleton.bones.includes(child)
+    ));
+    const parentBone = bone.parent;
     const parentIndex = skeleton.bones.indexOf(parentBone);
     const replacementIndex = attachedChild
       ? Math.max(0, skeleton.bones.indexOf(attachedChild) - 1)
@@ -742,8 +743,8 @@ export function spinRig(
 
   for (const bone of bones) {
     const parent = bone.parent;
-    const parentWorld = parent && (parent as THREE.Bone).isBone === true && nextWorld.has(parent as THREE.Bone)
-      ? nextWorld.get(parent as THREE.Bone)!
+    const parentWorld = isThreeBone(parent) && nextWorld.has(parent)
+      ? nextWorld.get(parent)!
       : parent?.matrixWorld ?? new THREE.Matrix4();
     const localMatrix = parentWorld.clone().invert().multiply(nextWorld.get(bone)!);
     localMatrix.decompose(bone.position, bone.quaternion, bone.scale);
@@ -772,7 +773,7 @@ export function deleteBoneBranch(
     return { ok: false, reason: 'missing-bone', message: `Bone ${boneName} is not in the current skeleton.` };
   }
 
-  if (!bone.parent || (bone.parent as THREE.Bone).isBone !== true || !skeleton.bones.includes(bone.parent as THREE.Bone)) {
+  if (!isThreeBone(bone.parent) || !skeleton.bones.includes(bone.parent)) {
     return { ok: false, reason: 'root-bone', message: 'Root bones cannot be deleted from the Rig workspace.' };
   }
 

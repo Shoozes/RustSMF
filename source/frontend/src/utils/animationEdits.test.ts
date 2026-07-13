@@ -14,6 +14,7 @@ import {
   getAnimationClipMetadata,
   getCurrentClipKey,
   hasDirtyAnimationEdits,
+  isAnimationInterpolation,
   makeAnimationEditState,
   makeKeyframeFromBone,
   makeUniqueAnimationClipName,
@@ -31,6 +32,12 @@ import {
   upsertAnimationKeyframe,
 } from './animationEdits';
 import type { ImportedSmf } from '../loaders/smf';
+
+test('animation interpolation guard rejects untrusted values', () => {
+  assert.equal(isAnimationInterpolation('linear'), true);
+  assert.equal(isAnimationInterpolation('cubic'), false);
+  assert.equal(isAnimationInterpolation(null), false);
+});
 
 test('animation edit helpers insert, replace, sort, and delete selected-bone keys', () => {
   const clipName = 'Walk';

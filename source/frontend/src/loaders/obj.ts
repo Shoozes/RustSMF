@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
+import { isThreeMesh, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
 
 // Basic OBJ loader, mirroring fbx/glb for consistency.
 // OBJ is typically static meshes (no skinning/rigging), but we support any animations if present.
@@ -25,7 +26,7 @@ export async function loadOBJ(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
     obj = await loader.loadAsync(urlOrBuffer);
   } else {
     // OBJLoader parse takes string content typically; convert buffer to text.
-    const text = new TextDecoder().decode(new Uint8Array(urlOrBuffer as ArrayBuffer));
+    const text = new TextDecoder().decode(new Uint8Array(urlOrBuffer));
     obj = loader.parse(text);
   }
 
@@ -33,32 +34,27 @@ export async function loadOBJ(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
   root.name = 'OBJ_Root';
 
   const skinnedMeshes: THREE.SkinnedMesh[] = [];
-  const rawAnimations: unknown = Reflect.get(root as object, 'animations');
+  const rawAnimations: unknown = Reflect.get(root, 'animations');
   const allClips = Array.isArray(rawAnimations)
     ? rawAnimations.filter(isAnimationClip)
     : [];
 
   root.traverse((node) => {
-    if (node.type !== 'Mesh' && node.type !== 'SkinnedMesh') {
-      return;
+    if (!isThreeMesh(node)) return;
+    const geo = node.geometry;
+    if (!geo.attributes.uv) {
+      const count = geo.attributes.position?.count || 0;
+      geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
     }
-    const mesh = node as THREE.Mesh | THREE.SkinnedMesh;
-    const geo = mesh.geometry;
-      if (!geo.attributes.uv) {
-        const count = geo.attributes.position?.count || 0;
-        geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
-      }
-      if (!geo.attributes.normal) {
-        geo.computeVertexNormals();
-      }
-      if (!geo.attributes.tangent && geo.index && geo.attributes.position && geo.attributes.normal && geo.attributes.uv) {
-        geo.computeTangents?.();
-      }
+    if (!geo.attributes.normal) {
+      geo.computeVertexNormals();
+    }
+    if (!geo.attributes.tangent && geo.index && geo.attributes.position && geo.attributes.normal && geo.attributes.uv) {
+      geo.computeTangents?.();
+    }
 
-      // OBJ meshes are rarely skinned, but collect if so
-      if (node.type === 'SkinnedMesh') {
-        skinnedMeshes.push(mesh as THREE.SkinnedMesh);
-      }
+    // OBJ meshes are rarely skinned, but collect if so
+    if (isThreeSkinnedMesh(node)) skinnedMeshes.push(node);
   });
 
   let skeleton: THREE.Skeleton | undefined;

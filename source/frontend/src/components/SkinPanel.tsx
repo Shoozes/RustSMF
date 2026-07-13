@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {
   SKIN_AUTO_WEIGHT_ALGORITHMS,
   SKIN_AUTO_WEIGHT_ALGORITHM_LABELS,
+  isSkinAutoWeightAlgorithm,
   type SkinAutoWeightAlgorithm,
   type SkinWeightEditMode,
 } from '../utils/skinWeights';
@@ -217,7 +218,11 @@ export default function SkinPanel({
               data-testid="skin-autoskin-algorithm"
               value={skinAutoWeightAlgorithm}
               disabled={!hasSkeleton}
-              onChange={(e) => onSkinAutoWeightAlgorithmChange(e.target.value as SkinAutoWeightAlgorithm)}
+              onChange={(e) => {
+                if (isSkinAutoWeightAlgorithm(e.target.value)) {
+                  onSkinAutoWeightAlgorithmChange(e.target.value);
+                }
+              }}
               className="w-40 bg-slate-800 border border-slate-700 px-1 py-0.5 text-slate-200"
             >
               {SKIN_AUTO_WEIGHT_ALGORITHMS.map((algorithm) => (

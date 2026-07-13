@@ -113,7 +113,7 @@
     },
     "feature__model_loading_export": {
       "description": "User-facing load, preview, edit-preview, and export flow across SMF, GLB/GLTF, FBX, and OBJ, including explicit current-root GLB recovery export with pre-save structural reparse validation.",
-      "status": "core connected; SMF high-fidelity export applies live pose/skin/animation edit layers, serializes edited rig DQs from world space across skipped head nodes, and preserves skin payloads in deform-bone order; dedicated Export as SMF preserves prebuilt head-node rig/frame DQs; guarded non-SMF skinned SMF and validated current-root GLB export are browser-covered; binary FBX 7500 export has static roundtrip units; structured SMF diagnostics cover counts, geometry, bounds, skin indices/8-bit weights, animation timing/metadata, and sign-equivalent pose deltas; real Mixamo and old-source head-node fixtures cover import/export/reimport; picker/input/drop/path/loader share one latest-intent sequence, successful loads replace atomically, stale parsed roots are disposed, and newer loads invalidate stale export UI commits while diagnostic/model saves remain globally single-flight; desktop paths read bytes for every supported format; source-format detection and typed bridge/loader boundaries remain centralized and production-any guarded.",
+      "status": "core connected; SMF high-fidelity export applies live pose/skin/animation edit layers, serializes edited rig DQs from world space across skipped head nodes, and preserves skin payloads in deform-bone order; dedicated Export as SMF preserves prebuilt head-node rig/frame DQs; guarded non-SMF skinned SMF and validated current-root GLB export are browser-covered; binary FBX 7500 export has static roundtrip units; structured SMF diagnostics cover counts, geometry, bounds, skin indices/8-bit weights, animation timing/metadata, and sign-equivalent pose deltas; real Mixamo and old-source head-node fixtures cover import/export/reimport; picker/input/drop/path/loader share one latest-intent sequence, successful loads replace atomically, stale parsed roots are disposed, and newer loads invalidate stale export UI commits while diagnostic/model saves remain globally single-flight; desktop paths read bytes for every supported format; Tauri, DOM, Three traversal, exporter-result, and disposable-resource boundaries use named runtime guards and remain production-any guarded.",
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -136,6 +136,10 @@
         "source/frontend/tests/smoke.spec.ts",
         "source/frontend/src/utils/modelFormat.ts",
         "source/frontend/src/utils/modelFormat.test.ts",
+        "source/frontend/src/utils/threeTypeGuards.ts",
+        "source/frontend/src/utils/threeTypeGuards.test.ts",
+        "source/frontend/src/utils/threeDisposal.ts",
+        "source/frontend/src/utils/threeDisposal.test.ts",
         "source/frontend/src/utils/index.ts",
         "source/frontend/src/loaders/smfRig.ts",
         "source/frontend/src/loaders/coord.test.ts"
@@ -179,7 +183,7 @@
     },
     "feature__modern_editor_workspaces": {
       "description": "Modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, active single/quad viewport layout, model-safe wireframe display, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
-      "status": "Editor workspaces, single/quad/Ortho layout, responsive toolbar/display controls, routed View/Rig/Skin/Animate/Export input ownership, Outliner visibility/history, Skin authoring, animation authoring, non-SMF Rig structure tools, explicit Endpoint/IK, and direct TransformControls history ownership are active and browser-covered. SMF Rig and material shelf policies are complete with scoped snap, viewport-only sampler previews, source-safe export, non-mutating shared-texture preflight, and per-format texture rules. Loaded-authoring and delayed lifecycle matrices prove root, selection, playback, status/error, dirty-state, handle, and latest-intent continuity. Remaining parity is typed interop cleanup and deeper pane-camera controls.",
+      "status": "Editor workspaces, single/quad/Ortho layout, responsive toolbar/display controls, routed View/Rig/Skin/Animate/Export input ownership, Outliner visibility/history, Skin authoring, animation authoring, non-SMF Rig structure tools, explicit Endpoint/IK, and direct TransformControls history ownership are active and browser-covered. SMF Rig and material shelf policies are complete with scoped snap, viewport-only sampler previews, source-safe export, non-mutating shared-texture preflight, and per-format texture rules. Loaded-authoring and delayed lifecycle matrices prove root, selection, playback, status/error, dirty-state, handle, and latest-intent continuity. UI settings and Three r182 boundaries are runtime-guarded; remaining editor parity is deeper pane-camera controls.",
       "paths": [
         "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
@@ -405,7 +409,7 @@
     },
     "subsystem__tauri_bridge_and_rust_peeks": {
       "description": "Tauri native dialog/save/read commands, browser fallbacks, Rust SMF header/section peeks, and desktop status messages.",
-      "status": "native peeks and fallback strings covered; Rust SMF header/section parsing is extracted to `source/src-tauri/src/smf_core.rs` with typed `SmfHeaderSummary`/`SmfDesktopInfo` and tests for valid fixtures, bad versions, missing null terminators, invalid offsets, and count widths; `TauriClient` contract is centralized in `source/frontend/src/backend-client/tauri.ts`; `useLoadModel.ts` uses typed bridge and loader contracts for fewer runtime/typing mismatches; Playwright native IPC mocks cover delayed picker/read/write success and error, atomic failed replacement, cross-entrypoint latest-intent ownership, global save single-flight, canceled-save continuity, and non-SMF `read_file_binary`; true OS-dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it",
+      "status": "native peeks and fallback strings covered; Rust SMF header/section parsing is extracted to `source/src-tauri/src/smf_core.rs` with typed `SmfHeaderSummary`/`SmfDesktopInfo` and tests for valid fixtures, bad versions, missing null terminators, invalid offsets, and count widths; `TauriClient` contract is centralized in `source/frontend/src/backend-client/tauri.ts`, and dialog selections remain `unknown` until a supported string/object path shape is validated; `useLoadModel.ts` uses typed bridge and loader contracts for fewer runtime/typing mismatches; Playwright native IPC mocks cover delayed picker/read/write success and error, atomic failed replacement, cross-entrypoint latest-intent ownership, global save single-flight, canceled-save continuity, and non-SMF `read_file_binary`; true OS-dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it",
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -505,7 +509,7 @@
     },
     "tests__quality": {
       "description": "Automated quality gates: lint, app typecheck, test typecheck, production any boundary check, Vite build, chunk guard, unit roundtrips, Playwright e2e, native IPC mocks, and Rust cargo checks/tests.",
-      "status": "Quality posture: canonical verify covers context validation, lint, app/test typechecks, production-any boundaries, build/chunk guards, units, and Rust cargo check. Units now include SMF Rig policy, inverse-bind reset, rig-space child pose serialization, real-fixture node/head/skin/animation preservation, and diagnostic skin drift detection. Browser suites cover native IPC/cancel/races, View selection, Rig/Endpoint/IK/gizmo ownership/history, real-SMF policy/reset/roundtrip, Skin-exclusive painting, Animate authoring, latest-load wins, quad/Ortho transitions, and visual layouts. Optional GenEye and strict snapshots remain advisory.",
+      "status": "Quality posture: canonical verify covers context validation, lint, app/test typechecks, production-any boundaries, build/chunk guards, units, and Rust cargo check. Units now include SMF Rig policy, inverse-bind reset, rig-space child pose serialization, real-fixture node/head/skin/animation preservation, diagnostic skin drift detection, typed external-value guards, and identity-deduplicated Three resource disposal. Browser suites cover native IPC/cancel/races, View selection, Rig/Endpoint/IK/gizmo ownership/history, real-SMF policy/reset/roundtrip, Skin-exclusive painting, Animate authoring, latest-load wins, quad/Ortho transitions, and visual layouts. Optional GenEye and strict snapshots remain advisory.",
       "paths": [
         "source/frontend/package.json",
         "source/package.json",
@@ -534,6 +538,9 @@
         "source/frontend/src/test/installImageTestPolyfill.ts",
         "source/frontend/src/utils/viewportLayout.test.ts",
         "source/frontend/src/utils/viewportInteractionRouter.test.ts",
+        "source/frontend/src/store/index.test.ts",
+        "source/frontend/src/utils/threeTypeGuards.test.ts",
+        "source/frontend/src/utils/threeDisposal.test.ts",
         "source/frontend/scripts/check-entry-chunks.mjs",
         "scripts/verify-context-bank.py",
         "source/frontend/eslint.config.js",
@@ -978,6 +985,28 @@
       ],
       "current_solution": "Use one source/preview registry for original mesh assignments, material/texture state, and geometry colors; exporters restore the source during awaited serialization, while diagnostics read source materials directly.",
       "next_prevention": "Route every new exporter-visible preview channel through materialPreview and retain the textured downloaded-GLB smoke with all overrides active.",
+      "files": []
+    },
+    "issue__broad_interop_casts_and_shared_disposal": {
+      "description": "Broad assertions at Tauri, DOM, Three.js, loader, and exporter boundaries could validate malformed values by declaration, while recursive cleanup could dispose shared render resources repeatedly or omit skeleton-owned resources.",
+      "status": "fixed 2026-07-13; named runtime guards replace broad production casts and Three subtree cleanup deduplicates geometry, skeleton, material, and texture disposal by identity",
+      "last_seen": "2026-07-13",
+      "paths": [
+        "source/frontend/src/backend-client/tauri.ts",
+        "source/frontend/src/components/ThreeViewport.tsx",
+        "source/frontend/src/loaders/glb.ts",
+        "source/frontend/src/loaders/fbx.ts",
+        "source/frontend/src/loaders/obj.ts",
+        "source/frontend/src/store/index.ts",
+        "source/frontend/src/utils/threeTypeGuards.ts",
+        "source/frontend/src/utils/threeTypeGuards.test.ts",
+        "source/frontend/src/utils/threeDisposal.ts",
+        "source/frontend/src/utils/threeDisposal.test.ts",
+        "source/frontend/scripts/check-production-any.mjs",
+        "docs/dev/PITFALL_LEDGER.md"
+      ],
+      "current_solution": "External values enter through narrow predicates/adapters; Three traversal uses shared instanceof guards; binary GLB exporter results are checked at runtime; buffer copies avoid SharedArrayBuffer assertions; disposal uses one identity set per subtree and includes skeleton resources.",
+      "next_prevention": "Validate worker messages as untrusted data, rerun production assertion searches after dependency upgrades, and add any new disposable resource type to the one adapter plus its deduplication test.",
       "files": []
     },
     "issue__export_inflight_guard": {

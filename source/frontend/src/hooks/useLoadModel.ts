@@ -20,6 +20,7 @@ import type { BoneTransformEditEvent, RigIkEditEvent, RigMoveEditEvent, RigRotat
 import { findBoneByName } from '../utils/bonePicker';
 import { createSeqGuard } from '../utils/seqGuard';
 import { disposeThreeObject } from '../utils/threeDisposal';
+import { isThreeBone } from '../utils/threeTypeGuards';
 import { detectModelFormat, supportedModelFormatsLabel, type ModelSourceFormat } from '../utils/modelFormat';
 import { summarizeObjectTextures } from '../utils/textureCompat';
 import {
@@ -476,9 +477,7 @@ const getBoneBranchIndices = (skeleton: THREE.Skeleton, boneName: string): Set<n
     const index = skeleton.bones.indexOf(bone);
     if (index >= 0) branch.add(index);
     bone.children.forEach((child) => {
-      if ((child as THREE.Bone).isBone === true) {
-        visit(child as THREE.Bone);
-      }
+      if (isThreeBone(child)) visit(child);
     });
   };
   visit(root);
@@ -748,9 +747,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         bone,
         name: bone.name,
         parent: bone.parent,
-        parentBone: bone.parent && (bone.parent as THREE.Bone).isBone === true
-          ? bone.parent as THREE.Bone
-          : null,
+        parentBone: isThreeBone(bone.parent) ? bone.parent : null,
         rustsmfDetached: bone.userData.rustsmfDetached === true,
         position: [bone.position.x, bone.position.y, bone.position.z],
         quaternion: [bone.quaternion.x, bone.quaternion.y, bone.quaternion.z, bone.quaternion.w],
@@ -1568,7 +1565,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     });
   }, [ui, model.root, withExportBusy, buildCurrentSmfExportCandidate]);
   const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const input = e.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
     const loadSeqGuard = loadSeqGuardRef.current;
     const loadSeq = beginLoadRequest();
@@ -1584,7 +1582,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       ui.setErrorMsg(`File load error: ${m}`);
       ui.setStatus(`File load error: ${m}`);
     } finally {
-      (e.target as HTMLInputElement).value = '';
+      input.value = '';
       if (loadSeqGuard.isCurrent(loadSeq)) ui.setIsLoading(false);
     }
   }, [ui, loadModel, beginLoadRequest]);
@@ -1592,7 +1590,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   // Keyboard handler (can be used in useEffect in App or moved)
   const setupKeyboard = useCallback((historyHandlers: KeyboardEditorHistoryHandlers = {}) => {
     const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
+      const target = e.target instanceof HTMLElement ? e.target : null;
       const tagName = target?.tagName.toLowerCase();
       const isTextInput = tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target?.isContentEditable === true;
       if (isTextInput) return;
@@ -2522,9 +2520,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
 
     const bone = findBoneByName(skeleton, boneName);
-    const parentName = bone?.parent && (bone.parent as THREE.Bone).isBone === true
-      ? (bone.parent as THREE.Bone).name
-      : 'Scene';
+    const parentName = isThreeBone(bone?.parent) ? bone.parent.name : 'Scene';
     const before = captureRigSnapshot();
     const result = deleteBoneBranch(skeleton, boneName, collectSkinnedMeshes(model.root));
     if (!result.ok) {

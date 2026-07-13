@@ -1,11 +1,13 @@
 import * as THREE from 'three';
+import { isThreeBone } from './threeTypeGuards';
 
 export const RIG_IK_CHAIN_LENGTHS = [1, 2, 3, 4, 5, 6] as const;
 export const RIG_IK_ITERATION_OPTIONS = [8, 16, 32, 64] as const;
 export const RIG_IK_TOLERANCE_OPTIONS = [0.001, 0.01, 0.05, 0.1] as const;
 export const RIG_IK_MAX_ANGLE_OPTIONS = [30, 60, 90, 120, 180] as const;
+export const RIG_IK_POLE_AXES = ['none', 'x', '-x', 'y', '-y', 'z', '-z'] as const;
 
-export type RigIkPoleAxis = 'none' | 'x' | '-x' | 'y' | '-y' | 'z' | '-z';
+export type RigIkPoleAxis = typeof RIG_IK_POLE_AXES[number];
 
 export interface RigIkSettings {
   chainLength: number;
@@ -82,9 +84,13 @@ const closestOption = (value: number, options: readonly number[], fallback: numb
   ), fallback);
 };
 
+export function isRigIkPoleAxis(value: unknown): value is RigIkPoleAxis {
+  return RIG_IK_POLE_AXES.some((axis) => axis === value);
+}
+
 export function normalizeRigIkSettings(settings: Partial<RigIkSettings>): RigIkSettings {
-  const poleAxis: RigIkPoleAxis = ['none', 'x', '-x', 'y', '-y', 'z', '-z'].includes(settings.poleAxis ?? '')
-    ? settings.poleAxis as RigIkPoleAxis
+  const poleAxis: RigIkPoleAxis = isRigIkPoleAxis(settings.poleAxis)
+    ? settings.poleAxis
     : DEFAULT_RIG_IK_SETTINGS.poleAxis;
   return {
     chainLength: closestOption(
@@ -127,8 +133,8 @@ export function createRigIkSession(
   const chainLength = Math.max(1, Math.floor(requestedChainLength));
   const ancestors: THREE.Bone[] = [];
   let cursor = endEffector.parent;
-  while (cursor && (cursor as THREE.Bone).isBone === true && ancestors.length < chainLength) {
-    ancestors.push(cursor as THREE.Bone);
+  while (isThreeBone(cursor) && ancestors.length < chainLength) {
+    ancestors.push(cursor);
     cursor = cursor.parent;
   }
   if (ancestors.length !== chainLength) {
@@ -315,9 +321,9 @@ export function solveRigIk(
 ): RigIkSolveResult {
   const settings = normalizeRigIkSettings(rawSettings);
   const chainNames = session.chain.map((bone) => bone.name);
-  const baseResult = {
+  const baseResult: Omit<RigIkSolveResult, 'status'> = {
     chainNames,
-    changedBoneNames: [] as string[],
+    changedBoneNames: [],
     iterations: 0,
     distanceToTarget: Number.POSITIVE_INFINITY,
     maxReach: session.maxReach,

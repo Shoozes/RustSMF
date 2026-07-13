@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { isThreeSkinnedMesh } from './threeTypeGuards';
 
 export interface SkinPointOverlayOptions {
   selectedBoneName?: string;
@@ -8,10 +9,6 @@ export interface SkinPointOverlayOptions {
 
 const DEFAULT_MAX_POINTS = 8000;
 const DEFAULT_POINT_SIZE = 0.035;
-
-const isSkinnedMesh = (value: THREE.Object3D): value is THREE.SkinnedMesh => (
-  value.type === 'SkinnedMesh' || (value as THREE.SkinnedMesh).isSkinnedMesh === true
-);
 
 function selectedBoneIndex(mesh: THREE.SkinnedMesh, selectedBoneName?: string): number {
   if (!selectedBoneName) return -1;
@@ -98,7 +95,7 @@ export function createSkinPointOverlays(
   if (!root) return [];
   const overlays: THREE.Points[] = [];
   root.traverse((object) => {
-    if (!isSkinnedMesh(object)) return;
+    if (!isThreeSkinnedMesh(object)) return;
     const overlay = createSkinPointOverlay(object, options);
     if (overlay) {
       object.add(overlay);

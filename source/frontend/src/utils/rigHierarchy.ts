@@ -1,7 +1,8 @@
 import * as THREE from 'three';
+import { isThreeBone } from './threeTypeGuards';
 
 export function isRigBone(object: THREE.Object3D): object is THREE.Bone {
-  return (object as THREE.Bone).isBone === true;
+  return isThreeBone(object);
 }
 
 export function collectRigHierarchyBones(
@@ -29,7 +30,7 @@ export function collectRigDeformBoneNames(skeleton?: THREE.Skeleton | null): str
 }
 
 export function getRigRootBones(bones: readonly THREE.Bone[]): THREE.Bone[] {
-  return bones.filter((bone) => !bone.parent || !bones.includes(bone.parent as THREE.Bone));
+  return bones.filter((bone) => !isThreeBone(bone.parent) || !bones.includes(bone.parent));
 }
 
 export function isRigBoneDetached(bone: THREE.Bone, skeleton?: THREE.Skeleton | null): boolean {

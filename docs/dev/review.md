@@ -4,29 +4,29 @@ Last reviewed: 2026-07-13
 
 ## Scope
 
-Focused implementation and integrity review for async load/export ownership, atomic replacement, stale completion rejection, and save single-flight behavior.
+Focused integrity review of production TypeScript boundaries, Three.js resource ownership, and readiness for workerized SMF processing.
 
 ## Current Findings
 
-- Picker, file input, drop, desktop path read, and loader completion now carry one token created at user intent. A delayed result cannot become artificially newest merely because it enters `loadModel` last.
-- Model replacement is atomic: the current root, selection, and dirty authoring state remain live until a current replacement parses successfully. Failed replacements preserve them; stale parsed roots are explicitly disposed.
-- New load intent invalidates old export UI ownership. GLB/FBX exporter, validation, diagnostic save, SMF save, and generic save paths check freshness after every await, so stale success/error cannot overwrite the newer load's status or error.
-- Save serialization remains global across diagnostic and model actions. Stale export cleanup always releases the save lock but does not clear a newer load's busy state.
-- Deterministic browser/native matrices cover stale success after newer error, stale error after newer success, picker and desktop reads, input/drop, export-versus-load, browser cross-action downloads, canceled saves, root/selection/status/error, and pose/skin/animation dirty ownership.
+- Tauri dialog selections, DOM select values, loader animation arrays, GLB exporter results, TransformControls events, Three object traversal, material fields, and disposable resources now enter through narrow guards or adapters rather than broad assertions.
+- Shared `Bone`, `Mesh`, and `SkinnedMesh` guards keep loader, viewport, outliner, rig, skin, and preview traversal consistent with Three.js r182.
+- Three subtree cleanup now releases geometry, material, texture, and skeleton resources once by identity, including shared resources across multiple meshes/material slots.
+- Production scans contain no `any`, double assertions, `as THREE.*`, `@ts-ignore`, or `@ts-expect-error` outside the owned vendor boundary. Remaining assertions are literal `as const` narrowing.
+- DOM/settings guards reject malformed editor mode, animation interpolation, auto-weight algorithm, and IK pole-axis values; animation snap uses the existing normalizer.
 
-## Next Tasks
+## Next Task
 
-### Typed interop boundaries
+### Workerize heavy SMF import/export with progress
 
-- What: Eliminate or isolate remaining broad casts and external-library type mismatches at Three.js, loader, exporter, Tauri, and disposal boundaries.
-- Why: The async ownership contract is now explicit; loose boundary types are the next source of assumptions that could bypass it during dependency upgrades or worker extraction.
-- Where: `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/hooks/useLoadModel.ts`, loaders/exporters, `ThreeViewport.tsx`, and `threeDisposal.ts`.
-- When: Before workerizing SMF import/export.
-- How: Keep errors `unknown`, introduce narrow named guards/adapters, and document only unavoidable external type skew.
-- Done when: App/test typechecks and production-any pass, with every remaining production cast narrow and justified.
+- What: Move synchronous SMF parse/export work off the UI thread while preserving exact load/export ownership and diagnostics.
+- Why: Current sequence guards stop stale commits but large binary work can still block interaction.
+- Where: `source/frontend/src/workers/modelWorker.ts`, `source/frontend/src/hooks/useLoadModel.ts`, SMF loaders/exporters, worker message tests, and Playwright stress coverage.
+- When: Next; async and typed boundary contracts are now stable.
+- How: Use typed transferable request/progress/success/error messages, monotonic bounded progress, explicit worker cleanup, shared sequence tokens, and a tested synchronous startup fallback.
+- Done when: Large-file interaction remains responsive; progress is monotonic and clears terminally; results preserve current roundtrip diagnostics; stale responses cannot commit; startup/runtime failures take an explicit tested path.
 
 ## Verification
 
-- Focused async evidence passes 7/7 under four-worker concurrency, with targeted reruns after strengthening failed-replacement assertions and replacing fixed write sleeps with explicit start/settlement telemetry.
-- Full `pwsh -File run.ps1 -Task verify` passes with 187/187 units, zero-warning context validation, lint, app/test typechecks, production-any guard, build/chunk checks, and Rust cargo check.
-- Browser-only `pwsh -File run.ps1 -Task test:e2e -NoGenEye` passes 50/50 under four-worker concurrency after auditing and fixing one test-only save-start timing assumption.
+- Focused typed-boundary/export/disposal evidence passes 67/67.
+- Full `pwsh -File run.ps1 -Task verify` passes with 195/195 units, zero-warning context validation, lint, app/test typechecks, production-any guard, build/chunk checks, and Rust cargo check.
+- Browser Playwright passes 50/50 under four-worker concurrency, including async lifecycle, workspace continuity, TransformControls, IK, export, and visual flows.

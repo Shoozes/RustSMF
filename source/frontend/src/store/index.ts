@@ -25,8 +25,13 @@ export interface PlaybackState {
   playbackSpeed: number;
 }
 
-export type EditorMode = 'view' | 'rig' | 'skin' | 'animate' | 'export';
+export const EDITOR_MODES = ['view', 'rig', 'skin', 'animate', 'export'] as const;
+export type EditorMode = typeof EDITOR_MODES[number];
 export type ViewportLayout = 'single' | 'quad';
+
+export function isEditorMode(value: unknown): value is EditorMode {
+  return EDITOR_MODES.some((mode) => mode === value);
+}
 
 export interface UiState {
   status: string;
