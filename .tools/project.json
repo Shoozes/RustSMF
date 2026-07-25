@@ -8,7 +8,7 @@
     "secretsDir": ".tools/.secrets",
     "tokenFile": "gt.txt"
   },
-  "_note": "Dev controller button layout. Groups become tabs. .tools/ and generators are for human devs + LLM skills only — keep context lean by using summary_bank.json + _gen_struct.py / get-context.ps1 instead of broad reads of old-src, node_modules, or .tools internals. See docs/dev/APP_STATE.md, docs/dev/TODO.md, docs/dev/PITFALL_LEDGER.md, and .agents/ for current conversion directions.",
+  "_note": "Dev controller button layout. Groups become tabs. .tools/ is for human dev workflows only — keep context lean by using summary_bank.json plus get-context.ps1 instead of broad reads of old-src, node_modules, or tool internals. See docs/dev/APP_STATE.md, docs/dev/TODO.md, docs/dev/PITFALL_LEDGER.md, and .agents/ for current conversion directions.",
   "window": {
     "title": "RustSMF  //  Unified Controller",
     "width": 780,
@@ -21,19 +21,19 @@
         {
           "label": "Dump Default Structure",
           "description": "Generates focused structure output from the current summary bank groups (preferred over full tree for LLM sessions).",
-          "type": "python",
-          "script": ".tools/_gen_struct.py",
+          "type": "powershell",
+          "script": ".tools/get-context.ps1",
           "args": [],
           "capture": true,
           "show_output": true
         },
         {
-          "label": "Sync Summary Bank",
-          "description": "Scans the repo for new or moved files and updates summary_bank.json without dropping custom groups. Run after adding loaders, UI panels, or Rust commands.",
-          "type": "python",
-          "script": ".tools/_gen_bank.py",
+          "label": "Verify Summary Bank",
+          "description": "Fails on malformed groups, missing or ambiguous paths, unmatched globs, and context budgets that exceed their declared limits.",
+          "type": "powershell",
+          "script": ".tools/get-context.ps1",
           "args": [
-            "--auto-add"
+            "-Verify"
           ],
           "capture": true,
           "show_output": true

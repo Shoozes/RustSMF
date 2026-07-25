@@ -1,1118 +1,308 @@
 {
   "defaults": {
     "groups": [
-      "docs__state_backlog",
-      "feature__model_loading_export",
-      "feature__modern_editor_workspaces",
-      "tests__quality"
+      "docs__orientation"
     ],
-    "tree": true,
+    "tree": false,
     "max_kb": 180,
+    "max_path_fanout": 8,
     "skip_dirs": [
-      ".agents",
-      ".env",
       ".git",
-      ".idea",
-      ".pytest_cache",
       ".secrets",
-      ".venv",
-      ".vscode",
-      "__pycache__",
-      "_backup",
-      "_struct_summary.txt",
-      "_structure_with_content.txt",
-      "_temp_payload.txt",
       "build",
-      "build_phase_prompt.txt",
-      "current_structure.txt",
       "dist",
-      "docs",
-      "docs/references",
-      "git",
-      "github",
-      "models",
       "node_modules",
       "playwright-report",
-      "public",
-      "qwen_sig.txt",
-      "release",
       "runtime-data",
       "target",
-      "test",
-      "test-results",
-      "tests",
-      "tmp_struct.txt",
-      "venv"
+      "test-results"
     ]
   },
   "groups": {
-    "docs__state_backlog": {
-      "description": "Current app state, active paired backlog, latest review snapshot, docs policy, and durable regression-prevention notes. Keep concise; do not append repeated pass logs.",
-      "status": "Current docs policy: active backlog (`docs/dev/TODO.md`), state (`docs/dev/APP_STATE.md`), concise review snapshot (`docs/dev/review.md`), pitfall ledger, and summary bank registry are authoritative; 2026-07-13 state includes verified SMF/GLB recovery protections and explicit reversible Rig IK, while completed progress narration is consolidated out of the active backlog.",
+    "docs__orientation": {
+      "description": "Lean current-state orientation. Use a focused feature or subsystem group before reading broader source.",
+      "max_kb": 64,
       "paths": [
         "README.md",
-        "docs/README.md",
         "docs/dev/README.md",
-        "docs/dev/TODO.md",
         "docs/dev/APP_STATE.md",
-        "docs/dev/review.md",
-        "docs/dev/PITFALL_LEDGER.md",
-        "docs/dev/GENEYE_FEEDBACK.md",
-        "docs/research-inbox/README.md",
-        "docs/research-inbox/archived/README.md",
-        "source/frontend/tests/README.md",
-        "AGENTS.md",
-        "docs/references/old-src/screenshots/README.md",
-        "docs/references/old-src/issues.md",
-        "docs/references/old-src/GML-2026.md",
-        "docs/references/old-src/GML-short-skills.md"
+        "docs/dev/TODO.md",
+        "docs/dev/review.md"
       ],
       "notes": [
-        "TODO entries use what/why/where/when/how, subtasks, and done criteria for active concerns only.",
-        "APP_STATE is current-state only.",
-        "Pitfalls capture regressions or hidden verification gaps.",
-        "Completed work is summarized once; avoid re-adding long pass logs."
-      ],
-      "files": []
+        "TODO owns executable work and completion conditions.",
+        "APP_STATE owns shipped behavior.",
+        "review.md is the latest concise integrity snapshot."
+      ]
     },
-    "subsystem__harness_and_context": {
-      "description": "Run scripts, agent workflows, context-bank generation, and repo helper tooling.",
-      "status": "Canonical process safety and verification context are anchored in `run.ps1`/`run.bat`, with context-bank checks and production-any boundary checks in verify. Dev preview/e2e uses build+preview, can optionally wrap RustSMF Playwright through GenEye advisory `playwright-full -Group geneye-watch-fixture`, and retains separate process-lifecycle safeguards.",
+    "workflow__context_bank": {
+      "description": "Portable context routing, validation, generation, and controller entry points.",
+      "max_kb": 96,
       "paths": [
-        "run.ps1",
-        "run.bat",
-        "README.md",
-        "source/package.json",
-        "source/frontend/package.json",
-        "source/frontend/playwright.config.ts",
-        "source/frontend/scripts/run-strict-visuals.mjs",
-        "source/frontend/scripts/check-production-any.mjs",
-        "source/frontend/scripts/start-vite-dev.mjs",
-        "source/src-tauri/tauri.conf.json",
-        ".tools/*.ps1",
-        ".tools/*.py",
-        ".tools/project.json",
-        ".agents/workflows/*.md",
-        ".agents/skills/*/SKILL.md",
-        "scripts/README.md",
-        "scripts/verify-context-bank.py",
-        "source/frontend/tsconfig.test.json",
         "summary_bank.json",
+        "scripts/context-bank-lib.mjs",
+        "scripts/verify-context-bank.mjs",
+        "scripts/generate-context.mjs",
+        "scripts/context-bank.test.mjs",
+        "scripts/README.md",
+        ".tools/get-context.ps1",
+        ".tools/project.json",
+        "run.ps1",
         "AGENTS.md"
       ],
       "notes": [
-        "Use `pwsh -File run.ps1 -Task verify` for the canonical local health check; it must exit nonzero on failed gates.",
-        "Use `pwsh -File run.ps1 -Task desktop-smoke` for unbundled Tauri build, Rust peeks, and native IPC mock coverage.",
-        "Use `pwsh -File run.ps1 -Task test:e2e -GenEyeRoot <path>` when GenEye subagent evidence is useful; use `-NoGenEye` for browser-only proof. The RustSMF Playwright command remains authoritative; app evidence comes from GenEye `project_tests` plus RustSMF artifacts, while the built-in GenEye scenario is plumbing-only.",
-        "Use `pwsh -File run.ps1 -Task test:visual-strict` only for opt-in strict SMF screenshot baselines; use `test:visual-update` only for intentional snapshot refreshes.",
-        "Use no-arg `pwsh -File run.ps1` or `run.bat` for default desktop launch.",
-        "Avoid `summary_bank.json --auto-add` unless intentionally refreshing broad generated file lists; prefer narrow paths.",
-        "Temp branches are scratch only; reconcile needed work back to local main before handoff. Do not push temp branches unless explicitly named."
-      ],
-      "files": []
+        "Exact files and explicit globs are the only path contract; bare directories fail.",
+        "Node.js 22 or newer is the canonical runtime.",
+        "Generation never truncates a file or writes when --out - is requested."
+      ]
     },
-    "feature__model_loading_export": {
-      "description": "User-facing load, preview, edit-preview, and export flow across SMF, GLB/GLTF, FBX, and OBJ, including explicit current-root GLB recovery export with pre-save structural reparse validation.",
-      "status": "core connected; SMF high-fidelity export applies live pose/skin/animation edit layers, serializes edited rig DQs from world space across skipped head nodes, and preserves skin payloads in deform-bone order; dedicated Export as SMF preserves prebuilt head-node rig/frame DQs; guarded non-SMF skinned SMF and validated current-root GLB export are browser-covered; binary FBX 7500 export has static roundtrip units; structured SMF diagnostics cover counts, geometry, bounds, skin indices/8-bit weights, animation timing/metadata, and sign-equivalent pose deltas; real Mixamo and old-source head-node fixtures cover import/export/reimport; picker/input/drop/path/loader share one latest-intent sequence, successful loads replace atomically, stale parsed roots are disposed, and newer loads invalidate stale export UI commits while diagnostic/model saves remain globally single-flight; desktop paths read bytes for every supported format; Tauri, DOM, Three traversal, exporter-result, and disposable-resource boundaries use named runtime guards and remain production-any guarded.",
+    "feature__theme_system": {
+      "description": "Persisted theme registry, Modern and Original SMF presentation, workspace labels, and visual behavior.",
+      "max_kb": 160,
       "paths": [
+        "source/frontend/src/theme.ts",
+        "source/frontend/src/theme.test.ts",
+        "source/frontend/src/hooks/useAppTheme.ts",
         "source/frontend/src/App.tsx",
-        "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/components/Toolbar.tsx",
-        "source/frontend/src/components/Inspector.tsx",
-        "source/frontend/src/components/Timeline.tsx",
-        "source/frontend/src/components/Outliner.tsx",
-        "source/frontend/src/backend-client/tauri.ts",
-        "source/frontend/src/loaders",
-        "source/frontend/src/loaders/smfDiagnostics.ts",
-        "source/frontend/src/loaders/smfBinary.ts",
-        "source/frontend/src/loaders/threeToSmf.ts",
-        "source/frontend/src/loaders/threeToSmf.test.ts",
+        "source/frontend/src/main.tsx",
+        "source/frontend/src/index.css",
+        "source/frontend/src/styles/themes/original.css",
+        "source/frontend/tests/visual.spec.ts"
+      ],
+      "notes": [
+        "Original preserves the old editor's simplicity and compact hierarchy.",
+        "Theme definitions own labels and panel copy; components should not branch on theme IDs."
+      ]
+    },
+    "feature__fbx_support": {
+      "description": "Binary FBX 7500 export, import compatibility, pre-save validation, and round-trip coverage.",
+      "max_kb": 80,
+      "paths": [
+        "source/frontend/src/loaders/fbx.ts",
         "source/frontend/src/loaders/fbx.test.ts",
+        "source/frontend/src/loaders/index.ts",
         "source/frontend/src/vendor/FBXExporter.js",
         "source/frontend/src/vendor/FBXExporter.d.ts",
         "source/frontend/src/vendor/FBXExporter-threejs.LICENSE.txt",
-        "source/frontend/tests/helpers/skinned-glb-fixture.ts",
-        "source/frontend/tests/test.fbx",
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/src/utils/modelFormat.ts",
-        "source/frontend/src/utils/modelFormat.test.ts",
-        "source/frontend/src/utils/threeTypeGuards.ts",
-        "source/frontend/src/utils/threeTypeGuards.test.ts",
-        "source/frontend/src/utils/threeDisposal.ts",
-        "source/frontend/src/utils/threeDisposal.test.ts",
-        "source/frontend/src/utils/index.ts",
-        "source/frontend/src/loaders/smfRig.ts",
-        "source/frontend/src/loaders/coord.test.ts"
+        "source/frontend/tests/helpers/skinned-glb-fixture.ts"
       ],
-      "files": []
+      "notes": [
+        "The bundled exporter is the implementation authority.",
+        "Exported bytes must re-import and preserve representative mesh, skin, bone, and clip structure before save."
+      ]
     },
-    "feature__smf_export_diagnostics": {
-      "description": "Structured SMF export preflight, format-owned texture policy, and source-safe material preview/export boundaries.",
-      "status": "Structured compatibility checks, report saving, material/texture warnings, shared-texture preflight, exact skin/pose roundtrip rows, and per-action texture embedding policy are active. GLB/FBX export restores source assignments, materials, samplers, and weight-color state for the full async call, so viewport previews cannot alter saved assets.",
+    "subsystem__smf_codec_worker": {
+      "description": "SMF worker protocol, structural validation, ownership transfer, cancellation, timeout, and startup fallback.",
+      "max_kb": 48,
       "paths": [
-        "docs/dev/APP_STATE.md",
-        "docs/dev/TODO.md",
+        "source/frontend/src/workers/modelWorker.ts",
+        "source/frontend/src/workers/smfCodecClient.ts",
+        "source/frontend/src/workers/smfCodecClient.test.ts",
+        "source/frontend/src/workers/smfCodecProtocol.ts",
+        "source/frontend/src/workers/smfCodecRuntime.ts",
+        "source/frontend/src/loaders/smfData.ts"
+      ],
+      "notes": [
+        "Worker messages are untrusted values.",
+        "Canonical editor buffers are cloned before export transfer.",
+        "Runtime worker errors do not silently fall back to the main thread."
+      ]
+    },
+    "subsystem__export_pipeline": {
+      "description": "Current-root conversion, SMF diagnostics, source-state preservation, and serialized save orchestration.",
+      "max_kb": 120,
+      "paths": [
+        "source/frontend/src/hooks/smfExportCandidate.ts",
+        "source/frontend/src/hooks/smfExportCandidate.test.ts",
+        "source/frontend/src/hooks/useSmfCodecTask.ts",
         "source/frontend/src/loaders/smfDiagnostics.ts",
         "source/frontend/src/loaders/smfDiagnostics.test.ts",
         "source/frontend/src/loaders/threeToSmf.ts",
         "source/frontend/src/loaders/threeToSmf.test.ts",
-        "source/frontend/src/utils/textureCompat.ts",
-        "source/frontend/src/utils/textureCompat.test.ts",
+        "source/frontend/src/loaders/glb.ts",
+        "source/frontend/src/loaders/fbx.ts",
         "source/frontend/src/utils/materialPreview.ts",
         "source/frontend/src/utils/materialPreview.test.ts",
         "source/frontend/src/utils/materialPolicy.ts",
-        "source/frontend/src/utils/materialPolicy.test.ts",
-        "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/src/components/ExportPanel.tsx",
-        "source/frontend/src/components/ThreeViewport.tsx",
-        "source/frontend/src/components/Toolbar.tsx",
-        "source/frontend/src/loaders/glb.ts",
-        "source/frontend/src/loaders/fbx.ts",
-        "source/frontend/src/App.tsx",
-        "source/frontend/src/index.css",
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/tests/helpers/skinned-glb-fixture.ts",
-        "source/frontend/tests/README.md",
-        "docs/dev/PITFALL_LEDGER.md"
+        "source/frontend/src/utils/materialPolicy.test.ts"
       ],
-      "next_steps": [
-        "Keep future exporter-visible previews inside the source-state boundary and extend downloaded-asset evidence for new material channels.",
-        "Only add texture atlas or geometry merge mutation with explicit ownership, undo, skin/material validation, and roundtrip proof."
-      ],
-      "files": []
+      "notes": [
+        "One pure candidate builder must own pose, animation, and live-skin application.",
+        "Indexed runtime geometry is expanded to SMF triangle soup before worker validation.",
+        "All saves stay globally single-flight and freshness-checked."
+      ]
     },
-    "feature__modern_editor_workspaces": {
-      "description": "Modern editor shell inspired by old-src GameMaker screenshots: mode-specific workspaces, active single/quad viewport layout, model-safe wireframe display, large bone handles/labels, clear skinning state, and GLB-first authoring with SMF backwards compatibility.",
-      "status": "Editor workspaces, single/quad/Ortho layout, responsive toolbar/display controls, routed View/Rig/Skin/Animate/Export input ownership, Outliner visibility/history, Skin authoring, animation authoring, non-SMF Rig structure tools, explicit Endpoint/IK, and direct TransformControls history ownership are active and browser-covered. SMF Rig and material shelf policies are complete with scoped snap, viewport-only sampler previews, source-safe export, non-mutating shared-texture preflight, and per-format texture rules. Loaded-authoring and delayed lifecycle matrices prove root, selection, playback, status/error, dirty-state, handle, and latest-intent continuity. UI settings and Three r182 boundaries are runtime-guarded; remaining editor parity is deeper pane-camera controls.",
+    "subsystem__viewport_editor": {
+      "description": "Three.js viewport lifecycle, selection, transform controls, edit gestures, overlays, and layouts.",
+      "max_kb": 160,
       "paths": [
-        "docs/dev/TODO.md",
-        "docs/dev/APP_STATE.md",
-        "docs/dev/old_editor_source_map.md",
-        "docs/references/old-src/screenshots/README.md",
-        "docs/references/old-src/screenshots/*.png",
-        "source/frontend/src/App.tsx",
-        "source/frontend/src/index.css",
-        "source/frontend/src/components/RigPanel.tsx",
-        "source/frontend/src/components/SkinPanel.tsx",
-        "source/frontend/src/components/AnimatePanel.tsx",
-        "source/frontend/src/components/ExportPanel.tsx",
-        "source/frontend/src/components/Outliner.tsx",
-        "source/frontend/src/components/Timeline.tsx",
         "source/frontend/src/components/ThreeViewport.tsx",
-        "source/frontend/src/components/Inspector.tsx",
-        "source/frontend/src/components/Toolbar.tsx",
-        "source/frontend/src/store/index.ts",
-        "source/frontend/src/hooks/useLoadModel.ts",
+        "source/frontend/src/types/viewportEditorEvents.ts",
+        "source/frontend/src/utils/viewportInteractionRouter.ts",
+        "source/frontend/src/utils/viewportInteractionRouter.test.ts",
+        "source/frontend/src/utils/viewportInteractionRuntime.ts",
+        "source/frontend/src/utils/viewportInteractionRuntime.test.ts",
+        "source/frontend/src/utils/viewportTransformControls.ts",
+        "source/frontend/src/utils/viewportLayout.ts",
+        "source/frontend/src/utils/viewportLayout.test.ts",
+        "source/frontend/src/utils/selectionOverlay.ts",
+        "source/frontend/src/utils/selectionOverlay.test.ts",
+        "source/frontend/src/utils/skinPointOverlay.ts",
+        "source/frontend/src/utils/skinPointOverlay.test.ts",
+        "source/frontend/src/utils/threeDisposal.ts",
+        "source/frontend/src/utils/threeDisposal.test.ts"
+      ],
+      "notes": [
+        "Mount-owned listeners and controls require one explicit dispose owner.",
+        "Long-lived callbacks read current mutable state through refs.",
+        "Animation actions bind only when the mixer root matches the current root; attachment applies one complete current playback intent."
+      ]
+    },
+    "feature__rig_ik_pose": {
+      "description": "Bone hierarchy, pose editing, rig transforms, endpoint editing, and bounded CCD IK.",
+      "max_kb": 128,
+      "paths": [
         "source/frontend/src/hooks/poseEdits.ts",
         "source/frontend/src/hooks/poseEdits.test.ts",
-        "source/frontend/src/utils/editorHistory.ts",
-        "source/frontend/src/utils/editorHistory.test.ts",
-        "source/frontend/src/utils/modelOutliner.ts",
-        "source/frontend/src/utils/modelOutliner.test.ts",
-        "source/frontend/src/utils/animationTimeline.ts",
-        "source/frontend/src/utils/animationTimeline.test.ts",
-        "source/frontend/src/utils/animationEdits.ts",
-        "source/frontend/src/utils/animationEdits.test.ts",
-        "source/frontend/src/utils/modernSkeletonHelper.ts",
         "source/frontend/src/utils/rigEdits.ts",
         "source/frontend/src/utils/rigEdits.test.ts",
+        "source/frontend/src/utils/rigIk.ts",
+        "source/frontend/src/utils/rigIk.test.ts",
         "source/frontend/src/utils/rigHierarchy.ts",
         "source/frontend/src/utils/rigHierarchy.test.ts",
         "source/frontend/src/utils/rigValidation.ts",
         "source/frontend/src/utils/rigValidation.test.ts",
         "source/frontend/src/utils/smfRigPolicy.ts",
-        "source/frontend/src/utils/smfRigPolicy.test.ts",
-        "source/frontend/src/utils/legacySmfLighting.ts",
-        "source/frontend/src/utils/legacySmfLighting.test.ts",
-        "source/frontend/src/utils/skinPointOverlay.ts",
-        "source/frontend/src/utils/skinPointOverlay.test.ts",
-        "source/frontend/src/utils/selectionOverlay.ts",
-        "source/frontend/src/utils/selectionOverlay.test.ts",
-        "source/frontend/src/utils/skinWeights.ts",
-        "source/frontend/src/utils/skinWeights.test.ts",
-        "source/frontend/src/utils/skinBrushIndex.ts",
-        "source/frontend/src/utils/skinBrushIndex.test.ts",
-        "source/frontend/src/utils/viewportLayout.ts",
-        "source/frontend/src/utils/viewportInteractionRouter.ts",
-        "source/frontend/src/utils/viewportInteractionRouter.test.ts",
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/tests/visual.spec.ts"
-      ],
-      "requirements": [
-        "Default to a polished single perspective viewport, with optional quad view and model-safe wireframe display for rigging/skinning precision.",
-        "Rig and skin modes need larger screen-space bone glyphs, labels, endpoint handles, hover/selected states, and adjustable hit radius.",
-        "Mode tabs should expose Model, Rig, Skin, Animate, and Export workflows without recreating GameMaker chrome.",
-        "GLB/GLTF remains the preferred modern fidelity path; SMF remains a compatibility format with explicit limits."
-      ],
-      "files": []
-    },
-    "feature__rig_ik_pose": {
-      "description": "Explicit reversible Rig IK posing, kept distinct from direct endpoint and TransformControls edits, with SMF/head-motion pitfall routing.",
-      "status": "implemented 2026-07-13; bounded CCD solves a private cloned ancestor chain with tolerance, unreachable clamping, reference-pose joint limits, world-axis pole guidance, stale-chain rejection, unchanged local bone lengths, labeled target drag, whole-chain Escape/pointer-cancel restore, one pose history transaction, SMF export/reimport proof, GLB reparse validation, and reviewed browser visual proof; keyed Animate IK remains intentionally unshipped pending an explicit bake-to-key contract",
-      "paths": [
-        "source/frontend/src/utils/rigIk.ts",
-        "source/frontend/src/utils/rigIk.test.ts",
-        "source/frontend/src/utils/viewportInteractionRouter.ts",
-        "source/frontend/src/utils/viewportInteractionRouter.test.ts",
-        "source/frontend/src/utils/boneHighlight.ts",
-        "source/frontend/src/components/RigPanel.tsx",
-        "source/frontend/src/components/ThreeViewport.tsx",
-        "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/src/App.tsx",
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/tests/visual.spec.ts",
-        "source/frontend/tests/README.md",
-        "docs/dev/APP_STATE.md",
-        "docs/dev/PITFALL_LEDGER.md",
-        "docs/dev/review.md"
-      ],
-      "requirements": [
-        "Only the labeled Rig IK target and rig-ik-drag owner may be described as IK.",
-        "IK changes rotations only; local bone translations and lengths must remain unchanged.",
-        "Cancel and undo restore the complete solved chain, and a completed drag creates one pose transaction.",
-        "SMF structural edits remain blocked; SMF pose and validated GLB export paths preserve solved rotations."
-      ],
-      "next_steps": [
-        "Add keyed IK only with an explicit Animate bake-to-key ownership design and head/neck fixture coverage."
-      ],
-      "files": []
-    },
-    "workflow__old_editor_parity_source_map": {
-      "description": "Focused old GameMaker reference map for adapting RustSMF workspaces, display toggles, skin paint, animation keyframes, and viewport precision behavior without recreating old chrome verbatim.",
-      "status": "active reference; current RustSMF covers workspace/layout/display routing, View selection, Outliner history, Skin and Animate authoring, non-SMF Rig structural tools, explicit Select/Endpoint/IK ownership, pane-aware Add/Move/Rotate, and structured Export checks. SMF Rig and global shelf/material decisions are closed with format-specific reasons, scoped snap, viewport-only sampler previews, source-safe export, and non-mutating texture reuse preflight. Remaining mapped work is transition/race hardening and deeper ortho-pane interaction parity.",
-      "paths": [
-        "docs/dev/TODO.md",
-        "docs/dev/APP_STATE.md",
-        "docs/dev/old_editor_source_map.md",
-        "docs/references/old-src/screenshots/README.md",
-        "docs/references/old-src/screenshots/*.png",
-        "docs/references/Old SMF Documentation v1.pdf",
-        "docs/references/old-src/issues.md",
-        "docs/references/old-src/SMF.yyp",
-        "docs/references/old-src/objects/oAnimEditSystem/Create_0.gml",
-        "docs/references/old-src/objects/oAnimEditSystem/Draw_0.gml",
-        "docs/references/old-src/objects/oAnimEditSystem/Step_0.gml",
-        "docs/references/old-src/scripts/common_add_buttons/common_add_buttons.gml",
-        "docs/references/old-src/scripts/views_init/views_init.gml",
-        "docs/references/old-src/scripts/draw_model/draw_model.gml",
-        "docs/references/old-src/scripts/editor_draw_grid/editor_draw_grid.gml",
-        "docs/references/old-src/scripts/modeleditor_update_wireframe/modeleditor_update_wireframe.gml",
-        "docs/references/old-src/scripts/skineditor_*/*.gml",
-        "docs/references/old-src/scripts/animeditor_*/*.gml",
-        "docs/references/old-src/scripts/rigeditor_*/*.gml",
-        "docs/references/old-src/scripts/smf_anim/smf_anim.gml",
-        "docs/references/old-src/scripts/smf_rig/smf_rig.gml",
-        "docs/references/old-src/scripts/Utility/Utility.gml",
-        "docs/references/old-src/shaders/sh_smf_animate/sh_smf_animate.vsh",
-        "docs/references/old-src/shaders/sh_smf_animate/sh_smf_animate.fsh",
-        "docs/references/old-src/shaders/sh_smf_static/sh_smf_static.vsh",
-        "docs/references/old-src/shaders/sh_smf_static/sh_smf_static.fsh",
-        "docs/references/old-src/shaders/sh_grid/sh_grid.vsh",
-        "docs/references/old-src/shaders/sh_grid/sh_grid.fsh",
-        "docs/references/old-src/shaders/sh_skinning_points/sh_skinning_points.vsh",
-        "docs/references/old-src/shaders/sh_skinning_points/sh_skinning_points.fsh",
-        "docs/references/old-src/shaders/sh_selection/sh_selection.vsh",
-        "docs/references/old-src/shaders/sh_selection/sh_selection.fsh"
-      ],
-      "notes": [
-        "Keep display-only toggles separate from data-mutating commands.",
-        "Use old scripts/screenshots to identify behavior and constraints, not to duplicate the GameMaker UI frame one-for-one."
-      ],
-      "files": []
-    },
-    "subsystem__viewport_editor": {
-      "description": "Three.js viewport, orbit controls, model attach/dispose, animation mixer, modern skeleton helper, raycast/helper-hit bone selection, TransformControls, model-safe wireframe display, and weight preview/edit helper boundaries.",
-      "status": "modular and typechecked; the Inspector preserves hierarchy expansion by bone UUID, while the Rig panel validates skeleton/skin references and exposes undoable non-SMF rename, reparent, create, Add child, Move, Rotate, Detach/Connect, Spin, and guarded delete operations with animation/pose/skin retargeting where required. SMF structural mutation remains blocked. `viewportInteractionRouter.ts` assigns model-select, rig-select, rig-endpoint-drag, skin-paint, animate-select, orbit, or no-op ownership before mutation and rejects invalid click releases; quad pane roles and high-DPI boundaries are tested. TransformControls mount the public `getHelper()` scene root and expose real picker-handle telemetry: Rig Select owns undoable pose edits, Animate owns key upserts, and View/Export/Skin/quad/ortho detach the one-camera gizmo. Skin owns paint input exclusively so brush gestures cannot move bones through an overlapping gizmo. Endpoint owns only marked cyan spheres, detaches TransformControls, commits one pose transaction on completion, and restores the pre-drag snapshot on pointer-cancel. View selection, selected-object overlays, modern skeleton/label/hover helpers, display-only Skin points, Legacy SMF lighting, and wireframe overrides remain non-destructive. Single/quad/Ortho layout, endpoint, Skin paint, Animate key authoring, pane-aware Rig tools, display overlays, and ownership telemetry are smoke/visual covered. Weight preview and skin painting share typed four-slot helpers; paint uses skinned-world candidate indexing, bounded radius/depth checks, undoable snapshots, canonical Auto Paint/Normalize/Auto Skin options, dirty-state continuity, and supported SMF export serialization.",
-      "paths": [
-        "source/frontend/src/components/ThreeViewport.tsx",
-        "source/frontend/src/components/RigPanel.tsx",
-        "source/frontend/src/utils/SimpleOrbit.ts",
-        "source/frontend/src/utils/threeDisposal.ts",
-        "source/frontend/src/components/Inspector.tsx",
-        "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/src/hooks/poseEdits.ts",
-        "source/frontend/src/hooks/poseEdits.test.ts",
-        "source/frontend/src/utils/editorHistory.ts",
-        "source/frontend/src/utils/editorHistory.test.ts",
-        "source/frontend/src/utils/weightPreview.ts",
-        "source/frontend/src/utils/skinWeights.ts",
-        "source/frontend/src/utils/skinWeights.test.ts",
-        "source/frontend/src/utils/skinBrushIndex.ts",
-        "source/frontend/src/utils/skinBrushIndex.test.ts",
-        "source/frontend/src/utils/bonePicker.ts",
-        "source/frontend/src/utils/boneLabels.ts",
-        "source/frontend/src/utils/modernSkeletonHelper.ts",
-        "source/frontend/src/utils/rigEdits.ts",
-        "source/frontend/src/utils/rigEdits.test.ts",
-        "source/frontend/src/utils/rigHierarchy.ts",
-        "source/frontend/src/utils/rigHierarchy.test.ts",
-        "source/frontend/src/utils/rigValidation.ts",
-        "source/frontend/src/utils/rigValidation.test.ts",
-        "source/frontend/src/utils/useBoneLabels.ts",
-        "source/frontend/src/utils/boneHighlight.ts",
-        "source/frontend/src/utils/seqGuard.ts",
-        "source/frontend/src/utils/viewportLayout.ts",
-        "source/frontend/src/utils/viewportLayout.test.ts",
-        "source/frontend/src/utils/viewportInteractionRouter.ts",
-        "source/frontend/src/utils/viewportInteractionRouter.test.ts",
-        "source/frontend/src/utils/skinPointOverlay.ts",
-        "source/frontend/src/utils/skinPointOverlay.test.ts",
-        "source/frontend/src/utils/selectionOverlay.ts",
-        "source/frontend/src/utils/selectionOverlay.test.ts",
-        "source/frontend/tests/visual.spec.ts"
-      ],
-      "notes": [
-        "updateHighlightPosition extracted for RAF use in viewport (modularity + testability); labels canvas polish (DPR scale, textBaseline, truncation for quality/readability). 2026-06-18: viewport pane math and guard logic moved to utils/viewportLayout.ts; unit coverage added in viewportLayout.test.ts."
-      ],
-      "edge_cases": [
-        "Overlapping loads must not overwrite newer state.",
-        "TransformControls drag must not also orbit the camera.",
-        "Unmount/remount must not leak window or canvas listeners."
-      ],
-      "files": []
+        "source/frontend/src/utils/smfRigPolicy.test.ts"
+      ]
     },
     "subsystem__smf_format_and_fidelity": {
-      "description": "SMF binary parsing/export, coordinate swizzles, dual-quaternion math, roundtrip fidelity, and old reference format material. Internal binary helpers (bytes + bounded R/W) live in smfBinary.ts (shared, barrel exposes bytesToArrayBuffer plus BinaryReader/BinaryWriter).",
-      "status": "SMF source roundtrip and visual coherence verified; rig DQs are stored/serialized in world space while Three locals resolve through effective deform parents; true inverse binds drive selected-bone bind reset; explicit head nodes and canonical SMF_Node identity remain preserved; skin payloads stay in deform-bone order rather than full node-ID order; textures remain structured-clone-safe raw RGBA buffers until main-thread DataTexture scene construction; import/export codecs expose monotonic progress; structured diagnostics catch skin index/weight drift; binary bounds, DQ normalization/sign equivalence, zero-duration animation, real-fixture identity, and non-SMF conversion remain test-covered.",
+      "description": "SMF parsing, serialization, coordinate conversion, rig fidelity, and malformed-input diagnostics.",
+      "max_kb": 128,
       "paths": [
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/loaders/smfBinary.ts",
+        "source/frontend/src/loaders/smfData.ts",
         "source/frontend/src/loaders/smfRig.ts",
         "source/frontend/src/loaders/coord.ts",
         "source/frontend/src/loaders/coord.test.ts",
-        "source/frontend/src/hooks/poseEdits.ts",
-        "source/frontend/src/hooks/poseEdits.test.ts",
         "source/frontend/src/loaders/smfDiagnostics.ts",
-        "source/frontend/src/loaders/smfDiagnostics.test.ts",
-        "docs/references/old-src/GLBtoSMF/*.js",
-        "docs/references/old-src/GLBtoSMF/server.py",
-        "docs/references/old-src/GLBtoSMF/visual_proof_smf_to_glb_working_in_blender.png",
-        "docs/references/old-src/datafiles/SMF/*.smf",
-        "docs/references/old-src/screenshots/*.png",
-        "docs/references/old-src/issues.md",
-        "docs/references/old-src/GML-2026.md",
-        "docs/references/old-src/GML-short-skills.md",
-        "docs/references/old-src/SMF.yyp",
-        "docs/references/old-src/scripts/Utility/Utility.gml",
-        "docs/references/old-src/scripts/smf_anim/smf_anim.gml",
-        "docs/references/old-src/scripts/smf_rig/smf_rig.gml",
-        "docs/references/old-src/scripts/editor_load_rig_and_animation_from_buffer/editor_load_rig_and_animation_from_buffer.gml",
-        "source/frontend/src/loaders/threeToSmf.ts",
-        "source/frontend/src/loaders/threeToSmf.test.ts"
-      ],
-      "notes": [
-        "SMF animation count is u8 at ANIM offset.",
-        "SMF source export uses loaded ImportedSmf data and applies live position/rotation pose edits before export.",
-        "Loaded SMF visual checks should compare against old-src screenshots and CPU bind-pose skinning invariants, not just parser success."
-      ],
-      "files": []
+        "source/frontend/src/loaders/smfDiagnostics.test.ts"
+      ]
     },
-    "subsystem__tauri_bridge_and_rust_peeks": {
-      "description": "Tauri native dialog/save/read commands, browser fallbacks, Rust SMF header/section peeks, and desktop status messages.",
-      "status": "native peeks and fallback strings covered; Rust SMF header/section parsing is extracted to `source/src-tauri/src/smf_core.rs` with typed `SmfHeaderSummary`/`SmfDesktopInfo` and tests for valid fixtures, bad versions, missing null terminators, invalid offsets, and count widths; `TauriClient` contract is centralized in `source/frontend/src/backend-client/tauri.ts`, and dialog selections remain `unknown` until a supported string/object path shape is validated; `useLoadModel.ts` uses typed bridge and loader contracts for fewer runtime/typing mismatches; Playwright native IPC mocks cover delayed picker/read/write success and error, atomic failed replacement, cross-entrypoint latest-intent ownership, global save single-flight, canceled-save continuity, and non-SMF `read_file_binary`; true OS-dialog automation is deferred until a dialog-only bug, CI requirement, or release checklist needs it",
+    "subsystem__tauri_bridge": {
+      "description": "Tauri command adapters, native file dialogs and binary IO, Rust peeks, and native smoke coverage.",
+      "max_kb": 96,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
-        "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/tests/native.spec.ts",
-        "source/frontend/tests/helpers/smoke-helpers.ts",
         "source/src-tauri/src/main.rs",
-        "source/src-tauri/src/smf_core.rs",
         "source/src-tauri/Cargo.toml",
-        "source/src-tauri/capabilities/default.json",
         "source/src-tauri/tauri.conf.json",
-        "run.ps1"
-      ],
-      "open_items": [
-        "Evaluate tauri-driver or equivalent only if true OS-dialog open/save roundtrips become necessary.",
-        "Keep Rust, TS loader, and Playwright desktop simulation aligned for parser widths and offsets."
-      ],
-      "files": []
-    },
-    "subsystem__dev_process_lifecycle": {
-      "description": "Launcher (run.ps1/run.bat), beforeDev wrapper (start-vite-dev.mjs for tauri dev server), Tauri conf, process safety (Job objects, recursive tree kills, parent-pid poll, port+cmdline stale sweeps, signals/finally/traps), and related dev server lifetime (playwright preview separate).",
-      "status": "2026-06-16: layered Windows safety implemented + clean (New-KillOnCloseJob for X-close even if finally skipped; Start-Process ownership + finally for dev/tauri-dev; Stop-ProcessTree + Stop-DevServers (5173 node + 'vite|start-vite-dev|tauri' cmdline) + Stop-Stale on entry; trap + PowerShell.Exiting; mjs wrapper for beforeDev with SIGS/'exit'/killViteTree/taskkill /T + win32 parent poll + delay). tauri.conf beforeDev still points at mjs. 2026-06-18 added unix fallback handling in wrapper (`pkill`/`kill`) and kept direct-launch caveat docs explicit. Green on cargo/context/typechecks/verify.",
-      "paths": [
-        "run.ps1",
-        "run.bat",
-        "source/frontend/scripts/start-vite-dev.mjs",
-        "source/src-tauri/tauri.conf.json",
-        "source/frontend/package.json",
-        "source/package.json",
-        "source/frontend/playwright.config.ts",
-        "runtime-data/README.md",
-        "docs/dev/PITFALL_LEDGER.md",
-        "docs/dev/APP_STATE.md",
-        "docs/dev/TODO.md",
-        "scripts/verify-context-bank.py",
-        "source/src-tauri/src/main.rs"
-      ],
-      "notes": [
-        "Primary coverage for close-cmd-window (Job), close-tauri-app (mjs poll+tree), Ctrl+C, next-launch-clean (stale entry sweeps). Redundant layers on Win. See issue__rogue_node_servers and issue__launcher_contract_matrix.",
-        "Playwright webServer uses preview (playwright-managed, reuse:false); separate from persistent dev server."
-      ],
-      "files": []
-    },
-    "issue__launcher_contract_matrix": {
-      "description": "The default launcher behavior and process-safety guarantees differ between Windows menu flow and direct/non-Windows launch flows, which can cause onboarding ambiguity.",
-      "status": "done 2026-06-18",
-      "last_seen": "2026-06-18",
-      "paths": [
-        "README.md",
-        "docs/user/README.md",
-        "run.ps1",
-        "run.bat",
-        "docs/dev/TODO.md",
-        "docs/dev/APP_STATE.md",
-        "docs/dev/PITFALL_LEDGER.md"
-      ],
-      "current_solution": "Windows-protected launcher path is canonical and documented; README/docs/user/APP_STATE now carry the matrix, and run.ps1 help contains explicit direct-launch caveats. No broader launcher rework has been promoted yet.",
-      "next_prevention": "Keep contract statements aligned across README/docs/user/APP_STATE and verify no stale mention of outdated launcher guarantees appears during future doc edits.",
-      "files": []
-    },
-    "issue__geneye_precheck_without_evidence": {
-      "description": "A standalone GenEye smoke precheck can prove GenEye health without producing RustSMF Playwright JSON, artifact, or subagent-handoff evidence for the actual e2e run.",
-      "status": "fixed 2026-06-18",
-      "last_seen": "2026-06-18",
-      "paths": [
-        "run.ps1",
-        "README.md",
-        "source/frontend/tests/README.md",
-        "docs/dev/APP_STATE.md",
-        "docs/dev/TODO.md",
-        "docs/dev/PITFALL_LEDGER.md",
-        "summary_bank.json"
-      ],
-      "current_solution": "`run.ps1 -Task test:e2e` resolves optional GenEye and passes RustSMF's own `npm run test:e2e -- --reporter=json` command to GenEye `playwright-full -AllowGenEyeFailure -Group geneye-watch-fixture`, writing ignored evidence under `runtime-data/geneye-playwright-runs`. `-NoGenEye` or `RUSTSMF_NO_GENEYE=1` forces browser-only proof. Missing GenEye or pre-evidence GenEye failure falls back to browser-only Playwright; project-test failures still exit nonzero.",
-      "next_prevention": "When GenEye `playwright-full` or RustSMF e2e command names change, update README/tests/APP_STATE/pitfall text together and re-run the GenEye-backed path plus browser-only fallback.",
-      "files": []
-    },
-    "issue__rogue_node_servers": {
-      "description": "Rogue node/vite (or tauri-cli) dev servers left listening after close cmd/pwsh window (X), close Tauri app, Ctrl+C, or hard kill when using tauri dev (beforeDevCommand spawn) or direct npm/vite.",
-      "status": "fixed 2026-06-16 via layered launcher (run.ps1 Job+tree+scans+finally+trap+stale) + beforeDev wrapper (mjs signals+killViteTree+taskkill /T+parent poll). Prior related: issue__launcher_default_local_tauri. Status includes unix fallback in wrapper (`pkill`/`kill`) for non-Windows environments. Checks (typecheck/cargo/context/verify) clean post-implementation.",
-      "last_seen": "2026-06-16",
-      "paths": [
-        "run.ps1",
-        "run.bat",
-        "source/frontend/scripts/start-vite-dev.mjs",
-        "source/src-tauri/tauri.conf.json",
-        "source/frontend/package.json",
-        "docs/dev/PITFALL_LEDGER.md",
-        "docs/dev/APP_STATE.md",
-        "docs/dev/TODO.md",
-        "summary_bank.json",
-        "runtime-data/vite-dev.out.log",
-        "runtime-data/vite-dev.err.log"
-      ],
-      "current_solution": "Stop-StaleDevStack (port 5173 node + cmdline sweeps) on dev entry + finally/trap; New-KillOnCloseJob (auto child add); recursive Stop-ProcessTree; mjs killViteTree (SIGTERM + win taskkill /T + parent poll every ~1.8s + exit handler). Tauri CLI term of beforeDev child triggers mjs. Entry sweep prevents 'port in use' on re-launch.",
-      "next_prevention": "Keep direct non-canonical launch paths documented as reduced-coverage, and re-run manual close/relaunch checks after any launcher or script-layer edits.",
-      "files": []
+        "source/src-tauri/capabilities/default.json"
+      ]
     },
     "tests__quality": {
-      "description": "Automated quality gates: lint, app typecheck, test typecheck, production any boundary check, Vite build, chunk guard, unit roundtrips, Playwright e2e, native IPC mocks, and Rust cargo checks/tests.",
-      "status": "Quality posture: canonical verify covers context validation, lint, app/test typechecks, production-any boundaries, build/chunk guards, units, and Rust cargo check. Units now include SMF Rig policy, inverse-bind reset, rig-space child pose serialization, real-fixture node/head/skin/animation preservation, diagnostic skin drift detection, typed external-value guards, and identity-deduplicated Three resource disposal. Browser suites cover native IPC/cancel/races, View selection, Rig/Endpoint/IK/gizmo ownership/history, real-SMF policy/reset/roundtrip, Skin-exclusive painting, Animate authoring, latest-load wins, quad/Ortho transitions, and visual layouts. Optional GenEye and strict snapshots remain advisory.",
+      "description": "Verification contract, test inventory, shared browser fixtures, lint/type gates, and production-boundary checks.",
+      "max_kb": 112,
       "paths": [
         "source/frontend/package.json",
-        "source/package.json",
+        "source/frontend/playwright.config.ts",
+        "source/frontend/eslint.config.js",
         "source/frontend/tsconfig.json",
         "source/frontend/tsconfig.test.json",
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/tests/visual.spec.ts",
-        "source/frontend/tests/native.spec.ts",
-        "source/frontend/tests/helpers/skinned-glb-fixture.ts",
-        "source/frontend/tests/test.fbx",
-        "source/frontend/tests/helpers/smoke-helpers.ts",
         "source/frontend/tests/README.md",
-        "source/frontend/playwright.config.ts",
-        "source/frontend/scripts/check-production-any.mjs",
-        "source/frontend/scripts/run-strict-visuals.mjs",
-        "source/frontend/src/hooks/poseEdits.test.ts",
-        "source/frontend/src/utils/editorHistory.test.ts",
-        "source/frontend/src/loaders/coord.test.ts",
-        "source/frontend/src/loaders/fbx.test.ts",
-        "source/frontend/src/loaders/threeToSmf.test.ts",
-        "source/frontend/src/loaders/smfBinary.ts",
-        "source/frontend/src/utils/modelFormat.test.ts",
-        "source/frontend/src/utils/rigEdits.test.ts",
-        "source/frontend/src/utils/rigHierarchy.test.ts",
-        "source/frontend/src/utils/smfRigPolicy.test.ts",
-        "source/frontend/src/test/installImageTestPolyfill.ts",
-        "source/frontend/src/utils/viewportLayout.test.ts",
-        "source/frontend/src/utils/viewportInteractionRouter.test.ts",
-        "source/frontend/src/store/index.test.ts",
-        "source/frontend/src/utils/threeTypeGuards.test.ts",
-        "source/frontend/src/utils/threeDisposal.test.ts",
+        "source/frontend/tests/helpers/*.ts",
         "source/frontend/scripts/check-entry-chunks.mjs",
-        "scripts/verify-context-bank.py",
-        "source/frontend/eslint.config.js",
-        "run.ps1"
-      ],
-      "commands": [
-        "python scripts/verify-context-bank.py",
-        "npm audit --omit=optional",
-        "pwsh -File run.ps1 -Task verify",
-        "pwsh -File run.ps1 -Task test:e2e",
-        "pwsh -File run.ps1 -Task test:visual-strict",
-        "pwsh -File run.ps1 -Task desktop-smoke"
-      ],
-      "files": []
+        "source/frontend/scripts/check-eslint-coverage.mjs",
+        "source/frontend/scripts/check-production-any.mjs",
+        "source/frontend/scripts/run-strict-visuals.mjs"
+      ]
     },
-    "issue__docs_context_path_drift": {
-      "description": "Backlog/docs moved under docs/dev while README, run.ps1, tests README, agent instructions, tool notes, and summary_bank.json still referenced deleted docs/TODO.md or nonexistent plan.md.",
-      "status": "fixed 2026-06-15; docs are indexed, active backlog path is docs/dev/TODO.md, research inbox policy is explicit, local agent/tool instructions point at current durable docs, and verify runs a context-bank path guard",
-      "last_seen": "2026-06-15",
+    "tests__browser_shell_lifecycle": {
+      "description": "Browser shell, model load, async ownership, worker responsiveness, and native IPC flows.",
+      "max_kb": 128,
       "paths": [
-        "README.md",
-        "run.ps1",
-        "docs/README.md",
-        "docs/dev/README.md",
-        "docs/dev/TODO.md",
-        "docs/dev/APP_STATE.md",
-        "docs/research-inbox/README.md",
-        "docs/research-inbox/archived/README.md",
-        "source/frontend/tests/README.md",
-        ".agents/copilot-instructions.md",
-        ".agents/instructions/frontend.instructions.md",
-        ".agents/instructions/backend.instructions.md",
-        ".agents/skills/summary_bank_json/SKILL.md",
-        ".tools/project.json",
-        "scripts/verify-context-bank.py",
-        "summary_bank.json"
+        "source/frontend/tests/shell-model.spec.ts",
+        "source/frontend/tests/lifecycle.spec.ts",
+        "source/frontend/tests/native.spec.ts",
+        "source/frontend/tests/helpers/smoke-helpers.ts",
+        "source/frontend/tests/helpers/format-assertions.ts",
+        "source/frontend/tests/helpers/smf-codec-probe.ts",
+        "source/frontend/tests/helpers/smf-stress-fixture.ts"
       ],
-      "current_solution": "Current docs point at docs/dev/TODO.md; historical pitfall text can still mention old docs/TODO.md as a past failure. The verifier fails stale explicit summary-bank paths and missing glob prefixes.",
-      "next_prevention": "Run `python scripts/verify-context-bank.py` after doc moves and keep active docs in docs/dev rather than adding new progress files.",
-      "files": []
+      "notes": [
+        "The Playwright config owns one build-and-preview server for the full suite.",
+        "Test titles remain stable after the domain split."
+      ]
     },
-    "issue__test_wrapper_false_success": {
-      "description": "PowerShell npm wrapper leaked command output into a boolean return, allowing run.ps1 test:e2e to print npm failure while returning exit code 0.",
-      "status": "fixed 2026-06-14; wrapper output is written to host and test:e2e exits nonzero on failed npm status",
-      "last_seen": "2026-06-14",
+    "tests__browser_authoring_formats": {
+      "description": "Browser Rig, Skin, Animate, format export, theme, and visual behavior.",
+      "max_kb": 128,
       "paths": [
-        "run.ps1",
-        "docs/dev/PITFALL_LEDGER.md",
-        "docs/dev/TODO.md"
+        "source/frontend/tests/animation.spec.ts",
+        "source/frontend/tests/export-formats.spec.ts",
+        "source/frontend/tests/rig.spec.ts",
+        "source/frontend/tests/skin.spec.ts",
+        "source/frontend/tests/visual.spec.ts",
+        "source/frontend/tests/helpers/skinned-glb-fixture.ts",
+        "source/frontend/tests/helpers/timeline-interactions.ts",
+        "source/frontend/tests/helpers/viewport-interactions.ts"
       ],
-      "current_solution": "Invoke-FrontendNpm captures LASTEXITCODE after writing npm output to host; test:e2e branches on the boolean return and exits 1 on failure.",
-      "next_prevention": "For new native-command wrappers, validate both passing and failing exit-code behavior.",
-      "files": []
+      "notes": [
+        "Generated indexed GLB coverage must pass SMF triangle-soup conversion and FBX re-import.",
+        "Strict snapshots remain opt-in and live beside their owning spec."
+      ]
     },
-    "issue__module_scope_react_hook_boot_crash": {
-      "description": "A React hook used as a module-scope cache caused the production app to fail before the shell mounted.",
-      "status": "fixed 2026-06-18; Tauri client cache now uses a plain module variable, React/Vite dedupe is hardened, and browser plus GenEye-backed e2e pass",
-      "last_seen": "2026-06-18",
+    "subsystem__load_editor_orchestration": {
+      "description": "Load/export intent ownership, editor snapshots, candidate construction, and stable cross-component event contracts.",
+      "max_kb": 160,
       "paths": [
         "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/vite.config.ts",
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/tests/visual.spec.ts",
-        "docs/dev/PITFALL_LEDGER.md"
+        "source/frontend/src/hooks/useSmfCodecTask.ts",
+        "source/frontend/src/hooks/smfExportCandidate.ts",
+        "source/frontend/src/hooks/smfExportCandidate.test.ts",
+        "source/frontend/src/hooks/editorSnapshots.ts",
+        "source/frontend/src/hooks/editorSnapshots.test.ts",
+        "source/frontend/src/types/viewportEditorEvents.ts"
       ],
-      "current_solution": "React hooks stay inside components/custom hooks; module-level lazy caches use plain variables or functions. Full e2e catches blank-page boot regressions that build/typecheck cannot catch.",
-      "next_prevention": "Search for module-scope `use*` calls during hook/cache refactors and rerun at least the app-boot smoke before broader e2e.",
-      "files": []
+      "notes": [
+        "useLoadModel keeps its public return contract while pure snapshots, codec tasks, and export candidates own focused policy.",
+        "Renderer and requestAnimationFrame ownership remain in ThreeViewport; mount listeners and TransformControls have explicit dispose owners."
+      ]
     },
-    "issue__typecheck_gap": {
-      "description": "ESLint ignored TS/TSX and Vite did not typecheck, allowing app type drift despite green verify.",
-      "status": "fixed for app source on 2026-06-13; test-source gate restored on 2026-06-14; verify now runs both",
-      "last_seen": "2026-06-13",
-      "paths": [
-        "source/frontend/eslint.config.js",
-        "source/frontend/package.json",
-        "source/package.json",
-        "run.ps1",
-        "docs/dev/PITFALL_LEDGER.md"
-      ],
-      "current_solution": "Run app `typecheck` and `typecheck:test`; both are included in `run.ps1 -Task verify` and `source/package.json` verify.",
-      "next_prevention": "Keep app and test tsconfigs separate; do not mark a type gate done without running it.",
-      "files": []
-    },
-    "issue__doc_coverage_overclaim": {
-      "description": "Progress docs claimed test-source typecheck/native IPC coverage and some fixture coverage that was not present in the repo.",
-      "status": "fixed for typecheck/native IPC on 2026-06-14; default skinned non-SMF fixture gap fixed on 2026-06-15 with generated skinned GLB coverage",
-      "last_seen": "2026-06-14",
-      "paths": [
-        "docs/dev/TODO.md",
-        "docs/dev/APP_STATE.md",
-        "docs/dev/PITFALL_LEDGER.md",
-        "summary_bank.json",
-        "source/frontend/tsconfig.test.json",
-        "source/frontend/tests/native.spec.ts",
-        "source/frontend/tests/helpers/skinned-glb-fixture.ts",
-        "source/frontend/tests/README.md",
-        "source/frontend/tests/smoke.spec.ts"
-      ],
-      "current_solution": "Docs are concise current-state/backlog docs; missing gates were added and runnable; generated skinned GLB e2e covers non-SMF skinned load/export without external asset assumptions.",
-      "next_prevention": "Before marking coverage complete, verify referenced files exist and run the documented command.",
-      "files": []
-    },
-    "issue__skinned_fixture_skip": {
-      "description": "Full non-SMF skinned load/export e2e depended on an absent local FBX sample and skipped by default.",
-      "status": "fixed 2026-06-15; generated self-authored skinned GLB fixture covers load, bone select, guarded SMF export, GLB export, screenshot, and console cleanliness",
-      "last_seen": "2026-06-15",
-      "paths": [
-        "source/frontend/tests/helpers/skinned-glb-fixture.ts",
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/tests/README.md",
-        "docs/dev/TODO.md",
-        "docs/dev/APP_STATE.md"
-      ],
-      "current_solution": "Generate a tiny two-bone animated GLB in Playwright's Node context and pass it to the hidden file input as `generated-skinned-fixture.glb`.",
-      "next_prevention": "Prefer generated or committed self-authored fixtures over machine-local optional fixture paths for required e2e coverage.",
-      "files": []
-    },
-    "issue__launcher_default_local_tauri": {
-      "description": "Default project launcher path did not reliably start the app: run.ps1 showed help by default, run.bat assumed pwsh, and Tauri CLI lookup could depend on globals.",
-      "status": "fixed 2026-06-15; no-arg run.ps1/run.bat launch desktop dev and route through local npm Tauri CLI",
-      "last_seen": "2026-06-15",
+    "subsystem__dev_process_lifecycle": {
+      "description": "Windows launcher ownership, npm resolution, preview-server startup, Tauri beforeDev cleanup, and orphan prevention.",
+      "max_kb": 128,
       "paths": [
         "run.ps1",
         "run.bat",
-        "README.md",
-        "source/frontend/package.json",
-        "docs/dev/TODO.md",
-        "docs/dev/APP_STATE.md",
-        "docs/dev/PITFALL_LEDGER.md"
-      ],
-      "current_solution": "Default Task is tauri-dev, run.bat falls back to Windows PowerShell, and Tauri commands execute via local npm workspace scripts.",
-      "next_prevention": "After run-script edits, execute the exact no-arg launchers in addition to verify.",
-      "files": []
-    },
-    "issue__vite8_e2e_preview_server": {
-      "description": "Vite 8 dev-server HMR websocket failures could reset Playwright pages during parallel WebGL/file-flow tests and appear as app regressions.",
-      "status": "fixed 2026-06-15; Playwright e2e builds first and serves production preview with local workers capped",
-      "last_seen": "2026-06-15",
-      "paths": [
-        "source/frontend/playwright.config.ts",
-        "source/frontend/tests/README.md",
-        "source/frontend/package.json",
-        "source/package-lock.json",
-        "docs/dev/TODO.md",
-        "docs/dev/PITFALL_LEDGER.md"
-      ],
-      "current_solution": "webServer command is `npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort`; reuseExistingServer is false and local workers are capped at 4.",
-      "next_prevention": "Keep e2e on production preview unless a replacement passes the full suite without websocket/page-reset symptoms.",
-      "files": []
-    },
-    "issue__chunk_guard_false_success": {
-      "description": "Entry chunk guard warned and exited 0 when the expected three-vendor split or dist output was missing.",
-      "status": "fixed 2026-06-15; guard exits nonzero on missing build output or missing vendor split",
-      "last_seen": "2026-06-15",
-      "paths": [
-        "source/frontend/scripts/check-entry-chunks.mjs",
-        "source/frontend/vite.config.ts",
         "source/package.json",
-        "run.ps1",
-        "docs/dev/PITFALL_LEDGER.md"
+        "source/frontend/package.json",
+        "source/frontend/playwright.config.ts",
+        "source/frontend/scripts/start-vite-dev.mjs",
+        "source/src-tauri/tauri.conf.json"
       ],
-      "current_solution": "check-entry-chunks logs errors and exits 1 for missing dist or missing `three-vendor`.",
-      "next_prevention": "Keep guard scripts fail-closed unless skipped output is explicitly part of the command contract.",
-      "files": []
+      "notes": [
+        "The launcher prefers the npm CLI bundled beside the active Node executable before falling back to PATH.",
+        "Playwright owns one build-and-preview server; independent test commands must not compete for port 5173.",
+        "Long-running Windows dev processes remain launcher-owned and recursively cleaned."
+      ]
     },
-    "issue__open_dialog_stale_result": {
-      "description": "Separately guarded picker, browser file/drop, desktop read, loader, and export awaits could each appear locally current while an older cross-entrypoint result overwrote newer root/status/error/dirty state.",
-      "status": "completed 2026-07-13; one load-intent sequence spans picker/input/drop/path/loader, successful replacement is atomic, stale roots are disposed, and newer loads invalidate export UI commits.",
-      "last_seen": "2026-07-13",
+    "workflow__old_editor_reference": {
+      "description": "Archived GameMaker source and screenshots used only for deliberate parity research.",
+      "archived": true,
       "paths": [
-        "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/src/backend-client/tauri.ts",
-        "source/frontend/tests/native.spec.ts",
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/tests/helpers/smoke-helpers.ts",
-        "docs/dev/PITFALL_LEDGER.md"
-      ],
-      "current_solution": "`beginLoadRequest` issues one token at user intent and invalidates prior export completion ownership. The token is checked after picker, file read, desktop validation/read, and loader awaits. Only a current parsed result replaces the model; failures preserve the valid root/selection/dirty state and stale parsed roots are disposed. Browser/native delayed success/error matrices assert full committed state.",
-      "next_prevention": "Carry the same token through planned worker messages and add every new lifecycle entrypoint to both stale-success/newer-error and stale-error/newer-success proofs.",
-      "files": []
-    },
-    "issue__desktop_open_non_smf_path_read": {
-      "description": "Desktop path-based opens for non-SMF formats could be under-specified, with only SMF-specific validation path covered and no explicit assertion that non-SMF branches read file bytes through the desktop bridge.",
-      "status": "completed 2026-06-18",
-      "last_seen": "2026-06-18",
-      "paths": [
-        "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/src/backend-client/tauri.ts",
-        "source/frontend/tests/native.spec.ts",
-        "docs/dev/APP_STATE.md",
-        "summary_bank.json"
-      ],
-      "current_solution": "Native open now always reads bytes with `readBinaryFile` when `res.path` is present for non-SMF formats, while preserving SMF header peek for `.smf`; `native.spec.ts` now includes a path-backed non-SMF open test (`.obj`) that asserts `read_file_binary` is called and `get_smf_desktop_info` is intentionally not used.",
-      "next_prevention": "Keep format-agnostic desktop path-load coverage in `native.spec.ts` whenever a new supported import format is added.",
-      "files": []
-    },
-    "issue__smf_visual_tearing": {
-      "description": "Real SMF sample loaded without console errors but rendered as torn mesh wedges because SMF world bind DQs/frame poses were treated as local transforms and raw byte weights were not normalized for Three skinning.",
-      "status": "fixed locally 2026-06-15; CPU bind-pose skinning regression added and visual screenshots show coherent low-poly character",
-      "last_seen": "2026-06-15",
-      "paths": [
-        "source/frontend/src/loaders/smf.ts",
-        "source/frontend/src/loaders/coord.test.ts",
-        "source/frontend/tests/mixamo_smf_baldguy.smf",
+        "docs/references/old-src/issues.md",
+        "docs/dev/old_editor_source_map.md",
         "docs/references/old-src/screenshots/README.md"
       ],
-      "current_solution": "Derive local bone transforms from stored SMF world bind matrices, compute true inverse bind matrices, convert animation frame world poses to local parent tracks, and normalize skin weights for Three rendering while preserving imported SMF export data.",
-      "next_prevention": "Keep the real-sample bind-pose skinning regression and visual check around any SMF rig/animation changes.",
-      "files": []
-    },
-    "issue__smf_head_parent_load_hang": {
-      "description": "Real SMF files can use self-parented isBone=0 head dummies; an unguarded head-skip walk can spin during buildThreeScene and leave the UI loading indefinitely.",
-      "status": "fixed 2026-06-16; effective-parent lookup tracks visited nodes, inverse binds calculate after world-matrix refresh, animation tracks target real scene bones only, app typecheck restored, real SMF smoke/native/browser checks passed",
-      "last_seen": "2026-06-16",
-      "paths": [
-        "source/frontend/src/loaders/smfRig.ts",
-        "source/frontend/src/loaders/smf.ts",
-        "source/frontend/src/loaders/coord.test.ts",
-        "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/tests/mixamo_smf_baldguy.smf",
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/tests/native.spec.ts",
-        "docs/dev/TODO.md",
-        "docs/dev/PITFALL_LEDGER.md",
-        "docs/dev/APP_STATE.md"
-      ],
-      "current_solution": "Use `findEffectiveBoneParentIndex` for hierarchy and animation local-parent resolution; keep seq guards stable with refs; verify with unit, targeted SMF Playwright, native IPC mock, Browser shell, and full `verify`.",
-      "next_prevention": "Before changing SMF parent walking or animation track targeting, run the root-head unit slice and targeted real SMF Playwright load.",
-      "files": []
-    },
-    "issue__smf_head_dq_roundtrip": {
-      "description": "SMF-source export and diagnostics can corrupt or falsely fail strict pose roundtrips if prebuilt non-bone/head node DQs are identity-filled or sign-equivalent dual quaternions are compared as raw component drift.",
-      "status": "fixed 2026-07-02; export preserves source rig/frame DQs for prebuilt head nodes, diagnostics compare direct-vs-negated DQ distance, and real fixtures cover old-source head nodes plus Mixamo sign flips.",
-      "last_seen": "2026-07-02",
-      "paths": [
-        "source/frontend/src/loaders/smf.ts",
-        "source/frontend/src/loaders/smfDiagnostics.ts",
-        "source/frontend/src/loaders/smfDiagnostics.test.ts",
-        "source/frontend/tests/mixamo_smf_baldguy.smf",
-        "docs/references/old-src/datafiles/SMF/spider_TEST.smf",
-        "docs/dev/PITFALL_LEDGER.md",
-        "docs/dev/APP_STATE.md"
-      ],
-      "current_solution": "`exportSMFToBuffer` uses source DQs for any node/frame with source data, including prebuilt heads; `compareSmfRoundtrip` treats full-DQ negation as equivalent while still surfacing real component deltas in the selected hemisphere.",
-      "next_prevention": "Run `npm --workspace frontend run test:unit -- smfDiagnostics` before changing SMF node-list, animation frame, or DQ comparison code.",
-      "files": []
-    },
-    "issue__smf_skin_index_roundtrip": {
-      "description": "SMF mesh skin payloads use sequential deform-bone indices; exporting them as full node IDs silently shifts influences after isBone=0 head nodes and previously escaped roundtrip diagnostics.",
-      "status": "fixed 2026-07-13; serializer preserves deform-order indices, diagnostics compare indices plus 8-bit weight tolerance, and a real head-node fixture proves node/head/skin/animation identity after pose export and reimport.",
-      "last_seen": "2026-07-13",
-      "paths": [
-        "source/frontend/src/loaders/smf.ts",
-        "source/frontend/src/loaders/smfDiagnostics.ts",
-        "source/frontend/src/loaders/smfDiagnostics.test.ts",
-        "source/frontend/src/hooks/poseEdits.test.ts",
-        "source/frontend/tests/mixamo_smf_baldguy.smf",
-        "docs/dev/PITFALL_LEDGER.md",
-        "docs/dev/APP_STATE.md"
-      ],
-      "current_solution": "Keep ImportedSmf and the deform-only Three skeleton in one skin-index representation; export indices unchanged and fail structured roundtrip checks on any index drift or weight delta beyond normal byte quantization.",
-      "next_prevention": "Require the real head-node identity test and SMF_ROUNDTRIP_SKINNING_OK before changing node lists, skin serialization, or skeleton ordering.",
-      "files": []
-    },
-    "issue__stale_strict_visual_baselines": {
-      "description": "Optional strict SMF screenshots can stay stale after renderer fixes, and tracked Playwright report/test-result artifacts can dirty source after each run.",
-      "status": "fixed locally 2026-06-15; strict SMF snapshot check/update tasks added, coherent SMF load/export baselines regenerated, and generated report/result files removed from tracking",
-      "last_seen": "2026-06-15",
-      "paths": [
-        "source/frontend/tests/smoke.spec.ts-snapshots/loaded-smf-bone-flow-chromium-win32.png",
-        "source/frontend/tests/smoke.spec.ts-snapshots/export-flow-smf-chromium-win32.png",
-        "source/frontend/scripts/run-strict-visuals.mjs",
-        "source/frontend/package.json",
-        "source/package.json",
-        "run.ps1",
-        "source/frontend/tests/README.md",
-        ".gitignore"
-      ],
-      "current_solution": "`test:visual-strict` runs the key SMF strict snapshot subset with RUSTSMF_STRICT_VISUALS=1; `test:visual-update` refreshes baselines intentionally; generated `playwright-report/` and `test-results/` files are ignored and untracked.",
-      "next_prevention": "When renderer or bone-overlay work changes the intended viewport, run strict visual checks and inspect the PNGs before committing.",
-      "files": []
-    },
-    "issue__branch_work_reconciliation": {
-      "description": "Execute-plan refs and the local auto-stash contained different useful work that was not represented on main.",
-      "status": "fixed locally 2026-06-15; execute-plan old-src docs/screenshots/proof artifacts and reddit option metadata restored, old-src GML/YY/SMF.yyp source metadata recovered from stash@{0} with whitespace-only cleanup where needed, old-src GameMaker state user-tested after recovery, SMF export/test fixes ported, and local temp branches cleaned after verification",
-      "last_seen": "2026-06-15",
-      "paths": [
-        "AGENTS.md",
-        "docs/references/old-src/screenshots/",
-        "docs/references/old-src/issues.md",
-        "docs/references/old-src/GML-2026.md",
-        "docs/references/old-src/SMF.yyp",
-        "docs/references/old-src/SMF.resource_order",
-        "docs/references/old-src/objects/oAnimEditSystem/*.gml",
-        "docs/references/old-src/scripts/Utility/Utility.gml",
-        "docs/references/old-src/scripts/smf_anim/smf_anim.gml",
-        "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/tests/test.fbx",
-        "source/frontend/tests/smoke.spec.ts"
-      ],
-      "current_solution": "Work locally on main, restore/port needed temp-branch or stash work into main, inspect stashes before cleanup, user-test old-src GameMaker recovery when GML changes are involved, and only push main when explicitly requested.",
-      "next_prevention": "Before deleting local temp branches or stash entries, compare branch diffs, run `git stash show --name-status`, and confirm unique work is represented locally or intentionally archived.",
-      "files": []
-    },
-    "issue__desktop_smf_parser_width": {
-      "description": "Playwright desktop SMF info simulation read animation count as u32 while runtime parser uses u8.",
-      "status": "fixed on 2026-06-13; 2026-06-14 full review: still aligned (Rust u8 + TS loader + sim + cargo test fixture)",
-      "last_seen": "2026-06-13",
-      "paths": [
-        "source/frontend/tests/smoke.spec.ts",
-        "source/src-tauri/src/main.rs",
-        "source/frontend/src/loaders/smf.ts",
-        "docs/dev/PITFALL_LEDGER.md"
-      ],
-      "current_solution": "JS simulation now reads `bytes[p.offAnim]` as u8 and Rust fixture keeps the width locked.",
-      "files": []
-    },
-    "issue__smf_binary_edge_cases": {
-      "description": "Malformed or edge-case SMF data can produce opaque parser failures or non-finite export values if binary reads, DQ normalization, and animation time normalization are not guarded.",
-      "status": "current guard coverage: bounded reads throw actionable errors, invalid DQs normalize safely, zero-duration animation export writes finite normalized time 0, and unit regressions cover those paths",
-      "last_seen": "2026-06-15",
-      "paths": [
-        "source/frontend/src/loaders/smf.ts",
-        "source/frontend/src/loaders/smfBinary.ts",
-        "source/frontend/src/loaders/coord.ts",
-        "source/frontend/src/loaders/coord.test.ts",
-        "docs/dev/PITFALL_LEDGER.md"
-      ],
-      "current_solution": "Use shared BinaryReader/BinaryWriter bounds checks, safe DQ normalization, and guarded normalized animation frame times.",
-      "next_prevention": "Keep malformed-input and zero/invalid transform unit tests near any SMF parser/export helper changes.",
-      "files": []
-    },
-    "issue__incomplete_binary_dedupe": {
-      "description": "After 'BinaryReader bounds' / threeToSmf / poseEdits integrity changes, smfBinary.ts existed (with improved ensure/patch + bytesTo) but was untracked + not imported; smf.ts, useLoadModel.ts and tauri.ts retained full/partial duplicate bytesTo + (smf) entire old Binary* classes. Barrel did not surface the util. Docs over-claimed the dedupes.",
-      "status": "completed: binary helper ownership and import/export dedupe are centralized with grep-verified single-owner checks and tests.",
-      "last_seen": "2026-06-13",
-      "paths": [
-        "source/frontend/src/loaders/smfBinary.ts",
-        "source/frontend/src/loaders/smf.ts",
-        "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/src/backend-client/tauri.ts",
-        "source/frontend/src/loaders/index.ts",
-        "source/frontend/src/loaders/coord.test.ts",
-        "docs/dev/TODO.md",
-        "docs/dev/APP_STATE.md",
-        "summary_bank.json"
-      ],
-      "current_solution": "smfBinary is now the canonical owner, and bytesToArrayBuffer + BinaryReader/BinaryWriter are re-exported from loader index. Consumers use the shared API; bounds checks are active on export too. saveFile bool is fixed in the same sweep.",
-      "next_prevention": "On any refactor that moves helpers (esp. between loaders/* and bridges), immediately update all direct consumers + barrel + run full typecheck + grep for duplicate fn/class names. Treat untracked critical src files as P0 during review.",
-      "files": []
-    },
-    "subsystem__modularity_candidates": {
-      "description": "High-line-count files that should be split only at safe, test-backed boundaries. smfBinary.ts is the focused home for binary (after dedupe).",
-      "status": "watch; 2026-06-18 rank: ThreeViewport.tsx(930), smoke.spec.ts(619), coord.test.ts(618), smf.ts(507), useLoadModel.ts(469), main.rs(433). Pure quad/ortho pane math was extracted to utils/viewportLayout.ts; keep future camera/layout helpers out of ThreeViewport unless tightly coupled to live render state.",
-      "paths": [
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/src/loaders/smf.ts",
-        "source/frontend/src/components/ThreeViewport.tsx",
-        "source/frontend/src/utils/viewportLayout.ts",
-        "source/frontend/src/loaders/smfBinary.ts",
-        "source/frontend/src/utils/weightPreview.ts",
-        "source/frontend/src/loaders/smfRig.ts",
-        "source/frontend/src/utils/bonePicker.ts"
-      ],
-      "split_candidates": [
-        "SMF BinaryReader/BinaryWriter helper module.",
-        "Viewport transform/weight-preview helpers.",
-        "Playwright fixture and desktop-simulation helpers."
-      ],
-      "files": []
-    },
-    "issue__inspector_clip_duration_and_type_safety": {
-      "description": "Inspector clip duration displayed literal `${}` text (JSX text vs expression bug). Related type safety gaps: findBoneByName returned any, lastSmfDataRef typed as any, onNudgeBone delta type was inline duplicate, isScaleEdit was dead-code stub.",
-      "status": "fixed 2026-06-15; all typecheck/lint/unit gates green",
-      "last_seen": "2026-06-15",
-      "paths": [
-        "source/frontend/src/components/Inspector.tsx",
-        "source/frontend/src/utils/bonePicker.ts",
-        "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/src/hooks/poseEdits.ts",
-        "source/frontend/src/components/ThreeViewport.tsx",
-        "source/frontend/src/backend-client/tauri.ts",
-        "source/frontend/tsconfig.json",
-        "docs/dev/TODO.md"
-      ],
-      "current_solution": "Clip duration uses JSX expression `{(c.duration).toFixed(2)}`. findBoneByName returns THREE.Bone | undefined. lastSmfDataRef typed as ImportedSmf | null. Inspector imports BoneNudgeDelta. Bone highlight group disposed via disposeThreeObject. isScaleEdit removed. Focus cancel debounce raised to 150ms. tsconfig uses ignoreDeprecations.",
-      "next_prevention": "In JSX text nodes, always wrap dynamic values in {}. Return concrete types from shared helpers. Prefer imported shared types over inline duplicates.",
-      "files": []
-    },
-    "issue__mode_layout_transition_continuity": {
-      "description": "Mode or viewport-layout switches could alter selected-bone/clip scrub state without explicit continuity checks, even when model/model-root state was preserved.",
-      "status": "completed 2026-07-13",
-      "last_seen": "2026-07-13",
-      "paths": [
-        "source/frontend/src/App.tsx",
-        "source/frontend/src/components/ThreeViewport.tsx",
-        "source/frontend/src/components/SkinPanel.tsx",
-        "source/frontend/src/components/AnimatePanel.tsx",
-        "source/frontend/src/components/ExportPanel.tsx",
-        "source/frontend/src/components/Toolbar.tsx",
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/tests/native.spec.ts",
-        "source/frontend/src/store/index.ts"
-      ],
-      "current_solution": "A generated skinned-GLB matrix proves stable root UUID, selected object/bone, paused playback time, export status, pose/skin/animation dirty state, and exclusive Select/Endpoint/IK telemetry across View/Rig/Skin/Animate/Export plus single/quad/Ortho transitions. No-model controls remain gated with no stale handle telemetry. Native canceled-save tests change panels before reasserting root, selection, status, and dirty state. Read-only viewport telemetry exposes root/playback continuity while mode-owned panels are unmounted.",
-      "next_prevention": "Keep the loaded/no-model matrix and canceled-save panel transitions with any workspace, viewport, playback, or store refactor; use stable shared-state telemetry rather than assuming a mode-owned panel stays mounted.",
-      "files": []
-    },
-    "issue__mode_tab_responsive_regression": {
-      "description": "Tiny viewport widths can make mode/workspace tab transitions inconsistent or visually inert across model view modes, while continuity assertions still pass with relaxed layout expectations.",
-      "status": "completed 2026-06-18",
-      "last_seen": "2026-06-18",
-      "paths": [
-        "source/frontend/src/App.tsx",
-        "source/frontend/src/components/Toolbar.tsx",
-        "source/frontend/src/index.css",
-        "source/frontend/src/components/SkinPanel.tsx",
-        "source/frontend/src/components/AnimatePanel.tsx",
-        "source/frontend/src/components/ExportPanel.tsx",
-        "source/frontend/tests/smoke.spec.ts"
-      ],
-      "current_solution": "Toolbar mode tabs now occupy a full-width scrollable row under 800px; layout buttons are disabled until a model exists and `App` forces no-model layout back to single. `smoke.spec.ts` includes a 360px post-load mode cycle that clicks Model/Rig/Skin/Animate/Export without forced clicks and verifies selected-bone plus scrub continuity.",
-      "next_prevention": "Keep constrained-width mode coverage whenever toolbar layout, mode state, or panel mount behavior changes.",
-      "files": []
-    },
-    "issue__viewport_preview_export_leak": {
-      "description": "Viewport-only material, sampler, Legacy, opacity, or weight-color state can alter GLB/FBX output when exporters consume the live mounted root.",
-      "status": "fixed 2026-07-13; root-scoped source state is restored for the full async exporter call and active preview state is reapplied only while the same root remains mounted",
-      "last_seen": "2026-07-13",
-      "paths": [
-        "source/frontend/src/utils/materialPreview.ts",
-        "source/frontend/src/utils/materialPreview.test.ts",
-        "source/frontend/src/utils/materialPolicy.ts",
-        "source/frontend/src/components/ThreeViewport.tsx",
-        "source/frontend/src/loaders/glb.ts",
-        "source/frontend/src/loaders/fbx.ts",
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/tests/README.md",
-        "docs/dev/PITFALL_LEDGER.md",
-        "docs/dev/APP_STATE.md"
-      ],
-      "current_solution": "Use one source/preview registry for original mesh assignments, material/texture state, and geometry colors; exporters restore the source during awaited serialization, while diagnostics read source materials directly.",
-      "next_prevention": "Route every new exporter-visible preview channel through materialPreview and retain the textured downloaded-GLB smoke with all overrides active.",
-      "files": []
-    },
-    "issue__broad_interop_casts_and_shared_disposal": {
-      "description": "Broad assertions at Tauri, DOM, Three.js, loader, and exporter boundaries could validate malformed values by declaration, while recursive cleanup could dispose shared render resources repeatedly or omit skeleton-owned resources.",
-      "status": "fixed 2026-07-13; named runtime guards replace broad production casts and Three subtree cleanup deduplicates geometry, skeleton, material, and texture disposal by identity",
-      "last_seen": "2026-07-13",
-      "paths": [
-        "source/frontend/src/backend-client/tauri.ts",
-        "source/frontend/src/components/ThreeViewport.tsx",
-        "source/frontend/src/loaders/glb.ts",
-        "source/frontend/src/loaders/fbx.ts",
-        "source/frontend/src/loaders/obj.ts",
-        "source/frontend/src/store/index.ts",
-        "source/frontend/src/utils/threeTypeGuards.ts",
-        "source/frontend/src/utils/threeTypeGuards.test.ts",
-        "source/frontend/src/utils/threeDisposal.ts",
-        "source/frontend/src/utils/threeDisposal.test.ts",
-        "source/frontend/scripts/check-production-any.mjs",
-        "docs/dev/PITFALL_LEDGER.md"
-      ],
-      "current_solution": "External values enter through narrow predicates/adapters; Three traversal uses shared instanceof guards; binary GLB exporter results are checked at runtime; buffer copies avoid SharedArrayBuffer assertions; disposal uses one identity set per subtree and includes skeleton resources.",
-      "next_prevention": "Validate worker messages as untrusted data, rerun production assertion searches after dependency upgrades, and add any new disposable resource type to the one adapter plus its deduplication test.",
-      "files": []
-    },
-    "issue__export_inflight_guard": {
-      "description": "Rapid repeated export actions can overlap async save/write operations and leave duplicate writes or stale status/UI state when users interact faster than completion.",
-      "status": "completed 2026-07-13: all diagnostic/model saves are globally single-flight, freshness is checked after exporter/validator/save awaits, newer loads invalidate old UI commits, and lock release is independent of stale UI ownership.",
-      "last_seen": "2026-07-13",
-      "paths": [
-        "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/src/App.tsx",
-        "source/frontend/src/components/Toolbar.tsx",
-        "docs/dev/TODO.md",
-        "docs/dev/APP_STATE.md",
-        "source/frontend/tests/README.md",
-        "source/frontend/tests/smoke.spec.ts",
-        "source/frontend/tests/native.spec.ts",
-        "source/frontend/tests/helpers/smoke-helpers.ts"
-      ],
-      "current_solution": "Export handlers call shared `withExportBusy`, which serializes diagnostic/model saves and passes a freshness predicate through GLB/FBX export, validation, and save awaits. A newer load advances the export epoch; stale success/error cannot overwrite its status, and `finally` always releases the owned lock without clearing newer loading state. Browser rapid cross-action and native delayed-write tests prove one save flight.",
-      "next_prevention": "Keep cross-action single-flight and export-versus-newer-load success/error coverage when save orchestration or worker export changes.",
-      "files": []
+      "notes": [
+        "Do not load the full archived source by default.",
+        "Use explicit file or screenshot globs only for a named parity question."
+      ]
     }
   },
-  "exclusions": {
-    ".tools": {
-      "note": "[collapsed (+)]"
-    },
-    "scripts": {
-      "note": "[collapsed (+)]"
-    },
-    "source": {
-      "note": "[collapsed (+)]"
-    },
-    "source/backend": {
-      "note": "[collapsed (+)]"
-    },
-    "source/frontend": {
-      "note": "[collapsed (+)]"
-    },
-    "source/frontend/scripts": {
-      "note": "[collapsed (+)]"
-    },
-    "source/frontend/src": {
-      "note": "[collapsed (+)]"
-    },
-    "source/frontend/src/backend-client": {
-      "note": "[collapsed (+)]"
-    },
-    "source/frontend/src/components": {
-      "note": "[collapsed (+)]"
-    },
-    "source/frontend/src/hooks": {
-      "note": "[collapsed (+)]"
-    },
-    "source/frontend/src/loaders": {
-      "note": "[collapsed (+)]"
-    },
-    "source/frontend/src/store": {
-      "note": "[collapsed (+)]"
-    },
-    "source/frontend/src/utils": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/capabilities": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/gen": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/gen/schemas": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/icons": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/icons/android": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/icons/android/mipmap-anydpi-v26": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/icons/android/mipmap-hdpi": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/icons/android/mipmap-mdpi": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/icons/android/mipmap-xhdpi": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/icons/android/mipmap-xxhdpi": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/icons/android/mipmap-xxxhdpi": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/icons/android/values": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/icons/ios": {
-      "note": "[collapsed (+)]"
-    },
-    "source/src-tauri/src": {
-      "note": "[collapsed (+)]"
-    }
-  }
+  "exclusions": {}
 }

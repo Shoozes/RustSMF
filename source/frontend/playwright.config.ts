@@ -1,4 +1,23 @@
 import { defineConfig, devices } from '@playwright/test';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
+const quoteShellArgument = (value: string): string => (
+  process.platform === 'win32'
+    ? `"${value.split('"').join('""')}"`
+    : `'${value.split("'").join("'\\''")}'`
+);
+
+const bundledNpmCli = path.join(
+  path.dirname(process.execPath),
+  'node_modules',
+  'npm',
+  'bin',
+  'npm-cli.js',
+);
+const npmCommand = existsSync(bundledNpmCli)
+  ? `${quoteShellArgument(process.execPath)} ${quoteShellArgument(bundledNpmCli)}`
+  : 'npm';
 
 /**
  * Playwright config for RustSMF frontend e2e (Chrome-focused).
@@ -29,7 +48,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort',
+    command: `${npmCommand} run build && ${npmCommand} run preview -- --host 127.0.0.1 --port 5173 --strictPort`,
     url: 'http://localhost:5173',
     reuseExistingServer: false,
     stdout: 'ignore',

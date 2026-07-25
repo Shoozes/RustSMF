@@ -6,7 +6,7 @@ applyTo: "source/frontend/index.html,source/frontend/src/**/*.{ts,tsx,js,jsx},so
 
 Stack and style:
 - TypeScript + React (TSX for components) + Vite as the build/dev tool. Tailwind + PostCSS for styling (match TulpaWeaver patterns for clean UI).
-- Three.js (core + addons) for all 3D: Scene, SkinnedMesh, Skeleton, AnimationMixer, GLTFLoader, (later) FBXLoader, OrbitControls or drei equivalents, BufferGeometry/BufferAttribute for imported data.
+- Three.js (core + addons) for all 3D: Scene, SkinnedMesh, Skeleton, AnimationMixer, GLTFLoader, FBXLoader, OrbitControls or drei equivalents, BufferGeometry/BufferAttribute for imported data.
 - Tauri v2 bridge via @tauri-apps/api (core invoke + plugins for dialog/fs). Keep a thin `source/frontend/src/backend-client/tauri.ts` layer with graceful fallback when not running under Tauri (browser File/Blob paths).
 - Vite config must chunk large vendors (especially three) to keep initial loads reasonable. Include COOP/COEP headers if using workers or advanced three features.
 - Keep the app independently runnable in browser (`vite` / `vite preview`) with drag-drop file + download for SMF/GLB. Tauri is the enhanced offline desktop shell.
@@ -15,6 +15,7 @@ Core boundaries and ownership:
 - Frontend owns: viewport (one primary three canvas + RAF-driven mixer), loaders (SMF/GLB/FBX), exporters, coordinate transforms, scene graph (meshes + bones), animation clips/timeline/scrub/play, outliner, inspector, store (split slices for model / anim state / ui selection), UI panels/modals.
 - Never put Three.js rendering, skinning, or animation sampling inside Rust/Tauri commands.
 - All SMF <-> Three.js conversion (pos/nor/uv/tan/skin, DQ rig/anim, head/tail node handling, winding, scale strip, sign flips) **must** go through the tested loader helpers, especially `source/frontend/src/loaders/coord.ts` and `source/frontend/src/loaders/smf.ts`. Document the Y-up vs Z-up + handedness rule near conversion helpers.
+- Run heavy SMF parse/export through the typed `source/frontend/src/workers/` codec boundary. Preserve transferable ownership, abort/timeout cleanup, monotonic progress, latest-intent response checks, and the explicit startup-only synchronous fallback.
 - Start loader/exporter implementations by directly adapting (then cleaning + typing) the reference:
   - `docs/references/old-src/GLBtoSMF/importer.js` + `unpacker.js` + `ModelLoader.js` (GLB/SMF -> structured + three data)
   - `docs/references/old-src/GLBtoSMF/exporter.js` + `packer.js` (three -> SMF/GLB; note the known exporter limitations around bone connections/rotations)

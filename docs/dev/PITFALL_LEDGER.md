@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-07-13 (verified source-safe material previews, texture export policy, SMF Rig/IK ownership, deform-index skin roundtrip, GLB recovery export, and DQ sign-equivalent diagnostics).
+Last reviewed: 2026-07-25 (verified source-safe material previews, SMF worker ownership/lifecycle, root-affine animation playback, indexed-runtime triangle expansion, real TypeScript lint coverage, viewport resize state, texture export policy, SMF Rig/IK ownership, deform-index skin roundtrip, GLB/FBX recovery export, and DQ sign-equivalent diagnostics).
 
 ### Q: What pitfall are we preventing?
 
@@ -10,13 +10,13 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 **Why it happened:** The viewport backed up maps and opacity but applied the preview directly to source materials, and Legacy mode replaced `mesh.material`. GLB/FBX exporters read that live assignment asynchronously. The weight preview also added a geometry color attribute and enabled vertex colors. Restoring only when a toggle was disabled or a root was unloaded left export timing unprotected.
 
-**Where:** `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/materialPreview.ts`, `source/frontend/src/utils/weightPreview.ts`, `source/frontend/src/loaders/glb.ts`, `source/frontend/src/loaders/fbx.ts`, `source/frontend/src/utils/materialPreview.test.ts`, and `source/frontend/tests/smoke.spec.ts`.
+**Where:** `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/materialPreview.ts`, `source/frontend/src/utils/weightPreview.ts`, `source/frontend/src/loaders/glb.ts`, `source/frontend/src/loaders/fbx.ts`, `source/frontend/src/utils/materialPreview.test.ts`, and `source/frontend/tests/export-formats.spec.ts`.
 
 **Evidence:** Source inspection showed `applyTextureEnabled(false)` assigning `material.map = null`, opacity changing the source material, and Legacy assigning a clone directly to each mesh before `GLTFExporter.parseAsync(root)`. The focused material tests now prove source assignment/map/opacity/vertex-color/wrap/filter state during an awaited operation and preview restoration afterward. The generated textured-GLB browser test activates all preview modes together and confirms the downloaded GLB still has one image and one texture.
 
 **Developer story:** The old shelf mapping began as a UI-policy task. Tracing each control through the current exporter showed the Tex button was not merely ambiguous copy: it could change saved output. Centralizing source snapshots solved map/opacity/sampler restoration, but the same review exposed Legacy material assignment and Skin weight colors as equivalent leaks. The boundary was widened to the complete exporter-visible material/color state and held for the full asynchronous call. A root-identity check prevents a stale exporter completion from reapplying preview state after unload.
 
-**How to catch it:** Run `npx tsx --test src/utils/materialPreview.test.ts src/utils/materialPolicy.test.ts src/utils/textureCompat.test.ts`, then `npx playwright test tests/smoke.spec.ts --grep "generated skinned GLB with material layout warnings" --workers=1` from `source/frontend`. Require image/texture records in the downloaded GLB while every preview override remains active.
+**How to catch it:** Run `npx tsx --test src/utils/materialPreview.test.ts src/utils/materialPolicy.test.ts src/utils/textureCompat.test.ts`, then `npx playwright test tests/export-formats.spec.ts --grep "generated skinned GLB with material layout warnings" --workers=1` from `source/frontend`. Require image/texture records in the downloaded GLB while every preview override remains active.
 
 **Solutions tried:**
 1. `28/100` Keep per-control backups and restore only on toggle/unload, result: normal preview switching worked but export could observe the modified live root.
@@ -103,7 +103,7 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 **Why it happened:** Modern `TransformControls` is a `Controls` object, not an `Object3D`; its public `getHelper()` root must be added to the scene. The previous cast-and-add path was swallowed as a supposedly benign Three-instance skew. Separately, endpoint raycasts included the visual connector line, and Three.js line raycasting uses a broad world-space threshold that overlapped gizmo pickers.
 
-**Where:** `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/boneHighlight.ts`, `source/frontend/src/utils/rigEdits.ts`, `source/frontend/src/components/RigPanel.tsx`, and `source/frontend/tests/smoke.spec.ts`.
+**Where:** `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/boneHighlight.ts`, `source/frontend/src/utils/rigEdits.ts`, `source/frontend/src/components/RigPanel.tsx`, and `source/frontend/tests/rig.spec.ts`.
 
 **Evidence:** The first real-handle smoke reached `data-transform-axis="X"` but stayed `data-transform-dragging="false"` while `data-endpoint-drag="active"`. Mounting `getHelper()` made the gizmo visible; restricting line hits alone still produced endpoint/gizmo ambiguity. The final focused run passed both the real TransformControls ownership test and the single/quad endpoint test sequentially, the six-test visual slice passed with the explicit six-button Rig tool row, and the complete browser suite passed 42/42.
 
@@ -155,9 +155,9 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 **Why it happened:** The canvas layout prop updated during React render, but `viewportRef` was refreshed in a normal effect. Under parallel Playwright load, the Rig Add child smoke clicked after the DOM attribute changed but before the effect updated hit specs.
 
-**Where:** `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/tests/smoke.spec.ts` generated-skinned Rig Add child flow.
+**Where:** `source/frontend/src/components/ThreeViewport.tsx` and the generated-skinned Rig Add child flow in `source/frontend/tests/export-formats.spec.ts`.
 
-**How to catch it:** Run the related smoke slice with default workers: `npx playwright test tests/smoke.spec.ts -g "generated skinned GLB load and SMF/GLB export path|viewport layout toggle works in single/quad modes|endpoint drag works in rig mode across single and quad layouts|skin paint updates edit state and exports SMF|animation keyframe authoring updates selected-bone clips and SMF checks"`.
+**How to catch it:** Run the related browser slice with default workers: `npx playwright test tests/export-formats.spec.ts tests/shell-model.spec.ts tests/rig.spec.ts tests/skin.spec.ts tests/animation.spec.ts -g "generated skinned GLB load and SMF/GLB export path|viewport layout toggle works in single/quad modes|endpoint drag works in rig mode across single and quad layouts|skin paint updates edit state and exports SMF|animation keyframe authoring updates selected-bone clips and SMF checks"`.
 
 **Solutions tried:**
 1. `65/100` Make Rig Add child own ortho placement before bone selection, result: focused generated-skinned smoke passed alone but still failed under the related parallel smoke slice.
@@ -199,17 +199,17 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 **Why it happened:** The backlog moved from `docs/TODO.md` to `docs/dev/TODO.md`, and old local agent/tool instructions still referenced `plan.md`, but there was no automated summary-bank path guard to catch stale explicit paths.
 
-**Where:** `README.md`, `run.ps1`, `docs/dev/APP_STATE.md`, `source/frontend/tests/README.md`, `.agents/*`, `.tools/project.json`, `summary_bank.json`, `scripts/verify-context-bank.py`.
+**Where:** `README.md`, `run.ps1`, `docs/dev/APP_STATE.md`, `source/frontend/tests/README.md`, `.agents/*`, `.tools/project.json`, `summary_bank.json`, `scripts/context-bank-lib.mjs`, `scripts/verify-context-bank.mjs`, and `scripts/generate-context.mjs`.
 
-**How to catch it:** Run `rg -n "docs/TODO\.md|plan\.md"` for current-path drift and `python scripts/verify-context-bank.py` for context-bank JSON/path validation.
+**How to catch it:** Run `rg -n "docs/TODO\.md|plan\.md"` for current-path drift and `pwsh -File run.ps1 -Task context` for context-bank schema, path, fanout, size, duplicate, and generation validation.
 
 **Solutions tried:**
 1. `55/100` Move the TODO file without a verifier, result: current docs and context groups could drift.
-2. `93/100` Add docs indexes/policy, redirect active references to `docs/dev/TODO.md`, update local agent/tool guidance to durable docs, and wire `scripts/verify-context-bank.py` into `verify`, result: stale current context paths fail locally.
+2. `97/100` Add docs indexes/policy, redirect active references to `docs/dev/TODO.md`, update local agent/tool guidance to durable docs, replace the host-dependent Python generator scripts with one portable Node library plus verifier/generator tests, and wire them into `context` and `verify`, result: stale paths and malformed or over-broad groups fail locally.
 
-**Current solution:** `docs/dev/TODO.md` is the active backlog; `docs/dev/APP_STATE.md`, `docs/dev/PITFALL_LEDGER.md`, and `summary_bank.json` are the durable state/context surfaces; `run.ps1 -Task verify` runs the context-bank verifier before frontend/Rust gates.
+**Current solution:** `docs/dev/TODO.md` is the active backlog; `docs/dev/APP_STATE.md`, `docs/dev/PITFALL_LEDGER.md`, and `summary_bank.json` are the durable state/context surfaces. `run.ps1 -Task context` runs the focused verifier and generator tests, and `run.ps1 -Task verify` includes that gate before frontend/Rust checks.
 
-**Effectiveness:** `93/100`, durable. It converts a docs-drift class into an executable check and keeps historical references separated from active links.
+**Effectiveness:** `97/100`, durable. It converts docs/path/schema/fanout drift into an executable cross-platform check, proves generated output behavior, and keeps historical references separated from active links.
 
 **Relevance check:** Current. This repo intentionally keeps multiple docs and local skills, so path drift is likely during future consolidation.
 
@@ -243,7 +243,7 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 **Why it happened:** The repo's Playwright config intentionally uses `npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort`. Launching two independent `npx playwright test ...` processes at once makes the second preview process fail with `Port 5173 is already in use`, even when the app and tests are healthy.
 
-**Where:** `source/frontend/playwright.config.ts`, local verification command usage, `source/frontend/tests/visual.spec.ts`, `source/frontend/tests/smoke.spec.ts`.
+**Where:** `source/frontend/playwright.config.ts`, local verification command usage, and the domain-owned specs under `source/frontend/tests/`.
 
 **How to catch it:** If a Playwright run fails before tests execute with a Vite preview port error, run `Get-NetTCPConnection -LocalPort 5173 -State Listen` and rerun the affected specs as one Playwright command or sequential commands.
 
@@ -319,7 +319,7 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 **Why it happened:** Default e2e uses tolerant screenshot byte-size checks for WebGL stability, so stale committed strict baselines were not exercised by normal `verify`. Separately, `playwright-report/index.html` and `test-results/.last-run.json` were tracked despite ignore rules.
 
-**Where:** `source/frontend/tests/smoke.spec.ts-snapshots/`, `source/frontend/scripts/run-strict-visuals.mjs`, `source/frontend/package.json`, `source/package.json`, `run.ps1`, `source/frontend/playwright-report/`, `source/frontend/test-results/`.
+**Where:** `source/frontend/tests/shell-model.spec.ts-snapshots/`, `source/frontend/tests/export-formats.spec.ts-snapshots/`, `source/frontend/scripts/run-strict-visuals.mjs`, `source/frontend/package.json`, `source/package.json`, `run.ps1`, `source/frontend/playwright-report/`, and `source/frontend/test-results/`.
 
 **How to catch it:** Run `pwsh -File run.ps1 -Task test:visual-strict` after SMF renderer, camera, skeleton, or visual snapshot changes; inspect the resulting PNGs; run `git status --short` after e2e and confirm reports/results do not appear as tracked modifications.
 
@@ -385,7 +385,7 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 **Why it happened:** The mode tablist used fixed-width inline-flex tabs inside a wrapping toolbar. At constrained widths, the tab group could overflow instead of becoming a predictable interaction row, and pre-load layout switching was documented as model-gated but not enforced by the toolbar controls.
 
-**Where:** `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/App.tsx`, `source/frontend/src/index.css`, and `source/frontend/tests/smoke.spec.ts`.
+**Where:** `source/frontend/src/components/Toolbar.tsx`, `source/frontend/src/App.tsx`, `source/frontend/src/index.css`, and `source/frontend/tests/shell-model.spec.ts`.
 
 **How to catch it:** Run the constrained-width smoke path that sets the viewport to 360px, loads the SMF fixture, clicks Model/Rig/Skin/Animate/Export tabs without forced clicks, and verifies selected-bone plus scrub continuity. Also assert no-model layout buttons are disabled and the canvas remains single-layout.
 
@@ -397,7 +397,7 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 **Effectiveness:** `93/100`, durable. The behavior is verified through a real browser at the problematic width and keeps state continuity assertions tied to actual clicks.
 
-**Relevance check:** Current. Toolbar, workspace panel, and viewport layout changes are active backlog areas.
+**Relevance check:** Current. Toolbar, workspace panel, and viewport layout changes remain active product surfaces.
 
 **Next prevention step:** Keep constrained-width e2e coverage with any toolbar, workspace mode, or layout-control refactor.
 
@@ -448,26 +448,35 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 ### Q: What pitfall are we preventing?
 
-**What:** TypeScript/TSX app code can drift while `npm run lint` and Vite build still pass.
+**What:** TypeScript/TSX app code can drift while `npm run lint` and Vite build both report success.
+
+**Context and constraints:** RustSMF is TypeScript-heavy, Vite transpiles without owning full type analysis, and the verification gate must catch both semantic type drift and lint-only React lifecycle hazards without relying on a reviewer to inspect ESLint resolution manually.
 
 **Why it happened:** The ESLint flat config intentionally ignores `*.ts` and `*.tsx`, and Vite transpiles TypeScript without full typechecking. That allowed ambiguous barrel exports, stale typed-array contracts, missing type imports, and obsolete Three.js material props to remain hidden.
 
-**Where:** `source/frontend/eslint.config.js`, `source/frontend/package.json`, `run.ps1`, `source/frontend/src/loaders/*`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/backend-client/tauri.ts`.
+**Where:** `source/frontend/eslint.config.js`, `source/frontend/scripts/check-eslint-coverage.mjs`, `source/frontend/package.json`, `source/package.json`, `run.ps1`, and all production/test TypeScript.
 
-**How to catch it:** Run `npm run typecheck` in `source/frontend`, or `pwsh -File run.ps1 -Task verify` after this pass. Treat typecheck as required for import/export or loader contract changes.
+**Evidence:** The prior flat config explicitly ignored `*.ts`/`*.tsx`; therefore a clean lint result examined no application TypeScript. Enabling TypeScript and React Hooks linting exposed stale viewport closures that typecheck/build accepted. `check-eslint-coverage.mjs` now resolves representative App, loader, and Playwright files and fails if they are ignored or required rules are disabled.
+
+**Developer story:** Earlier integrity work correctly added separate app/test typechecks, but preserved the assumption that lint was also useful for TypeScript. Inspecting the resolved flat config disproved that assumption. Re-enabling the files surfaced actual event-time state bugs, and a dedicated coverage probe was added so simply reintroducing a broad ignore cannot turn the gate green again.
+
+**How to catch it:** From `source`, run `npm run check:lint-coverage`, `npm run lint`, `npm run typecheck`, and `npm run typecheck:test`, or run `pwsh -File run.ps1 -Task verify`.
 
 **Solutions tried:**
 1. `55/100` Rely on Vite build and current lint, result: runtime build passed but static type drift stayed hidden.
 2. `88/100` Add app `tsc --noEmit` to package and verify, result: caught and fixed source contract drift without adding new dependencies.
 3. `94/100` Add separate test-source typecheck with Node/Playwright types, result: caught unsafe test buffers and implicit helper types, then made `verify` cover app and test contracts.
+4. `98/100` Lint all TypeScript with official TypeScript/React Hooks rules and independently verify resolved rule coverage, result: stale closures were fixed and ignored-file false success now fails closed.
 
-**Current solution:** `source/frontend/package.json` has `typecheck` and `typecheck:test`; `run.ps1 -Task verify` and `source/package.json` verify run both before build/tests.
+**Current solution:** `source/frontend/package.json` has app/test typechecks plus `check:lint-coverage`; the flat config covers source and tests; `source/package.json` verify runs the coverage probe before lint, typechecks, build, and tests.
 
-**Effectiveness:** `94/100`, durable. It catches app and test source regressions with low cost and keeps Node/Playwright types out of the browser app config.
+**Decision rationale:** Typecheck and lint protect different failure classes, so keeping both won over treating either as a substitute. The small resolved-config probe was preferred over trusting a successful lint exit code.
+
+**Effectiveness:** `98/100`, durable. It catches type, lint, hook-dependency, and ignored-config regressions with low deterministic cost.
 
 **Relevance check:** Current. The app is TypeScript-heavy and future loader/viewport changes can regress contracts without this check.
 
-**Next prevention step:** Keep app and test tsconfigs separate; do not silence failing test files with excludes.
+**Next prevention step:** Keep representative source/test targets in the coverage probe when lint ownership or directory layout changes.
 
 ### Q: What pitfall are we preventing?
 
@@ -475,7 +484,7 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 **Why it happened:** The Playwright helper read animation count as `u32` while Rust `get_smf_desktop_info`, Rust tests, and the TS SMF loader read the SMF animation count as `u8`.
 
-**Where:** `source/frontend/tests/smoke.spec.ts`, `source/src-tauri/src/main.rs`, `source/frontend/src/loaders/smf.ts`.
+**Where:** `source/frontend/tests/native.spec.ts`, `source/frontend/tests/helpers/smoke-helpers.ts`, `source/src-tauri/src/main.rs`, and `source/frontend/src/loaders/smf.ts`.
 
 **How to catch it:** Keep Rust native tests for `parse_smf_header_info` and run Playwright desktop-info simulation against real `.smf` bytes. When parser width/offset semantics change, update Rust, TS loader, and JS simulation together.
 
@@ -572,7 +581,7 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 1. 40/100 Assume the pass "took care of wiring", result: latent dupes + doc/code drift.
 2. 95/100 Full discovery grep + read of all buffer sites + consumers + barrel + status, plus immediate replace + tests, result: single source of truth, improved bounds active everywhere, doc claims corrected same pass.
 
-**Current solution:** smfBinary.ts is the owner (with header note); imports + barrel + deletions done; smfBinary now tracked in tree; paired entry added to TODO + new issue__ group in summary_bank.
+**Current solution:** `smfBinary.ts` is the single owner; consumers and the loader barrel import it, duplicate implementations are removed, and `subsystem__smf_format_and_fidelity` routes the durable context. No open TODO remains for this completed extraction.
 
 **Effectiveness:** 95/100, durable for this class of refactor. Prevents silent fidelity or error-handling drift (old check vs ensure impls).
 
@@ -593,7 +602,7 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 **Current solution:** Dedicated builder in `smfRig`; called from `buildThreeScene`; only `isBone=1` nodes enter the skeleton and scene hierarchy; effective parents skip heads with cycle protection; names are prefixed for readability + regex safety; userData carries original indices; animation clips target only scene bones.
 **Effectiveness:** `96/100`, durable. It is verified by the real `.smf` fixture, root-head regression, bind-pose skinning invariant, Playwright SMF load, native IPC mock, and full `verify`.
 **Relevance check:** Current. Any future SMF rig changes (more head synth, glb->smf heads) or editor viz work will touch this.
-**Next prevention step:** Keep root-head/self-parent and real-sample load tests near any SMF hierarchy change; before changing bone parent logic, rerun targeted units plus `npm --workspace frontend run test:e2e -- tests/smoke.spec.ts -g "can load a real SMF sample"`.
+**Next prevention step:** Keep root-head/self-parent and real-sample load tests near any SMF hierarchy change; before changing bone parent logic, rerun targeted units plus `npm --workspace frontend run test:e2e -- tests/shell-model.spec.ts -g "can load a real SMF sample"`.
 
 ### Q: What pitfall are we preventing?
 
@@ -603,19 +612,20 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 **Where:** `run.ps1`, `run.bat`, `README.md`, `source/frontend/package.json`.
 
-**How to catch it:** Run the exact user-facing commands with no extra task arguments: `.\run.bat` and `pwsh -File run.ps1`. Confirm Vite starts and the Tauri desktop app process launches, not only that help text prints.
+**How to catch it:** Run the exact user-facing commands with no extra task arguments: `.\run.bat` and `pwsh -File run.ps1`. Confirm the numbered menu appears, then choose option `2`; also run `pwsh -File run.ps1 -Task run` and confirm Vite plus the Tauri desktop process launch.
 
 **Solutions tried:**
 1. `55/100` Keep launch instructions as explicit tasks only, result: documented commands worked but the user-facing default failed the "run this project" expectation.
-2. `94/100` Make no-arg `run.ps1` start desktop dev, make `run.bat` fall back to Windows PowerShell, and invoke the local npm Tauri CLI, result: default launchers run the app without global CLI assumptions.
+2. `94/100` Make no-arg `run.ps1` start desktop dev, make `run.bat` fall back to Windows PowerShell, and invoke the local npm Tauri CLI, result: default launchers ran the app without global CLI assumptions.
+3. `96/100` Restore a numbered no-argument menu while keeping the stable `run` task and repo-local npm CLI path, result: interactive users get a discoverable launcher and scripts retain a deterministic direct command.
 
-**Current solution:** `run.ps1` defaults to Tauri dev, `run.bat` uses `pwsh` when present and `powershell` otherwise, and Tauri commands route through local npm scripts.
+**Current solution:** `run.ps1` and `run.bat` default to the numbered menu; option `2` and `-Task run` launch Tauri dev. `run.bat` uses `pwsh` when present and `powershell` otherwise, and Tauri commands route through local npm scripts.
 
-**Effectiveness:** `94/100`, durable for local Windows launch. It still depends on repo dependencies being installed.
+**Effectiveness:** `96/100`, durable for local Windows launch. It still depends on repo dependencies being installed.
 
 **Relevance check:** Current. Launcher behavior is the first user-visible health check.
 
-**Next prevention step:** After changing run scripts or package scripts, run both default launchers, not only `-Task verify`.
+**Next prevention step:** After changing run scripts or package scripts, verify both default menus and the direct `-Task run` route, not only `-Task verify`.
 
 ### Q: What pitfall are we preventing?
 
@@ -688,26 +698,32 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 **What:** Independently guarded picker, file/drop, loader, and export awaits can each be locally fresh while still being globally stale, allowing an older result to replace or report over a newer user intent.
 
+**Context and constraints:** Browser and Tauri flows share one mounted model and one status surface. Codec work may outlive the user action that started it, while a failed replacement must preserve the prior edited model and a save lock must always release.
+
 **Why it happened:** Picker open and browser file reads used separate counters, so a delayed picker could call `loadModel` after a newer file/drop completed. Export had its own sequence but loads did not invalidate it, and the old implementation cleared the current model before a replacement parsed successfully. Simply invalidating export in `finally` would also have skipped lock release.
 
-**Where:** `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/smoke.spec.ts`, `source/frontend/tests/native.spec.ts`, and `source/frontend/tests/helpers/smoke-helpers.ts`.
+**Where:** `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/workers/smfCodecClient.ts`, `source/frontend/tests/lifecycle.spec.ts`, `source/frontend/tests/native.spec.ts`, and `source/frontend/tests/helpers/smoke-helpers.ts`.
 
 **How to catch it:** Deterministically delay and succeed/fail picker open, browser `File.arrayBuffer`, desktop path reads, and native writes. Start a newer success or error before the older promise settles, then assert exact root UUID, selection, status/error, pose/skin/animation dirty state, write count, button recovery, and absence of stale completion text.
 
-**Developer story:** Focused file/drop tests originally suggested the sequence design was complete. Mapping every user entrypoint showed the counters were scoped to implementation branches rather than user intent. Cross-entrypoint tests reproduced the overwrite; export/load overlap then exposed the same ownership problem plus a lock-release hazard. Atomic replacement also fell out of the review because a failed newer load should not destroy a valid edited model.
+**Evidence:** Delayed browser/native matrices reproduce both completion orders. Worker units prove abort termination and cleared handlers; the bounded stress flow proves worker progress and terminal cleanup while the existing load/export ownership matrix remains green. The first full worker run also showed that changing in-progress copy from `Loading` to `Importing` let readiness assertions advance before model commit; keeping `Loading` as the stable operation state restored all affected Rig/IK flows.
+
+**Developer story:** Focused file/drop tests originally suggested the sequence design was complete. Mapping every user entrypoint showed the counters were scoped to implementation branches rather than user intent. Cross-entrypoint tests reproduced the overwrite; export/load overlap then exposed the same ownership problem plus a lock-release hazard. Atomic replacement followed because a failed newer load should not destroy a valid edited model. Workerization then reused the same ownership token and added active aborts rather than creating a second lifecycle.
 
 **Solutions tried:**
 1. `70/100` Guard only inside `loadModel`, result: a late picker or read could enter `loadModel` last and receive a newer token.
 2. `88/100` Use separate picker and file/drop counters, result: same-class races were blocked but cross-entrypoint races remained.
-3. `97/100` Use one load-intent sequence across picker/input/drop/path/loader, invalidate export UI commits when a load begins, check export freshness after each await, release the save lock independently, replace the model only after current parse success, and dispose stale parsed roots, result: delayed success/error matrices pass across all supported entrypoints.
+3. `98/100` Use one load-intent sequence across picker/input/drop/path/loader/worker, abort superseded codecs, invalidate export UI commits when a load begins, check freshness after each await, release the save lock independently, replace only after current parse success, and dispose stale parsed roots, result: delayed success/error and worker ownership matrices pass.
 
-**Current solution:** `beginLoadRequest` advances the shared load sequence and export epoch. All load stages carry the same token; only a current successful parse calls `clearLoadedModel` and commits format/root/state. `withExportBusy` serializes diagnostic/model saves, passes a freshness predicate through exporter/validator/save awaits, suppresses stale UI commits, and always releases its owned lock.
+**Current solution:** `beginLoadRequest` advances the shared load sequence and export epoch and aborts the active codec. All load stages carry the same token; only a current successful parse calls `clearLoadedModel` and commits format/root/state. Worker results are rechecked before scene/save ownership, and import progress retains the stable user-visible `Loading` state until terminal commit. `withExportBusy` serializes diagnostic/model saves, passes a freshness predicate through exporter/validator/save awaits, suppresses stale UI commits, and always releases its owned lock.
 
-**Effectiveness:** `97/100`, durable. Browser and native tests cover stale success after newer error, stale error after newer success, atomic failed replacements, dirty-state ownership, cross-action single-flight, and export completion after newer loads.
+**Decision rationale:** One user-intent token plus explicit resource cancellation is simpler and safer than composing independent branch counters or accepting stale results and filtering only status text.
 
-**Relevance check:** Current. The same request/response ownership contract is the required boundary for planned worker messages.
+**Effectiveness:** `98/100`, durable. Browser, native, and worker tests cover stale success/error orders, atomic replacement, dirty-state ownership, cancellation cleanup, cross-action single-flight, and export completion after newer loads.
 
-**Next prevention step:** Reuse the shared load token in worker requests/responses; any new async lifecycle entrypoint must join the delayed success/error matrix before shipping.
+**Relevance check:** Current. Every present async entrypoint, including SMF worker responses, joins the same ownership contract.
+
+**Next prevention step:** Any new async lifecycle entrypoint must join the delayed success/error matrix before shipping.
 
 ### Q: What pitfall are we preventing?
 
@@ -724,7 +740,7 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 2. `65/100` Add simple finally { Stop-Process ... } around & npm in run.ps1, result: helped Ctrl+C but not title-bar X (pwsh abrupt term) and not the full grandchild tree reliably.
 3. `93/100` Multi-layer defense (Windows JobObject with KILL_ON_JOB_CLOSE assigned to owned Start-Process pwsh for the dev subtree + recursive Stop-ProcessTree via Win32_Process + three-sweep Stop-DevServers (exact 5173 node owners + cmdline 'vite|start-vite-dev|tauri') + Stop-Stale on every dev entry + trap + PowerShell.Exiting register + mjs wrapper for the tauri-close path (SIGTERM/'exit'/taskkill /T + parentPid poll + delay)), result: X-close, tauri-close, Ctrl+C, and re-launch all clean; redundant but low-cost and effective on primary Windows launcher path.
 
-**Current solution:** The 3rd (layered) solution above. run.ps1 owns the long-running dev tasks via Start-Process + Job + finally/tree/stale; the mjs (now the beforeDevCommand) guarantees its direct Vite child is reaped on tauri CLI term (signals + poll + tree kill) and now has a unix fallback (`pkill`/`kill`) path when available. Entry sweep + port check makes re-launch robust. (See subsystem__dev_process_lifecycle and issue__rogue_node_servers in summary_bank.json for paths + notes.)
+**Current solution:** The 3rd (layered) solution above. run.ps1 owns the long-running dev tasks via Start-Process + Job + finally/tree/stale; the mjs (now the beforeDevCommand) guarantees its direct Vite child is reaped on tauri CLI term (signals + poll + tree kill) and now has a unix fallback (`pkill`/`kill`) path when available. Entry sweep + port check makes re-launch robust. See `subsystem__dev_process_lifecycle` in `summary_bank.json` for the maintained path group and notes.
 
 **Effectiveness:** `93/100`, durable. Verified by construction (checks: cargo/context/typecheck/verify all green post-change), manual X-close + re-launch scenarios (no rogue node, port free), and the prior orphan class being the exact motivator. Low runtime cost (scans only on dev entry or explicit close paths; poll is 1.8s win32-only in mjs).
 
@@ -738,7 +754,7 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 
 **Why it happened:** The Timeline owns the visible scrub label and is not rendered in Export, even though playback time remains in shared state and continues to drive the viewport. A transition assertion that waits for `time-display` in every mode tests panel presence rather than playback continuity.
 
-**Where:** `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/tests/smoke.spec.ts`, and `source/frontend/tests/native.spec.ts`.
+**Where:** `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/tests/shell-model.spec.ts`, and `source/frontend/tests/native.spec.ts`.
 
 **How to catch it:** Load a generated skinned GLB, create pose/skin/animation dirty state, pause and scrub, select an object and bone, then cycle every workspace through quad and single Ortho. Assert the same model-root UUID and playback value through viewport telemetry, while asserting mode-owned dirty controls only when their panels are mounted. Also change panels after a canceled native save before checking status and dirty state.
 
@@ -767,12 +783,128 @@ Last reviewed: 2026-07-13 (verified source-safe material previews, texture expor
 **Solutions tried:**
 1. `45/100` Trust component options and Three marker fields with inline assertions, result: concise code but no runtime rejection and fragile dependency-upgrade boundaries.
 2. `80/100` Replace only production `any`, result: the automated gate passed while double assertions and broad library casts still hid assumptions.
-3. `97/100` Validate unknown inputs with named predicates/adapters, use Three r182 public APIs and `instanceof` guards, require binary exporter output at runtime, and deduplicate disposal by resource identity including skeletons, result: focused tests, 195/195 units, and 50/50 browser tests pass.
+3. `98/100` Validate unknown inputs with named predicates/adapters, use Three r182 public APIs and `instanceof` guards, validate worker messages, require binary exporter output at runtime, and deduplicate disposal by resource identity including skeletons, result: focused and full gates pass.
 
-**Current solution:** The 3rd solution. Shared Three guards own traversal narrowing; Tauri/DOM/settings/export results validate before mutation; safe buffer copies avoid `SharedArrayBuffer` assertions; disposal uses a per-subtree identity set for geometry, skeleton, material, and texture resources.
+**Current solution:** The 3rd solution. Shared Three guards own traversal narrowing; Tauri/DOM/settings/export/worker values validate before mutation; export worker inputs are deep-owned before transfer; safe buffer copies avoid `SharedArrayBuffer` assertions; disposal uses a per-subtree identity set for geometry, skeleton, material, and texture resources.
 
-**Effectiveness:** `97/100`, durable. The runtime guards fail closed, the source scan is explicit, and shared-resource ownership has a regression test.
+**Effectiveness:** `98/100`, durable. Runtime guards fail closed, transfer ownership is explicit, the source scan is executable, and shared-resource ownership has a regression test.
 
 **Relevance check:** Current. Three.js upgrades, new worker messages, exporter replacements, or new material channels can reintroduce boundary assumptions.
 
-**Next prevention step:** Treat worker messages as untrusted boundary data, reuse the same named guards where applicable, and add new resource types to one disposal adapter plus its identity-deduplication test.
+**Next prevention step:** Keep new external message/resource types behind named validators and the identity-deduplicating disposal adapter.
+
+### Q: What pitfall are we preventing?
+
+**What:** SMF export can make roundtrip diagnostics pass by mutating the source animation DQs that serve as the expected result.
+
+**Context and constraints:** The same `ImportedSmf` data can back live editor state, diagnostics, a dedicated worker, or the explicit synchronous startup fallback. Serialization must be a read-only boundary, and diagnostics must compare semantic serialized poses rather than rely on exporter side effects.
+
+**Why it happened:** `dqNormalize` defaults its destination to the input array. The animation serializer passed source frame DQs directly, so synchronous export normalized them in place before `compareSmfRoundtrip` ran. Worker export correctly cloned before transfer, which removed the side effect and exposed noncanonical-but-equivalent DQs as pose deltas.
+
+**Where:** `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/smfDiagnostics.ts`, `source/frontend/src/workers/smfCodecClient.ts`, `source/frontend/src/workers/smfCodecClient.test.ts`, and `source/frontend/src/loaders/smfDiagnostics.test.ts`.
+
+**Evidence:** The first full worker-backed Playwright run reported repeatable first/last-frame pose deltas of `0.292893` and `0.250000` in three roundtrip flows. The source-safe worker path failed while the former synchronous path passed because the latter changed its expected input. A fallback unit now supplies a non-unit DQ and proves the source frame is byte-for-byte unchanged; diagnostics units prove scaled-equivalent DQs compare as the same serialized pose. The seven affected browser flows and then all 53 flows passed after the fix.
+
+**Developer story:** Worker transfer ownership was initially suspected because the failures appeared only after workerization. Comparing the cloned worker path to direct export showed the worker preserved data while the direct serializer did not. Tracing `buildDQForExport` reached the in-place default on `dqNormalize`; allocating a destination removed the mutation, then canonical normalization in diagnostics made the intended format comparison explicit instead of restoring the old side effect.
+
+**How to catch it:** Run `npx tsx --test src/workers/smfCodecClient.test.ts src/loaders/smfDiagnostics.test.ts`, then the SMF roundtrip Playwright flows. Assert the original animation frame remains unchanged after startup fallback and scaled/sign-equivalent DQs produce zero semantic pose delta.
+
+**Solutions tried:**
+1. `25/100` Keep comparing after synchronous export, result: false confidence because serialization rewrote the expected value.
+2. `68/100` Clone only for worker transfer, result: live worker state stayed safe but synchronous fallback still mutated input and diagnostics exposed unexplained deltas.
+3. `98/100` Normalize into fresh serializer buffers and normalize copies for sign-aware diagnostic comparison, result: worker and fallback paths are immutable and both exact and scaled-equivalent pose regressions are detected correctly.
+
+**Current solution:** Animation export calls `dqNormalize` with a fresh destination before negate/sign continuity. Roundtrip pose comparison canonicalizes copies of both DQs before direct-versus-negated component checks. Worker export still deep-clones before transfer, and fallback immutability is unit-tested.
+
+**Decision rationale:** A read-only serializer plus semantic diagnostics preserves ownership across every execution mode. Reintroducing mutation or weakening pose checks would only hide the discrepancy.
+
+**Effectiveness:** `98/100`, durable. Focused ownership/diagnostic tests and the complete browser suite cover both the root cause and user-visible roundtrip behavior.
+
+**Relevance check:** Current. Every SMF export, roundtrip check, worker transfer, and startup fallback crosses this boundary.
+
+**Next prevention step:** Treat all serializers as pure with respect to caller-owned buffers; add an immutability assertion whenever a new canonicalization step is introduced.
+
+### Q: What pitfall are we preventing?
+
+**What:** Indexed Three.js geometry can appear valid in the viewport but produce an invalid or incomplete SMF when conversion writes unique vertices while the SMF serializer emits only sequential triangle records.
+
+**Context and constraints:** Runtime GLB and FBX meshes commonly reuse vertices through an index buffer. The SMF writer stores a flat triangle-soup vertex stream and does not serialize Three.js index metadata, so conversion must make the topology explicit before worker validation or save.
+
+**Why it happened:** `threeToSmf` copied each geometry attribute at its unique-vertex count and built a separate triangle list from the index. The downstream SMF writer ignored that list, so an indexed quad reached export as four vertices instead of two complete triangles. The new nested worker request validator correctly rejected the malformed vertex count and exposed the pre-existing converter mismatch in seven browser flows.
+
+**Where:** `source/frontend/src/loaders/threeToSmf.ts`, `source/frontend/src/loaders/threeToSmf.test.ts`, `source/frontend/src/workers/smfCodecProtocol.ts`, and `source/frontend/tests/export-formats.spec.ts`.
+
+**Evidence:** A generated indexed quad with indices `[0, 1, 2, 0, 2, 3]` now converts to six position, normal, UV, tangent, skin-index, and skin-weight records and reimports successfully. Focused converter/worker tests, the seven initially affected browser cases, and then all 53 browser cases passed.
+
+**Developer story:** Relaxing the worker guard would have restored the old silent corruption. Following the rejected payload back through the conversion boundary showed that the serializer's actual wire contract—not the in-memory triangle helper—was authoritative. Expanding every present attribute through one validated triangle vertex map fixed the topology once and kept optional arrays aligned.
+
+**How to catch it:** Run `npx tsx --test src/loaders/threeToSmf.test.ts src/workers/smfCodecClient.test.ts`, then `npx playwright test tests/export-formats.spec.ts --workers=1`. Include an indexed mesh, reject incomplete triangles and out-of-range indices, and assert the reimported SMF vertex count is a multiple of three.
+
+**Solutions tried:**
+1. `20/100` Relax the worker's nested vertex-count validation, result: export would proceed while preserving the corrupt topology.
+2. `55/100` Serialize the separate triangle list without changing vertex attributes, result: it would require a format change and leave attribute cardinalities ambiguous.
+3. `98/100` Build one validated triangle vertex map and expand all required and optional attributes to flat triangle soup before diagnostics/serialization, result: indexed and non-indexed inputs share one explicit wire representation.
+
+**Current solution:** `makeTriangleVertexMap` validates complete triangle groups and index bounds. Conversion expands every attribute through that map, fills absent optional attributes to the exported vertex count, emits sequential triangle metadata, and blocks incomplete position or four-component skin layouts.
+
+**Decision rationale:** Normalizing at the Three-to-SMF boundary preserves the existing SMF file contract and gives diagnostics, worker validation, and serialization the same shape.
+
+**Effectiveness:** `98/100`, durable. The regression is covered at the pure converter boundary and through browser download/reimport.
+
+**Relevance check:** Current. Any new runtime importer or geometry preprocessing path may produce indexed buffers.
+
+**Next prevention step:** Every new Three-to-SMF fixture should include at least one indexed mesh, and serializer changes must keep flat vertex and triangle metadata cardinalities in lockstep.
+
+### Q: What pitfall are we preventing?
+
+**What:** A valid repo-local npm installation can be shadowed by an inaccessible user-profile npm shim, causing launcher, Playwright web-server, or verification commands to fail before project code runs.
+
+**Why it happened:** The managed Windows environment resolved the global `npm.cmd`, whose prefix helper attempted to read `C:\Users\jc816\AppData\Roaming\npm`. Node itself and its adjacent bundled `npm-cli.js` were available, but callers delegated resolution back to `PATH`.
+
+**Where:** `run.ps1` and `source/frontend/playwright.config.ts`.
+
+**Evidence:** Direct npm shim invocation failed at startup, while `node "C:\Program Files\nodejs\node_modules\npm\bin\npm-cli.js"` ran the same unit/type/build commands successfully. The launcher helper and Playwright server command now select the CLI adjacent to the active Node executable first.
+
+**How to catch it:** Run `pwsh -File run.ps1 -Task test:unit`, `pwsh -File run.ps1 -Task verify`, and one Playwright command in a managed Windows sandbox where the roaming profile is unreadable. The commands must reach project scripts without depending on a global npm prefix.
+
+**Solutions tried:**
+1. `35/100` Keep calling `npm` from `PATH`, result: environment-specific shim startup failed before package scripts ran.
+2. `65/100` Use the adjacent CLI only in ad hoc verification commands, result: local diagnosis worked but canonical launch and Playwright still retained the same failure.
+3. `96/100` Resolve Node once, prefer its adjacent `node_modules/npm/bin/npm-cli.js`, and use that stable pair in launcher and Playwright process commands with a PATH fallback only when needed, result: canonical scripts work in both ordinary and managed environments.
+
+**Current solution:** `run.ps1` centralizes npm invocation and child command construction around the active Node executable. `playwright.config.ts` uses the same adjacent-CLI preference for its build-and-preview server.
+
+**Effectiveness:** `96/100`, durable for standard Node distributions. The fallback keeps nonstandard installations supported.
+
+**Relevance check:** Current. Windows profile policy and multiple Node/npm installations are common launcher boundary conditions.
+
+**Next prevention step:** Keep package-manager discovery in one launcher helper and exercise at least one canonical runner task instead of validating only direct package-manager commands.
+
+### Q: What pitfall are we preventing?
+
+**What:** During an atomic model replacement, a new animation clip array can briefly bind to the previous root's `AnimationMixer`, producing missing-track warnings and applying playback intent to the wrong scene.
+
+**Context and constraints:** The viewport deliberately keeps root attachment in a narrow effect so scrub/time updates do not tear down the renderer. React runs effects in declaration order, and root, clips, selected clip, time, pause, and speed can all change in one async load commit.
+
+**Why it happened:** The clip-selection effect appeared before the root-attachment effect. On a replacement render it saw the old mixer and new clips, called `clipAction`, then the later effect disposed that mixer and attached the new root. Separate pause/time effects could likewise run before the new mixer existed, leaving its initial action with default playback state.
+
+**Where:** `source/frontend/src/components/ThreeViewport.tsx` and the export-versus-load replacement matrix in `source/frontend/tests/native.spec.ts`.
+
+**Evidence:** The isolated stale-export/newer-load test reproducibly logged `THREE.PropertyBinding: No target node found` for `FixtureTip.quaternion` and `FixtureRoot.position` while still passing state assertions. After the fix, the same test passes with an explicit zero-warning assertion.
+
+**How to catch it:** Run `npx playwright test tests/native.spec.ts --grep "stale native export success and error" --workers=1` and fail on missing-target `PropertyBinding` warnings, not only console errors or incorrect final UI state.
+
+**Solutions tried:**
+1. `35/100` Ignore the warning because final root/status ownership was correct, result: a real transient binding defect remained hidden by end-state assertions.
+2. `60/100` Add the new root to the clip effect dependencies, result: the effect still runs before attachment and cannot initialize a mixer that does not exist yet.
+3. `98/100` Require `mixer.getRoot()` to match the rendered root and let the root-attachment effect initialize the selected clip, pause state, time, and speed from one current intent snapshot, result: no cross-root bind occurs and replacement starts in the declared playback state.
+
+**Current solution:** `activateMixerClip` applies one coherent playback intent. The clip effect is root-affine and handles same-root clip edits/selections; the attachment effect creates the mixer and activates the latest intent for a replacement root.
+
+**Decision rationale:** Root affinity is the invariant that matters. Reordering effects would be fragile, while adding playback props to the attachment dependency list would recreate and dispose the model during normal playback.
+
+**Effectiveness:** `98/100`, durable. The regression test covers the exact async replacement ordering and preserves the narrow attachment dependency contract.
+
+**Relevance check:** Current. Any model replacement, clip edit, or playback-state refactor crosses this coordination boundary.
+
+**Next prevention step:** When a Three.js controller is recreated from React state, guard secondary effects by controller-owner identity and initialize the new controller from one complete current intent.

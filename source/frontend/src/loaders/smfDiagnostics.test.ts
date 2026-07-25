@@ -178,7 +178,8 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
     assert.equal(detail.maxComponentDelta, report.bonePoseMaxDelta);
     assert.equal(detail.componentDeltas.length, 8);
     assert.ok(Math.abs(detail.componentDeltas[0] - 0.01) < 1e-6);
-    assert.ok(detail.componentDeltas.slice(1).every((delta) => delta === 0));
+    assert.ok(detail.componentDeltas[3] > 0 && detail.componentDeltas[3] < 1e-4);
+    assert.ok([1, 2, 4, 5, 6, 7].every((index) => detail.componentDeltas[index] === 0));
   });
 
   it('treats negated dual quaternions as the same pose', () => {
@@ -194,6 +195,37 @@ describe('smfDiagnostics.compareSmfRoundtrip', () => {
         },
       ],
     };
+
+    const report = compareSmfRoundtrip(before, after);
+
+    assert.strictEqual(report.ok, true);
+    assert.strictEqual(report.bonePoseMaxDelta, 0);
+    assert.deepStrictEqual(report.poseDeltaDetails, []);
+  });
+
+  it('compares dual quaternions in their serialized normalized form', () => {
+    const before = makeImportedSmf();
+    before.animations[0].frames[0][0] = new Float32Array([
+      0,
+      0,
+      0,
+      2,
+      0.5,
+      0,
+      0,
+      0,
+    ]);
+    const after = makeImportedSmf();
+    after.animations[0].frames[0][0] = new Float32Array([
+      0,
+      0,
+      0,
+      1,
+      0.25,
+      0,
+      0,
+      0,
+    ]);
 
     const report = compareSmfRoundtrip(before, after);
 

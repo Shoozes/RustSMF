@@ -12,6 +12,7 @@
     "tauri:dev": "npm --workspace frontend run tauri:dev",
     "tauri:build": "npm --workspace frontend run tauri:build",
     "lint": "npm --workspace frontend run lint",
+    "check:lint-coverage": "npm --workspace frontend run check:lint-coverage",
     "typecheck": "npm --workspace frontend run typecheck",
     "typecheck:test": "npm --workspace frontend run typecheck:test",
     "check:production-any": "npm --workspace frontend run check:production-any",
@@ -19,7 +20,7 @@
     "test:visual-strict": "npm --workspace frontend run test:visual-strict",
     "test:visual-update": "npm --workspace frontend run test:visual-update",
     "test:unit": "npm --workspace frontend run test:unit",
-    "verify": "npm run lint && npm run typecheck && npm run typecheck:test && npm run check:production-any && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && cd src-tauri && cargo check",
+    "verify": "npm run check:lint-coverage && npm run lint && npm run typecheck && npm run typecheck:test && npm run check:production-any && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && cd src-tauri && cargo check",
     "desktop:smoke": "pwsh -File ../run.ps1 -Task desktop-smoke"
   },
   "engines": {

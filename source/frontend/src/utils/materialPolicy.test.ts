@@ -10,10 +10,11 @@ describe('material export policy', () => {
     );
   });
 
-  it('states texture behavior for explicit GLB and SMF conversion', () => {
+  it('states texture behavior for explicit GLB, FBX, and SMF conversion', () => {
     for (const source of ['smf', 'fbx', 'glb', 'obj']) {
       const rows = getTextureExportPolicies(source);
       assert.equal(rows.find((row) => row.action === 'GLB')?.texturePolicy, 'embedded');
+      assert.equal(rows.find((row) => row.action === 'FBX')?.texturePolicy, 'embedded');
       assert.equal(
         rows.find((row) => row.action === 'SMF')?.texturePolicy,
         source === 'smf' ? 'embedded' : 'omitted',

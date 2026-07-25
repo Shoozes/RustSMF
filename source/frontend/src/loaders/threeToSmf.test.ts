@@ -234,6 +234,107 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
     assert.strictEqual(converted.meshes[1].name, 'Mesh_B');
   });
 
+  it('expands indexed geometry into SMF triangle soup with matching skin data', () => {
+    const bone = new THREE.Bone();
+    bone.name = 'Bone_0';
+    const skeleton = new THREE.Skeleton([bone]);
+    const mesh = makeSkinnedMesh({ skin: true, normal: true, uv: true });
+    mesh.geometry.setAttribute('position', new THREE.Float32BufferAttribute([
+      0, 0, 0,
+      1, 0, 0,
+      1, 1, 0,
+      0, 1, 0,
+    ], 3));
+    mesh.geometry.setAttribute('normal', new THREE.Float32BufferAttribute([
+      0, 0, 1,
+      0, 0, 1,
+      0, 0, 1,
+      0, 0, 1,
+    ], 3));
+    mesh.geometry.setAttribute('uv', new THREE.Float32BufferAttribute([
+      0, 0,
+      1, 0,
+      1, 1,
+      0, 1,
+    ], 2));
+    mesh.geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute([
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+      0, 0, 0, 0,
+    ], 4));
+    mesh.geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute([
+      1, 0, 0, 0,
+      1, 0, 0, 0,
+      1, 0, 0, 0,
+      1, 0, 0, 0,
+    ], 4));
+    mesh.geometry.setIndex([0, 1, 2, 0, 2, 3]);
+
+    const converted = buildImportedSmfFromThree({
+      skeleton,
+      skinnedMeshes: [mesh],
+    });
+    const convertedMesh = converted.meshes[0];
+
+    assert.strictEqual(convertedMesh.verts, 6);
+    assert.deepStrictEqual(convertedMesh.triangles, [[0, 1, 2], [3, 4, 5]]);
+    assert.strictEqual(convertedMesh.positions.length, 18);
+    assert.strictEqual(convertedMesh.skinIndices.length, 24);
+    assert.strictEqual(convertedMesh.skinWeights.length, 24);
+    assert.deepStrictEqual(
+      [...convertedMesh.positions.slice(9, 18)].map((value) => Object.is(value, -0) ? 0 : value),
+      [0, 0, 0, 1, 0, 1, 0, 0, 1],
+    );
+
+    const reimported = importSMF(toArrayBuffer(exportSMFToBuffer(converted)));
+    assert.strictEqual(reimported.meshes[0].verts, 6);
+    assert.strictEqual(reimported.meshes[0].triangles.length, 2);
+  });
+
+  it('sizes missing optional vertex attributes to the exported triangle soup', () => {
+    const skeleton = makeSkeleton();
+    const mesh = makeSkinnedMesh({ skin: true });
+    const converted = buildImportedSmfFromThree({
+      skeleton,
+      skinnedMeshes: [mesh],
+    });
+
+    assert.strictEqual(converted.meshes[0].normals.length, 9);
+    assert.strictEqual(converted.meshes[0].uvs.length, 6);
+    assert.strictEqual(converted.meshes[0].tangents.length, 12);
+    assert.doesNotThrow(() => exportSMFToBuffer(converted));
+  });
+
+  it('blocks incomplete triangle and skin attribute layouts before conversion', () => {
+    const skeleton = makeSkeleton();
+    const incompleteTriangles = makeSkinnedMesh({ skin: true, normal: true, uv: true });
+    incompleteTriangles.geometry.setAttribute('position', new THREE.Float32BufferAttribute([
+      0, 0, 0,
+      1, 0, 0,
+      1, 1, 0,
+      0, 1, 0,
+    ], 3));
+    const triangleReport = inspectThreeToSmfSource({
+      skeleton,
+      skinnedMeshes: [incompleteTriangles],
+    });
+    assert.strictEqual(triangleReport.canExportSmf, false);
+    assert.ok(triangleReport.diagnostics.some((item) => item.code === 'SMF_INVALID_TRIANGLES'));
+
+    const incompleteSkin = makeSkinnedMesh({ skin: true, normal: true, uv: true });
+    incompleteSkin.geometry.setAttribute(
+      'skinWeight',
+      new THREE.Float32BufferAttribute([1, 0, 0, 0], 4),
+    );
+    const skinReport = inspectThreeToSmfSource({
+      skeleton,
+      skinnedMeshes: [incompleteSkin],
+    });
+    assert.strictEqual(skinReport.canExportSmf, false);
+    assert.ok(skinReport.diagnostics.some((item) => item.code === 'SMF_MISSING_SKIN_ATTRIBUTES'));
+  });
+
   it('preserves parent-child bone hierarchy', () => {
     const parent = new THREE.Bone();
     parent.name = 'Bone_0';

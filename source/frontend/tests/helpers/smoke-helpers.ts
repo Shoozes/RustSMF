@@ -67,7 +67,7 @@ export let SAMPLE_OBJ: string | null = null;
 if (fs.existsSync(LOCAL_TEST_OBJ)) {
   SAMPLE_OBJ = LOCAL_TEST_OBJ;
 }
-// No broad fallback to non-.obj files; old-src typically has no .obj. If needed later, extend getObjFiles similar to smf/fbx.
+// Keep OBJ discovery fixture-local so unrelated old-source assets cannot make tests environment-dependent.
 
 export interface SmfDesktopInfo {
   valid: boolean;

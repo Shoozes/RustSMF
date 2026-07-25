@@ -18,6 +18,6 @@ Keep developer docs concise and evidence-based. This repo has one current-state 
 - Update `review.md` after repo-wide integrity or stewardship passes.
 - Update `PITFALL_LEDGER.md` when a failure mode is likely to recur or took investigation to understand.
 - Update `summary_bank.json` when paths move, groups become stale, or a new feature/issue needs focused context.
-- Run `python scripts/verify-context-bank.py` after editing the context bank; `pwsh -File run.ps1 -Task verify` includes this check.
+- Run `pwsh -File run.ps1 -Task context` after editing the context bank; `pwsh -File run.ps1 -Task verify` includes the same validator and regression tests.
 
 Avoid copying the same completed-work narrative into multiple docs. Link to the durable owner instead. Canonical verification commands and launch instructions are centralized in APP_STATE.md "Primary commands" / "Verification" (other surfaces link or summarize to reduce duplication of lists).

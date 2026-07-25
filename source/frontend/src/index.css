@@ -11,19 +11,36 @@ html, body, #root {
 }
 
 .app-shell {
+  --ui-app-background: #0f172a;
+  --ui-surface: #1e293b;
+  --ui-surface-raised: #172033;
+  --ui-surface-inset: #0c1320;
+  --ui-control: #263348;
+  --ui-control-muted: #202b3d;
+  --ui-control-hover: #475569;
+  --ui-border: #334155;
+  --ui-border-strong: #475569;
+  --ui-text: #e2e8f0;
+  --ui-text-strong: #f8fafc;
+  --ui-text-muted: #94a3b8;
+  --ui-accent: #25636a;
+  --ui-accent-border: #2dd4bf;
+  --ui-viewport-background: #0b1120;
   display: flex;
   flex-direction: column;
   height: 100%;
+  background: var(--ui-app-background);
+  color: var(--ui-text);
 }
 
 .toolbar {
   position: relative;
   z-index: 5;
   min-height: 52px;
-  background: #172033;
-  border-bottom: 1px solid #314056;
+  background: var(--ui-surface-raised);
+  border-bottom: 1px solid var(--ui-border);
   display: grid;
-  grid-template-columns: auto minmax(300px, 1fr) auto;
+  grid-template-columns: auto minmax(280px, 1fr) auto auto;
   align-items: center;
   gap: 10px;
   padding: 8px 12px;
@@ -46,11 +63,19 @@ html, body, #root {
 .toolbar-brand {
   font-weight: 700;
   letter-spacing: 0;
-  color: #f8fafc;
+  color: var(--ui-text-strong);
 }
 
 .toolbar-action-group {
   gap: 6px;
+}
+
+.toolbar-file-actions {
+  gap: 4px;
+}
+
+.toolbar-file-actions .toolbar-action {
+  padding-inline: 7px;
 }
 
 .toolbar-workspace {
@@ -63,10 +88,10 @@ html, body, #root {
   max-width: 100%;
   gap: 4px;
   align-items: center;
-  border: 1px solid #314056;
+  border: 1px solid var(--ui-border);
   border-radius: 6px;
   padding: 2px;
-  background: #0c1320;
+  background: var(--ui-surface-inset);
   overflow-x: auto;
   scrollbar-width: thin;
 }
@@ -83,8 +108,8 @@ html, body, #root {
 }
 
 .mode-tab-active {
-  background: #25636a;
-  color: #f8fafc;
+  background: var(--ui-accent);
+  color: var(--ui-text-strong);
 }
 
 .toolbar-viewport {
@@ -95,15 +120,15 @@ html, body, #root {
 
 .control-group {
   gap: 4px;
-  border: 1px solid #314056;
+  border: 1px solid var(--ui-border);
   border-radius: 6px;
   padding: 2px;
-  background: #0c1320;
+  background: var(--ui-surface-inset);
 }
 
 .control-label {
   padding: 0 5px;
-  color: #93a4b8;
+  color: var(--ui-text-muted);
   font-size: 10px;
   font-weight: 700;
   line-height: 26px;
@@ -118,8 +143,8 @@ html, body, #root {
   min-width: 48px;
   padding: 0 9px;
   font-size: 12px;
-  background: #263348;
-  border: 1px solid #3d4d64;
+  background: var(--ui-control);
+  border: 1px solid var(--ui-border-strong);
   border-radius: 4px;
 }
 
@@ -134,7 +159,7 @@ html, body, #root {
 
 .toolbar-action-muted {
   color: #b7c4d4;
-  background: #202b3d;
+  background: var(--ui-control-muted);
 }
 
 .camera-btn {
@@ -142,8 +167,8 @@ html, body, #root {
 }
 
 .layout-btn-active {
-  background: #25636a;
-  color: #f8fafc;
+  background: var(--ui-accent);
+  color: var(--ui-text-strong);
 }
 
 .toolbar-menu {
@@ -154,7 +179,7 @@ html, body, #root {
   display: flex;
   align-items: center;
   list-style: none;
-  color: #e2e8f0;
+  color: var(--ui-text);
   cursor: pointer;
 }
 
@@ -163,7 +188,7 @@ html, body, #root {
 }
 
 .toolbar-menu[open] > .toolbar-menu-summary {
-  border-color: #2dd4bf;
+  border-color: var(--ui-accent-border);
   background: #1f3f45;
 }
 
@@ -176,10 +201,33 @@ html, body, #root {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 6px;
   padding: 8px;
-  border: 1px solid #314056;
+  border: 1px solid var(--ui-border);
   border-radius: 6px;
-  background: #111827;
+  background: var(--ui-surface-raised);
   box-shadow: 0 12px 28px rgba(2, 6, 23, 0.42);
+}
+
+.theme-switcher {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: max-content;
+  color: var(--ui-text-muted);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.theme-select {
+  width: 112px;
+  height: 30px;
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 4px;
+  padding: 0 7px;
+  background: var(--ui-control);
+  color: var(--ui-text);
+  font-size: 12px;
+  text-transform: none;
 }
 
 .display-toggle {
@@ -195,8 +243,8 @@ html, body, #root {
 
 .sidebar {
   width: 220px;
-  background: #1e293b;
-  border-right: 1px solid #334155;
+  background: var(--ui-surface);
+  border-right: 1px solid var(--ui-border);
   padding: 8px;
   font-size: 12px;
   overflow: auto;
@@ -344,12 +392,35 @@ html, body, #root {
 .viewport-container {
   flex: 1;
   position: relative;
-  background: #0b1120;
+  background: var(--ui-viewport-background);
 }
 
 .viewport-container canvas {
   display: block;
   outline: none;
+}
+
+.smf-codec-progress {
+  display: grid;
+  width: min(320px, calc(100% - 32px));
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  background: rgba(15, 23, 42, 0.92);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+  text-align: center;
+}
+
+.smf-codec-progress progress {
+  width: 100%;
+  height: 8px;
+  accent-color: #14b8a6;
+}
+
+.smf-codec-fallback {
+  color: #fcd34d;
+  font-size: 10px;
 }
 
 .quad-pane-overlay {
@@ -415,8 +486,8 @@ html, body, #root {
 
 .inspector {
   width: 240px;
-  background: #1e293b;
-  border-left: 1px solid #334155;
+  background: var(--ui-surface);
+  border-left: 1px solid var(--ui-border);
   padding: 8px;
   font-size: 12px;
   overflow: auto;
@@ -427,8 +498,8 @@ html, body, #root {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background: #1e293b;
-  border-left: 1px solid #334155;
+  background: var(--ui-surface);
+  border-left: 1px solid var(--ui-border);
   padding: 8px;
   overflow: auto;
 }
@@ -446,8 +517,8 @@ html, body, #root {
 
 .timeline {
   min-height: 108px;
-  background: #1e293b;
-  border-top: 1px solid #334155;
+  background: var(--ui-surface);
+  border-top: 1px solid var(--ui-border);
   padding: 8px 12px;
   font-size: 12px;
 }
@@ -669,9 +740,9 @@ html, body, #root {
 }
 
 button {
-  background: #334155;
-  color: #e2e8f0;
-  border: 1px solid #475569;
+  background: var(--ui-border);
+  color: var(--ui-text);
+  border: 1px solid var(--ui-border-strong);
   padding: 4px 8px;
   border-radius: 4px;
   cursor: pointer;
@@ -681,7 +752,7 @@ button {
 }
 
 button:hover {
-  background: #475569;
+  background: var(--ui-control-hover);
 }
 
 button:active {
@@ -691,7 +762,7 @@ button:active {
 .panel-title {
   font-weight: 600;
   margin-bottom: 6px;
-  color: #94a3b8;
+  color: var(--ui-text-muted);
   text-transform: uppercase;
   font-size: 10px;
   letter-spacing: 0.5px;

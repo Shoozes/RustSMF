@@ -9,11 +9,8 @@ import { bytesToArrayBuffer } from './smfBinary';
 /**
  * GLB / GLTF loader.
  * Uses three's native GLTFLoader for speed.
- * For SMF export fidelity we can later route through the same structured data
- * as the SMF importer (meshes + bones + anims).
- *
- * For now: returns a root Group containing SkinnedMesh(es) + Skeleton,
- * plus clips and a mixer, ready to drop into the scene.
+ * Returns a root Group containing SkinnedMesh(es) + Skeleton plus clips and a
+ * mixer. Guarded GLB/FBX-to-SMF conversion is owned by threeToSmf.ts.
  */
 
 export interface LoadedModel {

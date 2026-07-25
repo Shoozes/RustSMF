@@ -11,6 +11,15 @@ $SourceDir = Join-Path $RepoRoot "source"
 $FrontendDir = Join-Path $SourceDir "frontend"
 $SrcTauriDir = Join-Path $SourceDir "src-tauri"
 $DevStackStatePath = Join-Path $RepoRoot "runtime-data\dev-stack.json"
+$NodeExecutable = (Get-Command node -ErrorAction SilentlyContinue).Source
+$NpmCliPath = if ($NodeExecutable) {
+    Join-Path (Split-Path -Path $NodeExecutable -Parent) "node_modules\npm\bin\npm-cli.js"
+} else {
+    $null
+}
+if ($NpmCliPath -and -not (Test-Path -LiteralPath $NpmCliPath -PathType Leaf)) {
+    $NpmCliPath = $null
+}
 $PowerShellExe = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
 if (-not $PowerShellExe) {
     $PowerShellExe = (Get-Command powershell -ErrorAction Stop).Source
@@ -21,6 +30,64 @@ Set-Location -LiteralPath $RepoRoot
 function Write-Info([string]$Message) { Write-Host $Message -ForegroundColor Cyan }
 function Write-Warn([string]$Message) { Write-Host $Message -ForegroundColor Yellow }
 function Write-Ok([string]$Message) { Write-Host $Message -ForegroundColor Green }
+
+function Invoke-NpmCommand([string[]]$NpmArgs) {
+    if ($NodeExecutable -and $NpmCliPath) {
+        & $NodeExecutable $NpmCliPath @NpmArgs
+        return
+    }
+
+    $npmCommand = Get-Command npm -ErrorAction Stop
+    & $npmCommand.Source @NpmArgs
+}
+
+function ConvertTo-PowerShellLiteral([string]$Value) {
+    return "'" + $Value.Replace("'", "''") + "'"
+}
+
+function New-NpmPowerShellLaunch([string]$WorkingDirectory, [string[]]$NpmArgs) {
+    $workingDirectoryLiteral = ConvertTo-PowerShellLiteral $WorkingDirectory
+    $argumentLiterals = @($NpmArgs | ForEach-Object { ConvertTo-PowerShellLiteral $_ })
+    if ($NodeExecutable -and $NpmCliPath) {
+        $commandTokens = @(
+            (ConvertTo-PowerShellLiteral $NodeExecutable),
+            (ConvertTo-PowerShellLiteral $NpmCliPath)
+        ) + $argumentLiterals
+    } else {
+        $npmCommand = (Get-Command npm -ErrorAction Stop).Source
+        $commandTokens = @((ConvertTo-PowerShellLiteral $npmCommand)) + $argumentLiterals
+    }
+    return "& { Set-Location -LiteralPath $workingDirectoryLiteral; & $($commandTokens -join ' ') }"
+}
+
+function Get-NpmShellCommand([string[]]$NpmArgs) {
+    $tokens = if ($NodeExecutable -and $NpmCliPath) {
+        @($NodeExecutable, $NpmCliPath) + $NpmArgs
+    } else {
+        @((Get-Command npm -ErrorAction Stop).Source) + $NpmArgs
+    }
+    return ($tokens | ForEach-Object { '"' + $_.Replace('"', '\"') + '"' }) -join " "
+}
+
+function Invoke-ContextBankVerification {
+    if (-not $NodeExecutable) {
+        Write-Warn "Node.js 22 or newer is required for context-bank verification."
+        return $false
+    }
+
+    & $NodeExecutable scripts/verify-context-bank.mjs 2>&1 | Out-String | Write-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warn "context bank validation failed"
+        return $false
+    }
+
+    & $NodeExecutable --test scripts/context-bank.test.mjs 2>&1 | Out-String | Write-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warn "context bank tests failed"
+        return $false
+    }
+    return $true
+}
 
 function Ensure-Dirs {
     New-Item -ItemType Directory -Force -Path (Join-Path $RepoRoot "runtime-data") | Out-Null
@@ -201,12 +268,12 @@ public static class Job {
 
 function Invoke-FrontendNpm([string[]]$NpmArgs) {
     if (-not (Test-Path -LiteralPath $FrontendDir)) {
-        Write-Warn "source/frontend not present yet. See docs/dev/TODO.md and docs/dev/APP_STATE.md for current state."
+        Write-Warn "Required source/frontend directory is missing. Restore the repository checkout before running frontend tasks."
         return $false
     }
     Push-Location $FrontendDir
     try {
-        & npm @NpmArgs 2>&1 | ForEach-Object { Write-Host $_ }
+        Invoke-NpmCommand $NpmArgs 2>&1 | ForEach-Object { Write-Host $_ }
         $exitCode = $LASTEXITCODE
         return $exitCode -eq 0
     } finally {
@@ -283,7 +350,7 @@ function Invoke-GenEyePlaywright {
     $outDir = Join-Path $RepoRoot "runtime-data\geneye-playwright-runs\rustsmf-e2e-$stamp"
     New-Item -ItemType Directory -Force -Path $outDir | Out-Null
     $reportJson = Join-Path $outDir "project-report.json"
-    $projectCommand = "npm run test:e2e -- --reporter=json"
+    $projectCommand = Get-NpmShellCommand @("run", "test:e2e", "--", "--reporter=json")
     $genEyeRoot = Split-Path -Path $runBat -Parent
     $args = @(
         "-Task", "playwright-full",
@@ -347,12 +414,12 @@ function Invoke-GenEyePlaywright {
 
 function Invoke-SourceNpm([string[]]$NpmArgs) {
     if (-not (Test-Path -LiteralPath $SourceDir)) {
-        Write-Warn "source not present yet. See docs/dev/TODO.md and docs/dev/APP_STATE.md for current state."
+        Write-Warn "Required source directory is missing. Restore the repository checkout before running source tasks."
         return $false
     }
     Push-Location $SourceDir
     try {
-        & npm @NpmArgs 2>&1 | ForEach-Object { Write-Host $_ }
+        Invoke-NpmCommand $NpmArgs 2>&1 | ForEach-Object { Write-Host $_ }
         $exitCode = $LASTEXITCODE
         return $exitCode -eq 0
     } finally {
@@ -384,6 +451,7 @@ $NormalizedTask = switch -Exact ($Task.ToLowerInvariant()) {
     "build" { "compile" }
     "4" { "clean" }
     "5" { "verify" }
+    "context" { "context" }
     "6" { "dev" }
     "7" { "help" }
     "0" { "exit" }
@@ -399,10 +467,8 @@ switch -Exact ($NormalizedTask) {
         Ensure-Dirs
         Stop-StaleDevStack
         if (Test-Path $SourceDir) {
-            Push-Location $SourceDir
-            npm install
-            npx playwright install --with-deps | Out-Null
-            Pop-Location
+            if (-not (Invoke-SourceNpm @("install"))) { exit 1 }
+            if (-not (Invoke-FrontendNpm @("exec", "--", "playwright", "install", "--with-deps"))) { exit 1 }
         } else {
             Write-Warn "Skip npm (no source yet)"
         }
@@ -417,7 +483,7 @@ switch -Exact ($NormalizedTask) {
         Stop-StaleDevStack
 
         # Launch under our control so we can tie lifetime (cmd window close, Ctrl+C, script exit)
-        $launch = "& { Set-Location -LiteralPath '$FrontendDir'; & npm run dev }"
+        $launch = New-NpmPowerShellLaunch $FrontendDir @("run", "dev")
         $proc = Start-Process -FilePath $PowerShellExe -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $launch) `
             -NoNewWindow -PassThru -WorkingDirectory $RepoRoot
         $job = New-KillOnCloseJob
@@ -442,7 +508,7 @@ switch -Exact ($NormalizedTask) {
         # Launch under our control (the npm -> tauri cli -> our start-vite-dev.mjs wrapper).
         # The wrapper + job + explicit tree kill guarantee no rogue node servers remain
         # when the cmd/pwsh window is closed or the script is interrupted.
-        $launch = "& { Set-Location -LiteralPath '$SourceDir'; & npm run tauri:dev }"
+        $launch = New-NpmPowerShellLaunch $SourceDir @("run", "tauri:dev")
         $proc = Start-Process -FilePath $PowerShellExe -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', $launch) `
             -NoNewWindow -PassThru -WorkingDirectory $RepoRoot
         $job = New-KillOnCloseJob
@@ -468,28 +534,24 @@ switch -Exact ($NormalizedTask) {
     "clean" {
         Invoke-Clean
     }
+    "context" {
+        Write-Info "[CONTEXT] Validating and testing summary-bank routing..."
+        if (-not (Invoke-ContextBankVerification)) { exit 1 }
+        Write-Ok "[CONTEXT] Passed."
+    }
     "verify" {
-        Write-Info "[VERIFY] Lint + build + docs/context checks..."
+        Write-Info "[VERIFY] Lint coverage + lint + build + docs/context checks..."
         $ok = $true
-        & python scripts/verify-context-bank.py 2>&1 | Out-String | Write-Host
-        if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "context bank validation failed" }
+        if (-not (Invoke-ContextBankVerification)) { $ok = $false }
         if (Test-Path $FrontendDir) {
-            Push-Location $FrontendDir
-            & npm run lint 2>&1 | Out-String | Write-Host
-            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "lint failed" }
-            & npm run typecheck 2>&1 | Out-String | Write-Host
-            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "typecheck failed" }
-            & npm run typecheck:test 2>&1 | Out-String | Write-Host
-            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "test typecheck failed" }
-            & npm run check:production-any 2>&1 | Out-String | Write-Host
-            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "production any boundary check failed" }
-            & npm run build 2>&1 | Out-String | Write-Host
-            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "build failed" }
-            & node scripts/check-entry-chunks.mjs 2>&1 | Out-String | Write-Host
-            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "chunk check failed" }
-            & npm run test:unit 2>&1 | Out-String | Write-Host
-            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "unit tests failed" }
-            Pop-Location
+            if (-not (Invoke-FrontendNpm @("run", "check:lint-coverage"))) { $ok = $false; Write-Warn "lint coverage check failed" }
+            if (-not (Invoke-FrontendNpm @("run", "lint"))) { $ok = $false; Write-Warn "lint failed" }
+            if (-not (Invoke-FrontendNpm @("run", "typecheck"))) { $ok = $false; Write-Warn "typecheck failed" }
+            if (-not (Invoke-FrontendNpm @("run", "typecheck:test"))) { $ok = $false; Write-Warn "test typecheck failed" }
+            if (-not (Invoke-FrontendNpm @("run", "check:production-any"))) { $ok = $false; Write-Warn "production any boundary check failed" }
+            if (-not (Invoke-FrontendNpm @("run", "build"))) { $ok = $false; Write-Warn "build failed" }
+            if (-not (Invoke-FrontendNpm @("run", "check:entry-chunks"))) { $ok = $false; Write-Warn "chunk check failed" }
+            if (-not (Invoke-FrontendNpm @("run", "test:unit"))) { $ok = $false; Write-Warn "unit tests failed" }
         }
         if (Test-Path $SrcTauriDir) {
             Push-Location $SrcTauriDir
@@ -551,12 +613,8 @@ switch -Exact ($NormalizedTask) {
             Pop-Location
             if (Test-Path $FrontendDir) {
                 Write-Info "[SMOKE] Running Playwright native IPC mock suite..."
-                Push-Location $FrontendDir
-                try {
-                    & npm run test:e2e -- tests/native.spec.ts
-                    if ($LASTEXITCODE -ne 0) { throw "Playwright native IPC mock suite failed" }
-                } finally {
-                    Pop-Location
+                if (-not (Invoke-FrontendNpm @("run", "test:e2e", "--", "tests/native.spec.ts"))) {
+                    throw "Playwright native IPC mock suite failed"
                 }
             }
             Write-Ok "[SMOKE] Unbundled build, Rust native peek tests, and Playwright native IPC mock suite complete."
@@ -588,12 +646,13 @@ Tasks:
   dev           - Vite web dev (frontend only)
   compile       - production desktop build
   clean         - stop dev servers and remove generated build artifacts
-  verify        - lint/typecheck/build/chunk/unit/cargo checks
+  verify        - lint coverage/lint/typecheck/build/chunk/unit/cargo checks
+  context       - validate and test summary-bank routing
   test:unit     - frontend unit tests only
   test:e2e      - Playwright (optional GenEye advisory wrapper; use -NoGenEye for browser-only)
   test:visual-strict - opt-in strict SMF visual snapshot checks
   test:visual-update - refresh opt-in strict SMF visual snapshots
-  desktop-smoke - unbundled tauri build + basic check
+  desktop-smoke - release build + Rust tests + native IPC browser checks
 
 Launcher safety: run.ps1 (and run.bat) provide full orphan protection for dev servers (Job object for cmd X-close, tree kills, port/cmdline sweeps on entry, finally/traps). Direct 'tauri dev' (or npm run tauri:dev from source) has only the mjs wrapper (signals + poll + tree kill on its child). Prefer the launcher for clean close/re-launch on Windows.
 

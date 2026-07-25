@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { ImportedSmf } from '../loaders/smf';
 import { threeMatrixToSmf, dqCreateFromMatrix, dqNegate } from '../loaders/coord';
+import { cloneImportedSmf } from '../loaders/smfData';
 import { findBoneByName } from '../utils/bonePicker';
 
 /**
@@ -82,35 +83,6 @@ export function smfBoneNameToIndex(bones: ImportedSmf['bones'], boneName: string
   const idx = parseInt(match[1], 10);
   if (idx < 0 || idx >= bones.length) return -1;
   return idx;
-}
-
-// Deep clone of ImportedSmf for safe mutation before export.
-// Copies all typed arrays by value so the original is not modified.
-export function cloneImportedSmf(smf: ImportedSmf): ImportedSmf {
-  return {
-    meshes: smf.meshes.map(m => ({
-      ...m,
-      positions: new Float32Array(m.positions),
-      normals: new Float32Array(m.normals),
-      uvs: new Float32Array(m.uvs),
-      tangents: new Float32Array(m.tangents),
-      skinIndices: new Uint16Array(m.skinIndices),
-      skinWeights: new Float32Array(m.skinWeights),
-      triangles: m.triangles.map(t => [...t]),
-    })),
-    textures: smf.textures.map(t => ({ ...t, pixels: new Uint8Array(t.pixels) })),
-    bones: smf.bones.map(b => ({
-      ...b,
-      dq: new Float32Array(b.dq),
-      axis: [...b.axis],
-    })),
-    animations: smf.animations.map(a => ({
-      ...a,
-      times: [...a.times],
-      frames: a.frames.map(frame => frame.map(dq => new Float32Array(dq))),
-      lockedBones: [...a.lockedBones],
-    })),
-  };
 }
 
 // Apply recorded pose edits to a clone of the ImportedSmf.

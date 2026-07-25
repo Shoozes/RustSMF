@@ -22,7 +22,7 @@ Do not put progress logs or TODO prose into the context bank.
 
 ## Group Rules
 
-- Prefer `paths` over `files`; keep `files` empty unless a tool requires legacy support.
+- Use `paths`; the obsolete `files` field is rejected by the current validator.
 - Keep defaults minimal. Defaults should orient a normal task, not load every group.
 - Use stable prefixes: `feature__`, `subsystem__`, `issue__`, `investigation__`, `workflow__`.
 - Include source, tests, scripts, docs, fixtures, and reference files only when they are needed to understand that group.
@@ -38,11 +38,11 @@ Do not put progress logs or TODO prose into the context bank.
 5. Run:
 
 ```powershell
-python scripts/verify-context-bank.py
-python -m json.tool summary_bank.json > $null
+node scripts/verify-context-bank.mjs
+node --test scripts/context-bank.test.mjs
 ```
 
-`pwsh -File run.ps1 -Task verify` also runs the context-bank verifier.
+`pwsh -File run.ps1 -Task context` runs both commands; `verify` includes the same gate.
 
 ## Failure Modes To Catch
 

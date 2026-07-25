@@ -52,6 +52,11 @@ import {
   resolvePointerDownOwner,
   type ViewportInteractionOwner,
 } from '../utils/viewportInteractionRouter';
+import { attachViewportInteractionRuntime } from '../utils/viewportInteractionRuntime';
+import {
+  createViewportTransformControls,
+  type ViewportTransformControlsController,
+} from '../utils/viewportTransformControls';
 import {
   buildSkinnedWorldBrushIndex,
   querySkinBrushWorldIndex,
@@ -59,10 +64,18 @@ import {
   type SkinBrushVertexRef,
 } from '../utils/skinBrushIndex';
 import type { EditorMode, ViewportLayout } from '../store';
-import {
-  TransformControls,
-  TransformControlsGizmo,
-} from 'three/examples/jsm/controls/TransformControls.js';
+import { getAppTheme, type AppThemeId } from '../theme';
+import type {
+  BoneTransformEditEvent,
+  BoneTransformEditPhase,
+  BoneTransformEditSource,
+  BoneTransformOwner,
+  RigIkEditEvent,
+  RigMoveEditEvent,
+  RigRotateEditEvent,
+  ViewportObjectSelectEvent,
+} from '../types/viewportEditorEvents';
+import { TransformControlsGizmo } from 'three/examples/jsm/controls/TransformControls.js';
 
 type EndpointDragState = {
   boneName: string;
@@ -103,8 +116,6 @@ type MaterialWithMap = THREE.Material & {
   map?: THREE.Texture | null;
 };
 
-type TransformControlsDraggingEvent = { value: boolean };
-
 const TRANSFORM_HANDLE_AXES = ['X', 'Y', 'Z'] as const;
 
 type MeshMaterialEntry = {
@@ -121,67 +132,52 @@ interface SkinPaintCollection {
   totalVertexCount: number;
 }
 
-export type BoneTransformEditSource = 'transform-controls' | 'endpoint-drag';
-
-export type BoneTransformEditPhase = 'start' | 'change' | 'end' | 'cancel';
-
-export type BoneTransformOwner = 'disabled' | 'pose' | 'animation';
-
-export interface BoneTransformEditEvent {
-  phase: BoneTransformEditPhase;
-  source: BoneTransformEditSource;
-  owner: BoneTransformOwner;
-  boneName: string;
-  position: [number, number, number];
-  quaternion: [number, number, number, number];
-  scale: [number, number, number];
-}
-
-export type RigMoveEditPhase = 'start' | 'change' | 'end';
-
-export interface RigMoveEditEvent {
-  phase: RigMoveEditPhase;
-  boneName: string;
-  worldPosition: THREE.Vector3;
-  paneRole: ViewportRole;
-}
-
-export type RigRotateEditPhase = 'start' | 'change' | 'end';
-
-export interface RigRotateEditEvent {
-  phase: RigRotateEditPhase;
-  boneName: string;
-  worldAxis: THREE.Vector3;
-  angleRadians: number;
-  paneRole: ViewportRole;
-}
-
-export type RigIkEditPhase = 'start' | 'change' | 'end' | 'cancel';
-
-export interface RigIkEditEvent {
-  phase: RigIkEditPhase;
-  boneName: string;
-  targetWorld: THREE.Vector3;
-  paneRole: ViewportRole;
-}
-
-export interface ViewportObjectSelectEvent {
-  objectId: string;
-  objectName: string;
-  additive: boolean;
-  toggle: boolean;
-}
-
-const isDraggingEvent = (event: unknown): event is TransformControlsDraggingEvent =>
-  typeof event === 'object' && event !== null && typeof Reflect.get(event, 'value') === 'boolean';
-
 const isMaterialWithMap = (material: THREE.Material): material is MaterialWithMap => 'map' in material;
+
+const writeViewportCameraTelemetry = (
+  canvas: HTMLCanvasElement | null,
+  viewports: ViewportSpec[],
+): void => {
+  if (!canvas) return;
+  canvas.dataset.viewportCameraType = viewports[0]?.camera.type ?? '';
+};
 
 // Self-contained ThreeViewport.
 // Owns: renderer, scene (base lights+grid+axes), camera, SimpleOrbit controls, RAF loop, model attach,
 // SkeletonHelper, AnimationMixer + action management, time reporting.
 // Receives declarative props from App for the loaded model and playback intent.
 // No dead code or duplication with parent. All imperative three isolated here.
+
+interface PlaybackIntent {
+  clips: THREE.AnimationClip[];
+  currentClipName?: string;
+  isPlaying: boolean;
+  currentTime: number;
+  playbackSpeed: number;
+}
+
+function activateMixerClip(
+  mixer: THREE.AnimationMixer,
+  intent: PlaybackIntent,
+): THREE.AnimationAction | null {
+  if (intent.clips.length === 0) return null;
+
+  const clip = (
+    intent.currentClipName
+      ? intent.clips.find(candidate => (candidate.name || 'clip') === intent.currentClipName)
+      : undefined
+  ) ?? intent.clips[0];
+  if (!clip) return null;
+
+  const action = mixer.clipAction(clip);
+  action.reset();
+  action.play();
+  action.paused = !intent.isPlaying;
+  action.setEffectiveTimeScale(intent.playbackSpeed);
+  action.time = Math.max(0, Math.min(intent.currentTime, clip.duration || 0));
+  mixer.update(0);
+  return action;
+}
 
 interface ThreeViewportProps {
   root: THREE.Group | null;
@@ -225,6 +221,7 @@ interface ThreeViewportProps {
   shaderEnabled?: boolean;
   perspectiveEnabled?: boolean;
   modelOpacity?: number;
+  themeId?: AppThemeId;
   onPaintSkinVertices?: (paintVertices: SkinPaintVertex[]) => void;
   onSkinPaintStrokeStart?: () => void;
   onSkinPaintStrokeEnd?: () => void;
@@ -279,6 +276,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   shaderEnabled = false,
   perspectiveEnabled = true,
   modelOpacity = 1,
+  themeId = 'modern',
   onPaintSkinVertices,
   onSkinPaintStrokeStart,
   onSkinPaintStrokeEnd,
@@ -338,8 +336,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
   // TransformControls for selected bone (Cycle 3 editor polish). Attached to the live THREE.Bone when selectedBoneName changes.
   // Change events mutate the bone in place (position/rot/scale); works with existing marker + Inspector controls + RAF.
-  const transformControlsRef = useRef<TransformControls | null>(null);
-  const transformControlsHelperRef = useRef<THREE.Object3D | null>(null);
+  const transformControlsControllerRef = useRef<ViewportTransformControlsController | null>(null);
   const transformTargetRef = useRef<THREE.Bone | null>(null);
   const isTransformControlsPausedForEndpointRef = useRef(false);
 
@@ -348,6 +345,20 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const currentActionRef = useRef<THREE.AnimationAction | null>(null);
   const attachedModelRef = useRef<THREE.Object3D | null>(null);
   const skeletonHelperRef = useRef<DisposableSkeletonHelper | null>(null);
+  const playbackIntentRef = useRef<PlaybackIntent>({
+    clips,
+    currentClipName,
+    isPlaying,
+    currentTime,
+    playbackSpeed,
+  });
+  playbackIntentRef.current = {
+    clips,
+    currentClipName,
+    isPlaying,
+    currentTime,
+    playbackSpeed,
+  };
 
   // For raycast bone picking (3D click-to-select complementing Inspector list)
   const raycasterRef = useRef(new THREE.Raycaster());
@@ -382,6 +393,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const skinTotalVertexCountRef = useRef(0);
   const lastSkinPaintMsRef = useRef(0);
   const transformControlsDraggingRef = useRef(false);
+  const perspectiveEnabledRef = useRef(perspectiveEnabled);
+  const skinPointOverlayEnabledRef = useRef(skinPointOverlayEnabled);
+  const selectedObjectIdsRef = useRef(selectedObjectIds);
+  const textureEnabledRef = useRef(textureEnabled);
+  const modelOpacityRef = useRef(modelOpacity);
   const selectedObjectIdKey = selectedObjectIds.join('|');
 
   const clearTransformHandleTelemetry = (): void => {
@@ -398,8 +414,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const setTransformOwnerTelemetry = (attached: boolean): void => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const controls = transformControlsRef.current;
-    const helper = transformControlsHelperRef.current;
+    const controller = transformControlsControllerRef.current;
+    const controls = controller?.controls;
+    const helper = controller?.helper;
     canvas.dataset.transformOwner = boneTransformOwnerRef.current;
     canvas.dataset.transformAttached = attached ? 'true' : 'false';
     canvas.dataset.transformDragging = transformControlsDraggingRef.current ? 'true' : 'false';
@@ -416,15 +433,17 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const camera = cameraRef.current;
     if (!camera) return;
     updateOrthoCameras(orthoCameraRefs.current, boundsRef.current);
-    viewportRef.current = buildViewportSpecs(
+    const viewports = buildViewportSpecs(
       canvasSizeRef.current.width,
       canvasSizeRef.current.height,
       nextLayout,
       boundsRef.current,
       camera,
       orthoCameraRefs.current,
-      perspectiveEnabled,
+      perspectiveEnabledRef.current,
     );
+    viewportRef.current = viewports;
+    writeViewportCameraTelemetry(canvasRef.current, viewports);
     layoutRef.current = nextLayout;
   };
 
@@ -506,8 +525,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
   const writeTransformHandleTelemetry = (): void => {
     const canvas = canvasRef.current;
-    const controls = transformControlsRef.current;
-    const helper = transformControlsHelperRef.current;
+    const controller = transformControlsControllerRef.current;
+    const controls = controller?.controls;
+    const helper = controller?.helper;
     const target = transformTargetRef.current;
     const viewport = viewportRef.current.find((spec) => spec.role === 'perspective') ?? viewportRef.current[0];
     if (
@@ -583,6 +603,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const boneLabelScale = isPrecisionMode ? 1.8 : 1;
   pickDistanceRef.current = bonePickDist;
   isPrecisionModeRef.current = isPrecisionMode;
+  perspectiveEnabledRef.current = perspectiveEnabled;
+  skinPointOverlayEnabledRef.current = skinPointOverlayEnabled;
+  selectedObjectIdsRef.current = selectedObjectIds;
+  textureEnabledRef.current = textureEnabled;
+  modelOpacityRef.current = modelOpacity;
 
   const pickBoneName = (
     event: Pick<PointerEvent, 'clientX' | 'clientY'>,
@@ -701,7 +726,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const rebuildSkinPointOverlays = (): void => {
     clearSkinPointOverlays();
     const canvas = canvasRef.current;
-    if (!skinPointOverlayEnabled || !attachedModelRef.current) {
+    if (!skinPointOverlayEnabledRef.current || !attachedModelRef.current) {
       return;
     }
     skinPointOverlaysRef.current = createSkinPointOverlays(attachedModelRef.current, {
@@ -726,11 +751,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     clearSelectionOverlays();
     const scene = sceneRef.current;
     const canvas = canvasRef.current;
-    if (!scene || !attachedModelRef.current || selectedObjectIds.length === 0) {
+    const activeSelectedObjectIds = selectedObjectIdsRef.current;
+    if (!scene || !attachedModelRef.current || activeSelectedObjectIds.length === 0) {
       return;
     }
 
-    selectionOverlaysRef.current = createSelectionOverlays(attachedModelRef.current, selectedObjectIds);
+    selectionOverlaysRef.current = createSelectionOverlays(attachedModelRef.current, activeSelectedObjectIds);
     selectionOverlaysRef.current.forEach((overlay) => scene.add(overlay));
     if (canvas) {
       canvas.dataset.selectionOverlayCount = String(selectionOverlaysRef.current.length);
@@ -813,8 +839,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     if (!enabled) {
       restoreOriginalMaterials();
       disposeLegacyShaderMaterials();
-      applyTextureEnabled(textureEnabled);
-      applyModelOpacity(modelOpacity);
+      applyTextureEnabled(textureEnabledRef.current);
+      applyModelOpacity(modelOpacityRef.current);
       return;
     }
 
@@ -823,8 +849,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         let legacyMaterial = legacyShaderMaterialsRef.current.get(material.uuid);
         if (!legacyMaterial) {
           legacyMaterial = createLegacySmfMaterial(material, {
-            mapEnabled: textureEnabled,
-            opacity: modelOpacity,
+            mapEnabled: textureEnabledRef.current,
+            opacity: modelOpacityRef.current,
           });
           legacyShaderMaterialsRef.current.set(material.uuid, legacyMaterial);
         }
@@ -833,8 +859,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (displayMaterials.length === 0) return;
       mesh.material = materialWasArray ? displayMaterials : displayMaterials[0];
     });
-    applyTextureEnabled(textureEnabled);
-    applyModelOpacity(modelOpacity);
+    applyTextureEnabled(textureEnabledRef.current);
+    applyModelOpacity(modelOpacityRef.current);
   };
 
   const applyOpacityToMaterial = (
@@ -901,20 +927,20 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   };
 
   const pauseTransformControlsForEndpointDrag = () => {
-    const tc = transformControlsRef.current;
-    if (!tc || isTransformControlsPausedForEndpointRef.current) return;
+    const controller = transformControlsControllerRef.current;
+    if (!controller || isTransformControlsPausedForEndpointRef.current) return;
     isTransformControlsPausedForEndpointRef.current = true;
-    tc.enabled = false;
-    tc.detach();
+    controller.setEnabled(false);
+    controller.detach();
     setTransformOwnerTelemetry(false);
   };
 
   const restoreTransformControlsAfterEndpointDrag = () => {
-    const tc = transformControlsRef.current;
-    if (!tc || !isTransformControlsPausedForEndpointRef.current) return;
-    tc.enabled = true;
+    const controller = transformControlsControllerRef.current;
+    if (!controller || !isTransformControlsPausedForEndpointRef.current) return;
+    controller.setEnabled(true);
     if (transformTargetRef.current) {
-      tc.attach(transformTargetRef.current);
+      controller.attach(transformTargetRef.current);
     }
     isTransformControlsPausedForEndpointRef.current = false;
     setTransformOwnerTelemetry(!!transformTargetRef.current);
@@ -1166,7 +1192,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     rendererRef.current = renderer;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0b1120);
+    scene.background = new THREE.Color(getAppTheme(themeId).viewportBackground);
     sceneRef.current = scene;
     wireframeMaterialRef.current = new THREE.MeshBasicMaterial({
       color: 0xdbeafe,
@@ -1240,7 +1266,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         cancelRigIkDrag();
         return;
       }
-      const tc = transformControlsRef.current;
+      const tc = transformControlsControllerRef.current?.controls;
       if (tc && transformTargetRef.current) {
         const k = e.key.toLowerCase();
         if (k === 't') {
@@ -1264,8 +1290,6 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         updateCamera();
       }
     };
-    window.addEventListener('keydown', onKey);
-
     // Pointer-based bone selection on the canvas.
     // Complements list selection in Inspector. Uses bone world positions + ray distance.
     // Ignore drag/long-press paths to avoid accidental selection during orbit/transform interaction.
@@ -1297,7 +1321,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       const camera = pick.camera;
       let hit = hits[0]?.point.clone();
       if (!hit) {
-        if (transformControlsRef.current?.axis !== null) return null;
+        const transformAxis = transformControlsControllerRef.current?.controls.axis;
+        if (transformAxis !== null && transformAxis !== undefined) return null;
         const fallbackBone = pickBoneName(event, 120);
         if (fallbackBone !== selected) {
           return null;
@@ -1824,7 +1849,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
     const onCanvasPointerDown = (event: PointerEvent) => {
       const endpointState = event.button === 0 ? buildEndpointDragState(event) : null;
-      const activeTransformControls = transformControlsRef.current;
+      const activeTransformControls = transformControlsControllerRef.current?.controls;
       if (
         !endpointState
         && event.button === 0
@@ -2157,12 +2182,42 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       canvas.dataset.pointerOwner = 'model-select';
       onObjectContextMenuRef.current?.(objectHit);
     };
-    canvas.addEventListener('pointerdown', onCanvasPointerDown);
-    canvas.addEventListener('pointerup', onCanvasPointerUp);
-    canvas.addEventListener('pointermove', onCanvasPointerMove);
-    canvas.addEventListener('contextmenu', onCanvasContextMenu);
-    window.addEventListener('pointerup', onWindowPointerUp);
-    window.addEventListener('pointercancel', onWindowPointerCancel);
+    const interactionRuntime = attachViewportInteractionRuntime(canvas, window, {
+      onKeyDown: onKey,
+      onPointerDown: onCanvasPointerDown,
+      onPointerUp: onCanvasPointerUp,
+      onPointerMove: onCanvasPointerMove,
+      onContextMenu: onCanvasContextMenu,
+      onWindowPointerUp,
+      onWindowPointerCancel,
+      onDisposeActiveInteractions: () => {
+        if (endpointDragRef.current) {
+          endEndpointDrag(true);
+        }
+        if (rigMoveDragRef.current) {
+          orbit.enabled = true;
+          rigMoveDragRef.current = null;
+          clearRigMoveTelemetry();
+        }
+        if (rigRotateDragRef.current) {
+          orbit.enabled = true;
+          rigRotateDragRef.current = null;
+          clearRigRotateTelemetry();
+        }
+        if (rigIkDragRef.current) {
+          onSolveRigIkRef.current?.({
+            phase: 'cancel',
+            boneName: rigIkDragRef.current.boneName,
+            targetWorld: rigIkDragRef.current.initialTargetWorld.clone(),
+            paneRole: rigIkDragRef.current.paneRole,
+          });
+          orbit.enabled = true;
+          rigIkDragRef.current = null;
+          clearRigIkTelemetry();
+        }
+        restoreTransformControlsAfterEndpointDrag();
+      },
+    });
 
     const animate = () => {
       const mixer = mixerRef.current;
@@ -2195,7 +2250,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (endpoint && skel && sel) {
         const bone = findBoneByName(skel, sel);
         if (bone) {
-          updateEndpointHandle(endpoint, bone, boneLabelScale);
+          updateEndpointHandle(endpoint, bone, isPrecisionModeRef.current ? 1.8 : 1);
           writeEndpointScreenTelemetry(bone);
         }
       }
@@ -2270,9 +2325,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         boundsRef.current,
         camera,
         orthoCameraRefs.current,
-        perspectiveEnabled,
+        perspectiveEnabledRef.current,
       );
       viewportRef.current = specs;
+      writeViewportCameraTelemetry(canvas, specs);
       canvasSizeRef.current = { width: w, height: h };
     };
     const ro = new ResizeObserver(onResize);
@@ -2283,38 +2339,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     return () => {
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
       resizeObsRef.current?.disconnect();
-      window.removeEventListener('keydown', onKey);
-      canvas.removeEventListener('pointerdown', onCanvasPointerDown);
-      canvas.removeEventListener('pointerup', onCanvasPointerUp);
-      canvas.removeEventListener('pointermove', onCanvasPointerMove);
-      canvas.removeEventListener('contextmenu', onCanvasContextMenu);
-      window.removeEventListener('pointerup', onWindowPointerUp);
-      window.removeEventListener('pointercancel', onWindowPointerCancel);
-      if (endpointDragRef.current) {
-        endEndpointDrag(true);
-      }
-      if (rigMoveDragRef.current) {
-        orbitRef.current.enabled = true;
-        rigMoveDragRef.current = null;
-        clearRigMoveTelemetry();
-      }
-      if (rigRotateDragRef.current) {
-        orbitRef.current.enabled = true;
-        rigRotateDragRef.current = null;
-        clearRigRotateTelemetry();
-      }
-      if (rigIkDragRef.current) {
-        onSolveRigIkRef.current?.({
-          phase: 'cancel',
-          boneName: rigIkDragRef.current.boneName,
-          targetWorld: rigIkDragRef.current.initialTargetWorld.clone(),
-          paneRole: rigIkDragRef.current.paneRole,
-        });
-        orbitRef.current.enabled = true;
-        rigIkDragRef.current = null;
-        clearRigIkTelemetry();
-      }
-      restoreTransformControlsAfterEndpointDrag();
+      interactionRuntime.dispose();
       detachOrbit();
       canvas.style.cursor = 'default';
       cursorModeRef.current = 'default';
@@ -2337,11 +2362,19 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     };
     // Note: intentionally no deps on playback props; RAF always runs, control via effects below.
     // onTimeUpdate (and onSelectBone/skeleton) kept via refs to avoid re-creating renderer/scene/RAF/ listeners on every parent render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- renderer, RAF, and DOM listeners are mount-owned; live inputs are synchronized through refs and focused effects.
   }, []);
 
   useLayoutEffect(() => {
     applyViewportLayout(viewportLayout);
   }, [viewportLayout, perspectiveEnabled]);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (scene) {
+      scene.background = new THREE.Color(getAppTheme(themeId).viewportBackground);
+    }
+  }, [themeId]);
 
   useEffect(() => {
     wireframeEnabledRef.current = wireframeEnabled;
@@ -2388,20 +2421,13 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   // React to clip selection change from parent (inspector list)
   useEffect(() => {
     const mixer = mixerRef.current;
-    if (!mixer || !clips || clips.length === 0 || !currentClipName) return;
-
-    const target = clips.find(c => (c.name || 'clip') === currentClipName) || clips[0];
-    if (!target) return;
+    if (!mixer || !root || mixer.getRoot() !== root) return;
 
     if (currentActionRef.current) {
       currentActionRef.current.stop();
     }
-    const action = mixer.clipAction(target);
-    action.reset();
-    action.play();
-    action.setEffectiveTimeScale(playbackSpeed);
-    currentActionRef.current = action;
-  }, [currentClipName, clips, playbackSpeed]);
+    currentActionRef.current = activateMixerClip(mixer, playbackIntentRef.current);
+  }, [currentClipName, clips, root]);
 
   // Keep latest onSelectBone and skeleton for raycast handler (stable click listener)
   useEffect(() => { onSelectBoneRef.current = onSelectBone; }, [onSelectBone]);
@@ -2417,6 +2443,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => {
     boneTransformOwnerRef.current = boneTransformOwner;
     setTransformOwnerTelemetry(!!transformTargetRef.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- telemetry reads only imperative refs; owner is the sole reactive input.
   }, [boneTransformOwner]);
   useEffect(() => { skeletonRefForPick.current = skeleton; }, [skeleton]);
   useEffect(() => { onPaintSkinVerticesRef.current = onPaintSkinVertices; }, [onPaintSkinVertices]);
@@ -2476,19 +2503,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         onSkinPaintStrokeEndRef.current?.();
       }
       restoreTransformControlsAfterEndpointDrag();
-      const tc = transformControlsRef.current;
       const scene = sceneRef.current;
       clearSkinPointOverlays();
       clearSelectionOverlays();
-      if (tc) {
-        tc.detach();
-        const helper = transformControlsHelperRef.current;
-        if (scene && helper) scene.remove(helper);
-        tc.dispose();
-        transformControlsRef.current = null;
-        transformControlsHelperRef.current = null;
-        transformTargetRef.current = null;
-      }
+      transformControlsControllerRef.current?.dispose();
+      transformControlsControllerRef.current = null;
+      transformTargetRef.current = null;
       if (scene) {
         [boneHighlightRef.current, boneEndpointHandleRef.current, rigIkTargetHandleRef.current, boneHoverMarkerRef.current, skinBrushMarkerRef.current].forEach(marker => {
           if (!marker) return;
@@ -2503,6 +2523,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       boneHoverMarkerRef.current = null;
       skinBrushMarkerRef.current = null;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- unmount cleanup reads owned refs and must not rerun during the component lifetime.
   }, []);
   // Sync onTimeUpdate ref (for stable RAF time reporting without setup effect re-runs)
   useEffect(() => { onTimeUpdateRef.current = onTimeUpdate; }, [onTimeUpdate]);
@@ -2515,10 +2536,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
   useEffect(() => {
     rebuildSkinPointOverlays();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the helper reads synchronized refs; these values own rebuild timing.
   }, [skinPointOverlayEnabled, root, selectedBoneName]);
 
   useEffect(() => {
     rebuildSelectionOverlays();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the helper reads synchronized selection refs; the key/revision own invalidation.
   }, [root, selectedObjectIdKey, selectionOverlayRevision]);
 
   // Bone labels management (extracted hook for modularity)
@@ -2527,6 +2550,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
   useEffect(() => {
     applyTextureEnabled(textureEnabled);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the imperative material helper is ref-backed; these values own updates.
   }, [textureEnabled, root]);
 
   useEffect(() => {
@@ -2539,10 +2563,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
   useEffect(() => {
     applyShaderEnabled(shaderEnabled);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the imperative material helper reads synchronized texture/opacity refs.
   }, [shaderEnabled, root]);
 
   useEffect(() => {
     applyModelOpacity(modelOpacity);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- the imperative material helper is ref-backed; these values own updates.
   }, [modelOpacity, root]);
 
   useEffect(() => {
@@ -2649,9 +2675,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   // Apply transform mode from prop (for UI buttons) or default.
   // useEffect to react to prop changes and set on tc.
   useEffect(() => {
-    const tc = transformControlsRef.current;
-    if (tc && transformMode) {
-      tc.setMode(transformMode);
+    const controller = transformControlsControllerRef.current;
+    if (controller && transformMode) {
+      controller.setMode(transformMode);
     }
   }, [transformMode]);
 
@@ -2667,9 +2693,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const dom = rendererRef.current?.domElement;
     if (!scene || !cam || !dom) return;
 
-    const prevTc = transformControlsRef.current;
-    if (prevTc) {
-      prevTc.detach();
+    const previousController = transformControlsControllerRef.current;
+    if (previousController) {
+      previousController.detach();
       transformControlsDraggingRef.current = false;
     }
 
@@ -2683,7 +2709,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       || !skeleton
     ) {
       transformTargetRef.current = null;
-      transformControlsRef.current?.detach();
+      transformControlsControllerRef.current?.detach();
       setTransformOwnerTelemetry(false);
       return;
     }
@@ -2691,49 +2717,50 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const bone = findBoneByName(skeleton, selectedBoneName);
     if (!bone) {
       transformTargetRef.current = null;
-      transformControlsRef.current?.detach();
+      transformControlsControllerRef.current?.detach();
       setTransformOwnerTelemetry(false);
       return;
     }
     transformTargetRef.current = bone;
 
-    let tc = transformControlsRef.current;
-    if (!tc) {
-      tc = new TransformControls(cam, dom);
-      tc.setMode(transformMode || 'translate'); // controlled by prop from Inspector buttons (or default)
-      tc.addEventListener('change', () => {
-        // Ensure world matrices propagate for skinning + marker follow
-        const activeBone = transformTargetRef.current;
-        const activeSkeleton = skeletonRefForPick.current;
-        if (activeBone) {
-          activeBone.updateMatrixWorld(true);
-          if (transformControlsDraggingRef.current) {
-            emitBoneTransformEdit('change', 'transform-controls', activeBone);
+    let controller = transformControlsControllerRef.current;
+    if (!controller) {
+      controller = createViewportTransformControls({
+        scene,
+        camera: cam,
+        domElement: dom,
+        mode: transformMode || 'translate',
+        onChange: () => {
+          const activeBone = transformTargetRef.current;
+          const activeSkeleton = skeletonRefForPick.current;
+          if (activeBone) {
+            activeBone.updateMatrixWorld(true);
+            if (transformControlsDraggingRef.current) {
+              emitBoneTransformEdit('change', 'transform-controls', activeBone);
+            }
           }
-        }
-        if (activeSkeleton) {
-          activeSkeleton.update();
-        }
-      });
-      tc.addEventListener('dragging-changed', (event) => {
-        if (isDraggingEvent(event)) {
-          transformControlsDraggingRef.current = event.value;
-          orbitRef.current.enabled = !event.value;
+          activeSkeleton?.update();
+        },
+        onDraggingChange: (dragging) => {
+          transformControlsDraggingRef.current = dragging;
+          orbitRef.current.enabled = !dragging;
           setTransformOwnerTelemetry(!!transformTargetRef.current);
-          emitBoneTransformEdit(event.value ? 'start' : 'end', 'transform-controls', transformTargetRef.current);
-        }
+          emitBoneTransformEdit(
+            dragging ? 'start' : 'end',
+            'transform-controls',
+            transformTargetRef.current,
+          );
+        },
+        onAxisChange: () => {
+          setTransformOwnerTelemetry(!!transformTargetRef.current);
+        },
       });
-      tc.addEventListener('axis-changed', () => {
-        setTransformOwnerTelemetry(!!transformTargetRef.current);
-      });
-      const helper = tc.getHelper();
-      scene.add(helper);
-      transformControlsRef.current = tc;
-      transformControlsHelperRef.current = helper;
+      transformControlsControllerRef.current = controller;
     }
 
-    tc.attach(bone);
+    controller.attach(bone);
     setTransformOwnerTelemetry(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- transformMode has its own focused effect; telemetry and emitters read stable refs.
   }, [boneTransformOwner, editorMode, perspectiveEnabled, rigToolMode, selectedBoneName, skeleton, viewportLayout]);
 
   // Attach/replace model root + skeleton helper + create internal mixer when root prop changes.
@@ -2775,9 +2802,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     currentActionRef.current = null;
 
     // Detach any active transform gizmo when model is cleared/replaced (prevents dangling attachment to disposed bones)
-    if (transformControlsRef.current) {
-      transformControlsRef.current.detach();
-    }
+    transformControlsControllerRef.current?.detach();
 
     if (!root) {
       boundsRef.current = DEFAULT_VIEWPORT_BOUNDS;
@@ -2835,21 +2860,14 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const mixer = new THREE.AnimationMixer(root);
     mixerRef.current = mixer;
 
-    // Always start the first clip on fresh attach (reliable default).
-    // If parent also set a specific currentClipName in the same update, the clip effect below will switch it right after.
-    // Start at time 0; the isPlaying/currentTime effects will immediately apply parent's desired initial scrub/play state.
-    if (clips && clips.length > 0) {
-      const targetClip = clips[0];
-      const action = mixer.clipAction(targetClip);
-      action.play();
-      // Use prop value at attach time for initial speed (playbackSpeed effect will keep it in sync on changes)
-      action.setEffectiveTimeScale(playbackSpeed);
-      currentActionRef.current = action;
-    }
+    // Clip effects run before this attachment effect. Initialize from the latest complete
+    // playback intent so a root swap never binds the new clips to the previous mixer.
+    currentActionRef.current = activateMixerClip(mixer, playbackIntentRef.current);
 
     return () => {
       // cleanup handled on next root change or unmount via the top of this effect
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- model attachment is intentionally root/skeleton-owned; clips, playback, layout, and display settings have focused effects.
   }, [root, skeleton]);  // <-- ONLY scene objects; playback/clips handled by other effects to prevent re-attach loops on every edit/tick
 
   return (
@@ -2874,6 +2892,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         data-bone-index-labels-enabled={boneIndexLabelsEnabled ? 'true' : 'false'}
         data-rig-opacity={rigOpacity}
         data-model-opacity={modelOpacity}
+        data-theme={themeId}
         data-rig-thickness-scale={rigThicknessScale}
         data-skin-points-enabled={skinPointOverlayEnabled ? 'true' : 'false'}
         data-skin-point-overlay-count={skinPointOverlaysRef.current.length}

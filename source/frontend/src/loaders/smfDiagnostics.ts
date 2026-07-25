@@ -1,3 +1,4 @@
+import { dqNormalize } from './coord';
 import type { ImportedSmf } from './smf';
 
 export type SmfDiagnosticLevel = 'info' | 'warning' | 'error';
@@ -131,7 +132,12 @@ function maxNegatedDelta(a: Float32Array, b: Float32Array): number {
 }
 
 function maxDualQuaternionDelta(a: Float32Array, b: Float32Array): number {
-  return Math.min(maxDirectDelta(a, b), maxNegatedDelta(a, b));
+  const normalizedA = dqNormalize(a, new Float32Array(8));
+  const normalizedB = dqNormalize(b, new Float32Array(8));
+  return Math.min(
+    maxDirectDelta(normalizedA, normalizedB),
+    maxNegatedDelta(normalizedA, normalizedB),
+  );
 }
 
 function poseFrameLabel(frameIndex: number, frameCount: number): SmfPoseDeltaFrameLabel {
@@ -141,11 +147,16 @@ function poseFrameLabel(frameIndex: number, frameCount: number): SmfPoseDeltaFra
 }
 
 function componentDeltas(a: Float32Array, b: Float32Array): number[] {
-  const length = Math.min(a.length, b.length);
-  const useNegated = maxNegatedDelta(a, b) < maxDirectDelta(a, b);
+  const normalizedA = dqNormalize(a, new Float32Array(8));
+  const normalizedB = dqNormalize(b, new Float32Array(8));
+  const length = Math.min(normalizedA.length, normalizedB.length);
+  const useNegated = maxNegatedDelta(normalizedA, normalizedB)
+    < maxDirectDelta(normalizedA, normalizedB);
   const deltas: number[] = [];
   for (let i = 0; i < length; i++) {
-    deltas.push(Math.abs(a[i] - (useNegated ? -b[i] : b[i])));
+    deltas.push(Math.abs(
+      normalizedA[i] - (useNegated ? -normalizedB[i] : normalizedB[i]),
+    ));
   }
   return deltas;
 }

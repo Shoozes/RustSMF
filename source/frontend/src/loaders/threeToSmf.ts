@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { ImportedSmf } from './smf';
 import { threeVecToSmf, threeMatrixToSmf, dqCreateFromMatrix, dqNegate } from './coord';
+import { cloneImportedSmf } from './smfData';
 import {
   makeDiagnosticReport,
   pushDiagnostic,
@@ -64,23 +65,59 @@ function readComponent(
 
 function flattenVertexAttribute(
   attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute | undefined | null,
+  sourceVertexCount: number,
+  vertexMap: Uint32Array | null,
   itemSize: number,
-  fallbackItemSize: number,
+  outputItemSize: number,
 ): Float32Array {
-  const vertexCount = attribute?.count ?? 0;
-  const out = new Float32Array(vertexCount * fallbackItemSize);
+  const vertexCount = vertexMap?.length ?? sourceVertexCount;
+  const out = new Float32Array(vertexCount * outputItemSize);
   if (!attribute || attribute.itemSize < itemSize) return out;
 
   for (let i = 0; i < vertexCount; i++) {
-    for (let c = 0; c < fallbackItemSize; c++) {
-      out[i * fallbackItemSize + c] = c < itemSize ? readComponent(attribute, i, c) : 0;
+    const sourceIndex = vertexMap?.[i] ?? i;
+    if (sourceIndex >= attribute.count) continue;
+    for (let c = 0; c < outputItemSize; c++) {
+      out[i * outputItemSize + c] = c < itemSize
+        ? readComponent(attribute, sourceIndex, c)
+        : 0;
     }
   }
   return out;
 }
 
-function readSkinPayload(geometry: THREE.BufferGeometry): { skinIndices: Uint16Array; skinWeights: Float32Array } {
-  const vertices = geometry.getAttribute('position')?.count ?? 0;
+function makeTriangleVertexMap(
+  geometry: THREE.BufferGeometry,
+  sourceVertexCount: number,
+): Uint32Array | null {
+  const index = geometry.getIndex();
+  const exportVertexCount = index?.count ?? sourceVertexCount;
+  if (exportVertexCount % 3 !== 0) {
+    throw new SmfConversionError(
+      `SMF conversion requires complete triangles; received ${exportVertexCount} triangle vertices.`,
+    );
+  }
+  if (!index) return null;
+
+  const vertexMap = new Uint32Array(index.count);
+  for (let i = 0; i < index.count; i++) {
+    const sourceIndex = index.getX(i);
+    if (!Number.isSafeInteger(sourceIndex) || sourceIndex < 0 || sourceIndex >= sourceVertexCount) {
+      throw new SmfConversionError(
+        `SMF conversion found invalid triangle index ${sourceIndex} at offset ${i}.`,
+      );
+    }
+    vertexMap[i] = sourceIndex;
+  }
+  return vertexMap;
+}
+
+function readSkinPayload(
+  geometry: THREE.BufferGeometry,
+  sourceVertexCount: number,
+  vertexMap: Uint32Array | null,
+): { skinIndices: Uint16Array; skinWeights: Float32Array } {
+  const vertices = vertexMap?.length ?? sourceVertexCount;
   const skinIndex = geometry.getAttribute('skinIndex');
   const skinWeight = geometry.getAttribute('skinWeight');
   const skinIndices = new Uint16Array(vertices * 4);
@@ -90,29 +127,60 @@ function readSkinPayload(geometry: THREE.BufferGeometry): { skinIndices: Uint16A
     return { skinIndices, skinWeights };
   }
 
-  const sourceCount = Math.min(vertices, skinIndex.count, skinWeight.count);
-  for (let i = 0; i < sourceCount; i++) {
+  for (let i = 0; i < vertices; i++) {
+    const sourceIndex = vertexMap?.[i] ?? i;
+    if (sourceIndex >= skinIndex.count || sourceIndex >= skinWeight.count) continue;
     const base = i * 4;
-    skinIndices[base] = Math.max(0, Math.round(skinIndex.getX(i)));
-    skinIndices[base + 1] = Math.max(0, Math.round(skinIndex.getY(i)));
-    skinIndices[base + 2] = Math.max(0, Math.round(skinIndex.getZ(i)));
-    skinIndices[base + 3] = Math.max(0, Math.round(skinIndex.getW(i)));
-    skinWeights[base] = Math.max(0, Math.min(1, skinWeight.getX(i)));
-    skinWeights[base + 1] = Math.max(0, Math.min(1, skinWeight.getY(i)));
-    skinWeights[base + 2] = Math.max(0, Math.min(1, skinWeight.getZ(i)));
-    skinWeights[base + 3] = Math.max(0, Math.min(1, skinWeight.getW(i)));
+    skinIndices[base] = Math.max(0, Math.round(skinIndex.getX(sourceIndex)));
+    skinIndices[base + 1] = Math.max(0, Math.round(skinIndex.getY(sourceIndex)));
+    skinIndices[base + 2] = Math.max(0, Math.round(skinIndex.getZ(sourceIndex)));
+    skinIndices[base + 3] = Math.max(0, Math.round(skinIndex.getW(sourceIndex)));
+    skinWeights[base] = Math.max(0, Math.min(1, skinWeight.getX(sourceIndex)));
+    skinWeights[base + 1] = Math.max(0, Math.min(1, skinWeight.getY(sourceIndex)));
+    skinWeights[base + 2] = Math.max(0, Math.min(1, skinWeight.getZ(sourceIndex)));
+    skinWeights[base + 3] = Math.max(0, Math.min(1, skinWeight.getW(sourceIndex)));
   }
   return { skinIndices, skinWeights };
 }
 
 function extractMeshPayload(mesh: THREE.SkinnedMesh): MeshSkinPayload {
   const geometry = mesh.geometry;
-  const positions = flattenVertexAttribute(geometry.getAttribute('position'), 3, 3);
-  const normals = flattenVertexAttribute(geometry.getAttribute('normal'), 3, 3);
-  const uvs = flattenVertexAttribute(geometry.getAttribute('uv'), 2, 2);
-  const tangents = flattenVertexAttribute(geometry.getAttribute('tangent'), 4, 4);
-  const { skinIndices, skinWeights } = readSkinPayload(geometry);
-  const vertices = geometry.getAttribute('position')?.count ?? 0;
+  const sourceVertexCount = geometry.getAttribute('position')?.count ?? 0;
+  const vertexMap = makeTriangleVertexMap(geometry, sourceVertexCount);
+  const vertices = vertexMap?.length ?? sourceVertexCount;
+  const positions = flattenVertexAttribute(
+    geometry.getAttribute('position'),
+    sourceVertexCount,
+    vertexMap,
+    3,
+    3,
+  );
+  const normals = flattenVertexAttribute(
+    geometry.getAttribute('normal'),
+    sourceVertexCount,
+    vertexMap,
+    3,
+    3,
+  );
+  const uvs = flattenVertexAttribute(
+    geometry.getAttribute('uv'),
+    sourceVertexCount,
+    vertexMap,
+    2,
+    2,
+  );
+  const tangents = flattenVertexAttribute(
+    geometry.getAttribute('tangent'),
+    sourceVertexCount,
+    vertexMap,
+    4,
+    4,
+  );
+  const { skinIndices, skinWeights } = readSkinPayload(
+    geometry,
+    sourceVertexCount,
+    vertexMap,
+  );
 
   return {
     positions,
@@ -125,45 +193,15 @@ function extractMeshPayload(mesh: THREE.SkinnedMesh): MeshSkinPayload {
   };
 }
 
-function cloneImportedSmfForExport(source: ImportedSmf): ImportedSmf {
-  return {
-    meshes: source.meshes.map((mesh) => ({
-      ...mesh,
-      positions: new Float32Array(mesh.positions),
-      normals: new Float32Array(mesh.normals),
-      uvs: new Float32Array(mesh.uvs),
-      tangents: new Float32Array(mesh.tangents),
-      skinIndices: new Uint16Array(mesh.skinIndices),
-      skinWeights: new Float32Array(mesh.skinWeights),
-      triangles: mesh.triangles.map((triangle) => [...triangle]),
-    })),
-    textures: source.textures.map((texture) => ({
-      ...texture,
-      pixels: new Uint8Array(texture.pixels),
-    })),
-    bones: source.bones.map((bone) => ({
-      ...bone,
-      dq: new Float32Array(bone.dq),
-      axis: [...bone.axis],
-    })),
-    animations: source.animations.map((animation) => ({
-      ...animation,
-      times: [...animation.times],
-      frames: animation.frames.map((frame) => frame.map((dq) => new Float32Array(dq))),
-      lockedBones: [...animation.lockedBones],
-    })),
-  };
-}
-
 export function applyLiveSkinEditsToImportedSmf(
   source: ImportedSmf,
   skinnedMeshes: THREE.SkinnedMesh[],
 ): ImportedSmf {
   if (!source.meshes.length || !skinnedMeshes.length) {
-    return cloneImportedSmfForExport(source);
+    return cloneImportedSmf(source);
   }
 
-  const result = cloneImportedSmfForExport(source);
+  const result = cloneImportedSmf(source);
   const unusedByIndex = skinnedMeshes.map((_, index) => index);
   const byName = new Map<string, number[]>();
 
@@ -250,6 +288,28 @@ export function inspectThreeToSmfSource(src: SmfConversionSource): SmfDiagnostic
   for (const mesh of skinnedMeshes) {
     const geo = mesh.geometry;
     const meshName = mesh.name || 'mesh';
+    const position = geo.getAttribute('position');
+    const skinIndex = geo.getAttribute('skinIndex');
+    const skinWeight = geo.getAttribute('skinWeight');
+    const triangleVertexCount = geo.getIndex()?.count ?? position?.count ?? 0;
+
+    if (!position || position.itemSize < 3 || position.count === 0) {
+      pushDiagnostic(
+        diagnostics,
+        'error',
+        'SMF_MISSING_POSITION',
+        `${meshName} has no usable position attribute.`,
+        meshName,
+      );
+    } else if (triangleVertexCount % 3 !== 0) {
+      pushDiagnostic(
+        diagnostics,
+        'error',
+        'SMF_INVALID_TRIANGLES',
+        `${meshName} has ${triangleVertexCount} triangle vertices; SMF requires complete triangles.`,
+        meshName,
+      );
+    }
 
     if (!geo.attributes.uv) {
       pushDiagnostic(
@@ -271,12 +331,17 @@ export function inspectThreeToSmfSource(src: SmfConversionSource): SmfDiagnostic
       );
     }
 
-    if (!geo.attributes.skinIndex || !geo.attributes.skinWeight) {
+    if (!skinIndex
+      || !skinWeight
+      || skinIndex.itemSize < 4
+      || skinWeight.itemSize < 4
+      || skinIndex.count < (position?.count ?? 0)
+      || skinWeight.count < (position?.count ?? 0)) {
       pushDiagnostic(
         diagnostics,
         'error',
         'SMF_MISSING_SKIN_ATTRIBUTES',
-        `${meshName} has no skinIndex/skinWeight attributes.`,
+        `${meshName} has missing or incomplete four-component skinIndex/skinWeight attributes.`,
         meshName,
       );
     }
@@ -382,19 +447,8 @@ export function buildImportedSmfFromThree(src: SmfConversionSource): ImportedSmf
     }
 
     const triangles: number[][] = [];
-    const index = mesh.geometry.index;
-    if (index) {
-      for (let i = 0; i + 2 < index.count; i += 3) {
-        triangles.push([
-          index.getX(i),
-          index.getX(i + 1),
-          index.getX(i + 2),
-        ]);
-      }
-    } else {
-      for (let i = 0; i < verts; i += 3) {
-        triangles.push([i, i + 1, i + 2]);
-      }
+    for (let i = 0; i < verts; i += 3) {
+      triangles.push([i, i + 1, i + 2]);
     }
 
     meshes.push({

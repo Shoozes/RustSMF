@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import ThreeViewport, { type BoneTransformOwner, type ViewportObjectSelectEvent } from './components/ThreeViewport'
+import ThreeViewport from './components/ThreeViewport'
 import Timeline from './components/Timeline'
 import Outliner from './components/Outliner'
 import Inspector from './components/Inspector'
@@ -8,8 +8,11 @@ import SkinPanel from './components/SkinPanel';
 import RigPanel from './components/RigPanel';
 import AnimatePanel from './components/AnimatePanel';
 import ExportPanel from './components/ExportPanel';
+import { useAppTheme } from './hooks/useAppTheme'
 import { useLoadModel } from './hooks/useLoadModel'
 import type { EditorMode } from './store'
+import { getAppTheme, type AppThemeId } from './theme'
+import type { BoneTransformOwner, ViewportObjectSelectEvent } from './types/viewportEditorEvents'
 import { supportedModelFormatsLabel } from './utils/modelFormat'
 import { collectModelOutlinerItems } from './utils/modelOutliner'
 import { getClipByName, summarizeAnimationTimeline } from './utils/animationTimeline'
@@ -100,6 +103,8 @@ const WORKSPACE_BY_MODE: Record<EditorMode, WorkspaceProfile> = {
 // Drop and bone selection handlers now provided by hook for further modularity.
 export default function App() {
   const historyOrderRef = useRef(0);
+  const hadModelRef = useRef(false);
+  const { theme, themeId, setThemeId } = useAppTheme();
   const allocateHistoryOrder = useCallback(() => {
     historyOrderRef.current += 1;
     return historyOrderRef.current;
@@ -111,6 +116,7 @@ export default function App() {
     handleOpen,
     handleExport,
     handleExportGlb,
+    handleExportFbx,
     handleExportSmf,
     handleRunSmfRoundtripCheck,
     handleSaveSmfDiagnosticReport,
@@ -162,6 +168,7 @@ export default function App() {
     smfDiagnosticReport,
     materialTextureSummaries,
     smfRoundtripReport,
+    smfCodecActivity,
     skinEditHasDirtyState,
     skinEditBlockReason,
     skinPaintMode,
@@ -262,6 +269,19 @@ export default function App() {
         : 'disabled';
   const shouldShowBoneLabels = showBoneLabels || workspace.boneLabelsEnabledByDefault;
   const hasModel = !!model.root;
+  const handleThemeChange = useCallback((nextThemeId: AppThemeId) => {
+    const nextTheme = getAppTheme(nextThemeId);
+    setThemeId(nextThemeId);
+    if (hasModel && viewportLayout === theme.preferredViewportLayout) {
+      setViewportLayout(nextTheme.preferredViewportLayout);
+    }
+  }, [
+    hasModel,
+    setThemeId,
+    setViewportLayout,
+    theme.preferredViewportLayout,
+    viewportLayout,
+  ]);
   const hasSkinnedModel = !!model.skeleton && model.skeleton.bones.length > 0;
   const rigHierarchyBones = collectRigHierarchyBones(model.root, model.skeleton);
   const rigDeformBoneNames = collectRigDeformBoneNames(model.skeleton);
@@ -283,6 +303,8 @@ export default function App() {
     : animationTimelineSummary.keyframeTimes;
   const outlinerItems = useMemo(
     () => collectModelOutlinerItems(model.root),
+    // Visibility changes mutate the retained Three root; this revision is the invalidation token.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [model.root, outlinerRevision],
   );
   const getOutlinerItemName = useCallback((id: string): string => {
@@ -700,6 +722,19 @@ export default function App() {
   }, [hasModel, setViewportLayout, viewportLayout]);
 
   useEffect(() => {
+    const hadModel = hadModelRef.current;
+    hadModelRef.current = hasModel;
+    if (!hadModel && hasModel && viewportLayout !== theme.preferredViewportLayout) {
+      setViewportLayout(theme.preferredViewportLayout);
+    }
+  }, [
+    hasModel,
+    setViewportLayout,
+    theme.preferredViewportLayout,
+    viewportLayout,
+  ]);
+
+  useEffect(() => {
     setOutlinerRevision((value) => value + 1);
     setSelectedOutlinerIds([]);
     outlinerHistoryRef.current = makeEditorHistory();
@@ -707,11 +742,17 @@ export default function App() {
   }, [model.root, refreshOutlinerHistoryAvailability]);
 
   return (
-    <div className="app-shell">
+    <div
+      className="app-shell"
+      data-testid="app-shell"
+      data-theme={themeId}
+      data-editor-mode={editorMode}
+    >
       <Toolbar
         onOpen={handleOpen}
         onExport={handleExport}
         onExportGlb={handleExportGlb}
+        onExportFbx={handleExportFbx}
         onExportSmf={handleExportSmf}
         onPing={pingRust}
         onUndo={handleEditorUndo}
@@ -751,12 +792,15 @@ export default function App() {
         setPerspectiveEnabled={setPerspectiveEnabled}
         modelOpacity={modelOpacity}
         setModelOpacity={setModelOpacity}
+        theme={theme}
+        themeId={themeId}
+        setThemeId={handleThemeChange}
       />
 
       {/* Simple pure error banner (no extra deps) - always in DOM even when not shown (for e2e), hidden via style when no error */}
       <div
         data-testid="error-banner"
-        className="bg-red-900/80 text-red-200 text-xs px-3 py-1 flex items-center gap-2"
+        className="error-banner bg-red-900/80 text-red-200 text-xs px-3 py-1 flex items-center gap-2"
         style={{ display: ui.errorMsg ? 'flex' : 'none' }}
       >
         {ui.errorMsg && (
@@ -769,6 +813,7 @@ export default function App() {
 
       <div className="main-area">
         <Outliner
+          title={theme.panelTitles.outliner}
           clipsCount={model.clips.length}
           items={outlinerItems}
           selectedItemIds={selectedOutlinerIds}
@@ -834,6 +879,7 @@ export default function App() {
             shaderEnabled={shaderEnabled}
             perspectiveEnabled={perspectiveEnabled}
             modelOpacity={modelOpacity}
+            themeId={themeId}
             onPaintSkinVertices={applySkinPaint}
             onSkinPaintStrokeStart={beginSkinPaintStroke}
             onSkinPaintStrokeEnd={endSkinPaintStroke}
@@ -845,19 +891,44 @@ export default function App() {
           />
           {/* Simple pure loading overlay (no deps) */}
           {ui.isLoading && (
-            <div data-testid="loading-overlay" className="absolute inset-0 bg-slate-950/60 flex items-center justify-center text-sm text-slate-200 pointer-events-none">
-              Loading model…
+            <div
+              data-testid="loading-overlay"
+              data-smf-codec-operation={smfCodecActivity?.operation ?? ''}
+              data-smf-codec-execution={smfCodecActivity?.execution ?? ''}
+              data-smf-codec-percent={smfCodecActivity?.percent ?? ''}
+              className="absolute inset-0 bg-slate-950/60 flex items-center justify-center text-sm text-slate-200 pointer-events-none"
+            >
+              {smfCodecActivity ? (
+                <div className="smf-codec-progress" data-testid="smf-codec-progress">
+                  <span>
+                    {smfCodecActivity.operation === 'import' ? 'Importing' : 'Exporting'} SMF
+                    {' '}
+                    {smfCodecActivity.percent}%
+                  </span>
+                  <progress
+                    aria-label={`${smfCodecActivity.operation === 'import' ? 'Importing' : 'Exporting'} SMF`}
+                    max={100}
+                    value={smfCodecActivity.percent}
+                  />
+                  {smfCodecActivity.execution === 'sync-fallback' && (
+                    <span className="smf-codec-fallback">Synchronous fallback</span>
+                  )}
+                </div>
+              ) : (
+                ui.status.startsWith('Export') ? 'Exporting model…' : 'Loading model…'
+              )}
             </div>
           )}
-          <div data-testid="status-text" className={`absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${ui.isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
+          <div data-testid="status-text" className={`status-overlay absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${ui.isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
             {ui.status}
             {ui.isLoading && ' …'}
           </div>
-          <div className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 pointer-events-none">Drop {supportedModelFormatsLabel()} here</div>
+          <div className="viewport-drop-hint absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 pointer-events-none">Drop {supportedModelFormatsLabel()} here</div>
         </div>
 
         <div className="inspector-stack">
           <Inspector
+          title={theme.panelTitles.inspector}
           selected={ui.selected}
           clips={model.clips}
           currentClipName={playback.currentClipName}

@@ -131,11 +131,11 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
 
     for (let v = 0; v < verts; v++) {
       // positions + normals go through coord transform (Y-up)
-      let pos = [reader.f32(), reader.f32(), reader.f32()];
+      const pos = [reader.f32(), reader.f32(), reader.f32()];
       const tpos = smfVecToThree(pos); // or use matrix path if needed
       positions[v*3+0] = tpos.x; positions[v*3+1] = tpos.y; positions[v*3+2] = tpos.z;
 
-      let nor = [reader.f32(), reader.f32(), reader.f32()];
+      const nor = [reader.f32(), reader.f32(), reader.f32()];
       const tnor = smfVecToThree(nor);
       normals[v*3+0] = tnor.x; normals[v*3+1] = tnor.y; normals[v*3+2] = tnor.z;
 
@@ -206,7 +206,7 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
     const duration = reader.f32() / 1000;
     const interp = reader.u8();
     const mult = reader.u8();
-    let lockedBones: number[] = [];
+    const lockedBones: number[] = [];
     if (isV12) {
       const locked = reader.u16();
       for (let l = 0; l < locked; l++) lockedBones.push(reader.u16());
@@ -547,7 +547,8 @@ export function exportSMFToBuffer(
   aW.u8(animations.length);
 
   const buildDQForExport = (dq: Float32Array, prev: Float32Array | null) => {
-    let d = dqNegate(dqNormalize(dq));
+    const normalized = dqNormalize(dq, new Float32Array(8));
+    const d = dqNegate(normalized);
     return dqFlipSign(d, prev);
   };
 

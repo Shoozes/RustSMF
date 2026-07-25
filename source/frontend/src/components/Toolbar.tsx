@@ -1,5 +1,11 @@
 import React from 'react';
 import { isEditorMode, type EditorMode, type ViewportLayout } from '../store';
+import {
+  APP_THEMES,
+  isAppThemeId,
+  type AppThemeDefinition,
+  type AppThemeId,
+} from '../theme';
 import { SUPPORTED_MODEL_ACCEPT } from '../utils/modelFormat';
 import type { TextureFilterPreview } from '../utils/materialPreview';
 
@@ -7,6 +13,7 @@ interface ToolbarProps {
   onOpen: () => void;
   onExport: () => void;
   onExportGlb: () => void;
+  onExportFbx: () => void;
   onExportSmf: () => void;
   onPing: () => void;
   onUndo: () => void;
@@ -46,12 +53,16 @@ interface ToolbarProps {
   setPerspectiveEnabled: (enabled: boolean) => void;
   modelOpacity: number;
   setModelOpacity: (opacity: number) => void;
+  theme: AppThemeDefinition;
+  themeId: AppThemeId;
+  setThemeId: (themeId: AppThemeId) => void;
 }
 
 const Toolbar: React.FC<ToolbarProps> = ({
   onOpen,
   onExport,
   onExportGlb,
+  onExportFbx,
   onExportSmf,
   onPing,
   onUndo,
@@ -91,6 +102,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
   setPerspectiveEnabled,
   modelOpacity,
   setModelOpacity,
+  theme,
+  themeId,
+  setThemeId,
 }) => {
   const nextTextureFilter: Record<TextureFilterPreview, TextureFilterPreview> = {
     source: 'nearest',
@@ -98,13 +112,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     linear: 'source',
   };
   const modes: EditorMode[] = ['view', 'rig', 'skin', 'animate', 'export'];
-  const modeLabels: Record<EditorMode, string> = {
-    view: 'Model',
-    rig: 'Rig',
-    skin: 'Skin',
-    animate: 'Animate',
-    export: 'Export',
-  };
+  const modeLabels = theme.workspaceLabels;
   const displayControls = [
     {
       testId: 'viewport-wireframe-toggle',
@@ -197,7 +205,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
     <div className="toolbar">
       <div className="toolbar-primary">
         <div className="toolbar-brand">RustSMF</div>
-        <div className="toolbar-action-group" aria-label="File actions">
+        <div className="toolbar-action-group toolbar-file-actions" aria-label="File actions">
           <button className="toolbar-action" data-testid="open-model-btn" onClick={onOpen} disabled={isLoading}>
             Open
           </button>
@@ -207,6 +215,9 @@ const Toolbar: React.FC<ToolbarProps> = ({
           <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading}>
             GLB
           </button>
+          <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={isLoading}>
+            FBX
+          </button>
           <button className="toolbar-action" data-testid="export-smf-btn" onClick={onExportSmf} disabled={isLoading}>
             SMF
           </button>
@@ -214,7 +225,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
             Ping
           </button>
         </div>
-        <div className="toolbar-action-group" aria-label="Editor history">
+        <div className="toolbar-action-group toolbar-history-actions" aria-label="Editor history">
           <button
             className="toolbar-action toolbar-action-muted"
             data-testid="editor-undo-btn"
@@ -364,6 +375,35 @@ const Toolbar: React.FC<ToolbarProps> = ({
           </div>
         </details>
       </div>
+
+      <label className="theme-switcher">
+        <span className="theme-switcher-label">Theme</span>
+        <select
+          data-testid="theme-select"
+          className="theme-select"
+          value={themeId}
+          onChange={(event) => {
+            if (isAppThemeId(event.target.value)) {
+              setThemeId(event.target.value);
+            }
+          }}
+          aria-describedby="appearance-theme-description"
+          title={theme.description}
+        >
+          {APP_THEMES.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <span
+          id="appearance-theme-description"
+          data-testid="theme-description"
+          className="sr-only"
+        >
+          {theme.description}
+        </span>
+      </label>
 
       {/* Persistent hidden file input for reliable e2e file simulation (Playwright setInputFiles) */}
       <input

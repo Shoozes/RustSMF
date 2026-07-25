@@ -12,7 +12,8 @@ const result = spawnSync(
   [
     playwrightCli,
     'test',
-    'tests/smoke.spec.ts',
+    'tests/shell-model.spec.ts',
+    'tests/export-formats.spec.ts',
     '--grep',
     'can load a real SMF sample|export flow',
     ...passthroughArgs,

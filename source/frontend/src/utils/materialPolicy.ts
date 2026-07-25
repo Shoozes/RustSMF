@@ -1,5 +1,5 @@
 export interface TextureExportPolicy {
-  action: 'Export' | 'GLB' | 'SMF';
+  action: 'Export' | 'GLB' | 'FBX' | 'SMF';
   format: 'SMF' | 'GLB' | 'FBX' | 'none';
   texturePolicy: 'embedded' | 'omitted' | 'unavailable';
   detail: string;
@@ -12,6 +12,7 @@ export interface LegacyShelfDecision {
 }
 
 const GLB_EMBEDDED = 'Binary GLB embeds supported material images; viewport-only display settings are excluded.';
+const FBX_EMBEDDED = 'Binary FBX requests embedded images in the browser/desktop runtime; re-import to verify exporter compatibility.';
 const SMF_EMBEDDED = 'SMF source export re-embeds imported RGBA texture records in the SMF binary.';
 const SMF_OMITTED = 'Three-to-SMF conversion does not serialize material textures; use GLB when material fidelity matters.';
 
@@ -28,17 +29,13 @@ export function getTextureExportPolicies(sourceFormat: string): TextureExportPol
   const primary: TextureExportPolicy = sourceFormat === 'smf'
     ? { action: 'Export', format: 'SMF', texturePolicy: 'embedded', detail: SMF_EMBEDDED }
     : sourceFormat === 'fbx'
-      ? {
-          action: 'Export',
-          format: 'FBX',
-          texturePolicy: 'embedded',
-          detail: 'FBX export requests embedded images in the browser/desktop runtime; re-import to verify exporter compatibility.',
-        }
+      ? { action: 'Export', format: 'FBX', texturePolicy: 'embedded', detail: FBX_EMBEDDED }
       : { action: 'Export', format: 'GLB', texturePolicy: 'embedded', detail: GLB_EMBEDDED };
 
   return [
     primary,
     { action: 'GLB', format: 'GLB', texturePolicy: 'embedded', detail: GLB_EMBEDDED },
+    { action: 'FBX', format: 'FBX', texturePolicy: 'embedded', detail: FBX_EMBEDDED },
     sourceFormat === 'smf'
       ? { action: 'SMF', format: 'SMF', texturePolicy: 'embedded', detail: SMF_EMBEDDED }
       : { action: 'SMF', format: 'SMF', texturePolicy: 'omitted', detail: SMF_OMITTED },

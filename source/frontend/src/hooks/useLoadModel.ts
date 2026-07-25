@@ -1,22 +1,49 @@
 import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import type * as THREE from 'three';
 import type { OpenResult, SmfDesktopInfo, TauriClient } from '../backend-client/tauri';
-import { importSMF, buildThreeScene as buildSmfScene, exportSMFToBuffer, loadGLB, loadFBX, loadOBJ, exportGLB, validateExportedGLB, exportFBX, bytesToArrayBuffer, buildImportedSmfFromThree, SmfConversionError, collectSkinnedMeshes, compareSmfRoundtrip, inspectThreeToSmfSource, makeDiagnosticReport } from '../loaders';
-import { applyLiveSkinEditsToImportedSmf } from '../loaders/threeToSmf';
+import { buildThreeScene as buildSmfScene, loadGLB, loadFBX, loadOBJ, exportGLB, validateExportedGLB, exportFBX, validateExportedFBX, bytesToArrayBuffer, SmfConversionError, collectSkinnedMeshes, compareSmfRoundtrip, inspectThreeToSmfSource, makeDiagnosticReport } from '../loaders';
 import type { ImportedSmf, SmfDiagnosticReport, SmfRoundtripReport } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
+import {
+  SmfCodecCancelledError,
+  type SmfCodecExecution,
+} from '../workers/smfCodecClient';
 import {
   type BoneNudgeDelta,
   type PoseEditMap,
   hasPoseEdits,
-  hasUnsupportedPoseScaleEdits,
   applyNudgeDelta,
   emptyPoseEdit,
   markPoseBoneEdited,
   clonePoseEditMap,
-  applyPoseEditsToSmf,
 } from './poseEdits';
-import type { BoneTransformEditEvent, RigIkEditEvent, RigMoveEditEvent, RigRotateEditEvent } from '../components/ThreeViewport';
+import {
+  buildSmfExportCandidate,
+  UNSUPPORTED_SMF_SCALE_EDIT_MESSAGE,
+} from './smfExportCandidate';
+import {
+  captureRigSkinIndexSnapshots,
+  cloneAnimationClips,
+  cloneAnimationWorkspaceSnapshot,
+  restoreRigSkinIndexSnapshots,
+  sameAnimationWorkspaceSnapshot,
+  samePoseBoneSnapshot,
+  samePoseSnapshot,
+  sameRigBoneTransformSnapshot,
+  setRigSnapshotSelection,
+  type AnimationWorkspaceHistorySnapshot,
+  type EditorHistorySnapshot,
+  type PoseBoneSnapshot,
+  type PoseHistorySnapshot,
+  type RigHistorySnapshot,
+} from './editorSnapshots';
+import { useSmfCodecTask } from './useSmfCodecTask';
+import type {
+  BoneTransformEditEvent,
+  RigIkEditEvent,
+  RigMoveEditEvent,
+  RigRotateEditEvent,
+} from '../types/viewportEditorEvents';
 import { findBoneByName } from '../utils/bonePicker';
 import { createSeqGuard } from '../utils/seqGuard';
 import { disposeThreeObject } from '../utils/threeDisposal';
@@ -52,8 +79,6 @@ import {
 } from '../utils/editorHistory';
 import {
   applyAnimationEditsToClips,
-  applyAnimationEditsToImportedSmf,
-  applyAnimationMetadataToImportedSmf,
   cloneAnimationEditState,
   copyAnimationKeyframe,
   deleteAnimationEditClip,
@@ -163,8 +188,6 @@ const hasNonIdentityScale = (scale: readonly [number, number, number]): boolean 
   return scale.some((value) => Math.abs(value - 1) > 1e-4);
 };
 
-const unsupportedSmfScaleEditMessage = 'SMF export does not support scale edits. Reset bone scale or export GLB.';
-
 const clampPositive = (value: number, minimum = 0, maximum = Number.MAX_SAFE_INTEGER): number => {
   if (!Number.isFinite(value)) return minimum;
   return Math.min(maximum, Math.max(minimum, value));
@@ -193,18 +216,6 @@ const collectSkinnedMeshById = (
 interface SkinStrokeDraft {
   beforeState: SkinEditState;
   beforeSnapshots: Map<string, NonNullable<ReturnType<typeof captureSkinVertexSnapshot>>>;
-}
-
-interface PoseBoneSnapshot {
-  position: [number, number, number];
-  quaternion: [number, number, number, number];
-  scale: [number, number, number];
-}
-
-interface PoseHistorySnapshot {
-  selectedBoneName: string;
-  poseEdits: PoseEditMap;
-  bones: Record<string, PoseBoneSnapshot>;
 }
 
 interface ActivePoseTransformHistory {
@@ -236,232 +247,6 @@ interface ActiveRigIkHistory {
   session: RigIkSession;
   before: PoseHistorySnapshot;
 }
-
-interface AnimationWorkspaceHistorySnapshot {
-  baseClips: THREE.AnimationClip[];
-  animationEditState: AnimationEditState;
-  currentClipName: string;
-  currentTime: number;
-}
-
-interface RigBoneHistorySnapshot {
-  bone: THREE.Bone;
-  name: string;
-  parent: THREE.Object3D | null;
-  parentBone: THREE.Bone | null;
-  rustsmfDetached: boolean;
-  position: [number, number, number];
-  quaternion: [number, number, number, number];
-  scale: [number, number, number];
-}
-
-interface RigSkinIndexHistorySnapshot {
-  mesh: THREE.SkinnedMesh;
-  count: number;
-  itemSize: number;
-  values: number[];
-}
-
-interface RigHistorySnapshot {
-  selectedBoneName: string;
-  bones: RigBoneHistorySnapshot[];
-  skeletonBones: THREE.Bone[];
-  boneInverses: THREE.Matrix4[];
-  baseClips: THREE.AnimationClip[];
-  animationEditState: AnimationEditState;
-  poseEdits: PoseEditMap;
-  skinEditState: SkinEditState;
-  skinIndices: RigSkinIndexHistorySnapshot[];
-}
-
-type EditorHistorySnapshot =
-  | { kind: 'pose'; value: PoseHistorySnapshot }
-  | { kind: 'animation'; value: AnimationEditState }
-  | { kind: 'animation-workspace'; value: AnimationWorkspaceHistorySnapshot }
-  | { kind: 'rig'; value: RigHistorySnapshot };
-
-const POSE_HISTORY_EPSILON = 1e-6;
-
-const sameNumberArray = (
-  left: readonly number[],
-  right: readonly number[],
-  epsilon = POSE_HISTORY_EPSILON,
-): boolean => {
-  if (left.length !== right.length) return false;
-  return left.every((value, index) => Math.abs(value - right[index]) <= epsilon);
-};
-
-const samePoseEditMap = (left: PoseEditMap, right: PoseEditMap): boolean => {
-  const names = new Set([...Object.keys(left), ...Object.keys(right)]);
-  for (const name of names) {
-    const leftEdit = left[name] ?? emptyPoseEdit();
-    const rightEdit = right[name] ?? emptyPoseEdit();
-    if (
-      Math.abs(leftEdit.dx - rightEdit.dx) > POSE_HISTORY_EPSILON
-      || Math.abs(leftEdit.dy - rightEdit.dy) > POSE_HISTORY_EPSILON
-      || Math.abs(leftEdit.dRotZ - rightEdit.dRotZ) > POSE_HISTORY_EPSILON
-      || (leftEdit.dirty ?? false) !== (rightEdit.dirty ?? false)
-      || (leftEdit.hasScale ?? false) !== (rightEdit.hasScale ?? false)
-    ) {
-      return false;
-    }
-  }
-  return true;
-};
-
-const samePoseSnapshot = (left: PoseHistorySnapshot, right: PoseHistorySnapshot): boolean => {
-  if (left.selectedBoneName !== right.selectedBoneName) return false;
-  if (!samePoseEditMap(left.poseEdits, right.poseEdits)) return false;
-
-  const names = new Set([...Object.keys(left.bones), ...Object.keys(right.bones)]);
-  for (const name of names) {
-    const leftBone = left.bones[name];
-    const rightBone = right.bones[name];
-    if (!leftBone || !rightBone) return false;
-    if (
-      !sameNumberArray(leftBone.position, rightBone.position)
-      || !sameNumberArray(leftBone.quaternion, rightBone.quaternion)
-      || !sameNumberArray(leftBone.scale, rightBone.scale)
-    ) {
-      return false;
-    }
-  }
-
-  return true;
-};
-
-const samePoseBoneSnapshot = (
-  left: PoseBoneSnapshot | undefined,
-  right: PoseBoneSnapshot | undefined,
-): boolean => !!left && !!right
-  && sameNumberArray(left.position, right.position)
-  && sameNumberArray(left.quaternion, right.quaternion)
-  && sameNumberArray(left.scale, right.scale);
-
-const cloneAnimationClips = (clips: THREE.AnimationClip[]): THREE.AnimationClip[] => clips.map((clip) => clip.clone());
-
-const sameAnimationClip = (left: THREE.AnimationClip, right: THREE.AnimationClip, index: number): boolean => {
-  if (getClipKey(left, index) !== getClipKey(right, index)) return false;
-  if (Math.abs(left.duration - right.duration) > POSE_HISTORY_EPSILON) return false;
-  if (left.tracks.length !== right.tracks.length) return false;
-
-  return left.tracks.every((track, trackIndex) => {
-    const other = right.tracks[trackIndex];
-    return !!other
-      && track.name === other.name
-      && sameNumberArray(Array.from(track.times), Array.from(other.times))
-      && sameNumberArray(Array.from(track.values), Array.from(other.values));
-  });
-};
-
-const sameAnimationWorkspaceSnapshot = (
-  left: AnimationWorkspaceHistorySnapshot,
-  right: AnimationWorkspaceHistorySnapshot,
-): boolean => {
-  if (left.currentClipName !== right.currentClipName) return false;
-  if (Math.abs(left.currentTime - right.currentTime) > POSE_HISTORY_EPSILON) return false;
-  if (!sameAnimationEditState(left.animationEditState, right.animationEditState)) return false;
-  if (left.baseClips.length !== right.baseClips.length) return false;
-  return left.baseClips.every((clip, index) => sameAnimationClip(clip, right.baseClips[index], index));
-};
-
-const cloneAnimationWorkspaceSnapshot = (
-  snapshot: AnimationWorkspaceHistorySnapshot,
-): AnimationWorkspaceHistorySnapshot => ({
-  baseClips: cloneAnimationClips(snapshot.baseClips),
-  animationEditState: cloneAnimationEditState(snapshot.animationEditState),
-  currentClipName: snapshot.currentClipName,
-  currentTime: snapshot.currentTime,
-});
-
-const getAttributeComponent = (
-  attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-  vertexIndex: number,
-  slot: number,
-): number => {
-  if (slot === 0) return attribute.getX(vertexIndex);
-  if (slot === 1) return attribute.getY(vertexIndex);
-  if (slot === 2) return attribute.getZ(vertexIndex);
-  return attribute.getW(vertexIndex);
-};
-
-const setAttributeComponent = (
-  attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute,
-  vertexIndex: number,
-  slot: number,
-  value: number,
-): void => {
-  if (slot === 0) attribute.setX(vertexIndex, value);
-  else if (slot === 1) attribute.setY(vertexIndex, value);
-  else if (slot === 2) attribute.setZ(vertexIndex, value);
-  else attribute.setW(vertexIndex, value);
-};
-
-const captureRigSkinIndexSnapshots = (root: THREE.Object3D | null): RigSkinIndexHistorySnapshot[] => {
-  if (!root) return [];
-
-  return collectSkinnedMeshes(root).flatMap((mesh) => {
-    const attribute = mesh.geometry.getAttribute('skinIndex');
-    if (!attribute) return [];
-
-    const itemSize = Math.min(attribute.itemSize, 4);
-    const values: number[] = [];
-    for (let vertexIndex = 0; vertexIndex < attribute.count; vertexIndex += 1) {
-      for (let slot = 0; slot < itemSize; slot += 1) {
-        values.push(getAttributeComponent(attribute, vertexIndex, slot));
-      }
-    }
-
-    return [{ mesh, count: attribute.count, itemSize, values }];
-  });
-};
-
-const restoreRigSkinIndexSnapshots = (snapshots: RigSkinIndexHistorySnapshot[]): void => {
-  for (const snapshot of snapshots) {
-    const attribute = snapshot.mesh.geometry.getAttribute('skinIndex');
-    if (!attribute) continue;
-
-    const count = Math.min(attribute.count, snapshot.count);
-    const itemSize = Math.min(attribute.itemSize, snapshot.itemSize, 4);
-    for (let vertexIndex = 0; vertexIndex < count; vertexIndex += 1) {
-      for (let slot = 0; slot < itemSize; slot += 1) {
-        const value = snapshot.values[(vertexIndex * snapshot.itemSize) + slot];
-        if (Number.isFinite(value)) {
-          setAttributeComponent(attribute, vertexIndex, slot, value);
-        }
-      }
-    }
-    attribute.needsUpdate = true;
-  }
-};
-
-const setRigSnapshotSelection = (
-  snapshot: RigHistorySnapshot | null,
-  selectedBoneName: string,
-): RigHistorySnapshot | null => {
-  if (snapshot) {
-    snapshot.selectedBoneName = selectedBoneName;
-    snapshot.skinEditState = {
-      ...snapshot.skinEditState,
-      selectedBoneName: selectedBoneName && selectedBoneName !== 'Scene' ? selectedBoneName : '',
-    };
-  }
-  return snapshot;
-};
-
-const sameRigBoneTransformSnapshot = (
-  left: RigHistorySnapshot | null,
-  right: RigHistorySnapshot | null,
-  boneName: string,
-): boolean => {
-  if (!left || !right || !boneName) return false;
-  const leftBone = left.bones.find((bone) => bone.name === boneName);
-  const rightBone = right.bones.find((bone) => bone.name === boneName);
-  if (!leftBone || !rightBone) return false;
-  return sameNumberArray(leftBone.position, rightBone.position)
-    && sameNumberArray(leftBone.quaternion, rightBone.quaternion)
-    && sameNumberArray(leftBone.scale, rightBone.scale);
-};
 
 const getBoneIndex = (skeleton: THREE.Skeleton | null, boneName: string): number => {
   if (!skeleton || !boneName) return -1;
@@ -596,6 +381,17 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const loadSeqGuardRef = useRef(createSeqGuard());
   const exportSeqGuardRef = useRef(createSeqGuard());
   const isExportingRef = useRef(false);
+  const {
+    smfCodecActivity,
+    cancelActiveSmfCodec,
+    importSmfInWorker,
+    exportSmfInWorker,
+  } = useSmfCodecTask(ui.setStatus);
+
+  useEffect(() => () => {
+    loadSeqGuardRef.current.next();
+    exportSeqGuardRef.current.next();
+  }, []);
 
   const smfDiagnosticReport = useMemo<SmfDiagnosticReport>(() => {
     if (!model.root) {
@@ -656,8 +452,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
   const beginLoadRequest = useCallback(() => {
     exportSeqGuardRef.current.next();
-    return loadSeqGuardRef.current.next();
-  }, []);
+    const loadSeq = loadSeqGuardRef.current.next();
+    cancelActiveSmfCodec();
+    return loadSeq;
+  }, [cancelActiveSmfCodec]);
 
   const withExportBusy = useCallback(async (
     actionLabel: string,
@@ -678,6 +476,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       await action(isCurrentExport);
     } catch (e: unknown) {
       if (!isCurrentExport()) return;
+      if (e instanceof SmfCodecCancelledError) return;
       const msg = errorMessage(e);
       ui.setErrorMsg(`${actionLabel} error: ${msg}`);
       ui.setStatus(`${actionLabel} error: ${msg}`);
@@ -1099,6 +898,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     try {
       let loaded: LoadedModelResult;
       let importedSmf: ImportedSmf | null = null;
+      let smfCodecExecution: SmfCodecExecution | null = null;
       const name = res.name || res.path || '';
 
       let data: Uint8Array | undefined = res.data;
@@ -1158,7 +958,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         if (!data) {
           throw new Error('Could not obtain binary data for .smf (browser provides via input; desktop uses read_file_binary)');
         }
-        importedSmf = importSMF(bytesToArrayBuffer(data));
+        const imported = await importSmfInWorker(bytesToArrayBuffer(data), isCurrentLoad);
+        if (!isCurrentLoad()) return;
+        importedSmf = imported.value;
+        smfCodecExecution = imported.execution;
         loaded = buildSmfScene(importedSmf);
       } else if (detectedSourceFormat === 'fbx') {
         const urlOrBuf: string | ArrayBuffer = data ? bytesToArrayBuffer(data) : (res.path || '');
@@ -1209,6 +1012,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         if (rustValidated && detectedSourceFormat === 'smf') {
           status = `Rust validated SMF | ${status}`;
         }
+        if (smfCodecExecution === 'sync-fallback') {
+          status = `${status} | SMF codec: synchronous fallback`;
+        }
         ui.setStatus(status);
       }
 
@@ -1216,6 +1022,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
     } catch (e: unknown) {
       if (!isCurrentLoad()) return;
+      if (e instanceof SmfCodecCancelledError) return;
       const msg = errorMessage(e);
       if (!msg.startsWith('Unsupported model format.')) {
         console.error(e);
@@ -1225,7 +1032,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     } finally {
       if (isCurrentLoad()) ui.setIsLoading(false);
     }
-  }, [ui, model, playbackRef, clearLoadedModel, formatSmfDesktopInfo, commitSkinEditState]);
+  }, [ui, model, playbackRef, clearLoadedModel, formatSmfDesktopInfo, commitSkinEditState, importSmfInWorker]);
 
   const handleOpen = useCallback(async () => {
     if (ui.isLoading) return;
@@ -1267,39 +1074,56 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     return { bytes, summary };
   }, [ui]);
 
+  const saveFbxExport = useCallback(async (
+    root: THREE.Group,
+    clips: THREE.AnimationClip[],
+    isCurrentExport: () => boolean,
+  ) => {
+    ui.setStatus('Exporting current model as binary FBX 7500...');
+    const bytes = await exportFBX(root, clips);
+    if (!isCurrentExport()) return;
+    ui.setStatus('Validating exported FBX round-trip...');
+    const summary = await validateExportedFBX(bytes, root, clips);
+    if (!isCurrentExport()) return;
+    const ok = await (await getTauriClient()).saveFile(bytes, 'exported_model.fbx');
+    if (!isCurrentExport()) return;
+    if (!ok) {
+      ui.setStatus('Export canceled.');
+      return;
+    }
+    ui.setStatus(`Exported .fbx (binary FBX 7500). Verified ${summary.boneCount} bones, ${summary.skinnedMeshCount} skinned meshes, and ${summary.clipCount} clips.`);
+  }, [ui]);
+
+  const buildCurrentSmfExportCandidate = useCallback((): ImportedSmf | null => {
+    return buildSmfExportCandidate({
+      sourceSmf: lastSmfDataRef.current,
+      root: model.root,
+      skeleton: model.skeleton ?? null,
+      clips: model.clips,
+      poseEdits: poseEditsRef.current,
+      animationEdits: animationEditStateRef.current,
+    });
+  }, [model.clips, model.root, model.skeleton]);
+
   const handleExport = useCallback(async () => {
     const smfData = lastSmfDataRef.current;
     await withExportBusy('Export', async (isCurrentExport) => {
       try {
         if (smfData) {
-          if (hasUnsupportedPoseScaleEdits(poseEditsRef.current)) {
-            ui.setStatus(unsupportedSmfScaleEditMessage);
-            ui.setErrorMsg(`SMF export blocked: ${unsupportedSmfScaleEditMessage}`);
-            return;
-          }
           ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms + live pose edits)...');
-          const skeleton = model.skeleton;
-          let dataToExport = skeleton
-            ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
-            : smfData;
-          dataToExport = applyAnimationEditsToImportedSmf(
-            dataToExport,
-            model.clips,
-            animationEditStateRef.current,
-          );
-          if (model.root) {
-            dataToExport = applyLiveSkinEditsToImportedSmf(dataToExport, collectSkinnedMeshes(model.root));
-          }
+          const dataToExport = buildCurrentSmfExportCandidate();
+          if (!dataToExport) return;
 
-          const buf = exportSMFToBuffer(dataToExport);
-          const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
+          const encoded = await exportSmfInWorker(dataToExport, isCurrentExport);
+          if (!isCurrentExport()) return;
+          const ok = await (await getTauriClient()).saveFile(encoded.value, 'exported_model.smf');
           if (!isCurrentExport()) return;
           if (!ok) {
             ui.setStatus('Export canceled.');
             return;
           }
 
-          ui.setStatus('Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!');
+          ui.setStatus(`Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!${encoded.execution === 'sync-fallback' ? ' SMF codec used synchronous fallback.' : ''}`);
           return;
         }
 
@@ -1315,15 +1139,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         if (isFBXSource) {
           ui.setStatus('Exporting FBX-loaded model to binary .fbx...');
           try {
-            const buf = await exportFBX(rootToExport, model.clips);
-            if (!isCurrentExport()) return;
-            const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.fbx');
-            if (!isCurrentExport()) return;
-            if (!ok) {
-              ui.setStatus('Export canceled.');
-              return;
-            }
-            ui.setStatus('Exported .fbx (binary FBX 7500). Re-import to verify fidelity.');
+            await saveFbxExport(rootToExport, model.clips, isCurrentExport);
             return;
           } catch (e: unknown) {
             if (!isCurrentExport()) return;
@@ -1343,12 +1159,26 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         ui.setStatus(`Exported .glb (verified ${summary.boneCount} bones, ${summary.clipCount} clips).`);
       } catch (e: unknown) {
         if (!isCurrentExport()) return;
+        if (e instanceof SmfCodecCancelledError) return;
+        if (e instanceof SmfConversionError) {
+          ui.setErrorMsg(`SMF export blocked: ${e.message}`);
+          ui.setStatus(`SMF export blocked: ${e.message}`);
+          return;
+        }
         const msg = errorMessage(e);
         ui.setErrorMsg(`Export error: ${msg}`);
         ui.setStatus(`Export error: ${msg}`);
       }
     });
-  }, [ui, model, withExportBusy, buildVerifiedGlb]);
+  }, [
+    ui,
+    model,
+    withExportBusy,
+    buildVerifiedGlb,
+    saveFbxExport,
+    exportSmfInWorker,
+    buildCurrentSmfExportCandidate,
+  ]);
 
   const handleExportGlb = useCallback(async () => {
     await withExportBusy('Export as GLB', async (isCurrentExport) => {
@@ -1378,53 +1208,24 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     });
   }, [ui, model, withExportBusy, buildVerifiedGlb]);
 
-  const buildCurrentSmfExportCandidate = useCallback((): ImportedSmf | null => {
-    const smfData = lastSmfDataRef.current;
-    const skeleton = model.skeleton;
+  const handleExportFbx = useCallback(async () => {
+    await withExportBusy('Export as FBX', async (isCurrentExport) => {
+      try {
+        const rootToExport = model.root;
+        if (!rootToExport) {
+          ui.setStatus('Nothing to export as FBX.');
+          return;
+        }
 
-    if (hasUnsupportedPoseScaleEdits(poseEditsRef.current)) {
-      throw new SmfConversionError(unsupportedSmfScaleEditMessage);
-    }
-
-    if (smfData) {
-      let dataToExport = skeleton
-        ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
-        : smfData;
-      dataToExport = applyAnimationEditsToImportedSmf(
-        dataToExport,
-        model.clips,
-        animationEditStateRef.current,
-      );
-      if (model.root) {
-        dataToExport = applyLiveSkinEditsToImportedSmf(dataToExport, collectSkinnedMeshes(model.root));
+        await saveFbxExport(rootToExport, model.clips, isCurrentExport);
+      } catch (e: unknown) {
+        if (!isCurrentExport()) return;
+        const msg = errorMessage(e);
+        ui.setErrorMsg(`FBX export error: ${msg}`);
+        ui.setStatus(`FBX export error: ${msg}`);
       }
-      return dataToExport;
-    }
-
-    const rootToExport = model.root;
-    if (!rootToExport) {
-      return null;
-    }
-
-    const skinnedMeshes = collectSkinnedMeshes(rootToExport);
-    const diagnostics = inspectThreeToSmfSource({
-      skeleton: skeleton ?? null,
-      skinnedMeshes,
-      clips: model.clips,
     });
-    const blockingDiagnostic = diagnostics.diagnostics.find((item) => item.level === 'error');
-    if (blockingDiagnostic) {
-      const detail = blockingDiagnostic.target ? ` (${blockingDiagnostic.target})` : '';
-      throw new SmfConversionError(`${blockingDiagnostic.code}: ${blockingDiagnostic.message}${detail}`);
-    }
-
-    const converted = buildImportedSmfFromThree({
-      skeleton,
-      skinnedMeshes,
-      clips: model.clips,
-    });
-    return applyAnimationMetadataToImportedSmf(converted, animationEditStateRef.current);
-  }, [model.clips, model.root, model.skeleton]);
+  }, [ui, model, withExportBusy, saveFbxExport]);
 
   const handleRunSmfRoundtripCheck = useCallback(async () => {
     await withExportBusy('SMF roundtrip check', async (isCurrentExport) => {
@@ -1440,19 +1241,23 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           return;
         }
 
-        const buf = exportSMFToBuffer(candidate);
-        const reimported = importSMF(bytesToArrayBuffer(buf));
-        const report = compareSmfRoundtrip(candidate, reimported);
+        const encoded = await exportSmfInWorker(candidate, isCurrentExport);
+        if (!isCurrentExport()) return;
+        const decoded = await importSmfInWorker(bytesToArrayBuffer(encoded.value), isCurrentExport);
+        if (!isCurrentExport()) return;
+        const report = compareSmfRoundtrip(candidate, decoded.value);
         setSmfRoundtripReport(report);
 
         if (report.ok) {
-          ui.setStatus('SMF roundtrip check passed: export summary matches reimport.');
+          const usedFallback = encoded.execution === 'sync-fallback' || decoded.execution === 'sync-fallback';
+          ui.setStatus(`SMF roundtrip check passed: export summary matches reimport.${usedFallback ? ' SMF codec used synchronous fallback.' : ''}`);
         } else {
           ui.setErrorMsg(`SMF roundtrip mismatch: ${report.messages.join('; ')}`);
           ui.setStatus(`SMF roundtrip mismatch: ${report.messages.join('; ')}`);
         }
       } catch (e: unknown) {
         if (!isCurrentExport()) return;
+        if (e instanceof SmfCodecCancelledError) return;
         if (e instanceof SmfConversionError) {
           ui.setErrorMsg(`SMF roundtrip blocked: ${e.message}`);
           ui.setStatus(`SMF roundtrip blocked: ${e.message}`);
@@ -1463,7 +1268,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         ui.setStatus(`SMF roundtrip check error: ${msg}`);
       }
     });
-  }, [buildCurrentSmfExportCandidate, ui, withExportBusy]);
+  }, [buildCurrentSmfExportCandidate, ui, withExportBusy, exportSmfInWorker, importSmfInWorker]);
 
   const handleSaveSmfDiagnosticReport = useCallback(async () => {
     await withExportBusy('Save SMF diagnostic report', async (isCurrentExport) => {
@@ -1499,43 +1304,15 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     await withExportBusy('Export as SMF', async (isCurrentExport) => {
       try {
         const rootToExport = model.root;
-        const skeleton = model.skeleton;
         const smfData = lastSmfDataRef.current;
         if (smfData) {
-          if (hasUnsupportedPoseScaleEdits(poseEditsRef.current)) {
-            ui.setStatus(unsupportedSmfScaleEditMessage);
-            ui.setErrorMsg(`SMF export blocked: ${unsupportedSmfScaleEditMessage}`);
-            return;
-          }
           ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms + live pose edits)...');
-          let dataToExport = skeleton
-            ? applyPoseEditsToSmf(smfData, poseEditsRef.current, skeleton)
-            : smfData;
-          dataToExport = applyAnimationEditsToImportedSmf(
-            dataToExport,
-            model.clips,
-            animationEditStateRef.current,
-          );
-          if (rootToExport) {
-            dataToExport = applyLiveSkinEditsToImportedSmf(dataToExport, collectSkinnedMeshes(rootToExport));
-          }
-          const buf = exportSMFToBuffer(dataToExport);
-          const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
-          if (!isCurrentExport()) return;
-          if (!ok) {
-            ui.setStatus('Export canceled.');
-            return;
-          }
-          ui.setStatus('Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!');
-          return;
-        }
-
-        if (!rootToExport) {
+        } else if (!rootToExport) {
           ui.setStatus('No model loaded for SMF export. Load a skinned GLB/FBX with skeleton or use GLB export.');
           return;
+        } else {
+          ui.setStatus('Exporting as SMF via guarded converter (Three skinned -> ImportedSmf)...');
         }
-
-        ui.setStatus('Exporting as SMF via guarded converter (Three skinned -> ImportedSmf)...');
 
         const imported = buildCurrentSmfExportCandidate();
         if (!imported) {
@@ -1543,16 +1320,20 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           return;
         }
 
-        const buf = exportSMFToBuffer(imported);
-        const ok = await (await getTauriClient()).saveFile(buf, 'exported_model.smf');
+        const encoded = await exportSmfInWorker(imported, isCurrentExport);
+        if (!isCurrentExport()) return;
+        const ok = await (await getTauriClient()).saveFile(encoded.value, 'exported_model.smf');
         if (!isCurrentExport()) return;
         if (!ok) {
           ui.setStatus('Export canceled.');
           return;
         }
-        ui.setStatus('Exported .smf (from GLB/FBX via guarded threeToSmf converter + live pose). Re-import to verify fidelity!');
+        ui.setStatus(smfData
+          ? `Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!${encoded.execution === 'sync-fallback' ? ' SMF codec used synchronous fallback.' : ''}`
+          : `Exported .smf (from GLB/FBX via guarded threeToSmf converter + live pose). Re-import to verify fidelity!${encoded.execution === 'sync-fallback' ? ' SMF codec used synchronous fallback.' : ''}`);
       } catch (e: unknown) {
         if (!isCurrentExport()) return;
+        if (e instanceof SmfCodecCancelledError) return;
         if (e instanceof SmfConversionError) {
           ui.setErrorMsg(`SMF export blocked: ${e.message}`);
           ui.setStatus(`SMF export blocked: ${e.message}`);
@@ -1563,7 +1344,13 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         ui.setStatus(`SMF export error: ${msg}`);
       }
     });
-  }, [ui, model.root, withExportBusy, buildCurrentSmfExportCandidate]);
+  }, [
+    ui,
+    model.root,
+    withExportBusy,
+    buildCurrentSmfExportCandidate,
+    exportSmfInWorker,
+  ]);
   const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
     const file = input.files?.[0];
@@ -1636,7 +1423,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
   const setTransformModeHandler = useCallback((mode: 'translate' | 'rotate' | 'scale') => {
     if (sourceFormat === 'smf' && mode === 'scale') {
-      ui.setStatus(unsupportedSmfScaleEditMessage);
+      ui.setStatus(UNSUPPORTED_SMF_SCALE_EDIT_MESSAGE);
       return false;
     }
     setTransformMode(mode);
@@ -2791,7 +2578,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
     const shouldWarnUnsupportedScale = sourceFormat === 'smf' && hasScale;
     if (shouldWarnUnsupportedScale) {
-      ui.setStatus(unsupportedSmfScaleEditMessage);
+      ui.setStatus(UNSUPPORTED_SMF_SCALE_EDIT_MESSAGE);
     }
 
     if (event.phase === 'end') {
@@ -3242,6 +3029,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     handleOpen,
     handleExport,
     handleExportGlb,
+    handleExportFbx,
     handleExportSmf,
     handleRunSmfRoundtripCheck,
     handleSaveSmfDiagnosticReport,
@@ -3293,6 +3081,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     smfDiagnosticReport,
     materialTextureSummaries,
     smfRoundtripReport,
+    smfCodecActivity,
     sourceFormat,
     skinEditHasDirtyState,
     skinEditBlockReason,

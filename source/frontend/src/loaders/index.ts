@@ -3,6 +3,7 @@
 // Re-exports main public API; keeps specific imports possible for tree-shaking.
 
 export * from './smf';
+export * from './smfData';
 export * from './glb';
 export * from './fbx';
 export * from './obj';

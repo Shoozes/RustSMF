@@ -276,12 +276,12 @@ mod tests {
                 0
             };
             // anim u8 width (match TS loader + fixed peeks); would have been wrong/large if u32 le used on count byte
-            let anim_count = if (off_anim as usize) + 1 <= bytes.len() {
+            let anim_count = if (off_anim as usize) < bytes.len() {
                 bytes[off_anim as usize] as u32
             } else {
                 0
             };
-            let model_count = if (off_model as usize) + 1 <= bytes.len() {
+            let model_count = if (off_model as usize) < bytes.len() {
                 bytes[off_model as usize] as u32
             } else {
                 0
@@ -307,7 +307,7 @@ mod tests {
         let mut bad_version = b"NOTSMF\0".to_vec();
         bad_version.extend_from_slice(&[0; 32]);
         let info = super::build_smf_desktop_info(&bad_version);
-        assert_eq!(info.valid, false);
+        assert!(!info.valid);
         assert_eq!(info.error.as_deref(), Some("unsupported version: NOTSMF"));
 
         let mut bytes = b"SMF_v12_by_Snidr_and_Bart\0".to_vec();

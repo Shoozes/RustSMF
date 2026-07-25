@@ -8,6 +8,7 @@ import {
   smfMatrixToThree,
   threeMatrixToSmf,
 } from '../loaders/coord';
+import { cloneImportedSmf } from '../loaders/smfData';
 import { findEffectiveBoneParentIndex } from '../loaders/smfRig';
 
 export type AnimationInterpolation = 'linear' | 'step' | 'quadratic';
@@ -761,34 +762,6 @@ export const applyAnimationEditsToClips = (
     return new THREE.AnimationClip(clip.name, duration, tracks);
   });
 };
-
-const cloneImportedSmf = (source: ImportedSmf): ImportedSmf => ({
-  meshes: source.meshes.map((mesh) => ({
-    ...mesh,
-    positions: new Float32Array(mesh.positions),
-    normals: new Float32Array(mesh.normals),
-    uvs: new Float32Array(mesh.uvs),
-    tangents: new Float32Array(mesh.tangents),
-    skinIndices: new Uint16Array(mesh.skinIndices),
-    skinWeights: new Float32Array(mesh.skinWeights),
-    triangles: mesh.triangles.map((triangle) => [...triangle]),
-  })),
-  textures: source.textures.map((texture) => ({
-    ...texture,
-    pixels: new Uint8Array(texture.pixels),
-  })),
-  bones: source.bones.map((bone) => ({
-    ...bone,
-    dq: new Float32Array(bone.dq),
-    axis: [...bone.axis],
-  })),
-  animations: source.animations.map((animation) => ({
-    ...animation,
-    times: [...animation.times],
-    frames: animation.frames.map((frame) => frame.map((dq) => new Float32Array(dq))),
-    lockedBones: [...animation.lockedBones],
-  })),
-});
 
 const isValidNodeIndex = (index: number, count: number): boolean => index >= 0 && index < count;
 

@@ -3,6 +3,7 @@ import fs from 'fs';
 import {
   SAMPLE_OBJ,
   SAMPLE_SMF,
+  getBrowserErrors,
   getTauriMockSnapshot,
   installTauriMock,
   pausePlaybackIfRunning,
@@ -308,6 +309,9 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', rootBeforeFailedReplacement!);
     await expect(page.getByTestId('error-banner')).toBeVisible();
     await expect(page.getByTestId('export-btn')).toBeEnabled();
+    expect(
+      getBrowserErrors(page).filter(entry => entry.includes('THREE.PropertyBinding: No target node found')),
+    ).toEqual([]);
   });
 
   test('native rapid export clicks stay single-flight', async ({ page }) => {

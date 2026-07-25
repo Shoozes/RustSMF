@@ -5,6 +5,7 @@ import type { EditorMode } from '../store';
 import { getRigRootBones, isRigBone, isRigBoneDetached } from '../utils/rigHierarchy';
 
 interface InspectorProps {
+  title?: string;
   selected: string;
   clips: THREE.AnimationClip[];
   currentClipName: string;
@@ -26,6 +27,7 @@ interface InspectorProps {
 }
 
 const Inspector: React.FC<InspectorProps> = ({
+  title = 'Inspector',
   selected,
   clips,
   currentClipName,
@@ -47,9 +49,12 @@ const Inspector: React.FC<InspectorProps> = ({
 }) => {
   // State for collapsible bone hierarchy (starts with top-level roots expanded for usability)
   const [expandedBones, setExpandedBones] = React.useState<Set<string>>(new Set());
-  const visibleBones = displayBones && displayBones.length > 0
-    ? displayBones
-    : skeleton?.bones ?? [];
+  const visibleBones = React.useMemo(
+    () => displayBones && displayBones.length > 0
+      ? displayBones
+      : skeleton?.bones ?? [],
+    [displayBones, skeleton],
+  );
   const visibleBoneSet = React.useMemo(() => new Set(visibleBones), [visibleBones]);
   const rootBones = getRigRootBones(visibleBones);
   const rootBoneUuidKey = rootBones.map((bone) => bone.uuid).join('|');
@@ -107,7 +112,7 @@ const Inspector: React.FC<InspectorProps> = ({
   };
   return (
     <div data-testid="inspector" className="inspector" data-editor-mode={editorMode}>
-      <div className="panel-title">Inspector</div>
+      <div className="panel-title">{title}</div>
       <div className="text-xs">
         <div className="mb-1 text-slate-400">Selected</div>
         <div data-testid="inspector-selected" className="font-mono text-amber-300 break-all">{selected}</div>
@@ -160,16 +165,16 @@ const Inspector: React.FC<InspectorProps> = ({
               {editorMode === 'rig' ? ' (Rig Select owns the viewport gizmo)' : ' (viewport gizmo detached)'}
             </div>
             <button data-testid="transform-x-btn" className="mr-1 mt-0.5 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
-              onNudgeBone && onNudgeBone(selected, { x: 0.1 });
+              onNudgeBone?.(selected, { x: 0.1 });
             }}> +X </button>
             <button data-testid="transform-y-btn" className="mr-1 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
-              onNudgeBone && onNudgeBone(selected, { y: 0.1 });
+              onNudgeBone?.(selected, { y: 0.1 });
             }}> +Y </button>
             <button data-testid="transform-rot-btn" className="px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
-              onNudgeBone && onNudgeBone(selected, { rotZ: 0.2 });
+              onNudgeBone?.(selected, { rotZ: 0.2 });
             }}> rot </button>
             <button data-testid="transform-reset-btn" className="ml-1 px-1 py-0 bg-slate-800 text-xs" title="Restore the selected deform bone local bind transform" onClick={() => {
-              onNudgeBone && onNudgeBone(selected, { reset: true });
+              onNudgeBone?.(selected, { reset: true });
             }}> bind </button>
             {onToggleWeightPreview && (
               <button

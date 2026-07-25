@@ -2,6 +2,7 @@ import React from 'react';
 import type { ModelOutlinerItem } from '../utils/modelOutliner';
 
 interface OutlinerProps {
+  title?: string;
   clipsCount: number;
   items: ModelOutlinerItem[];
   selectedItemIds: string[];
@@ -22,6 +23,7 @@ const getKindLabel = (kind: ModelOutlinerItem['kind']): string => {
 };
 
 const Outliner: React.FC<OutlinerProps> = ({
+  title = 'Outliner',
   clipsCount,
   items,
   selectedItemIds,
@@ -42,7 +44,7 @@ const Outliner: React.FC<OutlinerProps> = ({
 
   return (
     <div data-testid="outliner" className="sidebar">
-      <div className="panel-title">Outliner</div>
+      <div className="panel-title">{title}</div>
       <div className="outliner-root-row">
         <button
           type="button"

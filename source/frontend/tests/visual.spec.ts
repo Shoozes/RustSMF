@@ -120,6 +120,56 @@ test.describe('RustSMF visual confirmations', () => {
     });
   }
 
+  test('Original SMF theme restores the compact tool-shelf layout and persists', async ({ page }, testInfo) => {
+    test.skip(!SAMPLE_SMF, 'No .smf test model available for original-theme confirmation');
+
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto('/');
+
+    const appShell = page.getByTestId('app-shell');
+    const themeSelect = page.getByTestId('theme-select');
+    await expect(appShell).toHaveAttribute('data-theme', 'modern');
+    await themeSelect.selectOption('original');
+    await expect(appShell).toHaveAttribute('data-theme', 'original');
+    await expect(page.getByTestId('theme-description')).toContainText(/compact GameMaker-inspired/i);
+    await expect(page.getByTestId('mode-tab-view')).toHaveText('Model [1]');
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-theme', 'original');
+    await expect(page.getByTestId('inspector').locator('.panel-title').first()).toHaveText('Settings');
+    await expect(page.getByTestId('outliner').locator('.panel-title').first()).toHaveText('Submodels');
+    await expect(page.getByTestId('timeline')).toBeHidden();
+
+    const tools = await getRequiredRect(page.locator('.inspector-stack'));
+    const viewport = await getRequiredRect(page.getByTestId('viewport-container'));
+    const submodels = await getRequiredRect(page.getByTestId('outliner'));
+    expect(tools.right).toBeLessThanOrEqual(viewport.left + 2);
+    expect(viewport.right).toBeLessThanOrEqual(submodels.left + 2);
+
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-layout', 'quad');
+    await pausePlaybackIfRunning(page);
+
+    await page.getByTestId('mode-tab-animate').click();
+    await expect(page.getByTestId('timeline')).toBeVisible();
+    const timeline = await getRequiredRect(page.getByTestId('timeline'));
+    const mainArea = await getRequiredRect(page.locator('.main-area'));
+    expect(timeline.bottom).toBeLessThanOrEqual(mainArea.top + 2);
+
+    await expectNoHorizontalOverflow(page);
+    await expectRenderedScreenshot(appShell, 5000);
+    await page.screenshot({ path: testInfo.outputPath('original-smf-theme.png'), fullPage: true });
+    await expectNoCriticalBrowserErrors(page);
+
+    await page.reload();
+    await expect(page.getByTestId('app-shell')).toHaveAttribute('data-theme', 'original');
+    await expect(page.getByTestId('theme-select')).toHaveValue('original');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByTestId('viewport-container')).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({ path: testInfo.outputPath('original-smf-theme-narrow.png'), fullPage: true });
+    await expectNoCriticalBrowserErrors(page);
+  });
+
   test('loaded SMF visual state keeps viewport, timeline, and skeleton panels coherent', async ({ page }) => {
     test.skip(!SAMPLE_SMF, 'No .smf test model available for loaded visual confirmation');
 
