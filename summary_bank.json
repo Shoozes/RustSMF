@@ -21,18 +21,16 @@
   "groups": {
     "docs__orientation": {
       "description": "Lean current-state orientation. Use a focused feature or subsystem group before reading broader source.",
-      "max_kb": 64,
+      "max_kb": 48,
       "paths": [
         "README.md",
         "docs/dev/README.md",
         "docs/dev/APP_STATE.md",
-        "docs/dev/TODO.md",
-        "docs/dev/review.md"
+        "docs/dev/TODO.md"
       ],
       "notes": [
         "TODO owns executable work and completion conditions.",
-        "APP_STATE owns shipped behavior.",
-        "review.md is the latest concise integrity snapshot."
+        "APP_STATE owns shipped behavior; review.md is opened only for integrity-pass evidence."
       ]
     },
     "workflow__context_bank": {
@@ -64,29 +62,44 @@
         "source/frontend/src/theme.test.ts",
         "source/frontend/src/hooks/useAppTheme.ts",
         "source/frontend/src/App.tsx",
-        "source/frontend/src/components/Outliner.tsx",
-        "source/frontend/src/components/TextureThumbnail.tsx",
         "source/frontend/src/components/Toolbar.tsx",
         "source/frontend/src/main.tsx",
         "source/frontend/src/index.css",
         "source/frontend/src/styles/themes/original.css",
-        "source/frontend/src/utils/modelOutliner.ts",
-        "source/frontend/src/utils/modelOutliner.test.ts",
-        "source/frontend/src/utils/textureThumbnail.ts",
-        "source/frontend/src/utils/textureThumbnail.test.ts",
+        "source/frontend/src/utils/themeViewportGrid.ts",
+        "source/frontend/src/utils/themeViewportGrid.test.ts",
         "source/frontend/tests/visual.spec.ts",
         "design-qa.md"
       ],
       "notes": [
         "Original preserves the old editor's simplicity and compact hierarchy, including quad view before model load.",
         "Theme definitions own labels, panel copy, camera scale, and grid behavior; components should not branch on theme IDs.",
-        "Submodel thumbnails prefer source base-color texture pixels and retain material color as the fallback.",
         "design-qa.md owns the preserved-source comparison and final fidelity evidence paths."
+      ]
+    },
+    "feature__model_outliner_materials": {
+      "description": "Model-derived submodel rows, source texture thumbnails, material fallback, and preview/source isolation.",
+      "max_kb": 64,
+      "paths": [
+        "source/frontend/src/components/Outliner.tsx",
+        "source/frontend/src/components/TextureThumbnail.tsx",
+        "source/frontend/src/utils/modelOutliner.ts",
+        "source/frontend/src/utils/modelOutliner.test.ts",
+        "source/frontend/src/utils/textureThumbnail.ts",
+        "source/frontend/src/utils/textureThumbnail.test.ts",
+        "source/frontend/src/utils/materialPreview.ts",
+        "source/frontend/src/utils/materialPreview.test.ts",
+        "source/frontend/src/utils/selectionOverlay.ts",
+        "source/frontend/src/utils/selectionOverlay.test.ts"
+      ],
+      "notes": [
+        "Outliner summaries read registered source materials so viewport previews cannot hide source maps.",
+        "Raw SMF DataTexture pixels are downsampled into bounded previews; unsupported images fall back to material color."
       ]
     },
     "feature__fbx_support": {
       "description": "Binary FBX 7500 export, import compatibility, pre-save validation, and round-trip coverage.",
-      "max_kb": 80,
+      "max_kb": 120,
       "paths": [
         "source/frontend/src/loaders/fbx.ts",
         "source/frontend/src/loaders/fbx.test.ts",
@@ -94,7 +107,9 @@
         "source/frontend/src/vendor/FBXExporter.js",
         "source/frontend/src/vendor/FBXExporter.d.ts",
         "source/frontend/src/vendor/FBXExporter-threejs.LICENSE.txt",
-        "source/frontend/tests/helpers/skinned-glb-fixture.ts"
+        "source/frontend/tests/helpers/skinned-glb-fixture.ts",
+        "source/frontend/tests/helpers/format-assertions.ts",
+        "source/frontend/tests/export-formats.spec.ts"
       ],
       "notes": [
         "The bundled exporter is the implementation authority.",
@@ -148,6 +163,7 @@
       "paths": [
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/types/viewportEditorEvents.ts",
+        "source/frontend/src/utils/SimpleOrbit.ts",
         "source/frontend/src/utils/viewportInteractionRouter.ts",
         "source/frontend/src/utils/viewportInteractionRouter.test.ts",
         "source/frontend/src/utils/viewportInteractionRuntime.ts",
@@ -155,10 +171,8 @@
         "source/frontend/src/utils/viewportTransformControls.ts",
         "source/frontend/src/utils/viewportLayout.ts",
         "source/frontend/src/utils/viewportLayout.test.ts",
-        "source/frontend/src/utils/selectionOverlay.ts",
-        "source/frontend/src/utils/selectionOverlay.test.ts",
-        "source/frontend/src/utils/skinPointOverlay.ts",
-        "source/frontend/src/utils/skinPointOverlay.test.ts",
+        "source/frontend/src/utils/themeViewportGrid.ts",
+        "source/frontend/src/utils/themeViewportGrid.test.ts",
         "source/frontend/src/utils/threeDisposal.ts",
         "source/frontend/src/utils/threeDisposal.test.ts"
       ],
@@ -171,8 +185,9 @@
     },
     "feature__rig_ik_pose": {
       "description": "Bone hierarchy, pose editing, rig transforms, endpoint editing, and bounded CCD IK.",
-      "max_kb": 128,
+      "max_kb": 144,
       "paths": [
+        "source/frontend/src/components/RigPanel.tsx",
         "source/frontend/src/hooks/poseEdits.ts",
         "source/frontend/src/hooks/poseEdits.test.ts",
         "source/frontend/src/utils/rigEdits.ts",
@@ -184,7 +199,45 @@
         "source/frontend/src/utils/rigValidation.ts",
         "source/frontend/src/utils/rigValidation.test.ts",
         "source/frontend/src/utils/smfRigPolicy.ts",
-        "source/frontend/src/utils/smfRigPolicy.test.ts"
+        "source/frontend/src/utils/smfRigPolicy.test.ts",
+        "source/frontend/tests/rig.spec.ts"
+      ]
+    },
+    "feature__animation_authoring": {
+      "description": "Timeline interaction, selected-bone key editing, clip management, metadata, history, and browser ownership.",
+      "max_kb": 112,
+      "paths": [
+        "source/frontend/src/components/AnimatePanel.tsx",
+        "source/frontend/src/components/Timeline.tsx",
+        "source/frontend/src/utils/animationEdits.ts",
+        "source/frontend/src/utils/animationEdits.test.ts",
+        "source/frontend/src/utils/animationTimeline.ts",
+        "source/frontend/src/utils/animationTimeline.test.ts",
+        "source/frontend/tests/helpers/timeline-interactions.ts",
+        "source/frontend/tests/animation.spec.ts"
+      ],
+      "notes": [
+        "useLoadModel remains the integration owner; this route keeps authoring policy and its closest tests focused.",
+        "Quadratic interpolation is preserved as SMF metadata and previews linearly in Three.js."
+      ]
+    },
+    "feature__skin_authoring": {
+      "description": "Skin paint state, brush indexing, auto-weight algorithms, history, exportability, and browser ownership.",
+      "max_kb": 112,
+      "paths": [
+        "source/frontend/src/components/SkinPanel.tsx",
+        "source/frontend/src/utils/skinWeights.ts",
+        "source/frontend/src/utils/skinWeights.test.ts",
+        "source/frontend/src/utils/skinBrushIndex.ts",
+        "source/frontend/src/utils/skinBrushIndex.test.ts",
+        "source/frontend/src/utils/skinPointOverlay.ts",
+        "source/frontend/src/utils/skinPointOverlay.test.ts",
+        "source/frontend/tests/helpers/viewport-interactions.ts",
+        "source/frontend/tests/skin.spec.ts"
+      ],
+      "notes": [
+        "Brush queries use bounded spatial candidates and verify world-space distance before mutation.",
+        "Completed strokes and batch actions own one undoable snapshot transaction."
       ]
     },
     "subsystem__smf_format_and_fidelity": {
@@ -208,6 +261,7 @@
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/tests/native.spec.ts",
         "source/src-tauri/src/main.rs",
+        "source/src-tauri/src/smf_core.rs",
         "source/src-tauri/Cargo.toml",
         "source/src-tauri/tauri.conf.json",
         "source/src-tauri/capabilities/default.json"
@@ -223,6 +277,7 @@
         "source/frontend/tsconfig.json",
         "source/frontend/tsconfig.test.json",
         "source/frontend/tests/README.md",
+        "source/frontend/tests/fixtures/invalid-model.gml",
         "source/frontend/tests/helpers/*.ts",
         "source/frontend/scripts/check-entry-chunks.mjs",
         "source/frontend/scripts/check-eslint-coverage.mjs",
@@ -237,6 +292,7 @@
         "source/frontend/tests/shell-model.spec.ts",
         "source/frontend/tests/lifecycle.spec.ts",
         "source/frontend/tests/native.spec.ts",
+        "source/frontend/tests/fixtures/invalid-model.gml",
         "source/frontend/tests/helpers/smoke-helpers.ts",
         "source/frontend/tests/helpers/format-assertions.ts",
         "source/frontend/tests/helpers/smf-codec-probe.ts",
@@ -248,7 +304,9 @@
       ]
     },
     "tests__browser_authoring_formats": {
-      "description": "Browser Rig, Skin, Animate, format export, theme, and visual behavior.",
+      "description": "Archived compatibility route for the former combined browser authoring/format pack.",
+      "archived": true,
+      "archive_note": "Use feature__rig_ik_pose, feature__skin_authoring, feature__animation_authoring, feature__fbx_support, and feature__theme_system.",
       "max_kb": 128,
       "paths": [
         "source/frontend/tests/animation.spec.ts",

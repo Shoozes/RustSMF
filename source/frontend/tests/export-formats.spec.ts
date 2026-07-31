@@ -15,12 +15,10 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
   });
 
   test('export flow and basic visuals (smoke for roundtrip prep)', async ({ page }) => {
-      test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
-
       await page.goto('/');
 
       const input = page.getByTestId('model-file-input');
-      await input.setInputFiles(SAMPLE_SMF!);
+      await input.setInputFiles(SAMPLE_SMF);
 
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/mixamo|Loaded|bones|clips|verts/i);
@@ -90,12 +88,10 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
     });
 
   test('FBX import happy path (self-authored static fixture)', async ({ page }) => {
-      test.skip(!SAMPLE_FBX, 'No .fbx test model available. Default repo fixture is source/frontend/tests/test.fbx.');
-
       await page.goto('/');
 
       const input = page.getByTestId('model-file-input');
-      await input.setInputFiles(SAMPLE_FBX!);
+      await input.setInputFiles(SAMPLE_FBX);
 
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/Loaded FBX|bones|clips/i);
@@ -447,12 +443,10 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
     // Exercises loadOBJ (static mesh, no skeleton) + status + outliner/inspector (no bones list) + render.
     // Export uses GLB path (intentional limit). Complements SMF/FBX fixture coverage.
     test('OBJ static load parity (full load if sample)', async ({ page }) => {
-      test.skip(!SAMPLE_OBJ || !SAMPLE_OBJ.endsWith('.obj'), 'No .obj test model available in this checkout. Default repo fixture is source/frontend/tests/test.obj.');
-
       await page.goto('/');
 
       const input = page.getByTestId('model-file-input');
-      await input.setInputFiles(SAMPLE_OBJ!);
+      await input.setInputFiles(SAMPLE_OBJ);
 
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/Loaded|model|OBJ/i);  // OBJ loader sets "OBJ_Root", status typically shows Loaded or verts

@@ -7,67 +7,18 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const LOCAL_TEST_SMF = path.resolve(__dirname, '../mixamo_smf_baldguy.smf');
-const SMF_DIR = path.resolve(__dirname, '../../../../docs/references/old-src/datafiles/SMF');
-const BAD_GML_DIR_SEARCH = path.resolve(__dirname, '../../../../docs/references/old-src');
-const LOCAL_TEST_FBX = path.resolve(__dirname, '../test.fbx');
-
-let smfFilesCache: string[] | null = null;
-function getSmfFiles(): string[] {
-  if (smfFilesCache) return smfFilesCache;
-  smfFilesCache = fs.existsSync(SMF_DIR)
-    ? fs.readdirSync(SMF_DIR).filter(f => f.endsWith('.smf'))
-    : [];
-  return smfFilesCache;
-}
-
-let gmlFilesCache: string[] | null = null;
-function getGmlFiles(): string[] {
-  if (gmlFilesCache) return gmlFilesCache;
-  const gmls: string[] = [];
-  function findGml(dir: string): void {
-    try {
-      const items = fs.readdirSync(dir);
-      for (const item of items) {
-        const full = path.join(dir, item);
-        if (fs.statSync(full).isDirectory()) findGml(full);
-        else if (item.endsWith('.gml')) gmls.push(full);
-      }
-    } catch {
-      /* best-effort GML search; ignore missing or permission issues for test fixtures */
-    }
+const requireFixture = (relativePath: string): string => {
+  const fixturePath = path.resolve(__dirname, relativePath);
+  if (!fs.existsSync(fixturePath)) {
+    throw new Error(`Required Playwright fixture is missing: ${fixturePath}`);
   }
-  if (fs.existsSync(BAD_GML_DIR_SEARCH)) findGml(BAD_GML_DIR_SEARCH);
-  gmlFilesCache = gmls;
-  return gmlFilesCache;
-}
+  return fixturePath;
+};
 
-export let SAMPLE_SMF: string | null = null;
-if (fs.existsSync(LOCAL_TEST_SMF)) {
-  SAMPLE_SMF = LOCAL_TEST_SMF;
-} else if (getSmfFiles().length > 0) {
-  SAMPLE_SMF = path.join(SMF_DIR, getSmfFiles()[0]);
-}
-// Note: old-src datafiles/SMF/*.smf (Axe, Dragon, Dwarf, etc.) provide additional legacy SMF format coverage
-// for roundtrips + visual smoke when the primary local sample is not present. These exercise the same
-// import/export paths used for "recover old model files" scenarios.
-
-const BAD_GML = getGmlFiles().length > 0 ? getGmlFiles()[0] : null;
-export const BAD_INPUT_FOR_ERROR_TEST = (BAD_GML && fs.existsSync(BAD_GML))
-  ? BAD_GML
-  : path.resolve(__dirname, '../smoke.spec.ts');
-
-export let SAMPLE_FBX: string | null = null;
-if (fs.existsSync(LOCAL_TEST_FBX)) {
-  SAMPLE_FBX = LOCAL_TEST_FBX;
-}
-
-const LOCAL_TEST_OBJ = path.resolve(__dirname, '../test.obj');
-export let SAMPLE_OBJ: string | null = null;
-if (fs.existsSync(LOCAL_TEST_OBJ)) {
-  SAMPLE_OBJ = LOCAL_TEST_OBJ;
-}
-// Keep OBJ discovery fixture-local so unrelated old-source assets cannot make tests environment-dependent.
+export const SAMPLE_SMF = requireFixture('../mixamo_smf_baldguy.smf');
+export const SAMPLE_FBX = requireFixture('../test.fbx');
+export const SAMPLE_OBJ = requireFixture('../test.obj');
+export const BAD_INPUT_FOR_ERROR_TEST = requireFixture('../fixtures/invalid-model.gml');
 
 export interface SmfDesktopInfo {
   valid: boolean;

@@ -26,7 +26,6 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
 
   test('native open/read/export and save cancel stay explicit', async ({ page }) => {
     test.setTimeout(90000);
-    test.skip(!SAMPLE_SMF, 'No .smf sample available for native IPC mock coverage');
 
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
     const desktopInfo = simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes));
@@ -46,7 +45,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     const savePath = 'C:\\tmp\\exported_model.smf';
 
     await installTauriMock(page, {
-      openPath: SAMPLE_SMF!,
+      openPath: SAMPLE_SMF,
       savePath,
       sampleBytes,
       desktopInfo,
@@ -102,11 +101,9 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
   });
 
   test('native open uses read_binary for non-SMF desktop paths', async ({ page }) => {
-    test.skip(!SAMPLE_OBJ, 'No .obj sample available for non-SMF native IPC mock coverage');
-
     const sampleBytes = readSampleBytes(SAMPLE_OBJ);
     await installTauriMock(page, {
-      openPath: SAMPLE_OBJ!,
+      openPath: SAMPLE_OBJ,
       savePath: 'C:\\tmp\\exported_obj.obj',
       sampleBytes,
       desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array([])),
@@ -131,11 +128,9 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
   });
 
   test('newer browser load invalidates delayed native picker success and error', async ({ page }) => {
-    test.skip(!SAMPLE_SMF, 'No .smf sample available for native picker race coverage');
-
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
     await installTauriMock(page, {
-      openPath: SAMPLE_SMF!,
+      openPath: SAMPLE_SMF,
       savePath: 'C:\\tmp\\unused-picker-race.smf',
       sampleBytes,
       desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes)),
@@ -186,11 +181,9 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
   });
 
   test('newer browser result invalidates delayed native path read success and error', async ({ page }) => {
-    test.skip(!SAMPLE_SMF, 'No .smf sample available for native read race coverage');
-
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
     await installTauriMock(page, {
-      openPath: SAMPLE_SMF!,
+      openPath: SAMPLE_SMF,
       savePath: 'C:\\tmp\\unused-read-race.smf',
       sampleBytes,
       desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes)),
@@ -241,11 +234,10 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
 
   test('stale native export success and error cannot overwrite a newer load result', async ({ page }) => {
     test.setTimeout(90000);
-    test.skip(!SAMPLE_SMF, 'No .smf sample available for native export/load race coverage');
 
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
     await installTauriMock(page, {
-      openPath: SAMPLE_SMF!,
+      openPath: SAMPLE_SMF,
       savePath: 'C:\\tmp\\export-load-race.smf',
       sampleBytes,
       desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes)),
@@ -316,14 +308,13 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
 
   test('native rapid export clicks stay single-flight', async ({ page }) => {
     test.setTimeout(120000);
-    test.skip(!SAMPLE_SMF, 'No .smf sample available for native IPC mock coverage');
 
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
     const desktopInfo = simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes));
     const savePath = 'C:\\tmp\\exported_model.smf';
 
     await installTauriMock(page, {
-      openPath: SAMPLE_SMF!,
+      openPath: SAMPLE_SMF,
       savePath,
       sampleBytes,
       desktopInfo,
@@ -369,13 +360,11 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
   });
 
   test('native open cancel reports no selected file', async ({ page }) => {
-    test.skip(!SAMPLE_SMF, 'No .smf sample available for native IPC mock coverage');
-
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
     const desktopInfo = simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes));
 
     await installTauriMock(page, {
-      openPath: SAMPLE_SMF!,
+      openPath: SAMPLE_SMF,
       savePath: 'C:\\tmp\\unused.smf',
       sampleBytes,
       desktopInfo,
@@ -388,14 +377,12 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
   });
 
   test('native export cancel keeps edited skin state dirty status', async ({ page }) => {
-    test.skip(!SAMPLE_SMF, 'No .smf sample available for native IPC mock coverage');
-
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
     const desktopInfo = simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes));
     const savePath = 'C:\\tmp\\exported_model.smf';
 
     await installTauriMock(page, {
-      openPath: SAMPLE_SMF!,
+      openPath: SAMPLE_SMF,
       savePath,
       sampleBytes,
       desktopInfo,
@@ -467,14 +454,12 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
   });
 
   test('native export cancel keeps edited animation state dirty status', async ({ page }) => {
-    test.skip(!SAMPLE_SMF, 'No .smf sample available for native IPC mock coverage');
-
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
     const desktopInfo = simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes));
     const savePath = 'C:\\tmp\\exported_animation_model.smf';
 
     await installTauriMock(page, {
-      openPath: SAMPLE_SMF!,
+      openPath: SAMPLE_SMF,
       savePath,
       sampleBytes,
       desktopInfo,

@@ -4,67 +4,81 @@ Last reviewed: 2026-07-30
 
 ## Scope
 
-Repository-wide implementation pass covering the requested theme/Original experience, basic FBX support, SMF export and worker integrity, async ownership, context/document routing, incomplete logic, broken imports/exports, test ownership, bounded modularization, launcher reliability, dependency health, and consolidated progress documentation.
+This repository-wide integrity pass reviewed current-state documentation, `summary_bank.json`, research and progress records, source/import boundaries, incomplete logic markers, async ownership, recent Original-theme/viewport/texture/FBX work, deterministic fixtures, unit/browser/native coverage, dependencies, and branch hygiene.
 
-## Completion Matrix
+Current behavior is documented once in `APP_STATE.md`. Forward work is in `TODO.md`, recurring regression lessons are in `PITFALL_LEDGER.md`, and test ownership is in `source/frontend/tests/README.md`.
 
-### Theme system and Original SMF simplicity
+## Corrections Completed
 
-- What: Modern and Original SMF are complete typed theme definitions, and Original SMF now follows the preserved editor's measured frame instead of only borrowing its colors.
-- Why: returning users can adopt the new app through familiar compact hierarchy and interaction cues while both themes continue to share one editor state and feature set.
-- Where: `src/theme.ts`, `src/hooks/useAppTheme.ts`, `src/App.tsx`, `src/components/Toolbar.tsx`, `src/components/Outliner.tsx`, `src/components/TextureThumbnail.tsx`, `src/components/ThreeViewport.tsx`, `src/utils/viewportLayout.ts`, `src/utils/textureThumbnail.ts`, `src/index.css`, and `src/styles/themes/original.css`.
-- How: the registry owns labels, panel copy, camera scale, grid geometry, and preferred layout; persisted values are validated and storage failures are non-blocking. Reference-derived CSS restores the 136/128 px side shelves, 80 px top strip, fixed numbered tabs, dense square controls, and Animation-only upper timeline. Original applies quad view before load and after restoration. Quad cameras retain distinct directions/zoom around one shared pan target. The Submodels shelf downsamples source base-color maps, including raw SMF `DataTexture` pixels, into bounded thumbnails and retains material color as fallback. Theme-owned camera-aligned grids give Top, Front, and Side panes the old red-axis/dark-grid treatment without branching editor state. The Original timeline uses the old 128/16 px horizontal insets and 28/32 px ruler/band split; multiplier-derived sample divisions, green keys, red selection, and a playing-only blue playhead retain current scrub/insert/drag behavior.
-- Done when: switching is persisted, stale storage is rejected, Original is quad before and after model load, editor state survives switching, panning either a fixed or 3D pane moves the one shared focus target, texture-backed submodels display non-white source pixels, the desktop frame matches the preserved proportions, all quad panes carry the correct grid plane, the keyframe ruler and marker band align with the old source, the upper timeline stays within the center shelf, and the narrow layout has no horizontal overflow.
-- Result: done. Focused pan/texture/default units and browser regressions pass, both full-frame and focused keyframe comparisons have no open P0-P2 fidelity findings, the in-app browser shows real colored thumbnails with no warnings/errors, and desktop plus 390 px geometry checks pass.
+### Required fixtures now fail closed
 
-### FBX export support
+- **What:** Browser and Rust tests use exact committed SMF, FBX, OBJ, and invalid-input fixtures. Missing fixtures throw or fail instead of searching archived source and silently skipping.
+- **Why:** Three native tests previously resolved paths relative to the wrong directory, and browser helpers could fall back to deleted or unrelated files. Green output therefore did not always prove the intended real-file path.
+- **Where:** `source/frontend/tests/helpers/smoke-helpers.ts`, `source/frontend/tests/fixtures/invalid-model.gml`, and `source/src-tauri/src/main.rs`.
+- **How:** Centralize exact fixture resolution, remove recursive archive discovery and nullable fixture exports, and require the committed real SMF in all native positive-path tests.
+- **Done when:** Deleting or renaming a required fixture makes its owning suite fail with the exact missing path, while the committed fixtures exercise load/error/native parsing successfully.
+- **Result:** Done. The focused browser cases, 54-case suite, and all 9 Rust tests pass; native output confirms the real sample parsed as model 6, rig 38, animation 12.
 
-- What: the current runtime root and clips export as binary FBX 7500 through the vendored MIT `FBXExporter-threejs`; FBX sources also use it through the primary source-aware action.
-- Why: users need a basic recovery/interchange path without a disguised GLB fallback or silently malformed save.
-- Where: `src/loaders/fbx.ts`, its focused tests, export orchestration in `useLoadModel.ts`, and the generated skinned browser fixture.
-- How: exporter output must be a binary FBX with the expected version, then reparse through the app loader and pass finite transform/track plus representative mesh, skin, bone, and clip checks before the save bridge is called. Preview material state is restored for the entire async export operation.
-- Done when: static binary roundtrip, invalid-header/version rejection, dropped-clip rejection, representative skinned/animated preservation, download, and app re-import all pass.
-- Result: done. Six focused FBX tests, format browser coverage, full browser coverage, build, and type gates pass.
+### Viewport coverage and reset behavior were repaired
 
-### SMF worker, conversion, and export ownership
+- **What:** Restore four overwritten viewport layout tests and make camera reset fit the loaded model’s shared center and distance.
+- **Why:** Recent shared-pan coverage accidentally replaced existing layout, boundary, and high-DPI tests. The old hard-coded reset target also moved off-origin or large models away from their fitted view.
+- **Where:** `src/utils/viewportLayout.ts`, `src/utils/SimpleOrbit.ts`, `src/utils/viewportLayout.test.ts`, `src/components/ThreeViewport.tsx`, and `tests/shell-model.spec.ts`.
+- **How:** Add one finite model-fit distance helper, pass the current bounds center into reset, export the public viewport helpers, restore prior assertions, and extend the shared-camera browser case through reset.
+- **Done when:** Single/quad layout, tiny panes, pane boundaries, fractional coordinates, fixed-view focus, ortho pan, model-fit distance, copied reset target, and browser pan/reset behavior all pass.
+- **Result:** Done. The viewport suite now has 10 focused cases and the full browser suite proves ortho and perspective panes share one focus target through pan and reset.
 
-- What: SMF import/export runs through a typed worker; all save/check paths use one candidate authority; indexed runtime meshes convert to the flat triangle layout the writer actually serializes.
-- Why: untrusted worker messages, detached canonical buffers, stale async completions, or index metadata ignored by the serializer could corrupt output or block the UI.
-- Where: `src/workers/*`, `src/hooks/useSmfCodecTask.ts`, `src/hooks/smfExportCandidate.ts`, `src/loaders/smfData.ts`, `src/loaders/threeToSmf.ts`, and focused tests.
-- How: validate the operation and nested payload, deep-clone export buffers before transfer, permit synchronous fallback only at startup, terminate on abort/timeout/runtime failure, keep progress monotonic, and recheck the shared load/export intent before commit. A validated triangle vertex map expands every indexed position and optional attribute in lockstep; incomplete triangles, out-of-range indices, and incomplete skin tuples fail before serialization.
-- Done when: transfer ownership, cancellation, timeout, fallback, runtime rejection, progress, source immutability, candidate policy, indexed conversion, diagnostic roundtrip, 300,000-vertex responsiveness, and download/re-import paths all pass.
-- Result: done. The stricter worker guard exposed and led to the indexed-geometry fix rather than being weakened; 223 units and 54 browser cases now pass.
+### Theme grid ownership was extracted and tested
 
-### Modular boundaries and browser ownership
+- **What:** Move Original-theme camera-plane grid creation, visibility, and disposal out of the renderer component.
+- **Why:** This is a stable leaf boundary with explicit inputs and resource ownership; leaving it inline added unrelated context to a 3,000-line integration owner.
+- **Where:** `src/utils/themeViewportGrid.ts`, `src/utils/themeViewportGrid.test.ts`, `src/theme.ts`, `src/utils/index.ts`, and `src/components/ThreeViewport.tsx`.
+- **How:** Use a typed grid mode and viewport role, retain per-pane render visibility, and dispose all owned Three resources through the existing disposal authority.
+- **Done when:** Plane orientation, role visibility, disabled state, scene removal, geometry disposal, typecheck, strict visuals, and Original quad behavior pass.
+- **Result:** Done. Three focused units, all 234 frontend units, strict visuals, and full browser coverage pass.
 
-- What: extract proven pure/controller boundaries while keeping lifecycle owners intact, and replace the 3,201-line catch-all smoke spec with domain-owned suites.
-- Why: smaller context surfaces reduce coordination risk, but splitting renderer or hook state solely by line count would create more synchronization seams.
-- Where: `useLoadModel.ts` now composes codec-task, export-candidate, and editor-snapshot modules; `ThreeViewport.tsx` composes event contracts, interaction runtime, and TransformControls lifecycle modules. Browser coverage is split across shell/model, lifecycle, Rig, Animate, Skin, formats, native, and visual specs with shared helpers.
-- How: preserve public hook/component contracts, add pure boundary tests, keep renderer/requestAnimationFrame ownership in the viewport, keep integration state in the hook, make animation actions root-affine during replacement, preserve all 37 former smoke titles, move strict snapshots beside their owning specs, and make lint coverage fail when a probed file is missing.
-- Done when: app/test typechecks and build prove imports/exports, focused tests cover extracted boundaries, Playwright lists and runs 54 cases, strict baselines resolve at their new paths, and no old smoke path remains in current docs or scripts.
-- Result: done. `ThreeViewport.tsx` remains an explicit renderer/integration owner and `useLoadModel.ts` remains the editor integration owner; further splitting is evidence-triggered, not an active size-only task. The export/load race now also fails on cross-root `PropertyBinding` warnings.
+### Documentation and context routing were consolidated
 
-### Context, docs, launcher, and repository integrity
+- **What:** Replace the repeated implementation recap with a compact product/architecture contract, create executable backlog items, record the fixture pitfall, and split broad context groups.
+- **Why:** The old default orientation approached its 64 KiB budget and mixed completed progress with current state. Broad authoring/test routes increased irrelevant context and made later scaling harder.
+- **Where:** `docs/dev/APP_STATE.md`, `TODO.md`, `PITFALL_LEDGER.md`, `review.md`, `docs/user/README.md`, `source/frontend/tests/README.md`, and `summary_bank.json`.
+- **How:** Assign one document per knowledge type; create focused model-outliner, animation, and skin groups; archive compatibility/reference routes explicitly; and give every backlog item What/Why/Where/When/How/Subtasks/Done when/Verification.
+- **Done when:** Context validation has no warning, every explicit path resolves, default orientation remains comfortably under budget, completed work is absent from the active backlog, and current counts agree across docs.
+- **Result:** Done. Context reports 19 groups, 27.5 KiB default orientation, zero warnings, and 7/7 context-tool tests.
 
-- What: replace duplicated host-dependent context scripts, narrow `summary_bank.json`, consolidate current/progress docs, harden npm launch resolution, and close stale-path/test gaps.
-- Why: context drift, false-positive lint probes, inaccessible global npm shims, and redundant progress recaps make future work less reliable.
-- Where: `scripts/context-bank-*.mjs`, `scripts/generate-context.mjs`, `run.ps1`, `.tools/*`, `summary_bank.json`, launcher/Playwright configuration, `docs/dev/*`, and `source/frontend/tests/README.md`.
-- How: one Node library owns read/validate/expand/generate behavior; exact files and explicit globs are required; budgets, duplicates, unmatched paths, obsolete fields, stdout, binary metadata, and no-truncation behavior are tested. Sixteen narrow groups replace broad routing. The launcher and Playwright prefer npm beside the active Node executable. Current state, active work, latest review, and recurring pitfalls each retain one owner; the redundant GenEye recap was removed.
-- Done when: context validation has zero warnings, generator regressions pass, canonical runner tasks work without the profile npm shim, research inbox has no unprocessed item, current scans find no stale deleted paths or production TODO/FIXME/stub marker, dependency audit is clean, and no listener remains on port 5173.
-- Result: done. Context reports 16 groups, a 60.1 KiB default set, zero warnings, and 7/7 tool tests; dependency audit reports zero vulnerabilities; port 5173 is clear. The release audit also aligned launcher guidance with the current numbered-menu default and exposed the live `context` task in `run.ps1 -Task help`.
+## Audit Results
 
-## Backlog Decision
+- **Imports/exports:** A production dependency walk found no broken relative import. Files outside the runtime entry graph are intentional test support, ambient declarations, or the test-facing public utility barrel. App and test typechecks pass.
+- **Incomplete logic:** No production `TODO`, `FIXME`, placeholder, “not implemented,” stub, or unsafe TypeScript assertion was found. Remaining format limits are explicit product constraints in `APP_STATE.md`, not disguised shipped behavior.
+- **Async and run conditions:** Existing latest-intent, abort, timeout, monotonic-progress, single-flight save, root-replacement, and process-lifecycle tests all pass. No new race or unowned timer/listener was found.
+- **Research inbox:** No unprocessed research or drop-in review item exists; only inbox instructions remain.
+- **Redundancy:** Current state, backlog, latest evidence, pitfalls, and test ownership now each have one document owner. `summary_bank.json` routes focused feature/subsystem slices rather than serving as another progress log.
+- **Modularity:** `useLoadModel.ts` and `ThreeViewport.tsx` remain large integration owners. The pass extracted only the proven theme-grid leaf seam; the next bounded controller extractions are specified in `TODO.md` to avoid stale closures, circular imports, or double disposal.
+- **Dependency health:** The installed tree resolves on Windows and `npm audit --omit=optional` reports zero vulnerabilities. Reported unmet optional packages are platform or opt-in feature packages.
 
-No evidence-backed executable item remains from this pass. The large integration owners and documented format limits are explicit watch conditions, not incomplete shipped behavior. A new item belongs in `TODO.md` only when it can state what, why, where, when, how, subtasks, a measurable done condition, and verification.
+## Open Work
 
-## Verification
+The active priority order is maintained in `TODO.md`:
 
-- `pwsh -File run.ps1 -Task verify`: passed; context 16 groups/zero warnings plus 7/7 tool tests, lint coverage, lint, app/test typechecks, production-`any` guard, production build, vendor/lazy-worker chunk guards, 223/223 frontend units, and Rust cargo check.
-- 2026-07-30 Original-theme follow-up: the same full verification gate passed after the reference-derived layout/grid/framing changes; the in-app browser also verified Model, Skinning, and Animation states at 1610x953 plus the 390x844 responsive fallback with zero console warnings/errors.
-- Browser-only Playwright: 54/54 passed, including shared perspective/ortho focus panning, Original quad restoration and source-texture thumbnails, worker responsiveness, async ownership, persisted Original SMF desktop/narrow behavior, indexed GLB-to-SMF conversion, validated FBX download/re-import, workspace continuity, authoring tools, and visual flows.
-- `pwsh -File run.ps1 -Task test:visual-strict`: 2/2 passed at the new owning snapshot paths.
-- `pwsh -File run.ps1 -Task desktop-smoke`: release Tauri build passed, Rust native tests 9/9, and Tauri IPC Playwright tests 9/9.
-- `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings`: passed; the audit corrected three test-only Clippy findings.
-- `npm ls --all --omit=optional`: passed with the expected platform/feature optional packages omitted on Windows.
+1. Extract bounded animation and viewport-display controllers from the two integration owners.
+2. Add camera-aware direct manipulation in fixed panes.
+3. Add an independently authored or redistributable skinned, textured, animated FBX compatibility fixture.
+
+Each item is evidence-backed, split into bounded subtasks, and has an explicit completion and verification contract.
+
+## Verification Evidence
+
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed; context 19 groups/zero warnings plus 7/7 tool tests, lint coverage, ESLint, app/test typechecks, production-`any` guard, production build, entry/lazy-worker chunk guards, 234/234 frontend units, and Rust check.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: 54/54 passed with zero skipped across eight domain-owned browser suites.
+- Focused shared-camera reset and invalid-file regression slice: 2/2 passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:visual-strict`: 2/2 passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task desktop-smoke`: release Tauri build passed, Rust tests 9/9, and native IPC browser tests 9/9.
+- `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings`: passed.
+- `npm ls --all --omit=optional`: passed with expected Windows/platform and opt-in packages omitted.
 - `npm audit --omit=optional`: zero vulnerabilities.
-- Final hygiene: `git diff --check` has no whitespace error; current source has no incomplete-logic marker; deleted validator/smoke paths are absent from current docs/scripts; port 5173 is clear.
+
+## Non-blocking Toolchain Warnings
+
+- Node emits `DEP0205` while Playwright loads its TypeScript configuration. A traced run locates the call in Playwright 1.60.0’s internal `registerESMLoader`, not repository code. Recheck on the next Playwright update; do not suppress it globally.
+- Cargo can warn that the managed environment cannot canonicalize `C:\Users\jc816`; Rust check, Clippy, tests, and release build still complete successfully.
+- The native fallback test intentionally logs its mocked dialog-open warning while proving fallback behavior.

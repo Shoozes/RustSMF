@@ -40,6 +40,7 @@ import {
 import {
   DEFAULT_VIEWPORT_BOUNDS,
   getMouseForViewport,
+  getModelOrbitDistance,
   getOrthographicPanDelta,
   getViewportAt as findViewportAt,
   refreshOrthoCameras as updateOrthoCameras,
@@ -58,6 +59,12 @@ import {
   createViewportTransformControls,
   type ViewportTransformControlsController,
 } from '../utils/viewportTransformControls';
+import {
+  createThemeViewportGrids,
+  disposeThemeViewportGrids,
+  updateThemeViewportGridVisibility,
+  type ThemeViewportGrids,
+} from '../utils/themeViewportGrid';
 import {
   buildSkinnedWorldBrushIndex,
   querySkinBrushWorldIndex,
@@ -133,46 +140,7 @@ interface SkinPaintCollection {
   totalVertexCount: number;
 }
 
-interface ThemeViewportGrids {
-  floor: THREE.GridHelper;
-  front: THREE.GridHelper;
-  side: THREE.GridHelper;
-}
-
 const isMaterialWithMap = (material: THREE.Material): material is MaterialWithMap => 'map' in material;
-
-const createThemeGrid = (themeId: AppThemeId): THREE.GridHelper => {
-  const { viewportGrid } = getAppTheme(themeId);
-  return new THREE.GridHelper(
-    viewportGrid.size,
-    viewportGrid.divisions,
-    viewportGrid.centerLine,
-    viewportGrid.line,
-  );
-};
-
-const createThemeViewportGrids = (themeId: AppThemeId): ThemeViewportGrids => {
-  const floor = createThemeGrid(themeId);
-  floor.position.y = 0.001;
-  const front = createThemeGrid(themeId);
-  front.rotation.x = Math.PI / 2;
-  front.position.z = -0.001;
-  const side = createThemeGrid(themeId);
-  side.rotation.z = Math.PI / 2;
-  side.position.x = 0.001;
-  return { floor, front, side };
-};
-
-const disposeThemeViewportGrids = (
-  scene: THREE.Scene,
-  grids: ThemeViewportGrids | null,
-): void => {
-  if (!grids) return;
-  scene.remove(grids.floor, grids.front, grids.side);
-  disposeThreeObject(grids.floor);
-  disposeThreeObject(grids.front);
-  disposeThreeObject(grids.side);
-};
 
 const writeViewportCameraTelemetry = (
   canvas: HTMLCanvasElement | null,
@@ -1389,7 +1357,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         }
       }
       if (e.key.toLowerCase() === 'r') {
-        orbit.reset();
+        orbit.reset(
+          boundsRef.current.center,
+          getModelOrbitDistance(boundsRef.current),
+        );
         updateCameras();
       }
     };
@@ -2380,7 +2351,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
       updateSelectionOverlays(selectionOverlaysRef.current);
 
-      const specs = viewportRef.current.length
+      const specs: ViewportSpec[] = viewportRef.current.length
         ? viewportRef.current
         : [{
           camera,
@@ -2399,13 +2370,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       specs.forEach((spec) => {
         const grids = viewportGridRefs.current;
         if (grids) {
-          const showGrid = gridEnabledRef.current;
-          const cameraPlanes = viewportGridModeRef.current === 'camera-planes';
-          grids.floor.visible = showGrid && (
-            !cameraPlanes || spec.role === 'top' || spec.role === 'perspective'
+          updateThemeViewportGridVisibility(
+            grids,
+            gridEnabledRef.current,
+            viewportGridModeRef.current,
+            spec.role,
           );
-          grids.front.visible = showGrid && cameraPlanes && spec.role === 'front';
-          grids.side.visible = showGrid && cameraPlanes && spec.role === 'side';
         }
         renderer.setViewport(spec.x, spec.y, spec.width, spec.height);
         if (isQuad) {
@@ -2970,7 +2940,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     boundsRef.current = modelBounds;
     const orbit = orbitRef.current;
     orbit.target.copy(modelBounds.center);
-    orbit.distance = modelBounds.maxDim * 0.85 + 2;
+    orbit.distance = getModelOrbitDistance(modelBounds);
     orbit.yaw = 0.6;
     orbit.pitch = 0.35;
     applyViewportLayout(viewportLayout);

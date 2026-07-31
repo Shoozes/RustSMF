@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-07-25 (verified source-safe material previews, SMF worker ownership/lifecycle, root-affine animation playback, indexed-runtime triangle expansion, real TypeScript lint coverage, viewport resize state, texture export policy, SMF Rig/IK ownership, deform-index skin roundtrip, GLB/FBX recovery export, and DQ sign-equivalent diagnostics).
+Last reviewed: 2026-07-30 (added deterministic fail-closed fixture ownership to the existing material, SMF worker, animation, conversion, viewport, export, and lifecycle prevention records).
 
 ### Q: What pitfall are we preventing?
 
@@ -908,3 +908,34 @@ Last reviewed: 2026-07-25 (verified source-safe material previews, SMF worker ow
 **Relevance check:** Current. Any model replacement, clip edit, or playback-state refactor crosses this coordination boundary.
 
 **Next prevention step:** When a Three.js controller is recreated from React state, guard secondary effects by controller-owner identity and initialize the new controller from one complete current intent.
+
+### Q: What pitfall are we preventing?
+
+**What:** Required browser and Rust compatibility tests can report success while silently skipping their real model fixtures.
+
+**Context and constraints:** RustSMF commits one real SMF plus small FBX, OBJ, and invalid-input fixtures. These are verification dependencies, not optional local samples. Tests must resolve them independently of the caller's working directory and must fail clearly when a required fixture disappears.
+
+**Why it happened:** Rust test paths were written as if Cargo ran from the repository root, but `run.ps1` runs Cargo from `source/src-tauri`; every candidate therefore missed. The tests treated the miss as an allowed environment skip. The browser helper recursively searched the large archived old source and fell back to the deleted `smoke.spec.ts`, so fixture selection depended on unrelated archive contents and could also skip the invalid-input test.
+
+**Where:** `source/src-tauri/src/main.rs`, `source/frontend/tests/helpers/smoke-helpers.ts`, `source/frontend/tests/fixtures/invalid-model.gml`, `source/frontend/tests/README.md`, `summary_bank.json`, and `run.ps1 -Task desktop-smoke`.
+
+**Evidence:** Resolving the former Rust candidates from `source/src-tauri` returned no files. After correction, the focused Rust test prints and parses the committed sample as `model~6 rig~38 anim~12`; all 9 Rust tests pass. Playwright inventory imports the helper and lists all 54 cases with the committed invalid fixture present.
+
+**Developer story:** The suite count and green status looked healthy because the optional branches returned normally. Checking paths from the actual command working directory exposed that no real native sample had been read. The same audit found a deleted browser fallback. Converting both owners to explicit committed fixtures removed archive traversal, made startup faster and deterministic, and turned fixture deletion into an immediate actionable error.
+
+**How to catch it:** Run `cargo test --manifest-path source/src-tauri/Cargo.toml test_real_smf_binary_read_and_desktop_info_peek_smoke -- --nocapture` from the repository root and require a `Rust desktop peek smoke on ...mixamo_smf_baldguy.smf` line. Run `npm run test:e2e -- --list` from `source/frontend`; helper import must fail if any required browser fixture is absent.
+
+**Solutions tried:**
+1. `25/100` Search several relative sample paths and skip if none exist, result: green native tests with no real fixture execution.
+2. `42/100` Recursively discover archived GML/SMF files and retain a deleted test-file fallback, result: environment-dependent coverage and unnecessary startup IO.
+3. `97/100` Resolve exact committed fixtures from the browser helper location or Cargo manifest directory and fail at test registration/read time, result: deterministic coverage with explicit missing-fixture errors independent of the caller's working directory.
+
+**Current solution:** Browser fixture constants resolve only committed files through `requireFixture`. Rust tests anchor `../frontend/tests/mixamo_smf_baldguy.smf` to `CARGO_MANIFEST_DIR` and panic with the exact resolved path/error if it is unreadable. No archive scan, current-directory dependency, or optional real-sample branch remains.
+
+**Decision rationale:** A committed compatibility fixture is part of the test contract. Failing closed protects coverage and is cheaper than maintaining fallback discovery across unrelated historical assets.
+
+**Effectiveness:** `97/100`, durable. The fix is small, deterministic, faster, current-directory independent, and proved through both fixture-owning runners.
+
+**Relevance check:** Current. Any fixture move, suite split, or runner working-directory change can otherwise reintroduce false-green coverage.
+
+**Next prevention step:** Keep required fixture paths in the focused test/context routes and rerun both fixture-owning entry points whenever tests or runners move.

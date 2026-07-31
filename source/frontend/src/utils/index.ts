@@ -13,12 +13,20 @@ export type { DisposableSkeletonHelper, ModernSkeletonHelperOptions } from './mo
 export {
   DEFAULT_VIEWPORT_BOUNDS,
   getMouseForViewport,
+  getModelOrbitDistance,
+  getOrthographicPanDelta,
   getViewportAt,
   refreshOrthoCameras,
   refreshViewportSpecs,
 } from './viewportLayout';
 export type { ModelBounds, ViewportSpec, ViewportRole } from './viewportLayout';
 export { createSeqGuard } from './seqGuard';
+export {
+  createThemeViewportGrids,
+  disposeThemeViewportGrids,
+  updateThemeViewportGridVisibility,
+} from './themeViewportGrid';
+export type { ThemeViewportGrids } from './themeViewportGrid';
 export {
   MODEL_FORMAT_EXTENSIONS,
   SUPPORTED_MODEL_ACCEPT,

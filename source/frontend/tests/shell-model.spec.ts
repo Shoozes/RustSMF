@@ -1,5 +1,4 @@
 import { test, expect } from '@playwright/test';
-import fs from 'node:fs';
 import { BAD_INPUT_FOR_ERROR_TEST, SAMPLE_SMF, expectRenderedScreenshot, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { parseSelectedBone, escapeRegex } from './helpers/format-assertions';
@@ -156,14 +155,12 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
     });
 
   test('can load a real SMF sample and basic UI updates', async ({ page }) => {
-      test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
-
       await page.goto('/');
 
       // Use the persistent hidden input (added for e2e) – setInputFiles triggers onChange
       // which calls loadModel directly. This bypasses the dynamic openFile() for reliability.
       const input = page.getByTestId('model-file-input');
-      await input.setInputFiles(SAMPLE_SMF!);
+      await input.setInputFiles(SAMPLE_SMF);
 
       // Wait for load to finish (status changes and no longer says "Loading")
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
@@ -481,12 +478,10 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
     });
 
   test('viewport layout toggle works in single/quad modes', async ({ page }) => {
-      test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
-
       await page.goto('/');
 
       const input = page.getByTestId('model-file-input');
-      await input.setInputFiles(SAMPLE_SMF!);
+      await input.setInputFiles(SAMPLE_SMF);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('three-canvas')).toBeVisible();
 
@@ -626,10 +621,8 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
     });
 
   test('quad orthographic and perspective panes pan one shared focus target', async ({ page }) => {
-      test.skip(!SAMPLE_SMF, 'No .smf test model available for shared camera pan coverage');
-
       await page.goto('/');
-      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await setViewportLayout(page, 'quad');
 
@@ -672,18 +665,26 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await page.mouse.move(perspectiveX - 36, perspectiveY + 18);
       await page.mouse.up({ button: 'right' });
       await expectTargetChanged(afterOrtho);
+
+      await page.keyboard.press('r');
+      await expect.poll(async () => {
+        const reset = await readTarget();
+        return Math.hypot(
+          reset[0] - initial[0],
+          reset[1] - initial[1],
+          reset[2] - initial[2],
+        );
+      }).toBeLessThan(0.000001);
     });
 
   test('small viewport mode tabs switch deterministically after load', async ({ page }) => {
-      test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
-
       await page.setViewportSize({ width: 360, height: 720 });
       await page.goto('/');
 
       await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-layout', 'single');
       await expect(page.getByTestId('viewport-layout-quad')).toBeDisabled();
 
-      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('viewport-layout-quad')).toBeEnabled();
 
@@ -834,11 +835,6 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
     });
 
   test('handles invalid file load with error banner and status (error path)', async ({ page }) => {
-      // No longer strict skip: we provide a reliable fallback bad input (this .ts or .gml) so error UX is always exercised.
-      if (!BAD_INPUT_FOR_ERROR_TEST || !fs.existsSync(BAD_INPUT_FOR_ERROR_TEST)) {
-        test.skip(true, 'No bad input available for error path test (unexpected)');
-      }
-
       await page.goto('/');
 
       const input = page.getByTestId('model-file-input');
@@ -857,12 +853,10 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
 
   // Additional robustness: confirm bone status update works in load flow (covers raycast/list + new validated status path indirectly)
     test('bone selection updates status (select UX coverage)', async ({ page }) => {
-      test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
-
       await page.goto('/');
 
       const input = page.getByTestId('model-file-input');
-      await input.setInputFiles(SAMPLE_SMF!);
+      await input.setInputFiles(SAMPLE_SMF);
 
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/mixamo|Loaded|bones|clips|verts/i);
@@ -1001,10 +995,9 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
 
   // Viewport coverage for transform controls, weight preview, bone selection, and SMF load state.
     test('viewport features smoke', async ({ page }) => {
-      test.skip(!SAMPLE_SMF, 'No .smf test model available');
       await page.goto('/');
       const input = page.getByTestId('model-file-input');
-      await input.setInputFiles(SAMPLE_SMF!);
+      await input.setInputFiles(SAMPLE_SMF);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
 
       // Viewport basics

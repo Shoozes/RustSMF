@@ -81,6 +81,7 @@ export const APP_THEMES = [
 
 export type AppThemeId = typeof APP_THEMES[number]['id'];
 export type AppThemeDefinition = typeof APP_THEMES[number];
+export type ViewportGridMode = AppThemeDefinition['viewportGrid']['mode'];
 
 export const DEFAULT_APP_THEME: AppThemeId = 'modern';
 

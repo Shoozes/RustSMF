@@ -23,6 +23,13 @@ export const DEFAULT_VIEWPORT_BOUNDS: ModelBounds = {
   maxDim: 1,
 };
 
+export function getModelOrbitDistance(modelBounds: ModelBounds): number {
+  const maxDim = Number.isFinite(modelBounds.maxDim) && modelBounds.maxDim > 0
+    ? modelBounds.maxDim
+    : DEFAULT_VIEWPORT_BOUNDS.maxDim;
+  return maxDim * 0.85 + 2;
+}
+
 function refreshOrthoFrustum(
   camera: THREE.OrthographicCamera,
   modelBounds: ModelBounds,

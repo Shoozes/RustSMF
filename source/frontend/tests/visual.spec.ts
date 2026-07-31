@@ -121,8 +121,6 @@ test.describe('RustSMF visual confirmations', () => {
   }
 
   test('Original SMF theme restores the compact tool-shelf layout and persists', async ({ page }, testInfo) => {
-    test.skip(!SAMPLE_SMF, 'No .smf test model available for original-theme confirmation');
-
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/');
 
@@ -155,7 +153,7 @@ test.describe('RustSMF visual confirmations', () => {
     expect(tools.right).toBeLessThanOrEqual(viewport.left + 2);
     expect(viewport.right).toBeLessThanOrEqual(submodels.left + 2);
 
-    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-layout', 'quad');
     const texturePreviews = page.locator('.outliner-color[data-preview-kind="texture"]');
@@ -224,11 +222,9 @@ test.describe('RustSMF visual confirmations', () => {
   });
 
   test('loaded SMF visual state keeps viewport, timeline, and skeleton panels coherent', async ({ page }) => {
-    test.skip(!SAMPLE_SMF, 'No .smf test model available for loaded visual confirmation');
-
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/');
-    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
 
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips/i);
@@ -243,11 +239,9 @@ test.describe('RustSMF visual confirmations', () => {
   });
 
   test('SMF IK tool keeps its target, settings, and posed model visually legible', async ({ page }, testInfo) => {
-    test.skip(!SAMPLE_SMF, 'No .smf test model available for IK visual confirmation');
-
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/');
-    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await pausePlaybackIfRunning(page);
     await page.getByTestId('mode-tab-rig').click({ force: true });
@@ -275,11 +269,9 @@ test.describe('RustSMF visual confirmations', () => {
   });
 
   test('loaded Display menu and single Ortho view stay visually coherent', async ({ page }) => {
-    test.skip(!SAMPLE_SMF, 'No .smf test model available for loaded viewport controls confirmation');
-
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/');
-    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
 
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips/i);
@@ -304,11 +296,9 @@ test.describe('RustSMF visual confirmations', () => {
   });
 
   test('narrow quad pane labels stay clear of display overlay controls', async ({ page }) => {
-    test.skip(!SAMPLE_SMF, 'No .smf test model available for narrow quad overlay confirmation');
-
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
-    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
 
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips/i);

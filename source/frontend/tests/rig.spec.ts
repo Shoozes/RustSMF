@@ -58,10 +58,8 @@ test.describe('RustSMF rig flow (Chromium)', () => {
     });
 
   test('SMF rig policy gates indexed edits and bind reset is reversible', async ({ page }) => {
-      test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
-
       await page.goto('/');
-      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await pausePlaybackIfRunning(page);
       await page.getByTestId('mode-tab-rig').click({ force: true });
@@ -108,12 +106,10 @@ test.describe('RustSMF rig flow (Chromium)', () => {
     });
 
   test('endpoint drag works in rig mode across single and quad layouts', async ({ page }) => {
-      test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
-
       await page.goto('/');
 
       const input = page.getByTestId('model-file-input');
-      await input.setInputFiles(SAMPLE_SMF!);
+      await input.setInputFiles(SAMPLE_SMF);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips|verts/i);
 
@@ -182,10 +178,8 @@ test.describe('RustSMF rig flow (Chromium)', () => {
     });
 
   test('SMF IK pose drag is constrained, cancelable, atomic, and export-safe', async ({ page }) => {
-      test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
-
       await page.goto('/');
-      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await pausePlaybackIfRunning(page);
       await page.getByTestId('mode-tab-rig').click({ force: true });

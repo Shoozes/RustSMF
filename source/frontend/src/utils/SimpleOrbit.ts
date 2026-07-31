@@ -108,11 +108,15 @@ export class SimpleOrbit {
     };
   }
 
-  reset() {
+  reset(target?: THREE.Vector3, distance = 4.5) {
     this.yaw = 0.6;
     this.pitch = 0.4;
-    this.distance = 4.5;
-    this.target.set(0, 0.8, 0);
+    this.distance = Number.isFinite(distance) && distance > 0 ? distance : 4.5;
+    if (target) {
+      this.target.copy(target);
+    } else {
+      this.target.set(0, 0.8, 0);
+    }
   }
 
   getPosition(): THREE.Vector3 {

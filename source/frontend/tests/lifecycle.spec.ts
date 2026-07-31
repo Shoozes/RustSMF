@@ -17,13 +17,11 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
   });
 
   test('latest async load wins between file input and drop', async ({ page }) => {
-      test.skip(!SAMPLE_SMF || !SAMPLE_FBX, 'Both .smf and .fbx fixtures are required for async overlap coverage.');
-
       await page.goto('/');
 
       const input = page.getByTestId('model-file-input');
       const inputDropTarget = page.getByTestId('viewport-container');
-      const fbxBase64 = fileToBase64(SAMPLE_FBX!);
+      const fbxBase64 = fileToBase64(SAMPLE_FBX);
       const dropFileSpec: SyntheticDropFile = {
         name: 'sample-fbx.fbx',
         mimeType: 'application/x-fbx',
@@ -31,12 +29,12 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       };
 
       await withBrowserFileArrayBufferDelay(page, {
-        delayedFileName: path.basename(SAMPLE_SMF!),
+        delayedFileName: path.basename(SAMPLE_SMF),
         delayMs: 450,
       });
 
       try {
-        await input.setInputFiles(SAMPLE_SMF!);
+        await input.setInputFiles(SAMPLE_SMF);
         await dispatchSyntheticDrop(inputDropTarget, dropFileSpec);
 
         await expect(page.getByTestId('status-text')).toContainText('Loaded FBX', { timeout: 15000 });
@@ -149,14 +147,12 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
     });
 
   test('skin dirty state resets when stale overlapped load wins from drop', async ({ page }) => {
-      test.skip(!SAMPLE_SMF || !SAMPLE_FBX, 'Both .smf and .fbx fixtures are required for async overlap coverage with skin state.');
-
       await page.goto('/');
 
       const skinnedFixtureInput = await createSkinnedGlbFixtureInput();
       const input = page.getByTestId('model-file-input');
       const inputDropTarget = page.getByTestId('viewport-container');
-      const fbxBase64 = fileToBase64(SAMPLE_FBX!);
+      const fbxBase64 = fileToBase64(SAMPLE_FBX);
       const dropFileSpec: SyntheticDropFile = {
         name: 'sample-fbx.fbx',
         mimeType: 'application/x-fbx',
@@ -197,12 +193,12 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
 
       await withBrowserFileArrayBufferDelay(page, {
-        delayedFileName: path.basename(SAMPLE_SMF!),
+        delayedFileName: path.basename(SAMPLE_SMF),
         delayMs: 450,
       });
 
       try {
-        await input.setInputFiles(SAMPLE_SMF!);
+        await input.setInputFiles(SAMPLE_SMF);
         await dispatchSyntheticDrop(inputDropTarget, dropFileSpec);
 
         await expect(page.getByTestId('status-text')).toContainText('Loaded FBX', { timeout: 15000 });
@@ -216,13 +212,11 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
     });
 
   test('pose edit dirty state resets when stale overlapped load wins from drop', async ({ page }) => {
-      test.skip(!SAMPLE_SMF || !SAMPLE_FBX, 'Both .smf and .fbx fixtures are required for async overlap coverage.');
-
       await page.goto('/');
 
       const input = page.getByTestId('model-file-input');
       const inputDropTarget = page.getByTestId('viewport-container');
-      const fbxBase64 = fileToBase64(SAMPLE_FBX!);
+      const fbxBase64 = fileToBase64(SAMPLE_FBX);
       const dropFileSpec: SyntheticDropFile = {
         name: 'sample-fbx.fbx',
         mimeType: 'application/x-fbx',
@@ -246,12 +240,12 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
       await withBrowserFileArrayBufferDelay(page, {
-        delayedFileName: path.basename(SAMPLE_SMF!),
+        delayedFileName: path.basename(SAMPLE_SMF),
         delayMs: 450,
       });
 
       try {
-        await input.setInputFiles(SAMPLE_SMF!);
+        await input.setInputFiles(SAMPLE_SMF);
         await dispatchSyntheticDrop(inputDropTarget, dropFileSpec);
 
         await expect(page.getByTestId('status-text')).toContainText('Loaded FBX', { timeout: 15000 });

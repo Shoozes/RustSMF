@@ -248,15 +248,13 @@ test.describe('RustSMF animation flow (Chromium)', () => {
     });
 
   test('timeline scrub, clip change, loading overlay, and error banner (extended controls + UX)', async ({ page }) => {
-      test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
-
       await page.goto('/');
 
       // Error banner element should be in DOM (even if not shown)
       await expect(page.getByTestId('error-banner')).toBeAttached();
 
       const input = page.getByTestId('model-file-input');
-      await input.setInputFiles(SAMPLE_SMF!);
+      await input.setInputFiles(SAMPLE_SMF);
 
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/mixamo|Loaded|bones|clips|verts/i);

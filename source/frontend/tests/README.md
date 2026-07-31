@@ -39,9 +39,15 @@ The 37 tests formerly in `smoke.spec.ts` retain their titles across the six feat
 
 ## Unit Coverage
 
-Node tests under `src/**/*.test.ts` cover theme registry/persistence, SMF binary and DQ fidelity, worker protocol and ownership, indexed Three-to-SMF triangle expansion, FBX and GLB pre-save reparse validation, export-candidate policy, editor snapshots/history, viewport listener disposal/routing/layout/shared-focus pan math, Rig/IK/Skin/Animate helpers, material isolation, raw texture thumbnail sampling, and resource disposal.
+The 234 Node tests under `src/**/*.test.ts` cover theme registry/persistence, SMF binary and DQ fidelity, worker protocol and ownership, indexed Three-to-SMF triangle expansion, FBX and GLB pre-save reparse validation, export-candidate policy, editor snapshots/history, viewport listener disposal/routing/layout/shared-focus pan/reset math, theme-grid plane ownership/disposal, Rig/IK/Skin/Animate helpers, material isolation, raw texture thumbnail sampling, and resource disposal.
 
 The generated indexed GLB is a required compatibility shape: conversion must duplicate indexed vertex attributes into complete SMF triangle soup before the worker guard accepts it. Missing optional normals/UVs/tangents receive correctly sized zero arrays; incomplete triangle or skin layouts fail preflight.
+
+## Fixture Policy
+
+`mixamo_smf_baldguy.smf`, `test.fbx`, `test.obj`, and `fixtures/invalid-model.gml` are committed verification dependencies. `helpers/smoke-helpers.ts` resolves them directly and throws an actionable error during test registration if one is missing; it does not scan archived old-source assets or silently fall back to a deleted spec.
+
+The Rust native tests anchor the same committed SMF to `CARGO_MANIFEST_DIR` and fail closed when it is unavailable, independent of the caller's working directory. `desktop-smoke` must therefore prove a real binary parse, not only report a green optional-sample branch.
 
 ## Visual Policy
 

@@ -129,7 +129,7 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
 // Roundtrip tests for SMF export fidelity (core to conversion).
 // Unit: data-driven roundtrip on minimal (no DOM deps).
 // + Real sample cycle using reference .smf files (fs in node test env).
-// E2E in smoke.spec.ts for visuals + full UI flows.
+// Domain-owned Playwright specs cover visuals and full UI flows.
 import { exportSMFToBuffer, importSMF, buildThreeScene, ImportedSmf } from './smf';
 import { buildRigHierarchy } from './smfRig';
 import { makeBoneLabel } from '../utils/boneLabels';
