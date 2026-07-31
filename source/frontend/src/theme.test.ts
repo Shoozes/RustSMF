@@ -27,7 +27,16 @@ test('theme registry exposes guarded modern and original themes', () => {
   assert.equal(isAppThemeId('original'), true);
   assert.equal(isAppThemeId('classic'), false);
   assert.equal(getAppTheme('original').preferredViewportLayout, 'quad');
+  assert.equal(getAppTheme('original').viewportCameraZoom, 1.2);
   assert.equal(getAppTheme('original').viewportBackground, 0x1b1b1b);
+  assert.deepEqual(getAppTheme('original').viewportGrid, {
+    mode: 'camera-planes',
+    size: 60,
+    divisions: 60,
+    centerLine: 0xa82c2c,
+    line: 0x101010,
+  });
+  assert.equal(getAppTheme('original').chromeLabel, 'Settings');
   assert.equal(getAppTheme('original').workspaceLabels.rig, 'Rigging [2]');
   assert.equal(getAppTheme('original').panelTitles.outliner, 'Submodels');
 });
@@ -37,6 +46,11 @@ test('every registered theme owns complete workspace and panel copy', () => {
   for (const theme of APP_THEMES) {
     assert.deepEqual(Object.keys(theme.workspaceLabels), modeKeys);
     assert.ok(Object.values(theme.workspaceLabels).every((label) => label.trim().length > 0));
+    assert.ok(theme.chromeLabel.trim().length > 0);
+    assert.ok(theme.viewportCameraZoom > 0);
+    assert.ok(['floor', 'camera-planes'].includes(theme.viewportGrid.mode));
+    assert.ok(theme.viewportGrid.size > 0);
+    assert.ok(theme.viewportGrid.divisions > 0);
     assert.ok(theme.panelTitles.outliner.trim().length > 0);
     assert.ok(theme.panelTitles.inspector.trim().length > 0);
   }

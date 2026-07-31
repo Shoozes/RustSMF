@@ -272,7 +272,7 @@ export default function App() {
   const handleThemeChange = useCallback((nextThemeId: AppThemeId) => {
     const nextTheme = getAppTheme(nextThemeId);
     setThemeId(nextThemeId);
-    if (hasModel && viewportLayout === theme.preferredViewportLayout) {
+    if (!hasModel || viewportLayout === theme.preferredViewportLayout) {
       setViewportLayout(nextTheme.preferredViewportLayout);
     }
   }, [
@@ -716,10 +716,15 @@ export default function App() {
   ]);
 
   useEffect(() => {
-    if (!hasModel && viewportLayout !== 'single') {
-      setViewportLayout('single');
+    if (!hasModel && viewportLayout !== theme.preferredViewportLayout) {
+      setViewportLayout(theme.preferredViewportLayout);
     }
-  }, [hasModel, setViewportLayout, viewportLayout]);
+  }, [
+    hasModel,
+    setViewportLayout,
+    theme.preferredViewportLayout,
+    viewportLayout,
+  ]);
 
   useEffect(() => {
     const hadModel = hadModelRef.current;
@@ -962,6 +967,8 @@ export default function App() {
           onScrub={onScrub}
           onSpeedChange={setSpeed}
           playbackSpeed={playback.playbackSpeed}
+          sampleFrameMultiplier={animationClipMetadata.sampleFrameMultiplier}
+          sampleFrameKeyCount={animationTimelineSummary.keyframeTimes.length}
           keyframeTimes={timelineKeyframeTimes}
           draggableKeyframeTimes={animationAuthoredKeyTimes}
           selectedKeyTime={animationSelectedKeyTime}

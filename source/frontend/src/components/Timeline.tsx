@@ -9,6 +9,8 @@ interface TimelineProps {
   onScrub: (t: number) => void;
   onSpeedChange: (s: number) => void;
   playbackSpeed: number;
+  sampleFrameMultiplier?: number;
+  sampleFrameKeyCount?: number;
   keyframeTimes?: number[];
   draggableKeyframeTimes?: number[];
   selectedKeyTime?: number | null;
@@ -25,6 +27,10 @@ interface DragState {
   moved: boolean;
 }
 
+type TimelineLaneStyle = React.CSSProperties & {
+  '--timeline-sample-frame-count': number;
+};
+
 const Timeline: React.FC<TimelineProps> = ({
   isPlaying,
   currentTime,
@@ -34,6 +40,8 @@ const Timeline: React.FC<TimelineProps> = ({
   onScrub,
   onSpeedChange,
   playbackSpeed,
+  sampleFrameMultiplier = 1,
+  sampleFrameKeyCount,
   keyframeTimes = [],
   draggableKeyframeTimes = [],
   selectedKeyTime = null,
@@ -44,6 +52,21 @@ const Timeline: React.FC<TimelineProps> = ({
 }) => {
   const safeDuration = duration || 1;
   const markerTimes = keyframeTimes.slice(0, 80);
+  const normalizedSampleMultiplier = Number.isFinite(sampleFrameMultiplier)
+    ? Math.max(1, Math.min(255, Math.round(sampleFrameMultiplier)))
+    : 1;
+  const requestedSampleKeyCount = sampleFrameKeyCount ?? markerTimes.length;
+  const normalizedSampleKeyCount = Number.isFinite(requestedSampleKeyCount)
+    ? Math.max(1, Math.floor(requestedSampleKeyCount))
+    : 1;
+  const sampleFrameCount = Math.min(512, normalizedSampleKeyCount * normalizedSampleMultiplier);
+  const laneStyle: TimelineLaneStyle = {
+    '--timeline-sample-frame-count': sampleFrameCount,
+  };
+  const rulerTicks = Array.from({ length: 10 }, (_, index) => ({
+    label: index === 0 ? '0' : (index / 10).toFixed(2),
+    position: index * 10,
+  }));
   const laneRef = React.useRef<HTMLDivElement | null>(null);
   const dragRef = React.useRef<DragState | null>(null);
   const suppressMarkerClickRef = React.useRef(false);
@@ -119,13 +142,26 @@ const Timeline: React.FC<TimelineProps> = ({
           <option value="2">2x</option>
         </select>
       </div>
+      <div className="timeline-ruler" aria-hidden="true">
+        {rulerTicks.map((tick) => (
+          <span
+            key={tick.position}
+            className="timeline-ruler-tick"
+            style={{ left: `${tick.position}%` }}
+          >
+            {tick.label}
+          </span>
+        ))}
+      </div>
       <div
         ref={laneRef}
         className="timeline-keyframe-lane"
         data-testid="timeline-keyframe-lane"
         data-keyframe-count={keyframeTimes.length}
+        data-sample-frame-count={sampleFrameCount}
         aria-label="Animation keyframe lane"
         role="presentation"
+        style={laneStyle}
         onClick={(event) => {
           if (disabled) return;
           const time = resolveLaneTime(event.clientX);
@@ -143,11 +179,16 @@ const Timeline: React.FC<TimelineProps> = ({
           className="timeline-keyframe-progress"
           style={{ width: `${Math.min(100, Math.max(0, (currentTime / safeDuration) * 100))}%` }}
         />
+        <div
+          className="timeline-playhead"
+          data-active={isPlaying ? 'true' : 'false'}
+          style={{ left: `${Math.min(100, Math.max(0, (currentTime / safeDuration) * 100))}%` }}
+        />
         {markerTimes.map((time, index) => (
           <button
             key={`${time}-${index}`}
             type="button"
-            className={`timeline-keyframe-marker ${selectedKeyTime !== null && Math.abs(selectedKeyTime - time) < 0.0001 ? 'timeline-keyframe-marker-selected' : ''}`}
+            className={`timeline-keyframe-marker ${index === 0 && time <= 0.0001 ? 'timeline-keyframe-marker-start' : ''} ${selectedKeyTime !== null && Math.abs(selectedKeyTime - time) < 0.0001 ? 'timeline-keyframe-marker-selected' : ''}`}
             data-testid={`timeline-keyframe-marker-${index}`}
             data-draggable-keyframe={isDraggableTime(time) ? 'true' : 'false'}
             style={{ left: `${Math.min(100, Math.max(0, (time / safeDuration) * 100))}%` }}

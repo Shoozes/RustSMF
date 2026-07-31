@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ModelOutlinerItem } from '../utils/modelOutliner';
+import TextureThumbnail from './TextureThumbnail';
 
 interface OutlinerProps {
   title?: string;
@@ -106,10 +107,9 @@ const Outliner: React.FC<OutlinerProps> = ({
                   })}
                   title={`${getKindLabel(item.kind)}: ${item.name}`}
                 >
-                  <span
-                    className="outliner-color"
-                    aria-hidden="true"
-                    style={{ background: item.color ?? '#64748b' }}
+                  <TextureThumbnail
+                    color={item.color ?? '#64748b'}
+                    texture={item.texture}
                   />
                   <span className="outliner-name">{item.name}</span>
                   <span className="outliner-kind">{getKindLabel(item.kind)}</span>

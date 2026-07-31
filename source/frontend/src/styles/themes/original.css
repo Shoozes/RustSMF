@@ -14,16 +14,17 @@
   --ui-accent: #417c3d;
   --ui-accent-border: #d7d443;
   --ui-viewport-background: #1b1b1b;
-  font-family: Tahoma, "Segoe UI", Arial, sans-serif;
+  position: relative;
+  font-family: Arial, Tahoma, "Segoe UI", sans-serif;
 }
 
 .app-shell[data-theme="original"] .toolbar {
   grid-template-areas:
     "brand workspace history"
     "file viewport theme";
-  grid-template-columns: 216px minmax(0, 1fr) 196px;
-  grid-template-rows: 20px 29px;
-  min-height: 49px;
+  grid-template-columns: 136px minmax(0, 1fr) 128px;
+  grid-template-rows: 20px 60px;
+  min-height: 80px;
   gap: 0;
   padding: 0;
   border-bottom-color: #111;
@@ -37,7 +38,7 @@
 .app-shell[data-theme="original"] .toolbar-brand {
   grid-area: brand;
   align-self: stretch;
-  padding: 2px 5px;
+  padding: 2px 4px;
   border-right: 1px solid #191919;
   background: #333;
   font-size: 10px;
@@ -46,9 +47,12 @@
 
 .app-shell[data-theme="original"] .toolbar-file-actions {
   grid-area: file;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(3, 18px);
   align-self: stretch;
-  gap: 1px;
-  padding: 3px 4px;
+  gap: 1px 2px;
+  padding: 2px 3px 3px;
   border-top: 1px solid #202020;
   border-right: 1px solid #191919;
   background: #414141;
@@ -59,7 +63,7 @@
   align-self: stretch;
   justify-content: flex-start;
   gap: 1px;
-  padding: 1px 4px;
+  padding: 1px 3px;
   border-left: 1px solid #191919;
   background: #333;
 }
@@ -73,8 +77,8 @@
 
 .app-shell[data-theme="original"] .mode-tablist {
   display: grid;
-  grid-template-columns: repeat(5, minmax(72px, 126px));
-  width: 100%;
+  grid-template-columns: repeat(5, 126px);
+  width: max-content;
   max-width: none;
   height: 20px;
   gap: 2px;
@@ -112,10 +116,12 @@
 .app-shell[data-theme="original"] .toolbar-viewport {
   grid-area: viewport;
   align-self: stretch;
+  align-content: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 2px;
   min-width: 0;
-  padding: 3px 4px;
+  padding: 4px;
   background: #414141;
 }
 
@@ -151,8 +157,10 @@
 }
 
 .app-shell[data-theme="original"] .toolbar-file-actions .toolbar-action {
-  flex: 1 1 0;
+  width: 100%;
+  height: 18px;
   padding: 0 2px;
+  line-height: 16px;
 }
 
 .app-shell[data-theme="original"] .layout-btn-active {
@@ -178,10 +186,14 @@
 
 .app-shell[data-theme="original"] .theme-switcher {
   grid-area: theme;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
   align-self: stretch;
-  justify-content: flex-start;
-  gap: 4px;
-  padding: 3px 5px;
+  justify-content: stretch;
+  gap: 2px;
+  min-width: 0;
+  padding: 3px;
   border-top: 1px solid #202020;
   border-left: 1px solid #191919;
   background: #414141;
@@ -192,8 +204,8 @@
 }
 
 .app-shell[data-theme="original"] .theme-select {
+  width: 100%;
   min-width: 0;
-  flex: 1;
   height: 19px;
   border: 1px solid #191919;
   border-radius: 0;
@@ -219,14 +231,16 @@
 
 .app-shell[data-theme="original"] .inspector-stack {
   order: 0;
-  flex: 0 0 216px;
-  width: 216px;
+  flex: 0 0 136px;
+  width: 136px;
   gap: 0;
   box-sizing: border-box;
   border-right: 1px solid #181818;
   border-left: 0;
   padding: 0;
   background: #414141;
+  overflow-x: hidden;
+  overflow-y: auto;
   scrollbar-color: #696969 #363636;
   scrollbar-width: thin;
 }
@@ -241,14 +255,16 @@
 
 .app-shell[data-theme="original"] .sidebar {
   order: 2;
-  flex: 0 0 196px;
-  width: 196px;
+  flex: 0 0 128px;
+  width: 128px;
   box-sizing: border-box;
   border-right: 0;
   border-left: 1px solid #181818;
-  padding: 4px;
+  padding: 3px;
   background: #414141;
   font-size: 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
   scrollbar-color: #696969 #363636;
   scrollbar-width: thin;
 }
@@ -257,14 +273,16 @@
   width: auto;
   border: 0;
   border-bottom: 1px solid #202020;
-  padding: 4px;
+  padding: 3px;
   background: #414141;
   font-size: 10px;
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .app-shell[data-theme="original"] .panel-title {
   margin: 0 0 3px;
-  padding: 1px 3px;
+  padding: 1px 2px;
   background: #303030;
   color: #fff;
   font-size: 10px;
@@ -277,11 +295,13 @@
 .app-shell[data-theme="original"] button {
   border-color: #1b1b1b;
   border-radius: 1px;
-  padding: 1px 4px;
+  min-height: 17px;
+  padding: 0 3px;
   background: #5a5a5e;
   color: #fff;
   font-family: inherit;
   font-size: 10px;
+  line-height: 15px;
 }
 
 .app-shell[data-theme="original"] button:hover {
@@ -312,12 +332,13 @@
 }
 
 .app-shell[data-theme="original"] .outliner-actions {
+  grid-template-columns: minmax(0, 1fr);
   gap: 1px;
   margin-top: 4px;
 }
 
 .app-shell[data-theme="original"] .outliner-actions button {
-  height: 19px;
+  height: 17px;
   padding: 0 3px;
   border-color: #1b1b1b;
   background: #5a5a5e;
@@ -337,8 +358,9 @@
 }
 
 .app-shell[data-theme="original"] .outliner-item {
-  min-height: 21px;
-  gap: 3px;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  min-height: 22px;
+  gap: 1px;
   border-radius: 0;
   padding: 1px 2px 1px 4px;
   background: #4b4b4b;
@@ -352,9 +374,49 @@
 .app-shell[data-theme="original"] .outliner-name-btn,
 .app-shell[data-theme="original"] .outliner-scene-btn,
 .app-shell[data-theme="original"] .outliner-visibility-btn {
-  height: 19px;
+  height: 17px;
   border-radius: 0;
   font-size: 9px;
+}
+
+.app-shell[data-theme="original"] .outliner-name-btn {
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 2px;
+  height: 20px;
+}
+
+.app-shell[data-theme="original"] .outliner-color {
+  width: 22px;
+  height: 18px;
+  border-color: #222;
+  border-radius: 0;
+}
+
+.app-shell[data-theme="original"] .outliner-kind,
+.app-shell[data-theme="original"] .outliner-metrics,
+.app-shell[data-theme="original"] .inspector-help-copy {
+  display: none;
+}
+
+.app-shell[data-theme="original"] .outliner-visibility-btn {
+  width: 24px;
+}
+
+.app-shell[data-theme="original"] .inspector-stack button,
+.app-shell[data-theme="original"] .sidebar button {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-shell[data-theme="original"] .inspector-stack ul,
+.app-shell[data-theme="original"] .inspector-stack li,
+.app-shell[data-theme="original"] .outliner-item {
+  min-width: 0;
+}
+
+.app-shell[data-theme="original"] .inspector-stack > .inspector:first-child > .panel-title:first-child {
+  display: none;
 }
 
 .app-shell[data-theme="original"] .animate-summary-grid > div,
@@ -365,12 +427,20 @@
 }
 
 .app-shell[data-theme="original"] .timeline {
-  order: 2;
-  min-height: 70px;
+  position: absolute;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  grid-template-rows: 28px 32px;
+  top: 20px;
+  right: 128px;
+  left: 136px;
+  height: 60px;
+  min-height: 0;
   box-sizing: border-box;
   border-top: 0;
   border-bottom: 1px solid #171717;
-  padding: 4px 200px 4px 220px;
+  padding: 0;
   background: #393939;
   font-size: 10px;
 }
@@ -380,34 +450,135 @@
 }
 
 .app-shell[data-theme="original"] .timeline-controls {
-  grid-template-columns: auto auto minmax(120px, 1fr) 104px 56px;
-  gap: 3px;
+  grid-column: 1;
+  grid-row: 1 / 3;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: 26px 17px 17px;
+  gap: 0;
+  align-items: stretch;
+  border-right: 1px solid #171717;
+  background: #414141;
+}
+
+.app-shell[data-theme="original"] .timeline-controls::before {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  box-sizing: border-box;
+  padding: 1px 2px;
+  background: #303030;
+  color: #fff;
+  content: "Timeline";
+  line-height: 15px;
+}
+
+.app-shell[data-theme="original"] .timeline-controls > button {
+  grid-row: 3;
+}
+
+.app-shell[data-theme="original"] .timeline-scrub,
+.app-shell[data-theme="original"] .timeline-time {
+  display: none;
 }
 
 .app-shell[data-theme="original"] .timeline-controls button,
 .app-shell[data-theme="original"] .timeline-speed-select {
-  height: 21px;
+  grid-row: 3;
+  width: 100%;
+  height: 17px;
+  min-width: 0;
+  padding: 0 1px;
   border-radius: 0;
+  font-size: 9px;
+}
+
+.app-shell[data-theme="original"] .timeline-speed-select {
+  grid-column: 3;
+  border-color: #1b1b1b;
+  background: #5a5a5e;
+  color: #fff;
+}
+
+.app-shell[data-theme="original"] .timeline-ruler {
+  position: relative;
+  display: block;
+  grid-column: 2;
+  grid-row: 1;
+  overflow: visible;
+  margin-right: 16px;
+  border-bottom: 1px solid #202020;
+  background: #414141;
+}
+
+.app-shell[data-theme="original"] .timeline-ruler-tick {
+  position: absolute;
+  bottom: 3px;
+  color: #fff;
   font-size: 10px;
+  line-height: 12px;
+  transform: translateX(-50%);
 }
 
 .app-shell[data-theme="original"] .timeline-keyframe-lane {
-  height: 17px;
-  margin-top: 3px;
-  border-color: #1a1a1a;
+  grid-column: 2;
+  grid-row: 2;
+  height: 32px;
+  margin-top: 0;
+  margin-right: 16px;
+  border: 1px solid #111;
   border-radius: 0;
-  background: #202020;
+  background-color: #c8c8c8;
+  background-image:
+    linear-gradient(to right, transparent calc(100% - 3px), #686868 calc(100% - 3px)),
+    linear-gradient(to right, transparent calc(100% - 1px), #898989 calc(100% - 1px)),
+    linear-gradient(to right, rgba(30, 55, 224, 0.72) 0 2px, #050505 2px 3px, transparent 3px);
+  background-size:
+    10% 100%,
+    1% 100%,
+    calc(100% / var(--timeline-sample-frame-count)) 100%;
+}
+
+.app-shell[data-theme="original"] .timeline-keyframe-progress {
+  display: none;
+}
+
+.app-shell[data-theme="original"] .timeline-playhead[data-active="true"] {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  bottom: 0;
+  display: block;
+  width: 6px;
+  border: 1px solid #050505;
+  background: #2847df;
+  transform: translateX(-50%);
 }
 
 .app-shell[data-theme="original"] .timeline-keyframe-marker {
-  top: 1px;
-  height: 13px;
+  z-index: 2;
+  top: 0;
+  width: 10px;
+  min-width: 10px;
+  height: 30px;
+  border: 1px solid #050505;
   border-radius: 0;
+  background: #079b18;
+}
+
+.app-shell[data-theme="original"] .timeline-keyframe-marker:hover {
+  background: #12bb28;
+}
+
+.app-shell[data-theme="original"] .timeline-keyframe-marker-start {
+  transform: translateX(0);
+}
+
+.app-shell[data-theme="original"] button.timeline-keyframe-marker-selected {
+  background: #d11919;
 }
 
 .app-shell[data-theme="original"] .timeline-note {
-  margin-top: 2px;
-  font-size: 9px;
+  display: none;
 }
 
 .app-shell[data-theme="original"] .quad-pane-line {
@@ -463,6 +634,7 @@
       "viewport viewport";
     grid-template-columns: minmax(0, 1fr) minmax(142px, auto);
     grid-template-rows: 20px 21px 25px auto;
+    min-height: 0;
     gap: 0;
     padding: 0;
   }
@@ -479,7 +651,14 @@
 
   .app-shell[data-theme="original"] .toolbar-file-actions,
   .app-shell[data-theme="original"] .toolbar-history-actions {
+    display: flex;
     padding: 2px 3px;
+  }
+
+  .app-shell[data-theme="original"] .theme-switcher {
+    display: flex;
+    align-content: normal;
+    justify-content: flex-start;
   }
 
   .app-shell[data-theme="original"] .toolbar-viewport {
@@ -533,11 +712,17 @@
   }
 
   .app-shell[data-theme="original"] .timeline {
-    min-height: 82px;
-    padding: 4px;
+    position: static;
+    z-index: auto;
+    order: 2;
+    width: auto;
+    height: 60px;
+    min-height: 60px;
+    grid-template-columns: 96px minmax(0, 1fr);
+    padding: 0;
   }
 
   .app-shell[data-theme="original"] .timeline-controls {
-    grid-template-columns: auto auto minmax(96px, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }

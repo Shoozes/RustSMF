@@ -40,6 +40,7 @@ import {
 import {
   DEFAULT_VIEWPORT_BOUNDS,
   getMouseForViewport,
+  getOrthographicPanDelta,
   getViewportAt as findViewportAt,
   refreshOrthoCameras as updateOrthoCameras,
   refreshViewportSpecs as buildViewportSpecs,
@@ -132,7 +133,46 @@ interface SkinPaintCollection {
   totalVertexCount: number;
 }
 
+interface ThemeViewportGrids {
+  floor: THREE.GridHelper;
+  front: THREE.GridHelper;
+  side: THREE.GridHelper;
+}
+
 const isMaterialWithMap = (material: THREE.Material): material is MaterialWithMap => 'map' in material;
+
+const createThemeGrid = (themeId: AppThemeId): THREE.GridHelper => {
+  const { viewportGrid } = getAppTheme(themeId);
+  return new THREE.GridHelper(
+    viewportGrid.size,
+    viewportGrid.divisions,
+    viewportGrid.centerLine,
+    viewportGrid.line,
+  );
+};
+
+const createThemeViewportGrids = (themeId: AppThemeId): ThemeViewportGrids => {
+  const floor = createThemeGrid(themeId);
+  floor.position.y = 0.001;
+  const front = createThemeGrid(themeId);
+  front.rotation.x = Math.PI / 2;
+  front.position.z = -0.001;
+  const side = createThemeGrid(themeId);
+  side.rotation.z = Math.PI / 2;
+  side.position.x = 0.001;
+  return { floor, front, side };
+};
+
+const disposeThemeViewportGrids = (
+  scene: THREE.Scene,
+  grids: ThemeViewportGrids | null,
+): void => {
+  if (!grids) return;
+  scene.remove(grids.floor, grids.front, grids.side);
+  disposeThreeObject(grids.floor);
+  disposeThreeObject(grids.front);
+  disposeThreeObject(grids.side);
+};
 
 const writeViewportCameraTelemetry = (
   canvas: HTMLCanvasElement | null,
@@ -140,6 +180,16 @@ const writeViewportCameraTelemetry = (
 ): void => {
   if (!canvas) return;
   canvas.dataset.viewportCameraType = viewports[0]?.camera.type ?? '';
+};
+
+const writeSharedCameraTargetTelemetry = (
+  canvas: HTMLCanvasElement | null,
+  target: THREE.Vector3,
+): void => {
+  if (!canvas) return;
+  canvas.dataset.cameraTargetX = target.x.toFixed(6);
+  canvas.dataset.cameraTargetY = target.y.toFixed(6);
+  canvas.dataset.cameraTargetZ = target.z.toFixed(6);
 };
 
 // Self-contained ThreeViewport.
@@ -297,10 +347,13 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const viewportRef = useRef<ViewportSpec[]>([]);
   const layoutRef = useRef<ViewportLayout>('single');
   const wireframeEnabledRef = useRef(false);
+  const gridEnabledRef = useRef(gridEnabled);
+  const viewportGridModeRef = useRef(getAppTheme(themeId).viewportGrid.mode);
+  const viewportGridThemeRef = useRef<AppThemeId>(themeId);
   const wireframeMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
   const boundsRef = useRef<ModelBounds>(DEFAULT_VIEWPORT_BOUNDS);
   const canvasSizeRef = useRef({ width: 800, height: 600 });
-  const gridRef = useRef<THREE.GridHelper | null>(null);
+  const viewportGridRefs = useRef<ThemeViewportGrids | null>(null);
   const axesRef = useRef<THREE.AxesHelper | null>(null);
   const clockRef = useRef(new THREE.Clock());
   const pointerDownRef = useRef<{
@@ -432,7 +485,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const applyViewportLayout = (nextLayout: ViewportLayout) => {
     const camera = cameraRef.current;
     if (!camera) return;
-    updateOrthoCameras(orthoCameraRefs.current, boundsRef.current);
+    updateOrthoCameras(
+      orthoCameraRefs.current,
+      boundsRef.current,
+      orbitRef.current.target,
+    );
     const viewports = buildViewportSpecs(
       canvasSizeRef.current.width,
       canvasSizeRef.current.height,
@@ -453,11 +510,6 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   };
 
   const isInPickingViewport = (x: number, y: number): boolean => !!getViewportAt(x, y, true);
-
-  const isInOrbitViewport = (x: number, y: number): boolean => {
-    const spec = getViewportAt(x, y, true);
-    return !!spec;
-  };
 
   const pickViewportCamera = (x: number, y: number): { camera: THREE.Camera; viewport: ViewportSpec } | null => {
     const match = getViewportAt(x, y, true);
@@ -1207,11 +1259,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     dir.position.set(4, 7, 3);
     scene.add(dir);
 
-    const grid = new THREE.GridHelper(14, 14, 0x475569, 0x334155);
-    grid.position.y = 0.001;
-    grid.visible = gridEnabled;
-    scene.add(grid);
-    gridRef.current = grid;
+    const viewportGrids = createThemeViewportGrids(themeId);
+    viewportGrids.floor.visible = gridEnabled;
+    viewportGrids.front.visible = false;
+    viewportGrids.side.visible = false;
+    scene.add(viewportGrids.floor, viewportGrids.front, viewportGrids.side);
+    viewportGridRefs.current = viewportGrids;
 
     const axes = new THREE.AxesHelper(1.8);
     axes.visible = axesEnabled;
@@ -1243,20 +1296,70 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     orthoCameraRefs.current = [frontCam, sideCam, topCam];
 
     const orbit = orbitRef.current;
-    const updateCamera = () => {
+    const updateCameras = () => {
       camera.position.copy(orbit.getPosition());
       camera.lookAt(orbit.target);
       camera.updateMatrixWorld();
+      updateOrthoCameras(
+        orthoCameraRefs.current,
+        boundsRef.current,
+        orbit.target,
+      );
+      writeSharedCameraTargetTelemetry(canvas, orbit.target);
     };
-    updateCamera();
+    updateCameras();
     const detachOrbit = orbit.attach(
       canvas,
-      updateCamera,
+      updateCameras,
       (x, y, button = 0) => {
         if (button !== 0 && button !== 2) return false;
-        return isInOrbitViewport(x, y);
+        return getViewportAt(x, y, true)?.role === 'perspective';
       },
     );
+
+    let orthoPanState: {
+      camera: THREE.OrthographicCamera;
+      lastX: number;
+      lastY: number;
+      viewportHeight: number;
+    } | null = null;
+    const onOrthoPanDown = (event: MouseEvent): void => {
+      if (!orbit.enabled || event.button !== 2) return;
+      const viewport = getViewportAt(event.clientX, event.clientY, true);
+      if (!viewport || !(viewport.camera instanceof THREE.OrthographicCamera)) return;
+      orthoPanState = {
+        camera: viewport.camera,
+        lastX: event.clientX,
+        lastY: event.clientY,
+        viewportHeight: viewport.height,
+      };
+    };
+    const onOrthoPanMove = (event: MouseEvent): void => {
+      const state = orthoPanState;
+      if (!state) return;
+      if (!orbit.enabled) {
+        orthoPanState = null;
+        return;
+      }
+      const deltaX = event.clientX - state.lastX;
+      const deltaY = event.clientY - state.lastY;
+      if (deltaX === 0 && deltaY === 0) return;
+      orbit.target.add(getOrthographicPanDelta(
+        state.camera,
+        deltaX,
+        deltaY,
+        state.viewportHeight,
+      ));
+      state.lastX = event.clientX;
+      state.lastY = event.clientY;
+      updateCameras();
+    };
+    const onOrthoPanUp = (): void => {
+      orthoPanState = null;
+    };
+    canvas.addEventListener('mousedown', onOrthoPanDown);
+    window.addEventListener('mousemove', onOrthoPanMove);
+    window.addEventListener('mouseup', onOrthoPanUp);
 
     // Internal key handler for view reset (R) + gizmo modes (T=translate, R=rotate, S=scale when a bone is selected).
     // Mode keys take precedence only while TransformControls has an active target. Space is handled by App.
@@ -1287,7 +1390,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       }
       if (e.key.toLowerCase() === 'r') {
         orbit.reset();
-        updateCamera();
+        updateCameras();
       }
     };
     // Pointer-based bone selection on the canvas.
@@ -2294,6 +2397,16 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       scene.overrideMaterial = wireframeEnabledRef.current ? wireframeMaterialRef.current : null;
       renderer.setScissorTest(isQuad);
       specs.forEach((spec) => {
+        const grids = viewportGridRefs.current;
+        if (grids) {
+          const showGrid = gridEnabledRef.current;
+          const cameraPlanes = viewportGridModeRef.current === 'camera-planes';
+          grids.floor.visible = showGrid && (
+            !cameraPlanes || spec.role === 'top' || spec.role === 'perspective'
+          );
+          grids.front.visible = showGrid && cameraPlanes && spec.role === 'front';
+          grids.side.visible = showGrid && cameraPlanes && spec.role === 'side';
+        }
         renderer.setViewport(spec.x, spec.y, spec.width, spec.height);
         if (isQuad) {
           renderer.setScissor(spec.x, spec.y, spec.width, spec.height);
@@ -2317,7 +2430,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
-      updateOrthoCameras(orthoCameraRefs.current, boundsRef.current);
+      updateOrthoCameras(
+        orthoCameraRefs.current,
+        boundsRef.current,
+        orbit.target,
+      );
       const specs = buildViewportSpecs(
         w,
         h,
@@ -2341,6 +2458,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       resizeObsRef.current?.disconnect();
       interactionRuntime.dispose();
       detachOrbit();
+      canvas.removeEventListener('mousedown', onOrthoPanDown);
+      window.removeEventListener('mousemove', onOrthoPanMove);
+      window.removeEventListener('mouseup', onOrthoPanUp);
       canvas.style.cursor = 'default';
       cursorModeRef.current = 'default';
       delete canvas.dataset.endpointX;
@@ -2356,6 +2476,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (attachedModelRef.current) {
         unregisterMaterialPreviewRoot(attachedModelRef.current);
       }
+      disposeThemeViewportGrids(scene, viewportGridRefs.current);
+      viewportGridRefs.current = null;
+      disposeThreeObject(axesRef.current);
+      axesRef.current = null;
       wireframeMaterialRef.current?.dispose();
       wireframeMaterialRef.current = null;
       renderer.dispose();
@@ -2370,10 +2494,26 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   }, [viewportLayout, perspectiveEnabled]);
 
   useEffect(() => {
+    const theme = getAppTheme(themeId);
+    viewportGridModeRef.current = theme.viewportGrid.mode;
     const scene = sceneRef.current;
     if (scene) {
-      scene.background = new THREE.Color(getAppTheme(themeId).viewportBackground);
+      scene.background = new THREE.Color(theme.viewportBackground);
+      if (viewportGridThemeRef.current !== themeId) {
+        disposeThemeViewportGrids(scene, viewportGridRefs.current);
+        const nextGrids = createThemeViewportGrids(themeId);
+        nextGrids.floor.visible = gridEnabledRef.current;
+        nextGrids.front.visible = false;
+        nextGrids.side.visible = false;
+        scene.add(nextGrids.floor, nextGrids.front, nextGrids.side);
+        viewportGridRefs.current = nextGrids;
+        viewportGridThemeRef.current = themeId;
+      }
     }
+    orthoCameraRefs.current.forEach((camera) => {
+      camera.zoom = theme.viewportCameraZoom;
+      camera.updateProjectionMatrix();
+    });
   }, [themeId]);
 
   useEffect(() => {
@@ -2381,10 +2521,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   }, [wireframeEnabled]);
 
   useEffect(() => {
-    const grid = gridRef.current;
-    if (grid) {
-      grid.visible = gridEnabled;
-    }
+    gridEnabledRef.current = gridEnabled;
   }, [gridEnabled]);
 
   useEffect(() => {
@@ -2831,17 +2968,18 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
     const modelBounds = { center, maxDim };
     boundsRef.current = modelBounds;
-    updateOrthoCameras(orthoCameraRefs.current, modelBounds);
-    applyViewportLayout(viewportLayout);
     const orbit = orbitRef.current;
     orbit.target.copy(modelBounds.center);
     orbit.distance = modelBounds.maxDim * 0.85 + 2;
     orbit.yaw = 0.6;
     orbit.pitch = 0.35;
+    applyViewportLayout(viewportLayout);
     if (cameraRef.current) {
       cameraRef.current.position.copy(orbit.getPosition());
       cameraRef.current.lookAt(orbit.target);
+      cameraRef.current.updateMatrixWorld();
     }
+    writeSharedCameraTargetTelemetry(canvasRef.current, orbit.target);
 
     // Modern skeleton helper for larger, old-editor-like rig visualization and direct helper hit picking.
     if (skeleton) {

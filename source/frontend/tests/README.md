@@ -16,16 +16,16 @@ Playwright may require execution outside a managed sandbox when Chromium launch 
 
 | Suite | Primary ownership |
 | --- | --- |
-| `shell-model.spec.ts` | App boot, real SMF load, responsive workspaces, viewport layouts, selection, invalid input |
+| `shell-model.spec.ts` | App boot, real SMF load, responsive workspaces, viewport layouts/shared camera focus, selection, invalid input |
 | `lifecycle.spec.ts` | Latest-intent load races, atomic replacement, save single-flight, worker progress/responsiveness |
 | `rig.spec.ts` | Pose history, SMF Rig policy, Endpoint, IK, TransformControls ownership |
 | `animation.spec.ts` | Timeline gestures, clip management, animation keys and SMF checks |
 | `skin.spec.ts` | Paint gating, cancel, undo/redo, Auto Skin, SMF export |
 | `export-formats.spec.ts` | GLB/SMF/FBX/OBJ flows, indexed-mesh conversion, material policy, FBX re-import |
 | `native.spec.ts` | Deterministic Tauri IPC open/read/write/cancel and stale-completion matrices |
-| `visual.spec.ts` | Modern/Original theme geometry, narrow layout, viewport/menu visual coherence |
+| `visual.spec.ts` | Modern/Original geometry/defaults, source texture thumbnails, reference-derived shelves/top strip/keyframe lane, narrow layout, viewport/menu visual coherence |
 
-The 37 tests formerly in `smoke.spec.ts` retain their titles across the six feature-owned browser suites. Playwright still discovers 53 browser cases total.
+The 37 tests formerly in `smoke.spec.ts` retain their titles across the six feature-owned browser suites. Playwright discovers 54 browser cases total.
 
 ## Shared Browser Helpers
 
@@ -39,7 +39,7 @@ The 37 tests formerly in `smoke.spec.ts` retain their titles across the six feat
 
 ## Unit Coverage
 
-Node tests under `src/**/*.test.ts` cover theme registry/persistence, SMF binary and DQ fidelity, worker protocol and ownership, indexed Three-to-SMF triangle expansion, FBX and GLB pre-save reparse validation, export-candidate policy, editor snapshots/history, viewport listener disposal/routing/layout, Rig/IK/Skin/Animate helpers, material isolation, and resource disposal.
+Node tests under `src/**/*.test.ts` cover theme registry/persistence, SMF binary and DQ fidelity, worker protocol and ownership, indexed Three-to-SMF triangle expansion, FBX and GLB pre-save reparse validation, export-candidate policy, editor snapshots/history, viewport listener disposal/routing/layout/shared-focus pan math, Rig/IK/Skin/Animate helpers, material isolation, raw texture thumbnail sampling, and resource disposal.
 
 The generated indexed GLB is a required compatibility shape: conversion must duplicate indexed vertex attributes into complete SMF triangle soup before the worker guard accepts it. Missing optional normals/UVs/tangents receive correctly sized zero arrays; incomplete triangle or skin layouts fail preflight.
 

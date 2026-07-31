@@ -41,24 +41,45 @@ function refreshOrthoFrustum(
 export function refreshOrthoCameras(
   orthoCameras: THREE.OrthographicCamera[],
   modelBounds: ModelBounds,
+  focusTarget: THREE.Vector3 = modelBounds.center,
 ): void {
   const [front, side, top] = orthoCameras;
   if (!front || !side || !top) return;
 
   const halfDim = Math.max(modelBounds.maxDim * 1.0, 1);
-  const center = modelBounds.center;
 
-  front.position.copy(center).add(new THREE.Vector3(0, 0, halfDim * 2));
+  front.position.copy(focusTarget).add(new THREE.Vector3(0, 0, halfDim * 2));
   front.up.set(0, 1, 0);
-  front.lookAt(center);
+  front.lookAt(focusTarget);
+  front.updateMatrixWorld();
 
-  side.position.copy(center).add(new THREE.Vector3(halfDim * 2, 0, 0));
+  side.position.copy(focusTarget).add(new THREE.Vector3(halfDim * 2, 0, 0));
   side.up.set(0, 1, 0);
-  side.lookAt(center);
+  side.lookAt(focusTarget);
+  side.updateMatrixWorld();
 
-  top.position.copy(center).add(new THREE.Vector3(0, halfDim * 2, 0));
+  top.position.copy(focusTarget).add(new THREE.Vector3(0, halfDim * 2, 0));
   top.up.set(0, 0, -1);
-  top.lookAt(center);
+  top.lookAt(focusTarget);
+  top.updateMatrixWorld();
+}
+
+export function getOrthographicPanDelta(
+  camera: THREE.OrthographicCamera,
+  deltaX: number,
+  deltaY: number,
+  viewportHeight: number,
+): THREE.Vector3 {
+  const visibleHeight = Math.abs(camera.top - camera.bottom)
+    / Math.max(Math.abs(camera.zoom), 0.000001);
+  const worldUnitsPerPixel = visibleHeight / Math.max(1, viewportHeight);
+  const right = new THREE.Vector3(1, 0, 0)
+    .applyQuaternion(camera.quaternion)
+    .multiplyScalar(deltaX * worldUnitsPerPixel);
+  const up = new THREE.Vector3(0, 1, 0)
+    .applyQuaternion(camera.quaternion)
+    .multiplyScalar(-deltaY * worldUnitsPerPixel);
+  return right.add(up);
 }
 
 export function refreshViewportSpecs(

@@ -116,7 +116,7 @@ const Inspector: React.FC<InspectorProps> = ({
       <div className="text-xs">
         <div className="mb-1 text-slate-400">Selected</div>
         <div data-testid="inspector-selected" className="font-mono text-amber-300 break-all">{selected}</div>
-        <div className="mt-3 text-[10px] text-slate-400">
+        <div className="inspector-help-copy mt-3 text-[10px] text-slate-400">
           Real SkinnedMesh + Skeleton + clips loaded here.<br />
           Timeline below drives the AnimationMixer.
         </div>

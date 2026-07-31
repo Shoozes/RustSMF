@@ -22,10 +22,10 @@ Both commands open the numbered launcher menu. Choose `2. Run if already install
 ## Supported Flow
 
 - Open `.smf`, `.glb`, `.gltf`, `.fbx`, or `.obj` by native dialog, file input, or drag/drop.
-- Choose the default Modern theme or the compact Original SMF theme. The Original theme keeps the old editor's simple square controls, numbered red workspace tabs, charcoal viewport, left-side tools, right-side Submodels, and quad-first loaded layout without changing model/edit state.
+- Choose the default Modern theme or the compact Original SMF theme. The Original theme starts in quad view even before a model loads and follows the preserved editor format with a 136 px left tool shelf, 128 px Submodels shelf, fixed numbered tabs, an 80 px top strip, square low-chrome controls, dense red/black quad grids, real base-color texture thumbnails in the Submodels list, and an upper Animation timeline whose ruler, sample divisions, and green/red keyframes match the old placement without changing model/edit state.
 - Large SMF imports and exports run in a background worker with visible progress. Starting a newer load cancels ownership of older work; if worker startup is unavailable, the app labels the synchronous fallback instead of silently changing behavior.
-- Orbit, pan, zoom, reset view, scrub animation, select bones, use TransformControls, and preview selected-bone weights.
-- Switch between single and quad viewport layouts after a model loads; quad view shows Top, 3D, Front, and Side panes with visible dividers.
+- Orbit, pan, zoom, reset view, scrub animation, select bones, use TransformControls, and preview selected-bone weights. In quad view, right-drag panning uses one shared focus point, so panning an orthographic pane moves the 3D view and panning the 3D view moves every orthographic pane.
+- Switch between single and quad viewport layouts after a model loads; before load, the disabled controls show the active theme's default. Quad view shows Top, 3D, Front, and Side panes with visible dividers.
 - Switch the single viewport between 3D and Ortho camera modes.
 - Use the Display menu for model-safe wireframe, grid, axes, texture, shader, node-index, rig-opacity, model-opacity, and rig-thickness viewport inspection controls without changing source export data.
 - Export loaded SMF sources through the high-fidelity SMF path with supported live position/rotation pose edits.

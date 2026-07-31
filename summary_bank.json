@@ -64,15 +64,24 @@
         "source/frontend/src/theme.test.ts",
         "source/frontend/src/hooks/useAppTheme.ts",
         "source/frontend/src/App.tsx",
+        "source/frontend/src/components/Outliner.tsx",
+        "source/frontend/src/components/TextureThumbnail.tsx",
         "source/frontend/src/components/Toolbar.tsx",
         "source/frontend/src/main.tsx",
         "source/frontend/src/index.css",
         "source/frontend/src/styles/themes/original.css",
-        "source/frontend/tests/visual.spec.ts"
+        "source/frontend/src/utils/modelOutliner.ts",
+        "source/frontend/src/utils/modelOutliner.test.ts",
+        "source/frontend/src/utils/textureThumbnail.ts",
+        "source/frontend/src/utils/textureThumbnail.test.ts",
+        "source/frontend/tests/visual.spec.ts",
+        "design-qa.md"
       ],
       "notes": [
-        "Original preserves the old editor's simplicity and compact hierarchy.",
-        "Theme definitions own labels and panel copy; components should not branch on theme IDs."
+        "Original preserves the old editor's simplicity and compact hierarchy, including quad view before model load.",
+        "Theme definitions own labels, panel copy, camera scale, and grid behavior; components should not branch on theme IDs.",
+        "Submodel thumbnails prefer source base-color texture pixels and retain material color as the fallback.",
+        "design-qa.md owns the preserved-source comparison and final fidelity evidence paths."
       ]
     },
     "feature__fbx_support": {
@@ -156,6 +165,7 @@
       "notes": [
         "Mount-owned listeners and controls require one explicit dispose owner.",
         "Long-lived callbacks read current mutable state through refs.",
+        "Perspective and orthographic panes keep distinct directions and zoom while sharing one pan/focus target.",
         "Animation actions bind only when the mixer root matches the current root; attachment applies one complete current playback intent."
       ]
     },

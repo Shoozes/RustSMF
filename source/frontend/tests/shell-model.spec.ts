@@ -625,6 +625,55 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await expect(canvas).toHaveAttribute('data-viewport-camera-type', 'PerspectiveCamera');
     });
 
+  test('quad orthographic and perspective panes pan one shared focus target', async ({ page }) => {
+      test.skip(!SAMPLE_SMF, 'No .smf test model available for shared camera pan coverage');
+
+      await page.goto('/');
+      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await setViewportLayout(page, 'quad');
+
+      const canvas = page.getByTestId('three-canvas');
+      const box = await canvas.boundingBox();
+      expect(box).not.toBeNull();
+      if (!box) return;
+
+      const readTarget = async (): Promise<[number, number, number]> => [
+        Number(await canvas.getAttribute('data-camera-target-x')),
+        Number(await canvas.getAttribute('data-camera-target-y')),
+        Number(await canvas.getAttribute('data-camera-target-z')),
+      ];
+      const expectTargetChanged = async (before: [number, number, number]): Promise<[number, number, number]> => {
+        await expect.poll(async () => {
+          const after = await readTarget();
+          return Math.hypot(
+            after[0] - before[0],
+            after[1] - before[1],
+            after[2] - before[2],
+          );
+        }).toBeGreaterThan(0.001);
+        return readTarget();
+      };
+
+      const initial = await readTarget();
+      expect(initial.every(Number.isFinite)).toBe(true);
+      const topX = box.x + box.width * 0.25;
+      const topY = box.y + box.height * 0.25;
+      await page.mouse.move(topX, topY);
+      await page.mouse.down({ button: 'right' });
+      await page.mouse.move(topX + 40, topY + 24);
+      await page.mouse.up({ button: 'right' });
+      const afterOrtho = await expectTargetChanged(initial);
+
+      const perspectiveX = box.x + box.width * 0.75;
+      const perspectiveY = box.y + box.height * 0.25;
+      await page.mouse.move(perspectiveX, perspectiveY);
+      await page.mouse.down({ button: 'right' });
+      await page.mouse.move(perspectiveX - 36, perspectiveY + 18);
+      await page.mouse.up({ button: 'right' });
+      await expectTargetChanged(afterOrtho);
+    });
+
   test('small viewport mode tabs switch deterministically after load', async ({ page }) => {
       test.skip(!SAMPLE_SMF, 'No .smf test model available (local mixamo_smf_baldguy.smf or old-src reference)');
 

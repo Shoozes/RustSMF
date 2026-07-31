@@ -1,6 +1,6 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-07-25
+Last reviewed: 2026-07-30
 
 ## Scope
 
@@ -10,12 +10,12 @@ Repository-wide implementation pass covering the requested theme/Original experi
 
 ### Theme system and Original SMF simplicity
 
-- What: Modern and Original SMF are complete typed theme definitions, not scattered component conditionals.
+- What: Modern and Original SMF are complete typed theme definitions, and Original SMF now follows the preserved editor's measured frame instead of only borrowing its colors.
 - Why: returning users can adopt the new app through familiar compact hierarchy and interaction cues while both themes continue to share one editor state and feature set.
-- Where: `src/theme.ts`, `src/hooks/useAppTheme.ts`, `src/App.tsx`, `src/components/Toolbar.tsx`, `src/index.css`, and `src/styles/themes/original.css`.
-- How: the registry owns labels, panel copy, viewport appearance, and preferred loaded layout; persisted values are validated and storage failures are non-blocking. Original keeps numbered red tabs, square low-chrome controls, a charcoal viewport, left tools, right Submodels, quad-first loaded layout, and Animation-only upper timeline without branching editor logic on a theme ID.
-- Done when: switching is persisted, stale storage is rejected, editor state survives switching, both desktop and narrow layouts remain usable, and visual ownership is executable.
-- Result: done. Theme units, the 53-test browser suite, and both strict visual baselines pass.
+- Where: `src/theme.ts`, `src/hooks/useAppTheme.ts`, `src/App.tsx`, `src/components/Toolbar.tsx`, `src/components/Outliner.tsx`, `src/components/TextureThumbnail.tsx`, `src/components/ThreeViewport.tsx`, `src/utils/viewportLayout.ts`, `src/utils/textureThumbnail.ts`, `src/index.css`, and `src/styles/themes/original.css`.
+- How: the registry owns labels, panel copy, camera scale, grid geometry, and preferred layout; persisted values are validated and storage failures are non-blocking. Reference-derived CSS restores the 136/128 px side shelves, 80 px top strip, fixed numbered tabs, dense square controls, and Animation-only upper timeline. Original applies quad view before load and after restoration. Quad cameras retain distinct directions/zoom around one shared pan target. The Submodels shelf downsamples source base-color maps, including raw SMF `DataTexture` pixels, into bounded thumbnails and retains material color as fallback. Theme-owned camera-aligned grids give Top, Front, and Side panes the old red-axis/dark-grid treatment without branching editor state. The Original timeline uses the old 128/16 px horizontal insets and 28/32 px ruler/band split; multiplier-derived sample divisions, green keys, red selection, and a playing-only blue playhead retain current scrub/insert/drag behavior.
+- Done when: switching is persisted, stale storage is rejected, Original is quad before and after model load, editor state survives switching, panning either a fixed or 3D pane moves the one shared focus target, texture-backed submodels display non-white source pixels, the desktop frame matches the preserved proportions, all quad panes carry the correct grid plane, the keyframe ruler and marker band align with the old source, the upper timeline stays within the center shelf, and the narrow layout has no horizontal overflow.
+- Result: done. Focused pan/texture/default units and browser regressions pass, both full-frame and focused keyframe comparisons have no open P0-P2 fidelity findings, the in-app browser shows real colored thumbnails with no warnings/errors, and desktop plus 390 px geometry checks pass.
 
 ### FBX export support
 
@@ -33,7 +33,7 @@ Repository-wide implementation pass covering the requested theme/Original experi
 - Where: `src/workers/*`, `src/hooks/useSmfCodecTask.ts`, `src/hooks/smfExportCandidate.ts`, `src/loaders/smfData.ts`, `src/loaders/threeToSmf.ts`, and focused tests.
 - How: validate the operation and nested payload, deep-clone export buffers before transfer, permit synchronous fallback only at startup, terminate on abort/timeout/runtime failure, keep progress monotonic, and recheck the shared load/export intent before commit. A validated triangle vertex map expands every indexed position and optional attribute in lockstep; incomplete triangles, out-of-range indices, and incomplete skin tuples fail before serialization.
 - Done when: transfer ownership, cancellation, timeout, fallback, runtime rejection, progress, source immutability, candidate policy, indexed conversion, diagnostic roundtrip, 300,000-vertex responsiveness, and download/re-import paths all pass.
-- Result: done. The stricter worker guard exposed and led to the indexed-geometry fix rather than being weakened; 224 units and 53 browser cases now pass.
+- Result: done. The stricter worker guard exposed and led to the indexed-geometry fix rather than being weakened; 223 units and 54 browser cases now pass.
 
 ### Modular boundaries and browser ownership
 
@@ -41,7 +41,7 @@ Repository-wide implementation pass covering the requested theme/Original experi
 - Why: smaller context surfaces reduce coordination risk, but splitting renderer or hook state solely by line count would create more synchronization seams.
 - Where: `useLoadModel.ts` now composes codec-task, export-candidate, and editor-snapshot modules; `ThreeViewport.tsx` composes event contracts, interaction runtime, and TransformControls lifecycle modules. Browser coverage is split across shell/model, lifecycle, Rig, Animate, Skin, formats, native, and visual specs with shared helpers.
 - How: preserve public hook/component contracts, add pure boundary tests, keep renderer/requestAnimationFrame ownership in the viewport, keep integration state in the hook, make animation actions root-affine during replacement, preserve all 37 former smoke titles, move strict snapshots beside their owning specs, and make lint coverage fail when a probed file is missing.
-- Done when: app/test typechecks and build prove imports/exports, focused tests cover extracted boundaries, Playwright lists and runs 53 cases, strict baselines resolve at their new paths, and no old smoke path remains in current docs or scripts.
+- Done when: app/test typechecks and build prove imports/exports, focused tests cover extracted boundaries, Playwright lists and runs 54 cases, strict baselines resolve at their new paths, and no old smoke path remains in current docs or scripts.
 - Result: done. `ThreeViewport.tsx` remains an explicit renderer/integration owner and `useLoadModel.ts` remains the editor integration owner; further splitting is evidence-triggered, not an active size-only task. The export/load race now also fails on cross-root `PropertyBinding` warnings.
 
 ### Context, docs, launcher, and repository integrity
@@ -59,8 +59,9 @@ No evidence-backed executable item remains from this pass. The large integration
 
 ## Verification
 
-- `pwsh -File run.ps1 -Task verify`: passed; context 16 groups/zero warnings plus 7/7 tool tests, lint coverage, lint, app/test typechecks, production-`any` guard, production build, vendor/lazy-worker chunk guards, 224/224 frontend units, and Rust cargo check.
-- Browser-only Playwright: 53/53 passed, including worker responsiveness, async ownership, persisted Original SMF desktop/narrow behavior, indexed GLB-to-SMF conversion, validated FBX download/re-import, workspace continuity, authoring tools, and visual flows.
+- `pwsh -File run.ps1 -Task verify`: passed; context 16 groups/zero warnings plus 7/7 tool tests, lint coverage, lint, app/test typechecks, production-`any` guard, production build, vendor/lazy-worker chunk guards, 223/223 frontend units, and Rust cargo check.
+- 2026-07-30 Original-theme follow-up: the same full verification gate passed after the reference-derived layout/grid/framing changes; the in-app browser also verified Model, Skinning, and Animation states at 1610x953 plus the 390x844 responsive fallback with zero console warnings/errors.
+- Browser-only Playwright: 54/54 passed, including shared perspective/ortho focus panning, Original quad restoration and source-texture thumbnails, worker responsiveness, async ownership, persisted Original SMF desktop/narrow behavior, indexed GLB-to-SMF conversion, validated FBX download/re-import, workspace continuity, authoring tools, and visual flows.
 - `pwsh -File run.ps1 -Task test:visual-strict`: 2/2 passed at the new owning snapshot paths.
 - `pwsh -File run.ps1 -Task desktop-smoke`: release Tauri build passed, Rust native tests 9/9, and Tauri IPC Playwright tests 9/9.
 - `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings`: passed; the audit corrected three test-only Clippy findings.

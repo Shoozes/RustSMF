@@ -131,9 +131,10 @@ test.describe('RustSMF visual confirmations', () => {
     await expect(appShell).toHaveAttribute('data-theme', 'modern');
     await themeSelect.selectOption('original');
     await expect(appShell).toHaveAttribute('data-theme', 'original');
-    await expect(page.getByTestId('theme-description')).toContainText(/compact GameMaker-inspired/i);
+    await expect(page.getByTestId('theme-description')).toContainText(/dense original editor format/i);
     await expect(page.getByTestId('mode-tab-view')).toHaveText('Model [1]');
     await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-theme', 'original');
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-layout', 'quad');
     await expect(page.getByTestId('inspector').locator('.panel-title').first()).toHaveText('Settings');
     await expect(page.getByTestId('outliner').locator('.panel-title').first()).toHaveText('Submodels');
     await expect(page.getByTestId('timeline')).toBeHidden();
@@ -141,19 +142,70 @@ test.describe('RustSMF visual confirmations', () => {
     const tools = await getRequiredRect(page.locator('.inspector-stack'));
     const viewport = await getRequiredRect(page.getByTestId('viewport-container'));
     const submodels = await getRequiredRect(page.getByTestId('outliner'));
+    const toolbar = await getRequiredRect(page.locator('.toolbar'));
+    const modeTabs = await getRequiredRect(page.locator('.mode-tablist'));
+    expect(tools.width).toBeGreaterThanOrEqual(134);
+    expect(tools.width).toBeLessThanOrEqual(138);
+    expect(submodels.width).toBeGreaterThanOrEqual(126);
+    expect(submodels.width).toBeLessThanOrEqual(130);
+    expect(toolbar.height).toBeGreaterThanOrEqual(79);
+    expect(toolbar.height).toBeLessThanOrEqual(81);
+    expect(modeTabs.left).toBeGreaterThanOrEqual(tools.right - 2);
+    expect(modeTabs.width).toBeLessThanOrEqual(644);
     expect(tools.right).toBeLessThanOrEqual(viewport.left + 2);
     expect(viewport.right).toBeLessThanOrEqual(submodels.left + 2);
 
     await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF!);
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-layout', 'quad');
+    const texturePreviews = page.locator('.outliner-color[data-preview-kind="texture"]');
+    await expect(texturePreviews.first()).toBeVisible();
+    await expect.poll(async () => texturePreviews.evaluateAll((canvases) => (
+      canvases.some((canvas) => {
+        if (!(canvas instanceof HTMLCanvasElement)) return false;
+        const context = canvas.getContext('2d');
+        if (!context) return false;
+        const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        for (let index = 0; index < pixels.length; index += 4) {
+          if (
+            pixels[index] !== 255
+            || pixels[index + 1] !== 255
+            || pixels[index + 2] !== 255
+          ) {
+            return true;
+          }
+        }
+        return false;
+      })
+    ))).toBe(true);
     await pausePlaybackIfRunning(page);
 
     await page.getByTestId('mode-tab-animate').click();
     await expect(page.getByTestId('timeline')).toBeVisible();
     const timeline = await getRequiredRect(page.getByTestId('timeline'));
+    const timelineControls = await getRequiredRect(page.locator('.timeline-controls'));
+    const timelineRuler = await getRequiredRect(page.locator('.timeline-ruler'));
+    const keyframeLane = page.getByTestId('timeline-keyframe-lane');
+    const keyframeLaneRect = await getRequiredRect(keyframeLane);
+    const keyframeMarker = await getRequiredRect(page.locator('.timeline-keyframe-marker').first());
     const mainArea = await getRequiredRect(page.locator('.main-area'));
     expect(timeline.bottom).toBeLessThanOrEqual(mainArea.top + 2);
+    expect(timelineControls.width).toBeGreaterThanOrEqual(126);
+    expect(timelineControls.width).toBeLessThanOrEqual(130);
+    expect(Math.abs(timelineRuler.left - timelineControls.right)).toBeLessThanOrEqual(2);
+    expect(Math.abs(keyframeLaneRect.left - timelineRuler.left)).toBeLessThanOrEqual(1);
+    expect(Math.abs(keyframeLaneRect.top - timelineRuler.bottom)).toBeLessThanOrEqual(1);
+    expect(keyframeLaneRect.height).toBeGreaterThanOrEqual(31);
+    expect(keyframeLaneRect.height).toBeLessThanOrEqual(33);
+    expect(timeline.right - keyframeLaneRect.right).toBeGreaterThanOrEqual(14);
+    expect(timeline.right - keyframeLaneRect.right).toBeLessThanOrEqual(18);
+    expect(keyframeMarker.width).toBeGreaterThanOrEqual(9);
+    expect(keyframeMarker.width).toBeLessThanOrEqual(11);
+    expect(keyframeMarker.height).toBeGreaterThanOrEqual(29);
+    expect(keyframeMarker.height).toBeLessThanOrEqual(31);
+    const keyframeCount = Number(await keyframeLane.getAttribute('data-keyframe-count'));
+    const sampleFrameCount = Number(await keyframeLane.getAttribute('data-sample-frame-count'));
+    expect(sampleFrameCount).toBeGreaterThanOrEqual(keyframeCount);
 
     await expectNoHorizontalOverflow(page);
     await expectRenderedScreenshot(appShell, 5000);
@@ -163,6 +215,7 @@ test.describe('RustSMF visual confirmations', () => {
     await page.reload();
     await expect(page.getByTestId('app-shell')).toHaveAttribute('data-theme', 'original');
     await expect(page.getByTestId('theme-select')).toHaveValue('original');
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-layout', 'quad');
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByTestId('viewport-container')).toBeVisible();
     await expectNoHorizontalOverflow(page);

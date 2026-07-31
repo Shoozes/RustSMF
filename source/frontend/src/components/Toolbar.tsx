@@ -204,7 +204,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   return (
     <div className="toolbar">
       <div className="toolbar-primary">
-        <div className="toolbar-brand">RustSMF</div>
+        <div className="toolbar-brand">{theme.chromeLabel}</div>
         <div className="toolbar-action-group toolbar-file-actions" aria-label="File actions">
           <button className="toolbar-action" data-testid="open-model-btn" onClick={onOpen} disabled={isLoading}>
             Open

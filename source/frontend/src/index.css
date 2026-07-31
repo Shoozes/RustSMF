@@ -345,14 +345,15 @@ html, body, #root {
 
 .outliner-name-btn {
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
   gap: 5px;
   align-items: center;
 }
 
 .outliner-color {
-  width: 10px;
-  height: 10px;
+  display: block;
+  width: 18px;
+  height: 18px;
   border: 1px solid rgba(226, 232, 240, 0.45);
   border-radius: 2px;
 }
@@ -554,6 +555,11 @@ html, body, #root {
   background: #334155;
   color: #e2e8f0;
   font-size: 12px;
+}
+
+.timeline-ruler,
+.timeline-playhead {
+  display: none;
 }
 
 .timeline-keyframe-lane {

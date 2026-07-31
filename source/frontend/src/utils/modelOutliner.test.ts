@@ -11,7 +11,12 @@ test('collectModelOutlinerItems summarizes renderable submodels', () => {
   parent.name = 'Body';
   root.add(parent);
 
-  const material = new THREE.MeshBasicMaterial({ color: 0x3366ff });
+  const texture = new THREE.DataTexture(
+    new Uint8Array([0x33, 0x66, 0xff, 0xff]),
+    1,
+    1,
+  );
+  const material = new THREE.MeshBasicMaterial({ color: 0x3366ff, map: texture });
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), material);
   mesh.name = 'Armor';
   parent.add(mesh);
@@ -36,6 +41,7 @@ test('collectModelOutlinerItems summarizes renderable submodels', () => {
   );
   assert.equal(items[1].depth, 1);
   assert.equal(items[1].color, '#3366ff');
+  assert.equal(items[1].texture, texture);
   assert.equal(items[1].vertexCount, 24);
 });
 

@@ -7,8 +7,17 @@ export const APP_THEMES = [
     id: 'modern',
     label: 'Modern',
     description: 'The current RustSMF workspace with spacious panels and a single-view default.',
+    chromeLabel: 'RustSMF',
     preferredViewportLayout: 'single',
+    viewportCameraZoom: 1,
     viewportBackground: 0x0b1120,
+    viewportGrid: {
+      mode: 'floor',
+      size: 14,
+      divisions: 14,
+      centerLine: 0x475569,
+      line: 0x334155,
+    },
     workspaceLabels: {
       view: 'Model',
       rig: 'Rig',
@@ -24,9 +33,18 @@ export const APP_THEMES = [
   {
     id: 'original',
     label: 'Original SMF',
-    description: 'A compact GameMaker-inspired workspace with left tools, right submodels, and a quad-view default.',
+    description: 'The dense original editor format with narrow tool shelves, right-side submodels, and a quad-view default.',
+    chromeLabel: 'Settings',
     preferredViewportLayout: 'quad',
+    viewportCameraZoom: 1.2,
     viewportBackground: 0x1b1b1b,
+    viewportGrid: {
+      mode: 'camera-planes',
+      size: 60,
+      divisions: 60,
+      centerLine: 0xa82c2c,
+      line: 0x101010,
+    },
     workspaceLabels: {
       view: 'Model [1]',
       rig: 'Rigging [2]',
@@ -43,8 +61,17 @@ export const APP_THEMES = [
   id: string;
   label: string;
   description: string;
+  chromeLabel: string;
   preferredViewportLayout: ViewportLayout;
+  viewportCameraZoom: number;
   viewportBackground: number;
+  viewportGrid: {
+    mode: 'floor' | 'camera-planes';
+    size: number;
+    divisions: number;
+    centerLine: number;
+    line: number;
+  };
   workspaceLabels: Record<EditorMode, string>;
   panelTitles: {
     outliner: string;

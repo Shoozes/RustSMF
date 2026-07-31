@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getSourceMaterials } from './materialPreview';
 import { isThreeMesh, isThreeSkinnedMesh } from './threeTypeGuards';
 
 export type ModelOutlinerItemKind = 'group' | 'mesh' | 'skinnedMesh';
@@ -12,6 +13,7 @@ export interface ModelOutlinerItem {
   vertexCount: number;
   materialCount: number;
   color: string | null;
+  texture: THREE.Texture | null;
 }
 
 const unnamedCounts = new Map<string, number>();
@@ -37,16 +39,18 @@ const getItemKind = (object: THREE.Object3D): ModelOutlinerItemKind | null => {
   return null;
 };
 
-const getMaterialList = (material: THREE.Material | THREE.Material[] | undefined): THREE.Material[] => {
-  if (!material) return [];
-  return Array.isArray(material) ? material : [material];
-};
-
-const getMaterialColor = (material: THREE.Material | THREE.Material[] | undefined): string | null => {
-  const color = getMaterialList(material)
+const getMaterialColor = (materials: THREE.Material[]): string | null => {
+  const color = materials
     .map((item) => Reflect.get(item, 'color'))
     .find((value): value is THREE.Color => value instanceof THREE.Color);
   return color ? `#${color.getHexString()}` : null;
+};
+
+const getMaterialTexture = (materials: THREE.Material[]): THREE.Texture | null => {
+  const texture = materials
+    .map((item) => Reflect.get(item, 'map'))
+    .find((value): value is THREE.Texture => value instanceof THREE.Texture);
+  return texture ?? null;
 };
 
 const getVertexCount = (object: THREE.Object3D): number => {
@@ -78,6 +82,7 @@ export const collectModelOutlinerItems = (root: THREE.Object3D | null): ModelOut
     if (!kind) return;
 
     const mesh = isMeshLike(object) ? object : null;
+    const materials = mesh ? getSourceMaterials(mesh) : [];
     items.push({
       id: object.uuid,
       name: object.name || getFallbackName(object.type),
@@ -85,8 +90,9 @@ export const collectModelOutlinerItems = (root: THREE.Object3D | null): ModelOut
       depth: getDepth(object, root),
       visible: object.visible,
       vertexCount: getVertexCount(object),
-      materialCount: mesh ? getMaterialList(mesh.material).length : 0,
-      color: mesh ? getMaterialColor(mesh.material) : null,
+      materialCount: materials.length,
+      color: getMaterialColor(materials),
+      texture: getMaterialTexture(materials),
     });
   });
 
