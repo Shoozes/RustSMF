@@ -20,6 +20,7 @@ The active P1 browser-evidence and P2 independent-FBX items are complete. No bro
 - A Blender-authored independent FBX fixture, generator, provenance record, validator, browser roundtrip, and ignored app-output artifact provide a second-application compatibility proof without broadening claims beyond Blender 5.0.0.
 - The follow-up audit reconciled the legacy selected-bone weight shaders with the current non-destructive vertex-color preview and fixed the browser harness fallback, favicon, IK drag reuse, and animated-fixture brush determinism.
 - The final audit also fixed null-coordinate readiness and newly mounted IK-handle transform timing; the focused IK case passed five repeated runs before the complete browser rerun.
+- The weight-preview state audit now snapshots the source color attribute and every material's prior `vertexColors` mode, with focused coverage for existing colors, absent colors, and invalid-selection restoration.
 
 ## Verification evidence
 
@@ -28,6 +29,7 @@ The active P1 browser-evidence and P2 independent-FBX items are complete. No bro
 - `npm.cmd run test:visual-strict -- --reporter=line` with the same browser override: 2/2 passed.
 - Canonical `desktop-smoke`: optimized no-bundle release build, Rust tests, and native IPC browser coverage passed.
 - `npm.cmd audit --omit=optional`: found 0 vulnerabilities (the managed sandbox could not reach the advisory endpoint; the same read-only command passed through the approved external runtime).
+- `npm.cmd run test:unit`: 250/250 passed across 41 discovered unit-test files, including the new weight-preview restoration cases.
 - Blender 5.0.0 validator passed the committed independent fixture and the app-exported roundtrip. Both reports contained one mesh, two bones, weighted groups, animation curves, and an embedded material texture.
 - Focused checks: FBX/skin units 26/26 passed; independent FBX browser flow passed; `git diff --check` passed.
 
@@ -35,7 +37,9 @@ The active P1 browser-evidence and P2 independent-FBX items are complete. No bro
 
 The bundled Playwright Chromium executable is rejected by the managed Windows process boundary with `spawn EPERM` before app execution. Direct launch of the installed system Chrome succeeds, so the current evidence uses the process-local `RUSTSMF_PLAYWRIGHT_EXECUTABLE` override. This does not alter app security settings, sandbox policy, PATH, or committed configuration. The current managed sandbox checkup is `blocked` only for the diagnostic `python_unavailable` finding; PowerShell 7, Windows PowerShell, Git, Node, npm, context validation, and the app verification lane remain available. Python is optional for the Blender fixture lane and is not an app-runtime dependency.
 
-Non-blocking test/tool warnings include Node's Playwright `DEP0205`, the managed-path Cargo canonicalization warning, the intentional mocked dialog-open warning in native fallback coverage, and one direct native-suite Node/Windows `UV_HANDLE_CLOSING` assertion printed after 9/9 tests had passed with exit code 0. The canonical desktop-smoke run completed without a failure, and no project-owned processes remained after the browser runs. None caused a failed or skipped test.
+Non-blocking test/tool warnings include Node's Playwright `DEP0205`, the managed-path Cargo canonicalization warning, the intentional mocked dialog-open warning in native fallback coverage, and one direct native-suite Node/Windows `UV_HANDLE_CLOSING` assertion printed after 9/9 tests had passed with exit code 0. The canonical desktop-smoke run completed without a failure; final cleanup left no listener on the project ports 5173 or 1420. None caused a failed or skipped test.
+
+A later focused `skin.spec.ts` rerun with the approved system Chrome reached all four test bodies but hit the known managed Windows `browserContext.close: spawn EPERM` boundary during teardown and left a stale preview server that was removed by the launcher cleanup. The run is treated as harness-blocked, not as new app evidence; the previously completed full 55/55 browser run remains the authoritative browser result for this commit line.
 
 ## Remaining limits
 

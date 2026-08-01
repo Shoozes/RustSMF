@@ -4,11 +4,38 @@ import { getSkinAttributes, readVertexSkinWeights } from './skinWeights';
 
 type ColorAttribute = THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
 
-function getStoredColorAttribute(mesh: THREE.SkinnedMesh): ColorAttribute | undefined {
-  const value = Reflect.get(mesh.userData, '_origColorAttr');
-  return value instanceof THREE.BufferAttribute || value instanceof THREE.InterleavedBufferAttribute
-    ? value
-    : undefined;
+const WEIGHT_PREVIEW_BACKUP_KEY = '_weightPreviewBackup';
+
+interface WeightPreviewBackup {
+  colorAttribute: ColorAttribute | null;
+  materialVertexColors: boolean[];
+}
+
+function isColorAttribute(value: unknown): value is ColorAttribute {
+  return value instanceof THREE.BufferAttribute || value instanceof THREE.InterleavedBufferAttribute;
+}
+
+function getColorAttribute(geometry: THREE.BufferGeometry): ColorAttribute | null {
+  const value = geometry.getAttribute('color');
+  return isColorAttribute(value) ? value : null;
+}
+
+function getStoredBackup(mesh: THREE.SkinnedMesh): WeightPreviewBackup | undefined {
+  const value = Reflect.get(mesh.userData, WEIGHT_PREVIEW_BACKUP_KEY);
+  if (!value || typeof value !== 'object') {
+    return undefined;
+  }
+
+  const colorAttribute = Reflect.get(value, 'colorAttribute');
+  const materialVertexColors = Reflect.get(value, 'materialVertexColors');
+  if (!Array.isArray(materialVertexColors) || materialVertexColors.some((enabled) => typeof enabled !== 'boolean')) {
+    return undefined;
+  }
+
+  return {
+    colorAttribute: isColorAttribute(colorAttribute) ? colorAttribute : null,
+    materialVertexColors,
+  };
 }
 
 function setMaterialVertexColors(material: THREE.Material, enabled: boolean): void {
@@ -23,29 +50,34 @@ function getSkinnedMeshes(root: THREE.Object3D): THREE.SkinnedMesh[] {
   return meshes;
 }
 
-function restoreMeshColorState(mesh: THREE.SkinnedMesh, geometry: THREE.BufferGeometry): void {
-  const originalColorAttr = getStoredColorAttribute(mesh);
+function getMaterials(mesh: THREE.SkinnedMesh): THREE.Material[] {
+  return (Array.isArray(mesh.material) ? mesh.material : [mesh.material]).filter(
+    (material): material is THREE.Material => Boolean(material),
+  );
+}
 
-  if (originalColorAttr) {
-    geometry.setAttribute('color', originalColorAttr);
-    delete mesh.userData._origColorAttr;
-  } else if (geometry.getAttribute('color')) {
+function restoreMeshColorState(mesh: THREE.SkinnedMesh, geometry: THREE.BufferGeometry): void {
+  const backup = getStoredBackup(mesh);
+  if (!backup) {
+    return;
+  }
+
+  if (backup.colorAttribute) {
+    geometry.setAttribute('color', backup.colorAttribute);
+  } else {
     geometry.deleteAttribute('color');
   }
 
-  const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-  materials.forEach((material) => {
-    if (!material) {
-      return;
-    }
-    setMaterialVertexColors(material, false);
+  getMaterials(mesh).forEach((material, index) => {
+    setMaterialVertexColors(material, backup.materialVertexColors[index] ?? false);
     material.needsUpdate = true;
   });
+  delete mesh.userData[WEIGHT_PREVIEW_BACKUP_KEY];
 }
 
 /**
  * Weight preview helpers (extracted from ThreeViewport for modularity).
- * Non-destructive: backups original color attr on first apply, restores on disable.
+ * Non-destructive: snapshots original color/material state on first apply and restores on disable.
  * Used for selected bone skin influence viz (blue=0 -> red=full).
  * Called from viewport effect only; no public API change to ThreeViewport.
  */
@@ -94,12 +126,11 @@ export function applyWeightPreviewForBone(
       return;
     }
 
-    const existingColor = geometry.getAttribute('color');
-
-    if (!mesh.userData._origColorAttr && existingColor) {
-      if ('clone' in existingColor) {
-        mesh.userData._origColorAttr = existingColor.clone();
-      }
+    if (!getStoredBackup(mesh)) {
+      Reflect.set(mesh.userData, WEIGHT_PREVIEW_BACKUP_KEY, {
+        colorAttribute: getColorAttribute(geometry),
+        materialVertexColors: getMaterials(mesh).map((material) => material.vertexColors),
+      } satisfies WeightPreviewBackup);
     }
 
     const colors = new Float32Array(positionAttr.count * 3);
@@ -117,11 +148,7 @@ export function applyWeightPreviewForBone(
 
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
-    const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-    materials.forEach((material) => {
-      if (!material) {
-        return;
-      }
+    getMaterials(mesh).forEach((material) => {
       setMaterialVertexColors(material, true);
       material.needsUpdate = true;
     });

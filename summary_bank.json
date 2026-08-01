@@ -244,13 +244,14 @@
         "source/frontend/src/utils/skinPointOverlay.ts",
         "source/frontend/src/utils/skinPointOverlay.test.ts",
         "source/frontend/src/utils/weightPreview.ts",
+        "source/frontend/src/utils/weightPreview.test.ts",
         "source/frontend/tests/helpers/viewport-interactions.ts",
         "source/frontend/tests/skin.spec.ts"
       ],
       "notes": [
         "Brush queries use bounded spatial candidates and verify world-space distance before mutation.",
         "Completed strokes and batch actions own one undoable snapshot transaction.",
-        "Weight preview is a non-destructive vertex-color display; original color attributes are restored before export."
+        "Weight preview is a non-destructive vertex-color display; original color attributes and material vertex-color modes are restored on disable/export."
       ]
     },
     "subsystem__smf_format_and_fidelity": {
