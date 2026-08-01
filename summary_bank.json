@@ -349,7 +349,7 @@
         "source/frontend/playwright.config.ts"
       ],
       "notes": [
-        "Historical current-head evidence is 55/55 browser cases, 2/2 strict visuals, canonical desktop-smoke green, and Blender 5.0.0 validation of app-exported FBX output; a later managed rerun reached all 55 bodies but failed only during browserContext.close teardown with spawn EPERM.",
+        "Historical current-head evidence is 55/55 browser cases, 2/2 strict visuals, canonical desktop-smoke green, and Blender 5.0.0 validation of app-exported FBX output. Fresh follow-up verification keeps the non-browser gates green; the default desktop-smoke browser phase is managed-Chromium blocked, while an approved system-Chrome native rerun reaches all 9 bodies and fails only during browserContext.close teardown with spawn EPERM.",
         "Bundled Chromium still fails before app execution with spawn EPERM in the managed process; current evidence uses a process-local approved system-browser executable and keeps the environment caveat separate from product results."
       ]
     },

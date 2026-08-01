@@ -28,10 +28,10 @@ The active P1 browser-evidence and P2 independent-FBX items are complete. No bro
 
 ## Verification evidence
 
-- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed after final code and documentation changes; context validation, lint/type/build/chunk gates, dynamic units, and Rust fmt/Clippy/tests/check are green.
+- Fresh follow-up `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed; context validation, lint/type/build/chunk gates, 254 frontend units across 42 files, and 9 Rust tests are green.
 - Historical `npm.cmd run test:e2e -- --reporter=line` with a process-local approved system Chrome executable: 55/55 passed across all eight browser suites after the IK audit fix.
 - `npm.cmd run test:visual-strict -- --reporter=line` with the same browser override: 2/2 passed.
-- Canonical `desktop-smoke`: optimized no-bundle release build, Rust tests, and native IPC browser coverage passed.
+- Historical canonical `desktop-smoke` evidence remains green for the optimized no-bundle release build, Rust tests, and native IPC browser coverage. The fresh default rerun was blocked by managed Chromium before app execution; a process-local system-Chrome native rerun reached all 9 native test bodies but failed only during `browserContext.close` teardown with `spawn EPERM`.
 - `npm.cmd audit --omit=optional`: found 0 vulnerabilities (the managed sandbox could not reach the advisory endpoint; the same read-only command passed through the approved external runtime).
 - `npm.cmd run test:unit`: 254/254 passed across 42 discovered unit-test files, including the worker setup-cancellation, weight-preview restoration, skin snapshot-index, and animation-frame cases.
 - Focused implementation slices: skin weights 21/21, FBX loader 6/6, and animation-frame cleanup 2/2.

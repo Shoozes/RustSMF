@@ -12,6 +12,8 @@ The test layout mirrors runtime ownership. Keep behavior in the narrowest suite 
 
 Playwright may require execution outside a managed sandbox when Chromium launch is rejected with `spawn EPERM`. That is a harness permission failure, not an application test failure.
 
+If a managed run reaches the test bodies but exits with `browserContext.close: spawn EPERM`, classify it as teardown-only harness evidence, keep the nonzero exit honest, and verify that the runner-owned preview server on port 5173 is stopped before the next command. Do not weaken teardown assertions or label the command green.
+
 For a process-local browser executable override, use an approved existing absolute path without changing repo or sandbox policy:
 
 ```powershell
