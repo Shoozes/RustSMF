@@ -73,13 +73,14 @@ async function waitForTextureImage(texture: THREE.Texture): Promise<void> {
     const settle = (): void => {
       if (settled) return;
       settled = true;
+      clearTimeout(timeoutId);
       image.removeEventListener?.('load', settle);
       image.removeEventListener?.('error', settle);
       resolve();
     };
+    const timeoutId = setTimeout(settle, FBX_TEXTURE_WAIT_MS);
     image.addEventListener?.('load', settle, { once: true });
     image.addEventListener?.('error', settle, { once: true });
-    setTimeout(settle, FBX_TEXTURE_WAIT_MS);
   });
 }
 

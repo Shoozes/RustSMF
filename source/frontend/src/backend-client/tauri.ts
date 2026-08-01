@@ -83,10 +83,15 @@ export async function openFile(): Promise<OpenResult | null> {
     input.multiple = false
 
     let settled = false
+    let focusTimeout: number | null = null
 
     const finalize = (result: OpenResult | null) => {
       if (settled) return
       settled = true
+      if (focusTimeout !== null) {
+        window.clearTimeout(focusTimeout)
+        focusTimeout = null
+      }
       window.removeEventListener('focus', onWindowFocus)
       input.removeEventListener('change', onChange)
       input.onchange = null
@@ -115,7 +120,10 @@ export async function openFile(): Promise<OpenResult | null> {
 
     const onCancel = () => finalize(null)
     const onWindowFocus = () => {
-      window.setTimeout(() => {
+      if (settled) return
+      if (focusTimeout !== null) window.clearTimeout(focusTimeout)
+      focusTimeout = window.setTimeout(() => {
+        focusTimeout = null
         if (!settled && (!input.files || input.files.length === 0)) {
           finalize(null)
         }

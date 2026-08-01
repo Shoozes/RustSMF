@@ -21,6 +21,21 @@ export interface SkinVertexSnapshot {
   vertex: VertexSkinWeights;
 }
 
+export function getSkinVertexSnapshotKey(meshId: string, vertexIndex: number): string {
+  return `${meshId}:${vertexIndex}`;
+}
+
+export function indexSkinVertexSnapshots(
+  snapshots: readonly SkinVertexSnapshot[],
+): Map<string, SkinVertexSnapshot> {
+  return new Map(
+    snapshots.map((snapshot) => [
+      getSkinVertexSnapshotKey(snapshot.meshId, snapshot.vertexIndex),
+      snapshot,
+    ]),
+  );
+}
+
 export interface SkinEditHistoryEntry {
   beforeState: SkinEditState;
   afterState: SkinEditState;

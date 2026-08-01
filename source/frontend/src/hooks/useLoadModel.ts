@@ -67,6 +67,8 @@ import {
   normalizeSkinnedMeshWeights,
   autoSkinSkinnedMeshWeights,
   autoSkinSkinnedMeshVertexWeights,
+  getSkinVertexSnapshotKey,
+  indexSkinVertexSnapshots,
   resolveSkinAutoWeightOptions,
   SKIN_AUTO_WEIGHT_ALGORITHM_LABELS,
 } from '../utils/skinWeights';
@@ -2214,11 +2216,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       const nextSnapshot = mesh ? captureSkinVertexSnapshot(mesh, snapshot.vertexIndex) : null;
       return nextSnapshot ? [nextSnapshot] : [];
     });
+    const afterByKey = indexSkinVertexSnapshots(after);
 
     const changed = before.some((snapshot) => {
-      const nextSnapshot = after.find((candidate) => (
-        candidate.meshId === snapshot.meshId && candidate.vertexIndex === snapshot.vertexIndex
-      ));
+      const nextSnapshot = afterByKey.get(getSkinVertexSnapshotKey(snapshot.meshId, snapshot.vertexIndex));
       return !!nextSnapshot && !sameVertexSkinWeights(snapshot.vertex, nextSnapshot.vertex);
     });
 
@@ -2315,13 +2316,12 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       const nextSnapshot = mesh ? captureSkinVertexSnapshot(mesh, snapshot.vertexIndex) : null;
       return nextSnapshot ? [nextSnapshot] : [];
     });
+    const afterByKey = indexSkinVertexSnapshots(after);
 
     let nextState = skinEditStateRef.current;
     let changed = 0;
     for (const snapshot of before) {
-      const nextSnapshot = after.find((candidate) => (
-        candidate.meshId === snapshot.meshId && candidate.vertexIndex === snapshot.vertexIndex
-      ));
+      const nextSnapshot = afterByKey.get(getSkinVertexSnapshotKey(snapshot.meshId, snapshot.vertexIndex));
       if (nextSnapshot && !sameVertexSkinWeights(snapshot.vertex, nextSnapshot.vertex, 1e-5)) {
         nextState = markSkinEdit(nextState, snapshot.meshId, snapshot.vertexIndex);
         changed += 1;

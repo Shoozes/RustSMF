@@ -1,6 +1,37 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-08-01 (added deterministic fail-closed fixture ownership, the managed-versus-host Python runtime boundary, and the SMF worker setup-cancellation guard).
+Last reviewed: 2026-08-01 (added deterministic fail-closed fixture ownership, the managed-versus-host Python runtime boundary, the SMF worker setup-cancellation guard, and the managed Playwright teardown boundary).
+
+### Q: What pitfall are we preventing?
+
+**What:** A Playwright run can execute every RustSMF test body successfully but be reported as a product failure when managed Windows denies the browser process cleanup used by `browserContext.close`.
+
+**Context and constraints:** RustSMF's browser suite uses one production Vite preview server and a process-local approved Chrome/Edge override when bundled Chromium cannot launch. Product assertions remain authoritative, but the test command must still exit honestly and leave no preview listener behind.
+
+**Why it happened:** The managed process boundary permits the approved browser to launch and the 55 test bodies to run, but denies the child-process operation Playwright uses during context teardown. This is outside the app and browser assertions; stopping the test runner can also leave the preview server alive unless the owner is explicitly cleaned.
+
+**Where:** `source/frontend/playwright.config.ts`, `source/frontend/tests/`, `source/frontend/test-results/`, the process-local `RUSTSMF_PLAYWRIGHT_EXECUTABLE` override, and the launcher cleanup contract in `run.ps1`.
+
+**Evidence:** On 2026-08-01, `npm.cmd run test:e2e -- --reporter=line` with `C:\Program Files\Google\Chrome\Application\chrome.exe` ran all 55 cases, and each reported only `browserContext.close: spawn EPERM`. No assertion failure was emitted; after the runner was stopped, port 5173 was confirmed clear. An earlier run on the same commit line completed 55/55, so the current result is harness evidence, not a newly observed product regression.
+
+**Developer story:** The bundled browser first failed at launch under the managed boundary, so the suite was rerun with the approved system executable. That run reached all application flows but failed during cleanup, making a green-looking body run indistinguishable from a failed test command until the error phase and port state were inspected. The correct handoff keeps the prior completed browser pass as product evidence, records the current teardown limitation, and verifies explicit process cleanup.
+
+**How to catch it:** Run the full suite with the process-local executable, classify failures by phase, and require a post-run `netstat -ano -p tcp` check for ports 5173 and 1420. If every failure is `browserContext.close: spawn EPERM` and no assertion failure occurs, label the run harness-blocked rather than product-failing; stop the known runner/preview processes before the next command.
+
+**Solutions tried:**
+1. `35/100` Use bundled Chromium in the managed sandbox, result: launch fails before app execution with `spawn EPERM`.
+2. `78/100` Use an approved installed system Chrome, result: all app flows reach their test bodies, but managed teardown can still fail with `browserContext.close: spawn EPERM`.
+3. `92/100` Keep the system-browser override process-local, preserve the earlier complete 55/55 result as product evidence, classify the new run by failure phase, and verify launcher cleanup, result: no app regression is inferred from an environment-only teardown failure and no preview listener remains.
+
+**Current solution:** Use `RUSTSMF_PLAYWRIGHT_EXECUTABLE` only for the affected process, keep Playwright's product exit authoritative, document the teardown boundary in `review.md` and `source/frontend/tests/README.md`, and run a post-failure port/process cleanup before further verification.
+
+**Decision rationale:** Weakening Playwright teardown errors or marking the command green would hide an environment failure and risk leaked servers. Replacing the browser or changing app sandbox policy is outside repo scope; process-local override plus explicit classification preserves truthful evidence.
+
+**Effectiveness:** `92/100`, durable. The distinction is reproducible, preserves product evidence, and adds a concrete cleanup check without changing application behavior.
+
+**Relevance check:** Current. Managed Windows runs may vary between a complete browser pass and a teardown-only failure even when the commit and test bodies are unchanged.
+
+**Next prevention step:** Keep the phase-specific result and post-run port check in every future browser audit; only update the authoritative browser result after a run with no assertion or teardown errors.
 
 ### Q: What pitfall are we preventing?
 

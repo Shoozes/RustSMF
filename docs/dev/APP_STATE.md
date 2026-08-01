@@ -57,11 +57,12 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 | `src/hooks/smfExportCandidate.ts` | One pure authority for pose, animation, metadata, and live-skin application before SMF export. |
 | `src/components/ThreeViewport.tsx` | Renderer/mixer/root lifecycle and imperative viewport interaction ownership. Display/material mutation is delegated to `src/utils/viewportDisplayController.ts`. |
 | `src/utils/viewportLayout.ts` | Viewport specs, pane hit math, model-fit distance, fixed-camera focus, and ortho pan conversion. |
+| `src/utils/animationFrame.ts` | Shared pending-RAF cancellation guard used by the mount-owned viewport loop and resize callback. |
 | `src/utils/themeViewportGrid.ts` | Theme grid construction, pane visibility, and disposal. |
 | `src/utils/materialPreview.ts` | Source-versus-preview material boundary for async exporters. |
 | `src/utils/weightPreview.ts` | Selected-bone weight-color preview with original geometry/material restoration and no export-material mutation. |
 | `src/utils/viewportDisplayController.ts` | Viewport texture/opacity preview, legacy SMF lighting substitution, source assignment restoration, and display cleanup. |
-| `src/utils/animationEdits.ts`, `rigEdits.ts`, `rigIk.ts`, `skinWeights.ts` | Pure authoring policy and transformations with focused unit coverage. |
+| `src/utils/animationEdits.ts`, `rigEdits.ts`, `rigIk.ts`, `skinWeights.ts` | Pure authoring policy and transformations with focused unit coverage; skin history snapshots use keyed indexing for batch comparisons. |
 | `src/utils/animationAuthoringContext.ts` | Pure selected-bone and active-clip guards shared by animation authoring callbacks and focused tests. |
 | `src/utils/animationAuthoringController.ts` | Clip CRUD, metadata, selected-bone key editing, snap, and animation-history action contract used by `useLoadModel`. |
 | `src/loaders/*` | SMF/GLB/FBX/OBJ parsing, conversion, diagnostics, coordinate/DQ math, and validated export. |
@@ -92,7 +93,7 @@ The sandbox checkup is diagnostic rather than an app gate. A managed profile may
 
 Current inventory:
 
-- 251 frontend unit tests across 41 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
+- 254 frontend unit tests across 42 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
 - 55 browser cases in eight domain-owned spec files.
 - 9 Rust tests; the real-SMF native tests require and parse the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
 - 21 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; the latest context run reports 25.3 KiB default orientation with zero warnings.

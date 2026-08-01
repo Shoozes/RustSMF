@@ -168,6 +168,8 @@
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/types/viewportEditorEvents.ts",
         "source/frontend/src/utils/SimpleOrbit.ts",
+        "source/frontend/src/utils/animationFrame.ts",
+        "source/frontend/src/utils/animationFrame.test.ts",
         "source/frontend/src/utils/viewportInteractionRouter.ts",
         "source/frontend/src/utils/viewportInteractionRouter.test.ts",
         "source/frontend/src/utils/viewportInteractionRuntime.ts",
@@ -186,7 +188,8 @@
         "Mount-owned listeners and controls require one explicit dispose owner.",
         "Long-lived callbacks read current mutable state through refs.",
         "Perspective and orthographic panes keep distinct directions and zoom while sharing one pan/focus target.",
-        "Animation actions bind only when the mixer root matches the current root; attachment applies one complete current playback intent."
+        "Animation actions bind only when the mixer root matches the current root; attachment applies one complete current playback intent.",
+        "Pending RAF handles are canceled through the shared zero-safe animation-frame guard."
       ]
     },
     "feature__rig_ik_pose": {
@@ -251,7 +254,8 @@
       "notes": [
         "Brush queries use bounded spatial candidates and verify world-space distance before mutation.",
         "Completed strokes and batch actions own one undoable snapshot transaction.",
-        "Weight preview is a non-destructive vertex-color display; original color attributes and material vertex-color modes are restored on disable/export."
+        "Weight preview is a non-destructive vertex-color display; original color attributes and material vertex-color modes are restored on disable/export.",
+        "Batch history comparisons use a mesh/vertex snapshot index rather than repeated linear scans."
       ]
     },
     "subsystem__smf_format_and_fidelity": {
@@ -345,7 +349,7 @@
         "source/frontend/playwright.config.ts"
       ],
       "notes": [
-        "Current-head evidence is 55/55 browser cases, 2/2 strict visuals, canonical desktop-smoke green, and Blender 5.0.0 validation of app-exported FBX output.",
+        "Historical current-head evidence is 55/55 browser cases, 2/2 strict visuals, canonical desktop-smoke green, and Blender 5.0.0 validation of app-exported FBX output; a later managed rerun reached all 55 bodies but failed only during browserContext.close teardown with spawn EPERM.",
         "Bundled Chromium still fails before app execution with spawn EPERM in the managed process; current evidence uses a process-local approved system-browser executable and keeps the environment caveat separate from product results."
       ]
     },

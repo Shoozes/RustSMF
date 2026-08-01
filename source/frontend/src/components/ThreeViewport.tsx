@@ -69,6 +69,7 @@ import {
   type SkinBrushVertexRef,
 } from '../utils/skinBrushIndex';
 import { getSkinnedVertexWorldPosition } from '../utils/skinnedVertexPosition';
+import { cancelPendingAnimationFrame } from '../utils/animationFrame';
 import type { EditorMode, ViewportLayout } from '../store';
 import { getAppTheme, type AppThemeId } from '../theme';
 import type {
@@ -2321,9 +2322,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     resizeFrameRef.current = requestAnimationFrame(onResize);
 
     return () => {
-      if (frameRef.current) cancelAnimationFrame(frameRef.current);
-      if (resizeFrameRef.current) cancelAnimationFrame(resizeFrameRef.current);
-      resizeFrameRef.current = null;
+      frameRef.current = cancelPendingAnimationFrame(frameRef.current, cancelAnimationFrame);
+      resizeFrameRef.current = cancelPendingAnimationFrame(resizeFrameRef.current, cancelAnimationFrame);
       resizeObsRef.current?.disconnect();
       interactionRuntime.dispose();
       detachOrbit();

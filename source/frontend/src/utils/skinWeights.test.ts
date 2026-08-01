@@ -8,7 +8,9 @@ import {
   cloneSkinEditState,
   editVertexBoneWeight,
   getDirtySkinExportBlockReason,
+  getSkinVertexSnapshotKey,
   getSkinAttributes,
+  indexSkinVertexSnapshots,
   isSkinAutoWeightAlgorithm,
   hasDirtySkinEdits,
   makeSkinEditState,
@@ -115,6 +117,25 @@ function weightsTotal(weights: readonly number[]): number {
 }
 
 describe('skinWeights', () => {
+  it('indexes skin snapshots by mesh and vertex without scanning the full list', () => {
+    const first = {
+      meshId: 'mesh-a',
+      vertexIndex: 3,
+      vertex: { indices: [0, 1, 2, 3] as [number, number, number, number], weights: [1, 0, 0, 0] as [number, number, number, number] },
+    };
+    const second = {
+      meshId: 'mesh-b',
+      vertexIndex: 3,
+      vertex: { indices: [2, 3, 4, 5] as [number, number, number, number], weights: [0.25, 0.25, 0.25, 0.25] as [number, number, number, number] },
+    };
+    const indexed = indexSkinVertexSnapshots([first, second]);
+
+    assert.equal(getSkinVertexSnapshotKey('mesh-a', 3), 'mesh-a:3');
+    assert.equal(indexed.get('mesh-a:3'), first);
+    assert.equal(indexed.get('mesh-b:3'), second);
+    assert.equal(indexed.get('mesh-a:4'), undefined);
+  });
+
   it('rejects unsupported auto-weight algorithm values', () => {
     assert.equal(isSkinAutoWeightAlgorithm('nearest-segment'), true);
     assert.equal(isSkinAutoWeightAlgorithm('magic'), false);
