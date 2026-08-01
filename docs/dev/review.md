@@ -1,12 +1,20 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-07-30
+Last reviewed: 2026-08-01
 
 ## Scope
 
 This repository-wide integrity pass reviewed current-state documentation, `summary_bank.json`, research and progress records, source/import boundaries, incomplete logic markers, async ownership, recent Original-theme/viewport/texture/FBX work, deterministic fixtures, unit/browser/native coverage, dependencies, and branch hygiene.
 
 Current behavior is documented once in `APP_STATE.md`. Forward work is in `TODO.md`, recurring regression lessons are in `PITFALL_LEDGER.md`, and test ownership is in `source/frontend/tests/README.md`.
+
+## Current pass
+
+- `pwsh -NoProfile -File .\run.ps1 -Task verify` passes after the animation/display controller extractions: 241/241 frontend units, typechecks, lint, build, chunk checks, context validation, and Rust check.
+- `source/frontend/src/utils/animationAuthoringController.ts` now owns clip CRUD, metadata, selected-bone key editing, snap, and action-level animation history integration; its guards remain pure in `animationAuthoringContext.ts` and both boundaries have focused tests.
+- `source/frontend/src/utils/viewportDisplayController.ts` now owns viewport texture/opacity preview, legacy lighting substitutions, source assignment restoration, and cleanup; renderer/root/RAF lifecycle remains in `ThreeViewport.tsx`.
+- Fixed-pane Rig move/rotate manipulation was confirmed as already shipped, with active-pane camera hit testing, cancel/undo/redo history, and export-format browser coverage in `export-formats.spec.ts`; the backlog item was removed as completed.
+- A fresh `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye` was blocked before app execution because Playwright Chromium launch returned `browserType.launch: spawn EPERM`. This is a managed-environment boundary; the previously recorded 54/54 browser pass remains historical evidence until Chromium can launch again.
 
 ## Corrections Completed
 
@@ -35,7 +43,7 @@ Current behavior is documented once in `APP_STATE.md`. Forward work is in `TODO.
 - **Where:** `src/utils/themeViewportGrid.ts`, `src/utils/themeViewportGrid.test.ts`, `src/theme.ts`, `src/utils/index.ts`, and `src/components/ThreeViewport.tsx`.
 - **How:** Use a typed grid mode and viewport role, retain per-pane render visibility, and dispose all owned Three resources through the existing disposal authority.
 - **Done when:** Plane orientation, role visibility, disabled state, scene removal, geometry disposal, typecheck, strict visuals, and Original quad behavior pass.
-- **Result:** Done. Three focused units, all 234 frontend units, strict visuals, and full browser coverage pass.
+- **Result:** Done. Three focused units, all 241 frontend units, strict visuals, and the previously recorded full browser coverage pass.
 
 ### Documentation and context routing were consolidated
 
@@ -53,23 +61,21 @@ Current behavior is documented once in `APP_STATE.md`. Forward work is in `TODO.
 - **Async and run conditions:** Existing latest-intent, abort, timeout, monotonic-progress, single-flight save, root-replacement, and process-lifecycle tests all pass. No new race or unowned timer/listener was found.
 - **Research inbox:** No unprocessed research or drop-in review item exists; only inbox instructions remain.
 - **Redundancy:** Current state, backlog, latest evidence, pitfalls, and test ownership now each have one document owner. `summary_bank.json` routes focused feature/subsystem slices rather than serving as another progress log.
-- **Modularity:** `useLoadModel.ts` and `ThreeViewport.tsx` remain large integration owners. The pass extracted only the proven theme-grid leaf seam; the next bounded controller extractions are specified in `TODO.md` to avoid stale closures, circular imports, or double disposal.
+- **Modularity:** `useLoadModel.ts` and `ThreeViewport.tsx` remain integration owners, now delegating animation actions and display/material mutation through explicit, focused controller contracts. No circular import or pass-through barrel was added.
 - **Dependency health:** The installed tree resolves on Windows and `npm audit --omit=optional` reports zero vulnerabilities. Reported unmet optional packages are platform or opt-in feature packages.
 
 ## Open Work
 
 The active priority order is maintained in `TODO.md`:
 
-1. Extract bounded animation and viewport-display controllers from the two integration owners.
-2. Add camera-aware direct manipulation in fixed panes.
-3. Add an independently authored or redistributable skinned, textured, animated FBX compatibility fixture.
+1. Add an independently authored or redistributable skinned, textured, animated FBX compatibility fixture.
 
 Each item is evidence-backed, split into bounded subtasks, and has an explicit completion and verification contract.
 
 ## Verification Evidence
 
-- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed; context 19 groups/zero warnings plus 7/7 tool tests, lint coverage, ESLint, app/test typechecks, production-`any` guard, production build, entry/lazy-worker chunk guards, 234/234 frontend units, and Rust check.
-- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: 54/54 passed with zero skipped across eight domain-owned browser suites.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed on 2026-08-01; context 19 groups/zero warnings plus 7/7 tool tests, lint coverage, ESLint, app/test typechecks, production-`any` guard, production build, entry/lazy-worker chunk guards, 241/241 frontend units, and Rust check.
+- Prior browser evidence (2026-07-30): `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye` passed 54/54 with zero skipped across eight domain-owned browser suites. Current rerun is blocked at Chromium process launch with `spawn EPERM`, before any test step executes.
 - Focused shared-camera reset and invalid-file regression slice: 2/2 passed.
 - `pwsh -NoProfile -File .\run.ps1 -Task test:visual-strict`: 2/2 passed.
 - `pwsh -NoProfile -File .\run.ps1 -Task desktop-smoke`: release Tauri build passed, Rust tests 9/9, and native IPC browser tests 9/9.
@@ -82,3 +88,4 @@ Each item is evidence-backed, split into bounded subtasks, and has an explicit c
 - Node emits `DEP0205` while Playwright loads its TypeScript configuration. A traced run locates the call in Playwright 1.60.0’s internal `registerESMLoader`, not repository code. Recheck on the next Playwright update; do not suppress it globally.
 - Cargo can warn that the managed environment cannot canonicalize `C:\Users\jc816`; Rust check, Clippy, tests, and release build still complete successfully.
 - The native fallback test intentionally logs its mocked dialog-open warning while proving fallback behavior.
+- Managed Playwright launch currently returns `spawn EPERM` for the installed Chromium headless shell; resolve the local execution-policy/process-permission issue before treating a new browser run as authoritative.

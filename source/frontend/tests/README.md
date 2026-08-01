@@ -25,7 +25,7 @@ Playwright may require execution outside a managed sandbox when Chromium launch 
 | `native.spec.ts` | Deterministic Tauri IPC open/read/write/cancel and stale-completion matrices |
 | `visual.spec.ts` | Modern/Original geometry/defaults, source texture thumbnails, reference-derived shelves/top strip/keyframe lane, narrow layout, viewport/menu visual coherence |
 
-The 37 tests formerly in `smoke.spec.ts` retain their titles across the six feature-owned browser suites. Playwright discovers 54 browser cases total.
+The 37 tests formerly in `smoke.spec.ts` retain their titles across the current domain-owned browser suites. Playwright discovers 54 browser cases total.
 
 ## Shared Browser Helpers
 
@@ -39,7 +39,7 @@ The 37 tests formerly in `smoke.spec.ts` retain their titles across the six feat
 
 ## Unit Coverage
 
-The 234 Node tests under `src/**/*.test.ts` cover theme registry/persistence, SMF binary and DQ fidelity, worker protocol and ownership, indexed Three-to-SMF triangle expansion, FBX and GLB pre-save reparse validation, export-candidate policy, editor snapshots/history, viewport listener disposal/routing/layout/shared-focus pan/reset math, theme-grid plane ownership/disposal, Rig/IK/Skin/Animate helpers, material isolation, raw texture thumbnail sampling, and resource disposal.
+The 241 Node tests under `src/**/*.test.ts` cover theme registry/persistence, SMF binary and DQ fidelity, worker protocol and ownership, indexed Three-to-SMF triangle expansion, FBX and GLB pre-save reparse validation, export-candidate policy, editor snapshots/history, viewport listener disposal/routing/layout/shared-focus pan/reset math, theme-grid plane ownership/disposal, Rig/IK/Skin/Animate helpers, animation authoring context/controller guards, material isolation and viewport display restoration, raw texture thumbnail sampling, and resource disposal.
 
 The generated indexed GLB is a required compatibility shape: conversion must duplicate indexed vertex attributes into complete SMF triangle soup before the worker guard accepts it. Missing optional normals/UVs/tangents receive correctly sized zero arrays; incomplete triangle or skin layouts fail preflight.
 

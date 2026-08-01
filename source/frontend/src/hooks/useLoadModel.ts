@@ -80,37 +80,20 @@ import {
 import {
   applyAnimationEditsToClips,
   cloneAnimationEditState,
-  copyAnimationKeyframe,
-  deleteAnimationEditClip,
   deleteAnimationEditBones,
-  deleteAnimationKeyframe,
-  duplicateAnimationEditClip,
-  getAnimationClipMetadata,
   getClipKey,
   getCurrentClipKey,
-  getEditedKeyframe,
   hasDirtyAnimationEdits,
   makeAnimationEditState,
-  makeUniqueAnimationClipName,
   makeKeyframeFromBone,
-  moveAnimationClip,
-  moveAnimationKeyframe,
-  normalizeAnimationSnapStep,
-  renameAnimationEditClip,
   renameAnimationEditBone,
   sameAnimationEditState,
-  selectAnimationKeyframe,
-  setAnimationClipLoop,
-  setAnimationClipSampleFrameMultiplier,
-  setAnimationInterpolation,
-  snapAnimationTime,
   upsertAnimationKeyframe,
   type AnimationClipMetadata,
   type AnimationEditState,
-  type AnimationInterpolation,
   type AnimationSnapStep,
-  type EditableBoneKeyframe,
 } from '../utils/animationEdits';
+import { createAnimationAuthoringController } from '../utils/animationAuthoringController';
 import {
   createChildBone,
   deleteBoneBranch,
@@ -1438,197 +1421,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     playback.selectClip(clip.name || 'clip', clip.duration);
   }, [playback]);
 
-  const renameCurrentAnimationClip = useCallback((requestedName: string) => {
-    const clips = baseClipsRef.current;
-    if (clips.length === 0) {
-      ui.setStatus('Load an animated model before renaming clips.');
-      return;
-    }
-
-    const currentClipName = getCurrentClipKey(clips, playbackRef.current.currentClipName);
-    const clipIndex = clips.findIndex((clip, index) => getClipKey(clip, index) === currentClipName);
-    if (clipIndex < 0) {
-      ui.setStatus('No animation clip is active for rename.');
-      return;
-    }
-
-    const nextName = makeUniqueAnimationClipName(clips, requestedName, currentClipName);
-    if (nextName === currentClipName) {
-      ui.setStatus('Animation clip name is unchanged.');
-      return;
-    }
-
-    const before = captureAnimationWorkspaceSnapshot();
-    const nextBaseClips = cloneAnimationClips(clips);
-    nextBaseClips[clipIndex].name = nextName;
-    const nextAnimationState = renameAnimationEditClip(animationEditStateRef.current, currentClipName, nextName);
-    const after: AnimationWorkspaceHistorySnapshot = {
-      baseClips: nextBaseClips,
-      animationEditState: nextAnimationState,
-      currentClipName: nextName,
-      currentTime: playbackRef.current.currentTime,
-    };
-    pushAnimationWorkspaceHistory(`rename animation clip ${currentClipName} to ${nextName}`, before, after);
-    applyAnimationWorkspaceSnapshot(after);
-    ui.setStatus(`Renamed animation clip ${currentClipName} to ${nextName}.`);
-  }, [applyAnimationWorkspaceSnapshot, captureAnimationWorkspaceSnapshot, playbackRef, pushAnimationWorkspaceHistory, ui]);
-
-  const duplicateCurrentAnimationClip = useCallback(() => {
-    const clips = baseClipsRef.current;
-    if (clips.length === 0) {
-      ui.setStatus('Load an animated model before duplicating clips.');
-      return;
-    }
-
-    const currentClipName = getCurrentClipKey(clips, playbackRef.current.currentClipName);
-    const clipIndex = clips.findIndex((clip, index) => getClipKey(clip, index) === currentClipName);
-    const sourceClip = clips[clipIndex];
-    if (!sourceClip) {
-      ui.setStatus('No animation clip is active for duplicate.');
-      return;
-    }
-
-    const nextName = makeUniqueAnimationClipName(clips, `${currentClipName} Copy`);
-    const before = captureAnimationWorkspaceSnapshot();
-    const duplicatedClip = sourceClip.clone();
-    duplicatedClip.name = nextName;
-    const nextBaseClips = cloneAnimationClips(clips);
-    nextBaseClips.splice(clipIndex + 1, 0, duplicatedClip);
-    const nextAnimationState = duplicateAnimationEditClip(animationEditStateRef.current, currentClipName, nextName);
-    const after: AnimationWorkspaceHistorySnapshot = {
-      baseClips: nextBaseClips,
-      animationEditState: nextAnimationState,
-      currentClipName: nextName,
-      currentTime: playbackRef.current.currentTime,
-    };
-    pushAnimationWorkspaceHistory(`duplicate animation clip ${currentClipName}`, before, after);
-    applyAnimationWorkspaceSnapshot(after);
-    ui.setStatus(`Duplicated animation clip ${currentClipName} as ${nextName}.`);
-  }, [applyAnimationWorkspaceSnapshot, captureAnimationWorkspaceSnapshot, playbackRef, pushAnimationWorkspaceHistory, ui]);
-
-  const deleteCurrentAnimationClip = useCallback(() => {
-    const clips = baseClipsRef.current;
-    if (clips.length === 0) {
-      ui.setStatus('Load an animated model before deleting clips.');
-      return;
-    }
-    if (clips.length === 1) {
-      ui.setStatus('Cannot delete the last animation clip.');
-      return;
-    }
-
-    const currentClipName = getCurrentClipKey(clips, playbackRef.current.currentClipName);
-    const clipIndex = clips.findIndex((clip, index) => getClipKey(clip, index) === currentClipName);
-    if (clipIndex < 0) {
-      ui.setStatus('No animation clip is active for delete.');
-      return;
-    }
-
-    const before = captureAnimationWorkspaceSnapshot();
-    const nextBaseClips = cloneAnimationClips(clips);
-    nextBaseClips.splice(clipIndex, 1);
-    const fallbackIndex = Math.min(clipIndex, nextBaseClips.length - 1);
-    const fallbackClipName = getClipKey(nextBaseClips[fallbackIndex], fallbackIndex);
-    const nextAnimationState = deleteAnimationEditClip(animationEditStateRef.current, currentClipName);
-    const after: AnimationWorkspaceHistorySnapshot = {
-      baseClips: nextBaseClips,
-      animationEditState: nextAnimationState,
-      currentClipName: fallbackClipName,
-      currentTime: playbackRef.current.currentTime,
-    };
-    pushAnimationWorkspaceHistory(`delete animation clip ${currentClipName}`, before, after);
-    applyAnimationWorkspaceSnapshot(after);
-    ui.setStatus(`Deleted animation clip ${currentClipName}.`);
-  }, [applyAnimationWorkspaceSnapshot, captureAnimationWorkspaceSnapshot, playbackRef, pushAnimationWorkspaceHistory, ui]);
-
-  const moveCurrentAnimationClip = useCallback((direction: -1 | 1) => {
-    const clips = baseClipsRef.current;
-    if (clips.length < 2) {
-      ui.setStatus('Load at least two animation clips before reordering clips.');
-      return;
-    }
-
-    const currentClipName = getCurrentClipKey(clips, playbackRef.current.currentClipName);
-    const clipIndex = clips.findIndex((clip, index) => getClipKey(clip, index) === currentClipName);
-    if (clipIndex < 0) {
-      ui.setStatus('No animation clip is active for reorder.');
-      return;
-    }
-
-    const targetIndex = clipIndex + direction;
-    if (targetIndex < 0 || targetIndex >= clips.length) {
-      ui.setStatus(`Animation clip ${currentClipName} is already ${direction < 0 ? 'first' : 'last'}.`);
-      return;
-    }
-
-    const before = captureAnimationWorkspaceSnapshot();
-    const nextBaseClips = moveAnimationClip(clips, currentClipName, direction);
-    const after: AnimationWorkspaceHistorySnapshot = {
-      baseClips: nextBaseClips,
-      animationEditState: cloneAnimationEditState(animationEditStateRef.current),
-      currentClipName,
-      currentTime: playbackRef.current.currentTime,
-    };
-    const label = `${direction < 0 ? 'move up' : 'move down'} animation clip ${currentClipName}`;
-    pushAnimationWorkspaceHistory(label, before, after);
-    applyAnimationWorkspaceSnapshot(after);
-    ui.setStatus(`Moved animation clip ${currentClipName} ${direction < 0 ? 'up' : 'down'}.`);
-  }, [applyAnimationWorkspaceSnapshot, captureAnimationWorkspaceSnapshot, playbackRef, pushAnimationWorkspaceHistory, ui]);
-
-  const moveCurrentAnimationClipUp = useCallback(() => {
-    moveCurrentAnimationClip(-1);
-  }, [moveCurrentAnimationClip]);
-
-  const moveCurrentAnimationClipDown = useCallback(() => {
-    moveCurrentAnimationClip(1);
-  }, [moveCurrentAnimationClip]);
-
-  const snapPlaybackTime = useCallback((time: number): number => (
-    snapAnimationTime(time, animationSnapStep, playbackRef.current.duration || 0)
-  ), [animationSnapStep, playbackRef]);
-
-  const onScrub = useCallback((t: number) => {
-    playbackRef.current.scrub(snapPlaybackTime(t));
-  }, [playbackRef, snapPlaybackTime]);
-
   const setSpeed = useCallback((s: number) => {
     playback.setPlaybackSpeed(s);
   }, [playback]);
-
-  const getActiveAnimationEditContext = useCallback((): {
-    clipName: string;
-    boneName: string;
-    bone: THREE.Bone;
-  } | null => {
-    const skeleton = model.skeleton;
-    if (!skeleton || baseClipsRef.current.length === 0) {
-      ui.setStatus('Load a skinned animated model before editing keyframes.');
-      return null;
-    }
-    const boneName = ui.selected;
-    if (!boneName || boneName === 'Scene') {
-      ui.setStatus('Select a bone before editing keyframes.');
-      return null;
-    }
-    const bone = findBoneByName(skeleton, boneName);
-    if (!bone) {
-      ui.setStatus('Selected item is not an editable animation bone.');
-      return null;
-    }
-    const clipName = getCurrentClipKey(baseClipsRef.current, playbackRef.current.currentClipName);
-    if (!clipName) {
-      ui.setStatus('No animation clip is active for keyframe editing.');
-      return null;
-    }
-    return { clipName, boneName, bone };
-  }, [model.skeleton, playbackRef, ui]);
-
-  const applyAnimationEditState = useCallback((next: AnimationEditState, status?: string) => {
-    commitAnimationEditState(next);
-    if (status) {
-      ui.setStatus(status);
-    }
-  }, [commitAnimationEditState, ui]);
 
   const getSourceAnimationClipMetadata = useCallback((clipName: string): AnimationClipMetadata => {
     const sourceAnimation = lastSmfDataRef.current?.animations.find((animation, index) => (
@@ -1640,234 +1435,52 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     };
   }, []);
 
-  const getActiveAnimationClipMetadataContext = useCallback((): {
-    clipName: string;
-    fallback: AnimationClipMetadata;
-  } | null => {
-    const clips = baseClipsRef.current;
-    if (clips.length === 0) {
-      ui.setStatus('Load an animated model before editing clip metadata.');
-      return null;
-    }
-
-    const clipName = getCurrentClipKey(clips, playbackRef.current.currentClipName);
-    if (!clipName) {
-      ui.setStatus('No animation clip is active for metadata editing.');
-      return null;
-    }
-
-    return {
-      clipName,
-      fallback: getSourceAnimationClipMetadata(clipName),
-    };
-  }, [getSourceAnimationClipMetadata, playbackRef, ui]);
-
-  const changeAnimationClipLoop = useCallback((loop: boolean) => {
-    const context = getActiveAnimationClipMetadataContext();
-    if (!context) return;
-
-    const before = cloneAnimationEditState(animationEditStateRef.current);
-    const next = setAnimationClipLoop(
-      animationEditStateRef.current,
-      context.clipName,
-      loop,
-      context.fallback,
-    );
-    pushAnimationHistory(
-      `set animation clip ${context.clipName} loop ${loop ? 'on' : 'off'}`,
-      before,
-      next,
-    );
-    applyAnimationEditState(next, `Animation clip ${context.clipName} loop ${loop ? 'enabled' : 'disabled'}.`);
-  }, [applyAnimationEditState, getActiveAnimationClipMetadataContext, pushAnimationHistory]);
-
-  const changeAnimationClipSampleFrameMultiplier = useCallback((value: number) => {
-    const context = getActiveAnimationClipMetadataContext();
-    if (!context) return;
-
-    const before = cloneAnimationEditState(animationEditStateRef.current);
-    const next = setAnimationClipSampleFrameMultiplier(
-      animationEditStateRef.current,
-      context.clipName,
-      value,
-      context.fallback,
-    );
-    const metadata = getAnimationClipMetadata(next, context.clipName, context.fallback);
-    pushAnimationHistory(
-      `set animation clip ${context.clipName} sample frame multiplier to ${metadata.sampleFrameMultiplier}`,
-      before,
-      next,
-    );
-    applyAnimationEditState(next, `Animation clip ${context.clipName} sample frame multiplier set to ${metadata.sampleFrameMultiplier}.`);
-  }, [applyAnimationEditState, getActiveAnimationClipMetadataContext, pushAnimationHistory]);
-
-  const insertAnimationKeyframeAtTime = useCallback((time: number) => {
-    const context = getActiveAnimationEditContext();
-    if (!context) return;
-    const state = animationEditStateRef.current;
-    const before = cloneAnimationEditState(state);
-    const keyTime = snapPlaybackTime(time);
-    const key = makeKeyframeFromBone(
-      context.bone,
-      keyTime,
-      state.interpolation,
-    );
-    const next = upsertAnimationKeyframe(state, context.clipName, context.boneName, key);
-    pushAnimationHistory(
-      `insert animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s`,
-      before,
-      next,
-    );
-    playbackRef.current.scrub(keyTime);
-    applyAnimationEditState(next, `Inserted animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
-  }, [applyAnimationEditState, getActiveAnimationEditContext, playbackRef, pushAnimationHistory, snapPlaybackTime]);
-
-  const insertAnimationKeyframe = useCallback(() => {
-    insertAnimationKeyframeAtTime(playbackRef.current.currentTime);
-  }, [insertAnimationKeyframeAtTime, playbackRef]);
-
-  const updateAnimationKeyframe = useCallback(() => {
-    const context = getActiveAnimationEditContext();
-    if (!context) return;
-    const state = animationEditStateRef.current;
-    const before = cloneAnimationEditState(state);
-    const time = state.selectedKeyTime ?? snapPlaybackTime(playbackRef.current.currentTime);
-    const key = makeKeyframeFromBone(context.bone, time, state.interpolation);
-    const next = upsertAnimationKeyframe(state, context.clipName, context.boneName, key);
-    pushAnimationHistory(
-      `update animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s`,
-      before,
-      next,
-    );
-    applyAnimationEditState(next, `Updated animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
-  }, [applyAnimationEditState, getActiveAnimationEditContext, playbackRef, pushAnimationHistory, snapPlaybackTime]);
-
-  const deleteSelectedAnimationKeyframe = useCallback(() => {
-    const context = getActiveAnimationEditContext();
-    if (!context) return;
-    const state = animationEditStateRef.current;
-    const before = cloneAnimationEditState(state);
-    const time = state.selectedKeyTime ?? snapPlaybackTime(playbackRef.current.currentTime);
-    const next = deleteAnimationKeyframe(state, context.clipName, context.boneName, time);
-    pushAnimationHistory(
-      `delete animation keyframe for ${context.boneName} near ${time.toFixed(2)}s`,
-      before,
-      next,
-    );
-    applyAnimationEditState(next, `Deleted animation keyframe for ${context.boneName} near ${time.toFixed(2)}s.`);
-  }, [applyAnimationEditState, getActiveAnimationEditContext, playbackRef, pushAnimationHistory, snapPlaybackTime]);
-
-  const copySelectedAnimationKeyframe = useCallback(() => {
-    const context = getActiveAnimationEditContext();
-    if (!context) return;
-    const state = animationEditStateRef.current;
-    const time = state.selectedKeyTime ?? snapPlaybackTime(playbackRef.current.currentTime);
-    const edited = getEditedKeyframe(state, context.clipName, context.boneName, time);
-    const key: EditableBoneKeyframe = edited ?? makeKeyframeFromBone(context.bone, time, state.interpolation);
-    const next = copyAnimationKeyframe(state, key);
-    animationEditStateRef.current = next;
-    setAnimationEditState(next);
-    ui.setStatus(`Copied animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
-  }, [getActiveAnimationEditContext, playbackRef, snapPlaybackTime, ui]);
-
-  const pasteAnimationKeyframe = useCallback(() => {
-    const context = getActiveAnimationEditContext();
-    if (!context) return;
-    const state = animationEditStateRef.current;
-    if (!state.clipboard) {
-      ui.setStatus('No copied animation keyframe to paste.');
-      return;
-    }
-    const before = cloneAnimationEditState(state);
-    const time = snapPlaybackTime(playbackRef.current.currentTime);
-    const key: EditableBoneKeyframe = {
-      ...state.clipboard,
-      time,
-    };
-    const next = upsertAnimationKeyframe(state, context.clipName, context.boneName, key);
-    pushAnimationHistory(
-      `paste animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s`,
-      before,
-      next,
-    );
-    applyAnimationEditState(next, `Pasted animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
-  }, [applyAnimationEditState, getActiveAnimationEditContext, playbackRef, pushAnimationHistory, snapPlaybackTime, ui]);
-
-  const selectAnimationKeyframeTime = useCallback((time: number | null) => {
-    const next = selectAnimationKeyframe(animationEditStateRef.current, time);
-    animationEditStateRef.current = next;
-    setAnimationEditState(next);
-  }, []);
-
-  const moveSelectedAnimationKeyframe = useCallback((fromTime: number, toTime: number) => {
-    const context = getActiveAnimationEditContext();
-    if (!context) return;
-    const state = animationEditStateRef.current;
-    const source = getEditedKeyframe(state, context.clipName, context.boneName, fromTime);
-    if (!source) {
-      ui.setStatus('Only authored animation keyframes can be dragged. Insert or update a keyframe first.');
-      return;
-    }
-
-    const before = cloneAnimationEditState(state);
-    const nextTime = snapPlaybackTime(toTime);
-    const next = moveAnimationKeyframe(state, context.clipName, context.boneName, fromTime, nextTime);
-    const moved = pushAnimationHistory(
-      `move animation keyframe for ${context.boneName} to ${nextTime.toFixed(2)}s`,
-      before,
-      next,
-    );
-    if (!moved) {
-      playbackRef.current.scrub(nextTime);
-      return;
-    }
-
-    playbackRef.current.scrub(nextTime);
-    applyAnimationEditState(next, `Moved animation keyframe for ${context.boneName} to ${nextTime.toFixed(2)}s.`);
-  }, [
-    applyAnimationEditState,
-    getActiveAnimationEditContext,
+  const animationAuthoring = createAnimationAuthoringController({
+    baseClipsRef,
+    animationEditStateRef,
     playbackRef,
+    skeleton: model.skeleton ?? null,
+    selectedBoneName: ui.selected ?? '',
+    animationSnapStep,
+    setAnimationEditState,
+    setAnimationSnapStep,
+    commitAnimationEditState,
+    captureAnimationWorkspaceSnapshot,
+    applyAnimationWorkspaceSnapshot,
     pushAnimationHistory,
+    pushAnimationWorkspaceHistory,
+    getSourceAnimationClipMetadata,
+    setStatus: ui.setStatus,
+  });
+
+  const {
+    renameCurrentAnimationClip,
+    duplicateCurrentAnimationClip,
+    deleteCurrentAnimationClip,
+    moveCurrentAnimationClipUp,
+    moveCurrentAnimationClipDown,
     snapPlaybackTime,
-    ui,
-  ]);
+    insertAnimationKeyframeAtTime,
+    insertAnimationKeyframe,
+    updateAnimationKeyframe,
+    deleteSelectedAnimationKeyframe,
+    copySelectedAnimationKeyframe,
+    pasteAnimationKeyframe,
+    selectAnimationKeyframeTime,
+    moveSelectedAnimationKeyframe,
+    changeAnimationInterpolation,
+    changeAnimationSnapStep,
+    changeAnimationClipLoop,
+    changeAnimationClipSampleFrameMultiplier,
+    applyAnimationEditState,
+  } = animationAuthoring;
 
-  const changeAnimationInterpolation = useCallback((interpolation: AnimationInterpolation) => {
-    const context = getActiveAnimationEditContext();
-    const before = cloneAnimationEditState(animationEditStateRef.current);
-    const next = context
-      ? setAnimationInterpolation(animationEditStateRef.current, interpolation, context.clipName, context.boneName)
-      : setAnimationInterpolation(animationEditStateRef.current, interpolation);
-    pushAnimationHistory(
-      `set animation interpolation to ${interpolation}`,
-      before,
-      next,
-    );
-    applyAnimationEditState(next, `Animation interpolation set to ${interpolation}.`);
-  }, [applyAnimationEditState, getActiveAnimationEditContext, pushAnimationHistory]);
+  const onScrub = useCallback((t: number) => {
+    playbackRef.current.scrub(snapPlaybackTime(t));
+  }, [playbackRef, snapPlaybackTime]);
 
-  const changeAnimationSnapStep = useCallback((step: AnimationSnapStep) => {
-    const next = normalizeAnimationSnapStep(step);
-    setAnimationSnapStep(next);
-    ui.setStatus(next > 0 ? `Animation snap set to ${next.toFixed(2)}s.` : 'Animation snap disabled.');
-  }, [ui]);
-
-  const animationAuthoredKeyTimes = useMemo(() => {
-    const boneName = ui.selected;
-    if (!boneName || boneName === 'Scene') return [];
-    const clipName = getCurrentClipKey(baseClipsRef.current, playback.currentClipName);
-    if (!clipName) return [];
-    return (animationEditState.editsByClip[clipName]?.[boneName] ?? []).map((key) => key.time);
-  }, [animationEditState, playback.currentClipName, ui.selected]);
-
-  const animationClipMetadata = useMemo(() => {
-    const clipName = getCurrentClipKey(model.clips, playback.currentClipName);
-    if (!clipName) {
-      return getAnimationClipMetadata(animationEditState, '', null);
-    }
-    return getAnimationClipMetadata(animationEditState, clipName, getSourceAnimationClipMetadata(clipName));
-  }, [animationEditState, getSourceAnimationClipMetadata, model.clips, playback.currentClipName]);
+  const animationAuthoredKeyTimes = animationAuthoring.getAnimationAuthoredKeyTimes();
+  const animationClipMetadata = animationAuthoring.getAnimationClipMetadata();
 
   const pingRust = useCallback(async () => {
     try {

@@ -158,7 +158,7 @@ export const sameAnimationEditState = (
 export const getClipKey = (clip: THREE.AnimationClip, index: number): string => clip.name || `clip_${index}`;
 
 export const getCurrentClipKey = (
-  clips: THREE.AnimationClip[],
+  clips: readonly THREE.AnimationClip[],
   currentClipName: string,
 ): string => {
   const foundIndex = clips.findIndex((clip, index) => getClipKey(clip, index) === currentClipName);

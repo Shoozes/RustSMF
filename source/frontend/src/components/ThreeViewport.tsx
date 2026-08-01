@@ -9,14 +9,11 @@ import type { SkinWeightEditMode } from '../utils/skinWeights';
 import type { RigToolMode } from '../utils/rigEdits';
 import type { RigIkSolveResult } from '../utils/rigIk';
 import { useBoneLabelsWithScale } from '../utils/useBoneLabels';
-import { createLegacySmfMaterial } from '../utils/legacySmfLighting';
 import { createSkinPointOverlays, disposeSkinPointOverlays } from '../utils/skinPointOverlay';
 import {
-  registerMaterialPreviewRoot,
-  unregisterMaterialPreviewRoot,
-  updateMaterialPreview,
   type TextureFilterPreview,
 } from '../utils/materialPreview';
+import { createViewportDisplayController } from '../utils/viewportDisplayController';
 import {
   createSelectionOverlays,
   disposeSelectionOverlays,
@@ -120,17 +117,7 @@ type RigIkDragState = {
   targetWorld: THREE.Vector3;
 };
 
-type MaterialWithMap = THREE.Material & {
-  map?: THREE.Texture | null;
-};
-
 const TRANSFORM_HANDLE_AXES = ['X', 'Y', 'Z'] as const;
-
-type MeshMaterialEntry = {
-  mesh: THREE.Mesh;
-  materials: THREE.Material[];
-  materialWasArray: boolean;
-};
 
 type SkinPaintVertex = { meshId: string; vertexIndex: number; amount: number };
 
@@ -139,8 +126,6 @@ interface SkinPaintCollection {
   candidateCount: number;
   totalVertexCount: number;
 }
-
-const isMaterialWithMap = (material: THREE.Material): material is MaterialWithMap => 'map' in material;
 
 const writeViewportCameraTelemetry = (
   canvas: HTMLCanvasElement | null,
@@ -332,11 +317,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     owner: ViewportInteractionOwner;
     isSkinPaint?: boolean;
   } | null>(null);
-  const materialTextureBackupRef = useRef<Map<string, THREE.Texture | null>>(new Map());
-  const materialOpacityBackupRef = useRef<Map<string, number>>(new Map());
-  const materialTransparentBackupRef = useRef<Map<string, boolean>>(new Map());
-  const meshMaterialsRef = useRef<Map<string, MeshMaterialEntry>>(new Map());
-  const legacyShaderMaterialsRef = useRef<Map<string, THREE.Material>>(new Map());
+  const viewportDisplayRef = useRef(createViewportDisplayController());
   const onPaintSkinVerticesRef = useRef(onPaintSkinVertices);
   const onSkinPaintStrokeStartRef = useRef(onSkinPaintStrokeStart);
   const onSkinPaintStrokeEndRef = useRef(onSkinPaintStrokeEnd);
@@ -787,134 +768,6 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     }
   };
 
-  const captureTextureMaterials = (object: THREE.Object3D | null): void => {
-    if (!object) return;
-    registerMaterialPreviewRoot(object);
-    disposeLegacyShaderMaterials();
-    meshMaterialsRef.current.clear();
-    materialTextureBackupRef.current.clear();
-    materialOpacityBackupRef.current.clear();
-    materialTransparentBackupRef.current.clear();
-    object.traverse((obj) => {
-      if (!(obj instanceof THREE.Mesh)) return;
-      const materialWasArray = Array.isArray(obj.material);
-      const materials = Array.isArray(obj.material)
-        ? obj.material
-        : [obj.material];
-      const normalized = materials.filter((m): m is THREE.Material => !!m);
-      if (normalized.length > 0) {
-        meshMaterialsRef.current.set(obj.uuid, { mesh: obj, materials: normalized, materialWasArray });
-        normalized.forEach((material) => {
-          if (!materialTextureBackupRef.current.has(material.uuid)) {
-            materialTextureBackupRef.current.set(material.uuid, isMaterialWithMap(material) ? material.map ?? null : null);
-            materialOpacityBackupRef.current.set(material.uuid, material.opacity);
-            materialTransparentBackupRef.current.set(material.uuid, material.transparent);
-          }
-        });
-      }
-    });
-  };
-
-  const disposeLegacyShaderMaterials = (): void => {
-    legacyShaderMaterialsRef.current.forEach((material) => {
-      material.dispose();
-    });
-    legacyShaderMaterialsRef.current.clear();
-  };
-
-  const restoreOriginalMaterials = (): void => {
-    meshMaterialsRef.current.forEach(({ mesh, materials, materialWasArray }) => {
-      if (materials.length === 0) return;
-      mesh.material = materialWasArray ? [...materials] : materials[0];
-    });
-  };
-
-  const applyTextureToMaterial = (
-    material: THREE.Material,
-    sourceMaterialUuid: string,
-    enabled: boolean,
-  ): void => {
-    if (!isMaterialWithMap(material)) return;
-    const mapValue = materialTextureBackupRef.current.get(sourceMaterialUuid);
-    if (typeof mapValue === 'undefined') return;
-    material.map = enabled ? mapValue : null;
-    material.needsUpdate = true;
-  };
-
-  const applyTextureEnabled = (enabled: boolean): void => {
-    if (attachedModelRef.current) {
-      updateMaterialPreview(attachedModelRef.current, { textureEnabled: enabled });
-    }
-    meshMaterialsRef.current.forEach(({ materials }) => {
-      for (const material of materials) {
-        const legacyMaterial = legacyShaderMaterialsRef.current.get(material.uuid);
-        if (legacyMaterial) {
-          applyTextureToMaterial(legacyMaterial, material.uuid, enabled);
-        }
-      }
-    });
-  };
-
-  const applyShaderEnabled = (enabled: boolean): void => {
-    if (!enabled) {
-      restoreOriginalMaterials();
-      disposeLegacyShaderMaterials();
-      applyTextureEnabled(textureEnabledRef.current);
-      applyModelOpacity(modelOpacityRef.current);
-      return;
-    }
-
-    meshMaterialsRef.current.forEach(({ mesh, materials, materialWasArray }) => {
-      const displayMaterials = materials.map((material) => {
-        let legacyMaterial = legacyShaderMaterialsRef.current.get(material.uuid);
-        if (!legacyMaterial) {
-          legacyMaterial = createLegacySmfMaterial(material, {
-            mapEnabled: textureEnabledRef.current,
-            opacity: modelOpacityRef.current,
-          });
-          legacyShaderMaterialsRef.current.set(material.uuid, legacyMaterial);
-        }
-        return legacyMaterial;
-      });
-      if (displayMaterials.length === 0) return;
-      mesh.material = materialWasArray ? displayMaterials : displayMaterials[0];
-    });
-    applyTextureEnabled(textureEnabledRef.current);
-    applyModelOpacity(modelOpacityRef.current);
-  };
-
-  const applyOpacityToMaterial = (
-    material: THREE.Material,
-    sourceMaterialUuid: string,
-    opacity: number,
-  ): void => {
-    const defaultOpacity = materialOpacityBackupRef.current.get(sourceMaterialUuid);
-    if (typeof defaultOpacity === 'undefined') return;
-    material.opacity = defaultOpacity * opacity;
-    if (material.opacity < 1) {
-      material.transparent = true;
-    } else {
-      const defaultTransparent = materialTransparentBackupRef.current.get(sourceMaterialUuid);
-      material.transparent = defaultTransparent ?? false;
-    }
-    material.needsUpdate = true;
-  };
-
-  const applyModelOpacity = (value: number): void => {
-    const opacity = clamp01(value);
-    if (attachedModelRef.current) {
-      updateMaterialPreview(attachedModelRef.current, { modelOpacity: opacity });
-    }
-    meshMaterialsRef.current.forEach(({ materials }) => {
-      for (const material of materials) {
-        const legacyMaterial = legacyShaderMaterialsRef.current.get(material.uuid);
-        if (legacyMaterial) {
-          applyOpacityToMaterial(legacyMaterial, material.uuid, opacity);
-        }
-      }
-    });
-  };
-
   const emitBoneTransformEdit = (
     phase: BoneTransformEditPhase,
     source: BoneTransformEditSource,
@@ -1203,6 +1056,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
   // One-time base scene + renderer + orbit + RAF + resize + internal R key reset
   useEffect(() => {
+    const displayController = viewportDisplayRef.current;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -2441,11 +2295,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         boneHighlightRef.current = null;
       }
       clearSkinPointOverlays();
-      restoreOriginalMaterials();
-      disposeLegacyShaderMaterials();
-      if (attachedModelRef.current) {
-        unregisterMaterialPreviewRoot(attachedModelRef.current);
-      }
+      displayController.dispose();
       disposeThemeViewportGrids(scene, viewportGridRefs.current);
       viewportGridRefs.current = null;
       disposeThreeObject(axesRef.current);
@@ -2656,26 +2506,22 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useBoneLabelsWithScale(boneLabelsEnabled, skeleton, boneLabelScale, boneIndexLabelsEnabled);
 
   useEffect(() => {
-    applyTextureEnabled(textureEnabled);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the imperative material helper is ref-backed; these values own updates.
+    viewportDisplayRef.current.setTextureEnabled(textureEnabled);
   }, [textureEnabled, root]);
 
   useEffect(() => {
-    if (!attachedModelRef.current) return;
-    updateMaterialPreview(attachedModelRef.current, {
+    viewportDisplayRef.current.updatePreview({
       repeatTextures: textureRepeatPreviewEnabled,
       textureFilter: textureFilterPreview,
     });
   }, [textureRepeatPreviewEnabled, textureFilterPreview, root]);
 
   useEffect(() => {
-    applyShaderEnabled(shaderEnabled);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the imperative material helper reads synchronized texture/opacity refs.
+    viewportDisplayRef.current.setShaderEnabled(shaderEnabled, textureEnabledRef.current, modelOpacityRef.current);
   }, [shaderEnabled, root]);
 
   useEffect(() => {
-    applyModelOpacity(modelOpacity);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- the imperative material helper is ref-backed; these values own updates.
+    viewportDisplayRef.current.setModelOpacity(modelOpacity);
   }, [modelOpacity, root]);
 
   useEffect(() => {
@@ -2886,17 +2732,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const prev = attachedModelRef.current;
     if (prev) {
       clearSkinPointOverlays();
-      restoreOriginalMaterials();
-      disposeLegacyShaderMaterials();
-      unregisterMaterialPreviewRoot(prev);
+      viewportDisplayRef.current.detachRoot(prev);
       scene.remove(prev);
       disposeThreeObject(prev);
       attachedModelRef.current = null;
     }
-    materialTextureBackupRef.current.clear();
-    materialOpacityBackupRef.current.clear();
-    materialTransparentBackupRef.current.clear();
-    meshMaterialsRef.current.clear();
     if (skeletonHelperRef.current) {
       scene.remove(skeletonHelperRef.current);
       skeletonHelperRef.current.dispose?.();
@@ -2921,15 +2761,15 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // Avoid clone here to keep skeleton bone refs and skinning correct.
     scene.add(root);
     attachedModelRef.current = root;
-    captureTextureMaterials(root);
+    viewportDisplayRef.current.captureRoot(root);
     rebuildSkinPointOverlays();
-    updateMaterialPreview(root, {
+    viewportDisplayRef.current.updatePreview({
       textureEnabled,
       modelOpacity,
       repeatTextures: textureRepeatPreviewEnabled,
       textureFilter: textureFilterPreview,
     });
-    applyShaderEnabled(shaderEnabled);
+    viewportDisplayRef.current.setShaderEnabled(shaderEnabled, textureEnabled, modelOpacity);
 
     // Auto frame camera + orbit to model (fixes giant/tiny uploads; uses bbox, no model scale to preserve skin/bind)
     const box = new THREE.Box3().setFromObject(root);

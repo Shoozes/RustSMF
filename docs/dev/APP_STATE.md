@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-07-30
+Last reviewed: 2026-08-01
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, and OBJ models. This document owns current behavior, architecture boundaries, format limits, and the verification contract. Forward work belongs in `TODO.md`; pass evidence belongs in `review.md`; recurring failure analysis belongs in `PITFALL_LEDGER.md`.
 
@@ -51,21 +51,24 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 | Owner | Responsibility |
 | --- | --- |
 | `src/App.tsx` | Workspace composition, theme/layout policy, shared UI chronology, and component wiring. |
-| `src/hooks/useLoadModel.ts` | Load/export intent integration, editor state coordination, authoring callbacks, save serialization, and the stable app-facing contract. |
+| `src/hooks/useLoadModel.ts` | Load/export intent integration, editor state coordination, save serialization, and the stable app-facing contract. Animation actions are delegated to `src/utils/animationAuthoringController.ts`. |
 | `src/hooks/useSmfCodecTask.ts` | SMF worker task lifecycle, progress, abort, timeout, and startup fallback. |
 | `src/hooks/smfExportCandidate.ts` | One pure authority for pose, animation, metadata, and live-skin application before SMF export. |
-| `src/components/ThreeViewport.tsx` | Renderer/mixer/root lifecycle and imperative viewport interaction ownership. |
+| `src/components/ThreeViewport.tsx` | Renderer/mixer/root lifecycle and imperative viewport interaction ownership. Display/material mutation is delegated to `src/utils/viewportDisplayController.ts`. |
 | `src/utils/viewportLayout.ts` | Viewport specs, pane hit math, model-fit distance, fixed-camera focus, and ortho pan conversion. |
 | `src/utils/themeViewportGrid.ts` | Theme grid construction, pane visibility, and disposal. |
 | `src/utils/materialPreview.ts` | Source-versus-preview material boundary for async exporters. |
+| `src/utils/viewportDisplayController.ts` | Viewport texture/opacity preview, legacy SMF lighting substitution, source assignment restoration, and display cleanup. |
 | `src/utils/animationEdits.ts`, `rigEdits.ts`, `rigIk.ts`, `skinWeights.ts` | Pure authoring policy and transformations with focused unit coverage. |
+| `src/utils/animationAuthoringContext.ts` | Pure selected-bone and active-clip guards shared by animation authoring callbacks and focused tests. |
+| `src/utils/animationAuthoringController.ts` | Clip CRUD, metadata, selected-bone key editing, snap, and animation-history action contract used by `useLoadModel`. |
 | `src/loaders/*` | SMF/GLB/FBX/OBJ parsing, conversion, diagnostics, coordinate/DQ math, and validated export. |
 | `src/workers/*` | Runtime-validated SMF worker protocol, client, and worker entry. |
 | `src/backend-client/tauri.ts` | Guarded native dialog/read/write adapters and browser fallbacks. |
 | `source/src-tauri/src/main.rs`, `smf_core.rs` | Tauri commands and shared native SMF header/section parsing. |
 | `source/frontend/tests/*` | Domain-owned browser suites and committed deterministic fixtures. |
 
-`useLoadModel.ts` and `ThreeViewport.tsx` remain deliberate integration owners. Leaf helpers should be extracted when they have explicit inputs, independent tests, and no new lifecycle owner; size alone is not permission to split shared React/Three state.
+`useLoadModel.ts` and `ThreeViewport.tsx` remain deliberate integration owners for load/export and renderer lifecycle. Animation actions and display/material mutations now have explicit leaf-controller contracts; future extractions still require independent inputs, tests, and one disposal owner.
 
 ## Verification
 
@@ -82,7 +85,7 @@ Primary commands from the repository root:
 
 Current inventory:
 
-- 234 frontend unit tests.
+- 241 frontend unit tests.
 - 54 browser cases in eight domain-owned spec files.
 - 9 Rust tests; the real-SMF native tests require and parse the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
 - 19 context groups, including one archived compatibility test route and one archived old-editor reference route.
@@ -93,7 +96,7 @@ The latest command results and any environment-only warnings are recorded in `re
 
 - SMF has no scale channel in the current dual-quaternion path. Scale edits block SMF export rather than being dropped.
 - Non-SMF-to-SMF conversion does not preserve static-only roots, materials/textures, morphs, object-level tracks, multiple skeletons, or scale animation.
-- The freeform TransformControls gizmo remains single-perspective. Quad/ortho authoring uses pane-aware explicit Rig tools until a camera-aware direct manipulation contract is implemented.
+- The freeform TransformControls gizmo remains single-perspective. Quad/ortho authoring uses pane-aware explicit Rig move/rotate/add-child/endpoint/IK tools; the freeform gizmo is intentionally not rebound across fixed cameras.
 - Rig IK is a pose tool. Keyed IK requires an explicit solve-and-bake design.
 - Basic FBX compatibility is covered with self-authored and generated fixtures. Broad third-party skinned FBX compatibility still requires an independent redistributable fixture and target-application evidence.
 - Native dialog behavior is covered by Rust tests plus deterministic Tauri IPC browser mocks; true OS-dialog automation remains evidence-gated.

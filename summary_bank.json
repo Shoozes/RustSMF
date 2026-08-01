@@ -89,6 +89,8 @@
         "source/frontend/src/utils/textureThumbnail.test.ts",
         "source/frontend/src/utils/materialPreview.ts",
         "source/frontend/src/utils/materialPreview.test.ts",
+        "source/frontend/src/utils/viewportDisplayController.ts",
+        "source/frontend/src/utils/viewportDisplayController.test.ts",
         "source/frontend/src/utils/selectionOverlay.ts",
         "source/frontend/src/utils/selectionOverlay.test.ts"
       ],
@@ -173,6 +175,8 @@
         "source/frontend/src/utils/viewportLayout.test.ts",
         "source/frontend/src/utils/themeViewportGrid.ts",
         "source/frontend/src/utils/themeViewportGrid.test.ts",
+        "source/frontend/src/utils/viewportDisplayController.ts",
+        "source/frontend/src/utils/viewportDisplayController.test.ts",
         "source/frontend/src/utils/threeDisposal.ts",
         "source/frontend/src/utils/threeDisposal.test.ts"
       ],
@@ -205,19 +209,23 @@
     },
     "feature__animation_authoring": {
       "description": "Timeline interaction, selected-bone key editing, clip management, metadata, history, and browser ownership.",
-      "max_kb": 112,
+      "max_kb": 128,
       "paths": [
         "source/frontend/src/components/AnimatePanel.tsx",
         "source/frontend/src/components/Timeline.tsx",
         "source/frontend/src/utils/animationEdits.ts",
         "source/frontend/src/utils/animationEdits.test.ts",
+        "source/frontend/src/utils/animationAuthoringContext.ts",
+        "source/frontend/src/utils/animationAuthoringContext.test.ts",
+        "source/frontend/src/utils/animationAuthoringController.ts",
+        "source/frontend/src/utils/animationAuthoringController.test.ts",
         "source/frontend/src/utils/animationTimeline.ts",
         "source/frontend/src/utils/animationTimeline.test.ts",
         "source/frontend/tests/helpers/timeline-interactions.ts",
         "source/frontend/tests/animation.spec.ts"
       ],
       "notes": [
-        "useLoadModel remains the integration owner; this route keeps authoring policy and its closest tests focused.",
+        "useLoadModel remains the load/export integration owner; animation authoring actions are delegated to the tested controller contract.",
         "Quadratic interpolation is preserved as SMF metadata and previews linearly in Three.js."
       ]
     },
