@@ -51,7 +51,9 @@ export function smfMatrixToThree(src: Float32Array | number[]): Float32Array {
 }
 
 export function threeMatrixToSmf(src: THREE.Matrix4 | Float32Array): Float32Array {
-  // For export, use the to_zup logic from reference (no handedness negate in that direction in some paths)
+  // Invert smfMatrixToThree's row-space transform. This keeps translation and
+  // rotation ownership consistent with threeVecToSmf, including the handedness
+  // sign on the SMF Y axis.
   const arr = src instanceof THREE.Matrix4 ? src.elements : src;
   const out = new Float32Array(arr);
 
@@ -65,7 +67,7 @@ export function threeMatrixToSmf(src: THREE.Matrix4 | Float32Array): Float32Arra
 
   for (const i of [1, 5, 9, 13]) {
     const t = out[i];
-    out[i] = out[i + 1];
+    out[i] = -out[i + 1];
     out[i + 1] = t;
   }
   return out;

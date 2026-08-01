@@ -294,8 +294,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Nothing to export as GLB/i);
       await page.getByTestId('export-fbx-btn').click();
       await expect(page.getByTestId('status-text')).toContainText(/Nothing to export as FBX/i);
-      await page.getByTestId('export-smf-btn').click();
-      await expect(page.getByTestId('status-text')).toContainText(/No model loaded for SMF export|Nothing to export as SMF/i);
+      await expect(page.getByTestId('export-smf-btn')).toBeDisabled();
 
       // Drop zone hint is present (for drag-drop UX)
       await expect(page.locator('text=/Drop .* here/')).toBeAttached();

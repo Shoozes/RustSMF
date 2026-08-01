@@ -10,8 +10,10 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 
 - `run.bat` and `run.ps1` are the canonical Windows launchers. No-argument launch opens the numbered menu; option 2 or `pwsh -File run.ps1 -Task run` starts the installed development app.
 - Browser input, drag/drop, and the native picker accept `.smf`, `.glb`, `.gltf`, `.fbx`, and `.obj`. Unsupported or malformed files produce an error without replacing the current model.
+- Browser metadata and native/test-injected byte payloads share a 256 MiB model-input limit. Browser picker and drop paths reject oversized `File` metadata before `File.arrayBuffer()`; the load boundary repeats the byte-length check for native reads and test fixtures.
+- A replacement requested while pose, animation, skin, rig, editor, or Outliner history is dirty opens an accessible Cancel/Discard decision. File bytes are not materialized until the decision is made; Cancel preserves the current root, selection, dirty flags, and status, while Discard permits one replacement. Parse failure or stale completion keeps the previous model mounted.
 - All picker, file-read, desktop-read, parse, export, and save paths use shared latest-intent ownership. A newer load invalidates older load/export UI completions; failed replacements preserve the mounted root, selection, dirty authoring state, and status.
-- SMF import/export uses a typed Web Worker with owned transferable buffers, nested payload validation, monotonic progress, cancellation, a 120-second timeout, and explicit termination. The client rechecks an abort signal after worker handlers are installed and before `postMessage`, so setup-time cancellation cannot publish or leave a task running. The codec bounds encoded input/output to 256 MiB, section reads to declared offsets, strings to 4,095 bytes, and allocation-driving texture/mesh/rig/animation counts; non-finite numeric values and invalid byte ranges fail closed. Synchronous fallback is limited to worker construction or initial `postMessage` failure; runtime worker errors surface instead of repeating work on the UI thread.
+- SMF import/export uses a typed Web Worker with owned transferable buffers, nested payload validation, monotonic progress, cancellation, a 120-second timeout, and explicit termination. The client rechecks an abort signal after worker handlers are installed and before `postMessage`, so setup-time cancellation cannot publish or leave a task running. The codec bounds encoded input/output to 256 MiB, decoded allocation estimates to 512 MiB, section reads to declared offsets, strings to 4,095 bytes, and allocation-driving texture/mesh/rig/animation counts; non-finite numeric values and invalid byte ranges fail closed. Synchronous fallback is limited to worker construction or initial `postMessage` failure; runtime worker errors surface instead of repeating work on the UI thread.
 - Save operations are globally single-flight and freshness-checked. User cancellation is distinct from failure.
 
 ### Viewport and themes
@@ -33,15 +35,16 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 - Endpoint and bounded CCD IK are explicit Rig tools with exclusive pointer ownership, cancel restoration, and one history transaction per completed gesture. IK is pose-only; it does not silently create animation keys.
 - Skin: selected-bone paint supports set/add/subtract/auto modes, vertex/triangle targets, bounded spatial candidate indexes, configurable Auto Skin algorithms, normalize, pointer cancel, undo/redo, and supported SMF export.
 - Skin weight preview uses a non-destructive Three.js vertex-color heat map for the selected bone and restores the original color attribute plus each material's prior `vertexColors` mode when disabled. The legacy four-slot shader and paint-transport references remain documented in `docs/dev/old_editor_source_map.md`; exact legacy texture modulation is not required for the current export-safe display path.
-- Animate: clip rename/duplicate/delete/reorder, loop/sample metadata, playback, scrub, selected-bone key insert/update/delete/copy/paste, marker drag, snap, interpolation metadata, and undo/redo update the runtime clips and supported SMF export candidate.
+- Animate: clip rename/duplicate/delete/reorder, loop/sample metadata, playback, scrub, selected-bone key insert/update/delete/copy/paste, marker drag, snap, interpolation metadata, and undo/redo update the runtime clips and supported SMF export candidate. The mixer clock remains imperative in the viewport; the parent timeline publishes a bounded 50 ms display cadence and flushes immediately for scrub/clip/pause commands.
 - App-level Undo/Redo selects the newest editor, Skin, or Outliner transaction by shared chronology rather than the currently visible workspace.
+- Editor history is capped at 100 entries and 64 MiB across undo/redo; skin history is capped at 50 entries and 32 MiB per direction. When an oldest entry is evicted, the status surface explains the bounded-history decision while the current edit remains applied.
 - Workspace, layout, and camera-mode changes preserve the mounted model, selection, paused time, dirty state, export status, and exclusive Select/Endpoint/IK ownership.
 
 ### Export and validation
 
 - Source-aware Export preserves the high-fidelity SMF path for SMF sources and uses FBX for FBX sources. Explicit GLB, FBX, and SMF actions remain available where valid.
-- SMF export preserves imported node/head structure, deform-order skin indices, finite normalized dual quaternions, normalized tangent handedness, position/rotation pose edits, supported animation edits/metadata, and dirty skin weights. Attribute shape, counts, times, strings, ranges, output size, and section arithmetic are checked before serialization; malformed data is rejected rather than wrapped. Structured diagnostics and an in-memory export/reimport comparison run before risky conversion saves.
-- Compatible non-SMF-to-SMF conversion requires one shared named skeleton, complete skin attributes, and position/quaternion bone tracks. Indexed geometry is expanded through one validated triangle map so all attributes become aligned SMF triangle soup.
+- SMF export preserves imported node/head structure, deform-order skin indices, finite normalized dual quaternions, normalized tangent handedness, position/rotation pose edits, supported animation edits/metadata, and dirty skin weights. Attribute shape, counts, times, strings, ranges, output size, section arithmetic, relational rig/animation/skin references, and finite numeric payloads are checked by the shared semantic validator before serialization; malformed data is rejected rather than wrapped.
+- Non-SMF-to-SMF conversion uses one explicit boundary: mesh attributes are baked once into model-root Three space, the serializer owns the single Three-to-SMF vector conversion, bones are captured as root-relative world DQs, and clips are sampled through a Three mixer. The app-facing SMF action and roundtrip check remain enabled for compatible skinned GLB/FBX sources; unsupported static roots, scale tracks, incomplete skin data, and malformed geometry remain blocked by diagnostics.
 - GLB export reparses generated bytes and checks finite transforms/tracks plus representative bone, skinned-mesh, clip, name, and track preservation before save.
 - FBX import waits for loader-owned texture work before attaching a parsed root and removes unavailable texture maps before render. Export writes binary FBX 7500 through the vendored MIT `FBXExporter-threejs`, emits typed index/layer arrays, then reparses the bytes and checks representative mesh, skin, bone, clip, and animation endpoint structure before save.
 - Display-only material, opacity, sampler, legacy-lighting, and weight-color previews are restored for the entire asynchronous GLB/FBX exporter call and reapplied only if the same root remains mounted.
@@ -66,9 +69,10 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 | `src/utils/animationAuthoringContext.ts` | Pure selected-bone and active-clip guards shared by animation authoring callbacks and focused tests. |
 | `src/utils/animationAuthoringController.ts` | Clip CRUD, metadata, selected-bone key editing, snap, and animation-history action contract used by `useLoadModel`. |
 | `src/loaders/*` | SMF/GLB/FBX/OBJ parsing, conversion, diagnostics, coordinate/DQ math, and validated export. |
+| `src/loaders/smfSemantics.ts` | Shared relational and finite-value validation for parsed, worker-fallback, and serialized `ImportedSmf` payloads. |
 | `src/workers/*` | Runtime-validated SMF worker protocol, client, and worker entry. |
 | `src/backend-client/tauri.ts` | Guarded native dialog/read/write adapters and browser fallbacks. |
-| `source/src-tauri/src/main.rs`, `smf_core.rs` | Tauri commands and shared native SMF header/section parsing. Native file reads/writes are size-bounded and run through blocking-task adapters; native validation reports header/offset acceptance only. |
+| `source/src-tauri/src/main.rs`, `smf_core.rs` | Tauri commands and shared native SMF header/section parsing. Rust owns the native dialogs, authorizes read paths selected by the dialog, bounds blocking reads/writes to 256 MiB, and accepts typed byte payloads for the save command; native validation reports header/offset acceptance only. |
 | `source/frontend/tests/*` | Domain-owned browser suites and committed deterministic fixtures. |
 
 `useLoadModel.ts` and `ThreeViewport.tsx` remain deliberate integration owners for load/export and renderer lifecycle. Animation actions and display/material mutations now have explicit leaf-controller contracts; future extractions still require independent inputs, tests, and one disposal owner.
@@ -93,17 +97,17 @@ The sandbox checkup is diagnostic rather than an app gate. A managed profile may
 
 Current inventory:
 
-- 254 frontend unit tests across 42 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
-- 55 browser cases in eight domain-owned spec files.
-- 9 Rust tests; the real-SMF native tests require and parse the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
-- 21 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; the latest context run reports 25.3 KiB default orientation with zero warnings.
+- 269 frontend unit tests across 45 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
+- 56 browser cases in eight domain-owned spec files.
+- 10 Rust tests; the real-SMF native tests require and parse the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
+- 22 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; the latest context run reports 27.3 KiB default orientation with zero warnings.
 
 The latest command results and any environment-only warnings are recorded in `review.md`.
 
 ## Current Limits
 
 - SMF has no scale channel in the current dual-quaternion path. Scale edits block SMF export rather than being dropped.
-- Non-SMF-to-SMF conversion does not preserve static-only roots, materials/textures, morphs, object-level tracks, multiple skeletons, or scale animation.
+- Non-SMF-to-SMF conversion does not preserve static-only roots, materials/textures in the SMF binary policy, morphs, object-level tracks, multiple skeletons, or scale animation. Mesh transforms and nested deform-bone world poses are baked into the supported single-root contract.
 - The freeform TransformControls gizmo remains single-perspective. Quad/ortho authoring uses pane-aware explicit Rig move/rotate/add-child/endpoint/IK tools; the freeform gizmo is intentionally not rebound across fixed cameras.
 - Rig IK is a pose tool. Keyed IK requires an explicit solve-and-bake design.
 - FBX compatibility is covered by self-authored/generated fixtures plus an independently authored Blender 5.0.0 skinned, textured, animated fixture. The app-exported roundtrip has been reopened and structurally validated by Blender 5.0.0; this does not claim universal third-party FBX compatibility.

@@ -9,6 +9,7 @@ export * from './fbx';
 export * from './obj';
 export * from './coord';
 export * from './smfDiagnostics';
+export * from './smfSemantics';
 export * from './threeToSmf';
 export { bytesToArrayBuffer, BinaryReader, BinaryWriter } from './smfBinary';
 

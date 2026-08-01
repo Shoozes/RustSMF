@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {
   autoSkinSkinnedMeshWeights,
   autoSkinSkinnedMeshVertexWeights,
+  appendSkinHistoryEntry,
   captureSkinVertexSnapshot,
   cloneSkinEditState,
   editVertexBoneWeight,
@@ -484,6 +485,31 @@ describe('skinWeights', () => {
     const afterRestore = captureSkinVertexSnapshot(mesh, 1);
     assert.ok(afterRestore);
     assert.equal(sameVertexSkinWeights(before.vertex, afterRestore.vertex), true);
+  });
+
+  it('bounds skin history by bytes while retaining the newest edit', () => {
+    const snapshot = {
+      meshId: 'mesh-1',
+      vertexIndex: 0,
+      vertex: {
+        indices: [0, 1, 2, 3] as [number, number, number, number],
+        weights: [1, 0, 0, 0] as [number, number, number, number],
+      },
+    };
+    const makeEntry = (marker: number) => ({
+      beforeState: makeSkinEditState('Bone', 'glb'),
+      afterState: markSkinEdit(makeSkinEditState('Bone', 'glb'), 'mesh-1', marker),
+      before: [snapshot],
+      after: [{ ...snapshot, vertexIndex: marker }],
+    });
+
+    const first = appendSkinHistoryEntry([], makeEntry(1), 10, 700);
+    const second = appendSkinHistoryEntry(first.entries, makeEntry(2), 10, 700);
+
+    assert.equal(second.accepted, true);
+    assert.deepEqual(second.entries.map((entry) => entry.after[0]?.vertexIndex), [2]);
+    assert.ok(second.bytesUsed <= 700);
+    assert.equal(second.evictions, 1);
   });
 
   it('writes individual skinned vertex weights with bounds checks', () => {

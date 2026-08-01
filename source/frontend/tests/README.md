@@ -7,6 +7,7 @@ The test layout mirrors runtime ownership. Keep behavior in the narrowest suite 
 - `pwsh -File run.ps1 -Task verify`: context-bank validation/tests, fail-closed ESLint coverage, lint, app and test typechecks, production `any` guard, production build, chunk checks, frontend units, and `cargo check`.
 - `pwsh -File run.ps1 -Task test:e2e -NoGenEye`: browser-only Playwright against one production `vite preview` server.
 - `pwsh -File run.ps1 -Task desktop-smoke`: unbundled Tauri build, Rust native tests, and the native IPC browser suite.
+- The Rust and frontend Tauri dialog-plugin manifests are pinned to the same 2.7.1 release. Rust owns dialog invocation; the frontend declaration remains part of Tauri's build-time version contract even though no frontend dialog API is imported.
 - `pwsh -File run.ps1 -Task test:visual-strict`: opt-in committed WebGL snapshots.
 - `pwsh -File run.ps1 -Task test:visual-update`: intentional strict-baseline refresh only.
 
@@ -26,15 +27,15 @@ npm.cmd run test:e2e -- --reporter=line
 | Suite | Primary ownership |
 | --- | --- |
 | `shell-model.spec.ts` | App boot, real SMF load, responsive workspaces, viewport layouts/shared camera focus, selection, invalid input |
-| `lifecycle.spec.ts` | Latest-intent load races, atomic replacement, save single-flight, worker progress/responsiveness |
+| `lifecycle.spec.ts` | Latest-intent load races, atomic replacement, dirty replacement decisions, save single-flight, worker progress/responsiveness |
 | `rig.spec.ts` | Pose history, SMF Rig policy, Endpoint, IK, TransformControls ownership |
 | `animation.spec.ts` | Timeline gestures, clip management, animation keys and SMF checks |
 | `skin.spec.ts` | Paint gating, cancel, undo/redo, Auto Skin, SMF export |
-| `export-formats.spec.ts` | GLB/SMF/FBX/OBJ flows, indexed-mesh conversion, material policy, FBX re-import |
-| `native.spec.ts` | Deterministic Tauri IPC open/read/write/cancel and stale-completion matrices |
+| `export-formats.spec.ts` | GLB/SMF/FBX/OBJ flows, indexed-mesh conversion, material policy, non-SMF-to-SMF fail-closed diagnostics, FBX re-import |
+| `native.spec.ts` | Deterministic Tauri IPC dialog-owned open/read/save/cancel and stale-completion matrices |
 | `visual.spec.ts` | Modern/Original geometry/defaults, source texture thumbnails, reference-derived shelves/top strip/keyframe lane, narrow layout, viewport/menu visual coherence |
 
-The 37 tests formerly in `smoke.spec.ts` retain their titles across the current domain-owned browser suites. Playwright discovers 55 browser cases total.
+The 37 tests formerly in `smoke.spec.ts` retain their titles across the current domain-owned browser suites. Playwright discovers 56 browser cases total.
 
 ## Shared Browser Helpers
 
@@ -48,9 +49,9 @@ The 37 tests formerly in `smoke.spec.ts` retain their titles across the current 
 
 ## Unit Coverage
 
-The 254 Node tests under `src/**/*.test.ts` cover theme registry/persistence, SMF binary and DQ fidelity, bounded malformed-input and export-field checks, worker protocol and ownership, setup-time worker cancellation, indexed Three-to-SMF triangle expansion, FBX and GLB pre-save reparse validation, export-candidate policy, editor snapshots/history, viewport listener disposal/routing/layout/shared-focus pan/reset math, pending animation-frame cleanup, theme-grid plane ownership/disposal, Rig/IK/Skin/Animate helpers, keyed skin-history snapshot indexing, animation authoring context/controller guards, material and weight-preview isolation/restoration, raw texture thumbnail sampling, and resource disposal. `source/frontend/scripts/run-unit-tests.mjs` discovers all unit files deterministically, so new tests are included without editing a hardcoded package list.
+The 269 Node tests under `src/**/*.test.ts` cover theme registry/persistence, SMF binary and DQ fidelity, shared semantic validation, bounded malformed-input and export-field checks, model-input size guards, worker protocol and ownership, setup-time worker cancellation, indexed Three-to-SMF triangle expansion and root-relative/mixer-sampled parity, FBX and GLB pre-save reparse validation, export-candidate policy, editor snapshots/history and byte eviction, viewport listener disposal/routing/layout/shared-focus pan/reset math, pending animation-frame cleanup, playback display cadence, theme-grid plane ownership/disposal, Rig/IK/Skin/Animate helpers, bounded keyed skin-history storage, animation authoring context/controller guards, material and weight-preview isolation/restoration, raw texture thumbnail sampling, and resource disposal. `source/frontend/scripts/run-unit-tests.mjs` discovers all unit files deterministically, so new tests are included without editing a hardcoded package list.
 
-The generated indexed GLB is a required compatibility shape: conversion must duplicate indexed vertex attributes into complete SMF triangle soup before the worker guard accepts it. Missing optional normals/UVs/tangents receive correctly sized zero arrays; incomplete triangle or skin layouts fail preflight.
+The generated indexed GLB is a required compatibility shape for GLB/FBX export and converter coverage: conversion must duplicate indexed vertex attributes into complete SMF triangle soup before the worker guard accepts it, bake mesh transforms once, capture root-relative world bone poses, and sample animation through Three's mixer. Missing optional normals/UVs/tangents receive correctly sized zero arrays; incomplete triangle or skin layouts fail preflight.
 
 ## Fixture Policy
 

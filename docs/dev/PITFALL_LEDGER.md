@@ -1,6 +1,97 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-08-01 (added deterministic fail-closed fixture ownership, the managed-versus-host Python runtime boundary, the SMF worker setup-cancellation guard, and the managed Playwright teardown boundary).
+Last reviewed: 2026-08-01 (closed the non-SMF spatial-conversion, decoded-memory, dirty-replacement, native-path, history-budget, playback-cadence, and Tauri manifest-alignment gaps with focused coverage; retained the pre-materialization, worker, and browser-harness lessons).
+
+### Q: What pitfall are we preventing?
+
+**What:** A replacement, native file operation, or long editing session can discard user work, read an unselected path, grow history without a memory contract, or publish timeline state on every render frame.
+
+**Context and constraints:** Model loading is latest-intent owned and may begin from browser input, drag/drop, or a native dialog. Tauri reads must remain dialog-authorized, Rust and frontend dialog-plugin declarations must stay version-aligned, saves must remain user-directed, authoring history must be bounded, and the viewport mixer must stay responsive while the timeline remains visibly current.
+
+**Why it happened:** The load path started reading before it knew whether authoring state was dirty, the frontend supplied native paths to the bridge, histories used count-only retention, and the parent timeline subscribed directly to the viewport's requestAnimationFrame cadence.
+
+**Where:** `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/App.tsx`, `source/frontend/src/backend-client/tauri.ts`, `source/frontend/package.json`, `source/package-lock.json`, `source/src-tauri/src/main.rs`, `source/src-tauri/Cargo.toml`, `source/frontend/src/utils/editorHistory.ts`, `source/frontend/src/utils/skinWeights.ts`, and `source/frontend/src/store/index.ts`.
+
+**Evidence:** The current flow queues dirty replacements before reading bytes and preserves the mounted root on Cancel or parse failure; Rust rejects unselected canonical paths and owns the save dialog; both Tauri dialog-plugin manifests are pinned to 2.7.1; editor history is capped at 100 entries/64 MiB, skin history at 50 entries/32 MiB per direction; and parent playback publication is capped at a 50 ms display cadence. Unit and browser mock coverage exercises these boundaries.
+
+**Developer story:** These were separate-looking reliability issues with the same root cause: integration code had no explicit ownership contract for destructive state, privileged destinations, retained snapshots, or high-frequency display updates. Shared guards and narrow owners make each boundary observable without hiding a real failure behind a fallback.
+
+**How to catch it:** Test Cancel before byte materialization, Discard after dirty authoring, stale load/export completion, unselected native reads, save cancellation, exact history budget eviction, oversized current edits, and throttled versus immediate playback updates. Run focused unit slices plus the full verification gate.
+
+**Solutions tried:**
+1. `34/100` Rely on a downstream parse guard and frontend-provided native destination, result: destructive replacement, arbitrary path reads, and excess retained memory remained possible.
+2. `95/100` Centralize replacement decisions, keep native path/destination authority in Rust, bound retained snapshots by count and bytes, and throttle only parent display publication, result: user state and privileged I/O fail closed while imperative rendering remains responsive.
+
+**Current solution:** `replacementGuard.ts`, `assertModelInputSize`, `smfBinary.ts` decoded reservations, Rust `NativeFileAuthority`, `save_file_binary`, the exact-match Tauri plugin declarations, bounded history helpers, and `playbackDisplayThrottle.ts` each own one narrow invariant; `useLoadModel` and `App` compose them at the integration boundary.
+
+**Decision rationale:** A single broad integration fallback would obscure which state was protected. Explicit guards preserve the current model on failure, keep OS dialogs authoritative, retain useful recent history, and reduce React work without altering mixer timing.
+
+**Effectiveness:** `95/100`, good. The focused tests cover the current failure modes; future changes must preserve both the safety boundary and the user-visible status explanation.
+
+**Relevance check:** Current. Revisit this entry when load sources, native commands, history shapes, or timeline rendering cadence change.
+
+**Next prevention step:** Keep completion evidence in `review.md` current and require any new asynchronous or memory-retaining integration surface to declare its owner, limit, cancellation behavior, and user-facing failure state.
+
+### Q: What pitfall are we preventing?
+
+**What:** A plausible-looking GLB/FBX-to-SMF conversion can apply coordinate ownership twice and serialize bone/animation data in a different space than the SMF importer consumes.
+
+**Context and constraints:** The review covered `main` at `e77d6bc4da703e64ba389d879a44235dde3a3717`. Non-SMF conversion is supported only for skinned single-root sources whose mesh, nested-rig, and animation boundaries are covered by numeric checks; static roots and unsupported channels remain blocked.
+
+**Why it happened:** The isolated builder converted mesh vectors before the serializer converted them again, captured local bone matrices while the runtime scene derives locals from world DQs, and interpolated quaternion components directly. Existing tests asserted counts and reimportability but not spatial parity.
+
+**Where:** `source/frontend/src/loaders/threeToSmf.ts`, `source/frontend/src/loaders/smf.ts`, `source/frontend/src/loaders/smfRig.ts`, `source/frontend/src/hooks/smfExportCandidate.ts`, and `source/frontend/tests/export-formats.spec.ts`.
+
+**Evidence:** Source tracing confirmed the two vector swizzles and local/world mismatch. The builder now leaves mesh arrays in model-root Three space, captures root-relative world DQs, and samples clips through a cloned Three mixer. Focused tests cover translated/rotated mesh and nested parent/child matrix parity plus quaternion interpolation; constructed rig node resolution also has a child-before-parent regression test.
+
+**Developer story:** The review's count-only roundtrip claim was tested against the current conversion graph rather than accepted as proof. The conversion defect was observable in code before a browser save could hide it behind a plausible render. The repair kept one coordinate owner at the serializer, made rig poses root-relative/world-based, and used runtime mixer sampling; browser diagnostics now enable the action only when the shared preflight remains clear.
+
+**How to catch it:** Require a non-identity translated/rotated mesh, nested parent/child rig, and multi-frame animation fixture. Compare mesh positions/normals, bind/world bone poses, and animation sample poses numerically after export/reimport; assert the browser action is disabled whenever preflight reports a real error.
+
+**Solutions tried:**
+1. `22/100` Trust structural reimport counts, result: false confidence because counts can pass while spatial data drifts.
+2. `58/100` Keep the converter enabled behind diagnostic warnings, result: unsafe because a save could still publish a corrupted asset.
+3. `97/100` Keep a stable preflight, repair the conversion ownership, and require numeric parity coverage before enabling the action, result: compatible conversion is available while unsupported inputs remain fail-closed.
+
+**Current solution:** `buildSmfExportCandidate` passes compatible non-SMF sources through the repaired converter. The candidate and serializer still reject real mesh, skeleton, scale-track, semantic, size, and finite-value errors; GLB/FBX output remains available for richer or unsupported source features.
+
+**Decision rationale:** Structural counts are not spatial proof. The conversion was re-enabled only after centralizing coordinate ownership and adding numeric parity tests for the concrete risks identified by the review.
+
+**Effectiveness:** `97/100`, good. The previously identified corruption path now has a single space contract and focused regression coverage; browser teardown remains an environment-only evidence limit.
+
+**Relevance check:** Current. Keep this entry as a regression story for future converter changes and do not weaken the numeric parity assertions.
+
+**Next prevention step:** Do not alter mesh/vector, bone/world, or mixer sampling ownership without updating the numeric parity fixture and the full verification lane.
+
+### Q: What pitfall are we preventing?
+
+**What:** Calling `File.arrayBuffer()` before checking `File.size` can materialize an oversized browser model and bypass the native/SMF allocation boundary.
+
+**Context and constraints:** Browser picker, persistent file input, and drag/drop all feed the same latest-intent load path. The current native and SMF binary limits are 256 MiB and must remain consistent without misleading the user or replacing the mounted model.
+
+**Why it happened:** The browser fallback read the selected file immediately, while the load hook only had a decoded-byte check downstream and the native path relied on a separate Rust limit.
+
+**Where:** `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/utils/modelFormat.ts`, and `source/frontend/src/utils/modelFormat.test.ts`.
+
+**Evidence:** The browser picker previously awaited `file.arrayBuffer()` before any size guard. The shared guard now rejects metadata over `MAX_MODEL_INPUT_BYTES` before that await, repeats the byte-length check after native/test-injected reads, and the model-format unit slice proves exact-limit acceptance, over-limit rejection, and invalid-size failure.
+
+**Developer story:** The review identified the allocation order as a boundary issue rather than a loader-specific bug. A shared model-format helper was chosen so picker, drop, native, and SMF binary limits cannot drift silently. Oversized picker selections return an actionable open error; direct input/drop paths leave the current model untouched.
+
+**How to catch it:** Keep an exact-limit and `limit + 1` unit test, inspect the browser fallback ordering, and require all load entry points to call the shared helper before reading bytes. Run the focused model-format tests and the full `verify` gate.
+
+**Solutions tried:**
+1. `35/100` Check only inside `loadModel`, result: too late for browser memory because `File.arrayBuffer()` had already allocated.
+2. `91/100` Share the 256 MiB constant and check File metadata before reads, then repeat for native/test bytes, result: early and defense-in-depth coverage with one source of truth.
+
+**Current solution:** `assertModelFileSize` and `assertModelInputSize` own the shared browser/native boundary; `smfBinary.ts` reuses the same limit for encoded input/output.
+
+**Decision rationale:** The helper is pure, cheap, and usable at every boundary. A browser-only check was rejected because desktop and worker fallback paths still need the same invariant.
+
+**Effectiveness:** `96/100`, durable. The ordering and unit contract are clear, and decoded expansion now has a checked 512 MiB reservation budget before allocation.
+
+**Relevance check:** Current. Any new model ingestion surface must use the shared helper before materializing bytes.
+
+**Next prevention step:** Keep decoded estimates aligned with parser allocation sites and update focused limits tests before raising either the encoded input or decoded-memory budgets.
 
 ### Q: What pitfall are we preventing?
 
@@ -12,7 +103,7 @@ Last reviewed: 2026-08-01 (added deterministic fail-closed fixture ownership, th
 
 **Where:** `source/frontend/playwright.config.ts`, `source/frontend/tests/`, `source/frontend/test-results/`, the process-local `RUSTSMF_PLAYWRIGHT_EXECUTABLE` override, and the launcher cleanup contract in `run.ps1`.
 
-**Evidence:** On 2026-08-01, `npm.cmd run test:e2e -- --reporter=line` with `C:\Program Files\Google\Chrome\Application\chrome.exe` ran all 55 cases, and each reported only `browserContext.close: spawn EPERM`. No assertion failure was emitted; after the runner was stopped, port 5173 was confirmed clear. An earlier run on the same commit line completed 55/55, so the current result is harness evidence, not a newly observed product regression.
+**Evidence:** On 2026-08-01, `npm.cmd run test:e2e -- --reporter=line` with `C:\Program Files\Google\Chrome\Application\chrome.exe` ran all 56 cases, and each reported only `browserContext.close: spawn EPERM`. No assertion failure was emitted; after the runner was stopped, port 5173 was confirmed clear. An earlier run on the prior 55-case commit line completed 55/55, so the current result is harness evidence, not a newly observed product regression.
 
 **Developer story:** The bundled browser first failed at launch under the managed boundary, so the suite was rerun with the approved system executable. That run reached all application flows but failed during cleanup, making a green-looking body run indistinguishable from a failed test command until the error phase and port state were inspected. The correct handoff keeps the prior completed browser pass as product evidence, records the current teardown limitation, and verifies explicit process cleanup.
 
@@ -21,7 +112,7 @@ Last reviewed: 2026-08-01 (added deterministic fail-closed fixture ownership, th
 **Solutions tried:**
 1. `35/100` Use bundled Chromium in the managed sandbox, result: launch fails before app execution with `spawn EPERM`.
 2. `78/100` Use an approved installed system Chrome, result: all app flows reach their test bodies, but managed teardown can still fail with `browserContext.close: spawn EPERM`.
-3. `92/100` Keep the system-browser override process-local, preserve the earlier complete 55/55 result as product evidence, classify the new run by failure phase, and verify launcher cleanup, result: no app regression is inferred from an environment-only teardown failure and no preview listener remains.
+3. `92/100` Keep the system-browser override process-local, preserve the earlier complete 55/55 result as historical product evidence, classify the current 56-body run by failure phase, and verify launcher cleanup, result: no app regression is inferred from an environment-only teardown failure and no preview listener remains.
 
 **Current solution:** Use `RUSTSMF_PLAYWRIGHT_EXECUTABLE` only for the affected process, keep Playwright's product exit authoritative, document the teardown boundary in `review.md` and `source/frontend/tests/README.md`, and run a post-failure port/process cleanup before further verification.
 

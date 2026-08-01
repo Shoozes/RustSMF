@@ -14,6 +14,11 @@ export function createSmfStressFixtureInput(vertexCount = DEFAULT_VERTEX_COUNT):
   const tangents = new Float32Array(boundedVertexCount * 4);
   const skinIndices = new Uint16Array(boundedVertexCount * 4);
   const skinWeights = new Float32Array(boundedVertexCount * 4);
+  const triangles = Array.from({ length: boundedVertexCount / 3 }, (_, triangle) => [
+    triangle * 3,
+    triangle * 3 + 1,
+    triangle * 3 + 2,
+  ]);
 
   for (let vertex = 0; vertex < boundedVertexCount; vertex += 1) {
     const triangleVertex = vertex % 3;
@@ -33,7 +38,7 @@ export function createSmfStressFixtureInput(vertexCount = DEFAULT_VERTEX_COUNT):
     meshes: [{
       name: 'WorkerStressMesh',
       verts: boundedVertexCount,
-      triangles: [],
+      triangles,
       texIdx: -1,
       positions,
       normals,

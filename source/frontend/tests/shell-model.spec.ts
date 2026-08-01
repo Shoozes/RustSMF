@@ -148,7 +148,9 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await expect(page.getByTestId('export-btn')).toBeEnabled();
       await expect(page.getByTestId('export-glb-btn')).toBeEnabled();
       await expect(page.getByTestId('export-fbx-btn')).toBeEnabled();
-      await expect(page.getByTestId('export-smf-btn')).toBeEnabled();
+      // Empty workspaces keep SMF disabled; the action requires a loaded
+      // source-fidelity model and the export panel explains the reason.
+      await expect(page.getByTestId('export-smf-btn')).toBeDisabled();
 
       const criticalErrors = getBrowserErrors(page).filter((e: string) => e.includes('ERROR'));
       expect(criticalErrors.length).toBe(0);

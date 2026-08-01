@@ -48,7 +48,13 @@ import { findBoneByName } from '../utils/bonePicker';
 import { createSeqGuard } from '../utils/seqGuard';
 import { disposeThreeObject } from '../utils/threeDisposal';
 import { isThreeBone } from '../utils/threeTypeGuards';
-import { detectModelFormat, supportedModelFormatsLabel, type ModelSourceFormat } from '../utils/modelFormat';
+import {
+  assertModelFileSize,
+  assertModelInputSize,
+  detectModelFormat,
+  supportedModelFormatsLabel,
+  type ModelSourceFormat,
+} from '../utils/modelFormat';
 import { summarizeObjectTextures } from '../utils/textureCompat';
 import {
   makeSkinEditState,
@@ -71,12 +77,14 @@ import {
   indexSkinVertexSnapshots,
   resolveSkinAutoWeightOptions,
   SKIN_AUTO_WEIGHT_ALGORITHM_LABELS,
+  appendSkinHistoryEntry,
 } from '../utils/skinWeights';
 import {
   makeEditorHistory,
   popRedo,
   popUndo,
   pushEditorHistory,
+  type EditorHistoryEntry,
   type EditorHistoryState,
 } from '../utils/editorHistory';
 import {
@@ -114,6 +122,7 @@ import {
   type RigToolMode,
 } from '../utils/rigEdits';
 import { collectRigHierarchyBones } from '../utils/rigHierarchy';
+import { hasPendingAuthoringChanges, UNSAVED_REPLACEMENT_MESSAGE } from '../utils/replacementGuard';
 import type { ViewportRole } from '../utils/viewportLayout';
 import {
   DEFAULT_RIG_IK_SETTINGS,
@@ -138,6 +147,7 @@ interface KeyboardEditorHistoryHandlers {
 
 interface UseLoadModelOptions {
   allocateHistoryOrder?: () => number;
+  externalDirtyRef?: { current: boolean };
 }
 
 let cachedTauriClient: TauriClient | null = null;
@@ -286,6 +296,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const ui = useUiSlice();
   const model = useModelSlice();
   const playback = usePlaybackSlice();
+  const pendingReplacementRef = useRef<{ label: string; start: () => Promise<void> } | null>(null);
+  const [pendingReplacement, setPendingReplacement] = useState<string | null>(null);
   const playbackRef = useRef(playback);
   useEffect(() => { playbackRef.current = playback }, [playback]);
   const allocateHistoryOrderRef = useRef(options.allocateHistoryOrder);
@@ -400,6 +412,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
 
     const report = inspectThreeToSmfSource({
+      root: model.root,
       skeleton: model.skeleton ?? null,
       skinnedMeshes: collectSkinnedMeshes(model.root),
       clips: model.clips,
@@ -434,6 +447,40 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const skinEditHasDirtyState = useMemo(() => hasDirtySkinEdits(skinEditState), [skinEditState]);
   const skinEditBlockReason = useMemo(() => getDirtySkinExportBlockReason(skinEditState), [skinEditState]);
   const animationEditHasDirtyState = useMemo(() => hasDirtyAnimationEdits(animationEditState), [animationEditState]);
+
+  const authoringChangesPending = useCallback(() => hasPendingAuthoringChanges({
+    pose: poseEditHasDirtyState,
+    animation: animationEditHasDirtyState,
+    skin: skinEditHasDirtyState,
+    editorHistory: editorHistoryRef.current.undo.length > 0 || editorHistoryRef.current.redo.length > 0,
+    externalHistory: options.externalDirtyRef?.current,
+  }), [animationEditHasDirtyState, options.externalDirtyRef, poseEditHasDirtyState, skinEditHasDirtyState]);
+
+  const queueOrStartReplacement = useCallback((
+    label: string,
+    start: () => Promise<void>,
+  ): boolean => {
+    if (!authoringChangesPending()) return false;
+    pendingReplacementRef.current = { label, start };
+    setPendingReplacement(label);
+    ui.setIsLoading(false);
+    ui.setStatus(UNSAVED_REPLACEMENT_MESSAGE);
+    return true;
+  }, [authoringChangesPending, ui]);
+
+  const cancelPendingReplacement = useCallback(() => {
+    pendingReplacementRef.current = null;
+    setPendingReplacement(null);
+    ui.setStatus('Model replacement canceled; current authoring state is unchanged.');
+  }, [ui]);
+
+  const confirmPendingReplacement = useCallback(async () => {
+    const pending = pendingReplacementRef.current;
+    pendingReplacementRef.current = null;
+    setPendingReplacement(null);
+    if (!pending) return;
+    await pending.start();
+  }, []);
 
   const beginLoadRequest = useCallback(() => {
     exportSeqGuardRef.current.next();
@@ -477,6 +524,21 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     setSkinUndoOrder(skinUndoStackRef.current.at(-1)?.order ?? 0);
     setSkinRedoOrder(skinRedoStackRef.current.at(-1)?.redoOrder ?? 0);
   }, []);
+
+  const appendSkinHistory = useCallback((
+    target: 'undo' | 'redo',
+    entry: SkinEditHistoryEntry,
+  ) => {
+    const stackRef = target === 'undo' ? skinUndoStackRef : skinRedoStackRef;
+    const result = appendSkinHistoryEntry(stackRef.current, entry);
+    stackRef.current = result.entries;
+    if (result.evictions > 0) {
+      ui.setStatus(result.accepted
+        ? `Skin history budget reached; evicted ${result.evictions} oldest entr${result.evictions === 1 ? 'y' : 'ies'}.`
+        : 'Skin history budget reached; the current edit remains applied but is not undoable.');
+    }
+    return result.accepted;
+  }, [ui]);
 
   const commitSkinEditState = useCallback((next: SkinEditState) => {
     skinEditStateRef.current = next;
@@ -674,6 +736,15 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     return true;
   }, [commitAnimationEditState, playbackRef]);
 
+  const pushEditorHistoryEntry = useCallback((entry: EditorHistoryEntry<EditorHistorySnapshot>) => {
+    const previousEvictions = editorHistoryRef.current.evictionCount;
+    editorHistoryRef.current = pushEditorHistory(editorHistoryRef.current, entry);
+    if (editorHistoryRef.current.evictionCount > previousEvictions) {
+      ui.setStatus('Editor history budget reached; the oldest undo entries were evicted.');
+    }
+    refreshEditorHistoryAvailability();
+  }, [refreshEditorHistoryAvailability, ui]);
+
   const pushPoseHistory = useCallback((
     label: string,
     before: PoseHistorySnapshot,
@@ -681,7 +752,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   ) => {
     if (samePoseSnapshot(before, after)) return false;
 
-    editorHistoryRef.current = pushEditorHistory(editorHistoryRef.current, {
+    pushEditorHistoryEntry({
       id: `pose-${editorHistoryIdRef.current += 1}`,
       label,
       domain: 'pose',
@@ -689,9 +760,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       after: { kind: 'pose', value: after },
       order: allocateHistoryOrder(),
     });
-    refreshEditorHistoryAvailability();
     return true;
-  }, [allocateHistoryOrder, refreshEditorHistoryAvailability]);
+  }, [allocateHistoryOrder, pushEditorHistoryEntry]);
 
   const pushRigHistory = useCallback((
     label: string,
@@ -700,7 +770,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   ) => {
     if (!before || !after) return false;
 
-    editorHistoryRef.current = pushEditorHistory(editorHistoryRef.current, {
+    pushEditorHistoryEntry({
       id: `rig-${editorHistoryIdRef.current += 1}`,
       label,
       domain: 'rig',
@@ -708,9 +778,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       after: { kind: 'rig', value: after },
       order: allocateHistoryOrder(),
     });
-    refreshEditorHistoryAvailability();
     return true;
-  }, [allocateHistoryOrder, refreshEditorHistoryAvailability]);
+  }, [allocateHistoryOrder, pushEditorHistoryEntry]);
 
   const pushAnimationHistory = useCallback((
     label: string,
@@ -719,7 +788,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   ) => {
     if (sameAnimationEditState(before, after)) return false;
 
-    editorHistoryRef.current = pushEditorHistory(editorHistoryRef.current, {
+    pushEditorHistoryEntry({
       id: `animation-${editorHistoryIdRef.current += 1}`,
       label,
       domain: 'animation',
@@ -727,9 +796,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       after: { kind: 'animation', value: cloneAnimationEditState(after) },
       order: allocateHistoryOrder(),
     });
-    refreshEditorHistoryAvailability();
     return true;
-  }, [allocateHistoryOrder, refreshEditorHistoryAvailability]);
+  }, [allocateHistoryOrder, pushEditorHistoryEntry]);
 
   const pushAnimationWorkspaceHistory = useCallback((
     label: string,
@@ -738,7 +806,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   ) => {
     if (sameAnimationWorkspaceSnapshot(before, after)) return false;
 
-    editorHistoryRef.current = pushEditorHistory(editorHistoryRef.current, {
+    pushEditorHistoryEntry({
       id: `animation-workspace-${editorHistoryIdRef.current += 1}`,
       label,
       domain: 'animation',
@@ -746,9 +814,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       after: { kind: 'animation-workspace', value: cloneAnimationWorkspaceSnapshot(after) },
       order: allocateHistoryOrder(),
     });
-    refreshEditorHistoryAvailability();
     return true;
-  }, [allocateHistoryOrder, refreshEditorHistoryAvailability]);
+  }, [allocateHistoryOrder, pushEditorHistoryEntry]);
 
   const undoEditorHistory = useCallback(() => {
     const result = popUndo(editorHistoryRef.current, allocateHistoryOrder());
@@ -873,6 +940,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       let smfCodecExecution: SmfCodecExecution | null = null;
       const name = res.name || res.path || '';
 
+      if (res.error) {
+        throw new Error(res.error);
+      }
+
       let data: Uint8Array | undefined = res.data;
 
       // Record source format for export decision and mode surfaces (FBX path etc.).
@@ -895,6 +966,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         }
         data = await tauri.readBinaryFile(res.path);
         if (!isCurrentLoad()) return;
+      }
+
+      if (data) {
+        assertModelInputSize(name, data.byteLength);
       }
 
       if (detectedSourceFormat === 'smf') {
@@ -984,7 +1059,16 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         ui.setStatus('No file selected.');
         return;
       }
-      await loadModel(res, loadSeq);
+      if (res.error) {
+        ui.setErrorMsg(`Open error: ${res.error}`);
+        ui.setStatus(`Open error: ${res.error}`);
+        return;
+      }
+      const start = () => loadModel(res, loadSeq);
+      if (queueOrStartReplacement(res.name || res.path || 'selected model', start)) {
+        return;
+      }
+      await start();
     } catch (e: unknown) {
       if (!loadSeqGuard.isCurrent(loadSeq)) return;
       const msg = errorMessage(e);
@@ -995,7 +1079,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         ui.setIsLoading(false);
       }
     }
-  }, [ui, loadModel, beginLoadRequest]);
+  }, [ui, loadModel, beginLoadRequest, queueOrStartReplacement]);
 
   const buildVerifiedGlb = useCallback(async (
     root: THREE.Group,
@@ -1236,7 +1320,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   }, [model.root, model.skeleton, smfDiagnosticReport, smfRoundtripReport, sourceFormat, ui, withExportBusy]);
 
   // Dedicated "Export as SMF" handler. SMF sources use the imported-data fidelity path;
-  // non-SMF skinned sources use the guarded Three-to-SMF converter.
+  // non-SMF skinned sources use the validated Three-to-SMF converter.
   const handleExportSmf = useCallback(async () => {
     await withExportBusy('Export as SMF', async (isCurrentExport) => {
       try {
@@ -1248,7 +1332,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           ui.setStatus('No model loaded for SMF export. Load a skinned GLB/FBX with skeleton or use GLB export.');
           return;
         } else {
-          ui.setStatus('Exporting as SMF via guarded converter (Three skinned -> ImportedSmf)...');
+          ui.setStatus('Exporting as SMF via validated converter (Three skinned -> ImportedSmf)...');
         }
 
         const imported = buildCurrentSmfExportCandidate();
@@ -1267,7 +1351,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         }
         ui.setStatus(smfData
           ? `Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!${encoded.execution === 'sync-fallback' ? ' SMF codec used synchronous fallback.' : ''}`
-          : `Exported .smf (from GLB/FBX via guarded threeToSmf converter + live pose). Re-import to verify fidelity!${encoded.execution === 'sync-fallback' ? ' SMF codec used synchronous fallback.' : ''}`);
+          : `Exported .smf (from GLB/FBX via validated threeToSmf converter + live pose). Re-import to verify fidelity!${encoded.execution === 'sync-fallback' ? ' SMF codec used synchronous fallback.' : ''}`);
       } catch (e: unknown) {
         if (!isCurrentExport()) return;
         if (e instanceof SmfCodecCancelledError) return;
@@ -1292,24 +1376,40 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     const input = e.currentTarget;
     const file = input.files?.[0];
     if (!file) return;
+    try {
+      assertModelFileSize(file);
+    } catch (err: unknown) {
+      const message = errorMessage(err);
+      ui.setErrorMsg(`File load blocked: ${message}`);
+      ui.setStatus(`File load blocked: ${message}`);
+      input.value = '';
+      return;
+    }
     const loadSeqGuard = loadSeqGuardRef.current;
     const loadSeq = beginLoadRequest();
-    ui.setStatus('Loading selected file...');
-    ui.setIsLoading(true);
-    try {
-      const buf = await file.arrayBuffer();
-      if (!loadSeqGuard.isCurrent(loadSeq)) return;
-      await loadModel({ name: file.name, data: new Uint8Array(buf) }, loadSeq);
-    } catch (err: unknown) {
-      if (!loadSeqGuard.isCurrent(loadSeq)) return;
-      const m = errorMessage(err);
-      ui.setErrorMsg(`File load error: ${m}`);
-      ui.setStatus(`File load error: ${m}`);
-    } finally {
+    const start = async (): Promise<void> => {
+      ui.setStatus('Loading selected file...');
+      ui.setIsLoading(true);
+      try {
+        const buf = await file.arrayBuffer();
+        if (!loadSeqGuard.isCurrent(loadSeq)) return;
+        await loadModel({ name: file.name, data: new Uint8Array(buf) }, loadSeq);
+      } catch (err: unknown) {
+        if (!loadSeqGuard.isCurrent(loadSeq)) return;
+        const m = errorMessage(err);
+        ui.setErrorMsg(`File load error: ${m}`);
+        ui.setStatus(`File load error: ${m}`);
+      } finally {
+        input.value = '';
+        if (loadSeqGuard.isCurrent(loadSeq)) ui.setIsLoading(false);
+      }
+    };
+    if (queueOrStartReplacement(file.name, start)) {
       input.value = '';
-      if (loadSeqGuard.isCurrent(loadSeq)) ui.setIsLoading(false);
+      return;
     }
-  }, [ui, loadModel, beginLoadRequest]);
+    await start();
+  }, [ui, loadModel, beginLoadRequest, queueOrStartReplacement]);
 
   // Keyboard handler (can be used in useEffect in App or moved)
   const setupKeyboard = useCallback((historyHandlers: KeyboardEditorHistoryHandlers = {}) => {
@@ -1460,23 +1560,34 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
   // Extracted for modularity: drop handler (mirrors handleFileInputChange but for DataTransfer)
   const handleDrop = useCallback(async (file: File) => {
+    try {
+      assertModelFileSize(file);
+    } catch (err: unknown) {
+      const message = errorMessage(err);
+      ui.setErrorMsg(`Drop load blocked: ${message}`);
+      ui.setStatus(`Drop load blocked: ${message}`);
+      return;
+    }
     const loadSeqGuard = loadSeqGuardRef.current;
     const loadSeq = beginLoadRequest();
-    ui.setStatus('Loading dropped file...');
-    ui.setIsLoading(true);
-    try {
-      const buf = await file.arrayBuffer();
-      if (!loadSeqGuard.isCurrent(loadSeq)) return;
-      await loadModel({ name: file.name, data: new Uint8Array(buf) }, loadSeq);
-    } catch (err: unknown) {
-      if (!loadSeqGuard.isCurrent(loadSeq)) return;
-      const m = errorMessage(err);
-      ui.setErrorMsg(`Drop load error: ${m}`);
-      ui.setStatus(`Drop load error: ${m}`);
-    } finally {
-      if (loadSeqGuard.isCurrent(loadSeq)) ui.setIsLoading(false);
-    }
-  }, [ui, loadModel, beginLoadRequest]);
+    const start = async (): Promise<void> => {
+      ui.setStatus('Loading dropped file...');
+      ui.setIsLoading(true);
+      try {
+        const buf = await file.arrayBuffer();
+        if (!loadSeqGuard.isCurrent(loadSeq)) return;
+        await loadModel({ name: file.name, data: new Uint8Array(buf) }, loadSeq);
+      } catch (err: unknown) {
+        if (!loadSeqGuard.isCurrent(loadSeq)) return;
+        const m = errorMessage(err);
+        ui.setErrorMsg(`Drop load error: ${m}`);
+        ui.setStatus(`Drop load error: ${m}`);
+      } finally {
+        if (loadSeqGuard.isCurrent(loadSeq)) ui.setIsLoading(false);
+      }
+    };
+    if (!queueOrStartReplacement(file.name, start)) await start();
+  }, [ui, loadModel, beginLoadRequest, queueOrStartReplacement]);
 
   // Extracted for modularity: bone selection updates UI state + status (used by Inspector + Viewport raycast)
   const handleSelectBone = useCallback((name: string) => {
@@ -2233,10 +2344,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       order: allocateHistoryOrder(),
     };
 
-    skinUndoStackRef.current = [...skinUndoStackRef.current.slice(-49), entry];
+    appendSkinHistory('undo', entry);
     skinRedoStackRef.current = [];
     refreshSkinHistoryAvailability();
-  }, [allocateHistoryOrder, model.root, refreshSkinHistoryAvailability]);
+  }, [allocateHistoryOrder, appendSkinHistory, model.root, refreshSkinHistoryAvailability]);
 
   const undoSkinPaint = useCallback(() => {
     if (activeSkinStrokeRef.current) {
@@ -2255,15 +2366,12 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
 
     skinUndoStackRef.current = skinUndoStackRef.current.slice(0, -1);
-    skinRedoStackRef.current = [
-      ...skinRedoStackRef.current.slice(-49),
-      { ...entry, redoOrder: allocateHistoryOrder() },
-    ];
+    appendSkinHistory('redo', { ...entry, redoOrder: allocateHistoryOrder() });
     commitSkinEditState(cloneSkinEditState(entry.beforeState));
     model.skeleton?.update();
     refreshSkinHistoryAvailability();
     ui.setStatus(`Undid skin edit (${restored} vertices restored).`);
-  }, [allocateHistoryOrder, model.root, model.skeleton, ui, endSkinPaintStroke, commitSkinEditState, refreshSkinHistoryAvailability]);
+  }, [allocateHistoryOrder, appendSkinHistory, model.root, model.skeleton, ui, endSkinPaintStroke, commitSkinEditState, refreshSkinHistoryAvailability]);
 
   const redoSkinPaint = useCallback(() => {
     if (activeSkinStrokeRef.current) {
@@ -2282,15 +2390,12 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
 
     skinRedoStackRef.current = skinRedoStackRef.current.slice(0, -1);
-    skinUndoStackRef.current = [
-      ...skinUndoStackRef.current.slice(-49),
-      { ...entry, order: allocateHistoryOrder(), redoOrder: undefined },
-    ];
+    appendSkinHistory('undo', { ...entry, order: allocateHistoryOrder(), redoOrder: undefined });
     commitSkinEditState(cloneSkinEditState(entry.afterState));
     model.skeleton?.update();
     refreshSkinHistoryAvailability();
     ui.setStatus(`Redid skin edit (${restored} vertices restored).`);
-  }, [allocateHistoryOrder, model.root, model.skeleton, ui, endSkinPaintStroke, commitSkinEditState, refreshSkinHistoryAvailability]);
+  }, [allocateHistoryOrder, appendSkinHistory, model.root, model.skeleton, ui, endSkinPaintStroke, commitSkinEditState, refreshSkinHistoryAvailability]);
 
   const captureAllSkinSnapshots = useCallback((meshes: THREE.SkinnedMesh[]) => {
     return meshes.flatMap((mesh) => {
@@ -2341,12 +2446,12 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       after,
       order: allocateHistoryOrder(),
     };
-    skinUndoStackRef.current = [...skinUndoStackRef.current.slice(-49), entry];
+    appendSkinHistory('undo', entry);
     skinRedoStackRef.current = [];
     model.skeleton?.update();
     refreshSkinHistoryAvailability();
     return changed;
-  }, [allocateHistoryOrder, commitSkinEditState, model.root, model.skeleton, refreshSkinHistoryAvailability, ui]);
+  }, [allocateHistoryOrder, appendSkinHistory, commitSkinEditState, model.root, model.skeleton, refreshSkinHistoryAvailability, ui]);
 
   const normalizeSkinWeights = useCallback(() => {
     if (activeSkinStrokeRef.current) {
@@ -2605,6 +2710,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     loadModel,
     clearLoadedModel,
     handleOpen,
+    pendingReplacement,
+    cancelPendingReplacement,
+    confirmPendingReplacement,
     handleExport,
     handleExportGlb,
     handleExportFbx,

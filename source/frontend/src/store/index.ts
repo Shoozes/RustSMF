@@ -6,10 +6,11 @@
  * Components and hooks consume these to reduce App bloat.
  */
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef, type SetStateAction } from 'react';
 import * as THREE from 'three';
 import { supportedModelFormatsLabel } from '../utils/modelFormat';
 import type { TextureFilterPreview } from '../utils/materialPreview';
+import { createPlaybackDisplayThrottle } from '../utils/playbackDisplayThrottle';
 
 export interface LoadedModelState {
   root: THREE.Group | null;
@@ -57,23 +58,44 @@ export interface UiState {
 
 export function usePlaybackSlice(initial: Partial<PlaybackState> = {}) {
   const [isPlaying, setIsPlaying] = useState<boolean>(initial.isPlaying ?? false);
-  const [currentTime, setCurrentTime] = useState<number>(initial.currentTime ?? 0);
+  const [currentTime, setCurrentTimeState] = useState<number>(initial.currentTime ?? 0);
   const [duration, setDuration] = useState<number>(initial.duration ?? 0);
   const [currentClipName, setCurrentClipName] = useState<string>(initial.currentClipName ?? '');
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(initial.playbackSpeed ?? 1);
+  const displayThrottleRef = useRef(createPlaybackDisplayThrottle());
+
+  const nowMs = (): number => (
+    typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now()
+  );
+
+  const setCurrentTime = useCallback((next: SetStateAction<number>) => {
+    displayThrottleRef.current.markPublished(nowMs());
+    setCurrentTimeState(next);
+  }, []);
+
+  const reportCurrentTime = useCallback((next: number) => {
+    if (!Number.isFinite(next)) return;
+    const now = nowMs();
+    if (!displayThrottleRef.current.shouldPublish(now)) return;
+    displayThrottleRef.current.markPublished(now);
+    setCurrentTimeState((previous) => Math.abs(previous - next) <= 1e-6 ? previous : next);
+  }, []);
 
   const toggle = useCallback(() => setIsPlaying(p => !p), []);
-  const scrub = useCallback((t: number) => setCurrentTime(Math.max(0, t)), []);
+  const scrub = useCallback((t: number) => setCurrentTime(Math.max(0, t)), [setCurrentTime]);
   const selectClip = useCallback((name: string, dur: number) => {
     setCurrentClipName(name);
     setDuration(dur);
     setCurrentTime(0);
     setIsPlaying(true);
-  }, []);
+  }, [setCurrentTime]);
 
   return {
     isPlaying, setIsPlaying,
     currentTime, setCurrentTime,
+    reportCurrentTime,
     duration, setDuration,
     currentClipName, setCurrentClipName,
     playbackSpeed, setPlaybackSpeed,

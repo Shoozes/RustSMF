@@ -130,7 +130,8 @@
         "source/frontend/src/workers/smfCodecClient.test.ts",
         "source/frontend/src/workers/smfCodecProtocol.ts",
         "source/frontend/src/workers/smfCodecRuntime.ts",
-        "source/frontend/src/loaders/smfData.ts"
+        "source/frontend/src/loaders/smfData.ts",
+        "source/frontend/src/loaders/smfSemantics.ts"
       ],
       "notes": [
         "Worker messages are untrusted values.",
@@ -208,13 +209,12 @@
         "source/frontend/src/utils/rigValidation.ts",
         "source/frontend/src/utils/smfRigPolicy.ts",
         "source/frontend/src/utils/smfRigPolicy.test.ts",
-        "source/frontend/tests/helpers/viewport-interactions.ts",
         "source/frontend/tests/rig.spec.ts"
       ]
     },
     "feature__animation_authoring": {
       "description": "Timeline interaction, selected-bone key editing, clip management, metadata, history, and browser ownership.",
-      "max_kb": 128,
+      "max_kb": 144,
       "paths": [
         "source/frontend/src/components/AnimatePanel.tsx",
         "source/frontend/src/components/Timeline.tsx",
@@ -226,12 +226,15 @@
         "source/frontend/src/utils/animationAuthoringController.test.ts",
         "source/frontend/src/utils/animationTimeline.ts",
         "source/frontend/src/utils/animationTimeline.test.ts",
+        "source/frontend/src/utils/playbackDisplayThrottle.ts",
+        "source/frontend/src/utils/playbackDisplayThrottle.test.ts",
         "source/frontend/tests/helpers/timeline-interactions.ts",
         "source/frontend/tests/animation.spec.ts"
       ],
       "notes": [
         "useLoadModel remains the load/export integration owner; animation authoring actions are delegated to the tested controller contract.",
-        "Quadratic interpolation is preserved as SMF metadata and previews linearly in Three.js."
+        "Quadratic interpolation is preserved as SMF metadata and previews linearly in Three.js.",
+        "The viewport advances the mixer imperatively; parent timeline publication is throttled to a 50 ms display cadence while scrub and playback-intent setters remain immediate."
       ]
     },
     "feature__skin_authoring": {
@@ -248,19 +251,19 @@
         "source/frontend/src/utils/skinPointOverlay.test.ts",
         "source/frontend/src/utils/weightPreview.ts",
         "source/frontend/src/utils/weightPreview.test.ts",
-        "source/frontend/tests/helpers/viewport-interactions.ts",
         "source/frontend/tests/skin.spec.ts"
       ],
       "notes": [
         "Brush queries use bounded spatial candidates and verify world-space distance before mutation.",
         "Completed strokes and batch actions own one undoable snapshot transaction.",
         "Weight preview is a non-destructive vertex-color display; original color attributes and material vertex-color modes are restored on disable/export.",
-        "Batch history comparisons use a mesh/vertex snapshot index rather than repeated linear scans."
+        "Batch history comparisons use a mesh/vertex snapshot index rather than repeated linear scans.",
+        "Skin undo/redo entries are bounded to 50 entries and 32 MiB per direction; oldest-entry eviction reports through the status surface."
       ]
     },
     "subsystem__smf_format_and_fidelity": {
       "description": "SMF parsing, serialization, coordinate conversion, rig fidelity, and malformed-input diagnostics.",
-      "max_kb": 128,
+      "max_kb": 144,
       "paths": [
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/loaders/smfBinary.ts",
@@ -270,11 +273,13 @@
         "source/frontend/src/loaders/coord.test.ts",
         "source/frontend/src/loaders/smfBinary.test.ts",
         "source/frontend/src/loaders/smfDiagnostics.ts",
-        "source/frontend/src/loaders/smfDiagnostics.test.ts"
+        "source/frontend/src/loaders/smfDiagnostics.test.ts",
+        "source/frontend/src/loaders/smfSemantics.ts",
+        "source/frontend/src/loaders/smfSemantics.test.ts"
       ],
       "notes": [
         "The TypeScript codec is the full structural SMF authority; native validation reports header/offset acceptance only.",
-        "SMF limits are centralized in smfBinary.ts and must be changed with focused malformed-input tests and APP_STATE documentation.",
+        "SMF limits are centralized in smfBinary.ts, including the 512 MiB decoded-memory estimate, and must be changed with focused malformed-input tests and APP_STATE documentation.",
         "Tangent handedness is normalized at import and byte-packed at export so the fourth tangent component is not silently discarded."
       ]
     },
@@ -283,7 +288,10 @@
       "max_kb": 96,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
+        "source/frontend/src/utils/modelFormat.ts",
+        "source/frontend/src/utils/modelFormat.test.ts",
         "source/frontend/tests/native.spec.ts",
+        "source/frontend/package.json",
         "source/src-tauri/src/main.rs",
         "source/src-tauri/src/smf_core.rs",
         "source/src-tauri/Cargo.toml",
@@ -291,7 +299,9 @@
         "source/src-tauri/capabilities/default.json"
       ],
       "notes": [
-        "Native file reads/writes are capped at 256 MiB and run through blocking-task adapters.",
+        "Rust owns native open/save dialogs; reads require a canonical path previously selected by the native dialog, saves do not accept a frontend path, and all blocking file work is capped at 256 MiB.",
+        "The frontend passes a Uint8Array byte view to save_file_binary rather than constructing an explicit Array.from number array; typed IPC remains bounded by the same native limit.",
+        "The Rust tauri-plugin-dialog and frontend @tauri-apps/plugin-dialog declarations are pinned to the same 2.7.1 release; the frontend package is a Tauri build-contract dependency even though dialog invocation is Rust-owned.",
         "validate_smf is an envelope/header check; full structural validation remains in the TypeScript worker codec."
       ]
     },
@@ -305,6 +315,8 @@
         "source/frontend/tsconfig.json",
         "source/frontend/tsconfig.test.json",
         "source/frontend/tests/README.md",
+        "source/frontend/src/loaders/smfSemantics.test.ts",
+        "source/frontend/src/utils/modelFormat.test.ts",
         "source/frontend/tests/fixtures/invalid-model.gml",
         "source/frontend/tests/helpers/*.ts",
         "source/frontend/scripts/run-unit-tests.mjs",
@@ -331,7 +343,32 @@
         "The Playwright config owns one build-and-preview server for the full suite.",
         "Test titles remain stable after the domain split.",
         "The unit runner discovers every src/**/*.test.ts file in deterministic order; adding a file requires no package-script edit.",
-        "Managed Windows Chromium launch can use the process-local RUSTSMF_PLAYWRIGHT_EXECUTABLE override; the path must be absolute and existing."
+        "Managed Windows Chromium launch can use the process-local RUSTSMF_PLAYWRIGHT_EXECUTABLE override; the path must be absolute and existing.",
+        "Non-SMF-to-SMF browser cases assert the enabled action for compatible skinned sources and diagnostic blocking for static or unsupported sources; source-SMF export cases remain enabled.",
+        "Dirty replacement coverage asserts Cancel preserves the mounted model and Discard clears authoring state before the selected model is committed.",
+        "The stress fixture supplies triangle metadata for every generated triangle-soup vertex, and overlap tests explicitly confirm each queued replacement so semantic and async regressions fail at the intended boundary.",
+        "Native mock coverage treats Rust-owned open/read/save/cancel commands and selected-path authorization as explicit IPC contracts."
+      ]
+    },
+    "issue__smf_conversion_spatial_fidelity": {
+      "description": "Validated non-SMF-to-SMF conversion boundary, coordinate ownership, rig parent resolution, and numeric parity routes.",
+      "max_kb": 180,
+      "paths": [
+        "source/frontend/src/loaders/threeToSmf.ts",
+        "source/frontend/src/loaders/threeToSmf.test.ts",
+        "source/frontend/src/loaders/smf.ts",
+        "source/frontend/src/loaders/smfRig.ts",
+        "source/frontend/src/loaders/coord.ts",
+        "source/frontend/src/hooks/smfExportCandidate.ts",
+        "source/frontend/src/hooks/smfExportCandidate.test.ts",
+        "source/frontend/src/components/Toolbar.tsx",
+        "source/frontend/src/components/ExportPanel.tsx",
+        "source/frontend/tests/export-formats.spec.ts"
+      ],
+      "notes": [
+        "The app enables GLB/FBX-to-SMF save and SMF roundtrip actions for compatible skinned single-root sources; static roots, scale tracks, malformed geometry, and semantic failures remain blocked.",
+        "The builder keeps mesh arrays in model-root Three space, captures root-relative world DQs, and samples clips through a cloned Three mixer; the serializer owns the single Three-to-SMF vector boundary.",
+        "Numeric tests cover non-identity mesh transforms, nested rig matrices, and mixer quaternion interpolation before browser-facing use."
       ]
     },
     "issue__verification_current_head": {
@@ -349,7 +386,8 @@
         "source/frontend/playwright.config.ts"
       ],
       "notes": [
-        "Historical current-head evidence is 55/55 browser cases, 2/2 strict visuals, canonical desktop-smoke green, and Blender 5.0.0 validation of app-exported FBX output. Fresh follow-up verification keeps the non-browser gates green; the default desktop-smoke browser phase is managed-Chromium blocked, while an approved system-Chrome native rerun reaches all 9 bodies and fails only during browserContext.close teardown with spawn EPERM.",
+        "Historical product evidence is 55/55 browser cases, 2/2 strict visuals, canonical desktop-smoke green, and Blender 5.0.0 validation of app-exported FBX output. Current final verification keeps all non-browser gates green; the current 56-body full browser run, 2-body strict visual run, and approved system-Chrome native rerun have no product assertion failures but are teardown-blocked by managed browserContext.close spawn EPERM with listeners cleaned.",
+        "The current working-tree inventory is 56 browser cases and 10 Rust tests; the current-head certification record is complete in review.md, with desktop-smoke's Tauri build/Rust portions passing and its managed native browser teardown explicitly classified.",
         "Bundled Chromium still fails before app execution with spawn EPERM in the managed process; current evidence uses a process-local approved system-browser executable and keeps the environment caveat separate from product results."
       ]
     },
@@ -398,11 +436,16 @@
         "source/frontend/src/hooks/smfExportCandidate.test.ts",
         "source/frontend/src/hooks/editorSnapshots.ts",
         "source/frontend/src/hooks/editorSnapshots.test.ts",
+        "source/frontend/src/utils/editorHistory.ts",
+        "source/frontend/src/utils/editorHistory.test.ts",
+        "source/frontend/src/utils/replacementGuard.ts",
+        "source/frontend/src/utils/replacementGuard.test.ts",
         "source/frontend/src/types/viewportEditorEvents.ts"
       ],
       "notes": [
         "useLoadModel keeps its public return contract while pure snapshots, codec tasks, and export candidates own focused policy.",
-        "Renderer and requestAnimationFrame ownership remain in ThreeViewport; mount listeners and TransformControls have explicit dispose owners."
+        "Renderer and requestAnimationFrame ownership remain in ThreeViewport; mount listeners and TransformControls have explicit dispose owners.",
+        "Replacement decisions are centralized before byte materialization, and editor history is capped at 100 entries/64 MiB with eviction status."
       ]
     },
     "subsystem__dev_process_lifecycle": {

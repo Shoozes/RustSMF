@@ -1,18 +1,21 @@
 // Thin Tauri bridge with browser fallback.
-// Real SMF/GLB/FBX file I/O and native dialogs/save route through this.
-// openFile: tauri dialog or browser input.
-// saveFile: native Tauri (dialog + write_file_binary) or browser download.
-// readBinaryFile: for desktop binary loads when only path is available.
+// Native dialogs and filesystem authority stay in Rust; browser input/downloads
+// remain DOM-owned and never accept arbitrary native paths.
 
 import { invoke } from '@tauri-apps/api/core'
-import { open, save } from '@tauri-apps/plugin-dialog'
 import { bytesToArrayBuffer } from '../loaders'
-import { SUPPORTED_MODEL_ACCEPT } from '../utils/modelFormat'
+import {
+  assertModelFileSize,
+  assertModelInputSize,
+  ModelInputSizeError,
+  SUPPORTED_MODEL_ACCEPT,
+} from '../utils/modelFormat'
 
 export interface OpenResult {
   path?: string
   name?: string
   data?: Uint8Array // browser-read bytes or test/native-injected bytes
+  error?: string
 }
 
 export interface SmfDesktopInfo {
@@ -46,28 +49,14 @@ function isTauriEnv(): boolean {
   return !!(Reflect.get(window, '__TAURI__') || Reflect.get(window, '__TAURI_INTERNALS__'));
 }
 
-function resolveOpenSelectionPath(selection: unknown): string {
-  if (typeof selection === 'string') return selection;
-  if (!selection || typeof selection !== 'object') return '';
-  const path = Reflect.get(selection, 'path');
-  return typeof path === 'string' ? path : '';
-}
-
 export async function openFile(): Promise<OpenResult | null> {
   const isTauri = isTauriEnv()
   if (isTauri) {
     try {
-      const selected = await open({
-        multiple: false,
-        filters: [
-          { name: '3D Models', extensions: ['smf', 'glb', 'gltf', 'fbx', 'obj'] },
-          { name: 'All Files', extensions: ['*'] }
-        ]
-      })
-      if (!selected) return null
-      const path = resolveOpenSelectionPath(selected);
-      if (!path) return null;
-      // Desktop returns a path; the load flow calls readBinaryFile when bytes are needed.
+      const path = await invokeCommand<string | null>('open_file')
+      if (!path) return null
+      // Rust returns a path only after the native dialog has authorized it;
+      // the following read is rejected if a caller supplies an unselected path.
       return { path, name: path.split(/[\\/]/).pop() }
     } catch (e) {
       console.warn('[tauri] dialog open failed, falling back', e)
@@ -107,6 +96,9 @@ export async function openFile(): Promise<OpenResult | null> {
         return
       }
       try {
+        // Check metadata before materializing the browser File. The load hook
+        // repeats the byte-length check for native and test-injected results.
+        assertModelFileSize(file)
         const buf = await file.arrayBuffer()
         finalize({
           name: file.name,
@@ -114,7 +106,7 @@ export async function openFile(): Promise<OpenResult | null> {
         })
       } catch (e) {
         console.warn('[tauri] failed to read file from browser input', e)
-        finalize(null)
+        finalize(e instanceof ModelInputSizeError ? { name: file.name, error: e.message } : null)
       }
     }
 
@@ -141,21 +133,17 @@ export async function openFile(): Promise<OpenResult | null> {
 export async function saveFile(data: Uint8Array | Blob, suggestedName: string): Promise<boolean> {
   const isTauri = isTauriEnv()
   if (isTauri) {
-    const filePath = await save({
-      defaultPath: suggestedName,
-      filters: [{ name: 'All Files', extensions: ['*'] }]
-    })
-    if (!filePath) return false
+    assertModelInputSize(suggestedName, data instanceof Blob ? data.size : data.byteLength)
     let bytes: Uint8Array
     if (data instanceof Blob) {
       bytes = new Uint8Array(await data.arrayBuffer())
     } else {
       bytes = data
     }
-    await invokeCommand('write_file_binary', { path: filePath, data: Array.from(bytes) })
-    return true
+    return invokeCommand<boolean>('save_file_binary', { suggestedName, data: bytes })
   }
   // Browser (or fallback) download
+  assertModelInputSize(suggestedName, data instanceof Blob ? data.size : data.byteLength)
   const blob = data instanceof Blob ? data : new Blob([bytesToArrayBuffer(data)])
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
@@ -177,7 +165,7 @@ export async function invokeCommand<T>(cmd: string, args?: Record<string, unknow
 
 /**
  * Read a file as binary (Uint8Array). 
- * - In Tauri: uses the read_file_binary command (added for SMF/GLB desktop loads).
+ * - In Tauri: uses read_file_binary after the Rust dialog authority check.
  * - In browser: not directly usable for arbitrary paths (security); openFile() already returns data.
  */
 export async function readBinaryFile(path: string): Promise<Uint8Array> {
@@ -185,7 +173,9 @@ export async function readBinaryFile(path: string): Promise<Uint8Array> {
   if (!isTauri) {
     throw new Error('readBinaryFile only available in Tauri desktop (use openFile in browser)')
   }
-  const bytes: number[] = await invokeCommand<number[]>('read_file_binary', { path })
+  const bytes = await invokeCommand<number[] | Uint8Array | ArrayBuffer>('read_file_binary', { path })
+  if (bytes instanceof Uint8Array) return bytes
+  if (bytes instanceof ArrayBuffer) return new Uint8Array(bytes)
   return new Uint8Array(bytes)
 }
 

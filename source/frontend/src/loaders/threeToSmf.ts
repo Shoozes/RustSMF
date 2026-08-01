@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import type { ImportedSmf } from './smf';
-import { threeVecToSmf, threeMatrixToSmf, dqCreateFromMatrix, dqNegate } from './coord';
+import { threeMatrixToSmf, dqCreateFromMatrix, dqNegate } from './coord';
 import { cloneImportedSmf } from './smfData';
 import {
   makeDiagnosticReport,
@@ -27,6 +27,7 @@ export class SmfConversionError extends Error {
 }
 
 export interface SmfConversionSource {
+  root?: THREE.Object3D | null;
   skeleton?: THREE.Skeleton | null;
   skinnedMeshes?: THREE.SkinnedMesh[];
   clips?: THREE.AnimationClip[];
@@ -191,6 +192,53 @@ function extractMeshPayload(mesh: THREE.SkinnedMesh): MeshSkinPayload {
     skinWeights,
     vertices,
   };
+}
+
+function transformMeshPayloadToRoot(
+  payload: MeshSkinPayload,
+  mesh: THREE.SkinnedMesh,
+  rootInverse: THREE.Matrix4 | null,
+): MeshSkinPayload {
+  mesh.updateMatrixWorld(true);
+  const modelMatrix = mesh.matrixWorld.clone();
+  if (rootInverse) modelMatrix.premultiply(rootInverse);
+
+  const normalMatrix = new THREE.Matrix3().getNormalMatrix(modelMatrix);
+  const position = new THREE.Vector3();
+  const normal = new THREE.Vector3();
+  const tangent = new THREE.Vector3();
+  const positions = new Float32Array(payload.positions);
+  const normals = new Float32Array(payload.normals);
+  const tangents = new Float32Array(payload.tangents);
+
+  for (let v = 0; v < payload.vertices; v += 1) {
+    const vertexOffset = v * 3;
+    position
+      .set(payload.positions[vertexOffset], payload.positions[vertexOffset + 1], payload.positions[vertexOffset + 2])
+      .applyMatrix4(modelMatrix);
+    positions[vertexOffset] = position.x;
+    positions[vertexOffset + 1] = position.y;
+    positions[vertexOffset + 2] = position.z;
+
+    normal
+      .set(payload.normals[vertexOffset], payload.normals[vertexOffset + 1], payload.normals[vertexOffset + 2])
+      .applyMatrix3(normalMatrix)
+      .normalize();
+    normals[vertexOffset] = normal.x;
+    normals[vertexOffset + 1] = normal.y;
+    normals[vertexOffset + 2] = normal.z;
+
+    const tangentOffset = v * 4;
+    tangent
+      .set(payload.tangents[tangentOffset], payload.tangents[tangentOffset + 1], payload.tangents[tangentOffset + 2])
+      .applyMatrix3(normalMatrix)
+      .normalize();
+    tangents[tangentOffset] = tangent.x;
+    tangents[tangentOffset + 1] = tangent.y;
+    tangents[tangentOffset + 2] = tangent.z;
+  }
+
+  return { ...payload, positions, normals, tangents };
 }
 
 export function applyLiveSkinEditsToImportedSmf(
@@ -358,34 +406,158 @@ export function inspectThreeToSmfSource(src: SmfConversionSource): SmfDiagnostic
   return makeDiagnosticReport(diagnostics, materialTextures);
 }
 
-// Convert a Three.js bone's current local matrix to SMF-space DQ (negated storage convention).
-function boneLocalToDq(bone: THREE.Bone): Float32Array {
-  bone.updateMatrix();
-  const smfMat = threeMatrixToSmf(bone.matrix);
-  const raw = dqCreateFromMatrix(smfMat);
-  return dqNegate(raw);
+function makeRootInverse(root: THREE.Object3D | null | undefined): THREE.Matrix4 | null {
+  if (!root) return null;
+  root.updateMatrixWorld(true);
+  return root.matrixWorld.clone().invert();
 }
 
-// Linear-interpolate a single component from a flat keyframe track at time t.
-function sampleTrackComponent(
-  values: ArrayLike<number>,
-  times: ArrayLike<number>,
-  t: number,
-  stride: number,
-  component: number
-): number {
-  const n = times.length;
-  if (n === 0) return 0;
-  if (t <= times[0]) return values[component];
-  if (t >= times[n - 1]) return values[(n - 1) * stride + component];
-  let i = 0;
-  while (i < n - 1 && times[i + 1] < t) i++;
-  const alpha = (t - times[i]) / (times[i + 1] - times[i]);
-  return values[i * stride + component] * (1 - alpha) + values[(i + 1) * stride + component] * alpha;
+function makeRootRelativeWorldMatrix(
+  object: THREE.Object3D,
+  rootInverse: THREE.Matrix4 | null,
+): THREE.Matrix4 {
+  object.updateMatrixWorld(true);
+  const world = object.matrixWorld.clone();
+  if (rootInverse) world.premultiply(rootInverse);
+  return world;
+}
+
+// SMF rig DQs contain root-relative world poses. Keeping this conversion at one
+// boundary prevents local-vs-world and coordinate-space drift between bind and
+// animation data.
+function boneWorldToDq(
+  bone: THREE.Bone,
+  rootInverse: THREE.Matrix4 | null,
+): Float32Array {
+  const smfMat = threeMatrixToSmf(makeRootRelativeWorldMatrix(bone, rootInverse));
+  return dqNegate(dqCreateFromMatrix(smfMat));
+}
+
+interface AnimationSampleRig {
+  root: THREE.Object3D;
+  rootInverse: THREE.Matrix4;
+  bones: THREE.Bone[];
+  mixer: THREE.AnimationMixer;
+}
+
+function copyBoneTransform(source: THREE.Bone, target: THREE.Bone): void {
+  target.name = source.name;
+  target.position.copy(source.position);
+  target.quaternion.copy(source.quaternion);
+  target.scale.copy(source.scale);
+  target.userData = { ...source.userData };
+}
+
+function makeStandaloneAnimationSampleRig(skeleton: THREE.Skeleton): AnimationSampleRig {
+  const root = new THREE.Group();
+  root.name = 'SMF_AnimationSampleRoot';
+  const boneMap = new Map<THREE.Bone, THREE.Bone>();
+
+  skeleton.bones.forEach((sourceBone) => {
+    const targetBone = new THREE.Bone();
+    copyBoneTransform(sourceBone, targetBone);
+    boneMap.set(sourceBone, targetBone);
+  });
+
+  skeleton.bones.forEach((sourceBone) => {
+    const targetBone = boneMap.get(sourceBone)!;
+    const targetParent = sourceBone.parent instanceof THREE.Bone
+      ? boneMap.get(sourceBone.parent)
+      : null;
+    (targetParent ?? root).add(targetBone);
+  });
+
+  root.updateMatrixWorld(true);
+  return {
+    root,
+    rootInverse: root.matrixWorld.clone().invert(),
+    bones: skeleton.bones.map((bone) => boneMap.get(bone)!),
+    mixer: new THREE.AnimationMixer(root),
+  };
+}
+
+function makeAnimationSampleRig(
+  sourceRoot: THREE.Object3D | null | undefined,
+  skeleton: THREE.Skeleton,
+): AnimationSampleRig {
+  if (!sourceRoot) return makeStandaloneAnimationSampleRig(skeleton);
+
+  const sourceObjects: THREE.Object3D[] = [];
+  sourceRoot.traverse((object) => sourceObjects.push(object));
+  const clonedRoot = sourceRoot.clone(true);
+  const clonedObjects: THREE.Object3D[] = [];
+  clonedRoot.traverse((object) => clonedObjects.push(object));
+
+  if (sourceObjects.length !== clonedObjects.length) {
+    return makeStandaloneAnimationSampleRig(skeleton);
+  }
+
+  const cloneBySource = new Map<THREE.Object3D, THREE.Object3D>();
+  sourceObjects.forEach((sourceObject, index) => {
+    cloneBySource.set(sourceObject, clonedObjects[index]);
+  });
+  const clonedBones = skeleton.bones.map((bone) => cloneBySource.get(bone));
+  if (clonedBones.some((bone): bone is undefined => !bone || !(bone instanceof THREE.Bone))) {
+    return makeStandaloneAnimationSampleRig(skeleton);
+  }
+
+  clonedRoot.updateMatrixWorld(true);
+  return {
+    root: clonedRoot,
+    rootInverse: clonedRoot.matrixWorld.clone().invert(),
+    bones: clonedBones as THREE.Bone[],
+    mixer: new THREE.AnimationMixer(clonedRoot),
+  };
+}
+
+function collectAnimationTimes(clip: THREE.AnimationClip): number[] {
+  if (!Number.isFinite(clip.duration) || clip.duration < 0) {
+    throw new SmfConversionError(`Animation "${clip.name || 'unnamed'}" has an invalid duration.`);
+  }
+
+  const timeSet = new Set<number>();
+  for (const track of clip.tracks) {
+    for (let i = 0; i < track.times.length; i += 1) {
+      const time = track.times[i];
+      if (!Number.isFinite(time) || time < 0) {
+        throw new SmfConversionError(
+          `Animation "${clip.name || 'unnamed'}" has an invalid keyframe time ${time}.`,
+        );
+      }
+      timeSet.add(time);
+    }
+  }
+  const times = Array.from(timeSet).sort((a, b) => a - b);
+  if (times.length === 0) times.push(0);
+  return times;
+}
+
+function sampleAnimationFrames(
+  clip: THREE.AnimationClip,
+  sourceRoot: THREE.Object3D | null | undefined,
+  skeleton: THREE.Skeleton,
+): { times: number[]; frames: Float32Array[][] } {
+  const times = collectAnimationTimes(clip);
+  const sampleRig = makeAnimationSampleRig(sourceRoot, skeleton);
+  const action = sampleRig.mixer.clipAction(clip);
+  action.reset();
+  action.setLoop(THREE.LoopOnce, 1);
+  action.clampWhenFinished = true;
+  action.play();
+
+  const frames = times.map((time) => {
+    sampleRig.mixer.setTime(time);
+    sampleRig.root.updateMatrixWorld(true);
+    const sampleRootInverse = sampleRig.rootInverse;
+    return sampleRig.bones.map((bone) => boneWorldToDq(bone, sampleRootInverse));
+  });
+
+  sampleRig.mixer.stopAllAction();
+  return { times, frames };
 }
 
 export function buildImportedSmfFromThree(src: SmfConversionSource): ImportedSmf {
-  const { skeleton, skinnedMeshes = [], clips = [] } = src;
+  const { root = null, skeleton, skinnedMeshes = [], clips = [] } = src;
   const report = inspectThreeToSmfSource(src);
 
   const firstError = report.diagnostics.find((item) => item.level === 'error');
@@ -403,7 +575,11 @@ export function buildImportedSmfFromThree(src: SmfConversionSource): ImportedSmf
     );
   }
 
-  // Build SMF bones from skeleton using current local transforms
+  const rootInverse = makeRootInverse(root);
+
+  // Build SMF bones from root-relative world transforms. SMF hierarchy import
+  // derives local transforms from these world poses, so exporting local bone
+  // matrices would double-apply parent transforms on reimport.
   const bones: ImportedSmf['bones'] = exportSkeleton.bones.map((b, i) => {
     const parentBone = b.parent instanceof THREE.Bone ? b.parent : null;
     const parentIdx = parentBone ? exportSkeleton.bones.indexOf(parentBone) : -1;
@@ -411,7 +587,7 @@ export function buildImportedSmfFromThree(src: SmfConversionSource): ImportedSmf
       index: i,
       parent: parentIdx,
       isBone: 1,
-      dq: boneLocalToDq(b),
+      dq: boneWorldToDq(b, rootInverse),
       axis: [0, 1, 0],
     };
   });
@@ -419,32 +595,8 @@ export function buildImportedSmfFromThree(src: SmfConversionSource): ImportedSmf
   // Build mesh data from skinned meshes
   const meshes: ImportedSmf['meshes'] = [];
   skinnedMeshes.forEach((mesh, meshIndex) => {
-    const payload = extractMeshPayload(mesh);
+    const payload = transformMeshPayloadToRoot(extractMeshPayload(mesh), mesh, rootInverse);
     const { positions, normals, uvs, tangents, skinIndices, skinWeights, vertices: verts } = payload;
-
-    const smfPos = new Float32Array(positions.length);
-    const smfNor = new Float32Array(normals.length);
-    for (let v = 0; v < verts; v++) {
-      const sp = threeVecToSmf(new THREE.Vector3(
-        positions[v * 3],
-        positions[v * 3 + 1],
-        positions[v * 3 + 2],
-      ));
-      smfPos[v * 3] = sp[0];
-      smfPos[v * 3 + 1] = sp[1];
-      smfPos[v * 3 + 2] = sp[2];
-
-      if (normals.length > 0) {
-        const sn = threeVecToSmf(new THREE.Vector3(
-          normals[v * 3],
-          normals[v * 3 + 1],
-          normals[v * 3 + 2],
-        ));
-        smfNor[v * 3] = sn[0];
-        smfNor[v * 3 + 1] = sn[1];
-        smfNor[v * 3 + 2] = sn[2];
-      }
-    }
 
     const triangles: number[][] = [];
     for (let i = 0; i < verts; i += 3) {
@@ -456,8 +608,10 @@ export function buildImportedSmfFromThree(src: SmfConversionSource): ImportedSmf
       verts,
       triangles,
       texIdx: -1,
-      positions: smfPos,
-      normals: smfNor,
+      // ImportedSmf mesh arrays are Three/model-root space in memory. The
+      // binary serializer owns the single Three -> SMF coordinate conversion.
+      positions,
+      normals,
       uvs,
       tangents,
       skinIndices,
@@ -466,56 +620,10 @@ export function buildImportedSmfFromThree(src: SmfConversionSource): ImportedSmf
     });
   });
 
-  // Build animations from clip track data (no mixer, direct track interpolation)
+  // Sample animations through Three's mixer so quaternion interpolation,
+  // defaults, hierarchy, and track binding follow the source runtime.
   const animations: ImportedSmf['animations'] = clips.map((clip, ci) => {
-    // Collect all unique keyframe times across all tracks
-    const timeSet = new Set<number>();
-    for (const track of clip.tracks) {
-      for (let i = 0; i < track.times.length; i++) timeSet.add(track.times[i]);
-    }
-    const times = Array.from(timeSet).sort((a, b) => a - b);
-    if (times.length === 0) times.push(0);
-
-    // Build per-bone position and quaternion track lookups
-    const boneQuatTimes = new Map<string, ArrayLike<number>>();
-    const boneQuatValues = new Map<string, ArrayLike<number>>();
-    const bonePosTime = new Map<string, ArrayLike<number>>();
-    const bonePosValues = new Map<string, ArrayLike<number>>();
-
-    for (const track of clip.tracks) {
-      const dot = track.name.lastIndexOf('.');
-      const boneName = track.name.slice(0, dot);
-      const prop = track.name.slice(dot + 1);
-      if (prop === 'quaternion') {
-        boneQuatTimes.set(boneName, track.times);
-        boneQuatValues.set(boneName, track.values);
-      } else if (prop === 'position') {
-        bonePosTime.set(boneName, track.times);
-        bonePosValues.set(boneName, track.values);
-      }
-    }
-
-    const frames: Float32Array[][] = times.map(t =>
-      exportSkeleton.bones.map(bone => {
-        const qtimes = boneQuatTimes.get(bone.name);
-        const qvals = boneQuatValues.get(bone.name);
-        const ptimes = bonePosTime.get(bone.name);
-        const pvals = bonePosValues.get(bone.name);
-
-        const qx = qtimes ? sampleTrackComponent(qvals!, qtimes, t, 4, 0) : bone.quaternion.x;
-        const qy = qtimes ? sampleTrackComponent(qvals!, qtimes, t, 4, 1) : bone.quaternion.y;
-        const qz = qtimes ? sampleTrackComponent(qvals!, qtimes, t, 4, 2) : bone.quaternion.z;
-        const qw = qtimes ? sampleTrackComponent(qvals!, qtimes, t, 4, 3) : bone.quaternion.w;
-        const px = ptimes ? sampleTrackComponent(pvals!, ptimes, t, 3, 0) : bone.position.x;
-        const py = ptimes ? sampleTrackComponent(pvals!, ptimes, t, 3, 1) : bone.position.y;
-        const pz = ptimes ? sampleTrackComponent(pvals!, ptimes, t, 3, 2) : bone.position.z;
-
-        const tmp = new THREE.Bone();
-        tmp.position.set(px, py, pz);
-        tmp.quaternion.set(qx, qy, qz, qw);
-        return boneLocalToDq(tmp);
-      })
-    );
+    const { times, frames } = sampleAnimationFrames(clip, root, exportSkeleton);
 
     return {
       name: clip.name || `Anim_${ci}`,

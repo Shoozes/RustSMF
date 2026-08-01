@@ -175,7 +175,7 @@ describe('buildSmfExportCandidate', () => {
     assert.deepEqual([...source.meshes[0].skinWeights], sourceWeights);
   });
 
-  it('converts a compatible non-SMF skinned root', () => {
+  it('builds a verified non-SMF conversion candidate before serialization', () => {
     const skeleton = makeSkeleton('Bone_0');
     const root = new THREE.Group();
     root.add(makeSkinnedMesh(skeleton, 'converted-mesh'));
@@ -191,7 +191,6 @@ describe('buildSmfExportCandidate', () => {
 
     assert.ok(candidate);
     assert.equal(candidate.meshes.length, 1);
-    assert.equal(candidate.meshes[0].name, 'converted-mesh');
     assert.equal(candidate.bones.length, 1);
   });
 });

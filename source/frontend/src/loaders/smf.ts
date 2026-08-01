@@ -15,8 +15,10 @@ import {
   checkedAdd,
   checkedMultiply,
   SMF_LIMITS,
+  SmfDecodedMemoryBudget,
 } from './smfBinary';
 import { buildSmfNodeList, buildRigHierarchy, findEffectiveBoneParentIndex } from './smfRig';
+import { validateImportedSmfSemantics } from './smfSemantics';
 
 /**
  * SMF binary loader (ported/adapted from docs/references/old-src/GLBtoSMF/importer.js)
@@ -29,6 +31,13 @@ import { buildSmfNodeList, buildRigHierarchy, findEffectiveBoneParentIndex } fro
 type Float32Buffer = Float32Array<ArrayBufferLike>;
 type Uint16Buffer = Uint16Array<ArrayBufferLike>;
 type Uint8Buffer = Uint8Array<ArrayBufferLike>;
+
+// Conservative estimates include typed-array payloads and the small object/
+// array wrappers created around each decoded mesh, bone, and animation frame.
+const DECODED_MESH_BYTES_PER_VERTEX = 128;
+const DECODED_BONE_BYTES = 256;
+const DECODED_ANIMATION_BYTES_PER_NODE_FRAME = 64;
+const DECODED_ANIMATION_FRAME_OVERHEAD = 96;
 
 export interface SmfCodecProgress {
   phase: 'header' | 'textures' | 'meshes' | 'rig' | 'animations' | 'finalize';
@@ -87,6 +96,7 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
   const report = makeProgressReporter(onProgress);
   report('header', 0);
   const reader = new BinaryReader(buffer);
+  const decodedBudget = new SmfDecodedMemoryBudget();
 
   const version = reader.strZ();
   const isV12 = version === 'SMF_v12_by_Snidr_and_Bart';
@@ -130,6 +140,7 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
     if (texturePixels > SMF_LIMITS.maxTexturePixels * 4) {
       throw new Error(`Invalid SMF binary: texture pixel budget exceeds ${SMF_LIMITS.maxTexturePixels} pixels`);
     }
+    decodedBudget.reserve(checkedAdd(size, 128, `texture ${i} decoded bytes`), `texture ${i} decoded payload`);
     const pixels = reader.bytes(size, `texture ${i} pixels`);
     textures.push({ name, width: w, height: h, pixels });
     report('textures', 4 + (11 * (i + 1)) / Math.max(1, texCount));
@@ -153,6 +164,14 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
     if (verts > SMF_LIMITS.maxMeshVertices || bytes > reader.remaining) {
       throw new Error(`Invalid SMF binary: mesh ${i} vertex payload exceeds limits`);
     }
+    decodedBudget.reserve(
+      checkedAdd(
+        checkedMultiply(verts, DECODED_MESH_BYTES_PER_VERTEX, `mesh ${i} decoded vertex bytes`),
+        2048,
+        `mesh ${i} decoded bytes`,
+      ),
+      `mesh ${i} decoded payload`,
+    );
     totalMeshVertices = checkedAdd(totalMeshVertices, verts, 'mesh vertex budget');
     if (totalMeshVertices > SMF_LIMITS.maxMeshVertices) {
       throw new Error(`Invalid SMF binary: total mesh vertices exceed ${SMF_LIMITS.maxMeshVertices}`);
@@ -221,6 +240,7 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
   }
   const bones: ImportedSmf['bones'] = [];
   for (let i = 0; i < nodeCount; i++) {
+    decodedBudget.reserve(DECODED_BONE_BYTES, `rig node ${i} decoded payload`);
     let dq: Float32Buffer = new Float32Array(8);
     for (let j = 0; j < 8; j++) dq[j] = reader.f32();
     dq = dqNegate(dq); // as per reference read path
@@ -269,6 +289,22 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
     if (frameDqCount > SMF_LIMITS.maxAnimationFrameDqs) {
       throw new Error(`Invalid SMF binary: animation ${i} frame DQ budget exceeds ${SMF_LIMITS.maxAnimationFrameDqs}`);
     }
+    decodedBudget.reserve(
+      checkedAdd(
+        checkedMultiply(
+          frameCount,
+          checkedAdd(
+            checkedMultiply(nodeCount, DECODED_ANIMATION_BYTES_PER_NODE_FRAME, `animation ${i} decoded node bytes`),
+            DECODED_ANIMATION_FRAME_OVERHEAD,
+            `animation ${i} decoded frame bytes`,
+          ),
+          `animation ${i} decoded frame budget`,
+        ),
+        2048,
+        `animation ${i} decoded bytes`,
+      ),
+      `animation ${i} decoded payload`,
+    );
 
     const times: number[] = [];
     const frames: Float32Buffer[][] = [];
@@ -291,8 +327,10 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
     animations.push({ name, duration, times, frames, nodeCount, loop, interpolation: interp, sampleFrameMultiplier: mult, lockedBones });
   }
 
+  const imported = { meshes, textures, bones, animations };
+  validateImportedSmfSemantics(imported);
   report('finalize', 100);
-  return { meshes, textures, bones, animations };
+  return imported;
 }
 
 function isValidParent(parent: number, index: number, count: number): boolean {
@@ -497,6 +535,8 @@ export function exportSMFToBuffer(
   const report = makeProgressReporter(onProgress);
   report('header', 0);
   const { meshes, textures, bones: importedBones, animations } = imported;
+
+  validateImportedSmfSemantics(imported);
 
   if (textures.length > SMF_LIMITS.maxTextures) {
     throw new Error(`Cannot export SMF: texture count exceeds ${SMF_LIMITS.maxTextures}`);

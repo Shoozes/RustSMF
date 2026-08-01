@@ -303,14 +303,12 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
       invoke: async (cmd: string, args?: Record<string, unknown>) => {
         state.calls.push({ cmd, args });
         switch (cmd) {
-          case 'plugin:dialog|open':
+          case 'open_file':
             if (typeof state.openDelayMs === 'number' && state.openDelayMs > 0) {
               await new Promise((resolve) => setTimeout(resolve, state.openDelayMs));
             }
             if (state.failOpen) throw new Error('mock open failed');
             return state.cancelOpen ? null : state.openPath;
-          case 'plugin:dialog|save':
-            return state.cancelSave ? null : state.savePath;
           case 'read_file_binary':
             if (typeof state.readDelayMs === 'number' && state.readDelayMs > 0) {
               await new Promise((resolve) => setTimeout(resolve, state.readDelayMs));
@@ -319,21 +317,24 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
             return state.sampleBytes;
           case 'get_smf_desktop_info':
             return state.desktopInfo;
-          case 'write_file_binary': {
+          case 'save_file_binary': {
+            if (state.cancelSave) return false;
             state.activeWrites += 1;
             try {
               if (typeof state.writeDelayMs === 'number' && state.writeDelayMs > 0) {
                 await new Promise((resolve) => setTimeout(resolve, state.writeDelayMs));
               }
               if (state.failWrite) throw new Error('mock write failed');
-              const data = Array.isArray(args?.data) ? args.data as number[] : [];
-              const pathValue = typeof args?.path === 'string' ? args.path : '';
+              const rawData = args?.data;
+              const data = rawData instanceof Uint8Array
+                ? Array.from(rawData)
+                : Array.isArray(rawData) ? rawData as number[] : [];
               state.writes.push({
-                path: pathValue,
+                path: state.savePath,
                 length: data.length,
                 firstBytes: data.slice(0, 8),
               });
-              return null;
+              return true;
             } finally {
               state.activeWrites -= 1;
             }

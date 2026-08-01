@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  assertModelFileSize,
+  assertModelInputSize,
+  MAX_MODEL_INPUT_BYTES,
+  ModelInputSizeError,
   SUPPORTED_MODEL_ACCEPT,
   detectModelFormat,
   getModelExtension,
@@ -38,5 +42,21 @@ describe('modelFormat', () => {
     }
     assert.equal(isSupportedModelFormat('bad.txt'), false);
     assert.equal(isSupportedModelFormat('ok.glb'), true);
+  });
+
+  it('rejects oversized model metadata before browser bytes are materialized', () => {
+    assert.doesNotThrow(() => assertModelInputSize('within-limit.glb', MAX_MODEL_INPUT_BYTES));
+    assert.doesNotThrow(() => assertModelFileSize({ name: 'within-limit.fbx', size: MAX_MODEL_INPUT_BYTES }));
+
+    assert.throws(
+      () => assertModelFileSize({ name: 'too-large.glb', size: MAX_MODEL_INPUT_BYTES + 1 }),
+      (error: unknown) => error instanceof ModelInputSizeError
+        && error.code === 'MODEL_INPUT_TOO_LARGE'
+        && error.message.includes('too-large.glb'),
+    );
+    assert.throws(
+      () => assertModelInputSize('unknown-size.obj', Number.NaN),
+      (error: unknown) => error instanceof ModelInputSizeError,
+    );
   });
 });

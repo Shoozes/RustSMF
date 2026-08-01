@@ -71,6 +71,12 @@ export function buildSmfNodeList(importedBones: ImportedSmf['bones']): {
   } else {
     // Constructed (e.g. from GLB/FBX): input is only real bones plus actual parent indices.
     // Detached head-node synthesis needs explicit source metadata, so keep direct nodes here.
+    // Build the complete lookup before resolving parents. A child may appear
+    // before its parent in a foreign skeleton; resolving while appending would
+    // silently turn that relationship into a root attachment.
+    importedBones.forEach((_b, bi) => {
+      boneToNode.set(bi, nodeIndex++);
+    });
     importedBones.forEach((b, bi) => {
       const hasParent = b.parent >= 0;
       nodeList.push({
@@ -80,8 +86,6 @@ export function buildSmfNodeList(importedBones: ImportedSmf['bones']): {
         isHead: false,
         name: `Bone_${bi}`
       });
-      boneToNode.set(bi, nodeIndex);
-      nodeIndex++;
     });
   }
 

@@ -29,7 +29,7 @@ Both commands open the numbered launcher menu. Choose `2. Run if already install
 - Switch the single viewport between 3D and Ortho camera modes.
 - Use the Display menu for model-safe wireframe, grid, axes, texture, shader, node-index, rig-opacity, model-opacity, and rig-thickness viewport inspection controls without changing source export data.
 - Export loaded SMF sources through the high-fidelity SMF path with supported live position/rotation pose edits.
-- Export compatible skinned GLB/FBX runtime roots to SMF when they have one shared named skeleton and supported position/quaternion bone tracks. Indexed meshes are expanded to SMF's flat triangle layout automatically.
+- Compatible skinned GLB/FBX sources can export to SMF through validated mesh, rig, and animation space boundaries. Static-only roots, unsupported scale tracks, incomplete skin data, or malformed geometry remain blocked with an actionable diagnostic. Use GLB/FBX when the source needs richer materials, morphs, object tracks, multiple skeletons, or scale animation.
 - Export any loaded runtime model to binary FBX 7500 with the explicit FBX action. RustSMF reparses and validates the generated mesh, transform, skin, bone, and animation structure before opening the save destination.
 - Export static or higher-fidelity assets through GLB when FBX compatibility is not required.
 

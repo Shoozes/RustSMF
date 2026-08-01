@@ -51,7 +51,7 @@ export default function ExportPanel({
       <div className="text-[10px] text-slate-400 mt-2">Source format: {sourceFormat || 'unknown'}</div>
       <div className="text-[10px] text-slate-400 mt-1">Skinned skeleton loaded: {hasSkeleton ? 'yes' : 'no'}</div>
       <div className="text-[10px] text-slate-500 mt-2">
-        SMF export uses imported data when available; non-SMF skinned export is guarded by converter limits.
+        SMF export uses imported data when available; GLB/FBX conversion is validated through shared mesh, rig, and animation space boundaries.
       </div>
       <div className="text-[10px] text-slate-500 mt-1">
         GLB remains the default fidelity path for runtime/scale/material-heavy workflows.
@@ -169,6 +169,10 @@ export default function ExportPanel({
           type="button"
           data-testid="smf-roundtrip-check-btn"
           onClick={onRunSmfRoundtripCheck}
+          disabled={!smfDiagnosticReport.canExportSmf}
+          title={smfDiagnosticReport.canExportSmf
+            ? 'Run an SMF export and re-import check'
+            : 'SMF roundtrip is unavailable until the current source has a verified SMF export path'}
         >
           Run SMF Check
         </button>

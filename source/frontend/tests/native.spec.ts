@@ -46,7 +46,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     let snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.calls.map((call) => call.cmd)).toEqual(
       expect.arrayContaining([
-        'plugin:dialog|open',
+        'open_file',
         'read_file_binary',
       ]),
     );
@@ -87,7 +87,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     const snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.calls.map((call) => call.cmd)).toEqual(
       expect.arrayContaining([
-        'plugin:dialog|open',
+        'open_file',
         'read_file_binary',
       ]),
     );
@@ -146,7 +146,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('error-banner')).toBeVisible();
 
     const snapshot = await getTauriMockSnapshot(page);
-    expect(snapshot.calls.filter((call) => call.cmd === 'plugin:dialog|open')).toHaveLength(3);
+    expect(snapshot.calls.filter((call) => call.cmd === 'open_file')).toHaveLength(3);
     expect(snapshot.calls.find((call) => call.cmd === 'read_file_binary')).toBeUndefined();
   });
 
@@ -224,7 +224,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
       writeCallCount += 1;
       await expect.poll(async () => (
         await getTauriMockSnapshot(page)
-      ).calls.filter((call) => call.cmd === 'write_file_binary').length, { timeout: 20000 }).toBe(writeCallCount);
+      ).calls.filter((call) => call.cmd === 'save_file_binary').length, { timeout: 20000 }).toBe(writeCallCount);
     };
     const waitForWriteSettle = async (): Promise<void> => {
       await expect.poll(async () => (
@@ -313,14 +313,14 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     expect(snapshot.writes[0].path).toBe(savePath);
 
     const writesBeforeSecondExport = snapshot.writes.length;
-    const savesBeforeSecondExport = snapshot.calls.filter((call) => call.cmd === 'plugin:dialog|save').length;
+    const savesBeforeSecondExport = snapshot.calls.filter((call) => call.cmd === 'save_file_binary').length;
     await updateTauriMock(page, { writeDelayMs: 0 });
     await expect(exportButton).toBeEnabled();
     // First export above uses a real pointer click; this repeat path targets handler recovery after mocked native save focus.
     await exportButton.dispatchEvent('click');
     await expect.poll(async () => (
       await getTauriMockSnapshot(page)
-    ).calls.filter((call) => call.cmd === 'plugin:dialog|save').length, { timeout: 30000 }).toBe(savesBeforeSecondExport + 1);
+    ).calls.filter((call) => call.cmd === 'save_file_binary').length, { timeout: 30000 }).toBe(savesBeforeSecondExport + 1);
     await expect.poll(async () => (
       await getTauriMockSnapshot(page)
     ).writes.length, { timeout: 30000 }).toBe(writesBeforeSecondExport + 1);
@@ -411,7 +411,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
     snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.writes).toHaveLength(1);
-    expect(snapshot.calls.map((call) => call.cmd)).toContain('write_file_binary');
+    expect(snapshot.calls.map((call) => call.cmd)).toContain('save_file_binary');
   });
 
   test('native export cancel keeps edited animation state dirty status', async ({ page }) => {
@@ -468,6 +468,6 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
     snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.writes).toHaveLength(1);
-    expect(snapshot.calls.map((call) => call.cmd)).toContain('write_file_binary');
+    expect(snapshot.calls.map((call) => call.cmd)).toContain('save_file_binary');
   });
 });

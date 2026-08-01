@@ -275,10 +275,8 @@ export const paintOnMeshInViewport = async (
       await page.mouse.move(x + 2, y + 2, { steps: 2 });
       await page.waitForTimeout(80);
       await page.mouse.up({ button: 'left' });
-      // Keep telemetry anchored to the known mesh hit after the stroke so callers
-      // can assert the collected candidate set instead of the final drag pixel.
-      await page.mouse.move(x, y);
-      await page.waitForTimeout(25);
+      // Leave telemetry at the last collected mesh hit so callers can assert the
+      // candidate set instead of a later hover pixel that may miss the mesh.
       if (options?.requireDirty) {
         try {
           await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true', { timeout: 300 });

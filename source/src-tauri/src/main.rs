@@ -2,13 +2,18 @@
 // RustSMF Tauri entry. Minimal shell for the Three.js frontend.
 // Provides native file dialogs plus binary SMF/GLB I/O commands.
 
-use std::path::PathBuf;
+use std::collections::HashSet;
+use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 use tauri::command;
 use tauri_plugin_dialog::DialogExt;
 mod smf_core;
 use smf_core::{build_smf_desktop_info, parse_smf_header_info, SmfDesktopInfo};
 
 const MAX_NATIVE_FILE_BYTES: u64 = 256 * 1024 * 1024;
+
+#[derive(Default)]
+struct NativeFileAuthority(Mutex<HashSet<String>>);
 
 fn sanitize_path(path: PathBuf) -> String {
     let path_str = path.to_string_lossy().to_string();
@@ -23,31 +28,80 @@ fn sanitize_path(path: PathBuf) -> String {
     path_str
 }
 
-fn read_file_bytes_sync(path: &str) -> Result<Vec<u8>, String> {
-    let metadata =
-        std::fs::metadata(path).map_err(|error| format!("Failed to inspect {path}: {error}"))?;
+fn authority_key(path: &Path) -> String {
+    let path = sanitize_path(path.to_path_buf());
+    if cfg!(windows) {
+        path.to_ascii_lowercase()
+    } else {
+        path
+    }
+}
+
+fn register_selected_path(
+    authority: &NativeFileAuthority,
+    path: PathBuf,
+) -> Result<String, String> {
+    let canonical = std::fs::canonicalize(&path).map_err(|error| {
+        format!(
+            "Failed to authorize selected file {}: {error}",
+            path.display()
+        )
+    })?;
+    authority
+        .0
+        .lock()
+        .map_err(|_| "Native file authority lock is poisoned".to_string())?
+        .insert(authority_key(&canonical));
+    Ok(sanitize_path(canonical))
+}
+
+fn authorize_selected_path(authority: &NativeFileAuthority, path: &str) -> Result<PathBuf, String> {
+    let candidate = PathBuf::from(path);
+    let canonical = std::fs::canonicalize(&candidate)
+        .map_err(|error| format!("Failed to resolve selected file {path}: {error}"))?;
+    let key = authority_key(&canonical);
+    let selected = authority
+        .0
+        .lock()
+        .map_err(|_| "Native file authority lock is poisoned".to_string())?;
+    if !selected.contains(&key) {
+        return Err(format!(
+            "NATIVE_PATH_NOT_SELECTED: {path} was not selected by the native file dialog"
+        ));
+    }
+    Ok(canonical)
+}
+
+fn read_file_bytes_sync(path: &Path) -> Result<Vec<u8>, String> {
+    let metadata = std::fs::metadata(path)
+        .map_err(|error| format!("Failed to inspect {}: {error}", path.display()))?;
     if metadata.len() > MAX_NATIVE_FILE_BYTES {
         return Err(format!(
-            "Refusing to read {path}: file is {} bytes; maximum is {MAX_NATIVE_FILE_BYTES}",
+            "MODEL_INPUT_TOO_LARGE: refusing to read {}: file is {} bytes; maximum is {MAX_NATIVE_FILE_BYTES}",
+            path.display(),
             metadata.len()
         ));
     }
-    std::fs::read(path).map_err(|error| format!("Failed to read {path}: {error}"))
+    std::fs::read(path).map_err(|error| format!("Failed to read {}: {error}", path.display()))
 }
 
-async fn read_file_bytes(path: String) -> Result<Vec<u8>, String> {
-    tauri::async_runtime::spawn_blocking(move || read_file_bytes_sync(&path))
+async fn read_file_bytes(authority: &NativeFileAuthority, path: String) -> Result<Vec<u8>, String> {
+    let authorized_path = authorize_selected_path(authority, &path)?;
+    tauri::async_runtime::spawn_blocking(move || read_file_bytes_sync(&authorized_path))
         .await
         .map_err(|error| format!("Native file read task failed: {error}"))?
 }
 
 #[command]
-async fn open_file(app: tauri::AppHandle) -> Result<Option<String>, String> {
+async fn open_file(
+    app: tauri::AppHandle,
+    authority: tauri::State<'_, NativeFileAuthority>,
+) -> Result<Option<String>, String> {
     let file_path = app.dialog().file().blocking_pick_file();
     match file_path {
         Some(p) => {
-            let s = sanitize_path(p.into_path().map_err(|e| e.to_string())?);
-            Ok(Some(s))
+            let path = p.into_path().map_err(|e| e.to_string())?;
+            Ok(Some(register_selected_path(&authority, path)?))
         }
         None => Ok(None),
     }
@@ -59,44 +113,79 @@ fn greet(name: &str) -> String {
 }
 
 #[command]
-async fn read_file_text(path: String) -> Result<String, String> {
+async fn read_file_text(
+    path: String,
+    authority: tauri::State<'_, NativeFileAuthority>,
+) -> Result<String, String> {
     // Small text read helper for metadata/debug paths; model loads use read_file_binary.
-    let bytes = read_file_bytes(path).await?;
+    let bytes = read_file_bytes(&authority, path).await?;
     String::from_utf8(bytes).map_err(|error| format!("File is not valid UTF-8: {error}"))
 }
 
 #[command]
-async fn read_file_binary(path: String) -> Result<Vec<u8>, String> {
+async fn read_file_binary(
+    path: String,
+    authority: tauri::State<'_, NativeFileAuthority>,
+) -> Result<Vec<u8>, String> {
     // Binary read for SMF/GLB/FBX etc. Returns raw bytes so frontend can pass to loaders.
-    // This makes desktop .smf load work when open_file only gives a path.
-    read_file_bytes(path).await
+    // The path is accepted only after open_file authorizes the native dialog result.
+    read_file_bytes(&authority, path).await
 }
 
 #[command]
-async fn write_file_binary(path: String, data: Vec<u8>) -> Result<(), String> {
-    // Binary write for exports (SMF/GLB etc). Used by frontend saveFile for native desktop save.
-    // Note: Uses direct std::fs (consistent with read_file_binary). For packaged Tauri apps,
-    // additional filesystem scope/permissions may be required per Tauri v2 security model
-    // (see capabilities/default.json and Tauri fs docs). In dev it works; "fs:default" permission
-    // would need tauri-plugin-fs if switching to its API.
+async fn save_file_binary(
+    app: tauri::AppHandle,
+    suggested_name: String,
+    data: Vec<u8>,
+) -> Result<bool, String> {
+    // The native dialog owns the destination. The frontend never supplies an
+    // arbitrary write path, and the byte bound is checked before filesystem work.
     if data.len() as u64 > MAX_NATIVE_FILE_BYTES {
         return Err(format!(
-            "Refusing to write {path}: file is {} bytes; maximum is {MAX_NATIVE_FILE_BYTES}",
+            "MODEL_INPUT_TOO_LARGE: refusing to write export: file is {} bytes; maximum is {MAX_NATIVE_FILE_BYTES}",
             data.len()
         ));
     }
+    let file_path = app
+        .dialog()
+        .file()
+        .set_file_name(suggested_name)
+        .blocking_save_file();
+    let Some(file_path) = file_path else {
+        return Ok(false);
+    };
+    let path = file_path.into_path().map_err(|error| error.to_string())?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| "Native save destination has no parent directory".to_string())?;
+    let canonical_parent = std::fs::canonicalize(parent).map_err(|error| {
+        format!(
+            "Failed to resolve native save directory {}: {error}",
+            parent.display()
+        )
+    })?;
+    let file_name = path
+        .file_name()
+        .ok_or_else(|| "Native save destination has no file name".to_string())?
+        .to_owned();
+    let output_path = canonical_parent.join(file_name);
     tauri::async_runtime::spawn_blocking(move || {
-        std::fs::write(&path, data).map_err(|error| format!("Failed to write {path}: {error}"))
+        std::fs::write(&output_path, data)
+            .map_err(|error| format!("Failed to write {}: {error}", output_path.display()))
     })
     .await
-    .map_err(|error| format!("Native file write task failed: {error}"))?
+    .map_err(|error| format!("Native file write task failed: {error}"))??;
+    Ok(true)
 }
 
 #[command]
-async fn peek_smf_header(path: String) -> Result<String, String> {
+async fn peek_smf_header(
+    path: String,
+    authority: tauri::State<'_, NativeFileAuthority>,
+) -> Result<String, String> {
     // Real small SMF header peek for desktop validation / rust-smf-parser progress.
     // Uses shared parse helper for modularity. Frontend uses for desktop .smf to surface Rust I/O in status.
-    let bytes = read_file_bytes(path).await?;
+    let bytes = read_file_bytes(&authority, path).await?;
     match parse_smf_header_info(&bytes) {
         Ok(header) => {
             if header.version.starts_with("SMF_v") {
@@ -117,11 +206,14 @@ async fn peek_smf_header(path: String) -> Result<String, String> {
 
 // Small real subtask for rust-smf-parser breakdown (header peek + size done; this adds basic validation).
 #[command]
-async fn validate_smf(path: String) -> Result<String, String> {
+async fn validate_smf(
+    path: String,
+    authority: tauri::State<'_, NativeFileAuthority>,
+) -> Result<String, String> {
     // This command validates the native header/offset envelope only. Full
     // structural validation remains in the shared TypeScript SMF codec.
     // Uses shared parse helper. Can be used for early desktop .smf checks before full load.
-    let bytes = read_file_bytes(path).await?;
+    let bytes = read_file_bytes(&authority, path).await?;
     match parse_smf_header_info(&bytes) {
         Ok(header) => {
             if header.version.starts_with("SMF_v") {
@@ -141,8 +233,11 @@ async fn validate_smf(path: String) -> Result<String, String> {
 // Parses header for RIG offset, reads first u32 at RIG as approx bone count (format has data starting with count-like in ref).
 // Returns info string for desktop .smf status. Real minimal parse, no full dupe of TS.
 #[command]
-async fn peek_smf_rig_basic(path: String) -> Result<String, String> {
-    let bytes = read_file_bytes(path).await?;
+async fn peek_smf_rig_basic(
+    path: String,
+    authority: tauri::State<'_, NativeFileAuthority>,
+) -> Result<String, String> {
+    let bytes = read_file_bytes(&authority, path).await?;
     match parse_smf_header_info(&bytes) {
         Ok(header) => {
             if header.off_rig + 4 > bytes.len() {
@@ -167,8 +262,11 @@ async fn peek_smf_rig_basic(path: String) -> Result<String, String> {
 // Parses header for ANIM offset, reads first u32 as clip count (format similar to rig).
 // Returns info for desktop .smf status. Real minimal, no full parse.
 #[command]
-async fn peek_smf_anim_basic(path: String) -> Result<String, String> {
-    let bytes = read_file_bytes(path).await?;
+async fn peek_smf_anim_basic(
+    path: String,
+    authority: tauri::State<'_, NativeFileAuthority>,
+) -> Result<String, String> {
+    let bytes = read_file_bytes(&authority, path).await?;
     match parse_smf_header_info(&bytes) {
         Ok(header) => {
             if header.off_anim + 1 > bytes.len() {
@@ -189,8 +287,11 @@ async fn peek_smf_anim_basic(path: String) -> Result<String, String> {
 // Parses header for MODEL offset, reads u8 at MODEL as approx mesh count (per SMF format: u8 modelCount after offset).
 // Returns info string for desktop .smf status. Real minimal parse, no full dupe of TS loader.
 #[command]
-async fn peek_smf_model_basic(path: String) -> Result<String, String> {
-    let bytes = read_file_bytes(path).await?;
+async fn peek_smf_model_basic(
+    path: String,
+    authority: tauri::State<'_, NativeFileAuthority>,
+) -> Result<String, String> {
+    let bytes = read_file_bytes(&authority, path).await?;
     match parse_smf_header_info(&bytes) {
         Ok(header) => {
             if header.off_model + 1 > bytes.len() {
@@ -210,20 +311,24 @@ async fn peek_smf_model_basic(path: String) -> Result<String, String> {
 // round-trips and avoid duplicated FS reads in .smf desktop load.
 // Real, small structured summary command for frontend status formatting.
 #[command]
-async fn get_smf_desktop_info(path: String) -> Result<SmfDesktopInfo, String> {
-    let bytes = read_file_bytes(path).await?;
+async fn get_smf_desktop_info(
+    path: String,
+    authority: tauri::State<'_, NativeFileAuthority>,
+) -> Result<SmfDesktopInfo, String> {
+    let bytes = read_file_bytes(&authority, path).await?;
     Ok(build_smf_desktop_info(&bytes))
 }
 
 fn main() {
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .manage(NativeFileAuthority::default())
         .invoke_handler(tauri::generate_handler![
             open_file,
             greet,
             read_file_text,
             read_file_binary,
-            write_file_binary,
+            save_file_binary,
             peek_smf_header,
             validate_smf,
             peek_smf_rig_basic,
@@ -261,6 +366,36 @@ mod tests {
                 path.display()
             )
         })
+    }
+
+    #[test]
+    fn native_file_authority_rejects_unselected_paths() {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be after the Unix epoch")
+            .as_nanos();
+        let path = std::env::temp_dir().join(format!(
+            "rustsmf-native-authority-{}-{nonce}.bin",
+            std::process::id()
+        ));
+        std::fs::write(&path, b"authority-test").expect("temporary authority fixture should write");
+
+        let authority = super::NativeFileAuthority::default();
+        let path_string = path.to_string_lossy().to_string();
+        let rejected = super::authorize_selected_path(&authority, &path_string)
+            .expect_err("arbitrary frontend paths must not be readable");
+        assert!(rejected.starts_with("NATIVE_PATH_NOT_SELECTED:"));
+
+        let selected = super::register_selected_path(&authority, path.clone())
+            .expect("dialog-selected path should be registered");
+        let authorized = super::authorize_selected_path(&authority, &selected)
+            .expect("registered dialog path should be readable");
+        assert_eq!(
+            authorized,
+            std::fs::canonicalize(&path).expect("fixture should canonicalize")
+        );
+
+        std::fs::remove_file(path).expect("temporary authority fixture should clean up");
     }
 
     #[test]

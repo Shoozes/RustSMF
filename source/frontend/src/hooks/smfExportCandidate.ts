@@ -56,6 +56,7 @@ export function buildSmfExportCandidate({
   if (!root) return null;
 
   const diagnostics = inspectThreeToSmfSource({
+    root,
     skeleton,
     skinnedMeshes,
     clips,
@@ -69,6 +70,7 @@ export function buildSmfExportCandidate({
   }
 
   const converted = buildImportedSmfFromThree({
+    root,
     skeleton,
     skinnedMeshes,
     clips,

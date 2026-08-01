@@ -15,6 +15,7 @@ interface ToolbarProps {
   onExportGlb: () => void;
   onExportFbx: () => void;
   onExportSmf: () => void;
+  smfExportEnabled: boolean;
   onPing: () => void;
   onUndo: () => void;
   onRedo: () => void;
@@ -64,6 +65,7 @@ const Toolbar: React.FC<ToolbarProps> = ({
   onExportGlb,
   onExportFbx,
   onExportSmf,
+  smfExportEnabled,
   onPing,
   onUndo,
   onRedo,
@@ -218,7 +220,13 @@ const Toolbar: React.FC<ToolbarProps> = ({
           <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={isLoading}>
             FBX
           </button>
-          <button className="toolbar-action" data-testid="export-smf-btn" onClick={onExportSmf} disabled={isLoading}>
+          <button
+            className="toolbar-action"
+            data-testid="export-smf-btn"
+            onClick={onExportSmf}
+            disabled={isLoading || !smfExportEnabled}
+            title={smfExportEnabled ? 'Export as SMF' : 'SMF export is blocked by the current compatibility diagnostics'}
+          >
             SMF
           </button>
           <button className="toolbar-action toolbar-action-muted" data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>

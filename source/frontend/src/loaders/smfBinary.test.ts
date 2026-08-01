@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { BinaryReader, BinaryWriter, SMF_LIMITS } from './smfBinary';
+import { BinaryReader, BinaryWriter, SMF_DECODED_MEMORY_BUDGET_CODE, SMF_LIMITS, SmfDecodedMemoryBudget } from './smfBinary';
 
 describe('SMF binary boundary helpers', () => {
   it('rejects numeric coercion that would silently wrap on export', () => {
@@ -32,5 +32,23 @@ describe('SMF binary boundary helpers', () => {
   it('rejects input larger than the codec boundary before parsing', () => {
     const oversized = new ArrayBuffer(SMF_LIMITS.maxEncodedBytes + 1);
     assert.throws(() => new BinaryReader(oversized), /maximum is/);
+  });
+});
+
+describe('SMF decoded-memory budget', () => {
+  it('accepts an exact estimate and rejects the next reservation with a stable code', () => {
+    const budget = new SmfDecodedMemoryBudget(128);
+    budget.reserve(96, 'mesh');
+    budget.reserve(32, 'rig');
+    assert.equal(budget.bytesUsed, 128);
+    assert.throws(
+      () => budget.reserve(1, 'animation'),
+      (error: unknown) => error instanceof Error
+        && error.message.startsWith(`${SMF_DECODED_MEMORY_BUDGET_CODE}:`),
+    );
+  });
+
+  it('keeps the documented decoded budget above the encoded file limit', () => {
+    assert.ok(SMF_LIMITS.maxDecodedBytes > SMF_LIMITS.maxEncodedBytes);
   });
 });

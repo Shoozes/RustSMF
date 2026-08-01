@@ -105,11 +105,15 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
 
       try {
         await input.setInputFiles({ ...fixture, name: staleName });
+        await expect(page.getByTestId('replacement-dialog')).toBeVisible();
+        await page.getByTestId('confirm-model-replacement').click();
         await dispatchSyntheticDrop(page.getByTestId('viewport-container'), {
           name: 'newer-invalid.glb',
           mimeType: 'model/gltf-binary',
           base64: Buffer.from('not a glb').toString('base64'),
         });
+        await expect(page.getByTestId('replacement-dialog')).toBeVisible();
+        await page.getByTestId('confirm-model-replacement').click();
 
         await expect(page.getByTestId('status-text')).toContainText('Load error:', { timeout: 15000 });
         const failedStatus = await page.getByTestId('status-text').textContent();
@@ -199,7 +203,11 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
 
       try {
         await input.setInputFiles(SAMPLE_SMF);
+        await expect(page.getByTestId('replacement-dialog')).toBeVisible();
+        await page.getByTestId('confirm-model-replacement').click();
         await dispatchSyntheticDrop(inputDropTarget, dropFileSpec);
+        await expect(page.getByTestId('replacement-dialog')).toBeVisible();
+        await page.getByTestId('confirm-model-replacement').click();
 
         await expect(page.getByTestId('status-text')).toContainText('Loaded FBX', { timeout: 15000 });
         await expect(page.getByTestId('status-text')).not.toContainText(/Loaded:.*\.smf|mixamo|FixtureRoot|FixtureTip/i);
@@ -246,7 +254,11 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
 
       try {
         await input.setInputFiles(SAMPLE_SMF);
+        await expect(page.getByTestId('replacement-dialog')).toBeVisible();
+        await page.getByTestId('confirm-model-replacement').click();
         await dispatchSyntheticDrop(inputDropTarget, dropFileSpec);
+        await expect(page.getByTestId('replacement-dialog')).toBeVisible();
+        await page.getByTestId('confirm-model-replacement').click();
 
         await expect(page.getByTestId('status-text')).toContainText('Loaded FBX', { timeout: 15000 });
         await expect(page.getByTestId('status-text')).not.toContainText(/Loaded:.*\.smf|mixamo|FixtureTip|Pose edit dirty/i);
@@ -257,6 +269,38 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       } finally {
         await restoreBrowserFileArrayBuffer(page);
       }
+    });
+
+  test('dirty replacement can be canceled or explicitly discarded', async ({ page }) => {
+      await page.goto('/');
+
+      const input = page.getByTestId('model-file-input');
+      await input.setInputFiles(await createSkinnedGlbFixtureInput());
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      const originalRootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+      expect(originalRootId).toBeTruthy();
+
+      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first().click({ force: true });
+      await page.getByTestId('transform-x-btn').click({ force: true });
+      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+
+      await input.setInputFiles(SAMPLE_SMF);
+      await expect(page.getByTestId('replacement-dialog')).toBeVisible();
+      await page.getByTestId('cancel-model-replacement').click();
+      await expect(page.getByTestId('replacement-dialog')).toHaveCount(0);
+      await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', originalRootId!);
+      await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+      await expect(page.getByTestId('status-text')).toContainText('replacement canceled', { ignoreCase: true });
+
+      await input.setInputFiles(SAMPLE_SMF);
+      await expect(page.getByTestId('replacement-dialog')).toBeVisible();
+      await page.getByTestId('confirm-model-replacement').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Loaded:.*\.smf/i, { timeout: 15000 });
+      await expect(page.getByTestId('three-canvas')).not.toHaveAttribute('data-model-root-id', originalRootId!);
+      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
     });
 
   test('global undo and redo follow chronology across outliner and pose edits', async ({ page }) => {

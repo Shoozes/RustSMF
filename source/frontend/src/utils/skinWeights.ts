@@ -45,6 +45,61 @@ export interface SkinEditHistoryEntry {
   redoOrder?: number;
 }
 
+export const SKIN_HISTORY_ENTRY_LIMIT = 50;
+export const SKIN_HISTORY_BYTE_LIMIT = 32 * 1024 * 1024;
+
+function estimateSkinEditStateBytes(state: SkinEditState): number {
+  let bytes = 64 + state.selectedBoneName.length * 2 + state.sourceFormat.length * 2;
+  bytes += state.dirtyMeshIds.size * 64;
+  for (const [meshId, vertices] of state.editedVertices) {
+    bytes += 64 + meshId.length * 2 + vertices.size * 8;
+  }
+  return bytes;
+}
+
+export function estimateSkinEditHistoryEntryBytes(entry: SkinEditHistoryEntry): number {
+  const snapshotBytes = [...entry.before, ...entry.after].reduce(
+    (total, snapshot) => total + 96 + snapshot.meshId.length * 2,
+    0,
+  );
+  return Math.max(
+    256,
+    estimateSkinEditStateBytes(entry.beforeState)
+      + estimateSkinEditStateBytes(entry.afterState)
+      + snapshotBytes,
+  );
+}
+
+export interface SkinHistoryAppendResult {
+  entries: SkinEditHistoryEntry[];
+  bytesUsed: number;
+  evictions: number;
+  accepted: boolean;
+}
+
+export function appendSkinHistoryEntry(
+  entries: readonly SkinEditHistoryEntry[],
+  entry: SkinEditHistoryEntry,
+  maxEntries = SKIN_HISTORY_ENTRY_LIMIT,
+  byteLimit = SKIN_HISTORY_BYTE_LIMIT,
+): SkinHistoryAppendResult {
+  const next = [...entries, entry];
+  let bytesUsed = next.reduce((total, item) => total + estimateSkinEditHistoryEntryBytes(item), 0);
+  let evictions = 0;
+  while (next.length > maxEntries || bytesUsed > byteLimit) {
+    const removed = next.shift();
+    if (!removed) break;
+    bytesUsed -= estimateSkinEditHistoryEntryBytes(removed);
+    evictions += 1;
+  }
+  return {
+    entries: next,
+    bytesUsed: Math.max(0, bytesUsed),
+    evictions,
+    accepted: next.includes(entry),
+  };
+}
+
 export const SKIN_AUTO_WEIGHT_ALGORITHMS = [
   'segment-inverse-distance',
   'segment-distance-normal',

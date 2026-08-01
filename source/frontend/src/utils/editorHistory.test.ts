@@ -8,7 +8,7 @@ import {
   type EditorHistoryEntry,
 } from './editorHistory';
 
-type Snapshot = { value: number };
+type Snapshot = { value: number | string };
 
 function entry(id: string, before: number, after: number): EditorHistoryEntry<Snapshot> {
   return {
@@ -76,5 +76,21 @@ describe('editorHistory', () => {
     const undo = popUndo(state);
     const redo = popRedo(undo.state);
     assert.deepEqual(redo.state.undo.map((item) => item.id), ['2', '3']);
+  });
+
+  it('evicts oldest entries when the byte budget is reached', () => {
+    const large = (id: string): EditorHistoryEntry<Snapshot> => ({
+      ...entry(id, 0, 1),
+      before: { value: 'x'.repeat(2_000) },
+      after: { value: 'y'.repeat(2_000) },
+    });
+    const state = pushEditorHistory(
+      pushEditorHistory(makeEditorHistory<Snapshot>(10, 10_000), large('1')),
+      large('2'),
+    );
+
+    assert.deepEqual(state.undo.map((item) => item.id), ['2']);
+    assert.ok(state.bytesUsed <= state.byteLimit);
+    assert.equal(state.evictionCount, 1);
   });
 });

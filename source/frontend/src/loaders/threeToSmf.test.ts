@@ -5,7 +5,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as THREE from 'three';
 import { applyLiveSkinEditsToImportedSmf, buildImportedSmfFromThree, inspectThreeToSmfSource, SmfConversionError } from './threeToSmf';
-import { exportSMFToBuffer, importSMF, ImportedSmf } from './smf';
+import { buildThreeScene, exportSMFToBuffer, importSMF, ImportedSmf } from './smf';
 import { dqToLocalTransform } from './coord';
 import { buildSmfNodeList } from './smfRig';
 import { compareSmfRoundtrip, summarizeImportedSmf } from './smfDiagnostics';
@@ -284,7 +284,7 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
     assert.strictEqual(convertedMesh.skinWeights.length, 24);
     assert.deepStrictEqual(
       [...convertedMesh.positions.slice(9, 18)].map((value) => Object.is(value, -0) ? 0 : value),
-      [0, 0, 0, 1, 0, 1, 0, 0, 1],
+      [0, 0, 0, 1, 1, 0, 0, 1, 0],
     );
 
     const reimported = importSMF(toArrayBuffer(exportSMFToBuffer(converted)));
@@ -349,6 +349,45 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
     assert.strictEqual(result.bones[1].parent, 0, 'child parent is index 0');
   });
 
+  it('exports root-relative world bone poses and bakes mesh transforms once', () => {
+    const root = new THREE.Group();
+    root.position.set(10, -4, 2);
+    root.rotation.set(0.1, -0.25, 0.2);
+
+    const parent = new THREE.Bone();
+    parent.name = 'Parent';
+    parent.position.set(1, 2, 3);
+    parent.rotation.set(0.2, 0.1, -0.15);
+    const child = new THREE.Bone();
+    child.name = 'Child';
+    child.position.set(0, 2, 0);
+    parent.add(child);
+    root.add(parent);
+
+    const skeleton = new THREE.Skeleton([parent, child]);
+    const mesh = makeSkinnedMesh({ skin: true, normal: true, uv: true });
+    mesh.position.set(2, -1, 0.5);
+    mesh.rotation.set(0, 0.3, 0);
+    root.add(mesh);
+    root.updateMatrixWorld(true);
+
+    const converted = buildImportedSmfFromThree({ root, skeleton, skinnedMeshes: [mesh] });
+    const expectedRootInverse = root.matrixWorld.clone().invert();
+    const expectedMeshPosition = new THREE.Vector3(0, 0, 0).applyMatrix4(mesh.matrixWorld).applyMatrix4(expectedRootInverse);
+    assert.ok(Math.abs(converted.meshes[0].positions[0] - expectedMeshPosition.x) < 1e-5);
+    assert.ok(Math.abs(converted.meshes[0].positions[1] - expectedMeshPosition.y) < 1e-5);
+    assert.ok(Math.abs(converted.meshes[0].positions[2] - expectedMeshPosition.z) < 1e-5);
+
+    const reimported = importSMF(toArrayBuffer(exportSMFToBuffer(converted)));
+    const built = buildThreeScene(reimported);
+    built.root.updateMatrixWorld(true);
+    const expectedChild = child.matrixWorld.clone().premultiply(expectedRootInverse);
+    const actualChild = built.skeleton.bones[1].matrixWorld;
+    for (let index = 0; index < 16; index += 1) {
+      assert.ok(Math.abs(actualChild.elements[index] - expectedChild.elements[index]) < 1e-4, `child matrix component ${index} drifted`);
+    }
+  });
+
   it('keeps constructed skeleton node lists direct unless head nodes are explicit', () => {
     const dq = new Float32Array(8);
     dq[3] = 1;
@@ -366,6 +405,16 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
         { boneIndex: 1, parent: 0, isBone: 1, isHead: false },
       ]
     );
+  });
+
+  it('resolves constructed parents even when a child precedes its parent', () => {
+    const dq = new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]);
+    const { nodeList } = buildSmfNodeList([
+      { index: 0, parent: 1, isBone: 1, dq, axis: [0, 1, 0] },
+      { index: 1, parent: -1, isBone: 1, dq, axis: [0, 1, 0] },
+    ]);
+
+    assert.deepStrictEqual(nodeList.map((node) => node.parent), [1, 0]);
   });
 
   it('produces an animation with correct frame count from clip tracks', () => {
@@ -387,6 +436,33 @@ describe('threeToSmf - buildImportedSmfFromThree', () => {
     assert.strictEqual(result.animations[0].frames.length, 3, '3 keyframe times');
     assert.strictEqual(result.animations[0].frames[0].length, 1, 'one DQ per frame per bone');
     assert.strictEqual(result.animations[0].frames[0][0].length, 8, 'DQ is 8 floats');
+  });
+
+  it('samples quaternion interpolation through Three mixer semantics', () => {
+    const root = new THREE.Group();
+    const bone = new THREE.Bone();
+    bone.name = 'Bone_0';
+    root.add(bone);
+    const skeleton = new THREE.Skeleton([bone]);
+    const end = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI);
+    const quatTrack = new THREE.QuaternionKeyframeTrack(
+      'Bone_0.quaternion',
+      [0, 1],
+      [0, 0, 0, 1, end.x, end.y, end.z, end.w],
+    );
+    const midpointTrack = new THREE.VectorKeyframeTrack('Bone_0.position', [0.5], [0, 0, 0]);
+    const clip = new THREE.AnimationClip('Turn', 1, [quatTrack, midpointTrack]);
+
+    const expectedMixer = new THREE.AnimationMixer(root);
+    expectedMixer.clipAction(clip).setLoop(THREE.LoopOnce, 1).play();
+    expectedMixer.setTime(0.5);
+    root.updateMatrixWorld(true);
+    const expectedQuaternion = bone.quaternion.clone();
+
+    const result = buildImportedSmfFromThree({ root, skeleton, clips: [clip] });
+    assert.deepStrictEqual(result.animations[0].times, [0, 0.5, 1]);
+    const middle = dqToLocalTransform(result.animations[0].frames[1][0]);
+    assert.ok(Math.abs(Math.abs(middle.quat.dot(expectedQuaternion)) - 1) < 1e-4, 'mixer quaternion interpolation was not preserved');
   });
 
   it('roundtrips through SMF export/import and captures live bone pose edits (for non-SMF Export SMF path)', () => {

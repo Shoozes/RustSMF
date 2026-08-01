@@ -104,6 +104,15 @@ const WORKSPACE_BY_MODE: Record<EditorMode, WorkspaceProfile> = {
 export default function App() {
   const historyOrderRef = useRef(0);
   const hadModelRef = useRef(false);
+  const outlinerHistoryRef = useRef<EditorHistoryState<OutlinerVisibilitySnapshot>>(makeEditorHistory());
+  const outlinerHistoryIdRef = useRef(0);
+  const outlinerDirtyRef = useRef(false);
+  const [outlinerUndoAvailable, setOutlinerUndoAvailable] = useState(false);
+  const [outlinerRedoAvailable, setOutlinerRedoAvailable] = useState(false);
+  const [outlinerUndoOrder, setOutlinerUndoOrder] = useState(0);
+  const [outlinerRedoOrder, setOutlinerRedoOrder] = useState(0);
+  const [outlinerRevision, setOutlinerRevision] = useState(0);
+  const [selectedOutlinerIds, setSelectedOutlinerIds] = useState<string[]>([]);
   const { theme, themeId, setThemeId } = useAppTheme();
   const allocateHistoryOrder = useCallback(() => {
     historyOrderRef.current += 1;
@@ -114,6 +123,9 @@ export default function App() {
     model,
     playback,
     handleOpen,
+    pendingReplacement,
+    cancelPendingReplacement,
+    confirmPendingReplacement,
     handleExport,
     handleExportGlb,
     handleExportFbx,
@@ -249,16 +261,7 @@ export default function App() {
     changeAnimationSnapStep,
     changeAnimationClipLoop,
     changeAnimationClipSampleFrameMultiplier,
-  } = useLoadModel({ allocateHistoryOrder });
-
-  const [outlinerRevision, setOutlinerRevision] = useState(0);
-  const [selectedOutlinerIds, setSelectedOutlinerIds] = useState<string[]>([]);
-  const outlinerHistoryRef = useRef<EditorHistoryState<OutlinerVisibilitySnapshot>>(makeEditorHistory());
-  const outlinerHistoryIdRef = useRef(0);
-  const [outlinerUndoAvailable, setOutlinerUndoAvailable] = useState(false);
-  const [outlinerRedoAvailable, setOutlinerRedoAvailable] = useState(false);
-  const [outlinerUndoOrder, setOutlinerUndoOrder] = useState(0);
-  const [outlinerRedoOrder, setOutlinerRedoOrder] = useState(0);
+  } = useLoadModel({ allocateHistoryOrder, externalDirtyRef: outlinerDirtyRef });
 
   const workspace = WORKSPACE_BY_MODE[editorMode];
   const boneTransformOwner: BoneTransformOwner =
@@ -312,6 +315,7 @@ export default function App() {
     return item?.name ?? 'submodel';
   }, [outlinerItems]);
   const refreshOutlinerHistoryAvailability = useCallback(() => {
+    outlinerDirtyRef.current = outlinerHistoryRef.current.undo.length > 0 || outlinerHistoryRef.current.redo.length > 0;
     setOutlinerUndoAvailable(outlinerHistoryRef.current.undo.length > 0);
     setOutlinerRedoAvailable(outlinerHistoryRef.current.redo.length > 0);
     setOutlinerUndoOrder(outlinerHistoryRef.current.undo.at(-1)?.order ?? 0);
@@ -759,6 +763,7 @@ export default function App() {
         onExportGlb={handleExportGlb}
         onExportFbx={handleExportFbx}
         onExportSmf={handleExportSmf}
+        smfExportEnabled={hasModel && smfDiagnosticReport.canExportSmf}
         onPing={pingRust}
         onUndo={handleEditorUndo}
         onRedo={handleEditorRedo}
@@ -850,7 +855,7 @@ export default function App() {
             currentTime={playback.currentTime}
             currentClipName={playback.currentClipName}
             playbackSpeed={playback.playbackSpeed}
-            onTimeUpdate={playback.setCurrentTime}
+            onTimeUpdate={playback.reportCurrentTime}
             onSelectBone={handleSelectBone}
             onSelectObject={handleSelectViewportObject}
             onClearObjectSelection={handleClearObjectSelection}
@@ -977,6 +982,34 @@ export default function App() {
           onMoveKeyframe={moveSelectedAnimationKeyframe}
           disabled={model.clips.length === 0}
         />
+      )}
+
+      {pendingReplacement && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          data-testid="replacement-dialog-backdrop"
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="replacement-dialog-title"
+            className="w-full max-w-md rounded border border-slate-600 bg-slate-900 p-4 text-slate-100 shadow-xl"
+            data-testid="replacement-dialog"
+          >
+            <h2 id="replacement-dialog-title" className="text-sm font-semibold">Discard unsaved changes?</h2>
+            <p className="mt-2 text-xs text-slate-300">
+              Loading <span className="font-medium text-slate-100">{pendingReplacement}</span> will replace the current model and its authoring history.
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" autoFocus className="toolbar-action" data-testid="cancel-model-replacement" onClick={cancelPendingReplacement}>
+                Cancel
+              </button>
+              <button type="button" className="toolbar-action bg-red-700" data-testid="confirm-model-replacement" onClick={() => void confirmPendingReplacement()}>
+                Discard and load
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

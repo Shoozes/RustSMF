@@ -10,6 +10,7 @@ import path from 'path';
 import {
   smfVecToThree,
   smfMatrixToThree,
+  threeMatrixToSmf,
   dqCreateFromMatrix,
   dqNegate,
   dqNormalize,
@@ -37,6 +38,20 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
     const out = smfMatrixToThree(m);
     // after norm + swap the diagonal should be sensible
     assert.ok(Math.abs(out[0]) > 0.9);
+  });
+
+  it('roundtrips a translated rotated matrix through the shared space boundary', () => {
+    const source = new THREE.Matrix4().compose(
+      new THREE.Vector3(1.25, 2.5, -3.75),
+      new THREE.Quaternion().setFromEuler(new THREE.Euler(0.2, -0.4, 0.6)),
+      new THREE.Vector3(1, 1, 1),
+    );
+    const roundtripped = new THREE.Matrix4().fromArray(
+      smfMatrixToThree(threeMatrixToSmf(source)),
+    );
+    for (let index = 0; index < 16; index += 1) {
+      assert.ok(Math.abs(roundtripped.elements[index] - source.elements[index]) < 1e-5, `matrix component ${index} drifted`);
+    }
   });
 
   it('dq roundtrip basic (create -> toMatrix -> create) produces similar rotation part', () => {

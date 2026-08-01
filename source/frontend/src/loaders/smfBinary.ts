@@ -7,9 +7,15 @@
  * result.
  */
 
+import { MAX_MODEL_INPUT_BYTES } from '../utils/modelFormat';
+
 export const SMF_LIMITS = {
-  maxEncodedBytes: 256 * 1024 * 1024,
-  maxOutputBytes: 256 * 1024 * 1024,
+  maxEncodedBytes: MAX_MODEL_INPUT_BYTES,
+  maxOutputBytes: MAX_MODEL_INPUT_BYTES,
+  // Decoded typed arrays, frame objects, and relational payloads can expand
+  // substantially beyond the encoded file. Keep this separate from the file
+  // limit so declared counts fail before large allocations begin.
+  maxDecodedBytes: 512 * 1024 * 1024,
   maxStringBytes: 4096,
   maxTextures: 255,
   maxTextureWidth: 8192,
@@ -22,6 +28,35 @@ export const SMF_LIMITS = {
   maxAnimationFrames: 100_000,
   maxAnimationFrameDqs: 10_000_000,
 } as const;
+
+export const SMF_DECODED_MEMORY_BUDGET_CODE = 'SMF_DECODED_MEMORY_BUDGET_EXCEEDED';
+
+export class SmfDecodedMemoryBudget {
+  private usedBytes = 0;
+
+  constructor(private readonly limitBytes = SMF_LIMITS.maxDecodedBytes) {
+    if (!Number.isSafeInteger(limitBytes) || limitBytes < 0) {
+      throw new Error(`${SMF_DECODED_MEMORY_BUDGET_CODE}: invalid decoded-memory limit ${limitBytes}`);
+    }
+  }
+
+  get bytesUsed(): number {
+    return this.usedBytes;
+  }
+
+  reserve(bytes: number, label: string): void {
+    if (!Number.isSafeInteger(bytes) || bytes < 0) {
+      throw new Error(`${SMF_DECODED_MEMORY_BUDGET_CODE}: ${label} estimate ${bytes} is invalid`);
+    }
+    const next = this.usedBytes + bytes;
+    if (!Number.isSafeInteger(next) || next > this.limitBytes) {
+      throw new Error(
+        `${SMF_DECODED_MEMORY_BUDGET_CODE}: ${label} would use ${next} decoded bytes; maximum is ${this.limitBytes}`,
+      );
+    }
+    this.usedBytes = next;
+  }
+}
 
 function fail(message: string): never {
   throw new Error(`Invalid SMF binary: ${message}`);
