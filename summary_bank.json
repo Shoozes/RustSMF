@@ -203,9 +203,9 @@
         "source/frontend/src/utils/rigHierarchy.ts",
         "source/frontend/src/utils/rigHierarchy.test.ts",
         "source/frontend/src/utils/rigValidation.ts",
-        "source/frontend/src/utils/rigValidation.test.ts",
         "source/frontend/src/utils/smfRigPolicy.ts",
         "source/frontend/src/utils/smfRigPolicy.test.ts",
+        "source/frontend/tests/helpers/viewport-interactions.ts",
         "source/frontend/tests/rig.spec.ts"
       ]
     },
@@ -243,12 +243,14 @@
         "source/frontend/src/utils/skinnedVertexPosition.ts",
         "source/frontend/src/utils/skinPointOverlay.ts",
         "source/frontend/src/utils/skinPointOverlay.test.ts",
+        "source/frontend/src/utils/weightPreview.ts",
         "source/frontend/tests/helpers/viewport-interactions.ts",
         "source/frontend/tests/skin.spec.ts"
       ],
       "notes": [
         "Brush queries use bounded spatial candidates and verify world-space distance before mutation.",
-        "Completed strokes and batch actions own one undoable snapshot transaction."
+        "Completed strokes and batch actions own one undoable snapshot transaction.",
+        "Weight preview is a non-destructive vertex-color display; original color attributes are restored before export."
       ]
     },
     "subsystem__smf_format_and_fidelity": {
@@ -422,11 +424,15 @@
       "paths": [
         "docs/references/old-src/issues.md",
         "docs/dev/old_editor_source_map.md",
-        "docs/references/old-src/screenshots/README.md"
+        "docs/references/old-src/screenshots/README.md",
+        "docs/references/old-src/shaders/sh_skinning_weights/sh_skinning_weights.vsh",
+        "docs/references/old-src/shaders/sh_skinning_weights/sh_skinning_weights.fsh",
+        "docs/references/old-src/shaders/sh_skinning_weight_paint/sh_skinning_weight_paint.vsh",
+        "docs/references/old-src/shaders/sh_skinning_weight_paint/sh_skinning_weight_paint.fsh"
       ],
       "notes": [
         "Do not load the full archived source by default.",
-        "Use explicit file or screenshot globs only for a named parity question."
+        "Use explicit file or screenshot globs only for a named parity question; the listed weight shaders are the selected-bone heat-map and paint-transport references."
       ]
     }
   },

@@ -1395,6 +1395,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (!pick || !canvasRef.current) return null;
       const rect = canvasRef.current.getBoundingClientRect();
       const mouse = getMouseForViewport(event.clientX, event.clientY, pick.viewport, rect);
+      // The target handle can be recreated immediately after a workspace switch;
+      // make its scene transform current before raycasting the first pointer event.
+      handle.updateWorldMatrix(true, true);
       raycasterRef.current.setFromCamera(mouse, pick.camera);
       const hit = raycasterRef.current.intersectObject(handle, true)[0]?.point.clone();
       if (!hit) return null;

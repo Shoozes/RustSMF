@@ -12,8 +12,8 @@ Role of Rust (Tauri side):
 - Tauri commands are the bridge for native open/save; frontend owns all Three.js rendering, animation, and UI.
 
 Role of Python:
-- Strictly limited to light repo tooling: .tools/ generators (_gen_bank.py, _gen_struct.py, controller), structure dumps, and verification helpers.
-- Keep scripts dependency-light (pathlib, json, subprocess) and friendly to a fresh Windows machine with only Python + pwsh.
+- Optional and strictly limited to existing light `.tools/` utilities plus the independent Blender FBX fixture generator/validator. It is not an app-runtime dependency or a required verification runtime.
+- Keep scripts dependency-light (pathlib, json, subprocess) and make the Node/PowerShell/Rust app gate independent of Python availability.
 - Never use Python for runtime app logic or heavy processing.
 
 Implementation rules:
@@ -24,6 +24,6 @@ Implementation rules:
 
 Testing:
 - Run `cargo check` (and cargo test if unit tests exist) in source/src-tauri/ after any Rust change.
-- Run `.\run.ps1 -Task verify` (or direct python) after Python tooling changes.
+- Run `.\run.ps1 -Task verify` after Python or fixture-tooling changes; run the exact external Blender command separately when the fixture lane is being validated.
 - All verification must be deterministic and independent of secrets/network (no external model downloads here).
 - After SMF parser work: roundtrip at least the samples under docs/references/old-src/datafiles/SMF/ and assert key data (vert count, bone parents, anim duration/times, skin weights) within epsilon. Log any sign-flip or remap issues to pitfall-ledger.

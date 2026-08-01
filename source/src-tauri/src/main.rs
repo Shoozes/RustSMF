@@ -216,7 +216,7 @@ async fn get_smf_desktop_info(path: String) -> Result<SmfDesktopInfo, String> {
 }
 
 fn main() {
-    tauri::Builder::default()
+    let result = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             open_file,
@@ -231,8 +231,12 @@ fn main() {
             peek_smf_model_basic,
             get_smf_desktop_info
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .run(tauri::generate_context!());
+
+    if let Err(error) = result {
+        eprintln!("error while running tauri application: {error}");
+        std::process::exit(1);
+    }
 }
 
 #[cfg(test)]

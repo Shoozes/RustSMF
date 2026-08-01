@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { setupBrowserDiagnostics } from './helpers/smoke-helpers';
+import { pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { parseSelectedBone } from './helpers/format-assertions';
 import { paintInViewport, paintOnMeshInViewport, cancelPaintOnMeshInViewport, setViewportLayout } from './helpers/viewport-interactions';
@@ -18,6 +18,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
 
       await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await pausePlaybackIfRunning(page);
 
       await page.getByTestId('mode-tab-skin').click({ force: true });
       await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
@@ -42,6 +43,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
 
       await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await pausePlaybackIfRunning(page);
 
       await page.getByTestId('mode-tab-skin').click({ force: true });
       await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
@@ -75,6 +77,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
 
       await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await pausePlaybackIfRunning(page);
 
       const skinTab = page.getByTestId('mode-tab-skin');
       await skinTab.click({ force: true });
@@ -198,6 +201,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
 
       await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await pausePlaybackIfRunning(page);
 
       const skinTab = page.getByTestId('mode-tab-skin');
       await skinTab.click({ force: true });

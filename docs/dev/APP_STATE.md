@@ -32,6 +32,7 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 - SMF Rig policy is explicit: position/rotation pose edits and inverse-bind local reset are supported; scale export, rename persistence, structural detach/connect, and mirror remain unavailable when the format cannot preserve them.
 - Endpoint and bounded CCD IK are explicit Rig tools with exclusive pointer ownership, cancel restoration, and one history transaction per completed gesture. IK is pose-only; it does not silently create animation keys.
 - Skin: selected-bone paint supports set/add/subtract/auto modes, vertex/triangle targets, bounded spatial candidate indexes, configurable Auto Skin algorithms, normalize, pointer cancel, undo/redo, and supported SMF export.
+- Skin weight preview uses a non-destructive Three.js vertex-color heat map for the selected bone and restores the original color attribute when disabled. The legacy four-slot shader and paint-transport references remain documented in `docs/dev/old_editor_source_map.md`; exact legacy texture modulation is not required for the current export-safe display path.
 - Animate: clip rename/duplicate/delete/reorder, loop/sample metadata, playback, scrub, selected-bone key insert/update/delete/copy/paste, marker drag, snap, interpolation metadata, and undo/redo update the runtime clips and supported SMF export candidate.
 - App-level Undo/Redo selects the newest editor, Skin, or Outliner transaction by shared chronology rather than the currently visible workspace.
 - Workspace, layout, and camera-mode changes preserve the mounted model, selection, paused time, dirty state, export status, and exclusive Select/Endpoint/IK ownership.
@@ -58,6 +59,7 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 | `src/utils/viewportLayout.ts` | Viewport specs, pane hit math, model-fit distance, fixed-camera focus, and ortho pan conversion. |
 | `src/utils/themeViewportGrid.ts` | Theme grid construction, pane visibility, and disposal. |
 | `src/utils/materialPreview.ts` | Source-versus-preview material boundary for async exporters. |
+| `src/utils/weightPreview.ts` | Selected-bone weight-color preview with original-attribute restoration and no export-material mutation. |
 | `src/utils/viewportDisplayController.ts` | Viewport texture/opacity preview, legacy SMF lighting substitution, source assignment restoration, and display cleanup. |
 | `src/utils/animationEdits.ts`, `rigEdits.ts`, `rigIk.ts`, `skinWeights.ts` | Pure authoring policy and transformations with focused unit coverage. |
 | `src/utils/animationAuthoringContext.ts` | Pure selected-bone and active-clip guards shared by animation authoring callbacks and focused tests. |
@@ -86,12 +88,14 @@ Primary commands from the repository root:
 
 When the bundled Playwright Chromium executable is rejected by a managed Windows process boundary, set `RUSTSMF_PLAYWRIGHT_EXECUTABLE` to an approved existing absolute Chrome/Edge executable for that process only. The config validates the path and does not persist or weaken the app sandbox/CSP.
 
+The sandbox checkup is diagnostic rather than an app gate. A managed profile may report `python_unavailable`; Python is not required by the Node/PowerShell/Rust verification lane, and the Python Blender fixture scripts are an optional external compatibility check.
+
 Current inventory:
 
 - 247 frontend unit tests across 40 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
 - 55 browser cases in eight domain-owned spec files.
 - 9 Rust tests; the real-SMF native tests require and parse the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
-- 21 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; the latest context run reports 27.1 KiB default orientation with zero warnings.
+- 21 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; the latest context run reports 25.1 KiB default orientation with zero warnings.
 
 The latest command results and any environment-only warnings are recorded in `review.md`.
 

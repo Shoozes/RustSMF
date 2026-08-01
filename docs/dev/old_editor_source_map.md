@@ -1,5 +1,7 @@
 # RustSMF: old-Editor parity source map (active reference)
 
+Last reconciled: 2026-08-01
+
 This map tracks legacy GameMaker behavior that must be preserved while implementing parity in RustSMF.
 
 Sources used:
@@ -8,6 +10,8 @@ Sources used:
 - `docs/references/old-src/scripts/animeditor_*`
 - `docs/references/old-src/scripts/rigeditor_*`
 - `docs/references/old-src/scripts/common_add_buttons/common_add_buttons.gml`
+- `docs/references/old-src/shaders/sh_skinning_weights/sh_skinning_weights.vsh` and `.fsh`
+- `docs/references/old-src/shaders/sh_skinning_weight_paint/sh_skinning_weight_paint.vsh` and `.fsh`
 - `docs/references/old-src/objects/oAnimEditSystem`
 - `docs/references/old-src/SMF.yyp`
 
@@ -21,6 +25,7 @@ Sources used:
     - `skineditor_select_points` (selection prep + buffer cache invalidation)
     - `skineditor_update_tri_ind_model` / `skineditor_clear_tri_ind_model` (triangle index helper lifecycle)
     - `skineditor_paint_vertices` (weight writes to 4-byte bone slots)
+  - `sh_skinning_weights` is the legacy selected-bone display reference: its vertex stage reads four packed bone IDs and weights, and its fragment stage dims the base texture before applying an unweighted-to-weighted HSV ramp. `sh_skinning_weight_paint` is a related point/paint transport reference, not a replacement for the heat-map display.
   - Paint tool semantics from legacy code:
     - Required selected node/bone before painting.
     - Set/Add/Subtract modes update selected bone and normalize up to 4 influence slots.
@@ -54,7 +59,8 @@ Sources used:
   - Current implementation status in RustSMF:
     - `Timeline` supports playback/scrub/clip list plus imported/authored keyframe markers, lane click-to-scrub, double-click selected-bone key insertion, and authored marker drag-to-time.
     - `AnimatePanel` and `useLoadModel` support selected-bone Insert/Update/Delete/Copy/Paste keyframe authoring for position/quaternion tracks, interpolation state, dirty tracking, runtime clip rebuild, toolbar/Ctrl+Z/Ctrl+Y undo-redo, and supported SMF export/check paths.
-    - Remaining parity is clip-level polish: rename/duplicate/reorder/delete, loop metadata editing, frame/sample multiplier UI, snap modifiers, and broader clip CRUD.
+    - Clip-level parity is implemented in `AnimatePanel`, `animationAuthoringController.ts`, and the shared animation-edit helpers: rename, duplicate, reorder, delete, loop metadata, sample-frame multiplier, snap step, interpolation, and selected-bone key CRUD all have focused unit or browser coverage.
+    - The legacy add-blank/add-from-sample timeline commands are represented by the current selected-bone insert/update/copy/paste workflow rather than a separate legacy command strip. Exact old timeline visuals and fixed-pane key-drag behavior remain intentionally outside the current single-perspective TransformControls contract.
 
 - Risk notes to preserve:
   - old behavior supports clip operations (move, rename, duplicate, delete, copy/paste) while selecting keyframes by timeline proximity.
@@ -82,7 +88,7 @@ Sources used:
     - Pose-level Undo/Redo is implemented for quick nudges, bind reset, TransformControls moves, and endpoint drags through a shared editor-history helper.
     - Non-SMF rig rename/reparent/create/move/delete Undo/Redo snapshots restore skeleton bones, parent links, inverse binds, skin indices, base clips, authored animation edits, pose edits, selected bone, and selected skin-paint state.
     - Viewport pointer ownership is now routed through a pure helper before mutation, so the explicit Rig Endpoint tool, Rig/Animate bone select, Skin paint gating, View-mode model/submodel selection, and Export read-only clicks have explicit owners; TransformControls keeps separate helper/axis/drag ownership telemetry.
-    - View-mode model/submodel viewport picking now syncs with Outliner selection. The SMF metadata/reset decision, non-SMF rotate/spin helpers, and global shelf/material policy are complete; remaining mapped work is deeper rig/ortho tool modes.
+    - View-mode model/submodel viewport picking now syncs with Outliner selection. The SMF metadata/reset decision, non-SMF rotate/spin helpers, and global shelf/material policy are complete. Structural SMF edits remain policy-blocked, while exact old-editor fixed-pane freeform gizmo rebinding and OS-dialog automation remain documented intentional limits.
 
 ## 4) Global shell/settings parity
 
@@ -101,7 +107,10 @@ Sources used:
     - `docs/references/old-src/shaders/sh_smf_static/sh_smf_static.vsh` and `.fsh`
     - `docs/references/old-src/shaders/sh_grid/sh_grid.vsh` and `.fsh`
     - `docs/references/old-src/shaders/sh_skinning_points/sh_skinning_points.vsh` and `.fsh`
+    - `docs/references/old-src/shaders/sh_skinning_weights/sh_skinning_weights.vsh` and `.fsh`
+    - `docs/references/old-src/shaders/sh_skinning_weight_paint/sh_skinning_weight_paint.vsh` and `.fsh`
     - `docs/references/old-src/shaders/sh_selection/sh_selection.vsh` and `.fsh`
+  - The current weight preview is intentionally implemented in `source/frontend/src/utils/weightPreview.ts` as a non-destructive Three.js vertex-color heat map. It restores the original color attribute when disabled and keeps export materials untouched; exact legacy texture modulation and shader uniform parity are reference material, not an unresolved runtime stub.
   - Outliner bulk Select All, Clear, Hide selected, Hide unselected, and Show all are implemented as display-only visibility actions, and visibility mutations use toolbar/Ctrl+Z/Ctrl+Y undo-redo.
   - Global shelf/material policy is resolved: repeat wrapping and source/nearest/linear filtering are viewport-only previews; source samplers and material assignments are restored during export; Rig and Animate own separate snap units; include-textures behavior is format-owned and visible in Export; and merge-same-textures is a shared-texture preflight rather than the legacy destructive geometry merge. Culling remains owned by the modern viewport rather than this material policy.
   - Global undo/redo covers current pose, Rig, Animate, Skin, and Outliner mutators through ordered domain histories. `source/frontend/tests/README.md` owns the current mutator inventory; new authoring actions must join an undoable row or be explicitly classified as non-destructive.
@@ -117,7 +126,7 @@ This matrix is the current parity decision point for old ray-sphere and ray-plan
 | Rig node move is an ortho-pane bind-pose operation with snap support and undo checkpoint. | `rigeditor_perform_actions.gml` gates `RIGMOVEAFTERPLACE`/`RIGMOVEBONE` behind `mouseViewInd > 1` and writes two pane axes. | Implemented for non-SMF selected bones as a Rig Move tool: Top/Front/Side drags move the selected bone through one history transaction, optional Rig Snap rounds positions, smoke covers undo/redo, and SMF-source structural mutation stays blocked. Endpoint drag remains a separate Select-mode pose edit path. | Reuse the Rig snap helper/settings shape for future animation movement. |
 | Rig global move/scale/rotate are ortho-drag operations, while spin X/Y/Z are button operations. | `rigeditor_perform_actions.gml` handles `RIGMOVE`, `RIGSCALE`, `RIGROTATE` for non-perspective panes; `rigeditor_press_buttons.gml` handles `SPINRIGX/Y/Z` as `rig_transform(... -pi/2 ...)`. | Move and Rotate are implemented for non-SMF selected bones as Top/Front/Side drag tools with one undoable transaction; Spin X/Y/Z is exposed as non-SMF button transactions with smoke coverage for undo/redo, skin-index preservation, refreshed skeleton buffers, and invalid-request guards. Scale is not currently planned for SMF export fidelity. | Reuse the proven ortho drag transaction shape for future rig/animation movement; defer/avoid scale until export semantics are explicit. |
 | Rig detach toggles `IsBone` and updates skeleton/skin-facing state. | `rigeditor_press_buttons.gml` `DETACHNODE` toggles `rig_node_get_bone` / `rig_node_set_bone` and calls `rigeditor_detach_node`. | Implemented for non-SMF hierarchy bones: Detach/Connect removes or restores a hierarchy bone from the deform `skeleton.bones` list, remaps skin indices, keeps detached nodes visible/selectable in Inspector/Rig trees, gates deform-only edits while detached, and smoke covers undo/redo membership restoration. | Keep SMF-source detach/connect blocked until a head-node-safe edit layer is designed and tested. |
-| Animation move/drag node uses perspective camera-plane ray casts or ortho pane-axis projection, then writes the active keyframe on release. | `animeditor_perform_actions.gml` uses `cast_ray_plane` in perspective, `camTransform` axes in ortho, `undo_save`, locked-position update, and `anim_keyframe_set_from_sample` on mouse release. | Partially implemented. Animate-owned TransformControls and viewport selection can author selected-bone keys, but old IK move/drag node tools are not explicit. | Add future Animate move/drag tools through the animation edit layer only; require one transaction per drag and reuse snap settings. |
+| Animation move/drag node uses perspective camera-plane ray casts or ortho pane-axis projection, then writes the active keyframe on release. | `animeditor_perform_actions.gml` uses `cast_ray_plane` in perspective, `camTransform` axes in ortho, `undo_save`, locked-position update, and `anim_keyframe_set_from_sample` on mouse release. | Current replacement is implemented for the supported path: Animate-owned perspective TransformControls plus panel/timeline key authoring write selected-bone keys through the animation edit layer and one history transaction. A separate legacy fixed-pane drag tool is intentionally not exposed. | Keep any future fixed-pane key-drag work behind the same animation-key ownership, snap, cancel, and one-transaction contract; do not add a second mutation path. |
 | Animation local/global rotate uses handle hit-testing, ray-plane loop math, and keyframe commit on release. | `animeditor_update_selecthandle_surface.gml`, `animeditor_mouseover_handle.gml`, and `animeditor_perform_actions.gml`. | Implemented through the mounted public TransformControls helper, owner-specific pose/key upsert, and a real picker-handle browser drag that proves Rig versus Animate history separation. | Keep TransformControls as the single-perspective freeform UI; use pane-aware explicit tools until a pane-camera gizmo contract is designed. |
 | Skin paint mutates selected-bone weights only after a real selected point/vertex set, with set/add/subtract/autoskin normalization. | `skineditor_paint_vertices.gml`. | Implemented. RustSMF uses selected-bone gating, vertex/triangle brush targets, skinned-world candidate indexing, empty-miss no-op checks, Auto Paint/Auto Skin options, undo-redo, and dirty-state smoke proof. | Keep mutation tests requiring dirty-state transition, not brush telemetry alone, so equivalent-weight strokes do not count as successful mutation. |
 | View/model selection is a modern replacement, not an old rig-node behavior. | Old editor used submodel list and selection overlays from global/common paths rather than the same rig-node ray path. | Implemented. View-mode `model-select` raycasts visible meshes into Outliner state and selected-object overlays. | Keep model selection separate from Rig/Animate bone selection in the router.

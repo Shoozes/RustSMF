@@ -50,7 +50,9 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
-    ...(configuredExecutablePath ? { executablePath: configuredExecutablePath } : {}),
+    ...(configuredExecutablePath
+      ? { launchOptions: { executablePath: configuredExecutablePath } }
+      : {}),
   },
   projects: [
     {

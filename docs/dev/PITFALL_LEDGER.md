@@ -1037,3 +1037,28 @@ Last reviewed: 2026-08-01 (added deterministic fail-closed fixture ownership and
 **Relevance check:** Current. Any FBX writer, loader timing change, or new external compatibility claim should preserve this two-target proof.
 
 **Next prevention step:** Keep at least one external target validator for each new FBX contract change and do not treat a browser-only roundtrip as broad format compatibility.
+
+### Q: What pitfall are we preventing?
+
+**What:** A browser interaction helper can treat a temporarily removed screen-coordinate telemetry attribute as `(0, 0)`, then report a failed IK drag during a workspace transition even though the target is visible and the app is healthy.
+
+**Why it happened:** `Number(null)` returns `0`. The helper polled only for finite numeric results while the Rig target handle effect was removing and recreating its screen telemetry after returning from another workspace. The first pointer event could therefore be sent to the canvas origin. The target handle can also be newly mounted when the first raycast arrives, so its world matrix must be current before intersection testing.
+
+**Where:** `source/frontend/tests/helpers/viewport-interactions.ts`, `source/frontend/src/components/ThreeViewport.tsx`, and the SMF IK flow in `source/frontend/tests/rig.spec.ts`.
+
+**Evidence:** The full browser audit first reproduced `54/55` with `dragRigIkTarget(page, 'escape')` returning false. Diagnostic output showed `target=(0,0)` while the telemetry became `(640,298)` immediately afterward. Requiring non-null attributes, updating the target handle world matrix before raycasting, and repeating the focused test five times produced `5/5`; the complete suite then passed `55/55`.
+
+**How to catch it:** Run the IK test after switching out of and back into Rig, then run `npm.cmd run test:e2e -- --reporter=line` with the approved system-browser override. Readiness checks must reject null/empty attributes rather than coercing them to numbers.
+
+**Solutions tried:**
+1. `45/100` Treat any finite numeric conversion as ready, result: deleted DOM attributes became zero and the helper clicked the canvas origin.
+2. `88/100` Add a blind delay after the workspace switch, result: it reduces but does not prove readiness and leaves the raycast transform race exposed.
+3. `98/100` Require non-null finite telemetry and refresh the recreated handle's world matrix at the pointer boundary, result: repeated focused and full browser coverage pass without masking a real app failure.
+
+**Current solution:** Browser helpers fail closed until both coordinate attributes are present and finite. `buildRigIkDragState` calls `updateWorldMatrix(true, true)` before raycasting a newly mounted target handle.
+
+**Effectiveness:** `98/100`, durable. The test now verifies the actual target readiness contract and the runtime pointer boundary no longer depends on a prior render having updated a recreated helper object.
+
+**Relevance check:** Current. Any new viewport telemetry, overlay handle, or workspace-owned pointer tool must distinguish absent state from numeric zero and refresh object transforms before immediate hit testing.
+
+**Next prevention step:** Keep the repeated IK case in the focused browser audit when changing workspace-owned handles, and do not use `Number(getAttribute(...))` as a readiness predicate without an explicit null check.

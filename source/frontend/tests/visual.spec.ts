@@ -6,6 +6,7 @@ import {
   pausePlaybackIfRunning,
   setupBrowserDiagnostics,
 } from './helpers/smoke-helpers';
+import { dragRigIkTarget } from './helpers/viewport-interactions';
 
 type ViewportCase = {
   name: string;
@@ -253,14 +254,7 @@ test.describe('RustSMF visual confirmations', () => {
     await page.getByTestId('rig-ik-chain-length').selectOption('1');
     await expect(page.getByTestId('rig-ik-settings')).toBeVisible();
 
-    const canvas = page.getByTestId('three-canvas');
-    await expect.poll(async () => Number.isFinite(Number(await canvas.getAttribute('data-rig-ik-target-screen-x')))).toBe(true);
-    const x = Number(await canvas.getAttribute('data-rig-ik-target-screen-x'));
-    const y = Number(await canvas.getAttribute('data-rig-ik-target-screen-y'));
-    await page.mouse.move(x, y);
-    await page.mouse.down();
-    await page.mouse.move(x + 32, y + 20, { steps: 4 });
-    await page.mouse.up();
+    expect(await dragRigIkTarget(page)).toBe(true);
     await expect(page.getByTestId('rig-ik-result')).toBeVisible();
     await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000);
     await page.screenshot({ path: testInfo.outputPath('ik-pose-tool.png'), fullPage: true });

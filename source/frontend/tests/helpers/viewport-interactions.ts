@@ -137,9 +137,16 @@ export const dragRigIkTarget = async (
 ): Promise<boolean> => {
   const canvas = page.getByTestId('three-canvas');
   await expect.poll(async () => {
-    const x = Number(await canvas.getAttribute('data-rig-ik-target-screen-x'));
-    const y = Number(await canvas.getAttribute('data-rig-ik-target-screen-y'));
-    return Number.isFinite(x) && Number.isFinite(y);
+    const [rawX, rawY] = await Promise.all([
+      canvas.getAttribute('data-rig-ik-target-screen-x'),
+      canvas.getAttribute('data-rig-ik-target-screen-y'),
+    ]);
+    return rawX !== null
+      && rawY !== null
+      && rawX.trim().length > 0
+      && rawY.trim().length > 0
+      && Number.isFinite(Number(rawX))
+      && Number.isFinite(Number(rawY));
   }, { timeout: 3000 }).toBe(true);
 
   const x = Number(await canvas.getAttribute('data-rig-ik-target-screen-x'));
@@ -232,7 +239,7 @@ export const paintOnMeshInViewport = async (
   const box = await canvas.boundingBox();
   if (!box) return false;
 
-  const quadProbePercents = [12, 25, 38, 62, 75, 88];
+  const meshProbePercents = [10, 20, 25, 30, 40, 45, 50, 55, 60, 70, 75, 80, 90];
   const targets: RelativePoint[] = [
     { x: 50, y: 50 },
     { x: 55, y: 55 },
@@ -253,7 +260,7 @@ export const paintOnMeshInViewport = async (
     { x: 40, y: 70 },
     { x: 50, y: 70 },
     { x: 70, y: 70 },
-    ...quadProbePercents.flatMap((x) => quadProbePercents.map((y) => ({ x, y }))),
+    ...meshProbePercents.flatMap((x) => meshProbePercents.map((y) => ({ x, y }))),
   ];
 
   for (const target of targets) {
@@ -268,6 +275,10 @@ export const paintOnMeshInViewport = async (
       await page.mouse.move(x + 2, y + 2, { steps: 2 });
       await page.waitForTimeout(80);
       await page.mouse.up({ button: 'left' });
+      // Keep telemetry anchored to the known mesh hit after the stroke so callers
+      // can assert the collected candidate set instead of the final drag pixel.
+      await page.mouse.move(x, y);
+      await page.waitForTimeout(25);
       if (options?.requireDirty) {
         try {
           await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true', { timeout: 300 });
