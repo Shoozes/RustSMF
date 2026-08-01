@@ -6,6 +6,6 @@ This file contains executable forward work only. Current behavior belongs in `AP
 
 ## Active work
 
-No open integrity items remain from the 2026-08-01 pass. Intentional product limits and environment-specific caveats live in `APP_STATE.md`; completed implementation and verification evidence live in `HISTORY.md` and `review.md`.
+No open integrity items remain from the 2026-08-01 integrity passes. Intentional product limits and environment-specific caveats live in `APP_STATE.md`; completed implementation and verification evidence live in `HISTORY.md` and `review.md`.
 
 New work belongs here only when it has a concrete What/Why/Where/When/How, subtasks where needed, a measurable **Done when** condition, and a named verification command or artifact.

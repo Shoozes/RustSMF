@@ -9,7 +9,7 @@ description: Record recurring repo-specific mistakes as evidence-grounded develo
 
 Use this skill to turn recent debugging context into a compact, ranked regression-prevention ledger. The output should help a future agent avoid repeating bad paths while still filtering out stale context.
 
-A pitfall is not a progress note. Record observable facts, tested hypotheses, decision criteria, rejected alternatives, and verification; do not fabricate hidden reasoning or unsupported certainty.
+A pitfall is not a progress note. It is a regression-prevention rule based on something that actually went wrong or is likely to recur. Record observable facts, tested hypotheses, decision criteria, rejected alternatives, and verification; do not fabricate hidden reasoning or unsupported certainty.
 
 ## Owned Files
 
@@ -32,6 +32,20 @@ Use the repo's established ledger location, preferably `docs/dev/PITFALL_LEDGER.
 5. Run the relevance/rerank check.
 6. Update the pitfall ledger doc and context routing if the lesson should become part of routine review.
 7. Keep obsolete context only when it explains a retired path or a decision boundary. Mark it clearly as superseded.
+
+## Developer Story Contract
+
+Each entry should be recoverable without chat history:
+
+1. Initial state: exact app/runtime/model/revision or workflow identity and intended outcome.
+2. Failure signal: error, incorrect output, timing anomaly, false pass, or user-visible consequence.
+3. Competing explanations: only hypotheses that shaped an actual check or decision.
+4. Evidence path: commands, tests, logs, artifacts, or controlled comparisons.
+5. Turning point: the observation that separated plausible causes.
+6. Decision: what changed, why it won, and what was deliberately not done.
+7. Verification and residual uncertainty: proof that passed and the boundary that remains open.
+
+Prefer exact values when they matter: versions, hashes, model sizes, context limits, timeouts, test names, and report paths. Redact secrets and do not preserve hidden reasoning output.
 
 ## Required Q&A Shape
 
@@ -113,3 +127,7 @@ Add or update an entry when the same mistake happens twice, docs claim behavior 
 ## Reference
 
 Use `references/pitfall_record_template.md` when creating or updating ledger entries.
+
+## Output
+
+Report the pitfall added or updated, the developer-story evidence preserved, the guard command or test, and any related TODO, HISTORY, or context-bank change.

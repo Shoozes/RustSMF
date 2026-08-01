@@ -158,8 +158,11 @@ async function runSmfCodecInvocation<T>(
   const workerResult = new Promise<T>((resolve, reject) => {
     let settled = false;
     let lastProgress = -1;
+    const timeoutRef: { current?: ReturnType<typeof globalThis.setTimeout> } = {};
     const cleanup = (): void => {
-      globalThis.clearTimeout(timeoutId);
+      if (timeoutRef.current !== undefined) {
+        globalThis.clearTimeout(timeoutRef.current);
+      }
       options.signal?.removeEventListener('abort', onAbort);
       worker.setMessageHandler(null);
       worker.setErrorHandler(null);
@@ -232,7 +235,12 @@ async function runSmfCodecInvocation<T>(
     });
 
     options.signal?.addEventListener('abort', onAbort, { once: true });
-    const timeoutId = globalThis.setTimeout(() => {
+    if (options.signal?.aborted) {
+      onAbort();
+      return;
+    }
+
+    timeoutRef.current = globalThis.setTimeout(() => {
       settle(() => reject(new SmfCodecWorkerError(
         `SMF ${invocation.operation} worker timed out after ${timeoutMs}ms.`,
       )));

@@ -21,6 +21,8 @@ The active P1 browser-evidence and P2 independent-FBX items are complete. No bro
 - The follow-up audit reconciled the legacy selected-bone weight shaders with the current non-destructive vertex-color preview and fixed the browser harness fallback, favicon, IK drag reuse, and animated-fixture brush determinism.
 - The final audit also fixed null-coordinate readiness and newly mounted IK-handle transform timing; the focused IK case passed five repeated runs before the complete browser rerun.
 - The weight-preview state audit now snapshots the source color attribute and every material's prior `vertexColors` mode, with focused coverage for existing colors, absent colors, and invalid-selection restoration.
+- The SMF codec client now rechecks abort state after worker handler setup and before `postMessage`; the setup-race regression proves cancellation terminates without posting stale work.
+- Repo-local `monolith-modularization` and `pitfall-ledger` skills were reconciled with the current global guidance while the RustSMF-specific `summary-bank-json` skill remained intentionally specialized.
 
 ## Verification evidence
 
@@ -29,7 +31,9 @@ The active P1 browser-evidence and P2 independent-FBX items are complete. No bro
 - `npm.cmd run test:visual-strict -- --reporter=line` with the same browser override: 2/2 passed.
 - Canonical `desktop-smoke`: optimized no-bundle release build, Rust tests, and native IPC browser coverage passed.
 - `npm.cmd audit --omit=optional`: found 0 vulnerabilities (the managed sandbox could not reach the advisory endpoint; the same read-only command passed through the approved external runtime).
-- `npm.cmd run test:unit`: 250/250 passed across 41 discovered unit-test files, including the new weight-preview restoration cases.
+- `npm.cmd run test:unit`: 251/251 passed across 41 discovered unit-test files, including the worker setup-cancellation and weight-preview restoration cases.
+- Focused SMF codec client test: 10/10 passed, including cancellation during worker setup before `postMessage`.
+- Focused lifecycle browser rerun: all 8 test bodies reached the intended flows, but each case failed only during managed Chrome teardown with `browserContext.close: spawn EPERM`; the runner and preview listener were cleaned up, so the prior complete 55/55 browser run remains authoritative.
 - Blender 5.0.0 validator passed the committed independent fixture and the app-exported roundtrip. Both reports contained one mesh, two bones, weighted groups, animation curves, and an embedded material texture.
 - Focused checks: FBX/skin units 26/26 passed; independent FBX browser flow passed; `git diff --check` passed.
 
@@ -40,6 +44,8 @@ The bundled Playwright Chromium executable is rejected by the managed Windows pr
 Non-blocking test/tool warnings include Node's Playwright `DEP0205`, the managed-path Cargo canonicalization warning, the intentional mocked dialog-open warning in native fallback coverage, and one direct native-suite Node/Windows `UV_HANDLE_CLOSING` assertion printed after 9/9 tests had passed with exit code 0. The canonical desktop-smoke run completed without a failure; final cleanup left no listener on the project ports 5173 or 1420. None caused a failed or skipped test.
 
 A later focused `skin.spec.ts` rerun with the approved system Chrome reached all four test bodies but hit the known managed Windows `browserContext.close: spawn EPERM` boundary during teardown and left a stale preview server that was removed by the launcher cleanup. The run is treated as harness-blocked, not as new app evidence; the previously completed full 55/55 browser run remains the authoritative browser result for this commit line.
+
+The current focused lifecycle rerun shows the same harness-only boundary across all eight lifecycle cases. It reached each test body, then failed at `browserContext.close: spawn EPERM`; the exact runner and preview PIDs were stopped and `netstat` confirmed no listener remained on port 5173. No new product failure was observed.
 
 ## Remaining limits
 

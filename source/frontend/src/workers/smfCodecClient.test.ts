@@ -121,6 +121,23 @@ class DeferredWorker implements SmfCodecWorkerPort {
   }
 }
 
+class AbortDuringSetupWorker extends DeferredWorker {
+  postCount = 0;
+
+  constructor(private readonly controller: AbortController) {
+    super();
+  }
+
+  override postMessage(_message: SmfCodecRequest, _transferables: Transferable[]): void {
+    this.postCount += 1;
+  }
+
+  override setMessageHandler(handler: ((event: MessageEvent<unknown>) => void) | null): void {
+    super.setMessageHandler(handler);
+    if (handler) this.controller.abort();
+  }
+}
+
 describe('SMF codec worker client', () => {
   it('validates nested SMF payload shape without scanning vertex scalar buffers', () => {
     const valid = makeImportedSmf();
@@ -250,6 +267,24 @@ describe('SMF codec worker client', () => {
     controller.abort();
 
     await assert.rejects(task, SmfCodecCancelledError);
+    assert.ok(worker.terminated);
+    assert.equal(worker.messageHandler, null);
+  });
+
+  it('cancels if the signal aborts during worker setup before postMessage', async () => {
+    const controller = new AbortController();
+    const worker = new AbortDuringSetupWorker(controller);
+
+    await assert.rejects(
+      runSmfImport(bytesToArrayBuffer(exportSMFToBuffer(makeImportedSmf())), {
+        workerFactory: () => worker,
+        signal: controller.signal,
+        timeoutMs: 20,
+      }),
+      SmfCodecCancelledError,
+    );
+
+    assert.equal(worker.postCount, 0);
     assert.ok(worker.terminated);
     assert.equal(worker.messageHandler, null);
   });

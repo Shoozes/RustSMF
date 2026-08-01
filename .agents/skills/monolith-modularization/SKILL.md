@@ -17,6 +17,15 @@ Reduce the context cost and change risk of oversized artifacts while preserving 
 4. Preserve public contracts and update only the owning docs, tests, and context routes.
 5. Run the smallest relevant check, then the repository's broader gate when structural behavior changed.
 
+Use the bundled inventory when PowerShell 7 and Git are available:
+
+```powershell
+.\scripts\rank-context-pressure.ps1 -RepoRoot <repo> -Top 20
+.\scripts\rank-context-pressure.ps1 -RepoRoot <repo> -Category docs -Json
+```
+
+If the repository has a stronger native context audit, use it as the authority and use this inventory only for candidate ranking.
+
 ## Workflow
 
 1. Rank candidates before editing.
@@ -58,6 +67,45 @@ Stop at the first level that resolves the context or maintenance problem:
 5. Split the physical artifact along a stable responsibility boundary.
 
 Do not create summary documents that repeat current state, TODOs, history, or API contracts.
+
+## Type-Specific Rules
+
+### Code
+
+- Prefer standalone helpers, validators, serializers, planners, or view extraction before core state and route rewrites.
+- Move mechanically first. Preserve imports, route paths, schemas, node IDs, command names, and exported names.
+- Avoid pass-through barrels, circular imports, and fragments that still require loading the original monolith.
+
+### Documentation
+
+- Keep `APP_STATE`, TODO/backlog, history, pitfalls, API, and user guidance in their declared authority roles.
+- Split by durable subject ownership and update cadence, not chronology or arbitrary size.
+- Preserve stable anchors or add cross-links when callers reference headings; never copy status into another authority.
+
+### Tests and Verifiers
+
+- Split by behavior family, contract, or fixture set—not an arbitrary number of cases.
+- Keep shared setup small and preserve discovery patterns, test IDs, negative-case names, exit semantics, and fixture provenance.
+
+### Structured and Generated Artifacts
+
+- Exclude lockfiles, build output, generated schemas, minified assets, model files, and runtime evidence from ordinary context.
+- Change the source generator or schema instead of editing generated output.
+
+## Context-Bank Integration
+
+- Route one work unit: owner implementation, nearest focused tests, exact contract/doc, and required fixtures.
+- Audit expanded bytes, largest-file share, fan-out, and repeated canonical docs—not only explicit file count.
+- Keep broad state, history, TODO, and whole-suite verifiers out of focused groups unless the task changes them.
+- Run the context verifier after file moves or `summary_bank.json` edits.
+
+## Verification
+
+- Code split: focused compile/test first, then the relevant build or repository gate.
+- Documentation split: link/anchor checks and stale-path searches.
+- Test split: discover tests, run positive and negative slices, then the owning suite.
+- Context change: parse the bank, expand paths/globs, and verify default/focused budgets.
+- Report skipped live, model, network, or platform checks explicitly.
 
 ## Candidate Heuristics
 

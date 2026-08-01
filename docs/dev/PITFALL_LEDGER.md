@@ -1,6 +1,36 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-08-01 (added deterministic fail-closed fixture ownership and the managed-versus-host Python runtime boundary).
+Last reviewed: 2026-08-01 (added deterministic fail-closed fixture ownership, the managed-versus-host Python runtime boundary, and the SMF worker setup-cancellation guard).
+
+### Q: What pitfall are we preventing?
+
+**What:** A cancellation signal can arrive while a worker adapter is being initialized and be missed if the listener is registered only after handler setup, allowing stale work to reach `postMessage` or wait for the timeout.
+
+**Context and constraints:** SMF import/export is latest-intent owned and must terminate stale worker tasks without falling back or publishing progress after a newer load/export. Worker creation and message-handler installation are adapter boundaries that may be synchronous in tests or alternate runtimes.
+
+**Why it happened:** The client checked `AbortSignal` before creating the worker, then installed worker handlers and only afterward registered the abort listener. A signal that became aborted during that setup window was already aborted when the listener was added, so no event was delivered before the request was posted. Cleanup also assumed a timer had already been assigned.
+
+**Where:** `source/frontend/src/workers/smfCodecClient.ts` and `source/frontend/src/workers/smfCodecClient.test.ts`; the ownership contract is documented in `docs/dev/APP_STATE.md` and `summary_bank.json`.
+
+**Evidence:** A controlled worker adapter aborts from `setMessageHandler`, before the client registers the signal listener. The regression now rejects with `SmfCodecCancelledError`, records zero `postMessage` calls, terminates the worker, clears the handler, and passes as part of the focused 10-test SMF codec suite.
+
+**Developer story:** The worker client already guarded cancellation before worker creation and during normal execution, but setup ordering left a narrow stale-work window. Modeling the adapter boundary as synchronous separated that race from normal worker runtime behavior. Rechecking `signal.aborted` immediately after listener registration and before posting closes the window; timer cleanup was made conditional for the same early-settlement path.
+
+**How to catch it:** Run `npm.cmd exec -- tsx --test src/workers/smfCodecClient.test.ts` from `source/frontend`; require the setup-abort case to reject with `SmfCodecCancelledError`, keep `postCount` at zero, and prove worker termination and handler cleanup.
+
+**Solutions tried:**
+1. `58/100` Check only before worker creation, result: normal pre-abort behavior worked but setup-time abort could still post stale work.
+2. `96/100` Register the listener, recheck `signal.aborted` before starting the timer/post, and make timer cleanup conditional, result: setup cancellation is fail-closed with no stale request and no cleanup exception.
+
+**Current solution:** `runSmfCodecInvocation` registers cancellation before posting, explicitly handles an already-aborted signal after handler setup, and clears the timeout only after it has been assigned. Runtime worker errors remain errors; only startup/post failures use the documented synchronous fallback.
+
+**Decision rationale:** The guard preserves the typed worker contract and latest-intent ownership without adding a second worker or retry path. Delaying all worker setup until after an arbitrary timer or relying on an adapter-specific cancellation event would leave the same ordering risk.
+
+**Effectiveness:** `96/100`, durable. The fix is small, has focused regression coverage, avoids stale work, and keeps the existing timeout/fallback policy intact.
+
+**Relevance check:** Current. Any worker, sidecar, or async adapter that registers cancellation after synchronous setup should use the same post-registration abort check.
+
+**Next prevention step:** Keep setup-time cancellation cases in async-worker client tests whenever handler registration, task ownership, or timeout ordering changes.
 
 ### Q: What pitfall are we preventing?
 

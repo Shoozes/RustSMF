@@ -135,7 +135,7 @@
       "notes": [
         "Worker messages are untrusted values.",
         "Canonical editor buffers are cloned before export transfer.",
-        "Runtime worker errors do not silently fall back to the main thread."
+        "Abort is rechecked after handler setup and before postMessage; runtime worker errors do not silently fall back to the main thread."
       ]
     },
     "subsystem__export_pipeline": {

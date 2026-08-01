@@ -11,7 +11,7 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 - `run.bat` and `run.ps1` are the canonical Windows launchers. No-argument launch opens the numbered menu; option 2 or `pwsh -File run.ps1 -Task run` starts the installed development app.
 - Browser input, drag/drop, and the native picker accept `.smf`, `.glb`, `.gltf`, `.fbx`, and `.obj`. Unsupported or malformed files produce an error without replacing the current model.
 - All picker, file-read, desktop-read, parse, export, and save paths use shared latest-intent ownership. A newer load invalidates older load/export UI completions; failed replacements preserve the mounted root, selection, dirty authoring state, and status.
-- SMF import/export uses a typed Web Worker with owned transferable buffers, nested payload validation, monotonic progress, cancellation, a 120-second timeout, and explicit termination. The codec bounds encoded input/output to 256 MiB, section reads to declared offsets, strings to 4,095 bytes, and allocation-driving texture/mesh/rig/animation counts; non-finite numeric values and invalid byte ranges fail closed. Synchronous fallback is limited to worker construction or initial `postMessage` failure; runtime worker errors surface instead of repeating work on the UI thread.
+- SMF import/export uses a typed Web Worker with owned transferable buffers, nested payload validation, monotonic progress, cancellation, a 120-second timeout, and explicit termination. The client rechecks an abort signal after worker handlers are installed and before `postMessage`, so setup-time cancellation cannot publish or leave a task running. The codec bounds encoded input/output to 256 MiB, section reads to declared offsets, strings to 4,095 bytes, and allocation-driving texture/mesh/rig/animation counts; non-finite numeric values and invalid byte ranges fail closed. Synchronous fallback is limited to worker construction or initial `postMessage` failure; runtime worker errors surface instead of repeating work on the UI thread.
 - Save operations are globally single-flight and freshness-checked. User cancellation is distinct from failure.
 
 ### Viewport and themes
@@ -92,10 +92,10 @@ The sandbox checkup is diagnostic rather than an app gate. A managed profile may
 
 Current inventory:
 
-- 250 frontend unit tests across 41 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
+- 251 frontend unit tests across 41 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
 - 55 browser cases in eight domain-owned spec files.
 - 9 Rust tests; the real-SMF native tests require and parse the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
-- 21 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; the latest context run reports 25.1 KiB default orientation with zero warnings.
+- 21 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; the latest context run reports 25.3 KiB default orientation with zero warnings.
 
 The latest command results and any environment-only warnings are recorded in `review.md`.
 
