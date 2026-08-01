@@ -18,8 +18,104 @@ export interface FbxLoadedModel {
   mixer: THREE.AnimationMixer;
 }
 
+const FBX_TEXTURE_WAIT_MS = 2000;
+const FBX_TEXTURE_SLOTS = [
+  'map',
+  'alphaMap',
+  'aoMap',
+  'bumpMap',
+  'displacementMap',
+  'emissiveMap',
+  'metalnessMap',
+  'normalMap',
+  'roughnessMap',
+] as const;
+
+type LoadableTextureImage = {
+  complete?: boolean;
+  naturalWidth?: number;
+  width?: number;
+  addEventListener?: (type: string, listener: () => void, options?: { once?: boolean }) => void;
+  removeEventListener?: (type: string, listener: () => void) => void;
+};
+
+function collectTextures(root: THREE.Object3D): THREE.Texture[] {
+  const textures = new Set<THREE.Texture>();
+  root.traverse((object) => {
+    if (!isThreeMesh(object)) return;
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    for (const material of materials) {
+      const record = material as THREE.Material & Record<string, unknown>;
+      for (const slot of FBX_TEXTURE_SLOTS) {
+        const texture = record[slot];
+        if (texture instanceof THREE.Texture) textures.add(texture);
+      }
+    }
+  });
+  return [...textures];
+}
+
+function hasUsableTextureImage(texture: THREE.Texture): boolean {
+  const image = texture.image as LoadableTextureImage | undefined;
+  if (!image) return false;
+  if (typeof image.naturalWidth === 'number') return image.naturalWidth > 0;
+  if (typeof image.width === 'number') return image.width > 0;
+  return true;
+}
+
+async function waitForTextureImage(texture: THREE.Texture): Promise<void> {
+  const image = texture.image as LoadableTextureImage | undefined;
+  if (!image || hasUsableTextureImage(texture) || (image.complete && image.naturalWidth === 0)) return;
+  if (typeof image.addEventListener !== 'function') return;
+
+  await new Promise<void>((resolve) => {
+    let settled = false;
+    const settle = (): void => {
+      if (settled) return;
+      settled = true;
+      image.removeEventListener?.('load', settle);
+      image.removeEventListener?.('error', settle);
+      resolve();
+    };
+    image.addEventListener?.('load', settle, { once: true });
+    image.addEventListener?.('error', settle, { once: true });
+    setTimeout(settle, FBX_TEXTURE_WAIT_MS);
+  });
+}
+
+async function waitForFbxTextures(root: THREE.Object3D): Promise<void> {
+  await Promise.all(collectTextures(root).map(waitForTextureImage));
+}
+
+function removeUnavailableFbxTextureMaps(root: THREE.Object3D): void {
+  root.traverse((object) => {
+    if (!isThreeMesh(object)) return;
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    for (const material of materials) {
+      const record = material as THREE.Material & Record<string, unknown>;
+      for (const slot of FBX_TEXTURE_SLOTS) {
+        const texture = record[slot];
+        if (!(texture instanceof THREE.Texture) || hasUsableTextureImage(texture)) continue;
+        texture.dispose();
+        record[slot] = null;
+        material.needsUpdate = true;
+      }
+    }
+  });
+}
+
 export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoadedModel> {
-  const loader = new FBXLoader();
+  const textureManager = new THREE.LoadingManager();
+  let textureLoadStarted = false;
+  let resolveTextureLoads: () => void = () => {};
+  const textureLoads = new Promise<void>((resolve) => {
+    resolveTextureLoads = resolve;
+  });
+  textureManager.onStart = () => {
+    textureLoadStarted = true;
+  };
+  textureManager.onLoad = () => resolveTextureLoads();
+  const loader = new FBXLoader(textureManager);
 
   let fbx: THREE.Group;
   if (typeof urlOrBuffer === 'string') {
@@ -31,6 +127,14 @@ export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoa
   }
 
   const root = fbx; // FBX loads as group-like
+  if (textureLoadStarted) {
+    await Promise.race([
+      textureLoads,
+      new Promise<void>((resolve) => setTimeout(resolve, FBX_TEXTURE_WAIT_MS)),
+    ]);
+  }
+  await waitForFbxTextures(root);
+  removeUnavailableFbxTextureMaps(root);
   root.name = 'FBX_Root';
 
   const skinnedMeshes: THREE.SkinnedMesh[] = [];
@@ -264,6 +368,20 @@ function nearlyEqual(left: number, right: number): boolean {
   return Math.abs(left - right) <= VALUE_TOLERANCE * Math.max(1, Math.abs(left), Math.abs(right));
 }
 
+function trackHasMeaningfulChange(track: THREE.KeyframeTrack): boolean {
+  const valueSize = track.getValueSize();
+  if (track.times.length <= 1 || valueSize <= 0) return false;
+  for (let key = 1; key < track.times.length; key += 1) {
+    const offset = key * valueSize;
+    for (let component = 0; component < valueSize; component += 1) {
+      if (!nearlyEqual(track.values[component], track.values[offset + component])) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 function assertMatchingTrackEndpoints(
   sourceTrack: THREE.KeyframeTrack,
   actualTrack: THREE.KeyframeTrack,
@@ -356,11 +474,6 @@ function assertMatchingFbxSummary(
         `FBX roundtrip validation failed: clip ${clipIndex} changed from ${sourceClip.name} to ${actualClip.name || 'unnamed'}.`,
       );
     }
-    if (sourceClip.tracks.length !== actualClip.tracks.length) {
-      throw new Error(
-        `FBX roundtrip validation failed: ${sourceClip.name || `clip ${clipIndex}`} track count changed from ${sourceClip.tracks.length} to ${actualClip.tracks.length}.`,
-      );
-    }
     if (!nearlyEqual(sourceClip.duration, actualClip.duration)) {
       throw new Error(
         `FBX roundtrip validation failed: ${sourceClip.name || `clip ${clipIndex}`} duration changed.`,
@@ -369,6 +482,7 @@ function assertMatchingFbxSummary(
     sourceClip.tracks.forEach((sourceTrack) => {
       const actualTrack = actualClip.tracks.find((track) => track.name === sourceTrack.name);
       if (!actualTrack) {
+        if (!trackHasMeaningfulChange(sourceTrack)) return;
         throw new Error(
           `FBX roundtrip validation failed: animation track ${sourceTrack.name} is missing.`,
         );

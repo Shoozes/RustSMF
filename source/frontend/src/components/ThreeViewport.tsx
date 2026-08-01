@@ -68,6 +68,7 @@ import {
   type SkinBrushIndex,
   type SkinBrushVertexRef,
 } from '../utils/skinBrushIndex';
+import { getSkinnedVertexWorldPosition } from '../utils/skinnedVertexPosition';
 import type { EditorMode, ViewportLayout } from '../store';
 import { getAppTheme, type AppThemeId } from '../theme';
 import type {
@@ -296,6 +297,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const orthoCameraRefs = useRef<THREE.OrthographicCamera[]>([]);
   const orbitRef = useRef(new SimpleOrbit());
   const frameRef = useRef<number | null>(null);
+  const resizeFrameRef = useRef<number | null>(null);
   const resizeObsRef = useRef<ResizeObserver | null>(null);
   const viewportRef = useRef<ViewportSpec[]>([]);
   const layoutRef = useRef<ViewportLayout>('single');
@@ -390,6 +392,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const selectionOverlaysRef = useRef<SelectionOverlay[]>([]);
   const hoveredBoneNameRef = useRef<string | null>(null);
   const skinBrushMarkerRef = useRef<THREE.Object3D | null>(null);
+  const skinBrushIndexCacheRef = useRef(new WeakMap<THREE.SkinnedMesh, {
+    cellSize: number;
+    signature: number;
+    index: SkinBrushIndex;
+  }>());
   const skinPaintHitCountRef = useRef(0);
   const skinCandidateCountRef = useRef(0);
   const skinTotalVertexCountRef = useRef(0);
@@ -665,9 +672,34 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     return meshes;
   };
 
-  const getSkinnedWorldBrushIndex = (mesh: THREE.SkinnedMesh, brushRadius: number): SkinBrushIndex => {
-    const desiredCellSize = Math.max(0.01, Math.min(Math.max(brushRadius / 2, 0.01), boundsRef.current.maxDim / 16));
-    return buildSkinnedWorldBrushIndex(mesh, desiredCellSize);
+  const getSkinnedWorldBrushIndex = (mesh: THREE.SkinnedMesh): SkinBrushIndex => {
+    const desiredCellSize = Math.max(0.01, Math.min(boundsRef.current.maxDim / 32, 0.25));
+    mesh.updateMatrixWorld(true);
+    mesh.skeleton?.update();
+    const position = mesh.geometry.getAttribute('position');
+    const skinIndex = mesh.geometry.getAttribute('skinIndex');
+    const skinWeight = mesh.geometry.getAttribute('skinWeight');
+    const attributeVersion = (attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute | undefined): number => (
+      attribute && 'version' in attribute ? attribute.version : 0
+    );
+    const signatureValues = [
+      ...mesh.matrixWorld.elements,
+      ...(mesh.skeleton?.boneMatrices ?? []),
+      attributeVersion(position),
+      attributeVersion(skinIndex),
+      attributeVersion(skinWeight),
+    ];
+    let signature = 2166136261;
+    for (const value of signatureValues) {
+      signature = Math.imul(signature ^ Math.round(value * 100000), 16777619);
+    }
+    const cached = skinBrushIndexCacheRef.current.get(mesh);
+    if (cached && cached.cellSize === desiredCellSize && cached.signature === signature) {
+      return cached.index;
+    }
+    const index = buildSkinnedWorldBrushIndex(mesh, desiredCellSize);
+    skinBrushIndexCacheRef.current.set(mesh, { cellSize: desiredCellSize, signature, index });
+    return index;
   };
 
   const shouldApplySkinPaintNow = (): boolean => {
@@ -1571,16 +1603,14 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       const paintVertices: SkinPaintVertex[] = [];
       let candidateCount = 0;
       let totalVertexCount = 0;
+      let skinIndexFailure: string | null = null;
       const hitDepth = hits[0]?.point ? hits[0].point.clone().project(pick.camera).z : null;
 
       const addCandidate = (mesh: THREE.SkinnedMesh, candidate: SkinBrushVertexRef): void => {
         local.set(candidate.localPosition[0], candidate.localPosition[1], candidate.localPosition[2]);
-        let transformed = world.copy(local);
-        const skinTransform = (mesh as { boneTransform?: (index: number, target: THREE.Vector3) => THREE.Vector3 }).boneTransform;
-        if (typeof skinTransform === 'function') {
-          transformed = skinTransform.call(mesh, candidate.vertexIndex, transformed);
-        }
-        transformed.applyMatrix4(mesh.matrixWorld);
+        const failure = getSkinnedVertexWorldPosition(mesh, candidate.vertexIndex, world.copy(local));
+        if (failure) return;
+        const transformed = world;
 
         if (hitDepth !== null) {
           const projected = transformed.clone().project(pick.camera);
@@ -1631,8 +1661,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         if (!positionAttr) continue;
         if (!mesh.geometry.getAttribute('skinIndex') || !mesh.geometry.getAttribute('skinWeight')) continue;
 
-        const index = getSkinnedWorldBrushIndex(mesh, brushRadius);
+        const index = getSkinnedWorldBrushIndex(mesh);
         totalVertexCount += index.vertexCount;
+        if (!index.valid) {
+          skinIndexFailure ??= index.failureReason ?? 'invalid-skinned-mesh';
+          continue;
+        }
         if (targetMode === 'triangle' && brushRadius < 0.5) {
           continue;
         }
@@ -1641,6 +1675,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         for (const candidate of candidates) {
           addCandidate(mesh, candidate);
         }
+      }
+
+      if (skinIndexFailure) {
+        canvasRef.current.dataset.skinBrushIndexError = skinIndexFailure;
+      } else {
+        delete canvasRef.current.dataset.skinBrushIndexError;
       }
 
       if (mode === 'subtract') {
@@ -2275,10 +2315,12 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const ro = new ResizeObserver(onResize);
     ro.observe(container);
     resizeObsRef.current = ro;
-    requestAnimationFrame(onResize);
+    resizeFrameRef.current = requestAnimationFrame(onResize);
 
     return () => {
       if (frameRef.current) cancelAnimationFrame(frameRef.current);
+      if (resizeFrameRef.current) cancelAnimationFrame(resizeFrameRef.current);
+      resizeFrameRef.current = null;
       resizeObsRef.current?.disconnect();
       interactionRuntime.dispose();
       detachOrbit();
@@ -2433,6 +2475,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         delete canvas.dataset.skinPaintRadius;
         delete canvas.dataset.skinPaintStrength;
         delete canvas.dataset.skinPaintTarget;
+        delete canvas.dataset.skinBrushIndexError;
         delete canvas.dataset.skinBrushX;
         delete canvas.dataset.skinBrushY;
         delete canvas.dataset.skinBrushZ;

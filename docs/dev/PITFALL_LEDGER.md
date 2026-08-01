@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-07-30 (added deterministic fail-closed fixture ownership to the existing material, SMF worker, animation, conversion, viewport, export, and lifecycle prevention records).
+Last reviewed: 2026-08-01 (added deterministic fail-closed fixture ownership and the managed-versus-host Python runtime boundary).
 
 ### Q: What pitfall are we preventing?
 
@@ -939,3 +939,101 @@ Last reviewed: 2026-07-30 (added deterministic fail-closed fixture ownership to 
 **Relevance check:** Current. Any fixture move, suite split, or runner working-directory change can otherwise reintroduce false-green coverage.
 
 **Next prevention step:** Keep required fixture paths in the focused test/context routes and rerun both fixture-owning entry points whenever tests or runners move.
+
+### Q: What pitfall are we preventing?
+
+**What:** A Python installation visible and executable in the operator's Windows shell can still be unavailable to the managed Codex sandbox, causing a diagnostic or skill-validation command to report that Python is missing.
+
+**Context and constraints:** The repository's required verification lane is PowerShell, Node, npm, and Rust; Python is tooling-only for the installed skill validator. Sandbox diagnosis must remain read-only and must not hard-code a personal interpreter path, weaken permissions, persist PATH changes, or create a virtual environment as an access workaround.
+
+**Why it happened:** The operator shell resolved user-local Python installations under `%LOCALAPPDATA%\Programs\Python`, but the managed PowerShell process had no `python` PATH candidate and could not launch those absolute executables. The sandbox checker therefore selected only `%SYSTEMROOT%\py.exe`, which returned exit code `112` with `No installed Python found!`. Host installation and managed process authority were different capabilities.
+
+**Where:** `C:\Users\jc816\.codex\skills\sandbox-checkup\scripts\sandbox-checkup.cmd`, the managed PowerShell process, the user-local Python installations, and the Python-based `quick_validate.py` skill validator.
+
+**Evidence:** Inside the managed process, `where.exe python` returned no match and each discovered absolute Python 3.10–3.13 executable returned `Access is denied`. The checker reported `overall_status: blocked`, `diagnosis: runtime_or_access_boundary_unresolved`, Python candidate `%SYSTEMROOT%\\py.exe`, and `python_unavailable`. Through an approved external-runtime comparison, Python 3.13.3 launched and reported its executable path. A PowerShell `quick_validate.ps1` replacement was then added for Windows, and all three updated local skills passed it inside the managed workspace. PowerShell 7, Windows PowerShell 5.1, Git, Node, npm, the native context task, and the full repository verification gate remained ready or passing.
+
+**Developer story:** The first checker result looked like a missing Python installation. The operator then supplied four installed Python paths. Testing those same paths in the managed process separated discovery from process access: the paths existed on the host but were denied by the sandbox, while the exact bounded command succeeded outside it. Because the validator only checks small frontmatter rules, the safer durable fix was to convert that gate to PowerShell on Windows instead of changing sandbox policy. The managed validator now runs without Python; the Python implementation remains only as a portable fallback.
+
+**How to catch it:** Run `cmd.exe /d /c "C:\\Users\\jc816\\.codex\\skills\\sandbox-checkup\\scripts\\sandbox-checkup.cmd -AsJson"`, then compare `where.exe python` and one exact absolute interpreter `--version` probe in the same managed process. If the managed probe is denied but the approved external probe succeeds, classify the result as a runtime/access boundary and keep the interpreter path process-local.
+
+**Solutions tried:**
+1. `35/100` Treat the checker message as proof that Python is not installed, result: incorrect host diagnosis and no explanation for the operator's working installations.
+2. `72/100` Add a personal absolute Python path or change PATH/permissions inside the repo, result: would bypass the managed boundary, reduce reproducibility, and violate sandbox ownership.
+3. `96/100` Compare the exact bounded command through the approved external runtime, keep the managed report authoritative for sandbox capability, and avoid environment mutation, result: installation, discovery, access, and repo verification remain separately classified.
+
+**Current solution:** Use the sandbox checker to report managed capability. Use Node/PowerShell/Rust for app truth and `quick_validate.ps1` for Windows skill validation. Keep `quick_validate.py` as a portable fallback when PowerShell is unavailable. Do not commit a personal executable path, change sandbox permissions, or convert the blocked managed result into managed-runtime proof.
+
+**Decision rationale:** The evidence identifies process authority, not a missing dependency or product defect. Converting the narrow validator to the repository's already-available PowerShell host removes the unnecessary Python dependency without weakening the sandbox boundary; retaining the Python script preserves portability for non-Windows environments.
+
+**Effectiveness:** `98/100`, durable. The distinction is proved by the same-command comparison, and the PowerShell validator passes all current local skills in the managed workspace without PATH, permission, or venv changes. The remaining risk is that the lightweight replacement must stay aligned with the portable validator if its rule set evolves.
+
+**Relevance check:** Current. Any Python-based skill validator, repo helper, optional model tool, or managed-vs-operator runtime comparison can encounter the same boundary.
+
+**Next prevention step:** Keep the PowerShell and Python validators' frontmatter rules aligned, and re-run the managed PowerShell validator after any skill-schema or sandbox launcher change.
+
+### Q: What pitfall are we preventing?
+
+**What:** A skinned brush index can silently fall back to bind-position math when the mesh is not actually bound or its skin tuple is malformed.
+
+**Why it happened:** The old path used an optional structural `boneTransform` cast and tests supplied a fake method, so a production mesh without that method could appear valid while painting the wrong vertices.
+
+**Where:** `source/frontend/src/utils/skinnedVertexPosition.ts`, `skinBrushIndex.ts`, `ThreeViewport.tsx`, and their focused tests.
+
+**How to catch it:** Require the public `SkinnedMesh.getVertexPosition` path, validate all four skin indices/weights and skeleton state, and assert that an invalid mesh returns no paint candidates plus a visible diagnostic marker.
+
+**Current solution:** Posed world sampling fails closed; cached indexes include pose and attribute versions in their invalidation signature. Effectiveness: `97/100`, durable.
+
+### Q: What pitfall are we preventing?
+
+**What:** A malformed SMF can drive huge allocations, unbounded string scans, section overreads, or silent numeric wrapping before the user receives an error.
+
+**Why it happened:** Legacy offsets/counts and DataView setters were trusted, and JavaScript setter coercion turns out-of-range numbers into plausible bytes.
+
+**Where:** `source/frontend/src/loaders/smfBinary.ts` and `smf.ts`.
+
+**How to catch it:** Keep limits centralized, set a reader limit for each declared section, use checked arithmetic before allocation, reject non-finite/range-invalid primitives, and test truncated, unterminated, oversized, and malformed export inputs.
+
+**Current solution:** The worker codec enforces encoded/output, string, texture, mesh, rig, animation, and DQ budgets and preserves tangent handedness instead of discarding it. Effectiveness: `96/100`, durable.
+
+### Q: What pitfall are we preventing?
+
+**What:** A desktop SMF load can perform duplicate filesystem reads and present native header acceptance as if it were full codec validation.
+
+**Why it happened:** The load hook requested a native metadata summary, then requested the same path again for the actual worker payload; the native command was named validation even though it only parsed the header envelope.
+
+**Where:** `source/frontend/src/hooks/useLoadModel.ts`, `source/src-tauri/src/main.rs`, and the native IPC spec.
+
+**How to catch it:** Assert exactly one `read_file_binary` call for a desktop load, no metadata call in the load path, and status text sourced from the full codec result. Label native checks as header-only.
+
+**Current solution:** The load path reads once and delegates structural truth to the typed codec; native I/O is size-bounded and moved to blocking tasks. Effectiveness: `95/100`, durable.
+
+### Q: What pitfall are we preventing?
+
+**What:** A binary FBX can pass the app's Three.js re-import check while failing a real target application, and an imported embedded texture can trigger a renderer warning if the scene is attached before its asynchronous image load completes.
+
+**Context and constraints:** RustSMF exports FBX 7500 from a live Three.js root and must preserve mesh topology, skin indices, animation, and material texture behavior without making Blender a runtime dependency. The browser loader and the external validator have different timing and type expectations.
+
+**Why it happened:** The vendored writer serialized integer-valued FBX arrays as double arrays and omitted required layer `Name` nodes. Three.js accepted the bytes, but Blender 5.0.0 rejected the geometry/layer contract. Separately, Three.js `TextureLoader.load()` returns a texture before its image is assigned; the app attached the root immediately, allowing WebGL to inspect an empty texture before the loader manager settled.
+
+**Where:** `source/frontend/src/vendor/FBXExporter.js`, `source/frontend/src/loaders/fbx.ts`, `source/frontend/tests/export-formats.spec.ts`, `source/frontend/tests/fixtures/independent-fbx/validate_fixture.py`, and `docs/dev/fixtures/INDEPENDENT_FBX_PROVENANCE.md`.
+
+**Evidence:** The first app-exported roundtrip passed the browser re-import but Blender failed with `TypeError: ufunc 'bitwise_xor'` on `PolygonVertexIndex`; after integer arrays were corrected, Blender failed on a missing layer name. The final output passed Blender 5.0.0 validation with one mesh, two bones, two weighted groups, 20 animation curves, and two packed images. The browser flow passed with no renderer warning after manager-aware texture waiting.
+
+**Developer story:** Self-roundtrip success initially looked sufficient. A second application exposed the external wire-contract mismatch, and the failure location narrowed the fix to typed geometry/layer metadata rather than app-side conversion. A separate browser diagnostic showed that the texture warning came from the loader's intentionally early return, not from a corrupt image. The final fix keeps the exporter format stable, waits only on the loader-owned resource manager, and removes unavailable maps before render.
+
+**How to catch it:** Run the independent FBX browser test, save its ignored app output under `source/frontend/test-results/`, and run the committed Blender validator against both the source fixture and app output. Assert no browser `ERROR` entries and no raw `WebGLRenderer: Texture marked for update but no image data found` warning. Keep the validator's material-node check so a merely packed-but-unconnected image does not count as texture proof.
+
+**Solutions tried:**
+1. `40/100` Trust Three.js re-import as the external contract, result: it missed Blender's typed-array and layer-name requirements.
+2. `68/100` Suppress the WebGL warning or filter it in the test, result: it would hide an attach-before-load race and lose texture diagnostics.
+3. `99/100` Emit explicit FBX integer arrays and layer names, await the isolated texture `LoadingManager`, remove unavailable maps before attach, and validate app output in Blender, result: both internal and external proof pass with a narrow runtime cost and no sandbox/toolchain dependency.
+
+**Current solution:** `FBXExporter.js` uses a shared `int32Values` encoder for polygon, material, skin, and animation integer arrays and supplies layer names. `loadFBX` owns a `LoadingManager` for parse-time texture requests, waits up to the bounded texture timeout, then fails safe on unavailable maps. The independent fixture and validator remain test-only.
+
+**Decision rationale:** External target validation is the only evidence that can catch a file-format dialect mismatch; suppressing a warning cannot. The manager wait is scoped to FBX parse work and preserves a usable material fallback when an external texture is genuinely unavailable.
+
+**Effectiveness:** `99/100`, durable. The fix is covered by browser roundtrip, focused FBX units, and an independently run Blender import/texture/animation validator.
+
+**Relevance check:** Current. Any FBX writer, loader timing change, or new external compatibility claim should preserve this two-target proof.
+
+**Next prevention step:** Keep at least one external target validator for each new FBX contract change and do not treat a browser-only roundtrip as broad format compatibility.

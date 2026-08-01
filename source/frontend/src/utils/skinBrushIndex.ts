@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getSkinnedVertexWorldPosition } from './skinnedVertexPosition';
 
 export interface SkinBrushVertexRef {
   meshId: string;
@@ -11,6 +12,8 @@ export interface SkinBrushIndex {
   meshId: string;
   cellSize: number;
   vertexCount: number;
+  valid: boolean;
+  failureReason?: string;
   cells: Map<string, SkinBrushVertexRef[]>;
 }
 
@@ -29,7 +32,7 @@ export function buildSkinBrushIndex(
   const cells = new Map<string, SkinBrushVertexRef[]>();
 
   if (!position || position.itemSize < 3) {
-    return { meshId: mesh.uuid, cellSize: safeCellSize, vertexCount: 0, cells };
+    return { meshId: mesh.uuid, cellSize: safeCellSize, vertexCount: 0, valid: false, failureReason: 'missing-position', cells };
   }
 
   for (let vertexIndex = 0; vertexIndex < position.count; vertexIndex += 1) {
@@ -46,7 +49,7 @@ export function buildSkinBrushIndex(
     cells.set(key, bucket);
   }
 
-  return { meshId: mesh.uuid, cellSize: safeCellSize, vertexCount: position.count, cells };
+  return { meshId: mesh.uuid, cellSize: safeCellSize, vertexCount: position.count, valid: true, cells };
 }
 
 export function buildSkinnedWorldBrushIndex(
@@ -58,24 +61,39 @@ export function buildSkinnedWorldBrushIndex(
   const cells = new Map<string, SkinBrushVertexRef[]>();
 
   if (!position || position.itemSize < 3) {
-    return { meshId: mesh.uuid, cellSize: safeCellSize, vertexCount: 0, cells };
+    return { meshId: mesh.uuid, cellSize: safeCellSize, vertexCount: 0, valid: false, failureReason: 'missing-position', cells };
+  }
+
+  if (!mesh.geometry.getAttribute('skinIndex') || !mesh.geometry.getAttribute('skinWeight')) {
+    return {
+      meshId: mesh.uuid,
+      cellSize: safeCellSize,
+      vertexCount: position.count,
+      valid: false,
+      failureReason: 'missing-skin-attributes',
+      cells,
+    };
   }
 
   mesh.updateMatrixWorld(true);
+  mesh.skeleton?.update();
 
   const local = new THREE.Vector3();
   const world = new THREE.Vector3();
 
   for (let vertexIndex = 0; vertexIndex < position.count; vertexIndex += 1) {
     local.fromBufferAttribute(position, vertexIndex);
-    world.copy(local);
-
-    const skinTransform = (mesh as { boneTransform?: (index: number, target: THREE.Vector3) => THREE.Vector3 }).boneTransform;
-    if (typeof skinTransform === 'function') {
-      skinTransform.call(mesh, vertexIndex, world);
+    const failure = getSkinnedVertexWorldPosition(mesh, vertexIndex, world);
+    if (failure) {
+      return {
+        meshId: mesh.uuid,
+        cellSize: safeCellSize,
+        vertexCount: position.count,
+        valid: false,
+        failureReason: `${failure} at vertex ${vertexIndex}`,
+        cells: new Map(),
+      };
     }
-
-    world.applyMatrix4(mesh.matrixWorld);
 
     const key = cellKey(world.x, world.y, world.z, safeCellSize);
     const bucket = cells.get(key) ?? [];
@@ -88,7 +106,7 @@ export function buildSkinnedWorldBrushIndex(
     cells.set(key, bucket);
   }
 
-  return { meshId: mesh.uuid, cellSize: safeCellSize, vertexCount: position.count, cells };
+  return { meshId: mesh.uuid, cellSize: safeCellSize, vertexCount: position.count, valid: true, cells };
 }
 
 export function querySkinBrushIndex(
@@ -96,7 +114,7 @@ export function querySkinBrushIndex(
   localCenter: THREE.Vector3,
   localRadius: number,
 ): SkinBrushVertexRef[] {
-  if (!Number.isFinite(localRadius) || localRadius < 0 || index.vertexCount === 0) return [];
+  if (!index.valid || !Number.isFinite(localRadius) || localRadius < 0 || index.vertexCount === 0) return [];
 
   const cellRadius = Math.max(0, Math.ceil(localRadius / index.cellSize));
   const centerX = cellCoord(localCenter.x, index.cellSize);
@@ -130,7 +148,7 @@ export function querySkinBrushWorldIndex(
   worldCenter: THREE.Vector3,
   worldRadius: number,
 ): SkinBrushVertexRef[] {
-  if (!Number.isFinite(worldRadius) || worldRadius < 0 || index.vertexCount === 0) return [];
+  if (!index.valid || !Number.isFinite(worldRadius) || worldRadius < 0 || index.vertexCount === 0) return [];
 
   const cellRadius = Math.max(0, Math.ceil(worldRadius / index.cellSize));
   const centerX = cellCoord(worldCenter.x, index.cellSize);

@@ -8,12 +8,37 @@ use tauri_plugin_dialog::DialogExt;
 mod smf_core;
 use smf_core::{build_smf_desktop_info, parse_smf_header_info, SmfDesktopInfo};
 
+const MAX_NATIVE_FILE_BYTES: u64 = 256 * 1024 * 1024;
+
 fn sanitize_path(path: PathBuf) -> String {
     let path_str = path.to_string_lossy().to_string();
-    if cfg!(windows) && path_str.starts_with("\\\\?\\") {
-        return path_str[4..].to_string();
+    if cfg!(windows) {
+        if let Some(rest) = path_str.strip_prefix("\\\\?\\UNC\\") {
+            return format!("\\\\{rest}");
+        }
+        if let Some(rest) = path_str.strip_prefix("\\\\?\\") {
+            return rest.to_string();
+        }
     }
     path_str
+}
+
+fn read_file_bytes_sync(path: &str) -> Result<Vec<u8>, String> {
+    let metadata =
+        std::fs::metadata(path).map_err(|error| format!("Failed to inspect {path}: {error}"))?;
+    if metadata.len() > MAX_NATIVE_FILE_BYTES {
+        return Err(format!(
+            "Refusing to read {path}: file is {} bytes; maximum is {MAX_NATIVE_FILE_BYTES}",
+            metadata.len()
+        ));
+    }
+    std::fs::read(path).map_err(|error| format!("Failed to read {path}: {error}"))
+}
+
+async fn read_file_bytes(path: String) -> Result<Vec<u8>, String> {
+    tauri::async_runtime::spawn_blocking(move || read_file_bytes_sync(&path))
+        .await
+        .map_err(|error| format!("Native file read task failed: {error}"))?
 }
 
 #[command]
@@ -36,14 +61,15 @@ fn greet(name: &str) -> String {
 #[command]
 async fn read_file_text(path: String) -> Result<String, String> {
     // Small text read helper for metadata/debug paths; model loads use read_file_binary.
-    std::fs::read_to_string(&path).map_err(|e| e.to_string())
+    let bytes = read_file_bytes(path).await?;
+    String::from_utf8(bytes).map_err(|error| format!("File is not valid UTF-8: {error}"))
 }
 
 #[command]
 async fn read_file_binary(path: String) -> Result<Vec<u8>, String> {
     // Binary read for SMF/GLB/FBX etc. Returns raw bytes so frontend can pass to loaders.
     // This makes desktop .smf load work when open_file only gives a path.
-    std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))
+    read_file_bytes(path).await
 }
 
 #[command]
@@ -53,14 +79,24 @@ async fn write_file_binary(path: String, data: Vec<u8>) -> Result<(), String> {
     // additional filesystem scope/permissions may be required per Tauri v2 security model
     // (see capabilities/default.json and Tauri fs docs). In dev it works; "fs:default" permission
     // would need tauri-plugin-fs if switching to its API.
-    std::fs::write(&path, data).map_err(|e| format!("Failed to write {}: {}", path, e))
+    if data.len() as u64 > MAX_NATIVE_FILE_BYTES {
+        return Err(format!(
+            "Refusing to write {path}: file is {} bytes; maximum is {MAX_NATIVE_FILE_BYTES}",
+            data.len()
+        ));
+    }
+    tauri::async_runtime::spawn_blocking(move || {
+        std::fs::write(&path, data).map_err(|error| format!("Failed to write {path}: {error}"))
+    })
+    .await
+    .map_err(|error| format!("Native file write task failed: {error}"))?
 }
 
 #[command]
 async fn peek_smf_header(path: String) -> Result<String, String> {
     // Real small SMF header peek for desktop validation / rust-smf-parser progress.
     // Uses shared parse helper for modularity. Frontend uses for desktop .smf to surface Rust I/O in status.
-    let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    let bytes = read_file_bytes(path).await?;
     match parse_smf_header_info(&bytes) {
         Ok(header) => {
             if header.version.starts_with("SMF_v") {
@@ -82,13 +118,14 @@ async fn peek_smf_header(path: String) -> Result<String, String> {
 // Small real subtask for rust-smf-parser breakdown (header peek + size done; this adds basic validation).
 #[command]
 async fn validate_smf(path: String) -> Result<String, String> {
-    // Real basic SMF validation using header logic. Returns "valid SMF" or "invalid: reason".
+    // This command validates the native header/offset envelope only. Full
+    // structural validation remains in the shared TypeScript SMF codec.
     // Uses shared parse helper. Can be used for early desktop .smf checks before full load.
-    let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    let bytes = read_file_bytes(path).await?;
     match parse_smf_header_info(&bytes) {
         Ok(header) => {
             if header.version.starts_with("SMF_v") {
-                Ok("valid SMF".to_string())
+                Ok("SMF header accepted; full structural validation runs in the codec".to_string())
             } else {
                 Ok(format!(
                     "invalid: not SMF header (starts with '{}')",
@@ -105,7 +142,7 @@ async fn validate_smf(path: String) -> Result<String, String> {
 // Returns info string for desktop .smf status. Real minimal parse, no full dupe of TS.
 #[command]
 async fn peek_smf_rig_basic(path: String) -> Result<String, String> {
-    let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    let bytes = read_file_bytes(path).await?;
     match parse_smf_header_info(&bytes) {
         Ok(header) => {
             if header.off_rig + 4 > bytes.len() {
@@ -131,7 +168,7 @@ async fn peek_smf_rig_basic(path: String) -> Result<String, String> {
 // Returns info for desktop .smf status. Real minimal, no full parse.
 #[command]
 async fn peek_smf_anim_basic(path: String) -> Result<String, String> {
-    let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    let bytes = read_file_bytes(path).await?;
     match parse_smf_header_info(&bytes) {
         Ok(header) => {
             if header.off_anim + 1 > bytes.len() {
@@ -153,7 +190,7 @@ async fn peek_smf_anim_basic(path: String) -> Result<String, String> {
 // Returns info string for desktop .smf status. Real minimal parse, no full dupe of TS loader.
 #[command]
 async fn peek_smf_model_basic(path: String) -> Result<String, String> {
-    let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    let bytes = read_file_bytes(path).await?;
     match parse_smf_header_info(&bytes) {
         Ok(header) => {
             if header.off_model + 1 > bytes.len() {
@@ -174,7 +211,7 @@ async fn peek_smf_model_basic(path: String) -> Result<String, String> {
 // Real, small structured summary command for frontend status formatting.
 #[command]
 async fn get_smf_desktop_info(path: String) -> Result<SmfDesktopInfo, String> {
-    let bytes = std::fs::read(&path).map_err(|e| format!("Failed to read {}: {}", path, e))?;
+    let bytes = read_file_bytes(path).await?;
     Ok(build_smf_desktop_info(&bytes))
 }
 

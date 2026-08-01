@@ -1,6 +1,6 @@
 ---
 name: pitfall-ledger
-description: Document recent regressions, failed attempts, pitfalls, and durable fixes in question-and-answer form during integrity passes, bug hunts, model/runtime changes, test hardening, or repo state updates. Use when Codex needs to preserve what failed, why it failed, where it happened, how it was fixed, how effective the fix was, and whether the context is still relevant or obsolete.
+description: Record recurring repo-specific mistakes as evidence-grounded developer stories with context, observable investigation steps, ranked solutions, decision rationale, detection, and verification. Use when a bug, false claim, broken workflow, model/runtime issue, contract drift, failed attempt, or repeated Codex mistake should become regression guidance or training-ready engineering decision data.
 ---
 
 # Pitfall Ledger
@@ -9,14 +9,29 @@ description: Document recent regressions, failed attempts, pitfalls, and durable
 
 Use this skill to turn recent debugging context into a compact, ranked regression-prevention ledger. The output should help a future agent avoid repeating bad paths while still filtering out stale context.
 
+A pitfall is not a progress note. Record observable facts, tested hypotheses, decision criteria, rejected alternatives, and verification; do not fabricate hidden reasoning or unsupported certainty.
+
+## Owned Files
+
+Use the repo's established ledger location, preferably `docs/dev/PITFALL_LEDGER.md`. Update `docs/dev/TODO.md`, `docs/dev/HISTORY.md`, or `summary_bank.json` only when the lesson creates unresolved prevention work, completed fix detail, or a high-risk routing need.
+
+## Overlap Boundaries
+
+- Use this skill for recurring mistakes and regression-prevention rules.
+- Use `backlog-surgeon` for active work items.
+- Use `repo-steward` for general project-state synchronization.
+- Use `repo-integrity-pass` for broad audits that may discover pitfalls as one output.
+- Do not store completed progress, current-state summaries, or broad review notes here.
+
 ## Workflow
 
 1. Identify recent pitfalls from diffs, test failures, logs, docs, runtime artifacts, and user reports.
-2. Write each pitfall in Q&A form using the required fields below.
-3. Score each solution with the effectiveness rubric.
-4. Run the relevance/rerank check.
-5. Update the pitfall ledger doc, `summary_bank.json`, and the integrity-pass workflow if the lesson should become part of routine review.
-6. Keep obsolete context only when it explains a retired path or a decision boundary. Mark it clearly as superseded.
+2. Reconstruct the observable developer story: starting context, symptom, competing hypotheses that were tested, evidence, turning point, decision, verification, and residual uncertainty.
+3. Write each pitfall in Q&A form using the required fields below.
+4. Score each solution with the effectiveness rubric.
+5. Run the relevance/rerank check.
+6. Update the pitfall ledger doc and context routing if the lesson should become part of routine review.
+7. Keep obsolete context only when it explains a retired path or a decision boundary. Mark it clearly as superseded.
 
 ## Required Q&A Shape
 
@@ -25,11 +40,15 @@ Use this structure for each entry:
 ```md
 ### Q: What pitfall are we preventing?
 **What:** One concrete failure mode.
+**Context and constraints:** Starting identity, intended outcome, and relevant safety/product constraints.
 **Why it happened:** Root cause, not just symptom.
 **Where:** Files, commands, docs, tests, runtime artifacts, or external dependency.
+**Evidence:** Exact observed outputs, comparisons, test failures, or artifacts.
+**Developer story:** Concise chronological narrative from symptom through turning point to decision.
 **How to catch it:** Test, log, visual check, command, assertion, or review step.
 **Solutions tried:** Short ranked list with outcome.
 **Current solution:** The active fix or mitigation.
+**Decision rationale:** Why the current solution won and which tempting alternative was rejected.
 **Effectiveness:** `NN/100`, label, and one-sentence rationale.
 **Relevance check:** Current, watch, superseded, or retired, with reason.
 **Next prevention step:** One small action if the score is below 90 or relevance is not current.
@@ -86,6 +105,10 @@ During an integrity pass:
 - Add summary-bank groups for high-risk issue clusters.
 - Remove duplication by linking to the pitfall ledger from project state docs instead of repeating long diagnostic history everywhere.
 - Keep TODO items action-oriented; do not bury unresolved prevention work inside the ledger.
+
+## When To Add An Entry
+
+Add or update an entry when the same mistake happens twice, docs claim behavior tests do not enforce, a mock/stub/gated surface is mistaken for shipped behavior, a route/command/schema/file-format contract drifts, a build/test/launcher/model issue recurs, or a large refactor risk needs a durable guard.
 
 ## Reference
 

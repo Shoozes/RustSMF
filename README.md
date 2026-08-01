@@ -45,8 +45,8 @@ See run.ps1 help, source/frontend/package.json, source/package.json (workspace),
 ## Known limits (intentional)
 - SMF export from edited pose or converted skinned: pos/rot only (no scale channel in DQ path). Scale edits block SMF export with status.
 - Non-SMF SMF export only for single shared named skeleton skinned, pos/quat bone tracks (no scale anim, no static, no multi-skel). Else GLB.
-- The explicit FBX action writes the current runtime root and clips as binary FBX 7500 through the vendored MIT FBXExporter-threejs writer. Before save, the app reparses the bytes and checks representative mesh, skin, bone, clip, and endpoint structure; complex third-party compatibility can still vary.
-- FBX load/export dispatch uses a self-authored static ASCII fixture, a generated static unit roundtrip, and a generated skinned GLB -> FBX -> app re-import browser roundtrip.
+- The explicit FBX action writes the current runtime root and clips as binary FBX 7500 through the vendored MIT FBXExporter-threejs writer. Before save, the app reparses the bytes and checks representative mesh, skin, bone, clip, and endpoint structure; typed index/layer arrays are also validated against Blender 5.0.0 output compatibility.
+- FBX load/export dispatch uses self-authored/static fixtures, a generated static unit roundtrip, a generated skinned GLB -> FBX -> app re-import browser roundtrip, and an independently authored Blender 5.0.0 textured/skinned/animated fixture with external app-output validation.
 - Compatible indexed GLB/FBX meshes are expanded to SMF triangle soup with aligned vertex and skin attributes before worker validation and serialization.
 - OBJ: load/preview parity only (static focus); export via GLB.
 - Native automation: deterministic Playwright Tauri IPC mocks + Rust cmd tests (real OS dialogs optional later via tauri-driver if needed).

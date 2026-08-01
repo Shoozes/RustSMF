@@ -555,8 +555,14 @@ switch -Exact ($NormalizedTask) {
         }
         if (Test-Path $SrcTauriDir) {
             Push-Location $SrcTauriDir
+            & cargo fmt --all -- --check 2>&1 | Out-String | Write-Host
+            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "cargo fmt check failed" }
+            & cargo clippy --all-targets -- -D warnings 2>&1 | Out-String | Write-Host
+            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "cargo clippy failed" }
+            & cargo test 2>&1 | Out-String | Write-Host
+            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "cargo test failed" }
             & cargo check 2>&1 | Out-String | Write-Host
-            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "cargo failed" }
+            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "cargo check failed" }
             Pop-Location
         }
         if ($ok) {
@@ -646,7 +652,7 @@ Tasks:
   dev           - Vite web dev (frontend only)
   compile       - production desktop build
   clean         - stop dev servers and remove generated build artifacts
-  verify        - lint coverage/lint/typecheck/build/chunk/unit/cargo checks
+  verify        - lint coverage/lint/typecheck/build/chunk/unit/Rust fmt+clippy+test+check
   context       - validate and test summary-bank routing
   test:unit     - frontend unit tests only
   test:e2e      - Playwright (optional GenEye advisory wrapper; use -NoGenEye for browser-only)

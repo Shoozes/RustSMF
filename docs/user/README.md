@@ -37,7 +37,7 @@ Both commands open the numbered launcher menu. Choose `2. Run if already install
 
 - GLB/GLTF is the preferred modern format for materials, textures, static meshes, morphs, object tracks, and scale animation.
 - SMF is preserved for compatibility. The current SMF export path does not encode scale edits, materials, morphs, or multiple skeletons.
-- FBX import is supported through Three.js. The explicit FBX action writes the current runtime root and clips through the vendored `FBXExporter-threejs` writer and rejects output that fails its pre-save re-import checks. Re-import complex assets in their target application to confirm application-specific compatibility.
+- FBX import is supported through Three.js. The explicit FBX action writes the current runtime root and clips through the vendored `FBXExporter-threejs` writer and rejects output that fails its pre-save re-import checks. A small independently authored Blender 5.0.0 skinned/textured/animated fixture is covered end to end, including reopening app output in Blender; other target applications may still differ.
 - OBJ support is load/preview focused; use GLB export for saved output.
 - Skin-weight paint authoring and animation keyframe authoring are available for supported paths, with format-specific export limits still enforced.
 

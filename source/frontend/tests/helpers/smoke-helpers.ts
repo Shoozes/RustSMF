@@ -17,6 +17,7 @@ const requireFixture = (relativePath: string): string => {
 
 export const SAMPLE_SMF = requireFixture('../mixamo_smf_baldguy.smf');
 export const SAMPLE_FBX = requireFixture('../test.fbx');
+export const SAMPLE_INDEPENDENT_FBX = requireFixture('../fixtures/independent-fbx/independent_skinned.fbx');
 export const SAMPLE_OBJ = requireFixture('../test.obj');
 export const BAD_INPUT_FOR_ERROR_TEST = requireFixture('../fixtures/invalid-model.gml');
 

@@ -109,13 +109,16 @@
         "source/frontend/src/vendor/FBXExporter.js",
         "source/frontend/src/vendor/FBXExporter.d.ts",
         "source/frontend/src/vendor/FBXExporter-threejs.LICENSE.txt",
-        "source/frontend/tests/helpers/skinned-glb-fixture.ts",
-        "source/frontend/tests/helpers/format-assertions.ts",
-        "source/frontend/tests/export-formats.spec.ts"
+        "source/frontend/tests/export-formats.spec.ts",
+        "source/frontend/tests/fixtures/independent-fbx/generate_fixture.py",
+        "source/frontend/tests/fixtures/independent-fbx/validate_fixture.py",
+        "docs/dev/fixtures/INDEPENDENT_FBX_PROVENANCE.md"
       ],
       "notes": [
         "The bundled exporter is the implementation authority.",
-        "Exported bytes must re-import and preserve representative mesh, skin, bone, and clip structure before save."
+        "Exported bytes must re-import and preserve representative mesh, skin, bone, and clip structure before save.",
+        "The independent Blender-authored fixture is test-only; Blender 5.0.0 validates both the source asset and app-exported output, but this does not claim universal FBX compatibility.",
+        "FBX texture parse waits on its isolated loader manager; unavailable maps fail safe before render."
       ]
     },
     "subsystem__smf_codec_worker": {
@@ -147,7 +150,6 @@
         "source/frontend/src/loaders/threeToSmf.ts",
         "source/frontend/src/loaders/threeToSmf.test.ts",
         "source/frontend/src/loaders/glb.ts",
-        "source/frontend/src/loaders/fbx.ts",
         "source/frontend/src/utils/materialPreview.ts",
         "source/frontend/src/utils/materialPreview.test.ts",
         "source/frontend/src/utils/materialPolicy.ts",
@@ -238,6 +240,7 @@
         "source/frontend/src/utils/skinWeights.test.ts",
         "source/frontend/src/utils/skinBrushIndex.ts",
         "source/frontend/src/utils/skinBrushIndex.test.ts",
+        "source/frontend/src/utils/skinnedVertexPosition.ts",
         "source/frontend/src/utils/skinPointOverlay.ts",
         "source/frontend/src/utils/skinPointOverlay.test.ts",
         "source/frontend/tests/helpers/viewport-interactions.ts",
@@ -258,8 +261,14 @@
         "source/frontend/src/loaders/smfRig.ts",
         "source/frontend/src/loaders/coord.ts",
         "source/frontend/src/loaders/coord.test.ts",
+        "source/frontend/src/loaders/smfBinary.test.ts",
         "source/frontend/src/loaders/smfDiagnostics.ts",
         "source/frontend/src/loaders/smfDiagnostics.test.ts"
+      ],
+      "notes": [
+        "The TypeScript codec is the full structural SMF authority; native validation reports header/offset acceptance only.",
+        "SMF limits are centralized in smfBinary.ts and must be changed with focused malformed-input tests and APP_STATE documentation.",
+        "Tangent handedness is normalized at import and byte-packed at export so the fourth tangent component is not silently discarded."
       ]
     },
     "subsystem__tauri_bridge": {
@@ -273,6 +282,10 @@
         "source/src-tauri/Cargo.toml",
         "source/src-tauri/tauri.conf.json",
         "source/src-tauri/capabilities/default.json"
+      ],
+      "notes": [
+        "Native file reads/writes are capped at 256 MiB and run through blocking-task adapters.",
+        "validate_smf is an envelope/header check; full structural validation remains in the TypeScript worker codec."
       ]
     },
     "tests__quality": {
@@ -287,6 +300,7 @@
         "source/frontend/tests/README.md",
         "source/frontend/tests/fixtures/invalid-model.gml",
         "source/frontend/tests/helpers/*.ts",
+        "source/frontend/scripts/run-unit-tests.mjs",
         "source/frontend/scripts/check-entry-chunks.mjs",
         "source/frontend/scripts/check-eslint-coverage.mjs",
         "source/frontend/scripts/check-production-any.mjs",
@@ -308,7 +322,43 @@
       ],
       "notes": [
         "The Playwright config owns one build-and-preview server for the full suite.",
-        "Test titles remain stable after the domain split."
+        "Test titles remain stable after the domain split.",
+        "The unit runner discovers every src/**/*.test.ts file in deterministic order; adding a file requires no package-script edit.",
+        "Managed Windows Chromium launch can use the process-local RUSTSMF_PLAYWRIGHT_EXECUTABLE override; the path must be absolute and existing."
+      ]
+    },
+    "issue__verification_current_head": {
+      "description": "Current-head verification evidence, authoritative gates, and environment-only browser blockers.",
+      "max_kb": 96,
+      "paths": [
+        "docs/dev/APP_STATE.md",
+        "docs/dev/TODO.md",
+        "docs/dev/review.md",
+        "docs/dev/HISTORY.md",
+        "run.ps1",
+        "source/package.json",
+        "source/frontend/scripts/run-unit-tests.mjs",
+        "source/frontend/tests/native.spec.ts",
+        "source/frontend/playwright.config.ts"
+      ],
+      "notes": [
+        "Current-head evidence is 55/55 browser cases, 2/2 strict visuals, canonical desktop-smoke green, and Blender 5.0.0 validation of app-exported FBX output.",
+        "Bundled Chromium still fails before app execution with spawn EPERM in the managed process; current evidence uses a process-local approved system-browser executable and keeps the environment caveat separate from product results."
+      ]
+    },
+    "issue__smf_resource_contract": {
+      "description": "SMF resource, allocation, offset, numeric, string, and fidelity boundaries across browser and native paths.",
+      "max_kb": 96,
+      "paths": [
+        "source/frontend/src/loaders/smf.ts",
+        "source/frontend/src/loaders/smfBinary.ts",
+        "source/frontend/src/loaders/smfBinary.test.ts",
+        "source/src-tauri/src/main.rs",
+        "source/src-tauri/src/smf_core.rs"
+      ],
+      "notes": [
+        "Keep limits broad enough for committed fixtures but fail closed before allocation or numeric coercion.",
+        "Any limit change requires focused malformed-input coverage and current-state documentation."
       ]
     },
     "tests__browser_authoring_formats": {

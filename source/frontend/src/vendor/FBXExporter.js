@@ -22,6 +22,10 @@ class Float { constructor( value ) { this.value = value; } }
 class Int32 { constructor( value ) { this.value = value; } }
 class FbxRaw { constructor( value ) { this.value = value; } }
 
+function int32Values( values ) {
+	return values.map( value => new Int32( value ) );
+}
+
 class FbxNode {
 	constructor( name ) {
 		this.name = name || '';
@@ -446,11 +450,11 @@ export class FBXExporter {
 		const vertices = Array.from( geometry.attributes.position.array ).map( v => new Double( v * scale ) );
 		let indices = geometry.index ? Array.from( geometry.index.array ) : Array.from( { length: geometry.attributes.position.count }, ( _, i ) => i );
 		indices = indices.map( ( i, idx ) => ( idx % 3 === 2 ? - ( i + 1 ) : i ) );
-		const node = new FbxNode( 'Geometry' ).addProperty( BigInt( geometryId ) ).addProperty( nameWithClass( mesh.name || 'Mesh', 'Geometry' ) ).addProperty( 'Mesh' ).addChild( new FbxNode( 'Vertices' ).addProperty( vertices ) ).addChild( new FbxNode( 'PolygonVertexIndex' ).addProperty( indices ) );
+		const node = new FbxNode( 'Geometry' ).addProperty( BigInt( geometryId ) ).addProperty( nameWithClass( mesh.name || 'Mesh', 'Geometry' ) ).addProperty( 'Mesh' ).addChild( new FbxNode( 'Vertices' ).addProperty( vertices ) ).addChild( new FbxNode( 'PolygonVertexIndex' ).addProperty( int32Values( indices ) ) );
 		if ( geometry.attributes.normal ) {
 			const normals = []; const src = geometry.attributes.normal.array;
 			for ( let i = 0; i < indices.length; i ++ ) { let idx = indices[ i ]; if ( idx < 0 ) idx = - idx - 1; normals.push( new Double( src[ idx * 3 ] ), new Double( src[ idx * 3 + 1 ] ), new Double( src[ idx * 3 + 2 ] ) ); }
-			node.addChild( new FbxNode( 'LayerElementNormal' ).addProperty( 0 ).addChild( new FbxNode( 'Version' ).addProperty( 101 ) ).addChild( new FbxNode( 'MappingInformationType' ).addProperty( 'ByPolygonVertex' ) ).addChild( new FbxNode( 'ReferenceInformationType' ).addProperty( 'Direct' ) ).addChild( new FbxNode( 'Normals' ).addProperty( normals ) ) );
+			node.addChild( new FbxNode( 'LayerElementNormal' ).addProperty( 0 ).addChild( new FbxNode( 'Version' ).addProperty( 101 ) ).addChild( new FbxNode( 'Name' ).addProperty( 'normal' ) ).addChild( new FbxNode( 'MappingInformationType' ).addProperty( 'ByPolygonVertex' ) ).addChild( new FbxNode( 'ReferenceInformationType' ).addProperty( 'Direct' ) ).addChild( new FbxNode( 'Normals' ).addProperty( normals ) ) );
 		}
 		if ( geometry.attributes.uv ) {
 			const uvs = []; const src = geometry.attributes.uv.array;
@@ -458,7 +462,7 @@ export class FBXExporter {
 			node.addChild( new FbxNode( 'LayerElementUV' ).addProperty( 0 ).addChild( new FbxNode( 'Version' ).addProperty( 101 ) ).addChild( new FbxNode( 'Name' ).addProperty( 'map1' ) ).addChild( new FbxNode( 'MappingInformationType' ).addProperty( 'ByPolygonVertex' ) ).addChild( new FbxNode( 'ReferenceInformationType' ).addProperty( 'Direct' ) ).addChild( new FbxNode( 'UV' ).addProperty( uvs ) ) );
 		}
 		const matIndices = new Array( Math.floor( indices.length / 3 ) ).fill( 0 );
-		node.addChild( new FbxNode( 'LayerElementMaterial' ).addProperty( 0 ).addChild( new FbxNode( 'Version' ).addProperty( 101 ) ).addChild( new FbxNode( 'MappingInformationType' ).addProperty( 'ByPolygon' ) ).addChild( new FbxNode( 'ReferenceInformationType' ).addProperty( 'IndexToDirect' ) ).addChild( new FbxNode( 'Materials' ).addProperty( matIndices ) ) );
+		node.addChild( new FbxNode( 'LayerElementMaterial' ).addProperty( 0 ).addChild( new FbxNode( 'Version' ).addProperty( 101 ) ).addChild( new FbxNode( 'Name' ).addProperty( 'Material' ) ).addChild( new FbxNode( 'MappingInformationType' ).addProperty( 'ByPolygon' ) ).addChild( new FbxNode( 'ReferenceInformationType' ).addProperty( 'IndexToDirect' ) ).addChild( new FbxNode( 'Materials' ).addProperty( int32Values( matIndices ) ) ) );
 		const layer = new FbxNode( 'Layer' ).addProperty( 0 ).addChild( new FbxNode( 'Version' ).addProperty( 100 ) );
 		if ( geometry.attributes.normal ) layer.addChild( new FbxNode( 'LayerElement' ).addChild( new FbxNode( 'Type' ).addProperty( 'LayerElementNormal' ) ).addChild( new FbxNode( 'TypedIndex' ).addProperty( 0 ) ) );
 		if ( geometry.attributes.uv ) layer.addChild( new FbxNode( 'LayerElement' ).addChild( new FbxNode( 'Type' ).addProperty( 'LayerElementUV' ) ).addChild( new FbxNode( 'TypedIndex' ).addProperty( 0 ) ) );
@@ -509,7 +513,7 @@ export class FBXExporter {
 				return e.map( v => new Double( v ) );
 			};
 
-			clusterNode.addChild( new FbxNode( 'Indexes' ).addProperty( boneIndices ) ).addChild( new FbxNode( 'Weights' ).addProperty( boneWeights.map( v => new Double( v ) ) ) );
+			clusterNode.addChild( new FbxNode( 'Indexes' ).addProperty( int32Values( boneIndices ) ) ).addChild( new FbxNode( 'Weights' ).addProperty( boneWeights.map( v => new Double( v ) ) ) );
 			clusterNode.addChild( new FbxNode( 'Transform' ).addProperty( writeM( meshBind ) ) );
 			clusterNode.addChild( new FbxNode( 'TransformLink' ).addProperty( writeM( transformLink ) ) );
 			clusterNode.addChild( new FbxNode( 'LinkMode' ).addProperty( 'Normalize' ) );
@@ -580,7 +584,7 @@ export class FBXExporter {
 				[ 'X', 'Y', 'Z' ].forEach( ( axis, axIdx ) => {
 					const curveId = generateId();
 					const val = data.filter( ( _, i ) => i % 3 === axIdx ).map( v => new Float( v ) );
-					animNodes.push( new FbxNode( 'AnimationCurve' ).addProperty( BigInt( curveId ) ).addProperty( nameWithClass( '', 'AnimCurve' ) ).addProperty( '' ).addChild( new FbxNode( 'KeyTime' ).addProperty( times ) ).addChild( new FbxNode( 'KeyValueFloat' ).addProperty( val ) ).addChild( new FbxNode( 'KeyAttrFlags' ).addProperty( new Array( times.length ).fill( 256 ) ) ).addChild( new FbxNode( 'KeyAttrDataFloat' ).addProperty( new Array( times.length * 4 ).fill( new Float( 0 ) ) ) ).addChild( new FbxNode( 'KeyAttrRefCount' ).addProperty( new Array( times.length ).fill( 1 ) ) ) );
+					animNodes.push( new FbxNode( 'AnimationCurve' ).addProperty( BigInt( curveId ) ).addProperty( nameWithClass( '', 'AnimCurve' ) ).addProperty( '' ).addChild( new FbxNode( 'KeyTime' ).addProperty( times ) ).addChild( new FbxNode( 'KeyValueFloat' ).addProperty( val ) ).addChild( new FbxNode( 'KeyAttrFlags' ).addProperty( int32Values( new Array( times.length ).fill( 256 ) ) ) ).addChild( new FbxNode( 'KeyAttrDataFloat' ).addProperty( new Array( times.length * 4 ).fill( new Float( 0 ) ) ) ).addChild( new FbxNode( 'KeyAttrRefCount' ).addProperty( int32Values( new Array( times.length ).fill( 1 ) ) ) ) );
 					animConnections.push( new FbxNode( 'C' ).addProperty( 'OP' ).addProperty( BigInt( curveId ) ).addProperty( BigInt( curveNodeId ) ).addProperty( `d|${axis}` ) );
 				} );
 			} );

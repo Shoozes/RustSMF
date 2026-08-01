@@ -181,14 +181,20 @@ export function createAnimationAuthoringController(
       currentTime: playbackRef.current.currentTime,
     };
     const label = `${direction < 0 ? 'move up' : 'move down'} animation clip ${currentClipName}`;
+    if (!applyWorkspaceSnapshot(after)) return;
     pushAnimationWorkspaceHistory(label, before, after);
-    applyAnimationWorkspaceSnapshot(after);
     setStatus(`Moved animation clip ${currentClipName} ${direction < 0 ? 'up' : 'down'}.`);
   };
 
   const snapPlaybackTime = (time: number): number => (
     snapAnimationTime(time, animationSnapStep, playbackRef.current.duration || 0)
   );
+
+  const applyWorkspaceSnapshot = (snapshot: AnimationWorkspaceHistorySnapshot): boolean => {
+    if (applyAnimationWorkspaceSnapshot(snapshot)) return true;
+    setStatus('Animation workspace update was skipped because no usable clip remained.');
+    return false;
+  };
 
   const controller: AnimationAuthoringController = {
     renameCurrentAnimationClip(requestedName) {
@@ -218,8 +224,8 @@ export function createAnimationAuthoringController(
         currentClipName: nextName,
         currentTime: playbackRef.current.currentTime,
       };
+      if (!applyWorkspaceSnapshot(after)) return;
       pushAnimationWorkspaceHistory(`rename animation clip ${currentClipName} to ${nextName}`, before, after);
-      applyAnimationWorkspaceSnapshot(after);
       setStatus(`Renamed animation clip ${currentClipName} to ${nextName}.`);
     },
 
@@ -249,8 +255,8 @@ export function createAnimationAuthoringController(
         currentClipName: nextName,
         currentTime: playbackRef.current.currentTime,
       };
+      if (!applyWorkspaceSnapshot(after)) return;
       pushAnimationWorkspaceHistory(`duplicate animation clip ${currentClipName}`, before, after);
-      applyAnimationWorkspaceSnapshot(after);
       setStatus(`Duplicated animation clip ${currentClipName} as ${nextName}.`);
     },
 
@@ -282,8 +288,8 @@ export function createAnimationAuthoringController(
         currentClipName: fallbackClipName,
         currentTime: playbackRef.current.currentTime,
       };
+      if (!applyWorkspaceSnapshot(after)) return;
       pushAnimationWorkspaceHistory(`delete animation clip ${currentClipName}`, before, after);
-      applyAnimationWorkspaceSnapshot(after);
       setStatus(`Deleted animation clip ${currentClipName}.`);
     },
 

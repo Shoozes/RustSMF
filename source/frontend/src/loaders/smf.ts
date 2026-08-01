@@ -8,7 +8,14 @@ import {
   smfMatrixToThree,
   decomposeMatrix,
 } from './coord';
-import { bytesToArrayBuffer, BinaryReader, BinaryWriter } from './smfBinary';
+import {
+  bytesToArrayBuffer,
+  BinaryReader,
+  BinaryWriter,
+  checkedAdd,
+  checkedMultiply,
+  SMF_LIMITS,
+} from './smfBinary';
 import { buildSmfNodeList, buildRigHierarchy, findEffectiveBoneParentIndex } from './smfRig';
 
 /**
@@ -94,33 +101,62 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
   const offRig = reader.u32();
   const offAnim = reader.u32();
 
+  const headerEnd = reader.off;
+  const offsets = [offTex, offModel, offRig, offAnim];
+  if (offsets.some((offset) => offset < headerEnd || offset > buffer.byteLength)) {
+    throw new Error('Invalid SMF binary: section offset is outside the input');
+  }
+  if (!(offTex < offModel && offModel < offRig && offRig < offAnim)) {
+    throw new Error('Invalid SMF binary: section offsets are not strictly ordered');
+  }
+
   // TEXTURES
-  reader.off = offTex;
+  reader.seek(offTex, 'textures').setLimit(offModel, 'textures');
   const texCount = reader.u8();
+  if (texCount > SMF_LIMITS.maxTextures) {
+    throw new Error(`Invalid SMF binary: texture count ${texCount} exceeds ${SMF_LIMITS.maxTextures}`);
+  }
   const textures: ImportedSmf['textures'] = [];
+  let texturePixels = 0;
   for (let i = 0; i < texCount; i++) {
     const name = reader.strZ();
     const w = reader.u16();
     const h = reader.u16();
-    const size = w * h * 4;
-    const pixels = new Uint8Array(size);
-    pixels.set(new Uint8Array(buffer, reader.off, size));
-    reader.off += size;
+    if (w < 1 || w > SMF_LIMITS.maxTextureWidth || h < 1 || h > SMF_LIMITS.maxTextureHeight) {
+      throw new Error(`Invalid SMF binary: texture ${i} dimensions ${w}x${h} exceed limits`);
+    }
+    const size = checkedMultiply(checkedMultiply(w, h, `texture ${i} pixels`), 4, `texture ${i} RGBA bytes`);
+    texturePixels = checkedAdd(texturePixels, size, 'texture pixel budget');
+    if (texturePixels > SMF_LIMITS.maxTexturePixels * 4) {
+      throw new Error(`Invalid SMF binary: texture pixel budget exceeds ${SMF_LIMITS.maxTexturePixels} pixels`);
+    }
+    const pixels = reader.bytes(size, `texture ${i} pixels`);
     textures.push({ name, width: w, height: h, pixels });
     report('textures', 4 + (11 * (i + 1)) / Math.max(1, texCount));
   }
   report('textures', 15);
 
   // MODEL
-  reader.off = offModel;
+  reader.seek(offModel, 'models').setLimit(offRig, 'models');
   const modelCount = reader.u8();
+  if (modelCount > SMF_LIMITS.maxMeshes) {
+    throw new Error(`Invalid SMF binary: mesh count ${modelCount} exceeds ${SMF_LIMITS.maxMeshes}`);
+  }
   const meshes: ImportedSmf['meshes'] = [];
   const texNameToIdx = new Map(textures.map((t, i) => [t.name, i]));
+  let totalMeshVertices = 0;
 
   for (let i = 0; i < modelCount; i++) {
     const bytes = reader.u32();
+    if (bytes % 44 !== 0) throw new Error('Invalid vertex bytes');
     const verts = bytes / 44;
-    if (!Number.isInteger(verts)) throw new Error('Invalid vertex bytes');
+    if (verts > SMF_LIMITS.maxMeshVertices || bytes > reader.remaining) {
+      throw new Error(`Invalid SMF binary: mesh ${i} vertex payload exceeds limits`);
+    }
+    totalMeshVertices = checkedAdd(totalMeshVertices, verts, 'mesh vertex budget');
+    if (totalMeshVertices > SMF_LIMITS.maxMeshVertices) {
+      throw new Error(`Invalid SMF binary: total mesh vertices exceed ${SMF_LIMITS.maxMeshVertices}`);
+    }
 
     const positions = new Float32Array(verts * 3);
     const normals = new Float32Array(verts * 3);
@@ -145,7 +181,7 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
       tangents[v*4+0] = (reader.u8() / 127) - 1;
       tangents[v*4+1] = (reader.u8() / 127) - 1;
       tangents[v*4+2] = (reader.u8() / 127) - 1;
-      tangents[v*4+3] = reader.u8();
+      tangents[v*4+3] = (reader.u8() / 127) - 1;
 
       for (let j = 0; j < 4; j++) skinIndices[v*4 + j] = reader.u8();
       for (let j = 0; j < 4; j++) skinWeights[v*4 + j] = reader.u8() / 255;
@@ -178,8 +214,11 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
   report('meshes', 60);
 
   // RIG (bones)
-  reader.off = offRig;
+  reader.seek(offRig, 'rig').setLimit(offAnim, 'rig');
   const nodeCount = reader.u32();
+  if (nodeCount > SMF_LIMITS.maxRigNodes) {
+    throw new Error(`Invalid SMF binary: rig node count ${nodeCount} exceeds ${SMF_LIMITS.maxRigNodes}`);
+  }
   const bones: ImportedSmf['bones'] = [];
   for (let i = 0; i < nodeCount; i++) {
     let dq: Float32Buffer = new Float32Array(8);
@@ -191,32 +230,53 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
       reader.u8(); // locked (ignored)
     }
     const axis = [reader.f32(), reader.f32(), reader.f32()];
+    if (parent >= nodeCount) {
+      throw new Error(`Invalid SMF binary: rig node ${i} has parent ${parent} outside the rig`);
+    }
+    if (isBone !== 0 && isBone !== 1) {
+      throw new Error(`Invalid SMF binary: rig node ${i} has invalid isBone flag ${isBone}`);
+    }
     bones.push({ index: i, parent, isBone, dq, axis });
     report('rig', 60 + 10 * (i + 1) / Math.max(1, nodeCount));
   }
   report('rig', 70);
 
   // ANIM
-  reader.off = offAnim;
+  reader.seek(offAnim, 'animations').clearLimit();
   const animCount = reader.u8();
+  if (animCount > SMF_LIMITS.maxAnimations) {
+    throw new Error(`Invalid SMF binary: animation count ${animCount} exceeds ${SMF_LIMITS.maxAnimations}`);
+  }
   const animations: ImportedSmf['animations'] = [];
   for (let i = 0; i < animCount; i++) {
     const name = reader.strZ();
     const loop = reader.u8();
     const duration = reader.f32() / 1000;
+    if (duration < 0) throw new Error(`Invalid SMF binary: animation ${i} has a negative duration`);
     const interp = reader.u8();
     const mult = reader.u8();
     const lockedBones: number[] = [];
     if (isV12) {
       const locked = reader.u16();
+      if (locked > nodeCount) throw new Error(`Invalid SMF binary: animation ${i} locks too many nodes`);
       for (let l = 0; l < locked; l++) lockedBones.push(reader.u16());
     }
     const frameCount = reader.u32();
+    if (frameCount > SMF_LIMITS.maxAnimationFrames) {
+      throw new Error(`Invalid SMF binary: animation ${i} has too many frames`);
+    }
+    const frameDqCount = checkedMultiply(frameCount, nodeCount, `animation ${i} frame DQ count`);
+    if (frameDqCount > SMF_LIMITS.maxAnimationFrameDqs) {
+      throw new Error(`Invalid SMF binary: animation ${i} frame DQ budget exceeds ${SMF_LIMITS.maxAnimationFrameDqs}`);
+    }
 
     const times: number[] = [];
     const frames: Float32Buffer[][] = [];
     for (let f = 0; f < frameCount; f++) {
       const normTime = reader.f32();
+      if (normTime < 0 || normTime > 1) {
+        throw new Error(`Invalid SMF binary: animation ${i} frame ${f} has normalized time ${normTime}`);
+      }
       times.push(normTime * duration);
       const frameDqs: Float32Buffer[] = [];
       for (let n = 0; n < nodeCount; n++) {
@@ -237,6 +297,21 @@ export function importSMF(buffer: ArrayBuffer, onProgress?: SmfCodecProgressHand
 
 function isValidParent(parent: number, index: number, count: number): boolean {
   return parent >= 0 && parent < count && parent !== index;
+}
+
+function validateAnimationFrame(
+  nodeList: Array<{ boneIndex: number }>,
+  frame: Float32Buffer[] | undefined,
+  animationIndex: number,
+  frameIndex: number,
+): void {
+  if (!frame) throw new Error(`Cannot export SMF: animation ${animationIndex} frame ${frameIndex} is missing`);
+  nodeList.forEach((node) => {
+    const dq = frame[node.boneIndex];
+    if (!dq || dq.length < 8) {
+      throw new Error(`Cannot export SMF: animation ${animationIndex} frame ${frameIndex} is missing node ${node.boneIndex}`);
+    }
+  });
 }
 
 function dqToThreeMatrix(dq: Float32Buffer): THREE.Matrix4 {
@@ -423,8 +498,104 @@ export function exportSMFToBuffer(
   report('header', 0);
   const { meshes, textures, bones: importedBones, animations } = imported;
 
-  // Build nodeList via the extracted rig helper while preserving export behavior and public API.
+  if (textures.length > SMF_LIMITS.maxTextures) {
+    throw new Error(`Cannot export SMF: texture count exceeds ${SMF_LIMITS.maxTextures}`);
+  }
+  if (meshes.length > SMF_LIMITS.maxMeshes) {
+    throw new Error(`Cannot export SMF: mesh count exceeds ${SMF_LIMITS.maxMeshes}`);
+  }
+  if (importedBones.length > SMF_LIMITS.maxRigNodes) {
+    throw new Error(`Cannot export SMF: rig node count exceeds ${SMF_LIMITS.maxRigNodes}`);
+  }
+  if (animations.length > SMF_LIMITS.maxAnimations) {
+    throw new Error(`Cannot export SMF: animation count exceeds ${SMF_LIMITS.maxAnimations}`);
+  }
+
+  let totalTexturePixels = 0;
+  textures.forEach((texture, index) => {
+    if (!Number.isInteger(texture.width) || !Number.isInteger(texture.height)
+      || texture.width < 1 || texture.width > SMF_LIMITS.maxTextureWidth
+      || texture.height < 1 || texture.height > SMF_LIMITS.maxTextureHeight) {
+      throw new Error(`Cannot export SMF: texture ${index} dimensions are outside the supported limits`);
+    }
+    const expectedSize = checkedMultiply(
+      checkedMultiply(texture.width, texture.height, `texture ${index} pixels`),
+      4,
+      `texture ${index} RGBA bytes`,
+    );
+    if (texture.pixels.length !== expectedSize) {
+      throw new Error(`Texture ${texture.name || index} has ${texture.pixels.length} RGBA bytes; expected ${expectedSize}.`);
+    }
+    totalTexturePixels = checkedAdd(totalTexturePixels, texture.width * texture.height, 'texture pixel budget');
+  });
+  if (totalTexturePixels > SMF_LIMITS.maxTexturePixels) {
+    throw new Error(`Cannot export SMF: texture pixel budget exceeds ${SMF_LIMITS.maxTexturePixels} pixels`);
+  }
+
+  // Build the node list before validating animation frames because export
+  // remaps source bones through this exact list.
   const { nodeList } = buildSmfNodeList(importedBones);
+  if (nodeList.length > SMF_LIMITS.maxRigNodes) {
+    throw new Error(`Cannot export SMF: generated rig node count exceeds ${SMF_LIMITS.maxRigNodes}`);
+  }
+
+  let totalMeshVertices = 0;
+  meshes.forEach((mesh, meshIndex) => {
+    const vcount = mesh.positions.length / 3;
+    if (!Number.isInteger(vcount) || vcount < 3 || vcount > SMF_LIMITS.maxMeshVertices || vcount % 3 !== 0) {
+      throw new Error(`Cannot export SMF: mesh ${meshIndex} must contain a triangle-aligned vertex count`);
+    }
+    if (mesh.verts !== vcount) throw new Error(`Cannot export SMF: mesh ${meshIndex} vertex metadata is stale`);
+    const requiredLengths = [
+      ['normals', mesh.normals.length, vcount * 3],
+      ['uvs', mesh.uvs.length, vcount * 2],
+      ['tangents', mesh.tangents.length, vcount * 4],
+      ['skinIndices', mesh.skinIndices.length, vcount * 4],
+      ['skinWeights', mesh.skinWeights.length, vcount * 4],
+    ] as const;
+    for (const [label, actual, expected] of requiredLengths) {
+      if (actual !== expected) throw new Error(`Cannot export SMF: mesh ${meshIndex} ${label} length is ${actual}; expected ${expected}`);
+    }
+    if (mesh.texIdx < -1 || mesh.texIdx >= textures.length) {
+      throw new Error(`Cannot export SMF: mesh ${meshIndex} references texture ${mesh.texIdx}`);
+    }
+    totalMeshVertices = checkedAdd(totalMeshVertices, vcount, 'mesh vertex budget');
+    for (let i = 0; i < mesh.skinIndices.length; i += 1) {
+      if (!Number.isInteger(mesh.skinIndices[i]) || mesh.skinIndices[i] < 0 || mesh.skinIndices[i] > 0xff) {
+        throw new Error(`Cannot export SMF: mesh ${meshIndex} skin index ${i} is outside the SMF byte range`);
+      }
+    }
+    for (let i = 0; i < mesh.skinWeights.length; i += 1) {
+      if (!Number.isFinite(mesh.skinWeights[i]) || mesh.skinWeights[i] < 0 || mesh.skinWeights[i] > 1) {
+        throw new Error(`Cannot export SMF: mesh ${meshIndex} skin weight ${i} is outside 0..1`);
+      }
+    }
+  });
+  if (totalMeshVertices > SMF_LIMITS.maxMeshVertices) {
+    throw new Error(`Cannot export SMF: total mesh vertices exceed ${SMF_LIMITS.maxMeshVertices}`);
+  }
+
+  animations.forEach((animation, animationIndex) => {
+    if (!Number.isFinite(animation.duration) || animation.duration < 0) {
+      throw new Error(`Cannot export SMF: animation ${animationIndex} has an invalid duration`);
+    }
+    if (animation.times.length !== animation.frames.length || animation.times.length > SMF_LIMITS.maxAnimationFrames) {
+      throw new Error(`Cannot export SMF: animation ${animationIndex} has mismatched or excessive frame data`);
+    }
+    if (checkedMultiply(animation.times.length, importedBones.length, `animation ${animationIndex} frame DQ count`) > SMF_LIMITS.maxAnimationFrameDqs) {
+      throw new Error(`Cannot export SMF: animation ${animationIndex} frame DQ budget is too large`);
+    }
+    if ((animation.lockedBones?.length || 0) > 0xffff) {
+      throw new Error(`Cannot export SMF: animation ${animationIndex} has too many locked bones`);
+    }
+    animation.times.forEach((time, frameIndex) => {
+      if (!Number.isFinite(time) || time < 0 || (animation.duration === 0 && time !== 0) || (animation.duration > 0 && time > animation.duration)) {
+        throw new Error(`Cannot export SMF: animation ${animationIndex} frame ${frameIndex} has an invalid time`);
+      }
+      const frame = animation.frames[frameIndex];
+      validateAnimationFrame(nodeList, frame, animationIndex, frameIndex);
+    });
+  });
 
   const versionString = 'SMF_v12_by_Snidr_and_Bart';
   const headerSize = versionString.length + 1 + 5 * 4;
@@ -433,38 +604,58 @@ export function exportSMFToBuffer(
   let texSize = 1;
   textures.forEach((t, i) => {
     const nm = `texture${i}`;
-    texSize += nm.length + 1 + 2 + 2 + (t.width * t.height * 4);
+    const entrySize = checkedAdd(
+      checkedAdd(nm.length + 1 + 2 + 2, checkedMultiply(checkedMultiply(t.width, t.height, `texture ${i} pixels`), 4, `texture ${i} RGBA bytes`), `texture ${i} entry`),
+      0,
+      `texture ${i} entry`,
+    );
+    texSize = checkedAdd(texSize, entrySize, 'texture section size');
   });
 
   // Model size (use flat data, verts from first attr or triangles)
   let modelSize = 1;
   meshes.forEach(m => {
     const vcount = m.positions.length / 3;
-    modelSize += 4 + vcount * 44 + 1 + (m.texIdx >= 0 ? (`texture${m.texIdx}`).length + 1 : 1) + 1;
+    const nameSize = m.texIdx >= 0 ? `texture${m.texIdx}`.length + 1 : 1;
+    modelSize = checkedAdd(modelSize, checkedAdd(4 + checkedMultiply(vcount, 44, 'mesh vertex bytes') + 1 + nameSize + 1, 0, 'mesh entry size'), 'model section size');
   });
 
   const rigStride = 8 * 4 + 4 + 1 + 3 * 4;
-  const rigSize = 4 + nodeList.length * rigStride;
+  const rigSize = checkedAdd(4, checkedMultiply(nodeList.length, rigStride, 'rig section size'), 'rig section size');
 
   let animSize = 1;
   animations.forEach(a => {
     const perFrame = 4 + nodeList.length * 8 * 4;
     const lbsLen = (a.lockedBones?.length || 0) * 2;
     // loop u8 + dur f32 + interp u8 + mult u8 + locked u16 count + locked list + frameCount u32
-    animSize += (a.name.length + 1) + (1 + 4 + 1 + 1 + 2 + lbsLen + 4) + a.times.length * perFrame;
+    animSize = checkedAdd(
+      animSize,
+      checkedAdd(
+        checkedAdd(a.name.length + 1, 1 + 4 + 1 + 1 + 2 + lbsLen + 4, 'animation entry header'),
+        checkedMultiply(a.times.length, perFrame, 'animation frame bytes'),
+        'animation entry size',
+      ),
+      'animation section size',
+    );
   });
 
+  const totalSize = [headerSize, texSize, modelSize, rigSize, animSize]
+    .reduce((sum, size) => checkedAdd(sum, size, 'SMF output size'), 0);
+  if (totalSize > SMF_LIMITS.maxOutputBytes) {
+    throw new Error(`Cannot export SMF: output exceeds ${SMF_LIMITS.maxOutputBytes} bytes`);
+  }
+
   // Header
-  const hW = new BinaryWriter(headerSize, 'header');
+  const hW = new BinaryWriter(Math.min(headerSize, 1024 * 1024), 'header');
   hW.strZ(versionString).u32(0).u32(0).u32(0).u32(0).u32(0);
   report('header', 5);
 
   // Textures
-  const tW = new BinaryWriter(texSize, 'textures');
+  const tW = new BinaryWriter(Math.min(texSize, 1024 * 1024), 'textures');
   tW.u8(textures.length);
   textures.forEach((t, i) => {
     const nm = `texture${i}`;
-    const expectedSize = t.width * t.height * 4;
+    const expectedSize = checkedMultiply(checkedMultiply(t.width, t.height, `texture ${i} pixels`), 4, `texture ${i} RGBA bytes`);
     if (t.pixels.length !== expectedSize) {
       throw new Error(`Texture ${t.name || i} has ${t.pixels.length} RGBA bytes; expected ${expectedSize}.`);
     }
@@ -475,7 +666,7 @@ export function exportSMFToBuffer(
   report('textures', 15);
 
   // Models (reverse the import transforms)
-  const mW = new BinaryWriter(modelSize, 'models');
+  const mW = new BinaryWriter(Math.min(modelSize, 1024 * 1024), 'models');
   mW.u8(meshes.length);
 
   meshes.forEach((m, meshIndex) => {
@@ -495,9 +686,9 @@ export function exportSMFToBuffer(
       mW.f32(m.uvs[v*2]).f32(m.uvs[v*2+1]);
 
       // Tangent pack (reverse)
-      const tx = m.tangents[v*4], ty = m.tangents[v*4+1], tz = m.tangents[v*4+2];
+      const tx = m.tangents[v*4], ty = m.tangents[v*4+1], tz = m.tangents[v*4+2], tw = m.tangents[v*4+3];
       const pack = (f: number) => Math.round((f + 1) * 127);
-      mW.u8(pack(tx)).u8(pack(ty)).u8(pack(tz)).u8(0);
+      mW.u8(pack(tx)).u8(pack(ty)).u8(pack(tz)).u8(pack(tw));
 
       // SMF skin indices use deform-bone order, not full node IDs. Head nodes do not consume an index.
       for (let j = 0; j < 4; j++) {
@@ -519,7 +710,7 @@ export function exportSMFToBuffer(
   report('meshes', 55);
 
   // Rig (use dqs from imported, with proper export prep)
-  const rW = new BinaryWriter(rigSize, 'rig');
+  const rW = new BinaryWriter(Math.min(rigSize, 1024 * 1024), 'rig');
   rW.u32(nodeList.length);
 
   nodeList.forEach((n, nodeIndex) => {
@@ -543,7 +734,7 @@ export function exportSMFToBuffer(
   report('rig', 70);
 
   // Anim (use frames dqs directly, with flip)
-  const aW = new BinaryWriter(animSize, 'anim');
+  const aW = new BinaryWriter(Math.min(animSize, 1024 * 1024), 'anim');
   aW.u8(animations.length);
 
   const buildDQForExport = (dq: Float32Array, prev: Float32Array | null) => {

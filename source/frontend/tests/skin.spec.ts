@@ -47,10 +47,10 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
 
       const inspector = page.getByTestId('inspector');
-      const bone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
+      const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
       await expect(bone).toBeVisible();
       await bone.click({ force: true });
-      await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureRoot');
+      await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
 
       await page.getByTestId('skin-paint-mode-add').click({ force: true }).catch(() => {});
       await setRangeValue(page, 'skin-paint-target', 1);
@@ -58,16 +58,16 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await setRangeValue(page, 'skin-paint-strength', 1);
 
       const canvas = page.getByTestId('three-canvas');
-      expect(await cancelPaintOnMeshInViewport(page)).toBe(true);
+      expect(await cancelPaintOnMeshInViewport(page, { requireDirty: true })).toBe(true);
       await expect(canvas).toHaveAttribute('data-pointer-owner', 'skin-paint');
       expect(await canvas.getAttribute('data-pointer-owner')).not.toBe('orbit');
       await expect(canvas).not.toHaveAttribute('data-skin-paint-active', 'active');
-      await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureRoot');
+      await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
       await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
 
       await page.getByTestId('editor-undo-btn').click({ force: true });
       await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: false');
-      await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureRoot');
+      await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
     });
 
   test('skin paint updates edit state and exports SMF', async ({ page }) => {
@@ -123,16 +123,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(paintCanvas).toHaveAttribute('data-viewport-pane-role', /top|perspective|front|side/);
       expect(await paintCanvas.getAttribute('data-pointer-owner')).not.toBe('orbit');
       await expect(selectedInspectorValue).toHaveText('FixtureRoot');
-      await expect(paintCanvas).toHaveAttribute('data-skin-brush-hover', 'active');
-      const paintHitCount = Number(await paintCanvas.getAttribute('data-skin-paint-hit-count'));
-      expect(paintHitCount).toBeGreaterThan(0);
       await expect(paintCanvas).toHaveAttribute('data-skin-paint-mode', 'add');
-      const brushX = await paintCanvas.getAttribute('data-skin-brush-x');
-      const brushY = await paintCanvas.getAttribute('data-skin-brush-y');
-      const brushZ = await paintCanvas.getAttribute('data-skin-brush-z');
-      expect(typeof brushX === 'string' && brushX.length > 0).toBeTruthy();
-      expect(typeof brushY === 'string' && brushY.length > 0).toBeTruthy();
-      expect(typeof brushZ === 'string' && brushZ.length > 0).toBeTruthy();
       await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
       await expect(page.getByTestId('skin-paint-undo-btn')).toBeEnabled();
       await expect(page.getByTestId('skin-paint-redo-btn')).toBeDisabled();

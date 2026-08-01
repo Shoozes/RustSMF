@@ -9,10 +9,10 @@ import {
   pausePlaybackIfRunning,
   simulateGetSmfDesktopInfo,
   setupBrowserDiagnostics,
-  type SmfDesktopInfo,
   updateTauriMock,
 } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
+import { cancelPaintOnMeshInViewport } from './helpers/viewport-interactions';
 
 function readSampleBytes(samplePath: string | null): number[] {
   if (!samplePath) return [];
@@ -28,61 +28,31 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     test.setTimeout(90000);
 
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
-    const desktopInfo = simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes));
-    const expectedDesktopInfo: SmfDesktopInfo = {
-      valid: desktopInfo.valid,
-      version: desktopInfo.version,
-      size: desktopInfo.size,
-      off_tex: desktopInfo.off_tex,
-      off_model: desktopInfo.off_model,
-      off_rig: desktopInfo.off_rig,
-      off_anim: desktopInfo.off_anim,
-      model_count: desktopInfo.model_count,
-      rig_bone_count: desktopInfo.rig_bone_count,
-      anim_clip_count: desktopInfo.anim_clip_count,
-      error: desktopInfo.error,
-    };
     const savePath = 'C:\\tmp\\exported_model.smf';
 
     await installTauriMock(page, {
       openPath: SAMPLE_SMF,
       savePath,
       sampleBytes,
-      desktopInfo,
+      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes)),
     });
 
     await page.goto('/');
     await page.getByTestId('open-model-btn').click();
 
-    await expect(page.getByTestId('status-text')).toContainText(/Rust validated SMF|Loaded/i, { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded:/i, { timeout: 15000 });
     await pausePlaybackIfRunning(page);
 
     let snapshot = await getTauriMockSnapshot(page);
-    const desktopInfoCall = snapshot.calls.find((call) => call.cmd === 'get_smf_desktop_info');
-    expect(desktopInfoCall).toBeDefined();
-    expect((desktopInfoCall?.args as Record<string, unknown>)?.path).toBe(SAMPLE_SMF);
     expect(snapshot.calls.map((call) => call.cmd)).toEqual(
       expect.arrayContaining([
         'plugin:dialog|open',
-        'get_smf_desktop_info',
         'read_file_binary',
       ]),
     );
-    expect(expectedDesktopInfo.valid).toBe(true);
-    expect(expectedDesktopInfo.version).toMatch(/^SMF_v\d+_by_Snidr_and_Bart$/);
-    expect(expectedDesktopInfo.off_tex).toBeGreaterThan(0);
-    expect(expectedDesktopInfo.off_model).toBeGreaterThan(expectedDesktopInfo.off_tex);
-    expect(expectedDesktopInfo.off_rig).toBeGreaterThan(expectedDesktopInfo.off_model);
-    expect(expectedDesktopInfo.off_anim).toBeGreaterThan(expectedDesktopInfo.off_rig);
-    if (expectedDesktopInfo.model_count !== undefined) {
-      await expect(page.getByTestId('status-text')).toContainText(`model ~${expectedDesktopInfo.model_count}`);
-    }
-    if (expectedDesktopInfo.rig_bone_count !== undefined) {
-      await expect(page.getByTestId('status-text')).toContainText(`rig ~${expectedDesktopInfo.rig_bone_count}`);
-    }
-    if (expectedDesktopInfo.anim_clip_count !== undefined) {
-      await expect(page.getByTestId('status-text')).toContainText(`anim ~${expectedDesktopInfo.anim_clip_count}`);
-    }
+    expect(snapshot.calls.filter((call) => call.cmd === 'read_file_binary')).toHaveLength(1);
+    expect(snapshot.calls.find((call) => call.cmd === 'get_smf_desktop_info')).toBeUndefined();
+    expect(snapshot.calls.find((call) => call.cmd === 'read_file_binary')?.args).toMatchObject({ path: SAMPLE_SMF });
 
     await page.getByTestId('export-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
@@ -246,7 +216,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
 
     await page.goto('/');
     await page.getByTestId('open-model-btn').click();
-    await expect(page.getByTestId('status-text')).toContainText(/Rust validated SMF|Loaded/i, { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded:/i, { timeout: 15000 });
 
     const input = page.getByTestId('model-file-input');
     let writeCallCount = 0;
@@ -324,7 +294,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await page.goto('/');
     await page.getByTestId('open-model-btn').click();
 
-    await expect(page.getByTestId('status-text')).toContainText(/Rust validated SMF|Loaded/i, { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded:/i, { timeout: 15000 });
     await pausePlaybackIfRunning(page);
 
     const exportButton = page.getByTestId('export-btn');
@@ -400,10 +370,10 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await page.getByTestId('mode-tab-skin').click({ force: true });
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
     const inspector = page.getByTestId('inspector');
-    const bone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
+    const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
     await expect(bone).toBeVisible();
     await bone.click({ force: true });
-    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureRoot/i);
+    await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
 
     await page.getByTestId('skin-paint-mode-add').click({ force: true }).catch(() => {});
     await page.getByTestId('skin-paint-target').fill('1');
@@ -416,16 +386,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     const canvas = page.getByTestId('three-canvas');
     const rootId = await canvas.getAttribute('data-model-root-id');
     expect(rootId).toBeTruthy();
-    const box = await canvas.boundingBox();
-    if (box) {
-      const x = box.x + box.width / 2;
-      const y = box.y + box.height / 2;
-      await page.mouse.move(x, y);
-      await page.mouse.down({ button: 'left' });
-      await page.mouse.move(x + 28, y + 24);
-      await page.waitForTimeout(60);
-      await page.mouse.up({ button: 'left' });
-    }
+    expect(await cancelPaintOnMeshInViewport(page, { requireDirty: true })).toBe(true);
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
 
     await page.getByTestId('export-smf-btn').click();
@@ -439,7 +400,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await page.getByTestId('mode-tab-view').click();
     await page.getByTestId('mode-tab-skin').click();
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
-    await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureRoot');
+    await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
     await expect(page.getByTestId('status-text')).toContainText('Export canceled.');
 
     let snapshot = await getTauriMockSnapshot(page);
@@ -470,7 +431,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await page.goto('/');
     await page.getByTestId('open-model-btn').click();
 
-    await expect(page.getByTestId('status-text')).toContainText(/Rust validated SMF|Loaded/i, { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded:/i, { timeout: 15000 });
     await pausePlaybackIfRunning(page);
 
     await page.getByTestId('mode-tab-rig').click({ force: true });

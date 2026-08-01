@@ -19,6 +19,16 @@ const npmCommand = existsSync(bundledNpmCli)
   ? `${quoteShellArgument(process.execPath)} ${quoteShellArgument(bundledNpmCli)}`
   : 'npm';
 
+const configuredExecutablePath = process.env.RUSTSMF_PLAYWRIGHT_EXECUTABLE?.trim();
+if (
+  configuredExecutablePath
+  && (!path.isAbsolute(configuredExecutablePath) || !existsSync(configuredExecutablePath))
+) {
+  throw new Error(
+    'RUSTSMF_PLAYWRIGHT_EXECUTABLE must be an existing absolute browser executable path',
+  );
+}
+
 /**
  * Playwright config for RustSMF frontend e2e (Chrome-focused).
  * Runs against a production Vite preview server.
@@ -40,6 +50,7 @@ export default defineConfig({
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
+    ...(configuredExecutablePath ? { executablePath: configuredExecutablePath } : {}),
   },
   projects: [
     {

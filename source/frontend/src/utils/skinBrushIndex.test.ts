@@ -7,6 +7,7 @@ import {
   querySkinBrushIndex,
   querySkinBrushWorldIndex,
 } from './skinBrushIndex';
+import { getSkinnedVertexWorldPosition } from './skinnedVertexPosition';
 
 test('skin brush index queries only nearby local vertices', () => {
   const geometry = new THREE.BufferGeometry();
@@ -34,18 +35,21 @@ test('skinned world brush index finds vertices moved away from bind position', (
     5, 0, 0,
     6, 0, 0,
   ], 3));
+  geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute([
+    0, 0, 0, 0,
+    0, 0, 0, 0,
+  ], 4));
+  geometry.setAttribute('skinWeight', new THREE.Float32BufferAttribute([
+    1, 0, 0, 0,
+    1, 0, 0, 0,
+  ], 4));
   const mesh = new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial());
-  (mesh as unknown as { boneTransform: (index: number, target: THREE.Vector3) => THREE.Vector3 }).boneTransform = (
-    vertexIndex,
-    target,
-  ) => {
-    if (vertexIndex === 0) {
-      target.set(0.05, 0, 0);
-      return target;
-    }
-    target.set(6, 0, 0);
-    return target;
-  };
+  const root = new THREE.Bone();
+  mesh.add(root);
+  mesh.bind(new THREE.Skeleton([root]));
+  root.position.set(-4.95, 0, 0);
+  mesh.updateMatrixWorld(true);
+  mesh.skeleton.update();
 
   const staticIndex = buildSkinBrushIndex(mesh, 0.25);
   const worldIndex = buildSkinnedWorldBrushIndex(mesh, 0.25);
@@ -55,5 +59,17 @@ test('skinned world brush index finds vertices moved away from bind position', (
   assert.deepEqual(staticNear.map((candidate) => candidate.vertexIndex), []);
   assert.deepEqual(skinnedNear.map((candidate) => candidate.vertexIndex), [0]);
   assert.deepEqual(skinnedNear[0].localPosition, [5, 0, 0]);
-  assert.deepEqual(skinnedNear[0].skinnedWorldPosition, [0.05, 0, 0]);
+  assert.ok(skinnedNear[0].skinnedWorldPosition);
+  assert.ok(Math.abs(skinnedNear[0].skinnedWorldPosition[0] - 0.05) < 1e-6);
+  assert.deepEqual(skinnedNear[0].skinnedWorldPosition.slice(1), [0, 0]);
+  assert.equal(worldIndex.valid, true);
+});
+
+test('skinned world position rejects an unbound mesh instead of using bind coordinates', () => {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute([1, 2, 3], 3));
+  const mesh = new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial());
+
+  assert.equal(getSkinnedVertexWorldPosition(mesh, 0, new THREE.Vector3()), 'missing-skin-attributes');
+  assert.equal(buildSkinnedWorldBrushIndex(mesh, 0.25).valid, false);
 });

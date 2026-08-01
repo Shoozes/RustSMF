@@ -2,90 +2,42 @@
 
 Last reviewed: 2026-08-01
 
-## Scope
+This is the latest integrity-pass evidence. `APP_STATE.md` owns current behavior, `TODO.md` owns active work, `HISTORY.md` owns completed work, `PITFALL_LEDGER.md` owns recurring hazards, and `summary_bank.json` owns focused context routing.
 
-This repository-wide integrity pass reviewed current-state documentation, `summary_bank.json`, research and progress records, source/import boundaries, incomplete logic markers, async ownership, recent Original-theme/viewport/texture/FBX work, deterministic fixtures, unit/browser/native coverage, dependencies, and branch hygiene.
+## Scope and outcome
 
-Current behavior is documented once in `APP_STATE.md`. Forward work is in `TODO.md`, recurring regression lessons are in `PITFALL_LEDGER.md`, and test ownership is in `source/frontend/tests/README.md`.
+The pass covered current-state docs, local skill alignment, context routing, SMF bounds/fidelity, skin authoring, viewport timing, native I/O, async ownership, controller wiring, FBX import/export compatibility, tests, verification commands, and main-branch hygiene.
 
-## Current pass
+The active P1 browser-evidence and P2 independent-FBX items are complete. No broken runtime relative import/export was found in the reviewed graph. The implementation remains intentionally concentrated in `useLoadModel.ts` and `ThreeViewport.tsx`; narrow controller, codec, brush-index, skinned-position, and FBX-writer boundaries have focused tests and explicit disposal/ownership rules.
 
-- `pwsh -NoProfile -File .\run.ps1 -Task verify` passes after the animation/display controller extractions: 241/241 frontend units, typechecks, lint, build, chunk checks, context validation, and Rust check.
-- `source/frontend/src/utils/animationAuthoringController.ts` now owns clip CRUD, metadata, selected-bone key editing, snap, and action-level animation history integration; its guards remain pure in `animationAuthoringContext.ts` and both boundaries have focused tests.
-- `source/frontend/src/utils/viewportDisplayController.ts` now owns viewport texture/opacity preview, legacy lighting substitutions, source assignment restoration, and cleanup; renderer/root/RAF lifecycle remains in `ThreeViewport.tsx`.
-- Fixed-pane Rig move/rotate manipulation was confirmed as already shipped, with active-pane camera hit testing, cancel/undo/redo history, and export-format browser coverage in `export-formats.spec.ts`; the backlog item was removed as completed.
-- A fresh `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye` was blocked before app execution because Playwright Chromium launch returned `browserType.launch: spawn EPERM`. This is a managed-environment boundary; the previously recorded 54/54 browser pass remains historical evidence until Chromium can launch again.
+## Durable changes
 
-## Corrections Completed
+- Frontend unit discovery is recursive and deterministic; new `src/**/*.test.ts` files enter the canonical unit gate automatically.
+- Skin sampling fails closed on invalid public Three.js state, caches only across stable pose/attribute signatures, and exposes actionable diagnostics.
+- SMF browser/native boundaries reject malformed counts, sections, strings, ranges, non-finite values, and oversized work before allocation or save; native blocking file work is size-bounded and offloaded.
+- Latest-intent load/export ownership, animation controller activation, resize cleanup, and native cancel/no-op behavior now have current-head regression coverage.
+- FBX texture loading waits for loader-owned asynchronous resources. The vendored FBX writer emits typed integer arrays and required layer names, preserving Three.js roundtrip behavior while making Blender import valid.
+- A Blender-authored independent FBX fixture, generator, provenance record, validator, browser roundtrip, and ignored app-output artifact provide a second-application compatibility proof without broadening claims beyond Blender 5.0.0.
 
-### Required fixtures now fail closed
+## Verification evidence
 
-- **What:** Browser and Rust tests use exact committed SMF, FBX, OBJ, and invalid-input fixtures. Missing fixtures throw or fail instead of searching archived source and silently skipping.
-- **Why:** Three native tests previously resolved paths relative to the wrong directory, and browser helpers could fall back to deleted or unrelated files. Green output therefore did not always prove the intended real-file path.
-- **Where:** `source/frontend/tests/helpers/smoke-helpers.ts`, `source/frontend/tests/fixtures/invalid-model.gml`, and `source/src-tauri/src/main.rs`.
-- **How:** Centralize exact fixture resolution, remove recursive archive discovery and nullable fixture exports, and require the committed real SMF in all native positive-path tests.
-- **Done when:** Deleting or renaming a required fixture makes its owning suite fail with the exact missing path, while the committed fixtures exercise load/error/native parsing successfully.
-- **Result:** Done. The focused browser cases, 54-case suite, and all 9 Rust tests pass; native output confirms the real sample parsed as model 6, rig 38, animation 12.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed after final code and documentation changes; context validation, lint/type/build/chunk gates, dynamic units, and Rust fmt/Clippy/tests/check are green.
+- `npm.cmd run test:e2e -- --reporter=line` with a process-local approved system Chrome executable: 55/55 passed across all eight browser suites.
+- `npm.cmd run test:visual-strict -- --reporter=line` with the same browser override: 2/2 passed.
+- Canonical `desktop-smoke`: optimized no-bundle release build, Rust tests, and native IPC browser coverage passed.
+- Blender 5.0.0 validator passed the committed independent fixture and the app-exported roundtrip. Both reports contained one mesh, two bones, weighted groups, animation curves, and an embedded material texture.
+- Focused checks: FBX/skin units 26/26 passed; independent FBX browser flow passed; `git diff --check` passed.
 
-### Viewport coverage and reset behavior were repaired
+## Environment notes
 
-- **What:** Restore four overwritten viewport layout tests and make camera reset fit the loaded model’s shared center and distance.
-- **Why:** Recent shared-pan coverage accidentally replaced existing layout, boundary, and high-DPI tests. The old hard-coded reset target also moved off-origin or large models away from their fitted view.
-- **Where:** `src/utils/viewportLayout.ts`, `src/utils/SimpleOrbit.ts`, `src/utils/viewportLayout.test.ts`, `src/components/ThreeViewport.tsx`, and `tests/shell-model.spec.ts`.
-- **How:** Add one finite model-fit distance helper, pass the current bounds center into reset, export the public viewport helpers, restore prior assertions, and extend the shared-camera browser case through reset.
-- **Done when:** Single/quad layout, tiny panes, pane boundaries, fractional coordinates, fixed-view focus, ortho pan, model-fit distance, copied reset target, and browser pan/reset behavior all pass.
-- **Result:** Done. The viewport suite now has 10 focused cases and the full browser suite proves ortho and perspective panes share one focus target through pan and reset.
+The bundled Playwright Chromium executable is rejected by the managed Windows process boundary with `spawn EPERM` before app execution. Direct launch of the installed system Chrome succeeds, so the current evidence uses the process-local `RUSTSMF_PLAYWRIGHT_EXECUTABLE` override. This does not alter app security settings, sandbox policy, PATH, or committed configuration. The sandbox checkup is `ready_with_warnings`; its only warning is the ambient WindowsApps Python shadow, which is outside the app verification lane.
 
-### Theme grid ownership was extracted and tested
+Non-blocking test/tool warnings include Node's Playwright `DEP0205`, the managed-path Cargo canonicalization warning, and the intentional mocked dialog-open warning in native fallback coverage. None caused a failed or skipped test.
 
-- **What:** Move Original-theme camera-plane grid creation, visibility, and disposal out of the renderer component.
-- **Why:** This is a stable leaf boundary with explicit inputs and resource ownership; leaving it inline added unrelated context to a 3,000-line integration owner.
-- **Where:** `src/utils/themeViewportGrid.ts`, `src/utils/themeViewportGrid.test.ts`, `src/theme.ts`, `src/utils/index.ts`, and `src/components/ThreeViewport.tsx`.
-- **How:** Use a typed grid mode and viewport role, retain per-pane render visibility, and dispose all owned Three resources through the existing disposal authority.
-- **Done when:** Plane orientation, role visibility, disabled state, scene removal, geometry disposal, typecheck, strict visuals, and Original quad behavior pass.
-- **Result:** Done. Three focused units, all 241 frontend units, strict visuals, and the previously recorded full browser coverage pass.
+## Remaining limits
 
-### Documentation and context routing were consolidated
+- FBX compatibility is proven for the covered Three.js paths and Blender 5.0.0 target; other exporters/importers can differ.
+- True OS-dialog automation remains separate from deterministic Tauri IPC mocks.
+- Direct Tauri/Vite launches have fewer Windows process-tree cleanup guarantees than `run.ps1`/`run.bat`.
 
-- **What:** Replace the repeated implementation recap with a compact product/architecture contract, create executable backlog items, record the fixture pitfall, and split broad context groups.
-- **Why:** The old default orientation approached its 64 KiB budget and mixed completed progress with current state. Broad authoring/test routes increased irrelevant context and made later scaling harder.
-- **Where:** `docs/dev/APP_STATE.md`, `TODO.md`, `PITFALL_LEDGER.md`, `review.md`, `docs/user/README.md`, `source/frontend/tests/README.md`, and `summary_bank.json`.
-- **How:** Assign one document per knowledge type; create focused model-outliner, animation, and skin groups; archive compatibility/reference routes explicitly; and give every backlog item What/Why/Where/When/How/Subtasks/Done when/Verification.
-- **Done when:** Context validation has no warning, every explicit path resolves, default orientation remains comfortably under budget, completed work is absent from the active backlog, and current counts agree across docs.
-- **Result:** Done. Context reports 19 groups, 27.5 KiB default orientation, zero warnings, and 7/7 context-tool tests.
-
-## Audit Results
-
-- **Imports/exports:** A production dependency walk found no broken relative import. Files outside the runtime entry graph are intentional test support, ambient declarations, or the test-facing public utility barrel. App and test typechecks pass.
-- **Incomplete logic:** No production `TODO`, `FIXME`, placeholder, “not implemented,” stub, or unsafe TypeScript assertion was found. Remaining format limits are explicit product constraints in `APP_STATE.md`, not disguised shipped behavior.
-- **Async and run conditions:** Existing latest-intent, abort, timeout, monotonic-progress, single-flight save, root-replacement, and process-lifecycle tests all pass. No new race or unowned timer/listener was found.
-- **Research inbox:** No unprocessed research or drop-in review item exists; only inbox instructions remain.
-- **Redundancy:** Current state, backlog, latest evidence, pitfalls, and test ownership now each have one document owner. `summary_bank.json` routes focused feature/subsystem slices rather than serving as another progress log.
-- **Modularity:** `useLoadModel.ts` and `ThreeViewport.tsx` remain integration owners, now delegating animation actions and display/material mutation through explicit, focused controller contracts. No circular import or pass-through barrel was added.
-- **Dependency health:** The installed tree resolves on Windows and `npm audit --omit=optional` reports zero vulnerabilities. Reported unmet optional packages are platform or opt-in feature packages.
-
-## Open Work
-
-The active priority order is maintained in `TODO.md`:
-
-1. Add an independently authored or redistributable skinned, textured, animated FBX compatibility fixture.
-
-Each item is evidence-backed, split into bounded subtasks, and has an explicit completion and verification contract.
-
-## Verification Evidence
-
-- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed on 2026-08-01; context 19 groups/zero warnings plus 7/7 tool tests, lint coverage, ESLint, app/test typechecks, production-`any` guard, production build, entry/lazy-worker chunk guards, 241/241 frontend units, and Rust check.
-- Prior browser evidence (2026-07-30): `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye` passed 54/54 with zero skipped across eight domain-owned browser suites. Current rerun is blocked at Chromium process launch with `spawn EPERM`, before any test step executes.
-- Focused shared-camera reset and invalid-file regression slice: 2/2 passed.
-- `pwsh -NoProfile -File .\run.ps1 -Task test:visual-strict`: 2/2 passed.
-- `pwsh -NoProfile -File .\run.ps1 -Task desktop-smoke`: release Tauri build passed, Rust tests 9/9, and native IPC browser tests 9/9.
-- `cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings`: passed.
-- `npm ls --all --omit=optional`: passed with expected Windows/platform and opt-in packages omitted.
-- `npm audit --omit=optional`: zero vulnerabilities.
-
-## Non-blocking Toolchain Warnings
-
-- Node emits `DEP0205` while Playwright loads its TypeScript configuration. A traced run locates the call in Playwright 1.60.0’s internal `registerESMLoader`, not repository code. Recheck on the next Playwright update; do not suppress it globally.
-- Cargo can warn that the managed environment cannot canonicalize `C:\Users\jc816`; Rust check, Clippy, tests, and release build still complete successfully.
-- The native fallback test intentionally logs its mocked dialog-open warning while proving fallback behavior.
-- Managed Playwright launch currently returns `spawn EPERM` for the installed Chromium headless shell; resolve the local execution-policy/process-permission issue before treating a new browser run as authoritative.
+These are intentional current-state limits, not open integrity TODOs. New work should be added to `TODO.md` only with a measurable done condition and verification command.

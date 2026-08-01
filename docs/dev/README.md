@@ -6,6 +6,7 @@ Keep developer docs concise and evidence-based. This repo has one current-state 
 
 - `APP_STATE.md`: what the app currently does, architecture ownership, limits, and verified commands.
 - `TODO.md`: active work only. Each concern should state what, why, where, when, how, subtasks, and done criteria when applicable.
+- `HISTORY.md`: completed work and durable verification evidence.
 - `review.md`: latest concise repo/app integrity snapshot and next-task direction.
 - `PITFALL_LEDGER.md`: repeated or high-risk failures, written as prevention records rather than progress history.
 - `../../summary_bank.json`: context groups for features, subsystems, and issue clusters.

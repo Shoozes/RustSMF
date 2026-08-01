@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
-import { SAMPLE_FBX, SAMPLE_OBJ, SAMPLE_SMF, expectRenderedScreenshot, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
+import { SAMPLE_FBX, SAMPLE_INDEPENDENT_FBX, SAMPLE_OBJ, SAMPLE_SMF, expectRenderedScreenshot, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput, createSkinnedGlbFixtureInputWithOptions } from './helpers/skinned-glb-fixture';
 import { readGlbJson } from './helpers/format-assertions';
 import { openViewportDisplayMenu, setViewportLayout, dragRigMoveInOrthoPane, dragRigRotateInOrthoPane } from './helpers/viewport-interactions';
@@ -106,6 +106,50 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
         /SMF export blocked: SMF_NO_SKINNED_SKELETON|Cannot export as SMF|Exported \.smf/i,
         { timeout: 5000 }
       );
+    });
+
+  test('independent textured skinned FBX imports, exports, and reimports', async ({ page }) => {
+      await page.goto('/');
+
+      const input = page.getByTestId('model-file-input');
+      await input.setInputFiles(SAMPLE_INDEPENDENT_FBX);
+      await expect(page.getByTestId('status-text')).toContainText(
+        /Loaded FBX: independent_skinned\.fbx/i,
+        { timeout: 15000 },
+      );
+      await expect(page.getByTestId('status-text')).toContainText(/bones: 2|clips: 1/i);
+      await expect(page.getByTestId('inspector')).toContainText(/IndependentRoot|IndependentTip/i);
+      await expect(page.getByTestId('timeline')).toBeVisible();
+      await expectRenderedScreenshot(page.getByTestId('three-canvas'));
+      expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
+
+      await page.getByTestId('mode-tab-export').click({ force: true });
+      await expect(page.getByTestId('texture-export-policy-panel')).toBeVisible();
+      await expect(page.getByTestId('smf-material-texture-row')).toHaveCount(1);
+      await page.getByTestId('mode-tab-view').click({ force: true });
+
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByTestId('export-fbx-btn').click();
+      const download = await downloadPromise;
+      const downloadPath = await download.path();
+      expect(downloadPath).not.toBeNull();
+      const bytes = fs.readFileSync(downloadPath!);
+      expect(bytes.toString('utf8', 0, 21)).toBe('Kaydara FBX Binary  \0');
+      fs.mkdirSync('test-results', { recursive: true });
+      await download.saveAs('test-results/independent-skinned-roundtrip.fbx');
+
+      await input.setInputFiles({
+        name: 'independent-skinned-roundtrip.fbx',
+        mimeType: 'application/octet-stream',
+        buffer: bytes,
+      });
+      await expect(page.getByTestId('status-text')).toContainText(
+        /Loaded FBX: independent-skinned-roundtrip\.fbx/i,
+        { timeout: 15000 },
+      );
+      await expect(page.getByTestId('status-text')).toContainText(/bones: 2|clips: 1/i);
+      await expect(page.getByTestId('timeline')).toBeVisible();
+      expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
     });
 
   test('explicit FBX export converts a generated skinned GLB and reimports it', async ({ page }) => {

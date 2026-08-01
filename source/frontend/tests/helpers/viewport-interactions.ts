@@ -311,7 +311,10 @@ export const clickPickableBoneInViewport = async (
   return null;
 };
 
-export const cancelPaintOnMeshInViewport = async (page: Page): Promise<boolean> => {
+export const cancelPaintOnMeshInViewport = async (
+  page: Page,
+  options?: { requireDirty?: boolean },
+): Promise<boolean> => {
   const canvas = page.getByTestId('three-canvas');
   const box = await canvas.boundingBox();
   if (!box) return false;
@@ -347,6 +350,13 @@ export const cancelPaintOnMeshInViewport = async (page: Page): Promise<boolean> 
         undefined,
         { timeout: 1200 },
       );
+      if (options?.requireDirty) {
+        try {
+          await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true', { timeout: 500 });
+        } catch {
+          continue;
+        }
+      }
       return true;
     }
 

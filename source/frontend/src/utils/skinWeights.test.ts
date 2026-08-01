@@ -370,6 +370,19 @@ describe('skinWeights', () => {
     assert.equal(weightsTotal(subtracted.vertex.weights), 1);
   });
 
+  it('reports a clamped add on a fully weighted bone as an unchanged edit', () => {
+    const mesh = makeSkinnedMesh();
+    const before = readVertexSkinWeights(getSkinAttributes(mesh.geometry)!, 0);
+    assert.ok(before);
+
+    const result = editVertexBoneWeight(mesh, 0, 0, 'add', 1);
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.changed, false);
+    assert.deepEqual(result.vertex, before);
+  });
+
   it('uses an empty slot before replacing the weakest influence', () => {
     const mesh = makeSkinnedMesh();
 

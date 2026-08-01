@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import type * as THREE from 'three';
-import type { OpenResult, SmfDesktopInfo, TauriClient } from '../backend-client/tauri';
+import type { OpenResult, TauriClient } from '../backend-client/tauri';
 import { buildThreeScene as buildSmfScene, loadGLB, loadFBX, loadOBJ, exportGLB, validateExportedGLB, exportFBX, validateExportedFBX, bytesToArrayBuffer, SmfConversionError, collectSkinnedMeshes, compareSmfRoundtrip, inspectThreeToSmfSource, makeDiagnosticReport } from '../loaders';
 import type { ImportedSmf, SmfDiagnosticReport, SmfRoundtripReport } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
@@ -657,14 +657,15 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   }, [commitAnimationEditState, commitSkinEditState, model.root, model.skeleton, ui]);
 
   const applyAnimationWorkspaceSnapshot = useCallback((snapshot: AnimationWorkspaceHistorySnapshot): boolean => {
-    baseClipsRef.current = cloneAnimationClips(snapshot.baseClips);
-    commitAnimationEditState(snapshot.animationEditState);
-    const editedClips = applyAnimationEditsToClips(baseClipsRef.current, snapshot.animationEditState);
+    const nextBaseClips = cloneAnimationClips(snapshot.baseClips);
+    const editedClips = applyAnimationEditsToClips(nextBaseClips, snapshot.animationEditState);
     const activeClipName = getCurrentClipKey(editedClips, snapshot.currentClipName);
     const activeClip = editedClips.find((clip, index) => getClipKey(clip, index) === activeClipName) ?? editedClips[0];
     if (!activeClip) return false;
 
     const nextTime = Math.max(0, Math.min(snapshot.currentTime, activeClip.duration || 0));
+    baseClipsRef.current = nextBaseClips;
+    commitAnimationEditState(snapshot.animationEditState);
     playbackRef.current.setCurrentClipName(activeClipName);
     playbackRef.current.setDuration(activeClip.duration);
     playbackRef.current.setCurrentTime(nextTime);
@@ -856,20 +857,6 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     pb.setPlaybackSpeed(1);
   }, [model, ui, playbackRef, clearSkinHistory, clearEditorHistory, commitSkinEditState]);
 
-  const formatSmfDesktopInfo = useCallback((info: SmfDesktopInfo) => {
-    if (!info.valid) {
-      const reason = info.error ? `: ${info.error}` : '';
-      return `Invalid SMF (Rust)${reason}`;
-    }
-
-    const parts = [`valid SMF (${info.version})`, `size ${info.size}`];
-    if (typeof info.model_count === 'number') parts.push(`model ~${info.model_count}`);
-    if (typeof info.rig_bone_count === 'number') parts.push(`rig ~${info.rig_bone_count}`);
-    if (typeof info.anim_clip_count === 'number') parts.push(`anim ~${info.anim_clip_count}`);
-    parts.push(`offsets t${info.off_tex} m${info.off_model} r${info.off_rig} a${info.off_anim}`);
-    return parts.join(' | ');
-  }, []);
-
   const loadModel = useCallback(async (res: OpenResult, loadSeq: number) => {
     const loadSeqGuard = loadSeqGuardRef.current;
     const isCurrentLoad = () => loadSeqGuard.isCurrent(loadSeq);
@@ -886,46 +873,17 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
       let data: Uint8Array | undefined = res.data;
 
-      let rustPeekMsg = '';
-      let rustValidated = false;
-
       // Record source format for export decision and mode surfaces (FBX path etc.).
       const detectedSourceFormat = detectModelFormat(name);
       if (!detectedSourceFormat) {
         throw new Error(`Unsupported model format. Supported formats: ${supportedModelFormatsLabel()}`);
       }
-      const fetchSmfDesktopInfo = async (
-        path: string,
-        tauriClient: TauriClient
-      ): Promise<{ rustPeekMsg: string; rustValidated: boolean }> => {
-        try {
-          const info = await tauriClient.getSmfDesktopInfo(path);
-          if (!isCurrentLoad()) return { rustPeekMsg: '', rustValidated: false };
-          if (!info.valid) {
-            const msg = formatSmfDesktopInfo(info);
-            ui.setErrorMsg(msg);
-            ui.setStatus(msg);
-            ui.setIsLoading(false);
-            return { rustPeekMsg: msg, rustValidated: false };
-          }
-          return { rustPeekMsg: formatSmfDesktopInfo(info), rustValidated: true };
-        } catch {
-          return { rustPeekMsg: '', rustValidated: false };
-        }
-      };
-
       // Single dynamic import for all Tauri client fns when on desktop .smf path.
-      // Reduces redundancy (multiple awaits), improves timing (one module load), centralizes.
+      // Reduces redundancy (one module load) and keeps the codec as the single
+      // structural SMF validation authority.
       let tauri: TauriClient | null = null;
       if (res.path) {
         tauri = await getTauriClient();
-        if (detectedSourceFormat === 'smf') {
-          const peek = await fetchSmfDesktopInfo(res.path, tauri);
-          if (!isCurrentLoad()) return;
-          if (!peek.rustValidated && peek.rustPeekMsg) return; // already set error above
-          rustValidated = peek.rustValidated;
-          rustPeekMsg = peek.rustPeekMsg;
-        }
       }
 
       if (!data && res.path) {
@@ -989,12 +947,6 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         ui.setStatus(`Loaded FBX: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length || 0}`);
       } else {
         let status = `Loaded: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length} | verts: ${loaded.skinnedMeshes?.[0]?.geometry?.attributes?.position?.count || '?'}`;
-        if (rustPeekMsg) {
-          status = `${rustPeekMsg} | ${status}`;
-        }
-        if (rustValidated && detectedSourceFormat === 'smf') {
-          status = `Rust validated SMF | ${status}`;
-        }
         if (smfCodecExecution === 'sync-fallback') {
           status = `${status} | SMF codec: synchronous fallback`;
         }
@@ -1015,7 +967,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     } finally {
       if (isCurrentLoad()) ui.setIsLoading(false);
     }
-  }, [ui, model, playbackRef, clearLoadedModel, formatSmfDesktopInfo, commitSkinEditState, importSmfInWorker]);
+  }, [ui, model, playbackRef, clearLoadedModel, commitSkinEditState, importSmfInWorker]);
 
   const handleOpen = useCallback(async () => {
     if (ui.isLoading) return;
@@ -1435,7 +1387,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     };
   }, []);
 
-  const animationAuthoring = createAnimationAuthoringController({
+  const animationAuthoring = useMemo(() => createAnimationAuthoringController({
     baseClipsRef,
     animationEditStateRef,
     playbackRef,
@@ -1451,7 +1403,20 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     pushAnimationWorkspaceHistory,
     getSourceAnimationClipMetadata,
     setStatus: ui.setStatus,
-  });
+  }), [
+    animationSnapStep,
+    applyAnimationWorkspaceSnapshot,
+    captureAnimationWorkspaceSnapshot,
+    commitAnimationEditState,
+    getSourceAnimationClipMetadata,
+    model.skeleton,
+    pushAnimationHistory,
+    pushAnimationWorkspaceHistory,
+    setAnimationEditState,
+    setAnimationSnapStep,
+    ui.selected,
+    ui.setStatus,
+  ]);
 
   const {
     renameCurrentAnimationClip,

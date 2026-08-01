@@ -12,6 +12,13 @@ The test layout mirrors runtime ownership. Keep behavior in the narrowest suite 
 
 Playwright may require execution outside a managed sandbox when Chromium launch is rejected with `spawn EPERM`. That is a harness permission failure, not an application test failure.
 
+For a process-local browser executable override, use an approved existing absolute path without changing repo or sandbox policy:
+
+```powershell
+$env:RUSTSMF_PLAYWRIGHT_EXECUTABLE = '<approved-absolute-Chrome-or-Edge-path>'
+npm.cmd run test:e2e -- --reporter=line
+```
+
 ## Browser Suite Ownership
 
 | Suite | Primary ownership |
@@ -25,7 +32,7 @@ Playwright may require execution outside a managed sandbox when Chromium launch 
 | `native.spec.ts` | Deterministic Tauri IPC open/read/write/cancel and stale-completion matrices |
 | `visual.spec.ts` | Modern/Original geometry/defaults, source texture thumbnails, reference-derived shelves/top strip/keyframe lane, narrow layout, viewport/menu visual coherence |
 
-The 37 tests formerly in `smoke.spec.ts` retain their titles across the current domain-owned browser suites. Playwright discovers 54 browser cases total.
+The 37 tests formerly in `smoke.spec.ts` retain their titles across the current domain-owned browser suites. Playwright discovers 55 browser cases total.
 
 ## Shared Browser Helpers
 
@@ -39,13 +46,13 @@ The 37 tests formerly in `smoke.spec.ts` retain their titles across the current 
 
 ## Unit Coverage
 
-The 241 Node tests under `src/**/*.test.ts` cover theme registry/persistence, SMF binary and DQ fidelity, worker protocol and ownership, indexed Three-to-SMF triangle expansion, FBX and GLB pre-save reparse validation, export-candidate policy, editor snapshots/history, viewport listener disposal/routing/layout/shared-focus pan/reset math, theme-grid plane ownership/disposal, Rig/IK/Skin/Animate helpers, animation authoring context/controller guards, material isolation and viewport display restoration, raw texture thumbnail sampling, and resource disposal.
+The 247 Node tests under `src/**/*.test.ts` cover theme registry/persistence, SMF binary and DQ fidelity, bounded malformed-input and export-field checks, worker protocol and ownership, indexed Three-to-SMF triangle expansion, FBX and GLB pre-save reparse validation, export-candidate policy, editor snapshots/history, viewport listener disposal/routing/layout/shared-focus pan/reset math, theme-grid plane ownership/disposal, Rig/IK/Skin/Animate helpers, animation authoring context/controller guards, material isolation and viewport display restoration, raw texture thumbnail sampling, and resource disposal. `source/frontend/scripts/run-unit-tests.mjs` discovers all unit files deterministically, so new tests are included without editing a hardcoded package list.
 
 The generated indexed GLB is a required compatibility shape: conversion must duplicate indexed vertex attributes into complete SMF triangle soup before the worker guard accepts it. Missing optional normals/UVs/tangents receive correctly sized zero arrays; incomplete triangle or skin layouts fail preflight.
 
 ## Fixture Policy
 
-`mixamo_smf_baldguy.smf`, `test.fbx`, `test.obj`, and `fixtures/invalid-model.gml` are committed verification dependencies. `helpers/smoke-helpers.ts` resolves them directly and throws an actionable error during test registration if one is missing; it does not scan archived old-source assets or silently fall back to a deleted spec.
+`mixamo_smf_baldguy.smf`, `test.fbx`, `test.obj`, `fixtures/invalid-model.gml`, and `fixtures/independent-fbx/independent_skinned.fbx` are committed verification dependencies. `helpers/smoke-helpers.ts` resolves them directly and throws an actionable error during test registration if one is missing; it does not scan archived old-source assets or silently fall back to a deleted spec. The independent FBX fixture's generator, provenance, and Blender validator live beside the asset; the validator can also inspect the ignored app-exported roundtrip under `test-results/`.
 
 The Rust native tests anchor the same committed SMF to `CARGO_MANIFEST_DIR` and fail closed when it is unavailable, independent of the caller's working directory. `desktop-smoke` must therefore prove a real binary parse, not only report a green optional-sample branch.
 
