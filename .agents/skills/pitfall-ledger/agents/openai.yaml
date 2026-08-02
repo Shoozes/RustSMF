@@ -1,4 +1,0 @@
-interface:
-  display_name: "Pitfall Ledger"
-  short_description: "Turn regressions into evidence-grounded stories"
-  default_prompt: "Document recent pitfalls as auditable developer stories with context, evidence, tested hypotheses, ranked solutions, decision rationale, verification, and relevance scoring."

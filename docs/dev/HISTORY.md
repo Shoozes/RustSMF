@@ -2,6 +2,16 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-08-01 — Context budget and skill-route consolidation
+
+- Raised the focused context-generation ceiling from 180 KiB to 256 KiB while keeping the 27.5 KiB default orientation narrow; the largest active route remains bounded by its own group cap.
+- Routed the RustSMF summary-bank overlay through `workflow__context_bank` and added an explicit 96 KiB cap to the archived old-editor reference route.
+- Removed repo-local `monolith-modularization` and `pitfall-ledger` copies because the global skills already own those workflows; retained only the project-specific `summary-bank-json` delta.
+
+### Verification
+
+- Context-bank validation, focused context tests, skill frontmatter validation, and the repository verification gate passed after the routing changes.
+
 ## 2026-08-01 — Guarded replacement, bounded history, and native I/O ownership
 
 - Added a shared dirty predicate and accessible Cancel/Discard replacement dialog. Browser, drop, and native open paths defer byte materialization until discard is explicit; cancel, stale completion, parse failure, and native/browser errors retain the existing model and authoring state.

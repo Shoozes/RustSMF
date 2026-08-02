@@ -100,7 +100,7 @@ Current inventory:
 - 269 frontend unit tests across 45 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
 - 56 browser cases in eight domain-owned spec files.
 - 10 Rust tests; the real-SMF native tests require and parse the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
-- 22 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; the latest context run reports 27.3 KiB default orientation with zero warnings.
+- 22 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; the latest context run reports 27.5 KiB default orientation with zero warnings, and focused generation has a 256 KiB ceiling for the largest active routes.
 
 The latest command results and any environment-only warnings are recorded in `review.md`.
 

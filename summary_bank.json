@@ -4,7 +4,7 @@
       "docs__orientation"
     ],
     "tree": false,
-    "max_kb": 180,
+    "max_kb": 256,
     "max_path_fanout": 8,
     "skip_dirs": [
       ".git",
@@ -46,12 +46,14 @@
         ".tools/get-context.ps1",
         ".tools/project.json",
         "run.ps1",
-        "AGENTS.md"
+        "AGENTS.md",
+        ".agents/skills/summary-bank-json/SKILL.md"
       ],
       "notes": [
         "Exact files and explicit globs are the only path contract; bare directories fail.",
         "Node.js 22 or newer is the canonical runtime.",
-        "Generation never truncates a file or writes when --out - is requested."
+        "Generation never truncates a file or writes when --out - is requested.",
+        "The repo-local summary-bank skill adds RustSMF ownership and native verification to the global context-bank policy."
       ]
     },
     "feature__theme_system": {
@@ -378,7 +380,6 @@
         "docs/dev/APP_STATE.md",
         "docs/dev/TODO.md",
         "docs/dev/review.md",
-        "docs/dev/HISTORY.md",
         "run.ps1",
         "source/package.json",
         "source/frontend/scripts/run-unit-tests.mjs",
@@ -469,6 +470,7 @@
     "workflow__old_editor_reference": {
       "description": "Archived GameMaker source and screenshots used only for deliberate parity research.",
       "archived": true,
+      "max_kb": 96,
       "paths": [
         "docs/references/old-src/issues.md",
         "docs/dev/old_editor_source_map.md",

@@ -1,4 +1,0 @@
-interface:
-  display_name: "Monolith Modularization"
-  short_description: "Reduce context-heavy artifacts safely"
-  default_prompt: "Rank context-heavy code, docs, tests, and scripts by actual pressure, apply the lightest safe mitigation, preserve contracts, update context routes, and verify the change."

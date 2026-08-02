@@ -32,7 +32,8 @@ The review found one high-risk correctness issue in the isolated non-SMF-to-SMF 
 - Native open/read/save authority now stays in Rust: reads require a previously selected canonical path, saves own the OS destination dialog, and frontend byte payloads are size-checked before IPC.
 - Tauri's Rust and frontend dialog-plugin declarations are pinned to the same 2.7.1 release, so the native smoke build cannot fail before compilation on manifest-version drift even though dialog invocation remains Rust-owned.
 - Parent playback publication is throttled to a 50 ms display cadence while imperative mixer advancement and scrub/intent updates remain immediate.
-- Repo-local `monolith-modularization` and `pitfall-ledger` skills were reconciled with the current global guidance while the RustSMF-specific `summary-bank-json` skill remained intentionally specialized.
+- Skill routing now has one owner per workflow: the redundant repo-local `monolith-modularization` and `pitfall-ledger` copies were removed in favor of the global skills, while the RustSMF-specific `summary-bank-json` overlay remains and is routed through `workflow__context_bank`.
+- The context ceiling is now 256 KiB for focused generation; the default orientation remains 27.5 KiB, and the archived old-editor route now has an explicit 96 KiB cap.
 
 ## Verification evidence
 

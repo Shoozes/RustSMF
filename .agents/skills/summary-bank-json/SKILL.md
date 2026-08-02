@@ -1,75 +1,77 @@
 ---
 name: summary-bank-json
-description: Maintain RustSMF summary_bank.json context groups with narrow feature, subsystem, issue, investigation, and workflow paths while preserving global context-bank size, fan-out, archive, and overlap policy.
+description: Maintain RustSMF summary_bank.json routes as a project-specific overlay on the global context-bank policy, using narrow feature, subsystem, issue, investigation, and workflow groups with native validation.
 ---
 
 # RustSMF Summary Bank
 
-## Goal
+## Scope
 
-`summary_bank.json` is a focused context router. It should help agents and developers load the files needed for a task without pulling generated output, dependency folders, or the full old-src reference tree.
+Use the global `summary-bank-context` skill for general context-bank policy. This file owns only the RustSMF delta: local authority paths, supported group conventions, old-editor reference boundaries, and the native verification route.
 
-Use the global `summary-bank-context` skill for general policy. This repo-local skill adds RustSMF-specific checks, ownership, and the native verifier route.
+`summary_bank.json` is a route map, not a progress log, TODO list, or second current-state document.
 
-## Current Durable Docs
+## Authorities and budgets
 
-- `docs/dev/APP_STATE.md`: current behavior, architecture, limits, and verified commands.
-- `docs/dev/TODO.md`: active backlog and compact integrity findings.
-- `docs/dev/PITFALL_LEDGER.md`: durable regression-prevention records.
-- `docs/README.md` and `docs/dev/README.md`: doc routing policy.
+- `docs/dev/APP_STATE.md` owns current behavior, architecture, limits, and verified commands.
+- `docs/dev/TODO.md` owns executable forward work and done-when conditions.
+- `docs/dev/PITFALL_LEDGER.md` owns recurring regression-prevention records.
+- `docs/dev/README.md` owns developer-document routing policy.
+- `summary_bank.json` owns focused paths, group descriptions, and context budgets.
 
-Do not put progress logs or TODO prose into the context bank.
+The current generation ceiling is `defaults.max_kb: 256`; the default `docs__orientation` group remains intentionally narrow. Treat the ceiling as room for a focused work unit, not a reason to load broad defaults. Measure expanded content, largest-file share, and fan-out before raising a group or root budget.
 
 ## Group Rules
 
-- Use `paths`; the obsolete `files` field is rejected by the current validator.
+- Use `paths`; the obsolete `files` field is rejected by the native validator.
 - Keep defaults minimal. Defaults should orient a normal task, not load every group.
-- Use stable prefixes: `feature__`, `subsystem__`, `issue__`, `investigation__`, `workflow__`.
+- Use stable prefixes: `feature__`, `subsystem__`, `issue__`, `investigation__`, and `workflow__`.
 - Include source, tests, scripts, docs, fixtures, and reference files only when they are needed to understand that group.
-- Avoid broad `docs/references/old-src/**` globs. Use targeted old-src screenshots, SMF samples, or GLBtoSMF files.
+- Route one work unit: owner implementation, nearest focused tests, exact contract/doc, and required fixtures.
+- Keep broad state, history, TODO, and whole-suite verifiers out of focused groups unless the task changes them.
+- Avoid broad `docs/references/old-src/**` globs. Use targeted shaders, screenshots, SMF samples, or GLBtoSMF files for a named parity question.
 - Keep ignored/runtime paths out: `node_modules`, `dist`, `target`, `runtime-data`, `playwright-report`, `test-results`, model weights, logs, caches.
-- Keep completed progress, forward work, and broad review prose in their owning docs rather than the context bank.
-- Keep defaults conservative; do not add every new group to normal orientation.
-- Archive broad legacy groups instead of loading them by default, using the repository's existing archive fields.
+- Keep completed progress and forward work in their owning docs rather than the context bank.
+- Archive broad legacy groups instead of loading them by default; the old-editor and former combined browser packs are archived examples.
+- Do not add a repo-local copy of a global skill solely to repeat its workflow. Use `skill-repo-maintainer` for overlap decisions and retain only project-specific skill deltas.
 
 ## Maintenance Workflow
 
-1. Read `AGENTS.md`, `docs/dev/APP_STATE.md`, and `docs/dev/TODO.md`.
+1. Read `AGENTS.md`, `docs/dev/APP_STATE.md`, `docs/dev/TODO.md`, and the relevant group before editing.
 2. Inspect the relevant group and remove stale paths before adding new ones.
-3. Add or update only the narrowest useful group for the current feature, subsystem, issue, or workflow.
-4. Update group `status` only when it helps future task routing.
-5. Run:
+3. Add or update only the narrowest useful group. Keep descriptions short and status metadata purposeful.
+4. Run:
 
 ```powershell
 node scripts/verify-context-bank.mjs
 node --test scripts/context-bank.test.mjs
 ```
 
-`pwsh -File run.ps1 -Task context` runs both commands; `verify` includes the same gate.
+`pwsh -NoProfile -File .\run.ps1 -Task context` runs both commands; `verify` includes the same gate.
 
-6. Audit expanded bytes, largest-file share, repeated canonical docs, fan-out, generated share, and archived groups in defaults. The native verifier's configured budgets are authoritative.
+5. Audit expanded bytes, largest-file share, repeated canonical docs, fan-out, generated share, and archived groups in defaults. The native verifier's configured budgets are authoritative.
 
-7. If overlap is intentional, preserve the repository-supported duplicate/overlap declaration rather than silently copying the same authority into unrelated groups.
+6. If overlap is intentional, preserve the repository-supported duplicate/overlap declaration rather than silently copying the same authority into unrelated groups.
 
-## Artifact-Aware Routing
+## RustSMF-specific references
 
-- Include the owner implementation, nearest focused tests, exact contract/doc, and required fixtures.
-- Avoid whole source trees, unrelated integration suites, broad barrels, lockfiles, generated schemas, minified assets, model files, and raw runtime evidence.
-- Route one work unit at a time; a few dense files can cost more context than many small files.
+- `workflow__context_bank` routes the bank, verifier, generator, controller, `AGENTS.md`, and this local skill.
+- `workflow__old_editor_reference` is archived and contains only targeted weight-preview shader and screenshot parity references.
+- `subsystem__smf_format_and_fidelity` and `issue__smf_resource_contract` own SMF limits and malformed-input routes; update `APP_STATE.md` and focused tests when limits change.
+- `tests__quality` owns the canonical unit-discovery and verification contract; do not copy its entire harness into feature groups.
 
-## Overlap Boundaries
+## Failure modes
 
-- Use this skill only for context banks, route maps, and focused context packs.
-- Use `core-skill-gate` for skill selection and context-load limits.
-- Use `repo-steward` for broader project-state docs.
-- Use `repo-integrity-pass` when route drift is one part of a repo-wide audit.
-- Use `skill-repo-maintainer` when the overlap is between Codex skills rather than repo files.
+- A moved current-doc path remains in a group.
+- A group contains generated/runtime output or a broad old-src glob.
+- Defaults include an archived group or grow beyond the narrow orientation purpose.
+- A focused group duplicates a canonical doc or pitfall entry without an ownership reason.
+- A local skill repeats global guidance instead of routing to its project-specific delta.
 
-## Failure Modes To Catch
+## Done when
 
-- A moved doc path such as old `docs/TODO.md` remains in a current group.
-- A group includes a generated report or local runtime artifact.
-- Default groups become too broad for ordinary orientation.
-- A glob prefix no longer exists after a folder move.
-- Issue groups duplicate pitfall-ledger content instead of pointing at the files needed to investigate.
-- A large canonical document is repeated across many groups without an ownership reason.
+- Every active group has existing, task-relevant paths and a clear owner.
+- Defaults remain narrow and no archived group is selected by default.
+- Focused groups remain within their configured budgets, with overlap and large-file pressure understood.
+- `node scripts/verify-context-bank.mjs` and `node --test scripts/context-bank.test.mjs` pass after the change.
+- Current-state or backlog docs are updated only when the route change changes their contract.

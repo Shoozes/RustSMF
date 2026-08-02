@@ -1,4 +1,4 @@
 interface:
   display_name: "RustSMF Summary Bank"
   short_description: "Maintain focused RustSMF context-bank routes"
-  default_prompt: "Use $summary-bank-json to audit summary_bank.json paths, budgets, defaults, overlap, and focused context routes, then run the native context verifier."
+  default_prompt: "Use $summary-bank-json with the global summary-bank-context policy to audit RustSMF paths, focused budgets, defaults, overlap, archived routes, and native context verification."
