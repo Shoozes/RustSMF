@@ -5,6 +5,7 @@ import {
   captureAnimationPose,
   createAnimationClipFromPose,
   normalizeAnimationDuration,
+  validateAnimationSkeleton,
 } from './animationCreation';
 
 function makeSkeleton(): THREE.Skeleton {
@@ -43,6 +44,37 @@ test('animation creation falls back to the live bone pose for missing snapshot e
   const childPosition = clip.tracks.find((track) => track.name === 'Child.position');
   assert.ok(childPosition);
   assert.deepEqual(Array.from(childPosition!.values), [4, 0, 0, 4, 0, 0]);
+});
+
+test('animation creation rejects unnamed and duplicate bone names before emitting ambiguous tracks', () => {
+  const unnamed = new THREE.Bone();
+  const unnamedSkeleton = new THREE.Skeleton([unnamed]);
+  assert.deepEqual(validateAnimationSkeleton(unnamedSkeleton), {
+    ok: false,
+    reason: 'unnamed-bone',
+  });
+  assert.equal(createAnimationClipFromPose(unnamedSkeleton, 'Invalid', 1, {}), null);
+
+  const root = new THREE.Bone();
+  root.name = 'Root';
+  const duplicate = new THREE.Bone();
+  duplicate.name = 'Root';
+  const duplicateSkeleton = new THREE.Skeleton([root, duplicate]);
+  assert.deepEqual(validateAnimationSkeleton(duplicateSkeleton), {
+    ok: false,
+    reason: 'duplicate-bone-name',
+    boneName: 'Root',
+  });
+  assert.equal(createAnimationClipFromPose(duplicateSkeleton, 'Invalid', 1, {}), null);
+});
+
+test('animation pose capture treats hostile bone names as own snapshot keys', () => {
+  const bone = new THREE.Bone();
+  bone.name = '__proto__';
+  const snapshot = captureAnimationPose(new THREE.Skeleton([bone]));
+
+  assert.equal(Object.prototype.hasOwnProperty.call(snapshot, '__proto__'), true);
+  assert.equal(snapshot['__proto__']?.quaternion[3], 1);
 });
 
 test('animation duration normalization rejects invalid values and bounds extreme input', () => {

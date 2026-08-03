@@ -108,6 +108,7 @@ import {
   type AnimationPoseSnapshot,
 } from '../utils/animationCreation';
 import { createAnimationAuthoringController } from '../utils/animationAuthoringController';
+import type { AnimationEditScope } from '../utils/animationScope';
 import {
   createChildBone,
   deleteBoneBranch,
@@ -375,6 +376,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const [skinAutoWeightNormalWeighting, setSkinAutoWeightNormalWeighting] = useState(0);
   const [skinAutoWeightMaxInfluences, setSkinAutoWeightMaxInfluences] = useState(4);
   const [animationSnapStep, setAnimationSnapStep] = useState<AnimationSnapStep>(0);
+  const [animationScope, setAnimationScope] = useState<AnimationEditScope>('bone');
 
   const [sourceFormat, setSourceFormat] = useState('');
   const [smfRoundtripReport, setSmfRoundtripReport] = useState<SmfRoundtripReport | null>(null);
@@ -1504,6 +1506,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     skeleton: model.skeleton ?? null,
     animationRestPoseRef,
     selectedBoneName: ui.selected ?? '',
+    animationScope,
+    setAnimationScope,
     animationSnapStep,
     setAnimationEditState,
     setAnimationSnapStep,
@@ -1515,6 +1519,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     getSourceAnimationClipMetadata,
     setStatus: ui.setStatus,
   }), [
+    animationScope,
     animationSnapStep,
     applyAnimationWorkspaceSnapshot,
     captureAnimationWorkspaceSnapshot,
@@ -1525,6 +1530,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     pushAnimationWorkspaceHistory,
     setAnimationEditState,
     setAnimationSnapStep,
+    setAnimationScope,
     ui.selected,
     ui.setStatus,
   ]);
@@ -1547,8 +1553,11 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     moveSelectedAnimationKeyframe,
     changeAnimationInterpolation,
     changeAnimationSnapStep,
+    changeAnimationScope,
     changeAnimationClipLoop,
     changeAnimationClipSampleFrameMultiplier,
+    changeAnimationClipDuration,
+    changeAnimationClipRetime,
     applyAnimationEditState,
   } = animationAuthoring;
 
@@ -2832,6 +2841,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     animationClipboardHasKeyframe: !!animationEditState.clipboard,
     animationInterpolation: animationEditState.interpolation,
     animationSnapStep,
+    animationScope,
     animationClipMetadata,
     insertAnimationKeyframe,
     insertAnimationKeyframeAtTime,
@@ -2843,8 +2853,11 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     moveSelectedAnimationKeyframe,
     changeAnimationInterpolation,
     changeAnimationSnapStep,
+    changeAnimationScope,
     changeAnimationClipLoop,
     changeAnimationClipSampleFrameMultiplier,
+    changeAnimationClipDuration,
+    changeAnimationClipRetime,
     viewportLayout: ui.viewportLayout,
     setViewportLayout: ui.setViewportLayout,
     gridEnabled: ui.gridEnabled,

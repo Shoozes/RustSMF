@@ -215,8 +215,8 @@
       ]
     },
     "feature__animation_authoring": {
-      "description": "Timeline interaction, pose-based clip creation, selected-bone key editing, clip management, metadata, history, and browser ownership.",
-      "max_kb": 144,
+      "description": "Timeline interaction, pose-based clip creation, Bone/Branch/Full Rig key authoring, clip management, metadata, history, and browser ownership.",
+      "max_kb": 176,
       "paths": [
         "source/frontend/src/components/AnimatePanel.tsx",
         "source/frontend/src/components/Timeline.tsx",
@@ -228,6 +228,8 @@
         "source/frontend/src/utils/animationAuthoringController.test.ts",
         "source/frontend/src/utils/animationCreation.ts",
         "source/frontend/src/utils/animationCreation.test.ts",
+        "source/frontend/src/utils/animationScope.ts",
+        "source/frontend/src/utils/animationScope.test.ts",
         "source/frontend/src/utils/animationTimeline.ts",
         "source/frontend/src/utils/animationTimeline.test.ts",
         "source/frontend/src/utils/playbackDisplayThrottle.ts",
@@ -239,6 +241,8 @@
         "useLoadModel remains the load/export integration owner; animation authoring actions are delegated to the tested controller contract.",
         "New clips capture the load-time rest pose or current local bone pose, emit position/quaternion keys for named skeleton bones, and use one animation-workspace history transaction even when the source clip list is empty.",
         "Quadratic interpolation is preserved as SMF metadata and previews linearly in Three.js.",
+        "Scoped key operations resolve a selected hierarchy, commit one history transaction, union timeline markers, and validate the clipboard's source scope, skeleton fingerprint, and target bone names before mutation.",
+        "Animation edit and clipboard maps use null-prototype records so hostile but valid names such as __proto__ cannot become prototype reads or writes; bounded duration set/extension and retime are implemented, while trim and locked-bone policy remain TODO scope.",
         "The viewport advances the mixer imperatively; parent timeline publication is throttled to a 50 ms display cadence while scrub and playback-intent setters remain immediate."
       ]
     },
@@ -392,7 +396,7 @@
       ],
       "notes": [
         "Historical product evidence is 55/55 browser cases, 2/2 strict visuals, canonical desktop-smoke green, and Blender 5.0.0 validation of app-exported FBX output. Current final verification keeps all non-browser gates green; the current 56-body full browser run, 2-body strict visual run, and approved system-Chrome native rerun have no product assertion failures but are teardown-blocked by managed browserContext.close spawn EPERM with listeners cleaned.",
-        "The current working-tree inventory is 56 browser cases and 10 Rust tests; the current-head certification record is complete in review.md, with desktop-smoke's Tauri build/Rust portions passing and its managed native browser teardown explicitly classified.",
+        "The current working-tree inventory is 59 browser cases and 10 Rust tests; the current-head certification record is complete in review.md, with desktop-smoke's Tauri build/Rust portions passing and its managed native browser teardown explicitly classified.",
         "Bundled Chromium still fails before app execution with spawn EPERM in the managed process; current evidence uses a process-local approved system-browser executable and keeps the environment caveat separate from product results."
       ]
     },
@@ -415,7 +419,7 @@
       "description": "Archived compatibility route for the former combined browser authoring/format pack.",
       "archived": true,
       "archive_note": "Use feature__rig_ik_pose, feature__skin_authoring, feature__animation_authoring, feature__fbx_support, and feature__theme_system.",
-      "max_kb": 128,
+      "max_kb": 144,
       "paths": [
         "source/frontend/tests/animation.spec.ts",
         "source/frontend/tests/export-formats.spec.ts",

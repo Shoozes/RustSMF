@@ -11,9 +11,15 @@ import {
 import {
   MAX_ANIMATION_DURATION,
   MIN_ANIMATION_DURATION,
+  normalizeAnimationDuration,
   type AnimationCreationRequest,
   type AnimationInitialPose,
 } from '../utils/animationCreation';
+import {
+  ANIMATION_EDIT_SCOPE_LABELS,
+  ANIMATION_EDIT_SCOPES,
+  type AnimationEditScope,
+} from '../utils/animationScope';
 
 interface AnimatePanelProps {
   clips: THREE.AnimationClip[];
@@ -30,6 +36,7 @@ interface AnimatePanelProps {
   clipboardHasKeyframe: boolean;
   interpolation: AnimationInterpolation;
   snapStep: AnimationSnapStep;
+  animationScope: AnimationEditScope;
   clipMetadata: AnimationClipMetadata;
   onInsertKeyframe: () => void;
   onUpdateKeyframe: () => void;
@@ -38,8 +45,11 @@ interface AnimatePanelProps {
   onPasteKeyframe: () => void;
   onInterpolationChange: (next: AnimationInterpolation) => void;
   onSnapStepChange: (next: AnimationSnapStep) => void;
+  onAnimationScopeChange: (next: AnimationEditScope) => void;
   onClipLoopChange: (next: boolean) => void;
   onClipSampleFrameMultiplierChange: (next: number) => void;
+  onClipDurationChange: (next: number) => void;
+  onClipRetimeChange: (next: number) => void;
   onRenameClip: (nextName: string) => void;
   onDuplicateClip: () => void;
   onDeleteClip: () => void;
@@ -64,6 +74,7 @@ export default function AnimatePanel({
   clipboardHasKeyframe,
   interpolation,
   snapStep,
+  animationScope,
   clipMetadata,
   onInsertKeyframe,
   onUpdateKeyframe,
@@ -72,8 +83,11 @@ export default function AnimatePanel({
   onPasteKeyframe,
   onInterpolationChange,
   onSnapStepChange,
+  onAnimationScopeChange,
   onClipLoopChange,
   onClipSampleFrameMultiplierChange,
+  onClipDurationChange,
+  onClipRetimeChange,
   onRenameClip,
   onDuplicateClip,
   onDeleteClip,
@@ -251,8 +265,53 @@ export default function AnimatePanel({
             Move Down
           </button>
         </div>
+        <label>
+          <span>Duration (s)</span>
+          <input
+            type="number"
+            data-testid="animation-duration-input"
+            min={MIN_ANIMATION_DURATION}
+            max={MAX_ANIMATION_DURATION}
+            step="0.01"
+            value={duration}
+            disabled={!hasActiveClip}
+            onChange={(event) => onClipDurationChange(normalizeAnimationDuration(Number(event.target.value)))}
+          />
+        </label>
+        <label>
+          <span>Retime to (s)</span>
+          <input
+            type="number"
+            data-testid="animation-retime-input"
+            min={MIN_ANIMATION_DURATION}
+            max={MAX_ANIMATION_DURATION}
+            step="0.01"
+            value={duration}
+            disabled={!hasActiveClip}
+            onChange={(event) => onClipRetimeChange(normalizeAnimationDuration(Number(event.target.value)))}
+          />
+        </label>
       </div>
       <div className="animate-keyframe-tools" data-testid="animate-keyframe-tools">
+        <label className="animate-scope-selector">
+          <span>Key scope</span>
+          <select
+            data-testid="animation-scope-select"
+            value={animationScope}
+            disabled={!hasEditableSelection}
+            onChange={(event) => {
+              if (ANIMATION_EDIT_SCOPES.includes(event.target.value as AnimationEditScope)) {
+                onAnimationScopeChange(event.target.value as AnimationEditScope);
+              }
+            }}
+          >
+            {ANIMATION_EDIT_SCOPES.map((scope) => (
+              <option key={scope} value={scope}>
+                {ANIMATION_EDIT_SCOPE_LABELS[scope]}
+              </option>
+            ))}
+          </select>
+        </label>
         <button
           type="button"
           data-testid="animation-insert-key-btn"

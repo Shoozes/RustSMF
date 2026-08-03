@@ -72,6 +72,37 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
     });
 
+  test('skin Set mode exposes target weight, flow, and falloff to the brush contract', async ({ page }) => {
+      await page.goto('/');
+
+      await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await pausePlaybackIfRunning(page);
+
+      await page.getByTestId('mode-tab-skin').click({ force: true });
+      const inspector = page.getByTestId('inspector');
+      const bone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
+      await expect(bone).toBeVisible();
+      await bone.click({ force: true });
+
+      await page.getByTestId('skin-paint-mode-set').click({ force: true });
+      await setRangeValue(page, 'skin-paint-target', 0.35);
+      await setRangeValue(page, 'skin-paint-strength', 0.5);
+      await setRangeValue(page, 'skin-paint-falloff', 2);
+      await expect(page.getByTestId('skin-paint-target')).toHaveValue('0.35');
+      await expect(page.getByTestId('skin-paint-strength')).toHaveValue('0.5');
+      await expect(page.getByTestId('skin-paint-falloff')).toHaveValue('2');
+
+      const canvas = page.getByTestId('three-canvas');
+      expect(await paintOnMeshInViewport(page, { requireDirty: true })).toBe(true);
+      await expect(canvas).toHaveAttribute('data-skin-paint-mode', 'set');
+      await expect(canvas).toHaveAttribute('data-skin-paint-target-weight', '0.35');
+      await expect(canvas).toHaveAttribute('data-skin-paint-strength', '0.5');
+      await expect(canvas).toHaveAttribute('data-skin-paint-falloff', '2');
+      await expect(page.getByTestId('status-text')).toContainText(/set mode/i);
+      await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
+    });
+
   test('skin paint updates edit state and exports SMF', async ({ page }) => {
       await page.goto('/');
 

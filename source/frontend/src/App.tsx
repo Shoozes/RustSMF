@@ -16,6 +16,7 @@ import type { BoneTransformOwner, ViewportObjectSelectEvent } from './types/view
 import { supportedModelFormatsLabel } from './utils/modelFormat'
 import { collectModelOutlinerItems } from './utils/modelOutliner'
 import { getClipByName, summarizeAnimationTimeline } from './utils/animationTimeline'
+import { resolveAnimationScope } from './utils/animationScope'
 import { validateRig } from './utils/rigValidation'
 import { collectRigDeformBoneNames, collectRigHierarchyBones } from './utils/rigHierarchy'
 import {
@@ -251,6 +252,7 @@ export default function App() {
     animationClipboardHasKeyframe,
     animationInterpolation,
     animationSnapStep,
+    animationScope,
     animationClipMetadata,
     insertAnimationKeyframe,
     insertAnimationKeyframeAtTime,
@@ -262,8 +264,11 @@ export default function App() {
     moveSelectedAnimationKeyframe,
     changeAnimationInterpolation,
     changeAnimationSnapStep,
+    changeAnimationScope,
     changeAnimationClipLoop,
     changeAnimationClipSampleFrameMultiplier,
+    changeAnimationClipDuration,
+    changeAnimationClipRetime,
   } = useLoadModel({ allocateHistoryOrder, externalDirtyRef: outlinerDirtyRef });
 
   const workspace = WORKSPACE_BY_MODE[editorMode];
@@ -295,13 +300,17 @@ export default function App() {
   const selectedBoneName = useMemo(() => {
     return model.skeleton?.bones.some((bone) => bone.name === ui.selected) ? ui.selected : '';
   }, [model.skeleton, ui.selected]);
+  const animationScopeNames = useMemo(() => {
+    const resolved = resolveAnimationScope(model.skeleton, selectedBoneName, animationScope);
+    return resolved.ok ? resolved.names : (selectedBoneName ? [selectedBoneName] : []);
+  }, [animationScope, model.skeleton, selectedBoneName]);
   const currentClip = useMemo(
     () => getClipByName(model.clips, playback.currentClipName),
     [model.clips, playback.currentClipName],
   );
   const animationTimelineSummary = useMemo(
-    () => summarizeAnimationTimeline(currentClip, selectedBoneName),
-    [currentClip, selectedBoneName],
+    () => summarizeAnimationTimeline(currentClip, animationScopeNames),
+    [animationScopeNames, currentClip],
   );
   const rigValidationReport = validateRig(model.skeleton, model.root);
   const timelineKeyframeTimes = animationTimelineSummary.selectedKeyframeTimes.length > 0
@@ -676,6 +685,7 @@ export default function App() {
           clipboardHasKeyframe={animationClipboardHasKeyframe}
           interpolation={animationInterpolation}
           snapStep={animationSnapStep}
+          animationScope={animationScope}
           clipMetadata={animationClipMetadata}
           onInsertKeyframe={insertAnimationKeyframe}
           onUpdateKeyframe={updateAnimationKeyframe}
@@ -684,8 +694,11 @@ export default function App() {
           onPasteKeyframe={pasteAnimationKeyframe}
           onInterpolationChange={changeAnimationInterpolation}
           onSnapStepChange={changeAnimationSnapStep}
+          onAnimationScopeChange={changeAnimationScope}
           onClipLoopChange={changeAnimationClipLoop}
           onClipSampleFrameMultiplierChange={changeAnimationClipSampleFrameMultiplier}
+          onClipDurationChange={changeAnimationClipDuration}
+          onClipRetimeChange={changeAnimationClipRetime}
           onRenameClip={renameCurrentAnimationClip}
           onDuplicateClip={duplicateCurrentAnimationClip}
           onDeleteClip={deleteCurrentAnimationClip}

@@ -10,6 +10,8 @@ import {
 } from '../loaders/coord';
 import { cloneImportedSmf } from '../loaders/smfData';
 import { findEffectiveBoneParentIndex } from '../loaders/smfRig';
+import { normalizeAnimationDuration } from './animationCreation';
+import type { AnimationEditScope } from './animationScope';
 
 export type AnimationInterpolation = 'linear' | 'step' | 'quadratic';
 export type AnimationSnapStep = 0 | 0.01 | 0.05 | 0.1 | 0.25 | 0.5;
@@ -38,23 +40,34 @@ export interface EditableBoneKeyframe {
   interpolation: AnimationInterpolation;
 }
 
+export interface AnimationKeyframeClipboard {
+  sourceClipName: string;
+  sourceSkeletonFingerprint: string;
+  sourceScope: AnimationEditScope;
+  entries: Record<string, EditableBoneKeyframe>;
+}
+
 export interface AnimationEditState {
   selectedKeyTime: number | null;
-  clipboard: EditableBoneKeyframe | null;
+  clipboard: AnimationKeyframeClipboard | null;
   interpolation: AnimationInterpolation;
   editsByClip: Record<string, Record<string, EditableBoneKeyframe[]>>;
   metadataByClip: Record<string, AnimationClipMetadata>;
+  durationByClip: Record<string, number>;
   dirtyClipNames: string[];
 }
 
 const TIME_EPSILON = 1e-4;
 
+const makeStringRecord = <T>(): Record<string, T> => Object.create(null) as Record<string, T>;
+
 export const makeAnimationEditState = (): AnimationEditState => ({
   selectedKeyTime: null,
   clipboard: null,
   interpolation: 'linear',
-  editsByClip: {},
-  metadataByClip: {},
+  editsByClip: makeStringRecord(),
+  metadataByClip: makeStringRecord(),
+  durationByClip: makeStringRecord(),
   dirtyClipNames: [],
 });
 
@@ -67,26 +80,46 @@ const cloneKey = (key: EditableBoneKeyframe): EditableBoneKeyframe => ({
   interpolation: key.interpolation,
 });
 
+const cloneClipboard = (clipboard: AnimationKeyframeClipboard | null): AnimationKeyframeClipboard | null => {
+  if (!clipboard) return null;
+  const entries = makeStringRecord<EditableBoneKeyframe>();
+  for (const [boneName, key] of Object.entries(clipboard.entries)) {
+    entries[boneName] = cloneKey(key);
+  }
+  return {
+    sourceClipName: clipboard.sourceClipName,
+    sourceSkeletonFingerprint: clipboard.sourceSkeletonFingerprint,
+    sourceScope: clipboard.sourceScope ?? 'bone',
+    entries,
+  };
+};
+
 export const cloneAnimationEditState = (state: AnimationEditState): AnimationEditState => {
-  const editsByClip: AnimationEditState['editsByClip'] = {};
+  const editsByClip = makeStringRecord<AnimationEditState['editsByClip'][string]>();
   for (const [clipName, boneEdits] of Object.entries(state.editsByClip)) {
-    editsByClip[clipName] = {};
+    editsByClip[clipName] = makeStringRecord<EditableBoneKeyframe[]>();
     for (const [boneName, keys] of Object.entries(boneEdits)) {
       editsByClip[clipName][boneName] = keys.map(cloneKey);
     }
   }
 
-  const metadataByClip: AnimationEditState['metadataByClip'] = {};
+  const metadataByClip = makeStringRecord<AnimationClipMetadata>();
   for (const [clipName, metadata] of Object.entries(state.metadataByClip)) {
     metadataByClip[clipName] = { ...metadata };
   }
 
+  const durationByClip = makeStringRecord<number>();
+  for (const [clipName, duration] of Object.entries(state.durationByClip ?? {})) {
+    durationByClip[clipName] = duration;
+  }
+
   return {
     selectedKeyTime: state.selectedKeyTime,
-    clipboard: state.clipboard ? cloneKey(state.clipboard) : null,
+    clipboard: cloneClipboard(state.clipboard),
     interpolation: state.interpolation,
     editsByClip,
     metadataByClip,
+    durationByClip,
     dirtyClipNames: [...state.dirtyClipNames],
   };
 };
@@ -101,6 +134,21 @@ const sameKey = (left: EditableBoneKeyframe | null, right: EditableBoneKeyframe 
     && left.position.every((value, index) => sameNumber(value, right.position[index]))
     && left.quaternion.every((value, index) => sameNumber(value, right.quaternion[index]))
   );
+};
+
+const sameClipboard = (
+  left: AnimationKeyframeClipboard | null,
+  right: AnimationKeyframeClipboard | null,
+): boolean => {
+  if (!left || !right) return left === right;
+  if (left.sourceClipName !== right.sourceClipName) return false;
+  if (left.sourceSkeletonFingerprint !== right.sourceSkeletonFingerprint) return false;
+  if (left.sourceScope !== right.sourceScope) return false;
+  const names = new Set([...Object.keys(left.entries), ...Object.keys(right.entries)]);
+  for (const name of names) {
+    if (!sameKey(left.entries[name] ?? null, right.entries[name] ?? null)) return false;
+  }
+  return true;
 };
 
 const sameStringSet = (left: string[], right: string[]): boolean => {
@@ -130,17 +178,27 @@ export const sameAnimationEditState = (
   ) {
     return false;
   }
-  if (!sameKey(left.clipboard, right.clipboard)) return false;
+  if (!sameClipboard(left.clipboard, right.clipboard)) return false;
   if (!sameStringSet(left.dirtyClipNames, right.dirtyClipNames)) return false;
   const metadataClipNames = new Set([...Object.keys(left.metadataByClip), ...Object.keys(right.metadataByClip)]);
   for (const clipName of metadataClipNames) {
     if (!sameMetadata(left.metadataByClip[clipName], right.metadataByClip[clipName])) return false;
   }
 
+  const durationClipNames = new Set([
+    ...Object.keys(left.durationByClip ?? {}),
+    ...Object.keys(right.durationByClip ?? {}),
+  ]);
+  for (const clipName of durationClipNames) {
+    if (Math.abs((left.durationByClip?.[clipName] ?? 0) - (right.durationByClip?.[clipName] ?? 0)) > TIME_EPSILON) {
+      return false;
+    }
+  }
+
   const clipNames = new Set([...Object.keys(left.editsByClip), ...Object.keys(right.editsByClip)]);
   for (const clipName of clipNames) {
-    const leftClip = left.editsByClip[clipName] ?? {};
-    const rightClip = right.editsByClip[clipName] ?? {};
+    const leftClip = left.editsByClip[clipName] ?? makeStringRecord<EditableBoneKeyframe[]>();
+    const rightClip = right.editsByClip[clipName] ?? makeStringRecord<EditableBoneKeyframe[]>();
     const boneNames = new Set([...Object.keys(leftClip), ...Object.keys(rightClip)]);
     for (const boneName of boneNames) {
       const leftKeys = leftClip[boneName] ?? [];
@@ -309,6 +367,77 @@ export const setAnimationClipSampleFrameMultiplier = (
   return next;
 };
 
+export const setAnimationClipDuration = (
+  state: AnimationEditState,
+  clipName: string,
+  duration: number,
+): AnimationEditState => {
+  if (!clipName) return cloneAnimationEditState(state);
+  const next = cloneAnimationEditState(state);
+  next.durationByClip[clipName] = normalizeAnimationDuration(duration);
+  markDirty(next, clipName);
+  return next;
+};
+
+export const getAnimationClipTimelineDuration = (clip: THREE.AnimationClip): number => {
+  let duration = Number.isFinite(clip.duration) && clip.duration > 0 ? clip.duration : 0;
+  for (const track of clip.tracks) {
+    for (const time of track.times) {
+      if (Number.isFinite(time)) duration = Math.max(duration, time);
+    }
+  }
+  return Math.max(0, duration);
+};
+
+const scaleAnimationTime = (time: number, scale: number, duration: number): number => (
+  normalizeTime(Math.min(duration, Math.max(0, Number.isFinite(time) ? time * scale : 0)))
+);
+
+export const retimeAnimationClip = (
+  clip: THREE.AnimationClip,
+  currentDuration: number,
+  targetDuration: number,
+): THREE.AnimationClip => {
+  const normalizedTarget = normalizeAnimationDuration(targetDuration);
+  const sourceDuration = Number.isFinite(currentDuration) && currentDuration > TIME_EPSILON
+    ? currentDuration
+    : getAnimationClipTimelineDuration(clip);
+  const scale = sourceDuration > TIME_EPSILON ? normalizedTarget / sourceDuration : 1;
+  const tracks = clip.tracks.map((track) => {
+    const retimed = track.clone();
+    retimed.times = Float32Array.from(track.times, (time) => scaleAnimationTime(time, scale, normalizedTarget));
+    return retimed;
+  });
+  return new THREE.AnimationClip(clip.name, normalizedTarget, tracks);
+};
+
+export const retimeAnimationEditState = (
+  state: AnimationEditState,
+  clipName: string,
+  currentDuration: number,
+  targetDuration: number,
+): AnimationEditState => {
+  if (!clipName) return cloneAnimationEditState(state);
+
+  const next = cloneAnimationEditState(state);
+  const normalizedTarget = normalizeAnimationDuration(targetDuration);
+  const sourceDuration = Number.isFinite(currentDuration) && currentDuration > TIME_EPSILON
+    ? currentDuration
+    : normalizedTarget;
+  const scale = sourceDuration > TIME_EPSILON ? normalizedTarget / sourceDuration : 1;
+  const clipEdits = next.editsByClip[clipName];
+  if (clipEdits) {
+    for (const [boneName, keys] of Object.entries(clipEdits)) {
+      clipEdits[boneName] = keys
+        .map((key) => ({ ...cloneKey(key), time: scaleAnimationTime(key.time, scale, normalizedTarget) }))
+        .sort((left, right) => left.time - right.time);
+    }
+  }
+  next.durationByClip[clipName] = normalizedTarget;
+  markDirty(next, clipName);
+  return next;
+};
+
 export const makeKeyframeFromBone = (
   bone: THREE.Bone,
   time: number,
@@ -332,7 +461,7 @@ export const upsertAnimationKeyframe = (
 ): AnimationEditState => {
   const next = cloneAnimationEditState(state);
   const key = cloneKey({ ...keyframe, time: normalizeTime(keyframe.time) });
-  const clipEdits = next.editsByClip[clipName] ?? {};
+  const clipEdits = next.editsByClip[clipName] ?? makeStringRecord<EditableBoneKeyframe[]>();
   const boneKeys = clipEdits[boneName] ?? [];
   const existingIndex = boneKeys.findIndex((candidate) => keyMatchesTime(candidate, key.time));
 
@@ -347,6 +476,38 @@ export const upsertAnimationKeyframe = (
   next.editsByClip[clipName] = clipEdits;
   next.selectedKeyTime = key.time;
   next.interpolation = key.interpolation;
+  markDirty(next, clipName);
+  return next;
+};
+
+export const upsertAnimationKeyframes = (
+  state: AnimationEditState,
+  clipName: string,
+  keyframes: Readonly<Record<string, EditableBoneKeyframe>>,
+): AnimationEditState => {
+  const next = cloneAnimationEditState(state);
+  const clipEdits = next.editsByClip[clipName] ?? makeStringRecord<EditableBoneKeyframe[]>();
+  let firstKey: EditableBoneKeyframe | null = null;
+
+  for (const [boneName, candidate] of Object.entries(keyframes)) {
+    if (!boneName) continue;
+    const key = cloneKey({ ...candidate, time: normalizeTime(candidate.time) });
+    const boneKeys = clipEdits[boneName] ?? [];
+    const existingIndex = boneKeys.findIndex((entry) => keyMatchesTime(entry, key.time));
+    if (existingIndex >= 0) {
+      boneKeys[existingIndex] = key;
+    } else {
+      boneKeys.push(key);
+    }
+    boneKeys.sort((left, right) => left.time - right.time);
+    clipEdits[boneName] = boneKeys;
+    firstKey ??= key;
+  }
+
+  if (!firstKey) return next;
+  next.editsByClip[clipName] = clipEdits;
+  next.selectedKeyTime = firstKey.time;
+  next.interpolation = firstKey.interpolation;
   markDirty(next, clipName);
   return next;
 };
@@ -373,6 +534,34 @@ export const deleteAnimationKeyframe = (
   if (Object.keys(clipEdits).length === 0) {
     delete next.editsByClip[clipName];
   }
+  next.selectedKeyTime = null;
+  markDirty(next, clipName);
+  return next;
+};
+
+export const deleteAnimationKeyframes = (
+  state: AnimationEditState,
+  clipName: string,
+  boneNames: Iterable<string>,
+  time: number,
+): AnimationEditState => {
+  const next = cloneAnimationEditState(state);
+  const clipEdits = next.editsByClip[clipName];
+  if (!clipEdits) return next;
+
+  let changed = false;
+  for (const boneName of new Set([...boneNames].filter(Boolean))) {
+    const boneKeys = clipEdits[boneName];
+    if (!boneKeys) continue;
+    const filtered = boneKeys.filter((key) => !keyMatchesTime(key, time));
+    if (filtered.length === boneKeys.length) continue;
+    changed = true;
+    if (filtered.length > 0) clipEdits[boneName] = filtered;
+    else delete clipEdits[boneName];
+  }
+
+  if (!changed) return next;
+  if (Object.keys(clipEdits).length === 0) delete next.editsByClip[clipName];
   next.selectedKeyTime = null;
   markDirty(next, clipName);
   return next;
@@ -408,9 +597,37 @@ export const setAnimationInterpolation = (
 export const copyAnimationKeyframe = (
   state: AnimationEditState,
   keyframe: EditableBoneKeyframe,
+  boneName = '',
+  sourceClipName = '',
+  sourceSkeletonFingerprint = '',
+  sourceScope: AnimationEditScope = 'bone',
 ): AnimationEditState => ({
   ...cloneAnimationEditState(state),
-  clipboard: cloneKey(keyframe),
+  clipboard: {
+    sourceClipName,
+    sourceSkeletonFingerprint,
+    sourceScope,
+    entries: Object.assign(makeStringRecord<EditableBoneKeyframe>(), { [boneName]: cloneKey(keyframe) }),
+  },
+});
+
+export const copyAnimationKeyframes = (
+  state: AnimationEditState,
+  sourceClipName: string,
+  sourceSkeletonFingerprint: string,
+  sourceScope: AnimationEditScope,
+  keyframes: Readonly<Record<string, EditableBoneKeyframe>>,
+): AnimationEditState => ({
+  ...cloneAnimationEditState(state),
+  clipboard: {
+    sourceClipName,
+    sourceSkeletonFingerprint,
+    sourceScope,
+    entries: Object.assign(
+      makeStringRecord<EditableBoneKeyframe>(),
+      Object.fromEntries(Object.entries(keyframes).map(([boneName, key]) => [boneName, cloneKey(key)])),
+    ),
+  },
 });
 
 export const renameAnimationEditBone = (
@@ -446,7 +663,7 @@ export const renameAnimationEditClip = (
   const next = cloneAnimationEditState(state);
   const existing = next.editsByClip[oldClipName];
   if (existing) {
-    const destination = next.editsByClip[newClipName] ?? {};
+    const destination = next.editsByClip[newClipName] ?? makeStringRecord<EditableBoneKeyframe[]>();
     next.editsByClip[newClipName] = {
       ...destination,
       ...existing,
@@ -457,6 +674,11 @@ export const renameAnimationEditClip = (
   if (metadata) {
     next.metadataByClip[newClipName] = { ...metadata };
     delete next.metadataByClip[oldClipName];
+  }
+  const duration = next.durationByClip[oldClipName];
+  if (duration !== undefined) {
+    next.durationByClip[newClipName] = duration;
+    delete next.durationByClip[oldClipName];
   }
 
   next.dirtyClipNames = Array.from(new Set([
@@ -478,7 +700,7 @@ export const duplicateAnimationEditClip = (
   const next = cloneAnimationEditState(state);
   const sourceEdits = next.editsByClip[sourceClipName];
   if (sourceEdits) {
-    next.editsByClip[duplicateClipName] = {};
+    next.editsByClip[duplicateClipName] = makeStringRecord<EditableBoneKeyframe[]>();
     for (const [boneName, keys] of Object.entries(sourceEdits)) {
       next.editsByClip[duplicateClipName][boneName] = keys.map(cloneKey);
     }
@@ -488,6 +710,10 @@ export const duplicateAnimationEditClip = (
   const metadata = next.metadataByClip[sourceClipName];
   if (metadata) {
     next.metadataByClip[duplicateClipName] = { ...metadata };
+  }
+  const duration = next.durationByClip[sourceClipName];
+  if (duration !== undefined) {
+    next.durationByClip[duplicateClipName] = duration;
   }
   markDirty(next, duplicateClipName);
   return next;
@@ -502,6 +728,7 @@ export const deleteAnimationEditClip = (
   const next = cloneAnimationEditState(state);
   delete next.editsByClip[clipName];
   delete next.metadataByClip[clipName];
+  delete next.durationByClip[clipName];
   next.dirtyClipNames = next.dirtyClipNames.filter((name) => name !== clipName);
   next.selectedKeyTime = null;
   return next;
@@ -530,7 +757,10 @@ export const deleteAnimationEditBones = (
       markDirty(next, clipName);
     }
   }
-  if (next.clipboard && names.size > 0) {
+  if (
+    next.clipboard
+    && [...names].some((name) => Object.prototype.hasOwnProperty.call(next.clipboard!.entries, name))
+  ) {
     next.clipboard = null;
   }
   next.selectedKeyTime = null;
@@ -579,6 +809,43 @@ export const moveAnimationKeyframe = (
   }
   withoutSource.sort((left, right) => left.time - right.time);
   clipEdits[boneName] = withoutSource;
+  next.selectedKeyTime = normalizedToTime;
+  markDirty(next, clipName);
+  return next;
+};
+
+export const moveAnimationKeyframes = (
+  state: AnimationEditState,
+  clipName: string,
+  boneNames: Iterable<string>,
+  fromTime: number,
+  toTime: number,
+): AnimationEditState => {
+  const next = cloneAnimationEditState(state);
+  const clipEdits = next.editsByClip[clipName];
+  if (!clipEdits) return next;
+
+  const normalizedToTime = normalizeTime(toTime);
+  let changed = false;
+  for (const boneName of new Set([...boneNames].filter(Boolean))) {
+    const boneKeys = clipEdits[boneName];
+    if (!boneKeys) continue;
+    const sourceIndex = boneKeys.findIndex((candidate) => keyMatchesTime(candidate, fromTime));
+    if (sourceIndex < 0) continue;
+    const source = boneKeys[sourceIndex];
+    if (keyMatchesTime(source, normalizedToTime)) continue;
+
+    const moved = cloneKey({ ...source, time: normalizedToTime });
+    const withoutSource = boneKeys.filter((_, index) => index !== sourceIndex);
+    const destinationIndex = withoutSource.findIndex((candidate) => keyMatchesTime(candidate, normalizedToTime));
+    if (destinationIndex >= 0) withoutSource[destinationIndex] = moved;
+    else withoutSource.push(moved);
+    withoutSource.sort((left, right) => left.time - right.time);
+    clipEdits[boneName] = withoutSource;
+    changed = true;
+  }
+
+  if (!changed) return next;
   next.selectedKeyTime = normalizedToTime;
   markDirty(next, clipName);
   return next;
@@ -750,13 +1017,16 @@ export const applyAnimationEditsToClips = (
   return baseClips.map((clip, index) => {
     const clipName = getClipKey(clip, index);
     const clipEdits = state.editsByClip[clipName];
-    if (!clipEdits) return clip;
+    const durationOverride = state.durationByClip?.[clipName];
+    if (!clipEdits && durationOverride === undefined) return clip;
 
-    const editedBoneNames = new Set(Object.keys(clipEdits));
-    const tracks = clip.tracks.filter((track) => !isEditedBoneTrack(track, editedBoneNames));
-    let duration = clip.duration;
+    const editedBoneNames = new Set(Object.keys(clipEdits ?? {}));
+    const tracks = clipEdits
+      ? clip.tracks.filter((track) => !isEditedBoneTrack(track, editedBoneNames))
+      : clip.tracks.map((track) => track.clone());
+    let duration = Math.max(clip.duration, durationOverride ?? 0);
 
-    for (const [boneName, editedKeys] of Object.entries(clipEdits)) {
+    for (const [boneName, editedKeys] of Object.entries(clipEdits ?? {})) {
       const byTime = new Map<number, EditableBoneKeyframe>();
       for (const key of collectBoneKeysFromClip(clip, boneName)) {
         byTime.set(key.time, key);
@@ -818,6 +1088,7 @@ const buildSmfAnimationFromClip = (
   source: ImportedSmf,
   sourceAnimation: ImportedSmf['animations'][number],
   clip: THREE.AnimationClip,
+  durationOverride?: number,
 ): ImportedSmf['animations'][number] => {
   const times = collectTrackTimes(clip.tracks);
   if (times.length === 0) times.push(0);
@@ -874,7 +1145,9 @@ const buildSmfAnimationFromClip = (
   return {
     ...sourceAnimation,
     name: clip.name || sourceAnimation.name,
-    duration: Math.max(sourceAnimation.duration, clip.duration, times[times.length - 1] ?? 0),
+    duration: durationOverride === undefined
+      ? Math.max(sourceAnimation.duration, clip.duration, times[times.length - 1] ?? 0)
+      : normalizeAnimationDuration(durationOverride),
     times,
     frames,
     nodeCount: source.bones.length,
@@ -965,7 +1238,7 @@ export const applyAnimationEditsToImportedSmf = (
         ?? sourceAnimations[index]
         ?? sourceAnimations[0]
         ?? makeFallbackAnimation(clipName);
-      const rebuilt = buildSmfAnimationFromClip(source, sourceAnimation, clip);
+      const rebuilt = buildSmfAnimationFromClip(source, sourceAnimation, clip, state.durationByClip?.[clipName]);
       return {
         ...applyAnimationMetadata(rebuilt, state.metadataByClip[clipName], getAuthoredClipInterpolation(state, clipName)),
         name: clipName,
@@ -980,7 +1253,11 @@ export const applyAnimationEditsToImportedSmf = (
     const clip = editedClips.find((candidate, clipIndex) => getClipKey(candidate, clipIndex) === clipName);
     const interpolation = getAuthoredClipInterpolation(state, clipName);
     if (!clip) return applyAnimationMetadata(animation, state.metadataByClip[clipName], interpolation);
-    return applyAnimationMetadata(buildSmfAnimationFromClip(source, animation, clip), state.metadataByClip[clipName], interpolation);
+    return applyAnimationMetadata(
+      buildSmfAnimationFromClip(source, animation, clip, state.durationByClip?.[clipName]),
+      state.metadataByClip[clipName],
+      interpolation,
+    );
   });
   return result;
 };

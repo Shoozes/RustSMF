@@ -151,6 +151,27 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Undid delete animation clip Hero Bend/i);
       await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Hero Bend');
       await expect(page.getByTestId('animation-delete-clip-btn')).toBeEnabled();
+
+      await expect(page.getByTestId('animation-duration-input')).toHaveValue('0.5');
+      await page.getByTestId('animation-duration-input').fill('1.5');
+      await expect(page.getByTestId('status-text')).toContainText(/Set animation clip Hero Bend duration to 1\.50s/i);
+      await expect(page.getByTestId('animation-duration-input')).toHaveValue('1.5');
+      await page.getByTestId('editor-undo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Undid set animation clip Hero Bend duration to 1\.50s/i);
+      await expect(page.getByTestId('animation-duration-input')).toHaveValue('0.5');
+      await page.getByTestId('editor-redo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Redid set animation clip Hero Bend duration to 1\.50s/i);
+      await expect(page.getByTestId('animation-duration-input')).toHaveValue('1.5');
+
+      await page.getByTestId('animation-retime-input').fill('0.75');
+      await expect(page.getByTestId('status-text')).toContainText(/Retimed animation clip Hero Bend from 1\.50s to 0\.75s/i);
+      await expect(page.getByTestId('animation-retime-input')).toHaveValue('0.75');
+      await page.getByTestId('editor-undo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Undid retime animation clip Hero Bend from 1\.50s to 0\.75s/i);
+      await expect(page.getByTestId('animation-retime-input')).toHaveValue('1.5');
+      await page.getByTestId('editor-redo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Redid retime animation clip Hero Bend from 1\.50s to 0\.75s/i);
+      await expect(page.getByTestId('animation-retime-input')).toHaveValue('0.75');
     });
 
   test('creates a pose-based animation and undoes the whole workspace transaction', async ({ page }) => {
@@ -277,6 +298,36 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Undid delete animation keyframe/i);
       await page.keyboard.press('Control+Y');
       await expect(page.getByTestId('status-text')).toContainText(/Redid delete animation keyframe/i);
+    });
+
+  test('scoped animation key authoring makes one undoable branch transaction', async ({ page }) => {
+      await page.goto('/');
+
+      const input = page.getByTestId('model-file-input');
+      await input.setInputFiles(await createSkinnedGlbFixtureInput());
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
+      await pausePlaybackIfRunning(page);
+
+      await page.getByTestId('mode-tab-rig').click({ force: true });
+      const inspector = page.getByTestId('inspector');
+      const boneEntry = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
+      await expect(boneEntry).toBeVisible();
+      await boneEntry.click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureRoot/i);
+
+      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await expect(page.getByTestId('animation-scope-select')).toHaveValue('bone');
+      await page.getByTestId('animation-scope-select').selectOption('branch');
+      await expect(page.getByTestId('status-text')).toContainText(/Animation edit scope set to Branch/i);
+      await page.getByTestId('animation-insert-key-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Inserted branch animation keyframes for Branch \(FixtureRoot, FixtureTip\)/i);
+      await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
+
+      await page.getByTestId('editor-undo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Undid insert branch animation keyframe/i);
+      await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: false');
+      await expect(page.getByTestId('animation-scope-select')).toHaveValue('branch');
     });
 
   test('timeline scrub, clip change, loading overlay, and error banner (extended controls + UX)', async ({ page }) => {

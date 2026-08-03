@@ -41,7 +41,7 @@ export const isTrackForBone = (trackName: string, boneName: string): boolean => 
 
 export const summarizeAnimationTimeline = (
   clip: THREE.AnimationClip | null | undefined,
-  selectedBoneName = '',
+  selectedBoneNames: string | readonly string[] = '',
 ): AnimationTimelineSummary => {
   if (!clip) {
     return {
@@ -52,8 +52,11 @@ export const summarizeAnimationTimeline = (
     };
   }
 
-  const selectedTracks = selectedBoneName
-    ? clip.tracks.filter((track) => isTrackForBone(track.name, selectedBoneName))
+  const names = typeof selectedBoneNames === 'string'
+    ? (selectedBoneNames ? [selectedBoneNames] : [])
+    : selectedBoneNames.filter(Boolean);
+  const selectedTracks = names.length > 0
+    ? clip.tracks.filter((track) => names.some((name) => isTrackForBone(track.name, name)))
     : [];
 
   return {

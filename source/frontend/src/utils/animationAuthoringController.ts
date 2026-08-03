@@ -1,11 +1,12 @@
 import type * as THREE from 'three';
 import {
   cloneAnimationEditState,
-  copyAnimationKeyframe,
+  copyAnimationKeyframes,
   deleteAnimationEditClip,
-  deleteAnimationKeyframe,
+  deleteAnimationKeyframes,
   duplicateAnimationEditClip,
   getAnimationClipMetadata,
+  getAnimationClipTimelineDuration,
   getClipKey,
   getCurrentClipKey,
   makeAnimationClipMetadata,
@@ -14,7 +15,10 @@ import {
   markAnimationClipDirty,
   makeUniqueAnimationClipName,
   moveAnimationClip,
-  moveAnimationKeyframe,
+  moveAnimationKeyframes,
+  retimeAnimationClip,
+  retimeAnimationEditState,
+  setAnimationClipDuration,
   normalizeAnimationSnapStep,
   renameAnimationEditClip,
   selectAnimationKeyframe,
@@ -22,9 +26,9 @@ import {
   setAnimationClipSampleFrameMultiplier,
   setAnimationInterpolation,
   snapAnimationTime,
-  upsertAnimationKeyframe,
-  type AnimationClipMetadata,
+  upsertAnimationKeyframes,
   type AnimationEditState,
+  type AnimationClipMetadata,
   type AnimationInterpolation,
   type AnimationSnapStep,
   type EditableBoneKeyframe,
@@ -32,6 +36,10 @@ import {
 import {
   captureAnimationPose,
   createAnimationClipFromPose,
+  normalizeAnimationDuration,
+  MAX_ANIMATION_DURATION,
+  MIN_ANIMATION_DURATION,
+  validateAnimationSkeleton,
   type AnimationCreationRequest,
   type AnimationPoseSnapshot,
 } from './animationCreation';
@@ -41,6 +49,13 @@ import {
   type AnimationEditContextFailure,
 } from './animationAuthoringContext';
 import type { AnimationWorkspaceHistorySnapshot } from '../hooks/editorSnapshots';
+import {
+  ANIMATION_EDIT_SCOPE_LABELS,
+  ANIMATION_EDIT_SCOPES,
+  getAnimationSkeletonFingerprint,
+  resolveAnimationScope,
+  type AnimationEditScope,
+} from './animationScope';
 
 export interface AnimationPlaybackController {
   currentClipName?: string;
@@ -59,6 +74,8 @@ export interface AnimationAuthoringControllerOptions {
   skeleton: THREE.Skeleton | null;
   animationRestPoseRef: { current: AnimationPoseSnapshot | null };
   selectedBoneName: string;
+  animationScope?: AnimationEditScope;
+  setAnimationScope?: (scope: AnimationEditScope) => void;
   animationSnapStep: AnimationSnapStep;
   setAnimationEditState: (state: AnimationEditState) => void;
   setAnimationSnapStep: (step: AnimationSnapStep) => void;
@@ -93,11 +110,15 @@ export interface AnimationAuthoringController {
   moveSelectedAnimationKeyframe: (fromTime: number, toTime: number) => void;
   changeAnimationInterpolation: (interpolation: AnimationInterpolation) => void;
   changeAnimationSnapStep: (step: AnimationSnapStep) => void;
+  changeAnimationScope: (scope: AnimationEditScope) => void;
   changeAnimationClipLoop: (loop: boolean) => void;
   changeAnimationClipSampleFrameMultiplier: (value: number) => void;
+  changeAnimationClipDuration: (value: number) => void;
+  changeAnimationClipRetime: (value: number) => void;
   applyAnimationEditState: (state: AnimationEditState, status?: string) => void;
   getAnimationAuthoredKeyTimes: () => number[];
   getAnimationClipMetadata: () => AnimationClipMetadata;
+  getAnimationScope: () => AnimationEditScope;
 }
 
 export function createAnimationAuthoringController(
@@ -110,6 +131,8 @@ export function createAnimationAuthoringController(
     skeleton,
     animationRestPoseRef,
     selectedBoneName,
+    animationScope = 'bone',
+    setAnimationScope,
     animationSnapStep,
     setAnimationEditState,
     setAnimationSnapStep,
@@ -121,6 +144,50 @@ export function createAnimationAuthoringController(
     getSourceAnimationClipMetadata,
     setStatus,
   } = options;
+
+  const scopeLabel = (): string => ANIMATION_EDIT_SCOPE_LABELS[animationScope];
+
+  const getActiveAnimationScopeContext = (): {
+    clipName: string;
+    boneName: string;
+    bone: THREE.Bone;
+    bones: THREE.Bone[];
+    names: string[];
+    fingerprint: string;
+  } | null => {
+    const context = getActiveAnimationEditContext();
+    if (!context) return null;
+    const resolved = resolveAnimationScope(skeleton, context.boneName, animationScope);
+    if (resolved.ok) {
+      return {
+        ...context,
+        bones: resolved.bones,
+        names: resolved.names,
+        fingerprint: getAnimationSkeletonFingerprint(skeleton),
+      };
+    }
+    const message = resolved.reason === 'ambiguous-selection'
+      ? `Animation scope is unavailable because bone name ${resolved.boneName || context.boneName} is ambiguous.`
+      : resolved.reason === 'ambiguous-bone-name'
+        ? `Animation scope is unavailable because bone name ${resolved.boneName || '(unnamed)'} is ambiguous.`
+        : 'Animation scope requires a selected bone and a loaded skeleton.';
+    setStatus(message);
+    return null;
+  };
+
+  const scopeTargetDescription = (context: { boneName: string; names: string[] }): string => (
+    animationScope === 'bone'
+      ? context.boneName
+      : `${scopeLabel()} (${context.names.join(', ')})`
+  );
+
+  const makeScopedKeyframes = (
+    context: { bones: THREE.Bone[] },
+    time: number,
+    interpolation: AnimationInterpolation,
+  ): Record<string, EditableBoneKeyframe> => Object.fromEntries(
+    context.bones.map((bone) => [bone.name, makeKeyframeFromBone(bone, time, interpolation)]),
+  );
 
   const getActiveAnimationEditContext = (): {
     clipName: string;
@@ -209,8 +276,14 @@ export function createAnimationAuthoringController(
 
   const controller: AnimationAuthoringController = {
     createAnimationFromPose(request) {
-      if (!skeleton || skeleton.bones.length === 0) {
-        setStatus('Load a skinned model with bones before creating an animation.');
+      const skeletonValidation = validateAnimationSkeleton(skeleton);
+      if (!skeletonValidation.ok) {
+        const message = skeletonValidation.reason === 'duplicate-bone-name'
+          ? `Animation creation is unavailable because bone name ${skeletonValidation.boneName || '(unnamed)'} is ambiguous.`
+          : skeletonValidation.reason === 'unnamed-bone'
+            ? 'Animation creation is unavailable because every bone must have a name.'
+            : 'Load a skinned model with bones before creating an animation.';
+        setStatus(message);
         return;
       }
 
@@ -233,7 +306,7 @@ export function createAnimationAuthoringController(
         snapshot,
       );
       if (!createdClip) {
-        setStatus('The new animation could not be created because the skeleton has no named bones.');
+        setStatus('The new animation could not be created because the skeleton is not animation-safe.');
         return;
       }
 
@@ -352,16 +425,17 @@ export function createAnimationAuthoringController(
     snapPlaybackTime,
 
     insertAnimationKeyframeAtTime(time) {
-      const context = getActiveAnimationEditContext();
+      const context = getActiveAnimationScopeContext();
       if (!context) return;
       const state = animationEditStateRef.current;
       const before = cloneAnimationEditState(state);
       const keyTime = snapPlaybackTime(time);
-      const key = makeKeyframeFromBone(context.bone, keyTime, state.interpolation);
-      const next = upsertAnimationKeyframe(state, context.clipName, context.boneName, key);
-      pushAnimationHistory(`insert animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s`, before, next);
+      const keyframes = makeScopedKeyframes(context, keyTime, state.interpolation);
+      const next = upsertAnimationKeyframes(state, context.clipName, keyframes);
+      const target = scopeTargetDescription(context);
+      pushAnimationHistory(`insert ${scopeLabel().toLowerCase()} animation keyframe for ${target} at ${keyTime.toFixed(2)}s`, before, next);
       playbackRef.current.scrub(keyTime);
-      applyAnimationEditState(next, `Inserted animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
+      applyAnimationEditState(next, `Inserted ${animationScope === 'bone' ? 'animation keyframe' : `${scopeLabel().toLowerCase()} animation keyframes`} for ${target} at ${keyTime.toFixed(2)}s.`);
     },
 
     insertAnimationKeyframe() {
@@ -369,55 +443,85 @@ export function createAnimationAuthoringController(
     },
 
     updateAnimationKeyframe() {
-      const context = getActiveAnimationEditContext();
+      const context = getActiveAnimationScopeContext();
       if (!context) return;
       const state = animationEditStateRef.current;
       const before = cloneAnimationEditState(state);
       const time = state.selectedKeyTime ?? snapPlaybackTime(playbackRef.current.currentTime);
-      const key = makeKeyframeFromBone(context.bone, time, state.interpolation);
-      const next = upsertAnimationKeyframe(state, context.clipName, context.boneName, key);
-      pushAnimationHistory(`update animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s`, before, next);
-      applyAnimationEditState(next, `Updated animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
+      const keyframes = makeScopedKeyframes(context, time, state.interpolation);
+      const next = upsertAnimationKeyframes(state, context.clipName, keyframes);
+      const target = scopeTargetDescription(context);
+      pushAnimationHistory(`update ${scopeLabel().toLowerCase()} animation keyframe for ${target} at ${time.toFixed(2)}s`, before, next);
+      applyAnimationEditState(next, `Updated ${animationScope === 'bone' ? 'animation keyframe' : `${scopeLabel().toLowerCase()} animation keyframes`} for ${target} at ${time.toFixed(2)}s.`);
     },
 
     deleteSelectedAnimationKeyframe() {
-      const context = getActiveAnimationEditContext();
+      const context = getActiveAnimationScopeContext();
       if (!context) return;
       const state = animationEditStateRef.current;
       const before = cloneAnimationEditState(state);
       const time = state.selectedKeyTime ?? snapPlaybackTime(playbackRef.current.currentTime);
-      const next = deleteAnimationKeyframe(state, context.clipName, context.boneName, time);
-      pushAnimationHistory(`delete animation keyframe for ${context.boneName} near ${time.toFixed(2)}s`, before, next);
-      applyAnimationEditState(next, `Deleted animation keyframe for ${context.boneName} near ${time.toFixed(2)}s.`);
+      const next = deleteAnimationKeyframes(state, context.clipName, context.names, time);
+      const target = scopeTargetDescription(context);
+      pushAnimationHistory(`delete ${scopeLabel().toLowerCase()} animation keyframe for ${target} near ${time.toFixed(2)}s`, before, next);
+      applyAnimationEditState(next, `Deleted ${animationScope === 'bone' ? 'animation keyframe' : `${scopeLabel().toLowerCase()} animation keyframes`} for ${target} near ${time.toFixed(2)}s.`);
     },
 
     copySelectedAnimationKeyframe() {
-      const context = getActiveAnimationEditContext();
+      const context = getActiveAnimationScopeContext();
       if (!context) return;
       const state = animationEditStateRef.current;
       const time = state.selectedKeyTime ?? snapPlaybackTime(playbackRef.current.currentTime);
-      const edited = getEditedKeyframe(state, context.clipName, context.boneName, time);
-      const key: EditableBoneKeyframe = edited ?? makeKeyframeFromBone(context.bone, time, state.interpolation);
-      const next = copyAnimationKeyframe(state, key);
+      const keyframes = Object.fromEntries(
+        context.bones.map((bone) => [
+          bone.name,
+          getEditedKeyframe(state, context.clipName, bone.name, time)
+            ?? makeKeyframeFromBone(bone, time, state.interpolation),
+        ]),
+      );
+      const next = copyAnimationKeyframes(
+        state,
+        context.clipName,
+        context.fingerprint,
+        animationScope,
+        keyframes,
+      );
       animationEditStateRef.current = next;
       setAnimationEditState(next);
-      setStatus(`Copied animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
+      setStatus(`Copied ${animationScope === 'bone' ? 'animation keyframe' : `${scopeLabel().toLowerCase()} animation keyframes`} for ${scopeTargetDescription(context)} at ${time.toFixed(2)}s.`);
     },
 
     pasteAnimationKeyframe() {
-      const context = getActiveAnimationEditContext();
+      const context = getActiveAnimationScopeContext();
       if (!context) return;
       const state = animationEditStateRef.current;
       if (!state.clipboard) {
         setStatus('No copied animation keyframe to paste.');
         return;
       }
+      if (state.clipboard.sourceSkeletonFingerprint !== context.fingerprint) {
+        setStatus('Copied animation keyframes belong to a different skeleton; paste was rejected.');
+        return;
+      }
+      if (state.clipboard.sourceScope !== animationScope) {
+        setStatus(`Copied ${ANIMATION_EDIT_SCOPE_LABELS[state.clipboard.sourceScope] ?? 'animation'} keyframes do not match the active ${scopeLabel().toLowerCase()} scope; paste was rejected.`);
+        return;
+      }
+      const targetNames = new Set(context.names);
+      const missingTarget = Object.keys(state.clipboard.entries).find((name) => !targetNames.has(name));
+      if (missingTarget) {
+        setStatus(`Copied ${scopeLabel().toLowerCase()} keyframes do not match the active ${scopeLabel().toLowerCase()} scope; paste was rejected.`);
+        return;
+      }
       const before = cloneAnimationEditState(state);
       const time = snapPlaybackTime(playbackRef.current.currentTime);
-      const key: EditableBoneKeyframe = { ...state.clipboard, time };
-      const next = upsertAnimationKeyframe(state, context.clipName, context.boneName, key);
-      pushAnimationHistory(`paste animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s`, before, next);
-      applyAnimationEditState(next, `Pasted animation keyframe for ${context.boneName} at ${key.time.toFixed(2)}s.`);
+      const keyframes = Object.fromEntries(
+        Object.entries(state.clipboard.entries).map(([boneName, key]) => [boneName, { ...key, time }]),
+      );
+      const next = upsertAnimationKeyframes(state, context.clipName, keyframes);
+      const target = scopeTargetDescription(context);
+      pushAnimationHistory(`paste ${scopeLabel().toLowerCase()} animation keyframe for ${target} at ${time.toFixed(2)}s`, before, next);
+      applyAnimationEditState(next, `Pasted ${animationScope === 'bone' ? 'animation keyframe' : `${scopeLabel().toLowerCase()} animation keyframes`} for ${target} at ${time.toFixed(2)}s.`);
     },
 
     selectAnimationKeyframeTime(time) {
@@ -427,7 +531,7 @@ export function createAnimationAuthoringController(
     },
 
     moveSelectedAnimationKeyframe(fromTime, toTime) {
-      const context = getActiveAnimationEditContext();
+      const context = getActiveAnimationScopeContext();
       if (!context) return;
       const state = animationEditStateRef.current;
       const source = getEditedKeyframe(state, context.clipName, context.boneName, fromTime);
@@ -437,14 +541,15 @@ export function createAnimationAuthoringController(
       }
       const before = cloneAnimationEditState(state);
       const nextTime = snapPlaybackTime(toTime);
-      const next = moveAnimationKeyframe(state, context.clipName, context.boneName, fromTime, nextTime);
-      const moved = pushAnimationHistory(`move animation keyframe for ${context.boneName} to ${nextTime.toFixed(2)}s`, before, next);
+      const next = moveAnimationKeyframes(state, context.clipName, context.names, fromTime, nextTime);
+      const target = scopeTargetDescription(context);
+      const moved = pushAnimationHistory(`move ${scopeLabel().toLowerCase()} animation keyframe for ${target} to ${nextTime.toFixed(2)}s`, before, next);
       if (!moved) {
         playbackRef.current.scrub(nextTime);
         return;
       }
       playbackRef.current.scrub(nextTime);
-      applyAnimationEditState(next, `Moved animation keyframe for ${context.boneName} to ${nextTime.toFixed(2)}s.`);
+      applyAnimationEditState(next, `Moved ${animationScope === 'bone' ? 'animation keyframe' : `${scopeLabel().toLowerCase()} animation keyframes`} for ${target} to ${nextTime.toFixed(2)}s.`);
     },
 
     changeAnimationInterpolation(interpolation) {
@@ -461,6 +566,12 @@ export function createAnimationAuthoringController(
       const next = normalizeAnimationSnapStep(step);
       setAnimationSnapStep(next);
       setStatus(next > 0 ? `Animation snap set to ${next.toFixed(2)}s.` : 'Animation snap disabled.');
+    },
+
+    changeAnimationScope(next) {
+      if (!ANIMATION_EDIT_SCOPES.includes(next)) return;
+      setAnimationScope?.(next);
+      setStatus(`Animation edit scope set to ${ANIMATION_EDIT_SCOPE_LABELS[next]}.`);
     },
 
     changeAnimationClipLoop(loop) {
@@ -482,13 +593,112 @@ export function createAnimationAuthoringController(
       applyAnimationEditState(next, `Animation clip ${context.clipName} sample frame multiplier set to ${metadata.sampleFrameMultiplier}.`);
     },
 
+    changeAnimationClipDuration(value) {
+      const context = getActiveAnimationClipMetadataContext();
+      if (!context) return;
+      const clip = baseClipsRef.current.find((candidate, index) => getClipKey(candidate, index) === context.clipName);
+      if (!clip) {
+        setStatus('No animation clip is active for duration editing.');
+        return;
+      }
+
+      const duration = normalizeAnimationDuration(value);
+      const authoredLatest = Math.max(
+        0,
+        ...Object.values(animationEditStateRef.current.editsByClip[context.clipName] ?? {})
+          .flatMap((keys) => keys.map((key) => key.time)),
+      );
+      const trackLatest = Math.max(
+        0,
+        ...clip.tracks.flatMap((track) => Array.from(track.times).filter(Number.isFinite)),
+      );
+      const latestKeyTime = Math.max(authoredLatest, trackLatest);
+      if (duration + 0.0001 < latestKeyTime) {
+        setStatus(`Animation duration cannot be shorter than the latest key at ${latestKeyTime.toFixed(2)}s; use Trim when it is available.`);
+        return;
+      }
+
+      const currentDuration = animationEditStateRef.current.durationByClip[context.clipName] ?? clip.duration;
+      if (Math.abs(currentDuration - duration) <= 0.0001) {
+        setStatus(`Animation clip ${context.clipName} duration is already ${duration.toFixed(2)}s.`);
+        return;
+      }
+
+      const before = captureAnimationWorkspaceSnapshot();
+      const nextAnimationState = setAnimationClipDuration(
+        animationEditStateRef.current,
+        context.clipName,
+        Math.min(MAX_ANIMATION_DURATION, Math.max(MIN_ANIMATION_DURATION, duration)),
+      );
+      const nextTime = Math.min(playbackRef.current.currentTime, duration);
+      const after: AnimationWorkspaceHistorySnapshot = {
+        baseClips: baseClipsRef.current.map((candidate) => candidate.clone()),
+        animationEditState: nextAnimationState,
+        currentClipName: context.clipName,
+        currentTime: nextTime,
+      };
+      if (!applyWorkspaceSnapshot(after)) return;
+      pushAnimationWorkspaceHistory(`set animation clip ${context.clipName} duration to ${duration.toFixed(2)}s`, before, after);
+      setStatus(`Set animation clip ${context.clipName} duration to ${duration.toFixed(2)}s.`);
+    },
+
+    changeAnimationClipRetime(value) {
+      const context = getActiveAnimationClipMetadataContext();
+      if (!context) return;
+      const clips = baseClipsRef.current;
+      const clipIndex = clips.findIndex((candidate, index) => getClipKey(candidate, index) === context.clipName);
+      const clip = clips[clipIndex];
+      if (!clip || clipIndex < 0) {
+        setStatus('No animation clip is active for retiming.');
+        return;
+      }
+
+      const targetDuration = normalizeAnimationDuration(value);
+      const currentDuration = animationEditStateRef.current.durationByClip[context.clipName]
+        ?? getAnimationClipTimelineDuration(clip);
+      if (Math.abs(currentDuration - targetDuration) <= 0.0001) {
+        setStatus(`Animation clip ${context.clipName} is already ${targetDuration.toFixed(2)}s; no retime was applied.`);
+        return;
+      }
+
+      const before = captureAnimationWorkspaceSnapshot();
+      const nextBaseClips = clips.map((candidate, index) => (
+        index === clipIndex ? retimeAnimationClip(candidate, currentDuration, targetDuration) : candidate.clone()
+      ));
+      const nextAnimationState = retimeAnimationEditState(
+        animationEditStateRef.current,
+        context.clipName,
+        currentDuration,
+        targetDuration,
+      );
+      const scale = currentDuration > 0 ? targetDuration / currentDuration : 1;
+      const nextTime = Math.min(targetDuration, Math.max(0, playbackRef.current.currentTime * scale));
+      const after: AnimationWorkspaceHistorySnapshot = {
+        baseClips: nextBaseClips,
+        animationEditState: nextAnimationState,
+        currentClipName: context.clipName,
+        currentTime: nextTime,
+      };
+      if (!applyWorkspaceSnapshot(after)) return;
+      pushAnimationWorkspaceHistory(
+        `retime animation clip ${context.clipName} from ${currentDuration.toFixed(2)}s to ${targetDuration.toFixed(2)}s`,
+        before,
+        after,
+      );
+      setStatus(`Retimed animation clip ${context.clipName} from ${currentDuration.toFixed(2)}s to ${targetDuration.toFixed(2)}s.`);
+    },
+
     applyAnimationEditState,
 
     getAnimationAuthoredKeyTimes() {
       if (!selectedBoneName || selectedBoneName === 'Scene') return [];
       const clipName = getCurrentClipKey(baseClipsRef.current, playbackRef.current.currentClipName ?? '');
       if (!clipName) return [];
-      return (animationEditStateRef.current.editsByClip[clipName]?.[selectedBoneName] ?? []).map((key) => key.time);
+      const resolved = resolveAnimationScope(skeleton, selectedBoneName, animationScope);
+      const names = resolved.ok ? resolved.names : [selectedBoneName];
+      return [...new Set(names.flatMap((name) => (
+        animationEditStateRef.current.editsByClip[clipName]?.[name] ?? []
+      ).map((key) => key.time)))].sort((left, right) => left - right);
     },
 
     getAnimationClipMetadata() {
@@ -499,6 +709,10 @@ export function createAnimationAuthoringController(
         clipName,
         getSourceAnimationClipMetadata(clipName),
       );
+    },
+
+    getAnimationScope() {
+      return animationScope;
     },
   };
 

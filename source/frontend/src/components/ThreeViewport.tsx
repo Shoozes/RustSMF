@@ -2215,7 +2215,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (attachedModelRef.current) {
         attachedModelRef.current.updateMatrixWorld(true);
       }
-      updateSkinPointOverlays(skinPointOverlaysRef.current);
+      if (skinPointOverlaysRef.current.length > 0) {
+        updateSkinPointOverlays(skinPointOverlaysRef.current);
+      }
 
       // keep bone highlight marker following the (possibly animated) selected bone (use extracted util for modularity)
       const hl = boneHighlightRef.current;

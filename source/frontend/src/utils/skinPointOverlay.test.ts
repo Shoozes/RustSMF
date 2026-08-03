@@ -93,8 +93,25 @@ describe('skinPointOverlay', () => {
     mesh.updateMatrixWorld(true);
 
     assert.equal(updateSkinPointOverlay(overlay), true);
-    const position = overlay.geometry.getAttribute('position');
+    const position = overlay.geometry.getAttribute('position') as THREE.BufferAttribute;
     assert.ok(position.getX(0) > 1.9, 'overlay follows the posed root-weighted vertex');
+  });
+
+  it('does not resample unchanged poses on every viewport tick', () => {
+    const mesh = makeSkinnedMesh();
+    const overlay = createSkinPointOverlay(mesh);
+    assert.ok(overlay);
+
+    const position = overlay.geometry.getAttribute('position') as THREE.BufferAttribute;
+    const versionAfterCreate = position.version;
+    assert.equal(updateSkinPointOverlay(overlay), true);
+    assert.equal(position.version, versionAfterCreate);
+
+    mesh.skeleton.bones[0].position.x = 2;
+    mesh.skeleton.bones[0].updateMatrixWorld(true);
+    mesh.updateMatrixWorld(true);
+    assert.equal(updateSkinPointOverlay(overlay), true);
+    assert.equal(position.version, versionAfterCreate + 1);
   });
 
   it('attaches and disposes overlays without mutating mesh geometry', () => {

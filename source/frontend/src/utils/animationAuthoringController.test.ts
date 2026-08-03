@@ -122,4 +122,122 @@ describe('animation authoring controller', () => {
     assert.match(fixture.statuses.at(-1) ?? '', /Created animation clip Rest Start from the rest pose/);
     assert.equal(fixture.history.length, 1);
   });
+
+  it('fails closed with a useful status when bone names are ambiguous', () => {
+    const fixture = makeControllerFixture();
+    const duplicate = new THREE.Bone();
+    duplicate.name = 'Tip';
+    fixture.skeleton.bones[0].add(duplicate);
+    fixture.skeleton.bones = [fixture.skeleton.bones[0], duplicate];
+
+    fixture.controller.createAnimationFromPose({
+      requestedName: 'Ambiguous',
+      duration: 1,
+      initialPose: 'current',
+    });
+
+    assert.match(fixture.statuses.at(-1) ?? '', /bone name Tip is ambiguous/i);
+    assert.deepEqual(fixture.baseClipsRef.current.map((clip) => clip.name), ['Idle']);
+    assert.equal(fixture.history.length, 0);
+  });
+
+  it('applies branch scope key edits as one history transaction', () => {
+    const fixture = makeControllerFixture();
+    const child = new THREE.Bone();
+    child.name = 'Child';
+    fixture.skeleton.bones[0].add(child);
+    fixture.skeleton.bones.push(child);
+    const scopeChanges: string[] = [];
+    const controller = createAnimationAuthoringController({
+      ...fixture.options,
+      animationScope: 'branch',
+      setAnimationScope: (scope) => { scopeChanges.push(scope); },
+    });
+
+    controller.insertAnimationKeyframeAtTime(0.5);
+
+    assert.deepEqual(Object.keys(fixture.animationEditStateRef.current.editsByClip.Idle ?? {}).sort(), ['Child', 'Tip']);
+    assert.equal(fixture.history.length, 1);
+    assert.match(fixture.statuses.at(-1) ?? '', /Inserted branch animation keyframes/);
+    controller.changeAnimationScope('rig');
+    assert.deepEqual(scopeChanges, ['rig']);
+  });
+
+  it('rejects a scoped paste when the clipboard scope or skeleton fingerprint no longer matches', () => {
+    const fixture = makeControllerFixture();
+    const child = new THREE.Bone();
+    child.name = 'Child';
+    fixture.skeleton.bones[0].add(child);
+    fixture.skeleton.bones.push(child);
+    const branchController = createAnimationAuthoringController({
+      ...fixture.options,
+      animationScope: 'branch',
+    });
+    branchController.copySelectedAnimationKeyframe();
+    const before = fixture.animationEditStateRef.current;
+
+    const boneController = createAnimationAuthoringController({
+      ...fixture.options,
+      animationScope: 'bone',
+    });
+    boneController.pasteAnimationKeyframe();
+    assert.equal(fixture.animationEditStateRef.current.editsByClip.Idle, before.editsByClip.Idle);
+    assert.match(fixture.statuses.at(-1) ?? '', /do not match the active bone scope/i);
+
+    const fingerprintController = createAnimationAuthoringController({
+      ...fixture.options,
+      animationScope: 'branch',
+    });
+    child.name = 'Renamed';
+    fingerprintController.pasteAnimationKeyframe();
+    assert.match(fixture.statuses.at(-1) ?? '', /different skeleton/i);
+
+    const broaderScopeFixture = makeControllerFixture();
+    const broaderChild = new THREE.Bone();
+    broaderChild.name = 'Child';
+    broaderScopeFixture.skeleton.bones[0].add(broaderChild);
+    broaderScopeFixture.skeleton.bones.push(broaderChild);
+    const boneSourceController = createAnimationAuthoringController({
+      ...broaderScopeFixture.options,
+      animationScope: 'bone',
+    });
+    boneSourceController.copySelectedAnimationKeyframe();
+    const branchTargetController = createAnimationAuthoringController({
+      ...broaderScopeFixture.options,
+      animationScope: 'branch',
+    });
+    const unchanged = broaderScopeFixture.animationEditStateRef.current;
+    branchTargetController.pasteAnimationKeyframe();
+    assert.equal(broaderScopeFixture.animationEditStateRef.current, unchanged);
+    assert.match(broaderScopeFixture.statuses.at(-1) ?? '', /do not match the active branch scope/i);
+  });
+
+  it('sets a bounded clip duration as one workspace edit and rejects shortening below a key', () => {
+    const fixture = makeControllerFixture();
+
+    fixture.controller.changeAnimationClipDuration(2);
+    assert.equal(fixture.animationEditStateRef.current.durationByClip.Idle, 2);
+    assert.equal(fixture.history.length, 1);
+    assert.match(fixture.statuses.at(-1) ?? '', /duration to 2\.00s/i);
+
+    fixture.controller.insertAnimationKeyframeAtTime(0.75);
+    assert.equal(fixture.history.length, 2);
+    fixture.controller.changeAnimationClipDuration(0.5);
+    assert.equal(fixture.animationEditStateRef.current.durationByClip.Idle, 2);
+    assert.equal(fixture.history.length, 2);
+    assert.match(fixture.statuses.at(-1) ?? '', /cannot be shorter than the latest key at 0\.75s/i);
+  });
+
+  it('retimes the active clip as one workspace edit and preserves relative playback time', () => {
+    const fixture = makeControllerFixture();
+
+    fixture.controller.changeAnimationClipRetime(2);
+
+    assert.equal(fixture.baseClipsRef.current[0].duration, 2);
+    assert.equal(fixture.playbackRef.current.duration, 2);
+    assert.equal(fixture.playbackRef.current.currentTime, 0.5);
+    assert.equal(fixture.animationEditStateRef.current.durationByClip.Idle, 2);
+    assert.equal(fixture.history.length, 1);
+    assert.match(fixture.statuses.at(-1) ?? '', /Retimed animation clip Idle from 1\.00s to 2\.00s/i);
+  });
 });

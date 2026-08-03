@@ -2,6 +2,33 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-08-03 — Scoped animation key authoring and hostile-name hardening
+
+- Added Bone/Branch/Full Rig scope resolution from the selected hierarchy, one history transaction per scoped insert/update/delete/move, unioned timeline markers, and a guarded scope selector in Animate.
+- Added skeleton fingerprints and source-scope metadata to the animation clipboard. Paste now rejects changed skeletons, mismatched scopes, and missing target bones without mutation.
+- Hardened animation edit and clipboard maps with null-prototype records so valid user/model names such as `__proto__` cannot turn into prototype reads or writes. Pose construction also treats snapshot entries as own keys only.
+- Added bulk helper, hostile-name, controller, and browser coverage for scoped edits and one-step undo.
+- Added bounded clip duration set/extension as a first-class animation edit. Shortening below the latest authored/source key fails closed until trim semantics exist; duration changes share the animation-workspace history and export path.
+- Added bounded clip retime as a first-class animation edit. Source tracks and authored keys scale together, relative playback time is preserved, and explicit shorter durations now survive SMF export.
+
+### Verification
+
+- `npm.cmd run test:unit`: 290/290 passed across 47 discovered unit-test files.
+- `npm.cmd run typecheck`, `npm.cmd run typecheck:test`, and `npm.cmd run lint`: passed.
+- The scoped and retime browser assertions reached their product flows without assertion failures; managed execution then reported only `browserContext.close: spawn EPERM`, so it is harness-blocked rather than browser-green evidence. Exact cleanup left ports 5173/1420 clear.
+
+## 2026-08-03 — Animation validation and skin-overlay cadence
+
+- Added a shared animation-skeleton validation boundary. New animation creation now fails closed for missing, empty, unnamed, or duplicate bone names instead of emitting ambiguous Three.js tracks; pose snapshots use own-key handling for hostile names such as `__proto__`.
+- Made posed Skin pts refresh cache pose matrices and position/skin attribute versions, skip unchanged viewport ticks, reuse per-overlay scratch vectors, and batch skeleton updates across changed overlays. Display-only ownership and disposal remain unchanged.
+- Added unit coverage for animation validation, hostile snapshot keys, duplicate-name controller status, and unchanged/changed overlay cadence. Added a browser regression for Skin Set target weight, flow, and falloff telemetry.
+
+### Verification
+
+- Focused `npm.cmd run test:unit -- --test-name-pattern "animation creation|animation authoring controller|skinPointOverlay"`: 279/279 discovered tests passed at that slice; the runner currently executes the full discovered set while applying the name filter to Node's test process.
+- `npm.cmd run typecheck` and `npm.cmd run lint`: passed.
+- The new browser case is included in the current 58-case discovery; managed browser execution remains subject to the documented `browserContext.close: spawn EPERM` teardown boundary.
+
 ## 2026-08-03 — Pose-based animation creation and skin authoring semantics
 
 - Added a bounded Animate-panel flow for creating a named clip from either the canonical load-time Rest pose or the current local bone pose. It supports models with zero source clips, creates complete position/quaternion tracks for named skeleton bones, and records one reversible animation-workspace transaction.

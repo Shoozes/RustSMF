@@ -10,6 +10,15 @@ export interface SkinPointOverlayOptions {
 const DEFAULT_MAX_POINTS = 8000;
 const DEFAULT_POINT_SIZE = 0.035;
 const sourceMeshByOverlay = new WeakMap<THREE.Points, THREE.SkinnedMesh>();
+const poseStateByOverlay = new WeakMap<THREE.Points, number[]>();
+const tempPositionByOverlay = new WeakMap<THREE.Points, THREE.Vector3>();
+
+interface SkinPointOverlayUpdateData {
+  mesh: THREE.SkinnedMesh;
+  sourcePosition: THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
+  overlayPosition: THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
+  stride: number;
+}
 
 function selectedBoneIndex(mesh: THREE.SkinnedMesh, selectedBoneName?: string): number {
   if (!selectedBoneName) return -1;
@@ -30,6 +39,66 @@ function selectedWeight(
     }
   }
   return 0;
+}
+
+function getUpdateData(points: THREE.Points, mesh: THREE.SkinnedMesh): SkinPointOverlayUpdateData | null {
+  const sourcePosition = mesh.geometry.getAttribute('position');
+  const overlayPosition = points.geometry.getAttribute('position');
+  const stride = Number(points.userData.sourceVertexStride);
+  if (!sourcePosition || !overlayPosition || !Number.isInteger(stride) || stride < 1) return null;
+  return { mesh, sourcePosition, overlayPosition, stride };
+}
+
+function attributeVersion(
+  attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute | undefined,
+): number {
+  if (!attribute) return -1;
+  return 'version' in attribute ? attribute.version : attribute.data.version;
+}
+
+function poseChanged(points: THREE.Points, mesh: THREE.SkinnedMesh): boolean {
+  const boneMatrices = mesh.skeleton?.bones ?? [];
+  const componentCount = 3 + (boneMatrices.length + 1) * 16;
+  let state = poseStateByOverlay.get(points);
+  if (!state || state.length !== componentCount) {
+    state = new Array<number>(componentCount).fill(Number.NaN);
+    poseStateByOverlay.set(points, state);
+  }
+
+  let index = 0;
+  const changed = (value: number): boolean => {
+    const previous = state![index];
+    state![index] = value;
+    index += 1;
+    return previous !== value;
+  };
+
+  let hasChanged = changed(attributeVersion(mesh.geometry.getAttribute('position')));
+  hasChanged = changed(attributeVersion(mesh.geometry.getAttribute('skinIndex'))) || hasChanged;
+  hasChanged = changed(attributeVersion(mesh.geometry.getAttribute('skinWeight'))) || hasChanged;
+  for (const matrix of [mesh.matrixWorld, ...boneMatrices.map((bone) => bone.matrixWorld)]) {
+    for (const value of matrix.elements) {
+      hasChanged = changed(value) || hasChanged;
+    }
+  }
+  return hasChanged;
+}
+
+function updateOverlayPositions(
+  points: THREE.Points,
+  data: SkinPointOverlayUpdateData,
+  updateSkeleton = true,
+): void {
+  if (updateSkeleton) data.mesh.skeleton?.update();
+  const target = tempPositionByOverlay.get(points) ?? new THREE.Vector3();
+  tempPositionByOverlay.set(points, target);
+  for (let pointIndex = 0; pointIndex < data.overlayPosition.count; pointIndex += 1) {
+    const vertexIndex = pointIndex * data.stride;
+    if (vertexIndex >= data.sourcePosition.count) break;
+    data.mesh.getVertexPosition(vertexIndex, target);
+    data.overlayPosition.setXYZ(pointIndex, target.x, target.y, target.z);
+  }
+  data.overlayPosition.needsUpdate = true;
 }
 
 export function createSkinPointOverlay(
@@ -96,25 +165,29 @@ export function updateSkinPointOverlay(points: THREE.Points): boolean {
   const mesh = sourceMeshByOverlay.get(points);
   if (!mesh) return false;
 
-  const sourcePosition = mesh.geometry.getAttribute('position');
-  const overlayPosition = points.geometry.getAttribute('position');
-  const stride = Number(points.userData.sourceVertexStride);
-  if (!sourcePosition || !overlayPosition || !Number.isInteger(stride) || stride < 1) return false;
-
-  mesh.skeleton?.update();
-  const target = new THREE.Vector3();
-  for (let pointIndex = 0; pointIndex < overlayPosition.count; pointIndex += 1) {
-    const vertexIndex = pointIndex * stride;
-    if (vertexIndex >= sourcePosition.count) break;
-    mesh.getVertexPosition(vertexIndex, target);
-    overlayPosition.setXYZ(pointIndex, target.x, target.y, target.z);
-  }
-  overlayPosition.needsUpdate = true;
+  const data = getUpdateData(points, mesh);
+  if (!data) return false;
+  if (!poseChanged(points, mesh)) return true;
+  updateOverlayPositions(points, data);
   return true;
 }
 
 export function updateSkinPointOverlays(overlays: readonly THREE.Points[]): void {
-  overlays.forEach(updateSkinPointOverlay);
+  const pending: Array<{ points: THREE.Points; data: SkinPointOverlayUpdateData }> = [];
+  const changedMeshes = new Set<THREE.SkinnedMesh>();
+  for (const points of overlays) {
+    const mesh = sourceMeshByOverlay.get(points);
+    if (!mesh) continue;
+    const data = getUpdateData(points, mesh);
+    if (!data || !poseChanged(points, mesh)) continue;
+    pending.push({ points, data });
+    changedMeshes.add(mesh);
+  }
+
+  changedMeshes.forEach((mesh) => mesh.skeleton?.update());
+  for (const { points, data } of pending) {
+    updateOverlayPositions(points, data, false);
+  }
 }
 
 export function createSkinPointOverlays(

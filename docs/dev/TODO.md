@@ -6,18 +6,18 @@ This file contains executable forward work only. Current behavior belongs in `AP
 
 ## Current status
 
-The current review slice is implemented: New Animation works from Rest or Current pose, including zero source clips; Skin pts follows posed vertices; and Set paint separates target weight from flow/falloff. The remaining items below are product-scope work identified by the old-editor comparison, not claims about missing integrity fixes in the shipped paths.
+The current review slice is implemented: New Animation works from Rest or Current pose, including zero source clips; Skin pts follows posed vertices; Set paint separates target weight from flow/falloff; Bone/Branch/Full Rig key operations have a guarded scope/fingerprint contract; and bounded animation duration set/extension plus retime are undoable and export-aware. The remaining items below are product-scope work identified by the old-editor comparison, not claims about missing integrity fixes in the shipped paths.
 
-## P1 — Scoped frame and pose authoring
+## P1 — Animation trim and lock policy
 
-- What: Add explicit Bone, Branch, and Full Rig operation scopes for copy/paste, insert/update/delete time, and frame selection; add clip duration edit/retime/trim/extend with locked-bone handling.
-- Why: Current key authoring is selected-bone only, so whole-pose work is slow and partial/full-frame intent is implicit.
-- Where: `source/frontend/src/components/AnimatePanel.tsx`, `Timeline.tsx`, `animationAuthoringController.ts`, `animationEdits.ts`, `editorSnapshots.ts`.
-- When: Next animation-authoring slice after the current creation path.
-- How: Define a pure scope resolver; make each operation produce one workspace-history snapshot; preserve untouched tracks; add clipboard skeleton/clip fingerprint validation and explicit collision policy.
-- Subtasks: scope selector; frame-time operations; retime/trim math; locked-bone policy; export roundtrip coverage.
-- Done when: each scope produces the documented affected bone set, one undo reverses the complete operation, invalid clipboard fingerprints are rejected without mutation, and GLB/SMF exports preserve the resulting clip times and tracks.
-- Verification: focused `animationEdits`/controller/history tests, `npm.cmd run typecheck`, `npm.cmd run test:unit`, and targeted `animation.spec.ts` browser coverage.
+- What: Complete scoped animation authoring with explicit trim behavior, locked-bone policy, and export/browser proof for the existing Bone/Branch/Full Rig operations.
+- Why: Bounded duration set/extension and retime are now explicit, but trimming and lock policy are still absent; edits must not silently drop untouched or locked tracks.
+- Where: `source/frontend/src/components/AnimatePanel.tsx`, `Timeline.tsx`, `animationAuthoringController.ts`, `animationEdits.ts`, `animationScope.ts`, `editorSnapshots.ts`, and GLB/SMF export tests.
+- When: Next animation-authoring slice.
+- How: Add a pure trim transform with finite bounds and an explicit key-retention policy, make locked bones a validated immutable set, and route every action through one workspace snapshot. Keep the shipped duration set/extension and retime transforms, the existing skeleton fingerprint, and explicit target-scope rejection for clipboard operations.
+- Subtasks: trim math; retained-key policy; locked-bone state and UI; scope export roundtrip; targeted browser undo/redo matrix.
+- Done when: retime and duration transforms preserve relative key times, trim removes only documented keys, locked bones are byte-for-byte unchanged, each scoped action still has one undo, clipboard mismatch remains fail-closed, and GLB/SMF exports preserve the resulting tracks/times.
+- Verification: focused `animationEdits`/controller/history tests, `npm.cmd run typecheck`, `npm.cmd run test:unit`, targeted `animation.spec.ts` browser coverage, and export roundtrip assertions.
 
 ## P1 — Skin diagnostics and pose context
 

@@ -7,11 +7,14 @@ import {
   applyAnimationMetadataToImportedSmf,
   animationInterpolationToSmf,
   cloneAnimationEditState,
+  copyAnimationKeyframes,
   deleteAnimationEditClip,
+  deleteAnimationKeyframes,
   deleteAnimationEditBones,
   deleteAnimationKeyframe,
   duplicateAnimationEditClip,
   getAnimationClipMetadata,
+  getAnimationClipTimelineDuration,
   getCurrentClipKey,
   hasDirtyAnimationEdits,
   isAnimationInterpolation,
@@ -20,16 +23,21 @@ import {
   makeUniqueAnimationClipName,
   moveAnimationClip,
   moveAnimationKeyframe,
+  moveAnimationKeyframes,
   normalizeAnimationSnapStep,
   renameAnimationEditBone,
   renameAnimationEditClip,
+  retimeAnimationClip,
+  retimeAnimationEditState,
   sameAnimationEditState,
   setAnimationClipLoop,
+  setAnimationClipDuration,
   setAnimationClipSampleFrameMultiplier,
   setAnimationInterpolation,
   smfInterpolationToAnimation,
   snapAnimationTime,
   upsertAnimationKeyframe,
+  upsertAnimationKeyframes,
 } from './animationEdits';
 import type { ImportedSmf } from '../loaders/smf';
 
@@ -113,6 +121,33 @@ test('moveAnimationKeyframe retimes authored keys and replaces destination colli
   );
 });
 
+test('bulk scoped key helpers preserve all tracks and tolerate hostile names', () => {
+  const key = (time: number, x: number) => ({
+    time,
+    position: [x, 0, 0] as [number, number, number],
+    quaternion: [0, 0, 0, 1] as [number, number, number, number],
+    interpolation: 'linear' as const,
+  });
+  const keyframes: Record<string, ReturnType<typeof key>> = Object.create(null) as Record<string, ReturnType<typeof key>>;
+  keyframes.Root = key(0.25, 1);
+  keyframes.__proto__ = key(0.25, 2);
+
+  let state = upsertAnimationKeyframes(makeAnimationEditState(), '__proto__', keyframes);
+  assert.deepEqual(Object.keys(state.editsByClip), ['__proto__']);
+  assert.equal(state.editsByClip.__proto__.__proto__[0].position[0], 2);
+
+  state = moveAnimationKeyframes(state, '__proto__', ['Root', '__proto__'], 0.25, 0.5);
+  assert.deepEqual(state.editsByClip.__proto__.Root.map((entry) => entry.time), [0.5]);
+  assert.deepEqual(state.editsByClip.__proto__.__proto__.map((entry) => entry.time), [0.5]);
+
+  const copied = copyAnimationKeyframes(state, '__proto__', 'fingerprint', 'branch', keyframes);
+  assert.equal(copied.clipboard?.sourceScope, 'branch');
+  assert.equal(Object.prototype.hasOwnProperty.call(copied.clipboard?.entries, '__proto__'), true);
+
+  const deleted = deleteAnimationKeyframes(copied, '__proto__', ['Root', '__proto__'], 0.5);
+  assert.equal(deleted.editsByClip['__proto__'], undefined);
+});
+
 test('applyAnimationEditsToClips creates position/quaternion tracks and preserves duration', () => {
   const boneName = 'SMF_Node_1';
   const base = new THREE.AnimationClip('Walk', 1, [
@@ -134,6 +169,76 @@ test('applyAnimationEditsToClips creates position/quaternion tracks and preserve
   assert.deepEqual(Array.from(posTrack!.times), [0, 0.5, 1]);
   assert.equal(posTrack!.getInterpolation(), THREE.InterpolateLinear);
   assert.equal(edited.duration, 1);
+});
+
+test('animation duration edits extend a clip without changing its source tracks', () => {
+  const base = new THREE.AnimationClip('Walk', 1, [
+    new THREE.VectorKeyframeTrack('Root.position', [0, 1], [0, 0, 0, 1, 0, 0]),
+  ]);
+  const state = setAnimationClipDuration(makeAnimationEditState(), 'Walk', 2);
+  const [edited] = applyAnimationEditsToClips([base], state);
+
+  assert.equal(edited.duration, 2);
+  assert.deepEqual(Array.from(edited.tracks[0].times), [0, 1]);
+  assert.notEqual(edited, base);
+  assert.notEqual(edited.tracks[0], base.tracks[0]);
+});
+
+test('animation retime scales source tracks and authored keys together', () => {
+  const base = new THREE.AnimationClip('Walk', 1, [
+    new THREE.VectorKeyframeTrack('Root.position', [0, 0.5, 1], [0, 0, 0, 0.5, 0, 0, 1, 0, 0]),
+  ]);
+  let state = upsertAnimationKeyframe(makeAnimationEditState(), 'Walk', 'Root', {
+    time: 0.25,
+    position: [0.25, 0, 0],
+    quaternion: [0, 0, 0, 1],
+    interpolation: 'linear',
+  });
+
+  assert.equal(getAnimationClipTimelineDuration(base), 1);
+  const retimedClip = retimeAnimationClip(base, 1, 2);
+  state = retimeAnimationEditState(state, 'Walk', 1, 2);
+
+  assert.deepEqual(Array.from(retimedClip.tracks[0].times), [0, 1, 2]);
+  assert.equal(retimedClip.duration, 2);
+  assert.deepEqual(state.editsByClip.Walk.Root.map((key) => key.time), [0.5]);
+  assert.equal(state.durationByClip.Walk, 2);
+  assert.equal(state.dirtyClipNames.includes('Walk'), true);
+  assert.notEqual(retimedClip, base);
+  assert.notEqual(retimedClip.tracks[0], base.tracks[0]);
+  assert.deepEqual(Array.from(base.tracks[0].times), [0, 0.5, 1]);
+});
+
+test('animation retime preserves an explicit shorter duration through SMF export', () => {
+  const dq = new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]);
+  const source: ImportedSmf = {
+    meshes: [],
+    textures: [],
+    bones: [{ index: 0, parent: 0, isBone: 1, dq, axis: [0, 1, 0] }],
+    animations: [{
+      name: 'Walk',
+      duration: 1,
+      times: [0, 1],
+      frames: [[dq], [dq]],
+      nodeCount: 1,
+      loop: 1,
+      interpolation: 1,
+      sampleFrameMultiplier: 1,
+      lockedBones: [],
+    }],
+  };
+  const boneName = 'SMF_Node_0';
+  const base = new THREE.AnimationClip('Walk', 1, [
+    new THREE.VectorKeyframeTrack(`${boneName}.position`, [0, 1], [0, 0, 0, 1, 0, 0]),
+    new THREE.QuaternionKeyframeTrack(`${boneName}.quaternion`, [0, 1], [0, 0, 0, 1, 0, 0, 0, 1]),
+  ]);
+  const state = retimeAnimationEditState(makeAnimationEditState(), 'Walk', 1, 0.5);
+  const editedClips = [retimeAnimationClip(base, 1, 0.5)];
+  const result = applyAnimationEditsToImportedSmf(source, editedClips, state);
+
+  assert.equal(result.animations[0].duration, 0.5);
+  assert.deepEqual(result.animations[0].times, [0, 0.5]);
+  assert.equal(result.animations[0].frames.length, 2);
 });
 
 test('applyAnimationEditsToImportedSmf carries dirty clip key times into SMF source exports', () => {
