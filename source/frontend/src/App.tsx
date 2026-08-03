@@ -163,6 +163,7 @@ export default function App() {
     setupKeyboard,
     togglePlay,
     changeClip,
+    createAnimationFromPose,
     renameCurrentAnimationClip,
     duplicateCurrentAnimationClip,
     deleteCurrentAnimationClip,
@@ -187,7 +188,8 @@ export default function App() {
     skinPaintTargetMode,
     skinPaintRadius,
     skinPaintStrength,
-    skinPaintTarget,
+    skinPaintTargetWeight,
+    skinPaintFalloff,
     skinAutoWeightAlgorithm,
     skinAutoWeightPower,
     skinAutoWeightNormalWeighting,
@@ -196,7 +198,8 @@ export default function App() {
     onSkinPaintTargetModeChange,
     onSkinPaintRadiusChange,
     onSkinPaintStrengthChange,
-    onSkinPaintTargetChange,
+    onSkinPaintTargetWeightChange,
+    onSkinPaintFalloffChange,
     onSkinAutoWeightAlgorithmChange,
     onSkinAutoWeightPowerChange,
     onSkinAutoWeightNormalWeightingChange,
@@ -630,7 +633,8 @@ export default function App() {
           skinPaintTargetMode={skinPaintTargetMode}
           skinPaintRadius={skinPaintRadius}
           skinPaintStrength={skinPaintStrength}
-          skinPaintTarget={skinPaintTarget}
+          skinPaintTargetWeight={skinPaintTargetWeight}
+          skinPaintFalloff={skinPaintFalloff}
           skinAutoWeightAlgorithm={skinAutoWeightAlgorithm}
           skinAutoWeightPower={skinAutoWeightPower}
           skinAutoWeightNormalWeighting={skinAutoWeightNormalWeighting}
@@ -639,7 +643,8 @@ export default function App() {
           onSkinPaintTargetModeChange={onSkinPaintTargetModeChange}
           onSkinPaintRadiusChange={onSkinPaintRadiusChange}
           onSkinPaintStrengthChange={onSkinPaintStrengthChange}
-          onSkinPaintTargetChange={onSkinPaintTargetChange}
+          onSkinPaintTargetWeightChange={onSkinPaintTargetWeightChange}
+          onSkinPaintFalloffChange={onSkinPaintFalloffChange}
           onSkinAutoWeightAlgorithmChange={onSkinAutoWeightAlgorithmChange}
           onSkinAutoWeightPowerChange={onSkinAutoWeightPowerChange}
           onSkinAutoWeightNormalWeightingChange={onSkinAutoWeightNormalWeightingChange}
@@ -658,6 +663,7 @@ export default function App() {
       return (
         <AnimatePanel
           clips={model.clips}
+          hasSkeleton={!!model.skeleton && model.skeleton.bones.length > 0}
           currentClipName={playback.currentClipName}
           isPlaying={playback.isPlaying}
           currentTime={playback.currentTime}
@@ -685,6 +691,7 @@ export default function App() {
           onDeleteClip={deleteCurrentAnimationClip}
           onMoveClipUp={moveCurrentAnimationClipUp}
           onMoveClipDown={moveCurrentAnimationClipDown}
+          onCreateAnimation={createAnimationFromPose}
           editorMode={editorMode}
         />
       );
@@ -897,7 +904,8 @@ export default function App() {
             skinPaintTargetMode={skinPaintTargetMode}
             skinPaintRadius={skinPaintRadius}
             skinPaintStrength={skinPaintStrength}
-            skinPaintTarget={skinPaintTarget}
+            skinPaintTargetWeight={skinPaintTargetWeight}
+            skinPaintFalloff={skinPaintFalloff}
           />
           {/* Simple pure loading overlay (no deps) */}
           {ui.isLoading && (

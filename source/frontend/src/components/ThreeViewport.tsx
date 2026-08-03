@@ -9,7 +9,11 @@ import type { SkinWeightEditMode } from '../utils/skinWeights';
 import type { RigToolMode } from '../utils/rigEdits';
 import type { RigIkSolveResult } from '../utils/rigIk';
 import { useBoneLabelsWithScale } from '../utils/useBoneLabels';
-import { createSkinPointOverlays, disposeSkinPointOverlays } from '../utils/skinPointOverlay';
+import {
+  createSkinPointOverlays,
+  disposeSkinPointOverlays,
+  updateSkinPointOverlays,
+} from '../utils/skinPointOverlay';
 import {
   type TextureFilterPreview,
 } from '../utils/materialPreview';
@@ -234,7 +238,8 @@ interface ThreeViewportProps {
   skinPaintTargetMode?: 'vertex' | 'triangle';
   skinPaintRadius?: number;
   skinPaintStrength?: number;
-  skinPaintTarget?: number;
+  skinPaintTargetWeight?: number;
+  skinPaintFalloff?: number;
 }
 
 // SimpleOrbit imported from ../utils/SimpleOrbit (filled modularity dir, single source of truth)
@@ -289,7 +294,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   skinPaintTargetMode = 'vertex',
   skinPaintRadius = 0.2,
   skinPaintStrength = 0.2,
-  skinPaintTarget = 1,
+  skinPaintTargetWeight = 1,
+  skinPaintFalloff = 2,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -328,7 +334,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const skinPaintTargetModeRef = useRef<'vertex' | 'triangle'>(skinPaintTargetMode);
   const skinPaintRadiusRef = useRef<number>(skinPaintRadius);
   const skinPaintStrengthRef = useRef<number>(skinPaintStrength);
-  const skinPaintTargetRef = useRef<number>(skinPaintTarget);
+  const skinPaintTargetWeightRef = useRef<number>(skinPaintTargetWeight);
+  const skinPaintFalloffRef = useRef<number>(skinPaintFalloff);
   const pickDistanceRef = useRef(DEFAULT_MAX_BONE_PICK_DIST);
   const editorModeRef = useRef(editorMode);
   const cursorModeRef = useRef<string>('default');
@@ -651,13 +658,13 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     distanceSq: number,
     radius: number,
     strength: number,
-    target: number,
+    falloffExponent: number,
   ): number => {
     if (radius <= 0 || distanceSq > radius * radius) return 0;
     if (strength <= 0) return 0;
     const dist = Math.sqrt(Math.max(0, distanceSq));
     const normalized = 1 - dist / radius;
-    const falloff = Math.max(1, target);
+    const falloff = Math.max(0.1, falloffExponent);
     return clamp01(strength * Math.pow(normalized, falloff));
   };
 
@@ -1598,7 +1605,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       const brushRadius = Math.max(0.0001, skinPaintRadiusRef.current);
       const brushRadiusSq = brushRadius * brushRadius;
       const strength = skinPaintStrengthRef.current;
-      const target = skinPaintTargetRef.current;
+      const falloff = skinPaintFalloffRef.current;
       const mode = skinPaintModeRef.current;
       const targetMode = skinPaintTargetModeRef.current;
       const local = new THREE.Vector3();
@@ -1625,8 +1632,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         if (distanceSq > brushRadiusSq) return;
 
         const amount = mode === 'auto'
-          ? getPaintAmount(distanceSq, brushRadius, Math.max(strength, 0.01), target)
-          : getPaintAmount(distanceSq, brushRadius, strength, target);
+          ? getPaintAmount(distanceSq, brushRadius, Math.max(strength, 0.01), falloff)
+          : getPaintAmount(distanceSq, brushRadius, strength, falloff);
         if (amount <= 0) return;
 
         const key = `${mesh.uuid}:${candidate.vertexIndex}`;
@@ -1772,7 +1779,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       canvas.dataset.skinPaintTargetMode = skinPaintTargetModeRef.current;
       canvas.dataset.skinPaintRadius = String(skinPaintRadiusRef.current);
       canvas.dataset.skinPaintStrength = String(skinPaintStrengthRef.current);
-      canvas.dataset.skinPaintTarget = String(skinPaintTargetRef.current);
+      canvas.dataset.skinPaintTargetWeight = String(skinPaintTargetWeightRef.current);
+      canvas.dataset.skinPaintFalloff = String(skinPaintFalloffRef.current);
     };
 
     const collectPaintVerticesWithTelemetry = (event: PointerEvent): SkinPaintCollection => {
@@ -2207,6 +2215,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       if (attachedModelRef.current) {
         attachedModelRef.current.updateMatrixWorld(true);
       }
+      updateSkinPointOverlays(skinPointOverlaysRef.current);
 
       // keep bone highlight marker following the (possibly animated) selected bone (use extracted util for modularity)
       const hl = boneHighlightRef.current;
@@ -2455,7 +2464,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => { skinPaintTargetModeRef.current = skinPaintTargetMode; }, [skinPaintTargetMode]);
   useEffect(() => { skinPaintRadiusRef.current = skinPaintRadius; }, [skinPaintRadius]);
   useEffect(() => { skinPaintStrengthRef.current = skinPaintStrength; }, [skinPaintStrength]);
-  useEffect(() => { skinPaintTargetRef.current = skinPaintTarget; }, [skinPaintTarget]);
+  useEffect(() => { skinPaintTargetWeightRef.current = skinPaintTargetWeight; }, [skinPaintTargetWeight]);
+  useEffect(() => { skinPaintFalloffRef.current = skinPaintFalloff; }, [skinPaintFalloff]);
   useEffect(() => { editorModeRef.current = editorMode; }, [editorMode]);
   useEffect(() => { rigToolModeRef.current = rigToolMode; }, [rigToolMode]);
   useEffect(() => {
@@ -2477,7 +2487,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         delete canvas.dataset.skinPaintTargetMode;
         delete canvas.dataset.skinPaintRadius;
         delete canvas.dataset.skinPaintStrength;
-        delete canvas.dataset.skinPaintTarget;
+        delete canvas.dataset.skinPaintTargetWeight;
+        delete canvas.dataset.skinPaintFalloff;
         delete canvas.dataset.skinBrushIndexError;
         delete canvas.dataset.skinBrushX;
         delete canvas.dataset.skinBrushY;

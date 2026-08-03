@@ -1,6 +1,6 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-08-01
+Last reviewed: 2026-08-03
 
 This is the latest integrity-pass evidence. `APP_STATE.md` owns current behavior, `TODO.md` owns active work, `HISTORY.md` owns completed work, `PITFALL_LEDGER.md` owns recurring hazards, and `summary_bank.json` owns focused context routing.
 
@@ -22,6 +22,10 @@ The review found one high-risk correctness issue in the isolated non-SMF-to-SMF 
 - The final audit also fixed null-coordinate readiness and newly mounted IK-handle transform timing; the focused IK case passed five repeated runs before the complete browser rerun.
 - The weight-preview state audit now snapshots the source color attribute and every material's prior `vertexColors` mode, with focused coverage for existing colors, absent colors, and invalid-selection restoration.
 - The SMF codec client now rechecks abort state after worker handler setup and before `postMessage`; the setup-race regression proves cancellation terminates without posting stale work.
+- Added pose-based animation creation from the canonical rest pose or current bone pose, with bounded duration, complete named-bone position/quaternion tracks, zero-source-clip support, and one reversible workspace transaction.
+- Separated Skin Set mode's target weight from brush flow/falloff, preserving incremental Add/Subtract semantics while keeping target edits bounded and export-safe.
+- Reworked the display-only Skin pts overlay to refresh posed skinned vertices during the viewport loop without serializing a runtime mesh reference; focused tests cover animated refresh and disposal ownership.
+- Added focused animation-creation/controller, skin-target, skin-overlay, and animation browser regression coverage; the unit discovery contract now reports 46 files and 275 tests.
 - The follow-up implementation pass now cancels zero-valued viewport RAF handles, coalesces browser file-picker focus timers, clears FBX texture wait timers on early settle, and indexes skin-history snapshots by mesh/vertex key instead of repeatedly scanning the post-edit list.
 - Added focused coverage for the shared animation-frame guard and skin snapshot index; the unit discovery contract now reports 45 files and 269 tests.
 - Repaired non-SMF-to-SMF conversion ownership: mesh data stays in model-root Three space until the serializer boundary, bones use root-relative world DQs, and animation frames are sampled through a Three mixer rather than direct quaternion-component interpolation. Compatible GLB/FBX export and SMF roundtrip actions are enabled again; unsupported diagnostics still block.
@@ -37,12 +41,13 @@ The review found one high-risk correctness issue in the isolated non-SMF-to-SMF 
 
 ## Verification evidence
 
-- Fresh current-head `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed after the final replacement, memory-budget, native-authority, history, playback, browser-fixture, and test-contract changes; context validation, lint, typechecks, build/chunk checks, 269 frontend tests, Rust fmt/clippy/check, and 10 Rust tests were green.
+- Fresh current-head `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed after the pose-creation, skin-authoring, overlay-refresh, and documentation changes; context validation, lint, typechecks, build/chunk checks, 275 frontend tests across 46 files, Rust fmt/clippy/check, and 10 Rust tests were green.
 - Historical `npm.cmd run test:e2e -- --reporter=line` with a process-local approved system Chrome executable: 55/55 passed across all eight browser suites after the IK audit fix.
 - `npm.cmd run test:visual-strict -- --reporter=line` with the same browser override: 2/2 passed.
 - Current `desktop-smoke` Tauri build and Rust portions passed: the unbundled release executable built and all 10 Rust tests passed. Its 9-case native browser phase reached the case set but did not complete managed teardown; the runner wrappers and descendants were stopped after the same managed-process hang and no preview listener remained. An approved system-Chrome native rerun reached all 9 bodies and reported only `browserContext.close: spawn EPERM` during teardown.
 - `npm.cmd audit --omit=optional`: found 0 vulnerabilities (the managed sandbox could not reach the advisory endpoint; the same read-only command passed through the approved external runtime).
-- Current full `npm.cmd run test:e2e -- --reporter=line` with the process-local system Chrome override: all 56 test bodies reached their assertions with no product assertion failures; every case then reported only `browserContext.close: spawn EPERM`, and the preview listener was cleaned. This is environment-blocked evidence, not a browser-green claim.
+- Prior full `npm.cmd run test:e2e -- --reporter=line` with the process-local system Chrome override: all 56 test bodies reached their assertions with no product assertion failures before this slice; every case then reported only `browserContext.close: spawn EPERM`, and the preview listener was cleaned. This is environment-blocked evidence, not a browser-green claim.
+- Current focused pose-creation browser coverage reached its assertions with no product assertion failure, then reported only managed `browserContext.close: spawn EPERM`; exact test-process cleanup left no listener on ports 5173/1420. This is harness-blocked evidence, not a browser-green claim.
 - Current `npm.cmd run test:visual-strict -- --reporter=line` with the same override: both test bodies reached their assertions with no product assertion failures; both were teardown-blocked by the same `spawn EPERM`, and the preview listener was cleaned.
 - Current focused implementation slice: 58/58 passed for conversion candidate, converter, coordinate/DQ, semantic validator, and model-input guard; app and test typechecks passed.
 - Current focused replacement/decoded-memory slice: 7/7 passed; editor-history, skin-history, and playback-cadence slices: 27/27, 27/27, and 2/2 passed respectively.
@@ -64,7 +69,7 @@ A later focused `skin.spec.ts` rerun with the approved system Chrome reached all
 
 The current focused lifecycle rerun shows the same harness-only boundary across all eight lifecycle cases. It reached each test body, then failed at `browserContext.close: spawn EPERM`; the exact runner and preview PIDs were stopped and `netstat` confirmed no listener remained on port 5173. No new product failure was observed.
 
-The latest full Playwright rerun with the same process-local system Chrome override reached all 56 test bodies across all eight suites, but every case failed during managed `browserContext.close` teardown with `spawn EPERM`. The preview listener was stopped afterward. This does not replace the earlier 55/55 pass as product evidence, but it confirms the teardown boundary is still environment-dependent and must remain visible in handoff reports.
+The prior full Playwright rerun with the same process-local system Chrome override reached all 56 test bodies across all eight suites, but every case failed during managed `browserContext.close` teardown with `spawn EPERM`. The preview listener was stopped afterward. This does not replace the earlier 55/55 pass as product evidence, but it confirms the teardown boundary is still environment-dependent and must remain visible in handoff reports. The current slice adds one browser case; its focused run reached assertions and hit the same teardown boundary.
 
 ## Remaining limits
 
@@ -73,4 +78,4 @@ The latest full Playwright rerun with the same process-local system Chrome overr
 - True OS-dialog automation remains separate from deterministic Tauri IPC mocks.
 - Direct Tauri/Vite launches have fewer Windows process-tree cleanup guarantees than `run.ps1`/`run.bat`.
 
-These are intentional current-state limits. The current-head certification TODO is complete: the final verification record is fresh, every browser body reached its assertions without an unclassified product failure, and runner-owned listeners were cleaned. Reopen a narrowly scoped TODO only when a new behavior change creates a measurable gap with a done condition and verification command.
+These are intentional current-state limits. The full-suite browser certification remains the prior 56-case evidence because the managed teardown boundary prevents a clean current rerun; the new pose-creation case reached its assertions and was classified as harness-blocked. The current verification gate is fresh, and runner-owned listeners were cleaned. Reopen a narrowly scoped TODO only when a new behavior change creates a measurable gap with a done condition and verification command.

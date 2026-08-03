@@ -8,9 +8,16 @@ import {
   type AnimationInterpolation,
   type AnimationSnapStep,
 } from '../utils/animationEdits';
+import {
+  MAX_ANIMATION_DURATION,
+  MIN_ANIMATION_DURATION,
+  type AnimationCreationRequest,
+  type AnimationInitialPose,
+} from '../utils/animationCreation';
 
 interface AnimatePanelProps {
   clips: THREE.AnimationClip[];
+  hasSkeleton: boolean;
   currentClipName: string;
   isPlaying: boolean;
   currentTime: number;
@@ -38,11 +45,13 @@ interface AnimatePanelProps {
   onDeleteClip: () => void;
   onMoveClipUp: () => void;
   onMoveClipDown: () => void;
+  onCreateAnimation: (request: AnimationCreationRequest) => void;
   editorMode?: string;
 }
 
 export default function AnimatePanel({
   clips,
+  hasSkeleton,
   currentClipName,
   isPlaying,
   currentTime,
@@ -70,6 +79,7 @@ export default function AnimatePanel({
   onDeleteClip,
   onMoveClipUp,
   onMoveClipDown,
+  onCreateAnimation,
   editorMode = 'animate',
 }: AnimatePanelProps) {
   const clipCount = clips.length;
@@ -82,6 +92,9 @@ export default function AnimatePanel({
   const canMoveClipUp = hasActiveClip && activeClipIndex > 0;
   const canMoveClipDown = hasActiveClip && activeClipIndex >= 0 && activeClipIndex < clipCount - 1;
   const [draftClipName, setDraftClipName] = useState(currentClipName);
+  const [draftNewAnimationName, setDraftNewAnimationName] = useState('New Animation');
+  const [draftNewAnimationDuration, setDraftNewAnimationDuration] = useState(1);
+  const [draftNewAnimationPose, setDraftNewAnimationPose] = useState<AnimationInitialPose>('rest');
 
   useEffect(() => {
     setDraftClipName(currentClipName);
@@ -89,6 +102,14 @@ export default function AnimatePanel({
 
   const submitRename = () => {
     onRenameClip(draftClipName);
+  };
+
+  const submitCreateAnimation = () => {
+    onCreateAnimation({
+      requestedName: draftNewAnimationName,
+      duration: draftNewAnimationDuration,
+      initialPose: draftNewAnimationPose,
+    });
   };
 
   return (
@@ -120,6 +141,55 @@ export default function AnimatePanel({
         <div data-testid="animation-selected-key">Selected key: <span>{selectedKeyTime === null ? 'none' : `${selectedKeyTime.toFixed(2)}s`}</span></div>
         <div>Playback: <span>{isPlaying ? 'Playing' : 'Paused'}</span></div>
         <div>Time: <span>{currentTime.toFixed(2)} / {duration.toFixed(2)}s</span></div>
+      </div>
+      <div className="animate-new-clip-tools" data-testid="animate-new-clip-tools">
+        <div className="text-slate-400 mb-1">New animation</div>
+        <div className="grid gap-1.5 text-[10px]">
+          <label>
+            <span>Name</span>
+            <input
+              data-testid="animation-new-name-input"
+              value={draftNewAnimationName}
+              onChange={(event) => setDraftNewAnimationName(event.target.value)}
+            />
+          </label>
+          <label>
+            <span>Duration (s)</span>
+            <input
+              type="number"
+              data-testid="animation-new-duration-input"
+              min={MIN_ANIMATION_DURATION}
+              max={MAX_ANIMATION_DURATION}
+              step="0.01"
+              value={draftNewAnimationDuration}
+              onChange={(event) => setDraftNewAnimationDuration(Number(event.target.value))}
+            />
+          </label>
+          <label>
+            <span>Initial pose</span>
+            <select
+              data-testid="animation-new-pose-select"
+              value={draftNewAnimationPose}
+              onChange={(event) => {
+                if (event.target.value === 'rest' || event.target.value === 'current') {
+                  setDraftNewAnimationPose(event.target.value);
+                }
+              }}
+            >
+              <option value="rest">Rest</option>
+              <option value="current">Current</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            data-testid="animation-create-btn"
+            disabled={!hasSkeleton || draftNewAnimationName.trim().length === 0}
+            onClick={submitCreateAnimation}
+          >
+            Create animation
+          </button>
+        </div>
+        {!hasSkeleton && <div className="text-slate-500 mt-1">Load a skinned model with bones first.</div>}
       </div>
       <div className="animate-clip-tools" data-testid="animate-clip-tools">
         <label>

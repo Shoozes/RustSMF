@@ -360,6 +360,32 @@ export function setVertexBoneWeight(
   };
 }
 
+function setVertexBoneWeightAtExactTarget(
+  vertex: VertexSkinWeights,
+  boneIndex: number,
+  targetWeight: number,
+): { vertex: VertexSkinWeights; slot: number } | null {
+  if (!Number.isInteger(boneIndex) || boneIndex < 0) return null;
+
+  const next = cloneVertex(vertex);
+  const slot = findWritableSlot(next, boneIndex);
+  next.indices[slot] = boneIndex;
+  const desired = clamp01(targetWeight);
+  const otherTotal = next.weights.reduce((sum, value, index) => index === slot ? sum : sum + value, 0);
+  next.weights = next.weights.map((value, index) => (
+    index === slot
+      ? desired
+      : otherTotal > 0 ? (value / otherTotal) * (1 - desired) : 0
+  )) as VertexSkinWeights['weights'];
+
+  if (otherTotal <= 0 && desired < 1) {
+    const fallbackSlot = slot === 0 ? 1 : 0;
+    next.weights[fallbackSlot] = 1 - desired;
+  }
+
+  return { vertex: next, slot };
+}
+
 export function captureSkinVertexSnapshot(
   mesh: THREE.SkinnedMesh,
   vertexIndex: number,
@@ -759,6 +785,7 @@ export function editVertexBoneWeight(
   boneIndex: number,
   mode: SkinWeightEditMode,
   amount: number,
+  targetWeight?: number,
 ): SkinWeightEditResult {
   if (!Number.isInteger(boneIndex) || boneIndex < 0) {
     return { ok: false, reason: 'invalid-bone' };
@@ -776,12 +803,20 @@ export function editVertexBoneWeight(
 
   const slot = findWritableSlot(current, boneIndex);
   const previousWeight = current.indices[slot] === boneIndex ? current.weights[slot] : 0;
-  const targetWeight = mode === 'set'
-    ? amount
+  const requestedTargetWeight = mode === 'set'
+    ? targetWeight ?? amount
     : mode === 'add'
       ? previousWeight + amount
       : previousWeight - amount;
-  const updated = setVertexBoneWeight(current, boneIndex, targetWeight);
+  const setBlend = mode === 'set' && targetWeight !== undefined
+    ? clamp01(amount)
+    : 1;
+  const nextWeight = mode === 'set'
+    ? previousWeight + (clamp01(requestedTargetWeight) - previousWeight) * setBlend
+    : requestedTargetWeight;
+  const updated = targetWeight === undefined
+    ? setVertexBoneWeight(current, boneIndex, nextWeight)
+    : setVertexBoneWeightAtExactTarget(current, boneIndex, nextWeight);
   if (!updated) {
     return { ok: false, reason: 'invalid-bone' };
   }

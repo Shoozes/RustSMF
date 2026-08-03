@@ -376,6 +376,17 @@ describe('skinWeights', () => {
     assert.equal((mesh.geometry.getAttribute('skinWeight') as THREE.BufferAttribute).version, 1);
   });
 
+  it('blends toward an explicit target weight when brush flow is below one', () => {
+    const mesh = makeSkinnedMesh();
+    const result = editVertexBoneWeight(mesh, 1, 1, 'set', 0.5, 1);
+
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.equal(result.slot, 1);
+    assert.ok(result.vertex.weights[1] > 0.59 && result.vertex.weights[1] < 0.66);
+    assert.equal(weightsTotal(result.vertex.weights), 1);
+  });
+
   it('adds, subtracts, and clamps selected-bone weights', () => {
     const mesh = makeSkinnedMesh();
 

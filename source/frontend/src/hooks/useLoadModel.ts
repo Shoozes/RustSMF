@@ -103,6 +103,10 @@ import {
   type AnimationEditState,
   type AnimationSnapStep,
 } from '../utils/animationEdits';
+import {
+  captureAnimationPose,
+  type AnimationPoseSnapshot,
+} from '../utils/animationCreation';
 import { createAnimationAuthoringController } from '../utils/animationAuthoringController';
 import {
   createChildBone,
@@ -333,6 +337,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const [editorUndoOrder, setEditorUndoOrder] = useState(0);
   const [editorRedoOrder, setEditorRedoOrder] = useState(0);
   const baseClipsRef = useRef<THREE.AnimationClip[]>([]);
+  const animationRestPoseRef = useRef<AnimationPoseSnapshot | null>(null);
   const [animationEditState, setAnimationEditState] = useState<AnimationEditState>(() => makeAnimationEditState());
   const animationEditStateRef = useRef<AnimationEditState>(animationEditState);
 
@@ -363,7 +368,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const [skinPaintTargetMode, setSkinPaintTargetMode] = useState<'vertex' | 'triangle'>('vertex');
   const [skinPaintRadius, setSkinPaintRadius] = useState(0.2);
   const [skinPaintStrength, setSkinPaintStrength] = useState(0.2);
-  const [skinPaintTarget, setSkinPaintTarget] = useState(1);
+  const [skinPaintTargetWeight, setSkinPaintTargetWeight] = useState(1);
+  const [skinPaintFalloff, setSkinPaintFalloff] = useState(2);
   const [skinAutoWeightAlgorithm, setSkinAutoWeightAlgorithm] = useState<SkinAutoWeightAlgorithm>('segment-inverse-distance');
   const [skinAutoWeightPower, setSkinAutoWeightPower] = useState(2);
   const [skinAutoWeightNormalWeighting, setSkinAutoWeightNormalWeighting] = useState(0);
@@ -895,6 +901,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     lastSmfDataRef.current = null;
     lastSourceFormatRef.current = '';
     baseClipsRef.current = [];
+    animationRestPoseRef.current = null;
     setSourceFormat('');
     commitSkinEditState(makeSkinEditState('', ''));
     clearSkinHistory();
@@ -1007,6 +1014,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       const availableClips = loaded.clips || [];
 
       baseClipsRef.current = availableClips;
+      animationRestPoseRef.current = captureAnimationPose(loaded.skeleton ?? null);
       model.setRoot(root);
       model.setSkeleton(loaded.skeleton);
       model.setClips(availableClips);
@@ -1494,6 +1502,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     animationEditStateRef,
     playbackRef,
     skeleton: model.skeleton ?? null,
+    animationRestPoseRef,
     selectedBoneName: ui.selected ?? '',
     animationSnapStep,
     setAnimationEditState,
@@ -1521,6 +1530,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   ]);
 
   const {
+    createAnimationFromPose,
     renameCurrentAnimationClip,
     duplicateCurrentAnimationClip,
     deleteCurrentAnimationClip,
@@ -2628,7 +2638,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           ...autoWeightOptions,
           blendAmount: amount,
         })
-        : editVertexBoneWeight(meshObj, index, boneIndex, mode, amount);
+        : editVertexBoneWeight(
+          meshObj,
+          index,
+          boneIndex,
+          mode,
+          amount,
+          mode === 'set' ? skinPaintTargetWeight : undefined,
+        );
       if (!result.ok) return;
       touched += 1;
       if (result.changed) {
@@ -2657,6 +2674,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     model,
     ui,
     skinPaintMode,
+    skinPaintTargetWeight,
     skinAutoWeightAlgorithm,
     skinAutoWeightMaxInfluences,
     skinAutoWeightNormalWeighting,
@@ -2682,8 +2700,12 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     setSkinPaintStrength(clamp01(next));
   }, []);
 
-  const onSkinPaintTargetChange = useCallback((next: number) => {
-    setSkinPaintTarget(Math.max(1, Math.round(clampPositive(next, 1, 4))));
+  const onSkinPaintTargetWeightChange = useCallback((next: number) => {
+    setSkinPaintTargetWeight(clamp01(next));
+  }, []);
+
+  const onSkinPaintFalloffChange = useCallback((next: number) => {
+    setSkinPaintFalloff(clampPositive(next, 0.1, 4));
   }, []);
 
   const onSkinAutoWeightAlgorithmChange = useCallback((next: SkinAutoWeightAlgorithm) => {
@@ -2750,6 +2772,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     setupKeyboard,
     togglePlay,
     changeClip,
+    createAnimationFromPose,
     renameCurrentAnimationClip,
     duplicateCurrentAnimationClip,
     deleteCurrentAnimationClip,
@@ -2775,7 +2798,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     skinPaintTargetMode,
     skinPaintRadius,
     skinPaintStrength,
-    skinPaintTarget,
+    skinPaintTargetWeight,
+    skinPaintFalloff,
     skinAutoWeightAlgorithm,
     skinAutoWeightPower,
     skinAutoWeightNormalWeighting,
@@ -2784,7 +2808,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     onSkinPaintTargetModeChange,
     onSkinPaintRadiusChange,
     onSkinPaintStrengthChange,
-    onSkinPaintTargetChange,
+    onSkinPaintTargetWeightChange,
+    onSkinPaintFalloffChange,
     onSkinAutoWeightAlgorithmChange,
     onSkinAutoWeightPowerChange,
     onSkinAutoWeightNormalWeightingChange,

@@ -2,6 +2,22 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-08-03 — Pose-based animation creation and skin authoring semantics
+
+- Added a bounded Animate-panel flow for creating a named clip from either the canonical load-time Rest pose or the current local bone pose. It supports models with zero source clips, creates complete position/quaternion tracks for named skeleton bones, and records one reversible animation-workspace transaction.
+- Separated Skin Set mode's Target weight from brush flow and falloff. Set blends toward the bounded target; Add/Subtract retain incremental behavior.
+- Made the display-only Skin pts overlay follow posed skinned vertices during the viewport loop while keeping runtime source links outside serializable `userData`.
+- Added focused unit coverage for pose capture/clip construction, controller history/metadata, explicit skin targets, and posed overlay refresh, plus a browser regression for create/undo/redo.
+- Updated app-state, user, review, backlog, history, and summary-bank documentation to match the current feature contract and remaining old-editor parity work.
+
+### Verification
+
+- `npm.cmd run test:unit`: 275/275 passed across 46 discovered unit-test files.
+- `npm.cmd run typecheck`, `npm.cmd run typecheck:test`, and `npm.cmd run lint`: passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed, including context validation, production build/chunk checks, frontend units, Rust fmt/clippy/check, and 10 Rust tests.
+- The focused new pose-creation browser case reached all assertions with no product assertion failure, then hit managed `browserContext.close: spawn EPERM`; exact cleanup left no listener on ports 5173/1420. This remains harness-blocked evidence rather than a browser-green claim.
+- `git diff --check`: passed.
+
 ## 2026-08-01 — Context budget and skill-route consolidation
 
 - Raised the focused context-generation ceiling from 180 KiB to 256 KiB while keeping the 27.5 KiB default orientation narrow; the largest active route remains bounded by its own group cap.

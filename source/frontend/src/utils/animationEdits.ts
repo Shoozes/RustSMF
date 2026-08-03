@@ -251,6 +251,16 @@ const markDirty = (state: AnimationEditState, clipName: string): void => {
   }
 };
 
+export const markAnimationClipDirty = (
+  state: AnimationEditState,
+  clipName: string,
+): AnimationEditState => {
+  if (!clipName) return cloneAnimationEditState(state);
+  const next = cloneAnimationEditState(state);
+  markDirty(next, clipName);
+  return next;
+};
+
 export const normalizeSampleFrameMultiplier = (value: number): number => {
   if (!Number.isFinite(value)) return 1;
   return Math.min(255, Math.max(1, Math.round(value)));

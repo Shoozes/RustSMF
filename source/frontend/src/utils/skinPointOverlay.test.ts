@@ -5,6 +5,7 @@ import {
   createSkinPointOverlay,
   createSkinPointOverlays,
   disposeSkinPointOverlays,
+  updateSkinPointOverlay,
 } from './skinPointOverlay';
 
 function makeSkinnedMesh(): THREE.SkinnedMesh {
@@ -79,6 +80,21 @@ describe('skinPointOverlay', () => {
     assert.ok(overlay);
     assert.equal(overlay.geometry.getAttribute('position').count, 2);
     assert.equal(overlay.userData.pointCount, 2);
+  });
+
+  it('updates sampled points from the posed skinned vertex positions', () => {
+    const mesh = makeSkinnedMesh();
+    const overlay = createSkinPointOverlay(mesh);
+    assert.ok(overlay);
+
+    mesh.skeleton.bones[0].position.x = 2;
+    mesh.skeleton.bones[0].updateMatrixWorld(true);
+    mesh.skeleton.update();
+    mesh.updateMatrixWorld(true);
+
+    assert.equal(updateSkinPointOverlay(overlay), true);
+    const position = overlay.geometry.getAttribute('position');
+    assert.ok(position.getX(0) > 1.9, 'overlay follows the posed root-weighted vertex');
   });
 
   it('attaches and disposes overlays without mutating mesh geometry', () => {

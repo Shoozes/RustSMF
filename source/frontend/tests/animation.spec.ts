@@ -153,6 +153,38 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('animation-delete-clip-btn')).toBeEnabled();
     });
 
+  test('creates a pose-based animation and undoes the whole workspace transaction', async ({ page }) => {
+      await page.goto('/');
+
+      const input = page.getByTestId('model-file-input');
+      await input.setInputFiles(await createSkinnedGlbFixtureInput());
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
+      await pausePlaybackIfRunning(page);
+
+      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await expect(page.getByTestId('animation-create-btn')).toBeEnabled();
+      await page.getByTestId('animation-new-name-input').fill('Rest Pose Start');
+      await page.getByTestId('animation-new-duration-input').fill('1.25');
+      await page.getByTestId('animation-new-pose-select').selectOption('rest');
+      await page.getByTestId('animation-create-btn').click();
+
+      await expect(page.getByTestId('status-text')).toContainText(/Created animation clip Rest Pose Start from the rest pose/i);
+      await expect(page.getByTestId('animate-summary').locator('div').first().locator('strong')).toHaveText('2');
+      await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Rest Pose Start');
+      await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
+
+      await page.getByTestId('editor-undo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Undid create animation clip Rest Pose Start/i);
+      await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
+      await expect(page.getByTestId('animate-summary').locator('div').first().locator('strong')).toHaveText('1');
+
+      await page.getByTestId('editor-redo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Redid create animation clip Rest Pose Start/i);
+      await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Rest Pose Start');
+      await expect(page.getByTestId('animate-summary').locator('div').first().locator('strong')).toHaveText('2');
+    });
+
   test('animation keyframe authoring updates selected-bone clips and SMF checks', async ({ page }) => {
       await page.goto('/');
 

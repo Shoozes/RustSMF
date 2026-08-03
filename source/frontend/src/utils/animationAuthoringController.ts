@@ -8,8 +8,10 @@ import {
   getAnimationClipMetadata,
   getClipKey,
   getCurrentClipKey,
+  makeAnimationClipMetadata,
   getEditedKeyframe,
   makeKeyframeFromBone,
+  markAnimationClipDirty,
   makeUniqueAnimationClipName,
   moveAnimationClip,
   moveAnimationKeyframe,
@@ -27,6 +29,12 @@ import {
   type AnimationSnapStep,
   type EditableBoneKeyframe,
 } from './animationEdits';
+import {
+  captureAnimationPose,
+  createAnimationClipFromPose,
+  type AnimationCreationRequest,
+  type AnimationPoseSnapshot,
+} from './animationCreation';
 import {
   resolveAnimationEditContext,
   resolveAnimationMetadataContext,
@@ -49,6 +57,7 @@ export interface AnimationAuthoringControllerOptions {
   animationEditStateRef: { current: AnimationEditState };
   playbackRef: { current: AnimationPlaybackController };
   skeleton: THREE.Skeleton | null;
+  animationRestPoseRef: { current: AnimationPoseSnapshot | null };
   selectedBoneName: string;
   animationSnapStep: AnimationSnapStep;
   setAnimationEditState: (state: AnimationEditState) => void;
@@ -67,6 +76,7 @@ export interface AnimationAuthoringControllerOptions {
 }
 
 export interface AnimationAuthoringController {
+  createAnimationFromPose: (request: AnimationCreationRequest) => void;
   renameCurrentAnimationClip: (requestedName: string) => void;
   duplicateCurrentAnimationClip: () => void;
   deleteCurrentAnimationClip: () => void;
@@ -98,6 +108,7 @@ export function createAnimationAuthoringController(
     animationEditStateRef,
     playbackRef,
     skeleton,
+    animationRestPoseRef,
     selectedBoneName,
     animationSnapStep,
     setAnimationEditState,
@@ -197,6 +208,49 @@ export function createAnimationAuthoringController(
   };
 
   const controller: AnimationAuthoringController = {
+    createAnimationFromPose(request) {
+      if (!skeleton || skeleton.bones.length === 0) {
+        setStatus('Load a skinned model with bones before creating an animation.');
+        return;
+      }
+
+      const snapshot = request.initialPose === 'rest'
+        ? animationRestPoseRef.current
+        : captureAnimationPose(skeleton);
+      if (!snapshot || Object.keys(snapshot).length === 0) {
+        setStatus(request.initialPose === 'rest'
+          ? 'The model rest pose is unavailable; reload the model or choose Current pose.'
+          : 'The current skeleton pose is unavailable.');
+        return;
+      }
+
+      const clips = baseClipsRef.current;
+      const name = makeUniqueAnimationClipName(clips, request.requestedName);
+      const createdClip = createAnimationClipFromPose(
+        skeleton,
+        name,
+        request.duration,
+        snapshot,
+      );
+      if (!createdClip) {
+        setStatus('The new animation could not be created because the skeleton has no named bones.');
+        return;
+      }
+
+      const before = captureAnimationWorkspaceSnapshot();
+      const nextAnimationState = markAnimationClipDirty(animationEditStateRef.current, name);
+      nextAnimationState.metadataByClip[name] = makeAnimationClipMetadata();
+      const after: AnimationWorkspaceHistorySnapshot = {
+        baseClips: [...clips.map((clip) => clip.clone()), createdClip],
+        animationEditState: nextAnimationState,
+        currentClipName: name,
+        currentTime: 0,
+      };
+      if (!applyWorkspaceSnapshot(after)) return;
+      pushAnimationWorkspaceHistory(`create animation clip ${name}`, before, after);
+      setStatus(`Created animation clip ${name} from the ${request.initialPose} pose.`);
+    },
+
     renameCurrentAnimationClip(requestedName) {
       const clips = baseClipsRef.current;
       if (clips.length === 0) {

@@ -9,6 +9,7 @@ export interface SkinPointOverlayOptions {
 
 const DEFAULT_MAX_POINTS = 8000;
 const DEFAULT_POINT_SIZE = 0.035;
+const sourceMeshByOverlay = new WeakMap<THREE.Points, THREE.SkinnedMesh>();
 
 function selectedBoneIndex(mesh: THREE.SkinnedMesh, selectedBoneName?: string): number {
   if (!selectedBoneName) return -1;
@@ -81,11 +82,39 @@ export function createSkinPointOverlay(
     displayOnly: true,
     interactionTarget: false,
     sourceMeshUuid: mesh.uuid,
+    sourceVertexStride: stride,
     selectedBoneName: options.selectedBoneName ?? '',
     sourceVertexCount: position.count,
     pointCount,
   };
+  sourceMeshByOverlay.set(points, mesh);
+  updateSkinPointOverlay(points);
   return points;
+}
+
+export function updateSkinPointOverlay(points: THREE.Points): boolean {
+  const mesh = sourceMeshByOverlay.get(points);
+  if (!mesh) return false;
+
+  const sourcePosition = mesh.geometry.getAttribute('position');
+  const overlayPosition = points.geometry.getAttribute('position');
+  const stride = Number(points.userData.sourceVertexStride);
+  if (!sourcePosition || !overlayPosition || !Number.isInteger(stride) || stride < 1) return false;
+
+  mesh.skeleton?.update();
+  const target = new THREE.Vector3();
+  for (let pointIndex = 0; pointIndex < overlayPosition.count; pointIndex += 1) {
+    const vertexIndex = pointIndex * stride;
+    if (vertexIndex >= sourcePosition.count) break;
+    mesh.getVertexPosition(vertexIndex, target);
+    overlayPosition.setXYZ(pointIndex, target.x, target.y, target.z);
+  }
+  overlayPosition.needsUpdate = true;
+  return true;
+}
+
+export function updateSkinPointOverlays(overlays: readonly THREE.Points[]): void {
+  overlays.forEach(updateSkinPointOverlay);
 }
 
 export function createSkinPointOverlays(

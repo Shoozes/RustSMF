@@ -22,7 +22,8 @@ interface SkinPanelProps {
   skinPaintTargetMode: 'vertex' | 'triangle';
   skinPaintRadius: number;
   skinPaintStrength: number;
-  skinPaintTarget: number;
+  skinPaintTargetWeight: number;
+  skinPaintFalloff: number;
   skinAutoWeightAlgorithm: SkinAutoWeightAlgorithm;
   skinAutoWeightPower: number;
   skinAutoWeightNormalWeighting: number;
@@ -31,7 +32,8 @@ interface SkinPanelProps {
   onSkinPaintTargetModeChange: (next: 'vertex' | 'triangle') => void;
   onSkinPaintRadiusChange: (value: number) => void;
   onSkinPaintStrengthChange: (value: number) => void;
-  onSkinPaintTargetChange: (value: number) => void;
+  onSkinPaintTargetWeightChange: (value: number) => void;
+  onSkinPaintFalloffChange: (value: number) => void;
   onSkinAutoWeightAlgorithmChange: (next: SkinAutoWeightAlgorithm) => void;
   onSkinAutoWeightPowerChange: (value: number) => void;
   onSkinAutoWeightNormalWeightingChange: (value: number) => void;
@@ -58,7 +60,8 @@ export default function SkinPanel({
   skinPaintTargetMode,
   skinPaintRadius,
   skinPaintStrength,
-  skinPaintTarget,
+  skinPaintTargetWeight,
+  skinPaintFalloff,
   skinAutoWeightAlgorithm,
   skinAutoWeightPower,
   skinAutoWeightNormalWeighting,
@@ -67,7 +70,8 @@ export default function SkinPanel({
   onSkinPaintTargetModeChange,
   onSkinPaintRadiusChange,
   onSkinPaintStrengthChange,
-  onSkinPaintTargetChange,
+  onSkinPaintTargetWeightChange,
+  onSkinPaintFalloffChange,
   onSkinAutoWeightAlgorithmChange,
   onSkinAutoWeightPowerChange,
   onSkinAutoWeightNormalWeightingChange,
@@ -305,16 +309,30 @@ export default function SkinPanel({
             />
           </label>
           <label className="flex items-center justify-between gap-2 text-slate-400">
-            <span>Target</span>
+            <span>Target weight</span>
             <input
               data-testid="skin-paint-target"
               type="range"
-              min="1"
-              max="4"
-              step="1"
-              value={skinPaintTarget}
+              min="0"
+              max="1"
+              step="0.05"
+              value={skinPaintTargetWeight}
               disabled={sliderDisabled}
-              onChange={(e) => onSkinPaintTargetChange(Number(e.target.value))}
+              onChange={(e) => onSkinPaintTargetWeightChange(Number(e.target.value))}
+              className="w-40"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-2 text-slate-400">
+            <span>Falloff</span>
+            <input
+              data-testid="skin-paint-falloff"
+              type="range"
+              min="0.1"
+              max="4"
+              step="0.1"
+              value={skinPaintFalloff}
+              disabled={sliderDisabled}
+              onChange={(e) => onSkinPaintFalloffChange(Number(e.target.value))}
               className="w-40"
             />
           </label>

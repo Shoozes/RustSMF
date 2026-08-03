@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-08-01
+Last reviewed: 2026-08-03
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, and OBJ models. This document owns current behavior, architecture boundaries, format limits, and the verification contract. Forward work belongs in `TODO.md`; pass evidence belongs in `review.md`; recurring failure analysis belongs in `PITFALL_LEDGER.md`.
 
@@ -33,9 +33,9 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 - Rig: validation covers skeleton presence, duplicate names, orphan/cyclic hierarchy, skin tuple shape, and invalid skin indices. Non-SMF rigs support rename, reparent, child creation, move, rotate, detach/connect, 90-degree spin, and deletion of unweighted non-root branches with full snapshot undo/redo.
 - SMF Rig policy is explicit: position/rotation pose edits and inverse-bind local reset are supported; scale export, rename persistence, structural detach/connect, and mirror remain unavailable when the format cannot preserve them.
 - Endpoint and bounded CCD IK are explicit Rig tools with exclusive pointer ownership, cancel restoration, and one history transaction per completed gesture. IK is pose-only; it does not silently create animation keys.
-- Skin: selected-bone paint supports set/add/subtract/auto modes, vertex/triangle targets, bounded spatial candidate indexes, configurable Auto Skin algorithms, normalize, pointer cancel, undo/redo, and supported SMF export.
+- Skin: selected-bone paint supports set/add/subtract/auto modes, vertex/triangle targets, bounded spatial candidate indexes, configurable Auto Skin algorithms, normalize, pointer cancel, undo/redo, and supported SMF export. Set mode now separates Target weight (0–1) from brush flow and falloff; flow blends toward the target while Add/Subtract retain incremental behavior. The optional Skin pts overlay samples posed skinned vertices during the viewport loop and remains display-only.
 - Skin weight preview uses a non-destructive Three.js vertex-color heat map for the selected bone and restores the original color attribute plus each material's prior `vertexColors` mode when disabled. The legacy four-slot shader and paint-transport references remain documented in `docs/dev/old_editor_source_map.md`; exact legacy texture modulation is not required for the current export-safe display path.
-- Animate: clip rename/duplicate/delete/reorder, loop/sample metadata, playback, scrub, selected-bone key insert/update/delete/copy/paste, marker drag, snap, interpolation metadata, and undo/redo update the runtime clips and supported SMF export candidate. The mixer clock remains imperative in the viewport; the parent timeline publishes a bounded 50 ms display cadence and flushes immediately for scrub/clip/pause commands.
+- Animate: clip creation, rename/duplicate/delete/reorder, loop/sample metadata, playback, scrub, selected-bone key insert/update/delete/copy/paste, marker drag, snap, interpolation metadata, and undo/redo update the runtime clips and supported SMF export candidate. New clips can be created from the canonical load-time rest pose or the current local bone pose, including models that load with zero source clips; creation is one animation-workspace history transaction and emits position/quaternion keys for every named skeleton bone. The mixer clock remains imperative in the viewport; the parent timeline publishes a bounded 50 ms display cadence and flushes immediately for scrub/clip/pause commands.
 - App-level Undo/Redo selects the newest editor, Skin, or Outliner transaction by shared chronology rather than the currently visible workspace.
 - Editor history is capped at 100 entries and 64 MiB across undo/redo; skin history is capped at 50 entries and 32 MiB per direction. When an oldest entry is evicted, the status surface explains the bounded-history decision while the current edit remains applied.
 - Workspace, layout, and camera-mode changes preserve the mounted model, selection, paused time, dirty state, export status, and exclusive Select/Endpoint/IK ownership.
@@ -67,7 +67,9 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 | `src/utils/viewportDisplayController.ts` | Viewport texture/opacity preview, legacy SMF lighting substitution, source assignment restoration, and display cleanup. |
 | `src/utils/animationEdits.ts`, `rigEdits.ts`, `rigIk.ts`, `skinWeights.ts` | Pure authoring policy and transformations with focused unit coverage; skin history snapshots use keyed indexing for batch comparisons. |
 | `src/utils/animationAuthoringContext.ts` | Pure selected-bone and active-clip guards shared by animation authoring callbacks and focused tests. |
-| `src/utils/animationAuthoringController.ts` | Clip CRUD, metadata, selected-bone key editing, snap, and animation-history action contract used by `useLoadModel`. |
+| `src/utils/animationCreation.ts` | Rest/current pose capture, bounded new-clip duration normalization, and complete position/quaternion track construction. |
+| `src/utils/animationAuthoringController.ts` | Clip creation/CRUD, metadata, selected-bone key editing, snap, and animation-history action contract used by `useLoadModel`. |
+| `src/utils/skinPointOverlay.ts` | Viewport-only sampled skin-point construction, posed-vertex refresh, and disposal; runtime source links stay outside serializable `userData`. |
 | `src/loaders/*` | SMF/GLB/FBX/OBJ parsing, conversion, diagnostics, coordinate/DQ math, and validated export. |
 | `src/loaders/smfSemantics.ts` | Shared relational and finite-value validation for parsed, worker-fallback, and serialized `ImportedSmf` payloads. |
 | `src/workers/*` | Runtime-validated SMF worker protocol, client, and worker entry. |
@@ -97,8 +99,8 @@ The sandbox checkup is diagnostic rather than an app gate. A managed profile may
 
 Current inventory:
 
-- 269 frontend unit tests across 45 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
-- 56 browser cases in eight domain-owned spec files.
+- 275 frontend unit tests across 46 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
+- 57 browser cases in eight domain-owned spec files.
 - 10 Rust tests; the real-SMF native tests require and parse the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
 - 22 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; the latest context run reports 27.5 KiB default orientation with zero warnings, and focused generation has a 256 KiB ceiling for the largest active routes.
 
