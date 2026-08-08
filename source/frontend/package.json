@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "test:unit": "node scripts/run-unit-tests.mjs",
     "test:e2e": "playwright test",
+    "test:e2e:list": "playwright test --list",
     "test:visual-strict": "node scripts/run-strict-visuals.mjs",
     "test:visual-update": "node scripts/run-strict-visuals.mjs --update-snapshots",
     "tauri:dev": "cd ../src-tauri && tauri dev",

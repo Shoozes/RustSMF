@@ -72,7 +72,12 @@ import {
   type SkinBrushIndex,
   type SkinBrushVertexRef,
 } from '../utils/skinBrushIndex';
-import { getSkinnedVertexWorldPosition } from '../utils/skinnedVertexPosition';
+import {
+  captureSkinPaintPose,
+  getSkinnedVertexWorldPosition,
+  type SkinPaintPoseSnapshot,
+} from '../utils/skinnedVertexPosition';
+import type { SkinPaintPoseMode } from '../utils/skinDiagnostics';
 import { cancelPendingAnimationFrame } from '../utils/animationFrame';
 import type { EditorMode, ViewportLayout } from '../store';
 import { getAppTheme, type AppThemeId } from '../theme';
@@ -234,7 +239,9 @@ interface ThreeViewportProps {
   onPaintSkinVertices?: (paintVertices: SkinPaintVertex[]) => void;
   onSkinPaintStrokeStart?: () => void;
   onSkinPaintStrokeEnd?: () => void;
+  onInspectSkinVertex?: (selection: { meshId: string; vertexIndex: number }) => void;
   skinPaintMode?: SkinWeightEditMode;
+  skinPaintPose?: SkinPaintPoseMode;
   skinPaintTargetMode?: 'vertex' | 'triangle';
   skinPaintRadius?: number;
   skinPaintStrength?: number;
@@ -290,7 +297,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   onPaintSkinVertices,
   onSkinPaintStrokeStart,
   onSkinPaintStrokeEnd,
+  onInspectSkinVertex,
   skinPaintMode = 'set',
+  skinPaintPose = 'live',
   skinPaintTargetMode = 'vertex',
   skinPaintRadius = 0.2,
   skinPaintStrength = 0.2,
@@ -330,7 +339,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const onPaintSkinVerticesRef = useRef(onPaintSkinVertices);
   const onSkinPaintStrokeStartRef = useRef(onSkinPaintStrokeStart);
   const onSkinPaintStrokeEndRef = useRef(onSkinPaintStrokeEnd);
+  const onInspectSkinVertexRef = useRef(onInspectSkinVertex);
   const skinPaintModeRef = useRef<SkinWeightEditMode>(skinPaintMode);
+  const skinPaintPoseRef = useRef<SkinPaintPoseMode>(skinPaintPose);
   const skinPaintTargetModeRef = useRef<'vertex' | 'triangle'>(skinPaintTargetMode);
   const skinPaintRadiusRef = useRef<number>(skinPaintRadius);
   const skinPaintStrengthRef = useRef<number>(skinPaintStrength);
@@ -405,6 +416,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     signature: number;
     index: SkinBrushIndex;
   }>());
+  const skinFrozenPoseCacheRef = useRef(new WeakMap<THREE.SkinnedMesh, SkinPaintPoseSnapshot>());
   const skinPaintHitCountRef = useRef(0);
   const skinCandidateCountRef = useRef(0);
   const skinTotalVertexCountRef = useRef(0);
@@ -690,9 +702,19 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const attributeVersion = (attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute | undefined): number => (
       attribute && 'version' in attribute ? attribute.version : 0
     );
+    const paintPose = skinPaintPoseRef.current;
+    const frozenPose = paintPose === 'frozen'
+      ? (skinFrozenPoseCacheRef.current.get(mesh) ?? (() => {
+        const captured = captureSkinPaintPose(mesh);
+        if (captured) skinFrozenPoseCacheRef.current.set(mesh, captured);
+        return captured;
+      })())
+      : null;
     const signatureValues = [
+      paintPose === 'rest' ? 1 : paintPose === 'frozen' ? 2 : 3,
       ...mesh.matrixWorld.elements,
-      ...(mesh.skeleton?.boneMatrices ?? []),
+      ...(paintPose === 'live' ? (mesh.skeleton?.boneMatrices ?? []) : []),
+      ...(frozenPose?.boneMatrices ?? []),
       attributeVersion(position),
       attributeVersion(skinIndex),
       attributeVersion(skinWeight),
@@ -705,7 +727,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     if (cached && cached.cellSize === desiredCellSize && cached.signature === signature) {
       return cached.index;
     }
-    const index = buildSkinnedWorldBrushIndex(mesh, desiredCellSize);
+    const index = buildSkinnedWorldBrushIndex(
+      mesh,
+      desiredCellSize,
+      frozenPose ?? { mode: paintPose },
+    );
     skinBrushIndexCacheRef.current.set(mesh, { cellSize: desiredCellSize, signature, index });
     return index;
   };
@@ -1601,6 +1627,28 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       const firstHit = hits[0];
       if (!firstHit?.point) return empty;
 
+      if (isThreeSkinnedMesh(firstHit.object) && firstHit.face) {
+        const position = firstHit.object.geometry.getAttribute('position');
+        if (!position) return empty;
+        const hitVertexIndices = [firstHit.face.a, firstHit.face.b, firstHit.face.c]
+          .filter((vertexIndex) => Number.isInteger(vertexIndex) && vertexIndex >= 0 && vertexIndex < position.count);
+        let inspectedVertex = hitVertexIndices[0] ?? -1;
+        let inspectedDistance = Number.POSITIVE_INFINITY;
+        const inspectedWorld = new THREE.Vector3();
+        for (const vertexIndex of hitVertexIndices) {
+          const failure = getSkinnedVertexWorldPosition(firstHit.object, vertexIndex, inspectedWorld);
+          if (failure) continue;
+          const distance = inspectedWorld.distanceToSquared(firstHit.point);
+          if (distance < inspectedDistance) {
+            inspectedDistance = distance;
+            inspectedVertex = vertexIndex;
+          }
+        }
+        if (inspectedVertex >= 0) {
+          onInspectSkinVertexRef.current?.({ meshId: firstHit.object.uuid, vertexIndex: inspectedVertex });
+        }
+      }
+
       const brushCenter = firstHit.point.clone();
       const brushRadius = Math.max(0.0001, skinPaintRadiusRef.current);
       const brushRadiusSq = brushRadius * brushRadius;
@@ -2462,7 +2510,18 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => { onPaintSkinVerticesRef.current = onPaintSkinVertices; }, [onPaintSkinVertices]);
   useEffect(() => { onSkinPaintStrokeStartRef.current = onSkinPaintStrokeStart; }, [onSkinPaintStrokeStart]);
   useEffect(() => { onSkinPaintStrokeEndRef.current = onSkinPaintStrokeEnd; }, [onSkinPaintStrokeEnd]);
+  useEffect(() => { onInspectSkinVertexRef.current = onInspectSkinVertex; }, [onInspectSkinVertex]);
   useEffect(() => { skinPaintModeRef.current = skinPaintMode; }, [skinPaintMode]);
+  useEffect(() => {
+    skinPaintPoseRef.current = skinPaintPose;
+    skinBrushIndexCacheRef.current = new WeakMap();
+    skinFrozenPoseCacheRef.current = new WeakMap();
+    const canvas = canvasRef.current;
+    if (canvas) {
+      canvas.dataset.skinPaintPose = skinPaintPose;
+      canvas.dataset.skinPaintPoseWarning = skinPaintPose === 'live' ? 'live-animation' : '';
+    }
+  }, [skinPaintPose]);
   useEffect(() => { skinPaintTargetModeRef.current = skinPaintTargetMode; }, [skinPaintTargetMode]);
   useEffect(() => { skinPaintRadiusRef.current = skinPaintRadius; }, [skinPaintRadius]);
   useEffect(() => { skinPaintStrengthRef.current = skinPaintStrength; }, [skinPaintStrength]);
@@ -2491,6 +2550,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         delete canvas.dataset.skinPaintStrength;
         delete canvas.dataset.skinPaintTargetWeight;
         delete canvas.dataset.skinPaintFalloff;
+        delete canvas.dataset.skinPaintPose;
+        delete canvas.dataset.skinPaintPoseWarning;
         delete canvas.dataset.skinBrushIndexError;
         delete canvas.dataset.skinBrushX;
         delete canvas.dataset.skinBrushY;
@@ -2789,6 +2850,8 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
     // Dispose + remove previous attached model + helper (use shared util)
     const prev = attachedModelRef.current;
+    skinBrushIndexCacheRef.current = new WeakMap();
+    skinFrozenPoseCacheRef.current = new WeakMap();
     if (prev) {
       clearSkinPointOverlays();
       viewportDisplayRef.current.detachRoot(prev);
@@ -2907,6 +2970,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         data-skin-candidate-count={skinCandidateCountRef.current}
         data-skin-total-vertex-count={skinTotalVertexCountRef.current}
         data-skin-paint-target-mode={skinPaintTargetMode}
+        data-skin-paint-pose={skinPaintPose}
         data-transform-owner={boneTransformOwner}
         data-transform-attached={transformTargetRef.current ? 'true' : 'false'}
         data-transform-dragging={transformControlsDraggingRef.current ? 'true' : 'false'}

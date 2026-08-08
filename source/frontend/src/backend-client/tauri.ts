@@ -4,6 +4,7 @@
 
 import { invoke } from '@tauri-apps/api/core'
 import { bytesToArrayBuffer } from '../loaders'
+import { normalizeBinaryPayload } from './binaryPayload'
 import {
   assertModelFileSize,
   assertModelInputSize,
@@ -106,7 +107,15 @@ export async function openFile(): Promise<OpenResult | null> {
         })
       } catch (e) {
         console.warn('[tauri] failed to read file from browser input', e)
-        finalize(e instanceof ModelInputSizeError ? { name: file.name, error: e.message } : null)
+        const message = e instanceof Error && e.message.trim()
+          ? e.message
+          : 'The browser could not read the selected file.'
+        finalize({
+          name: file.name,
+          error: e instanceof ModelInputSizeError
+            ? message
+            : `Could not read model file "${file.name}": ${message}`,
+        })
       }
     }
 
@@ -173,10 +182,8 @@ export async function readBinaryFile(path: string): Promise<Uint8Array> {
   if (!isTauri) {
     throw new Error('readBinaryFile only available in Tauri desktop (use openFile in browser)')
   }
-  const bytes = await invokeCommand<number[] | Uint8Array | ArrayBuffer>('read_file_binary', { path })
-  if (bytes instanceof Uint8Array) return bytes
-  if (bytes instanceof ArrayBuffer) return new Uint8Array(bytes)
-  return new Uint8Array(bytes)
+  const payload = await invokeCommand<unknown>('read_file_binary', { path })
+  return normalizeBinaryPayload(payload, path)
 }
 
 export async function peekSmfHeader(path: string): Promise<string> {

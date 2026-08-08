@@ -1,5 +1,9 @@
 import * as THREE from 'three';
-import { getSkinnedVertexWorldPosition } from './skinnedVertexPosition';
+import {
+  getSkinPaintVertexWorldPosition,
+  getSkinnedVertexWorldPosition,
+  type SkinPaintPoseSnapshot,
+} from './skinnedVertexPosition';
 
 export interface SkinBrushVertexRef {
   meshId: string;
@@ -55,6 +59,7 @@ export function buildSkinBrushIndex(
 export function buildSkinnedWorldBrushIndex(
   mesh: THREE.SkinnedMesh,
   cellSize: number,
+  pose: SkinPaintPoseSnapshot = { mode: 'live' },
 ): SkinBrushIndex {
   const position = mesh.geometry.getAttribute('position');
   const safeCellSize = Number.isFinite(cellSize) && cellSize > 0 ? cellSize : 0.1;
@@ -76,14 +81,16 @@ export function buildSkinnedWorldBrushIndex(
   }
 
   mesh.updateMatrixWorld(true);
-  mesh.skeleton?.update();
+  if (pose.mode === 'live') mesh.skeleton?.update();
 
   const local = new THREE.Vector3();
   const world = new THREE.Vector3();
 
   for (let vertexIndex = 0; vertexIndex < position.count; vertexIndex += 1) {
     local.fromBufferAttribute(position, vertexIndex);
-    const failure = getSkinnedVertexWorldPosition(mesh, vertexIndex, world);
+    const failure = pose.mode === 'live'
+      ? getSkinnedVertexWorldPosition(mesh, vertexIndex, world)
+      : getSkinPaintVertexWorldPosition(mesh, vertexIndex, world, pose);
     if (failure) {
       return {
         meshId: mesh.uuid,

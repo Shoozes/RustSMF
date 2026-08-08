@@ -10,7 +10,7 @@ import {
 } from '../loaders/coord';
 import { cloneImportedSmf } from '../loaders/smfData';
 import { findEffectiveBoneParentIndex } from '../loaders/smfRig';
-import { normalizeAnimationDuration } from './animationCreation';
+import { MIN_ANIMATION_DURATION, normalizeAnimationDuration } from './animationCreation';
 import type { AnimationEditScope } from './animationScope';
 
 export type AnimationInterpolation = 'linear' | 'step' | 'quadratic';
@@ -47,6 +47,25 @@ export interface AnimationKeyframeClipboard {
   entries: Record<string, EditableBoneKeyframe>;
 }
 
+export type AnimationTrimKeyPolicy = 'retain-keys-and-sampled-boundaries';
+
+export const ANIMATION_TRIM_KEY_POLICY: AnimationTrimKeyPolicy = 'retain-keys-and-sampled-boundaries';
+
+export type AnimationTrimFailureReason = 'invalid-range' | 'locked-bone-range';
+
+export type AnimationTrimResult =
+  | {
+      ok: true;
+      clip: THREE.AnimationClip;
+      startTime: number;
+      endTime: number;
+    }
+  | {
+      ok: false;
+      reason: AnimationTrimFailureReason;
+      boneName?: string;
+    };
+
 export interface AnimationEditState {
   selectedKeyTime: number | null;
   clipboard: AnimationKeyframeClipboard | null;
@@ -54,6 +73,7 @@ export interface AnimationEditState {
   editsByClip: Record<string, Record<string, EditableBoneKeyframe[]>>;
   metadataByClip: Record<string, AnimationClipMetadata>;
   durationByClip: Record<string, number>;
+  lockedBonesByClip: Record<string, string[]>;
   dirtyClipNames: string[];
 }
 
@@ -68,6 +88,7 @@ export const makeAnimationEditState = (): AnimationEditState => ({
   editsByClip: makeStringRecord(),
   metadataByClip: makeStringRecord(),
   durationByClip: makeStringRecord(),
+  lockedBonesByClip: makeStringRecord(),
   dirtyClipNames: [],
 });
 
@@ -113,6 +134,11 @@ export const cloneAnimationEditState = (state: AnimationEditState): AnimationEdi
     durationByClip[clipName] = duration;
   }
 
+  const lockedBonesByClip = makeStringRecord<string[]>();
+  for (const [clipName, boneNames] of Object.entries(state.lockedBonesByClip ?? {})) {
+    lockedBonesByClip[clipName] = [...new Set(boneNames.filter((name) => typeof name === 'string' && name))];
+  }
+
   return {
     selectedKeyTime: state.selectedKeyTime,
     clipboard: cloneClipboard(state.clipboard),
@@ -120,6 +146,7 @@ export const cloneAnimationEditState = (state: AnimationEditState): AnimationEdi
     editsByClip,
     metadataByClip,
     durationByClip,
+    lockedBonesByClip,
     dirtyClipNames: [...state.dirtyClipNames],
   };
 };
@@ -193,6 +220,16 @@ export const sameAnimationEditState = (
     if (Math.abs((left.durationByClip?.[clipName] ?? 0) - (right.durationByClip?.[clipName] ?? 0)) > TIME_EPSILON) {
       return false;
     }
+  }
+
+  const lockedClipNames = new Set([
+    ...Object.keys(left.lockedBonesByClip ?? {}),
+    ...Object.keys(right.lockedBonesByClip ?? {}),
+  ]);
+  for (const clipName of lockedClipNames) {
+    const leftNames = new Set(left.lockedBonesByClip?.[clipName] ?? []);
+    const rightNames = new Set(right.lockedBonesByClip?.[clipName] ?? []);
+    if (leftNames.size !== rightNames.size || [...leftNames].some((name) => !rightNames.has(name))) return false;
   }
 
   const clipNames = new Set([...Object.keys(left.editsByClip), ...Object.keys(right.editsByClip)]);
@@ -379,6 +416,36 @@ export const setAnimationClipDuration = (
   return next;
 };
 
+export const getAnimationClipLockedBoneNames = (
+  state: AnimationEditState,
+  clipName: string,
+  fallback: readonly string[] = [],
+): string[] => {
+  const names = Object.prototype.hasOwnProperty.call(state.lockedBonesByClip ?? {}, clipName)
+    ? state.lockedBonesByClip[clipName]
+    : fallback;
+  return [...new Set((names ?? []).filter((name) => typeof name === 'string' && name))];
+};
+
+export const setAnimationClipLockedBones = (
+  state: AnimationEditState,
+  clipName: string,
+  boneNames: Iterable<string>,
+): AnimationEditState => {
+  if (!clipName) return cloneAnimationEditState(state);
+  const next = cloneAnimationEditState(state);
+  next.lockedBonesByClip[clipName] = [...new Set([...boneNames].filter(Boolean))].sort();
+  markDirty(next, clipName);
+  return next;
+};
+
+export const isAnimationBoneLocked = (
+  state: AnimationEditState,
+  clipName: string,
+  boneName: string,
+  fallback: readonly string[] = [],
+): boolean => getAnimationClipLockedBoneNames(state, clipName, fallback).includes(boneName);
+
 export const getAnimationClipTimelineDuration = (clip: THREE.AnimationClip): number => {
   let duration = Number.isFinite(clip.duration) && clip.duration > 0 ? clip.duration : 0;
   for (const track of clip.tracks) {
@@ -387,6 +454,134 @@ export const getAnimationClipTimelineDuration = (clip: THREE.AnimationClip): num
     }
   }
   return Math.max(0, duration);
+};
+
+const trackBoneName = (track: THREE.KeyframeTrack): string | null => {
+  const match = track.name.match(/^(.*)\.(?:position|quaternion)$/);
+  return match?.[1] || null;
+};
+
+const hasTrackKeyOutsideRange = (
+  track: THREE.KeyframeTrack,
+  startTime: number,
+  endTime: number,
+): boolean => Array.from(track.times).some((time) => (
+  !Number.isFinite(time) || time < startTime - TIME_EPSILON || time > endTime + TIME_EPSILON
+));
+
+const normalizeTrimBounds = (
+  clip: THREE.AnimationClip,
+  startTime: number,
+  endTime: number,
+): { startTime: number; endTime: number } | null => {
+  const duration = getAnimationClipTimelineDuration(clip);
+  if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || duration < TIME_EPSILON) return null;
+  const start = normalizeTime(Math.min(duration, Math.max(0, startTime)));
+  const end = normalizeTime(Math.min(duration, Math.max(0, endTime)));
+  if (end <= start || end - start < MIN_ANIMATION_DURATION - TIME_EPSILON) return null;
+  return { startTime: start, endTime: end };
+};
+
+const sampleTrackAt = (track: THREE.KeyframeTrack, time: number): number[] => {
+  const valueSize = track.getValueSize();
+  const result = new Float32Array(valueSize);
+  const interpolant = track.getInterpolation() === THREE.InterpolateDiscrete
+    ? track.InterpolantFactoryMethodDiscrete(result)
+    : track.getInterpolation() === THREE.InterpolateSmooth
+      ? track.InterpolantFactoryMethodSmooth(result)
+      : track.InterpolantFactoryMethodLinear(result);
+  return Array.from(interpolant.evaluate(time) as ArrayLike<number>);
+};
+
+const trimTrackToRange = (
+  track: THREE.KeyframeTrack,
+  startTime: number,
+  endTime: number,
+): THREE.KeyframeTrack => {
+  const valueSize = track.getValueSize();
+  const entries = Array.from(track.times)
+    .map((time, index) => ({ time, values: Array.from(track.values.slice(index * valueSize, (index + 1) * valueSize)) }))
+    .filter((entry) => Number.isFinite(entry.time) && entry.time >= startTime - TIME_EPSILON && entry.time <= endTime + TIME_EPSILON)
+    .map((entry) => ({
+      time: normalizeTime(Math.max(0, entry.time - startTime)),
+      values: entry.values,
+    }));
+
+  const addBoundary = (sourceTime: number): void => {
+    const targetTime = normalizeTime(sourceTime - startTime);
+    if (entries.some((entry) => sameNumber(entry.time, targetTime))) return;
+    entries.push({ time: targetTime, values: sampleTrackAt(track, sourceTime) });
+  };
+
+  addBoundary(startTime);
+  addBoundary(endTime);
+  entries.sort((left, right) => left.time - right.time);
+
+  const trimmed = track.clone();
+  trimmed.times = Float32Array.from(entries.map((entry) => entry.time));
+  trimmed.values = Float32Array.from(entries.flatMap((entry) => entry.values));
+  return trimmed;
+};
+
+export const trimAnimationClip = (
+  clip: THREE.AnimationClip,
+  startTime: number,
+  endTime: number,
+  lockedBoneNames: readonly string[] = [],
+): AnimationTrimResult => {
+  const bounds = normalizeTrimBounds(clip, startTime, endTime);
+  if (!bounds) return { ok: false, reason: 'invalid-range' };
+
+  const locked = new Set(lockedBoneNames);
+  const lockedTrack = clip.tracks.find((track) => {
+    const boneName = trackBoneName(track);
+    return !!boneName && locked.has(boneName) && hasTrackKeyOutsideRange(track, bounds.startTime, bounds.endTime);
+  });
+  if (lockedTrack) {
+    return {
+      ok: false,
+      reason: 'locked-bone-range',
+      boneName: trackBoneName(lockedTrack) ?? undefined,
+    };
+  }
+
+  return {
+    ok: true,
+    clip: new THREE.AnimationClip(
+      clip.name,
+      bounds.endTime - bounds.startTime,
+      clip.tracks.map((track) => trimTrackToRange(track, bounds.startTime, bounds.endTime)),
+    ),
+    ...bounds,
+  };
+};
+
+export const trimAnimationEditState = (
+  state: AnimationEditState,
+  clipName: string,
+  startTime: number,
+  endTime: number,
+): AnimationEditState => {
+  if (!clipName) return cloneAnimationEditState(state);
+  const next = cloneAnimationEditState(state);
+  const clipEdits = next.editsByClip[clipName];
+  if (clipEdits) {
+    for (const [boneName, keys] of Object.entries(clipEdits)) {
+      const trimmed = keys
+        .filter((key) => key.time >= startTime - TIME_EPSILON && key.time <= endTime + TIME_EPSILON)
+        .map((key) => ({ ...cloneKey(key), time: normalizeTime(key.time - startTime) }))
+        .sort((left, right) => left.time - right.time);
+      if (trimmed.length > 0) clipEdits[boneName] = trimmed;
+      else delete clipEdits[boneName];
+    }
+    if (Object.keys(clipEdits).length === 0) delete next.editsByClip[clipName];
+  }
+  next.selectedKeyTime = next.selectedKeyTime === null
+    ? null
+    : normalizeTime(Math.max(0, Math.min(endTime - startTime, next.selectedKeyTime - startTime)));
+  next.durationByClip[clipName] = normalizeAnimationDuration(endTime - startTime);
+  markDirty(next, clipName);
+  return next;
 };
 
 const scaleAnimationTime = (time: number, scale: number, duration: number): number => (
@@ -680,6 +875,11 @@ export const renameAnimationEditClip = (
     next.durationByClip[newClipName] = duration;
     delete next.durationByClip[oldClipName];
   }
+  const lockedBones = next.lockedBonesByClip[oldClipName];
+  if (lockedBones !== undefined) {
+    next.lockedBonesByClip[newClipName] = [...lockedBones];
+    delete next.lockedBonesByClip[oldClipName];
+  }
 
   next.dirtyClipNames = Array.from(new Set([
     ...next.dirtyClipNames.map((clipName) => (clipName === oldClipName ? newClipName : clipName)),
@@ -715,6 +915,10 @@ export const duplicateAnimationEditClip = (
   if (duration !== undefined) {
     next.durationByClip[duplicateClipName] = duration;
   }
+  const lockedBones = next.lockedBonesByClip[sourceClipName];
+  if (lockedBones !== undefined) {
+    next.lockedBonesByClip[duplicateClipName] = [...lockedBones];
+  }
   markDirty(next, duplicateClipName);
   return next;
 };
@@ -729,6 +933,7 @@ export const deleteAnimationEditClip = (
   delete next.editsByClip[clipName];
   delete next.metadataByClip[clipName];
   delete next.durationByClip[clipName];
+  delete next.lockedBonesByClip[clipName];
   next.dirtyClipNames = next.dirtyClipNames.filter((name) => name !== clipName);
   next.selectedKeyTime = null;
   return next;
@@ -1191,6 +1396,28 @@ const getAuthoredClipInterpolation = (
   return found;
 };
 
+const getImportedBoneIndex = (boneName: string, boneCount: number): number | null => {
+  const match = boneName.match(/^(?:SMF_Node|Bone)_(\d+)$/);
+  if (!match) return null;
+  const index = Number(match[1]);
+  return Number.isInteger(index) && index >= 0 && index < boneCount ? index : null;
+};
+
+const applyAnimationLockState = (
+  animation: ImportedSmf['animations'][number],
+  state: AnimationEditState,
+  clipName: string,
+  boneCount: number,
+): ImportedSmf['animations'][number] => {
+  if (!Object.prototype.hasOwnProperty.call(state.lockedBonesByClip ?? {}, clipName)) return animation;
+  const lockedBones = [...new Set(
+    (state.lockedBonesByClip[clipName] ?? [])
+      .map((name) => getImportedBoneIndex(name, boneCount))
+      .filter((index): index is number => index !== null),
+  )].sort((left, right) => left - right);
+  return { ...animation, lockedBones };
+};
+
 export const applyAnimationMetadataToImportedSmf = (
   source: ImportedSmf,
   state: AnimationEditState,
@@ -1216,7 +1443,8 @@ export const applyAnimationEditsToImportedSmf = (
   const sourceByName = new Map(sourceAnimations.map((animation, index) => [animation.name || `clip_${index}`, animation]));
   const clipListChanged = editedClips.length !== sourceAnimations.length
     || editedClips.some((clip, index) => getClipKey(clip, index) !== (sourceAnimations[index]?.name || `clip_${index}`));
-  if (!hasDirtyAnimationEdits(state) && !clipListChanged) return source;
+  const hasLockOverrides = Object.keys(state.lockedBonesByClip ?? {}).length > 0;
+  if (!hasDirtyAnimationEdits(state) && !clipListChanged && !hasLockOverrides) return source;
 
   const result = cloneImportedSmf(source);
   const makeFallbackAnimation = (clipName: string): ImportedSmf['animations'][number] => ({
@@ -1240,7 +1468,12 @@ export const applyAnimationEditsToImportedSmf = (
         ?? makeFallbackAnimation(clipName);
       const rebuilt = buildSmfAnimationFromClip(source, sourceAnimation, clip, state.durationByClip?.[clipName]);
       return {
-        ...applyAnimationMetadata(rebuilt, state.metadataByClip[clipName], getAuthoredClipInterpolation(state, clipName)),
+        ...applyAnimationLockState(
+          applyAnimationMetadata(rebuilt, state.metadataByClip[clipName], getAuthoredClipInterpolation(state, clipName)),
+          state,
+          clipName,
+          source.bones.length,
+        ),
         name: clipName,
       };
     });
@@ -1253,10 +1486,15 @@ export const applyAnimationEditsToImportedSmf = (
     const clip = editedClips.find((candidate, clipIndex) => getClipKey(candidate, clipIndex) === clipName);
     const interpolation = getAuthoredClipInterpolation(state, clipName);
     if (!clip) return applyAnimationMetadata(animation, state.metadataByClip[clipName], interpolation);
-    return applyAnimationMetadata(
-      buildSmfAnimationFromClip(source, animation, clip, state.durationByClip?.[clipName]),
-      state.metadataByClip[clipName],
-      interpolation,
+    return applyAnimationLockState(
+      applyAnimationMetadata(
+        buildSmfAnimationFromClip(source, animation, clip, state.durationByClip?.[clipName]),
+        state.metadataByClip[clipName],
+        interpolation,
+      ),
+      state,
+      clipName,
+      source.bones.length,
     );
   });
   return result;

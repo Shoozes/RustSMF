@@ -261,4 +261,27 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       expect(await paintCanvas.getAttribute('data-skin-paint-mode')).toBe(null);
       await expect(inspector).toContainText(/Selected\s*FixtureTip/i);
     });
+
+  test('skin diagnostics expose raw influences and explicit paint-pose safety', async ({ page }) => {
+      await page.goto('/');
+
+      await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await pausePlaybackIfRunning(page);
+      await page.getByTestId('mode-tab-skin').click({ force: true });
+
+      await expect(page.getByTestId('skin-diagnostics')).toContainText(/Meshes \/ vertices/i);
+      await expect(page.getByTestId('skin-diagnostics')).toContainText(/Invalid references/i);
+      await expect(page.getByTestId('skin-paint-pose')).toHaveValue('live');
+      await expect(page.getByTestId('skin-paint-pose-warning')).toContainText(/Frozen Current/i);
+
+      const canvas = page.getByTestId('three-canvas');
+      await expect(canvas).toHaveAttribute('data-skin-paint-pose', 'live');
+      await page.getByTestId('skin-paint-pose').selectOption('frozen');
+      await expect(page.getByTestId('skin-paint-pose')).toHaveValue('frozen');
+      await expect(page.getByTestId('skin-paint-pose-warning')).toHaveCount(0);
+      await expect(canvas).toHaveAttribute('data-skin-paint-pose', 'frozen');
+      await page.getByTestId('skin-paint-pose').selectOption('rest');
+      await expect(canvas).toHaveAttribute('data-skin-paint-pose', 'rest');
+    });
 });

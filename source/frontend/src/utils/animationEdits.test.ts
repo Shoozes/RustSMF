@@ -15,6 +15,7 @@ import {
   duplicateAnimationEditClip,
   getAnimationClipMetadata,
   getAnimationClipTimelineDuration,
+  getAnimationClipLockedBoneNames,
   getCurrentClipKey,
   hasDirtyAnimationEdits,
   isAnimationInterpolation,
@@ -30,12 +31,15 @@ import {
   retimeAnimationClip,
   retimeAnimationEditState,
   sameAnimationEditState,
+  setAnimationClipLockedBones,
   setAnimationClipLoop,
   setAnimationClipDuration,
   setAnimationClipSampleFrameMultiplier,
   setAnimationInterpolation,
   smfInterpolationToAnimation,
   snapAnimationTime,
+  trimAnimationClip,
+  trimAnimationEditState,
   upsertAnimationKeyframe,
   upsertAnimationKeyframes,
 } from './animationEdits';
@@ -207,6 +211,56 @@ test('animation retime scales source tracks and authored keys together', () => {
   assert.notEqual(retimedClip, base);
   assert.notEqual(retimedClip.tracks[0], base.tracks[0]);
   assert.deepEqual(Array.from(base.tracks[0].times), [0, 0.5, 1]);
+});
+
+test('animation trim samples finite boundaries, shifts retained keys, and preserves authored edits', () => {
+  const base = new THREE.AnimationClip('Walk', 2, [
+    new THREE.VectorKeyframeTrack('Root.position', [0, 1, 2], [0, 0, 0, 1, 0, 0, 2, 0, 0]),
+  ]);
+  const result = trimAnimationClip(base, 0.5, 1.5);
+
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.clip.duration, 1);
+  assert.deepEqual(Array.from(result.clip.tracks[0].times), [0, 0.5, 1]);
+  assert.deepEqual(Array.from(result.clip.tracks[0].values), [0.5, 0, 0, 1, 0, 0, 1.5, 0, 0]);
+
+  const authored = upsertAnimationKeyframe(makeAnimationEditState(), 'Walk', 'Root', {
+    time: 1,
+    position: [4, 0, 0],
+    quaternion: [0, 0, 0, 1],
+    interpolation: 'linear',
+  });
+  const trimmed = trimAnimationEditState(authored, 'Walk', 0.5, 1.5);
+  assert.deepEqual(trimmed.editsByClip.Walk.Root.map((key) => key.time), [0.5]);
+  assert.equal(trimmed.durationByClip.Walk, 1);
+});
+
+test('locked animation channels reject trim and remain unchanged by export overrides', () => {
+  const base = new THREE.AnimationClip('Walk', 2, [
+    new THREE.VectorKeyframeTrack('Root.position', [0, 1, 2], [0, 0, 0, 1, 0, 0, 2, 0, 0]),
+  ]);
+  const blocked = trimAnimationClip(base, 0.5, 1.5, ['Root']);
+  assert.deepEqual(blocked, { ok: false, reason: 'locked-bone-range', boneName: 'Root' });
+
+  const state = setAnimationClipLockedBones(makeAnimationEditState(), 'Walk', ['SMF_Node_0']);
+  assert.deepEqual(getAnimationClipLockedBoneNames(state, 'Walk'), ['SMF_Node_0']);
+  const source: ImportedSmf = {
+    meshes: [],
+    textures: [],
+    bones: [{ index: 0, parent: 0, isBone: 1, dq: new Float32Array([0, 0, 0, 1, 0, 0, 0, 0]), axis: [0, 1, 0] }],
+    animations: [{
+      name: 'Walk', duration: 2, times: [0, 2], frames: [
+        [new Float32Array([0, 0, 0, 1, 0, 0, 0, 0])],
+        [new Float32Array([0, 0, 0, 1, 0, 0, 0, 0])],
+      ], nodeCount: 1, loop: 1, interpolation: 1, sampleFrameMultiplier: 1, lockedBones: [],
+    }],
+  };
+  const exportClip = new THREE.AnimationClip('Walk', 2, [
+    new THREE.VectorKeyframeTrack('SMF_Node_0.position', [0, 1, 2], [0, 0, 0, 1, 0, 0, 2, 0, 0]),
+  ]);
+  const exported = applyAnimationEditsToImportedSmf(source, [exportClip], state);
+  assert.deepEqual(exported.animations[0].lockedBones, [0]);
 });
 
 test('animation retime preserves an explicit shorter duration through SMF export', () => {

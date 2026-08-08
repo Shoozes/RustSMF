@@ -2,6 +2,56 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-08-08 — Skin diagnostics and paint-pose safety
+
+- Completed the P1 skin diagnostics slice: the Skin workspace now exposes raw four-slot influence details for hovered vertices, aggregate invalid-reference/weight/unweighted counts, stable issue codes, and an influence legend independent of export materials.
+- Added real Rest / Bind, Frozen Current, and Live Animation brush sampling contracts. Frozen Current captures bone matrices until the mode changes; Live Animation follows the mixer and shows an explicit safety warning; viewport telemetry records the selected mode.
+- Added pure diagnostics and pose-position/index tests plus a browser registration covering diagnostics and pose-mode telemetry. The active frontend inventory is 305 unit tests across 50 files and 63 browser cases across eight suites.
+
+### Verification
+
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with context validation, lint/typechecks, production build/chunk guards, 305/305 frontend units, and 10/10 Rust tests.
+- `npm.cmd run test:e2e:list`: discovered 63 browser cases. Runtime browser proof remains subject to the documented managed Chromium `spawn EPERM` launch boundary.
+
+## 2026-08-08 — Animation trim and locked-channel safety
+
+- Completed the P1 animation authoring slice: finite range trim samples both boundaries and shifts retained authored keys, while the Animate workspace exposes trim bounds and one-step workspace undo/redo.
+- Added per-clip locked-bone state with source-SMF lock discovery, UI lock/unlock, scoped/viewport edit guards, retime/trim fail-closed protection, clip CRUD propagation, and SMF lock-list export preservation.
+- Added pure transform, controller, export, and browser regression coverage. Current frontend inventory is 300 unit tests across 49 files; browser inventory is 62 cases across eight suites.
+
+### Verification
+
+- `npm.cmd run typecheck` from `source`: passed.
+- `npm.cmd run test:unit` from `source`: passed with 300/300 tests across 49 files.
+- The new `animation.spec.ts` trim/lock case is registered in the 62-case browser inventory; runtime proof remains subject to the existing managed Chromium `spawn EPERM` launch block recorded in `docs/dev/review.md`.
+
+## 2026-08-08 — Static-root history safety and current-state reconciliation
+
+- Repaired the static non-SMF root-preparation path so mesh promotion is reversible, preserves original skin attributes on undo, reapplies deterministically on redo, and participates in the dirty replacement guard.
+- Added focused restore/reapply coverage, routed the static-root module through the Rig summary-bank group, and updated app/user/test state docs plus the model-authoring backlog with the remaining browser/export proof gap.
+- Reconciled current verification inventory to 296 frontend unit tests across 49 files and retained the browser launch limitation as harness-blocked evidence rather than a product result.
+
+### Verification
+
+- `npm.cmd run verify` from `source`: passed with 296/296 frontend units, all lint/type/build/chunk/production-boundary checks, and 10/10 Rust tests.
+- `node scripts/verify-context-bank.mjs` and `node --test scripts/context-bank.test.mjs`: passed with 23 groups and no warnings.
+- `npm.cmd run test:e2e:list`: discovered 61 cases. Full browser execution was attempted with `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye` but was blocked before test bodies by managed `browserType.launch: spawn EPERM`; ports 5173/1420 were clear after the owner session was stopped.
+
+## 2026-08-06 — Repo integrity, I/O boundaries, and browser regression repair
+
+- Reconciled the app/user/test/controller docs with the current implementation, reduced the root README and review snapshot, removed completed prose from the active backlog, and added measurable sidecar-import and evidence-led modularization tasks.
+- Reorganized `summary_bank.json` into 23 validated groups by adding the external-model-resources issue route, routing strict native payload validation through the Tauri subsystem, and replacing stale current-head progress notes with stable verification guidance.
+- Centralized animation scope keyframe labels, restored Auto Skin algorithm context for equivalent strokes, and stabilized post-stroke hover telemetry. These changes repaired four product assertions found by a full browser audit.
+- Made browser file-read failures visible instead of cancel-like, added strict native IPC byte normalization, added unit/native/lifecycle regressions, and removed doubled punctuation from load guidance.
+- Added a safe browser inventory script and retained the tested lightweight utility barrel after test typechecking proved it was a contract surface rather than dead production syntax.
+
+### Verification
+
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 292/292 frontend units across 48 files, 10/10 Rust tests, all lint/type/build/chunk/production-boundary checks, and 23 context groups at 36.7 KiB default orientation with zero warnings.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: 61/61 passed across eight browser suites.
+- `npm.cmd run test:e2e:list`: discovered the same 61 cases without launching them.
+- Focused animation/lifecycle/skin browser slice: 21/21 passed; malformed-native-payload browser case passed; ports 5173 and 1420 were clear after the complete run.
+
 ## 2026-08-03 — Scoped animation key authoring and hostile-name hardening
 
 - Added Bone/Branch/Full Rig scope resolution from the selected hierarchy, one history transaction per scoped insert/update/delete/move, unioned timeline markers, and a guarded scope selector in Animate.

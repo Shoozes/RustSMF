@@ -13,7 +13,7 @@ General:
 Repo conventions:
 
 - `source/frontend/` is the canonical TypeScript + React + Vite + Three.js application (use .tsx for React components, .ts for pure modules and loaders). The app must remain runnable standalone in the browser via Vite (File/Blob + download fallbacks) while Tauri provides the native desktop shell.
-- `source/src-tauri/src/` owns Rust Tauri commands (native file dialogs, binary FS read/write for models, optional SMF parser). Use @tauri-apps/api and plugins (dialog, fs) from the frontend. Thin backend-client wrappers live in `source/frontend/src/backend-client/`.
+- `source/src-tauri/src/` owns Rust Tauri commands (native file dialogs, authorized binary model I/O, optional SMF peeks). The frontend invokes only the thin `@tauri-apps/api` bridge in `source/frontend/src/backend-client/`; Rust owns dialog and filesystem operations. The frontend dialog-plugin declaration is retained solely to match Tauri's build-time plugin contract.
 - Three.js (Y-up, right-handed) + SMF (Z-up, left-handed per historical + GLBtoSMF reference) boundary code **must** live in or call `source/frontend/src/loaders/coord.ts` (or equivalent). Never hardcode swizzles or transforms outside it. See `docs/dev/APP_STATE.md`, `docs/dev/TODO.md`, and `docs/dev/PITFALL_LEDGER.md` for current format scope, known limits, and active work.
 - All SMF/GLB/FBX import/export logic starts by adapting `docs/references/old-src/GLBtoSMF/` (importer.js, exporter.js, packer.js, unpacker.js, smf_dq_math.js, etc.). Port to TS modules under source/frontend/src/loaders/. Maintain roundtrip fidelity tests.
 - Use `summary_bank.json` with `node scripts/verify-context-bank.mjs` or `pwsh -File run.ps1 -Task context` for focused context. `.tools/get-context.ps1` is an optional legacy helper; do not reference missing generators. Never load full old-src trees or node_modules in LLM sessions. Update summary_bank on structural changes (new loaders, UI panels, Rust commands).
@@ -30,7 +30,7 @@ Context and debugging:
 Visual/3D/UI changes:
 
 - After any viewport, loader, timeline, or Three.js scene change: run the web dev or tauri-dev flow, exercise load + play + export, capture screenshots via Playwright (see source/frontend/tests/ and visual artifacts patterns from TulpaWeaver inspiration), and verify data fidelity (positions, bone parents, anim times, skin weights within epsilon).
-- Run `npm --prefix source/frontend run build && npm --prefix source/frontend run test:e2e` (or equivalent via run.ps1) after frontend edits.
+- After frontend edits, run `pwsh -NoProfile -File .\run.ps1 -Task verify`, then `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye` when browser behavior changed.
 - For Rust/Tauri FS or parser changes: `cargo check` (in source/src-tauri) + desktop smoke + roundtrip on real .smf files.
 
 SMF / Format specifics (critical):

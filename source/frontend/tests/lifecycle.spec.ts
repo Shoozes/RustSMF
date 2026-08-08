@@ -80,6 +80,33 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       }
     });
 
+  test('browser Open reports a selected-file read failure instead of a cancel', async ({ page }) => {
+      await page.goto('/');
+
+      const fixture = await createSkinnedGlbFixtureInput();
+      const failedName = 'unreadable-selection.glb';
+      await withBrowserFileArrayBufferDelay(page, {
+        delayedFileName: failedName,
+        delayMs: 25,
+        rejectMessage: 'simulated browser read failure',
+      });
+
+      try {
+        const chooserPromise = page.waitForEvent('filechooser');
+        await page.getByTestId('open-model-btn').click();
+        const chooser = await chooserPromise;
+        await chooser.setFiles({ ...fixture, name: failedName });
+
+        await expect(page.getByTestId('status-text')).toContainText(
+          /Open error: Could not read model file "unreadable-selection\.glb": simulated browser read failure/i,
+        );
+        await expect(page.getByTestId('error-banner')).toContainText(/simulated browser read failure/i);
+        await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', '');
+      } finally {
+        await restoreBrowserFileArrayBuffer(page);
+      }
+    });
+
   test('stale browser read success cannot overwrite a newer load error', async ({ page }) => {
       await page.goto('/');
 

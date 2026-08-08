@@ -1,5 +1,4 @@
-// Utils barrel. Reusable three helpers, math, file, without pulling in heavy UI or store logic.
-// Keep lean; no new runtime deps.
+// Stable lightweight utility surface for shared helpers and contract tests; keep UI/store modules out.
 
 export { SimpleOrbit } from './SimpleOrbit';
 export { disposeThreeObject } from './threeDisposal';

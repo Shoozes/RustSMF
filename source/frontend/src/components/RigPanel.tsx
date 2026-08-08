@@ -18,6 +18,8 @@ interface RigPanelProps {
   deformBoneNames: string[];
   selectedIsDeformBone: boolean;
   sourceFormat: string;
+  canPrepareRootSkeleton?: boolean;
+  onPrepareRootSkeleton?: () => void;
   onRenameSelectedBone: (nextName: string) => void;
   onReparentSelectedBone: (parentName: string) => void;
   onCreateChildBone: (name: string) => void;
@@ -46,6 +48,8 @@ export default function RigPanel({
   deformBoneNames,
   selectedIsDeformBone,
   sourceFormat,
+  canPrepareRootSkeleton = false,
+  onPrepareRootSkeleton,
   onRenameSelectedBone,
   onReparentSelectedBone,
   onCreateChildBone,
@@ -103,6 +107,24 @@ export default function RigPanel({
           <div data-testid="rig-skinned-mesh-count" className="text-slate-200">{report.skinnedMeshCount}</div>
         </div>
       </div>
+      {canPrepareRootSkeleton && (
+        <div
+          className="mt-2 rounded border border-amber-500/40 bg-amber-950/20 p-1"
+          data-testid="rig-prepare-static-panel"
+        >
+          <div className="text-[10px] text-amber-200 mb-1">
+            Static mesh loaded without a skeleton. Prepare a root bone to enable child bones and weight painting.
+          </div>
+          <button
+            type="button"
+            data-testid="rig-prepare-root-skeleton"
+            className="w-full px-1 py-1 text-xs bg-amber-500 text-slate-950 hover:bg-amber-400"
+            onClick={() => onPrepareRootSkeleton?.()}
+          >
+            Prepare root skeleton
+          </button>
+        </div>
+      )}
       <div className="mt-2 border-t border-slate-700 pt-2">
         <div className="text-slate-400 text-[10px] mb-1">Tool</div>
         <div className="grid grid-cols-3 gap-1 mb-2" data-testid="rig-tool-row">

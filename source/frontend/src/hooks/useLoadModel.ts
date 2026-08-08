@@ -36,6 +36,7 @@ import {
   type PoseBoneSnapshot,
   type PoseHistorySnapshot,
   type RigHistorySnapshot,
+  type StaticMeshSkinPreparationHistorySnapshot,
 } from './editorSnapshots';
 import { useSmfCodecTask } from './useSmfCodecTask';
 import type {
@@ -80,6 +81,13 @@ import {
   appendSkinHistoryEntry,
 } from '../utils/skinWeights';
 import {
+  diagnoseSkinVertex,
+  diagnoseSkinnedMeshes,
+  type SkinDiagnosticsSummary,
+  type SkinPaintPoseMode,
+  type SkinVertexDiagnostic,
+} from '../utils/skinDiagnostics';
+import {
   makeEditorHistory,
   popRedo,
   popUndo,
@@ -91,6 +99,7 @@ import {
   applyAnimationEditsToClips,
   cloneAnimationEditState,
   deleteAnimationEditBones,
+  getAnimationClipLockedBoneNames,
   getClipKey,
   getCurrentClipKey,
   hasDirtyAnimationEdits,
@@ -126,6 +135,12 @@ import {
   type RigSpinAxis,
   type RigToolMode,
 } from '../utils/rigEdits';
+import {
+  countStaticMeshes,
+  reapplyStaticMeshSkinPreparation,
+  prepareStaticMeshesForSkinning,
+  restoreStaticMeshSkinPreparation,
+} from '../utils/staticMeshSkinPrep';
 import { collectRigHierarchyBones } from '../utils/rigHierarchy';
 import { hasPendingAuthoringChanges, UNSAVED_REPLACEMENT_MESSAGE } from '../utils/replacementGuard';
 import type { ViewportRole } from '../utils/viewportLayout';
@@ -366,6 +381,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const [skinRedoOrder, setSkinRedoOrder] = useState(0);
 
   const [skinPaintMode, setSkinPaintMode] = useState<SkinWeightEditMode>('set');
+  const [skinPaintPose, setSkinPaintPose] = useState<SkinPaintPoseMode>('live');
+  const [selectedSkinVertex, setSelectedSkinVertex] = useState<{ meshId: string; vertexIndex: number } | null>(null);
   const [skinPaintTargetMode, setSkinPaintTargetMode] = useState<'vertex' | 'triangle'>('vertex');
   const [skinPaintRadius, setSkinPaintRadius] = useState(0.2);
   const [skinPaintStrength, setSkinPaintStrength] = useState(0.2);
@@ -455,6 +472,23 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const skinEditHasDirtyState = useMemo(() => hasDirtySkinEdits(skinEditState), [skinEditState]);
   const skinEditBlockReason = useMemo(() => getDirtySkinExportBlockReason(skinEditState), [skinEditState]);
   const animationEditHasDirtyState = useMemo(() => hasDirtyAnimationEdits(animationEditState), [animationEditState]);
+  const skinDiagnostics = useMemo<SkinDiagnosticsSummary>(
+    () => diagnoseSkinnedMeshes(model.root ? collectSkinnedMeshes(model.root) : []),
+    // Skin attributes mutate in place; the edit-state identity is the explicit diagnostic revision.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- root identity and skin edit identity are the two invalidation sources.
+    [model.root, skinEditState],
+  );
+  const skinSelectedVertexDiagnostic = useMemo<SkinVertexDiagnostic | null>(() => {
+    if (!model.root || !selectedSkinVertex) return null;
+    const mesh = collectSkinnedMeshById(model.root, selectedSkinVertex.meshId);
+    return mesh ? diagnoseSkinVertex(mesh, selectedSkinVertex.vertexIndex) : null;
+    // Skin attributes mutate in place; the edit-state identity is the explicit diagnostic revision.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- selected vertex, root, and edit identity invalidate the raw report.
+  }, [model.root, selectedSkinVertex, skinEditState]);
+
+  useEffect(() => {
+    setSelectedSkinVertex(null);
+  }, [model.root]);
 
   const authoringChangesPending = useCallback(() => hasPendingAuthoringChanges({
     pose: poseEditHasDirtyState,
@@ -728,6 +762,23 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     return true;
   }, [commitAnimationEditState, commitSkinEditState, model.root, model.skeleton, ui]);
 
+  const applyStaticMeshSkinPreparationSnapshot = useCallback((
+    snapshot: StaticMeshSkinPreparationHistorySnapshot,
+  ): boolean => {
+    if (snapshot.preparation.root !== model.root) return false;
+
+    if (snapshot.prepared) {
+      reapplyStaticMeshSkinPreparation(snapshot.preparation);
+      model.setSkeleton(snapshot.preparation.skeleton);
+    } else {
+      restoreStaticMeshSkinPreparation(snapshot.preparation);
+      model.setSkeleton(undefined);
+    }
+    commitSkinEditState(cloneSkinEditState(snapshot.skinEditState));
+    ui.setSelected(snapshot.selectedBoneName || 'Scene');
+    return true;
+  }, [commitSkinEditState, model, ui]);
+
   const applyAnimationWorkspaceSnapshot = useCallback((snapshot: AnimationWorkspaceHistorySnapshot): boolean => {
     const nextBaseClips = cloneAnimationClips(snapshot.baseClips);
     const editedClips = applyAnimationEditsToClips(nextBaseClips, snapshot.animationEditState);
@@ -854,13 +905,18 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         ui.setStatus(`Undo skipped: ${result.entry.label} rig target is missing.`);
         return;
       }
+    } else if (result.entry.domain === 'rig' && result.entry.before.kind === 'static-skin-preparation') {
+      if (!applyStaticMeshSkinPreparationSnapshot(result.entry.before.value)) {
+        ui.setStatus(`Undo skipped: ${result.entry.label} model target is missing.`);
+        return;
+      }
     } else {
       ui.setStatus(`Undo skipped: ${result.entry.domain} history payload is invalid.`);
       return;
     }
 
     ui.setStatus(`Undid ${result.entry.label}.`);
-  }, [allocateHistoryOrder, applyAnimationWorkspaceSnapshot, applyPoseSnapshot, applyRigSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
+  }, [allocateHistoryOrder, applyAnimationWorkspaceSnapshot, applyPoseSnapshot, applyRigSnapshot, applyStaticMeshSkinPreparationSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
 
   const redoEditorHistory = useCallback(() => {
     const result = popRedo(editorHistoryRef.current, allocateHistoryOrder());
@@ -891,13 +947,18 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         ui.setStatus(`Redo skipped: ${result.entry.label} rig target is missing.`);
         return;
       }
+    } else if (result.entry.domain === 'rig' && result.entry.after.kind === 'static-skin-preparation') {
+      if (!applyStaticMeshSkinPreparationSnapshot(result.entry.after.value)) {
+        ui.setStatus(`Redo skipped: ${result.entry.label} model target is missing.`);
+        return;
+      }
     } else {
       ui.setStatus(`Redo skipped: ${result.entry.domain} history payload is invalid.`);
       return;
     }
 
     ui.setStatus(`Redid ${result.entry.label}.`);
-  }, [allocateHistoryOrder, applyAnimationWorkspaceSnapshot, applyPoseSnapshot, applyRigSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
+  }, [allocateHistoryOrder, applyAnimationWorkspaceSnapshot, applyPoseSnapshot, applyRigSnapshot, applyStaticMeshSkinPreparationSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
 
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
@@ -1030,17 +1091,39 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         pb.setCurrentTime(0);
       }
 
-      if (detectedSourceFormat === 'fbx') {
-        ui.setStatus(`Loaded FBX: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length || 0}`);
+      const boneCount = loaded.skeleton?.bones?.length ?? 0;
+      if (detectedSourceFormat === 'fbx' && 'summary' in loaded && loaded.summary) {
+        const summary = loaded.summary;
+        const parts = [
+          `Loaded FBX: ${res.name || 'model'}`,
+          `meshes: ${summary.meshCount}`,
+          `verts: ${summary.vertexCount}`,
+          `bones: ${summary.boneCount}`,
+          `clips: ${summary.clipCount}`,
+        ];
+        if (summary.removedTextureMaps > 0) {
+          parts.push(`textures skipped: ${summary.removedTextureMaps}`);
+        }
+        let status = parts.join(' | ');
+        if (summary.notes.length > 0) {
+          status = `${status} — ${summary.notes.join(' ')}`;
+        }
+        ui.setStatus(status);
       } else {
-        let status = `Loaded: ${res.name || 'model'} | bones: ${loaded.skeleton?.bones?.length || '?'} | clips: ${availableClips.length} | verts: ${loaded.skinnedMeshes?.[0]?.geometry?.attributes?.position?.count || '?'}`;
+        let status = `Loaded: ${res.name || 'model'} | bones: ${boneCount} | clips: ${availableClips.length} | verts: ${loaded.skinnedMeshes?.[0]?.geometry?.attributes?.position?.count ?? '?'}`;
         if (smfCodecExecution === 'sync-fallback') {
           status = `${status} | SMF codec: synchronous fallback`;
+        }
+        if (detectedSourceFormat !== 'smf' && boneCount === 0) {
+          status = `${status} — static mesh (no skeleton). Use Rig → Prepare root skeleton to enable weight painting.`;
         }
         ui.setStatus(status);
       }
 
-      ui.setSelected(loaded.skinnedMeshes?.[0]?.name || 'root');
+      const primarySelection = loaded.skinnedMeshes?.[0]?.name
+        || ('summary' in loaded && loaded.summary?.primaryMeshName)
+        || 'root';
+      ui.setSelected(primarySelection);
 
     } catch (e: unknown) {
       if (!isCurrentLoad()) return;
@@ -1050,7 +1133,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         console.error(e);
       }
       ui.setErrorMsg(`Load error: ${msg}`);
-      ui.setStatus(`Load error: ${msg}. Try ${supportedModelFormatsLabel()} from docs/references/old-src/datafiles/SMF/.`);
+      const separator = /[.!?]$/.test(msg) ? ' ' : '. ';
+      ui.setStatus(`Load error: ${msg}${separator}Try ${supportedModelFormatsLabel()} from docs/references/old-src/datafiles/SMF/.`);
     } finally {
       if (isCurrentLoad()) ui.setIsLoading(false);
     }
@@ -1499,6 +1583,13 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     };
   }, []);
 
+  const getSourceAnimationLockedBoneNames = useCallback((clipName: string): readonly string[] => {
+    const sourceAnimation = lastSmfDataRef.current?.animations.find((animation, index) => (
+      (animation.name || `clip_${index}`) === clipName
+    ));
+    return (sourceAnimation?.lockedBones ?? []).map((index) => `SMF_Node_${index}`);
+  }, []);
+
   const animationAuthoring = useMemo(() => createAnimationAuthoringController({
     baseClipsRef,
     animationEditStateRef,
@@ -1517,6 +1608,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     pushAnimationHistory,
     pushAnimationWorkspaceHistory,
     getSourceAnimationClipMetadata,
+    getSourceAnimationLockedBoneNames,
     setStatus: ui.setStatus,
   }), [
     animationScope,
@@ -1525,6 +1617,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     captureAnimationWorkspaceSnapshot,
     commitAnimationEditState,
     getSourceAnimationClipMetadata,
+    getSourceAnimationLockedBoneNames,
     model.skeleton,
     pushAnimationHistory,
     pushAnimationWorkspaceHistory,
@@ -1558,6 +1651,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     changeAnimationClipSampleFrameMultiplier,
     changeAnimationClipDuration,
     changeAnimationClipRetime,
+    changeAnimationClipTrim,
+    toggleAnimationBoneLock,
     applyAnimationEditState,
   } = animationAuthoring;
 
@@ -1736,6 +1831,71 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     ui.setStatus(`Reparented ${boneName} under ${parentName}.`);
   }, [captureRigSnapshot, model.skeleton, pushRigHistory, sourceFormat, ui]);
 
+  const prepareRootSkeletonForStaticMeshes = useCallback(() => {
+    if (sourceFormat === 'smf') {
+      ui.setStatus('SMF sources already carry their own skeleton contract.');
+      return;
+    }
+    if (!model.root) {
+      ui.setStatus('Load a model before preparing a root skeleton.');
+      return;
+    }
+    if ((model.skeleton?.bones.length ?? 0) > 0) {
+      ui.setStatus('This model already has a skeleton. Use Rig tools to edit bones.');
+      return;
+    }
+
+    const selectedBefore = ui.selected;
+    const skinStateBefore = cloneSkinEditState(skinEditStateRef.current);
+    const result = prepareStaticMeshesForSkinning(model.root);
+    if (!result.ok) {
+      ui.setStatus(result.message);
+      return;
+    }
+
+    model.setSkeleton(result.skeleton);
+    const skinStateAfter = {
+      ...skinEditStateRef.current,
+      selectedBoneName: result.rootBoneName,
+    };
+    commitSkinEditState(skinStateAfter);
+    ui.setSelected(result.rootBoneName);
+    pushEditorHistoryEntry({
+      id: `rig-${editorHistoryIdRef.current += 1}`,
+      label: 'prepare root skeleton for static meshes',
+      domain: 'rig',
+      before: {
+        kind: 'static-skin-preparation',
+        value: {
+          preparation: result.preparation,
+          prepared: false,
+          selectedBoneName: selectedBefore,
+          skinEditState: skinStateBefore,
+        },
+      },
+      after: {
+        kind: 'static-skin-preparation',
+        value: {
+          preparation: result.preparation,
+          prepared: true,
+          selectedBoneName: result.rootBoneName,
+          skinEditState: cloneSkinEditState(skinStateAfter),
+        },
+      },
+      order: allocateHistoryOrder(),
+    });
+    ui.setStatus(
+      `Prepared root skeleton "${result.rootBoneName}" on ${result.convertedCount} mesh${result.convertedCount === 1 ? '' : 'es'}. Add child bones, then weight-paint or auto-skin.`,
+    );
+  }, [allocateHistoryOrder, commitSkinEditState, model, pushEditorHistoryEntry, sourceFormat, ui]);
+
+  const canPrepareRootSkeleton = useMemo(() => {
+    if (sourceFormat === 'smf') return false;
+    if (!model.root) return false;
+    if ((model.skeleton?.bones.length ?? 0) > 0) return false;
+    return countStaticMeshes(model.root) > 0;
+  }, [model.root, model.skeleton, sourceFormat]);
+
   const createChildForSelectedBone = useCallback((requestedName: string) => {
     const skeleton = model.skeleton;
     const parentName = ui.selected;
@@ -1744,7 +1904,11 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       return;
     }
     if (!skeleton) {
-      ui.setStatus('Load a skinned model before creating child bones.');
+      ui.setStatus(
+        canPrepareRootSkeleton
+          ? 'Static mesh has no skeleton yet. Use Prepare root skeleton first.'
+          : 'Load a skinned model before creating child bones.',
+      );
       return;
     }
 
@@ -1766,7 +1930,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       setRigSnapshotSelection(captureRigSnapshot(), result.bone.name),
     );
     ui.setStatus(`Created child bone ${result.bone.name} under ${parentName}.`);
-  }, [captureRigSnapshot, commitSkinEditState, model.skeleton, pushRigHistory, sourceFormat, ui]);
+  }, [canPrepareRootSkeleton, captureRigSnapshot, commitSkinEditState, model.skeleton, pushRigHistory, sourceFormat, ui]);
 
   const createChildForSelectedBoneAtWorld = useCallback((event: {
     worldPosition: THREE.Vector3;
@@ -2256,6 +2420,16 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         return;
       }
 
+      if (getAnimationClipLockedBoneNames(
+        animationEditStateRef.current,
+        clipName,
+        getSourceAnimationLockedBoneNames(clipName),
+      ).includes(event.boneName)) {
+        activeAnimationTransformHistoryRef.current = null;
+        ui.setStatus(`Viewport animation editing is blocked for locked bone ${event.boneName}.`);
+        return;
+      }
+
       const active = activeAnimationTransformHistoryRef.current;
       const before = active?.boneName === event.boneName && active.source === event.source
         ? active.before
@@ -2322,6 +2496,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     pushPoseHistory,
     recordPoseBoneEdit,
     sourceFormat,
+    getSourceAnimationLockedBoneNames,
     ui,
   ]);
 
@@ -2665,13 +2840,13 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
     if (touched > 0) {
       commitSkinEditState(nextState);
+      const modeLabel = mode === 'auto'
+        ? `auto ${SKIN_AUTO_WEIGHT_ALGORITHM_LABELS[skinAutoWeightAlgorithm]}`
+        : mode;
       if (changed > 0) {
-        const modeLabel = mode === 'auto'
-          ? `auto ${SKIN_AUTO_WEIGHT_ALGORITHM_LABELS[skinAutoWeightAlgorithm]}`
-          : mode;
         ui.setStatus(`Painted ${changed} skin vertices on ${selectedBoneName} (${modeLabel} mode).`);
       } else {
-        ui.setStatus(`Paint stroke touched ${touched} vertices on ${selectedBoneName} but kept equivalent weights.`);
+        ui.setStatus(`Paint stroke touched ${touched} vertices on ${selectedBoneName} (${modeLabel} mode) but kept equivalent weights.`);
       }
     } else {
       ui.setStatus('No skin vertices changed during paint stroke.');
@@ -2696,6 +2871,24 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const onSkinPaintModeChange = useCallback((next: SkinWeightEditMode) => {
     setSkinPaintMode(next);
   }, []);
+
+  const onSkinPaintPoseChange = useCallback((next: SkinPaintPoseMode) => {
+    setSkinPaintPose(next);
+    ui.setStatus(next === 'live'
+      ? 'Skin painting uses Live Animation. Switch to Frozen Current for repeatable brush sampling.'
+      : next === 'rest'
+        ? 'Skin painting uses Rest / Bind pose coordinates.'
+        : 'Skin painting uses a captured Frozen Current pose until the mode changes.');
+  }, [ui]);
+
+  const onInspectSkinVertex = useCallback((selection: { meshId: string; vertexIndex: number }) => {
+    if (!model.root || !collectSkinnedMeshById(model.root, selection.meshId)) return;
+    setSelectedSkinVertex((previous) => (
+      previous?.meshId === selection.meshId && previous.vertexIndex === selection.vertexIndex
+        ? previous
+        : selection
+    ));
+  }, [model.root]);
 
   const onSkinPaintTargetModeChange = useCallback((next: 'vertex' | 'triangle') => {
     setSkinPaintTargetMode(next === 'triangle' ? 'triangle' : 'vertex');
@@ -2755,6 +2948,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     handleSelectBone,
     renameSelectedBone,
     reparentSelectedBone,
+    canPrepareRootSkeleton,
+    prepareRootSkeletonForStaticMeshes,
     createChildForSelectedBone,
     createChildForSelectedBoneAtWorld,
     moveRigBoneToWorld,
@@ -2804,6 +2999,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     skinEditHasDirtyState,
     skinEditBlockReason,
     skinPaintMode,
+    skinPaintPose,
+    onSkinPaintPoseChange,
     skinPaintTargetMode,
     skinPaintRadius,
     skinPaintStrength,
@@ -2814,6 +3011,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     skinAutoWeightNormalWeighting,
     skinAutoWeightMaxInfluences,
     onSkinPaintModeChange,
+    onInspectSkinVertex,
+    skinDiagnostics,
+    skinSelectedVertexDiagnostic,
     onSkinPaintTargetModeChange,
     onSkinPaintRadiusChange,
     onSkinPaintStrengthChange,
@@ -2843,6 +3043,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     animationSnapStep,
     animationScope,
     animationClipMetadata,
+    animationLockedBoneNames: animationAuthoring.getAnimationLockedBoneNames(),
     insertAnimationKeyframe,
     insertAnimationKeyframeAtTime,
     updateAnimationKeyframe,
@@ -2858,6 +3059,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     changeAnimationClipSampleFrameMultiplier,
     changeAnimationClipDuration,
     changeAnimationClipRetime,
+    changeAnimationClipTrim,
+    toggleAnimationBoneLock,
     viewportLayout: ui.viewportLayout,
     setViewportLayout: ui.setViewportLayout,
     gridEnabled: ui.gridEnabled,

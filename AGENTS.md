@@ -1,4 +1,4 @@
-\## Coding Philosophy
+## Coding Philosophy
 
 Safety, courtesy, show, and efficiency, in that order.
 

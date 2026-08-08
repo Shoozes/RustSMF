@@ -240,4 +240,30 @@ describe('animation authoring controller', () => {
     assert.equal(fixture.history.length, 1);
     assert.match(fixture.statuses.at(-1) ?? '', /Retimed animation clip Idle from 1\.00s to 2\.00s/i);
   });
+
+  it('trims the active clip into one workspace edit and shifts playback into the trimmed range', () => {
+    const fixture = makeControllerFixture();
+
+    fixture.controller.changeAnimationClipTrim(0.25, 0.75);
+
+    assert.equal(fixture.baseClipsRef.current[0].duration, 0.5);
+    assert.equal(fixture.playbackRef.current.duration, 0.5);
+    assert.equal(fixture.playbackRef.current.currentTime, 0);
+    assert.equal(fixture.animationEditStateRef.current.durationByClip.Idle, 0.5);
+    assert.equal(fixture.history.length, 1);
+    assert.match(fixture.statuses.at(-1) ?? '', /Trimmed animation clip Idle to 0\.50s/i);
+  });
+
+  it('locks a selected bone as one edit and rejects subsequent key authoring', () => {
+    const fixture = makeControllerFixture();
+
+    fixture.controller.toggleAnimationBoneLock();
+    assert.deepEqual(fixture.animationEditStateRef.current.lockedBonesByClip.Idle, ['Tip']);
+    assert.equal(fixture.history.length, 1);
+
+    fixture.controller.insertAnimationKeyframeAtTime(0.5);
+    assert.equal(fixture.animationEditStateRef.current.editsByClip.Idle, undefined);
+    assert.equal(fixture.history.length, 1);
+    assert.match(fixture.statuses.at(-1) ?? '', /all bones.*locked/i);
+  });
 });

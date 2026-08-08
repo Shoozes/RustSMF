@@ -101,7 +101,7 @@
         },
         {
           "label": "Verify Repo",
-          "description": "Runs lint, type checks, unit tests, frontend build + entry chunk checks, cargo check, and basic integrity in one sweep.",
+          "description": "Runs context validation, lint coverage/lint, app and test type checks, production-boundary and chunk guards, frontend unit tests, plus Rust fmt/clippy/tests/check.",
           "type": "powershell",
           "script": "run.ps1",
           "args": [
@@ -127,7 +127,7 @@
         },
         {
           "label": "Desktop Smoke",
-          "description": "Builds (no-bundle), boots the desktop app, exercises basic native commands + 3D smoke (load small model, check no crash).",
+          "description": "Builds Tauri without bundling, runs Rust native parser/command tests, then exercises deterministic native IPC flows in Playwright; it does not automate real OS dialogs.",
           "type": "powershell",
           "script": "run.ps1",
           "args": [

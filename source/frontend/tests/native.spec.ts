@@ -97,6 +97,28 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     expect(snapshot.writes).toHaveLength(0);
   });
 
+  test('native open rejects malformed byte payloads without mounting a model', async ({ page }) => {
+    const invalidPath = 'C:\\tmp\\malformed-native.glb';
+    await installTauriMock(page, {
+      openPath: invalidPath,
+      savePath: 'C:\\tmp\\unused-malformed-native.glb',
+      sampleBytes: [256],
+      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array([])),
+    });
+
+    await page.goto('/');
+    await page.getByTestId('open-model-btn').click();
+
+    await expect(page.getByTestId('status-text')).toContainText(
+      /Load error: Native binary payload is invalid: byte 0 must be an integer from 0 through 255/i,
+    );
+    await expect(page.getByTestId('error-banner')).toContainText(/Native binary payload is invalid/i);
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', '');
+
+    const snapshot = await getTauriMockSnapshot(page);
+    expect(snapshot.calls.filter((call) => call.cmd === 'read_file_binary')).toHaveLength(1);
+  });
+
   test('newer browser load invalidates delayed native picker success and error', async ({ page }) => {
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
     await installTauriMock(page, {

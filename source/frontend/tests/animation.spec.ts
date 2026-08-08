@@ -206,6 +206,40 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('animate-summary').locator('div').first().locator('strong')).toHaveText('2');
     });
 
+  test('animation trim and locked-bone policy are visible and undoable', async ({ page }) => {
+      await page.goto('/');
+
+      const input = page.getByTestId('model-file-input');
+      await input.setInputFiles(await createSkinnedGlbFixtureInput());
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await pausePlaybackIfRunning(page);
+
+      await page.getByTestId('mode-tab-rig').click({ force: true });
+      const inspector = page.getByTestId('inspector');
+      await inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first().click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
+
+      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await page.getByTestId('animation-trim-start-input').fill('0.10');
+      await page.getByTestId('animation-trim-end-input').fill('0.40');
+      await page.getByTestId('animation-trim-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Trimmed animation clip FixtureBend to 0\.30s/i);
+      await expect(page.getByTestId('animation-duration-input')).toHaveValue('0.3');
+
+      await page.getByTestId('editor-undo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Undid trim animation clip FixtureBend/i);
+      await expect(page.getByTestId('animation-duration-input')).toHaveValue('0.5');
+      await page.getByTestId('editor-redo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Redid trim animation clip FixtureBend/i);
+
+      await page.getByTestId('animation-lock-bone-btn').click();
+      await expect(page.getByTestId('animation-lock-state')).toContainText('Locked bones: 1');
+      await page.getByTestId('animation-insert-key-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/all bones.*locked/i);
+      await page.getByTestId('editor-undo-btn').click({ force: true });
+      await expect(page.getByTestId('animation-lock-state')).toContainText('Locked bones: 0');
+    });
+
   test('animation keyframe authoring updates selected-bone clips and SMF checks', async ({ page }) => {
       await page.goto('/');
 
@@ -325,7 +359,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
       await page.getByTestId('editor-undo-btn').click({ force: true });
-      await expect(page.getByTestId('status-text')).toContainText(/Undid insert branch animation keyframe/i);
+      await expect(page.getByTestId('status-text')).toContainText(/Undid insert branch animation keyframes/i);
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: false');
       await expect(page.getByTestId('animation-scope-select')).toHaveValue('branch');
     });

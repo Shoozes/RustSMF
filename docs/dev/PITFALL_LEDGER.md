@@ -1,18 +1,18 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-08-01 (closed the non-SMF spatial-conversion, decoded-memory, dirty-replacement, native-path, history-budget, playback-cadence, and Tauri manifest-alignment gaps with focused coverage; retained the pre-materialization, worker, and browser-harness lessons).
+Last reviewed: 2026-08-08 (added reversible static-root preparation to the replacement/history boundary; retained the pre-materialization, worker, conversion, history, timing, and process-lifecycle lessons).
 
 ### Q: What pitfall are we preventing?
 
 **What:** A replacement, native file operation, or long editing session can discard user work, read an unselected path, grow history without a memory contract, or publish timeline state on every render frame.
 
-**Context and constraints:** Model loading is latest-intent owned and may begin from browser input, drag/drop, or a native dialog. Tauri reads must remain dialog-authorized, Rust and frontend dialog-plugin declarations must stay version-aligned, saves must remain user-directed, authoring history must be bounded, and the viewport mixer must stay responsive while the timeline remains visibly current.
+**Context and constraints:** Model loading is latest-intent owned and may begin from browser input, drag/drop, or a native dialog. Tauri reads must remain dialog-authorized, returned IPC values are untrusted until validated, Rust and frontend dialog-plugin declarations must stay version-aligned, saves must remain user-directed, authoring history must be bounded, and the viewport mixer must stay responsive while the timeline remains visibly current.
 
 **Why it happened:** The load path started reading before it knew whether authoring state was dirty, the frontend supplied native paths to the bridge, histories used count-only retention, and the parent timeline subscribed directly to the viewport's requestAnimationFrame cadence.
 
-**Where:** `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/App.tsx`, `source/frontend/src/backend-client/tauri.ts`, `source/frontend/package.json`, `source/package-lock.json`, `source/src-tauri/src/main.rs`, `source/src-tauri/Cargo.toml`, `source/frontend/src/utils/editorHistory.ts`, `source/frontend/src/utils/skinWeights.ts`, and `source/frontend/src/store/index.ts`.
+**Where:** `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/App.tsx`, `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/backend-client/binaryPayload.ts`, `source/frontend/package.json`, `source/package-lock.json`, `source/src-tauri/src/main.rs`, `source/src-tauri/Cargo.toml`, `source/frontend/src/utils/editorHistory.ts`, `source/frontend/src/utils/skinWeights.ts`, and `source/frontend/src/store/index.ts`.
 
-**Evidence:** The current flow queues dirty replacements before reading bytes and preserves the mounted root on Cancel or parse failure; Rust rejects unselected canonical paths and owns the save dialog; both Tauri dialog-plugin manifests are pinned to 2.7.1; editor history is capped at 100 entries/64 MiB, skin history at 50 entries/32 MiB per direction; and parent playback publication is capped at a 50 ms display cadence. Unit and browser mock coverage exercises these boundaries.
+**Evidence:** The current flow queues dirty replacements before reading bytes and preserves the mounted root on Cancel or parse failure; static-root preparation now records a reversible rig-history entry and therefore also blocks replacement until discarded or undone; Rust rejects unselected canonical paths and owns the save dialog; frontend normalization rejects native arrays containing fractional, negative, over-255, missing, or non-numeric entries before parsing; both Tauri dialog-plugin manifests are pinned to 2.7.1; editor history is capped at 100 entries/64 MiB, skin history at 50 entries/32 MiB per direction; and parent playback publication is capped at a 50 ms display cadence. Unit and browser mock coverage exercises these boundaries.
 
 **Developer story:** These were separate-looking reliability issues with the same root cause: integration code had no explicit ownership contract for destructive state, privileged destinations, retained snapshots, or high-frequency display updates. Shared guards and narrow owners make each boundary observable without hiding a real failure behind a fallback.
 
@@ -22,7 +22,7 @@ Last reviewed: 2026-08-01 (closed the non-SMF spatial-conversion, decoded-memory
 1. `34/100` Rely on a downstream parse guard and frontend-provided native destination, result: destructive replacement, arbitrary path reads, and excess retained memory remained possible.
 2. `95/100` Centralize replacement decisions, keep native path/destination authority in Rust, bound retained snapshots by count and bytes, and throttle only parent display publication, result: user state and privileged I/O fail closed while imperative rendering remains responsive.
 
-**Current solution:** `replacementGuard.ts`, `assertModelInputSize`, `smfBinary.ts` decoded reservations, Rust `NativeFileAuthority`, `save_file_binary`, the exact-match Tauri plugin declarations, bounded history helpers, and `playbackDisplayThrottle.ts` each own one narrow invariant; `useLoadModel` and `App` compose them at the integration boundary.
+**Current solution:** `replacementGuard.ts`, `assertModelInputSize`, `normalizeBinaryPayload`, `staticMeshSkinPrep.ts`, `smfBinary.ts` decoded reservations, Rust `NativeFileAuthority`, `save_file_binary`, the exact-match Tauri plugin declarations, bounded history helpers, and `playbackDisplayThrottle.ts` each own one narrow invariant; `useLoadModel` and `App` compose them at the integration boundary.
 
 **Decision rationale:** A single broad integration fallback would obscure which state was protected. Explicit guards preserve the current model on failure, keep OS dialogs authoritative, retain useful recent history, and reduce React work without altering mixer timing.
 
@@ -95,34 +95,34 @@ Last reviewed: 2026-08-01 (closed the non-SMF spatial-conversion, decoded-memory
 
 ### Q: What pitfall are we preventing?
 
-**What:** A Playwright run can execute every RustSMF test body successfully but be reported as a product failure when managed Windows denies the browser process cleanup used by `browserContext.close`.
+**What:** A command intended only to inventory Playwright cases can accidentally execute the full suite, and historical environment caveats can distract from real current assertion failures.
 
-**Context and constraints:** RustSMF's browser suite uses one production Vite preview server and a process-local approved Chrome/Edge override when bundled Chromium cannot launch. Product assertions remain authoritative, but the test command must still exit honestly and leave no preview listener behind.
+**Context and constraints:** RustSMF's browser suite owns one production Vite preview server. Product assertions, browser launch, and teardown are separate evidence phases; every command must exit honestly and leave ports 5173 and 1420 clear.
 
-**Why it happened:** The managed process boundary permits the approved browser to launch and the 55 test bodies to run, but denies the child-process operation Playwright uses during context teardown. This is outside the app and browser assertions; stopping the test runner can also leave the preview server alive unless the owner is explicitly cleaned.
+**Why it happened:** `npm.cmd exec playwright test --list` did not put npm's argument separator before the Playwright flag, so npm could consume `--list` and start the default test command. The resulting unexpected run was initially easy to read through the lens of an older managed-Windows `spawn EPERM` teardown problem even though four current product assertions had actually failed.
 
-**Where:** `source/frontend/playwright.config.ts`, `source/frontend/tests/`, `source/frontend/test-results/`, the process-local `RUSTSMF_PLAYWRIGHT_EXECUTABLE` override, and the launcher cleanup contract in `run.ps1`.
+**Where:** `source/frontend/package.json`, `source/package.json`, `source/frontend/tests/README.md`, `source/frontend/playwright.config.ts`, `run.ps1`, and the affected animation, lifecycle, skin, and native browser suites.
 
-**Evidence:** On 2026-08-01, `npm.cmd run test:e2e -- --reporter=line` with `C:\Program Files\Google\Chrome\Application\chrome.exe` ran all 56 cases, and each reported only `browserContext.close: spawn EPERM`. No assertion failure was emitted; after the runner was stopped, port 5173 was confirmed clear. An earlier run on the prior 55-case commit line completed 55/55, so the current result is harness evidence, not a newly observed product regression.
+**Evidence:** The unintended 59-case run produced four assertion failures: two animation-history wording mismatches, a missing Auto Skin mode label on an equivalent stroke, and unstable final skin-hover telemetry. After repairing those paths and adding browser/native read-boundary coverage, `npm.cmd run test:e2e:list` discovered 61 cases without executing them and `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye` passed 61/61 with both ports clear.
 
-**Developer story:** The bundled browser first failed at launch under the managed boundary, so the suite was rerun with the approved system executable. That run reached all application flows but failed during cleanup, making a green-looking body run indistinguishable from a failed test command until the error phase and port state were inspected. The correct handoff keeps the prior completed browser pass as product evidence, records the current teardown limitation, and verifies explicit process cleanup.
+**Developer story:** The failed run was treated as evidence rather than discarded because it was launched accidentally. Classifying each failure by phase exposed real app/test drift that an old teardown narrative could have hidden. A named inventory script now makes intent explicit, while the full launcher-owned run remains the certification command.
 
-**How to catch it:** Run the full suite with the process-local executable, classify failures by phase, and require a post-run `netstat -ano -p tcp` check for ports 5173 and 1420. If every failure is `browserContext.close: spawn EPERM` and no assertion failure occurs, label the run harness-blocked rather than product-failing; stop the known runner/preview processes before the next command.
+**How to catch it:** Use `npm.cmd run test:e2e:list` for inventory and require output beginning with `Listing tests`. For execution, inspect assertion, launch, and teardown failures separately, preserve the nonzero exit, and check ports 5173/1420 after any interrupted run.
 
 **Solutions tried:**
-1. `35/100` Use bundled Chromium in the managed sandbox, result: launch fails before app execution with `spawn EPERM`.
-2. `78/100` Use an approved installed system Chrome, result: all app flows reach their test bodies, but managed teardown can still fail with `browserContext.close: spawn EPERM`.
-3. `92/100` Keep the system-browser override process-local, preserve the earlier complete 55/55 result as historical product evidence, classify the current 56-body run by failure phase, and verify launcher cleanup, result: no app regression is inferred from an environment-only teardown failure and no preview listener remains.
+1. `25/100` Use npm exec without an argument separator, result: a read-only inventory request can become a stateful full test run.
+2. `55/100` Assume a familiar managed teardown failure explains the run, result: current product assertions can be overlooked.
+3. `97/100` Add a dedicated inventory script, classify failures by phase, repair every current assertion, and certify with the launcher-owned full suite, result: command intent and product evidence are both explicit.
 
-**Current solution:** Use `RUSTSMF_PLAYWRIGHT_EXECUTABLE` only for the affected process, keep Playwright's product exit authoritative, document the teardown boundary in `review.md` and `source/frontend/tests/README.md`, and run a post-failure port/process cleanup before further verification.
+**Current solution:** `test:e2e:list` owns case discovery; `run.ps1 -Task test:e2e -NoGenEye` owns browser certification; `review.md` records only the latest result; and process/port cleanup remains mandatory after interrupted or teardown-blocked runs.
 
-**Decision rationale:** Weakening Playwright teardown errors or marking the command green would hide an environment failure and risk leaked servers. Replacing the browser or changing app sandbox policy is outside repo scope; process-local override plus explicit classification preserves truthful evidence.
+**Decision rationale:** A named package script removes shell/npm flag ambiguity. Phase-specific classification preserves truthful environment reporting without allowing old harness behavior to excuse a current product regression.
 
-**Effectiveness:** `92/100`, durable. The distinction is reproducible, preserves product evidence, and adds a concrete cleanup check without changing application behavior.
+**Effectiveness:** `97/100`, good. The safe inventory path and complete 61/61 rerun directly cover the observed failure mode.
 
-**Relevance check:** Current. Managed Windows runs may vary between a complete browser pass and a teardown-only failure even when the commit and test bodies are unchanged.
+**Relevance check:** Current. Revisit whenever npm/Playwright invocation, server ownership, browser selection, or result reporting changes.
 
-**Next prevention step:** Keep the phase-specific result and post-run port check in every future browser audit; only update the authoritative browser result after a run with no assertion or teardown errors.
+**Next prevention step:** Keep test-count docs tied to `test:e2e:list`, and do not update authoritative browser evidence without a complete run whose assertions and teardown both pass.
 
 ### Q: What pitfall are we preventing?
 

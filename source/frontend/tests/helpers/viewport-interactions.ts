@@ -263,28 +263,40 @@ export const paintOnMeshInViewport = async (
     ...meshProbePercents.flatMap((x) => meshProbePercents.map((y) => ({ x, y }))),
   ];
 
-  for (const target of targets) {
+  const moveToPaintHit = async (target: RelativePoint): Promise<boolean> => {
     const x = box.x + (box.width * target.x) / 100;
     const y = box.y + (box.height * target.y) / 100;
     await page.mouse.move(x, y);
     await page.waitForTimeout(25);
     const hitCount = Number(await canvas.getAttribute('data-skin-paint-hit-count'));
     const hover = await canvas.getAttribute('data-skin-brush-hover');
-    if (hover === 'active' && hitCount > 0) {
+    return hover === 'active' && hitCount > 0;
+  };
+
+  const restorePaintHover = async (): Promise<void> => {
+    for (const target of targets) {
+      if (await moveToPaintHit(target)) return;
+    }
+  };
+
+  for (const target of targets) {
+    const x = box.x + (box.width * target.x) / 100;
+    const y = box.y + (box.height * target.y) / 100;
+    if (await moveToPaintHit(target)) {
       await page.mouse.down({ button: 'left' });
       await page.mouse.move(x + 2, y + 2, { steps: 2 });
       await page.waitForTimeout(80);
       await page.mouse.up({ button: 'left' });
-      // Leave telemetry at the last collected mesh hit so callers can assert the
-      // candidate set instead of a later hover pixel that may miss the mesh.
       if (options?.requireDirty) {
         try {
           await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true', { timeout: 300 });
-          return true;
         } catch {
           continue;
         }
       }
+      // The small drag can end just outside a thin mesh. Reacquire a confirmed
+      // hit so callers observe stable hover/candidate telemetry after the stroke.
+      await restorePaintHover();
       return true;
     }
   }

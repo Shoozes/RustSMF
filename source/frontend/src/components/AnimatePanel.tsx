@@ -37,6 +37,7 @@ interface AnimatePanelProps {
   interpolation: AnimationInterpolation;
   snapStep: AnimationSnapStep;
   animationScope: AnimationEditScope;
+  animationLockedBoneNames: string[];
   clipMetadata: AnimationClipMetadata;
   onInsertKeyframe: () => void;
   onUpdateKeyframe: () => void;
@@ -50,6 +51,8 @@ interface AnimatePanelProps {
   onClipSampleFrameMultiplierChange: (next: number) => void;
   onClipDurationChange: (next: number) => void;
   onClipRetimeChange: (next: number) => void;
+  onClipTrimChange: (startTime: number, endTime: number) => void;
+  onToggleAnimationBoneLock: () => void;
   onRenameClip: (nextName: string) => void;
   onDuplicateClip: () => void;
   onDeleteClip: () => void;
@@ -75,6 +78,7 @@ export default function AnimatePanel({
   interpolation,
   snapStep,
   animationScope,
+  animationLockedBoneNames,
   clipMetadata,
   onInsertKeyframe,
   onUpdateKeyframe,
@@ -88,6 +92,8 @@ export default function AnimatePanel({
   onClipSampleFrameMultiplierChange,
   onClipDurationChange,
   onClipRetimeChange,
+  onClipTrimChange,
+  onToggleAnimationBoneLock,
   onRenameClip,
   onDuplicateClip,
   onDeleteClip,
@@ -101,6 +107,7 @@ export default function AnimatePanel({
   const selectedKeyframeCount = timelineSummary.selectedKeyframeTimes.length;
   const allKeyframeCount = timelineSummary.keyframeTimes.length;
   const hasEditableSelection = !!selectedBoneName && !!currentClipName;
+  const selectedBoneLocked = !!selectedBoneName && animationLockedBoneNames.includes(selectedBoneName);
   const hasActiveClip = !!currentClipName;
   const canDeleteClip = clipCount > 1 && hasActiveClip;
   const canMoveClipUp = hasActiveClip && activeClipIndex > 0;
@@ -109,10 +116,14 @@ export default function AnimatePanel({
   const [draftNewAnimationName, setDraftNewAnimationName] = useState('New Animation');
   const [draftNewAnimationDuration, setDraftNewAnimationDuration] = useState(1);
   const [draftNewAnimationPose, setDraftNewAnimationPose] = useState<AnimationInitialPose>('rest');
+  const [draftTrimStart, setDraftTrimStart] = useState(0);
+  const [draftTrimEnd, setDraftTrimEnd] = useState(duration);
 
   useEffect(() => {
     setDraftClipName(currentClipName);
-  }, [currentClipName]);
+    setDraftTrimStart(0);
+    setDraftTrimEnd(duration);
+  }, [currentClipName, duration]);
 
   const submitRename = () => {
     onRenameClip(draftClipName);
@@ -291,6 +302,42 @@ export default function AnimatePanel({
             onChange={(event) => onClipRetimeChange(normalizeAnimationDuration(Number(event.target.value)))}
           />
         </label>
+        <div className="animate-trim-tools">
+          <label>
+            <span>Trim start (s)</span>
+            <input
+              type="number"
+              data-testid="animation-trim-start-input"
+              min="0"
+              max={duration}
+              step="0.01"
+              value={draftTrimStart}
+              disabled={!hasActiveClip}
+              onChange={(event) => setDraftTrimStart(Number(event.target.value))}
+            />
+          </label>
+          <label>
+            <span>Trim end (s)</span>
+            <input
+              type="number"
+              data-testid="animation-trim-end-input"
+              min="0"
+              max={duration}
+              step="0.01"
+              value={draftTrimEnd}
+              disabled={!hasActiveClip}
+              onChange={(event) => setDraftTrimEnd(Number(event.target.value))}
+            />
+          </label>
+          <button
+            type="button"
+            data-testid="animation-trim-btn"
+            disabled={!hasActiveClip}
+            onClick={() => onClipTrimChange(draftTrimStart, draftTrimEnd)}
+          >
+            Trim
+          </button>
+        </div>
       </div>
       <div className="animate-keyframe-tools" data-testid="animate-keyframe-tools">
         <label className="animate-scope-selector">
@@ -352,6 +399,18 @@ export default function AnimatePanel({
         >
           Paste
         </button>
+        <button
+          type="button"
+          data-testid="animation-lock-bone-btn"
+          disabled={!hasEditableSelection}
+          onClick={onToggleAnimationBoneLock}
+        >
+          {selectedBoneLocked ? 'Unlock bone' : 'Lock bone'}
+        </button>
+      </div>
+      <div className="text-[10px] text-slate-400" data-testid="animation-lock-state">
+        Locked bones: {animationLockedBoneNames.length}
+        {selectedBoneLocked && selectedBoneName ? ` (${selectedBoneName})` : ''}
       </div>
       <div className="animate-authoring-settings">
         <label className="animate-loop-toggle">

@@ -138,6 +138,8 @@ export default function App() {
     handleSelectBone,
     renameSelectedBone,
     reparentSelectedBone,
+    canPrepareRootSkeleton,
+    prepareRootSkeletonForStaticMeshes,
     createChildForSelectedBone,
     createChildForSelectedBoneAtWorld,
     moveRigBoneToWorld,
@@ -186,6 +188,8 @@ export default function App() {
     skinEditHasDirtyState,
     skinEditBlockReason,
     skinPaintMode,
+    skinPaintPose,
+    onSkinPaintPoseChange,
     skinPaintTargetMode,
     skinPaintRadius,
     skinPaintStrength,
@@ -196,6 +200,9 @@ export default function App() {
     skinAutoWeightNormalWeighting,
     skinAutoWeightMaxInfluences,
     onSkinPaintModeChange,
+    onInspectSkinVertex,
+    skinDiagnostics,
+    skinSelectedVertexDiagnostic,
     onSkinPaintTargetModeChange,
     onSkinPaintRadiusChange,
     onSkinPaintStrengthChange,
@@ -254,6 +261,7 @@ export default function App() {
     animationSnapStep,
     animationScope,
     animationClipMetadata,
+    animationLockedBoneNames,
     insertAnimationKeyframe,
     insertAnimationKeyframeAtTime,
     updateAnimationKeyframe,
@@ -269,6 +277,8 @@ export default function App() {
     changeAnimationClipSampleFrameMultiplier,
     changeAnimationClipDuration,
     changeAnimationClipRetime,
+    changeAnimationClipTrim,
+    toggleAnimationBoneLock,
   } = useLoadModel({ allocateHistoryOrder, externalDirtyRef: outlinerDirtyRef });
 
   const workspace = WORKSPACE_BY_MODE[editorMode];
@@ -609,6 +619,8 @@ export default function App() {
           selectedIsDeformBone={selectedIsDeformBone}
           report={rigValidationReport}
           sourceFormat={sourceFormat}
+          canPrepareRootSkeleton={canPrepareRootSkeleton}
+          onPrepareRootSkeleton={prepareRootSkeletonForStaticMeshes}
           onRenameSelectedBone={renameSelectedBone}
           onReparentSelectedBone={reparentSelectedBone}
           onCreateChildBone={createChildForSelectedBone}
@@ -639,6 +651,7 @@ export default function App() {
           skinEditHasDirtyState={skinEditHasDirtyState}
           skinEditBlockReason={skinEditBlockReason}
           skinPaintMode={skinPaintMode}
+          skinPaintPose={skinPaintPose}
           skinPaintTargetMode={skinPaintTargetMode}
           skinPaintRadius={skinPaintRadius}
           skinPaintStrength={skinPaintStrength}
@@ -649,6 +662,7 @@ export default function App() {
           skinAutoWeightNormalWeighting={skinAutoWeightNormalWeighting}
           skinAutoWeightMaxInfluences={skinAutoWeightMaxInfluences}
           onSkinPaintModeChange={onSkinPaintModeChange}
+          onSkinPaintPoseChange={onSkinPaintPoseChange}
           onSkinPaintTargetModeChange={onSkinPaintTargetModeChange}
           onSkinPaintRadiusChange={onSkinPaintRadiusChange}
           onSkinPaintStrengthChange={onSkinPaintStrengthChange}
@@ -664,6 +678,8 @@ export default function App() {
           onAutoSkinWeights={autoSkinWeights}
           skinUndoAvailable={skinUndoAvailable}
           skinRedoAvailable={skinRedoAvailable}
+          skinDiagnostics={skinDiagnostics}
+          skinSelectedVertex={skinSelectedVertexDiagnostic}
           editorMode={editorMode}
         />
       );
@@ -686,6 +702,7 @@ export default function App() {
           interpolation={animationInterpolation}
           snapStep={animationSnapStep}
           animationScope={animationScope}
+          animationLockedBoneNames={animationLockedBoneNames}
           clipMetadata={animationClipMetadata}
           onInsertKeyframe={insertAnimationKeyframe}
           onUpdateKeyframe={updateAnimationKeyframe}
@@ -699,6 +716,8 @@ export default function App() {
           onClipSampleFrameMultiplierChange={changeAnimationClipSampleFrameMultiplier}
           onClipDurationChange={changeAnimationClipDuration}
           onClipRetimeChange={changeAnimationClipRetime}
+          onClipTrimChange={changeAnimationClipTrim}
+          onToggleAnimationBoneLock={toggleAnimationBoneLock}
           onRenameClip={renameCurrentAnimationClip}
           onDuplicateClip={duplicateCurrentAnimationClip}
           onDeleteClip={deleteCurrentAnimationClip}
@@ -913,7 +932,9 @@ export default function App() {
             onPaintSkinVertices={applySkinPaint}
             onSkinPaintStrokeStart={beginSkinPaintStroke}
             onSkinPaintStrokeEnd={endSkinPaintStroke}
+            onInspectSkinVertex={onInspectSkinVertex}
             skinPaintMode={skinPaintMode}
+            skinPaintPose={skinPaintPose}
             skinPaintTargetMode={skinPaintTargetMode}
             skinPaintRadius={skinPaintRadius}
             skinPaintStrength={skinPaintStrength}

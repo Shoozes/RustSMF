@@ -11,6 +11,7 @@ import {
   emptyPoseEdit,
   type PoseEditMap,
 } from './poseEdits';
+import type { StaticMeshSkinPreparation } from '../utils/staticMeshSkinPrep';
 
 export interface PoseBoneSnapshot {
   position: [number, number, number];
@@ -61,11 +62,19 @@ export interface RigHistorySnapshot {
   skinIndices: RigSkinIndexHistorySnapshot[];
 }
 
+export interface StaticMeshSkinPreparationHistorySnapshot {
+  preparation: StaticMeshSkinPreparation;
+  prepared: boolean;
+  selectedBoneName: string;
+  skinEditState: SkinEditState;
+}
+
 export type EditorHistorySnapshot =
   | { kind: 'pose'; value: PoseHistorySnapshot }
   | { kind: 'animation'; value: AnimationEditState }
   | { kind: 'animation-workspace'; value: AnimationWorkspaceHistorySnapshot }
-  | { kind: 'rig'; value: RigHistorySnapshot };
+  | { kind: 'rig'; value: RigHistorySnapshot }
+  | { kind: 'static-skin-preparation'; value: StaticMeshSkinPreparationHistorySnapshot };
 
 const SNAPSHOT_EPSILON = 1e-6;
 

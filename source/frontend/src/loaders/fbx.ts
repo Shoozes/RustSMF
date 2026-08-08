@@ -10,12 +10,24 @@ import { bytesToArrayBuffer } from './smfBinary';
 // Supports skinned meshes if present in FBX.
 // Full roundtrip: loadFBX + exportFBX + re-load with FBXLoader.
 
+export interface FbxLoadSummary {
+  meshCount: number;
+  skinnedMeshCount: number;
+  boneCount: number;
+  vertexCount: number;
+  clipCount: number;
+  removedTextureMaps: number;
+  primaryMeshName: string | null;
+  notes: string[];
+}
+
 export interface FbxLoadedModel {
   root: THREE.Group;
   skeleton?: THREE.Skeleton;
   skinnedMeshes: THREE.SkinnedMesh[];
   clips: THREE.AnimationClip[];
   mixer: THREE.AnimationMixer;
+  summary: FbxLoadSummary;
 }
 
 const FBX_TEXTURE_WAIT_MS = 2000;
@@ -88,21 +100,90 @@ async function waitForFbxTextures(root: THREE.Object3D): Promise<void> {
   await Promise.all(collectTextures(root).map(waitForTextureImage));
 }
 
-function removeUnavailableFbxTextureMaps(root: THREE.Object3D): void {
+function removeUnavailableFbxTextureMaps(root: THREE.Object3D): number {
+  let removed = 0;
   root.traverse((object) => {
     if (!isThreeMesh(object)) return;
     const materials = Array.isArray(object.material) ? object.material : [object.material];
     for (const material of materials) {
       const record = material as THREE.Material & Record<string, unknown>;
+      let changed = false;
       for (const slot of FBX_TEXTURE_SLOTS) {
         const texture = record[slot];
         if (!(texture instanceof THREE.Texture) || hasUsableTextureImage(texture)) continue;
         texture.dispose();
         record[slot] = null;
+        removed += 1;
+        changed = true;
+      }
+      if (changed) {
+        // Blender FBX often marks materials transparent for alpha maps. After a
+        // failed external map load, keep the mesh opaque when opacity is full.
+        if (
+          'opacity' in material
+          && typeof material.opacity === 'number'
+          && material.opacity >= 1
+          && 'transparent' in material
+        ) {
+          material.transparent = false;
+        }
         material.needsUpdate = true;
       }
     }
   });
+  return removed;
+}
+
+function buildFbxLoadSummary(
+  root: THREE.Object3D,
+  skinnedMeshes: THREE.SkinnedMesh[],
+  skeleton: THREE.Skeleton | undefined,
+  clips: THREE.AnimationClip[],
+  removedTextureMaps: number,
+): FbxLoadSummary {
+  let meshCount = 0;
+  let vertexCount = 0;
+  let primaryMeshName: string | null = null;
+
+  root.traverse((object) => {
+    if (!isThreeMesh(object)) return;
+    meshCount += 1;
+    const position = object.geometry.getAttribute('position');
+    if (position) vertexCount += position.count;
+    if (!primaryMeshName) {
+      primaryMeshName = object.name || (isThreeSkinnedMesh(object) ? 'skinned_mesh' : 'mesh');
+    }
+  });
+
+  const boneCount = skeleton?.bones.length ?? 0;
+  const notes: string[] = [];
+  if (meshCount === 0) {
+    notes.push('No mesh geometry was found in the FBX file.');
+  }
+  if (meshCount > 0 && skinnedMeshes.length === 0) {
+    notes.push(
+      'Static mesh only (no skeleton/skin). Rig and weight-paint tools need a root skeleton first.',
+    );
+  }
+  if (removedTextureMaps > 0) {
+    notes.push(
+      `${removedTextureMaps} external texture map${removedTextureMaps === 1 ? '' : 's'} could not be loaded (paths outside the single-file open, or missing embeds). Geometry still loaded with solid materials.`,
+    );
+  }
+  if (clips.length === 0 && skinnedMeshes.length > 0) {
+    notes.push('No animation clips in this FBX.');
+  }
+
+  return {
+    meshCount,
+    skinnedMeshCount: skinnedMeshes.length,
+    boneCount,
+    vertexCount,
+    clipCount: clips.length,
+    removedTextureMaps,
+    primaryMeshName,
+    notes,
+  };
 }
 
 export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoadedModel> {
@@ -135,7 +216,7 @@ export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoa
     ]);
   }
   await waitForFbxTextures(root);
-  removeUnavailableFbxTextureMaps(root);
+  const removedTextureMaps = removeUnavailableFbxTextureMaps(root);
   root.name = 'FBX_Root';
 
   const skinnedMeshes: THREE.SkinnedMesh[] = [];
@@ -167,6 +248,7 @@ export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoa
   }
 
   const mixer = new THREE.AnimationMixer(root);
+  const summary = buildFbxLoadSummary(root, skinnedMeshes, skeleton, allClips, removedTextureMaps);
 
   return {
     root,
@@ -174,6 +256,7 @@ export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoa
     skinnedMeshes,
     clips: allClips,
     mixer,
+    summary,
   };
 }
 

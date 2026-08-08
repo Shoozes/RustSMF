@@ -66,6 +66,14 @@ describe('fbx export', () => {
       assert.equal(loaded.root.name, 'FBX_Root');
       assert.equal(meshes.length, 1);
       assert.equal(meshes[0].name, 'TriangleMesh');
+      assert.equal(loaded.summary.meshCount, 1);
+      assert.equal(loaded.summary.skinnedMeshCount, 0);
+      assert.equal(loaded.summary.boneCount, 0);
+      assert.equal(loaded.summary.primaryMeshName, 'TriangleMesh');
+      assert.ok(
+        loaded.summary.notes.some((note) => /static mesh only/i.test(note)),
+        'static FBX load should note that skin tools need a root skeleton',
+      );
     } finally {
       loaded.mixer.stopAllAction();
       disposeThreeObject(loaded.root);

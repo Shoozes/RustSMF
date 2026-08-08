@@ -671,7 +671,7 @@ Examples:
   .\run.ps1 -Task test:e2e -GenEyeRoot C:\DevStuff\Three-sisters\GenEye
   .\run.ps1 -Task test:e2e -NoGenEye
 
-See docs/dev/TODO.md, docs/dev/APP_STATE.md and summary_bank.json for state, commands, gaps. Source/frontend and src-tauri fully populated (modular hook+components+loaders+Rust peeks).
+See docs/dev/TODO.md, docs/dev/APP_STATE.md and summary_bank.json for current state, commands, known gaps, and focused file routes. Source/frontend and src-tauri contain the current implementation and verification surfaces.
 "@
     }
 }

@@ -1,44 +1,30 @@
 # RustSMF TODO
 
-Last reviewed: 2026-08-03
+Last reviewed: 2026-08-08
 
 This file contains executable forward work only. Current behavior belongs in `APP_STATE.md`; completed work and command evidence belong in `HISTORY.md` and `review.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
-## Current status
-
-The current review slice is implemented: New Animation works from Rest or Current pose, including zero source clips; Skin pts follows posed vertices; Set paint separates target weight from flow/falloff; Bone/Branch/Full Rig key operations have a guarded scope/fingerprint contract; and bounded animation duration set/extension plus retime are undoable and export-aware. The remaining items below are product-scope work identified by the old-editor comparison, not claims about missing integrity fixes in the shipped paths.
-
-## P1 — Animation trim and lock policy
-
-- What: Complete scoped animation authoring with explicit trim behavior, locked-bone policy, and export/browser proof for the existing Bone/Branch/Full Rig operations.
-- Why: Bounded duration set/extension and retime are now explicit, but trimming and lock policy are still absent; edits must not silently drop untouched or locked tracks.
-- Where: `source/frontend/src/components/AnimatePanel.tsx`, `Timeline.tsx`, `animationAuthoringController.ts`, `animationEdits.ts`, `animationScope.ts`, `editorSnapshots.ts`, and GLB/SMF export tests.
-- When: Next animation-authoring slice.
-- How: Add a pure trim transform with finite bounds and an explicit key-retention policy, make locked bones a validated immutable set, and route every action through one workspace snapshot. Keep the shipped duration set/extension and retime transforms, the existing skeleton fingerprint, and explicit target-scope rejection for clipboard operations.
-- Subtasks: trim math; retained-key policy; locked-bone state and UI; scope export roundtrip; targeted browser undo/redo matrix.
-- Done when: retime and duration transforms preserve relative key times, trim removes only documented keys, locked bones are byte-for-byte unchanged, each scoped action still has one undo, clipboard mismatch remains fail-closed, and GLB/SMF exports preserve the resulting tracks/times.
-- Verification: focused `animationEdits`/controller/history tests, `npm.cmd run typecheck`, `npm.cmd run test:unit`, targeted `animation.spec.ts` browser coverage, and export roundtrip assertions.
-
-## P1 — Skin diagnostics and pose context
-
-- What: Add a skin diagnostics view with an influence legend, selected-vertex exact slots/bone names/percentages, sum/unweighted/invalid-reference counts, and an explicit Rest/Bind versus Frozen Current paint-pose choice.
-- Why: The current heat map and corrected brush semantics are safer, but they do not expose enough data to diagnose bad weights or distinguish rest-pose authoring from live animation.
-- Where: `source/frontend/src/components/SkinPanel.tsx`, `ThreeViewport.tsx`, `skinWeights.ts`, new pure diagnostics utility/tests.
-- When: Before bulk skin operations or animation-on-pose workflows.
-- How: Read-only diagnostics must use the same validated skin attributes as paint/export; freeze a captured pose for brush sampling; warn before Live Animation; keep the legend independent of export materials.
-- Subtasks: influence sampler; legend renderer; invalid-data report; Rest/Frozen/Live selector; selected/visible-submodel scope contract.
-- Done when: every displayed vertex report lists four bounded slots and a finite sum, invalid data is surfaced with a stable code, frozen-pose painting is deterministic, and the selected mode is visible in UI telemetry.
-- Verification: pure diagnostics tests, `skinWeights`/overlay tests, `npm.cmd run test:unit`, and targeted skin browser assertions.
-
 ## P2 — Model workspace authoring
 
-- What: Build guarded model/submodel operations: rename, duplicate, reorder, delete, append static model, object transforms, material assignment, winding, normals/tangents, and per-submodel diagnostics.
-- Why: The current Model workspace is primarily inspection/visibility; destructive geometry actions from the old editor are not represented by a safe modern contract.
+- What: Extend guarded model/submodel operations beyond the reversible static-root preparation: rename, duplicate, reorder, delete, append static model, object transforms, material assignment, winding, normals/tangents, and per-submodel diagnostics; add browser/export proof for the existing preparation flow.
+- Why: The current Model workspace is primarily inspection/visibility. Static-root preparation now has a safe reversible contract, but broader destructive geometry actions from the old editor are not represented by a safe modern contract and the new path still lacks end-to-end browser proof.
 - Where: `source/frontend/src/components/Outliner.tsx`, `App.tsx`, new model-authoring utility, export diagnostics, and editor snapshots.
 - When: After animation/skin scope contracts are stable.
-- How: Start with reversible non-destructive metadata and visibility operations; add compatibility guards for skinned append/retarget; use one root-owned snapshot per action and never mutate source materials without restoration.
+- How: Start with reversible non-destructive metadata and visibility operations; add a browser regression that prepares a static OBJ/FBX root, verifies undo/redo and dirty replacement protection, and confirms the resulting SMF/GLB diagnostics; add compatibility guards for skinned append/retarget; use one root-owned snapshot per action and never mutate source materials without restoration.
+- Subtasks: static-root browser/history/export proof; reversible metadata/visibility actions; skinned append/retarget compatibility; material and geometry diagnostics.
 - Done when: supported operations are undoable, blocked compatibility cases explain why without mutation, and GLB/FBX/SMF diagnostics state exactly what survives export.
 - Verification: pure model-authoring/history tests, export roundtrips, browser smoke, and full `verify`.
+
+## P2 — Sidecar-aware GLTF and OBJ import
+
+- What: Add an explicit multi-file/resource-resolution contract for `.gltf` buffers and images and, if OBJ material import is retained, neighboring `.mtl` and texture assets.
+- Why: The picker and drop paths currently provide one file's bytes to a loader with an empty resource base. A self-contained `.gltf` works, but external URIs cannot resolve; OBJ geometry loads while `.mtl` sidecars are ignored. Accepting the extensions without stating this boundary can make a valid asset look corrupt or incomplete.
+- Where: `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/loaders/glb.ts`, `source/frontend/src/loaders/obj.ts`, a new bounded resource-bundle utility, native capability/I/O code if desktop directory access is chosen, and `source/frontend/tests/export-formats.spec.ts`.
+- When: Before advertising general `.gltf` or material-complete OBJ compatibility.
+- How: Define one normalized bundle of the selected primary asset plus user-authorized sidecars; canonicalize and percent-decode relative URIs, reject traversal/remote/data-size violations, generate and revoke object URLs in one owner, and keep browser directory selection and native dialog authority explicit. Prefer `.glb` guidance when a bundle is unavailable.
+- Subtasks: URI parser and traversal guard; aggregate/per-file limits; browser multi-file/drop contract; native authorization contract; GLTF loading-manager resolver; optional MTL policy; cleanup and stale-load cancellation; missing-resource diagnostics.
+- Done when: a committed external-buffer `.gltf` fixture and texture load in browser and native-mock flows, missing or ambiguous resources name the unresolved URI without replacing the mounted model, traversal and over-budget bundles fail before allocation, stale loads revoke every generated URL, and self-contained GLB/GLTF plus OBJ geometry behavior remains unchanged.
+- Verification: pure URI/bundle tests, targeted lifecycle and export-format browser cases, native IPC mocks if native bundle access is added, `pwsh -NoProfile -File .\run.ps1 -Task verify`, and full browser e2e.
 
 ## P2 — Project save and recovery
 
@@ -69,5 +55,16 @@ The current review slice is implemented: New Animation works from Rest or Curren
 - How: Keep every surface read-only first; route capability results through existing diagnostic codes; test display cleanup across async export and root replacement.
 - Done when: each diagnostic reports a finite, named result; unsupported features are explained rather than silently approximated; and toggling overlays never changes export payloads.
 - Verification: diagnostics/unit tests, export-preservation tests, visual/browser smoke, and full `verify`.
+
+## P3 — Evidence-led integration-owner decomposition
+
+- What: Continue reducing `useLoadModel.ts`, `ThreeViewport.tsx`, and `App.tsx` only at stable policy, timing, or lifecycle seams; remove dead internal barrels when repository-wide import analysis proves they have no consumers.
+- Why: These files legitimately compose cross-cutting state, but their size increases review cost and makes duplicated status wording, gesture cleanup, and async ownership easier to miss. Blind file splitting would only spread coupled state and make disposal harder.
+- Where: `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/App.tsx`, existing `animationAuthoringController.ts`, `viewportDisplayController.ts`, `viewportInteractionRuntime.ts`, and new focused pure/controller modules only where evidence supports them.
+- When: During the next behavior change that touches a repeated block or independently testable seam; do not run as a line-count-only rewrite.
+- How: Identify one repeated policy or lifecycle with a single owner, define typed inputs/outputs and cancellation/disposal semantics, move it with focused tests, then re-run the static relative-import graph to prevent cycles or orphaned exports. Keep React state composition in hooks/App and renderer ownership in the viewport.
+- Subtasks: record candidate seams during reviews; rank by defect/repetition evidence; extract one seam per slice; delete superseded helpers/barrels; update the architecture table and summary-bank route only for structural changes.
+- Done when: each extraction removes real duplicated policy from its integration owner, has a focused testable contract, introduces no circular or unresolved imports, retains one async/disposal owner, and leaves browser behavior and export bytes unchanged.
+- Verification: focused unit tests for the extracted contract, lint/app/test typechecks, production build/chunk checks, affected browser suites, static relative-import resolution, and full `verify`.
 
 New work remains here only when it has What/Why/Where/When/How, a measurable “Done when” condition, and a verification command.

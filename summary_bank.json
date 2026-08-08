@@ -166,7 +166,7 @@
     },
     "subsystem__viewport_editor": {
       "description": "Three.js viewport lifecycle, selection, transform controls, edit gestures, overlays, and layouts.",
-      "max_kb": 160,
+      "max_kb": 176,
       "paths": [
         "source/frontend/src/components/ThreeViewport.tsx",
         "source/frontend/src/types/viewportEditorEvents.ts",
@@ -211,12 +211,17 @@
         "source/frontend/src/utils/rigValidation.ts",
         "source/frontend/src/utils/smfRigPolicy.ts",
         "source/frontend/src/utils/smfRigPolicy.test.ts",
+        "source/frontend/src/utils/staticMeshSkinPrep.ts",
+        "source/frontend/src/utils/staticMeshSkinPrep.test.ts",
         "source/frontend/tests/rig.spec.ts"
+      ],
+      "notes": [
+        "Static non-SMF meshes can be promoted to one root-bound skeleton; preparation is reversible through the shared rig history and participates in dirty replacement protection."
       ]
     },
     "feature__animation_authoring": {
       "description": "Timeline interaction, pose-based clip creation, Bone/Branch/Full Rig key authoring, clip management, metadata, history, and browser ownership.",
-      "max_kb": 176,
+      "max_kb": 208,
       "paths": [
         "source/frontend/src/components/AnimatePanel.tsx",
         "source/frontend/src/components/Timeline.tsx",
@@ -242,13 +247,13 @@
         "New clips capture the load-time rest pose or current local bone pose, emit position/quaternion keys for named skeleton bones, and use one animation-workspace history transaction even when the source clip list is empty.",
         "Quadratic interpolation is preserved as SMF metadata and previews linearly in Three.js.",
         "Scoped key operations resolve a selected hierarchy, commit one history transaction, union timeline markers, and validate the clipboard's source scope, skeleton fingerprint, and target bone names before mutation.",
-        "Animation edit and clipboard maps use null-prototype records so hostile but valid names such as __proto__ cannot become prototype reads or writes; bounded duration set/extension and retime are implemented, while trim and locked-bone policy remain TODO scope.",
+        "Animation edit and clipboard maps use null-prototype records so hostile but valid names such as __proto__ cannot become prototype reads or writes; bounded duration set/extension, retime, trim, and locked-bone policy are implemented with one workspace transaction per action.",
         "The viewport advances the mixer imperatively; parent timeline publication is throttled to a 50 ms display cadence while scrub and playback-intent setters remain immediate."
       ]
     },
     "feature__skin_authoring": {
       "description": "Skin paint state, brush indexing, auto-weight algorithms, history, exportability, and browser ownership.",
-      "max_kb": 112,
+      "max_kb": 144,
       "paths": [
         "source/frontend/src/components/SkinPanel.tsx",
         "source/frontend/src/utils/skinWeights.ts",
@@ -256,6 +261,8 @@
         "source/frontend/src/utils/skinBrushIndex.ts",
         "source/frontend/src/utils/skinBrushIndex.test.ts",
         "source/frontend/src/utils/skinnedVertexPosition.ts",
+        "source/frontend/src/utils/skinDiagnostics.ts",
+        "source/frontend/src/utils/skinDiagnostics.test.ts",
         "source/frontend/src/utils/skinPointOverlay.ts",
         "source/frontend/src/utils/skinPointOverlay.test.ts",
         "source/frontend/src/utils/weightPreview.ts",
@@ -266,6 +273,8 @@
         "Brush queries use bounded spatial candidates and verify world-space distance before mutation.",
         "Completed strokes and batch actions own one undoable snapshot transaction.",
         "Set paint separates target weight from brush flow and falloff; the optional Skin pts overlay refreshes posed vertex positions through a non-serializable runtime WeakMap link.",
+        "Skin diagnostics reads raw four-slot attributes for the hovered vertex and aggregate mesh counts, preserving invalid references/weights as stable issue codes instead of silently clamping them.",
+        "Brush sampling exposes Rest / Bind, Frozen Current, and Live Animation modes; Frozen Current owns a captured bone-matrix snapshot and Live Animation displays a safety warning.",
         "Weight preview is a non-destructive vertex-color display; original color attributes and material vertex-color modes are restored on disable/export.",
         "Batch history comparisons use a mesh/vertex snapshot index rather than repeated linear scans.",
         "Skin undo/redo entries are bounded to 50 entries and 32 MiB per direction; oldest-entry eviction reports through the status surface."
@@ -298,6 +307,8 @@
       "max_kb": 96,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
+        "source/frontend/src/backend-client/binaryPayload.ts",
+        "source/frontend/src/backend-client/binaryPayload.test.ts",
         "source/frontend/src/utils/modelFormat.ts",
         "source/frontend/src/utils/modelFormat.test.ts",
         "source/frontend/tests/native.spec.ts",
@@ -311,6 +322,7 @@
       "notes": [
         "Rust owns native open/save dialogs; reads require a canonical path previously selected by the native dialog, saves do not accept a frontend path, and all blocking file work is capped at 256 MiB.",
         "The frontend passes a Uint8Array byte view to save_file_binary rather than constructing an explicit Array.from number array; typed IPC remains bounded by the same native limit.",
+        "Native read responses are untrusted: binaryPayload.ts accepts only ArrayBuffer, Uint8Array, or arrays of integer bytes from 0 through 255 so coercion cannot wrap malformed values.",
         "The Rust tauri-plugin-dialog and frontend @tauri-apps/plugin-dialog declarations are pinned to the same 2.7.1 release; the frontend package is a Tauri build-contract dependency even though dialog invocation is Rust-owned.",
         "validate_smf is an envelope/header check; full structural validation remains in the TypeScript worker codec."
       ]
@@ -382,22 +394,40 @@
       ]
     },
     "issue__verification_current_head": {
-      "description": "Current-head verification evidence, authoritative gates, and environment-only browser blockers.",
+      "description": "Current working-tree verification evidence, authoritative local gates, browser result classification, and cleanup ownership.",
       "max_kb": 96,
       "paths": [
         "docs/dev/APP_STATE.md",
-        "docs/dev/TODO.md",
         "docs/dev/review.md",
         "run.ps1",
         "source/package.json",
+        "source/frontend/package.json",
         "source/frontend/scripts/run-unit-tests.mjs",
-        "source/frontend/tests/native.spec.ts",
+        "source/frontend/tests/README.md",
         "source/frontend/playwright.config.ts"
       ],
       "notes": [
-        "Historical product evidence is 55/55 browser cases, 2/2 strict visuals, canonical desktop-smoke green, and Blender 5.0.0 validation of app-exported FBX output. Current final verification keeps all non-browser gates green; the current 56-body full browser run, 2-body strict visual run, and approved system-Chrome native rerun have no product assertion failures but are teardown-blocked by managed browserContext.close spawn EPERM with listeners cleaned.",
-        "The current working-tree inventory is 59 browser cases and 10 Rust tests; the current-head certification record is complete in review.md, with desktop-smoke's Tauri build/Rust portions passing and its managed native browser teardown explicitly classified.",
-        "Bundled Chromium still fails before app execution with spawn EPERM in the managed process; current evidence uses a process-local approved system-browser executable and keeps the environment caveat separate from product results."
+        "review.md is the only current command ledger; HISTORY.md owns older completed evidence and TODO.md owns forward work.",
+        "Use the test:e2e:list package script for browser inventory so npm cannot consume Playwright's --list flag and accidentally run the suite.",
+        "Classify browser failures by assertion, launch, and teardown phase; a historical managed-process caveat must never hide a current product assertion failure, and runner-owned ports must be clear after interrupted runs."
+      ]
+    },
+    "issue__external_model_resources": {
+      "description": "Current single-file GLTF/OBJ import boundary and the planned safe sidecar-resource contract.",
+      "max_kb": 192,
+      "paths": [
+        "source/frontend/src/backend-client/tauri.ts",
+        "source/frontend/src/hooks/useLoadModel.ts",
+        "source/frontend/src/loaders/glb.ts",
+        "source/frontend/src/loaders/obj.ts",
+        "source/frontend/src/utils/modelFormat.ts",
+        "source/frontend/tests/export-formats.spec.ts",
+        "docs/dev/TODO.md"
+      ],
+      "notes": [
+        "The current picker/drop contract supplies one primary file and GLTFLoader receives an empty resource base, so only GLB or self-contained GLTF can resolve reliably.",
+        "OBJ currently parses geometry bytes without loading an adjacent MTL bundle.",
+        "Any sidecar design must preserve user authorization, URI traversal guards, aggregate input limits, latest-intent cancellation, object-URL cleanup, and actionable missing-resource errors."
       ]
     },
     "issue__smf_resource_contract": {
@@ -437,7 +467,7 @@
     },
     "subsystem__load_editor_orchestration": {
       "description": "Load/export intent ownership, editor snapshots, candidate construction, and stable cross-component event contracts.",
-      "max_kb": 160,
+      "max_kb": 176,
       "paths": [
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/hooks/useSmfCodecTask.ts",

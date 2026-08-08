@@ -21,10 +21,11 @@ Both commands open the numbered launcher menu. Choose `2. Run if already install
 
 ## Supported Flow
 
-- Open `.smf`, `.glb`, `.gltf`, `.fbx`, or `.obj` by native dialog, file input, or drag/drop.
+- Open `.smf`, `.glb`, `.gltf`, `.fbx`, or `.obj` by native dialog, file input, or drag/drop. Browser read failures and malformed native byte responses are reported as errors rather than being treated as picker cancellation.
 - Choose the default Modern theme or the compact Original SMF theme. The Original theme starts in quad view even before a model loads and follows the preserved editor format with a 136 px left tool shelf, 128 px Submodels shelf, fixed numbered tabs, an 80 px top strip, square low-chrome controls, dense red/black quad grids, real base-color texture thumbnails in the Submodels list, and an upper Animation timeline whose ruler, sample divisions, and green/red keyframes match the old placement without changing model/edit state.
 - Large SMF imports and exports run in a background worker with visible progress. Starting a newer load cancels ownership of older work; if worker startup is unavailable, the app labels the synchronous fallback instead of silently changing behavior.
 - Orbit, pan, zoom, reset view, scrub animation, select bones, use TransformControls, and preview selected-bone weights. In quad view, right-drag panning uses one shared focus point, so panning an orthographic pane moves the 3D view and panning the 3D view moves every orthographic pane. Reset refits that shared focus and camera distance to the loaded model.
+- For a static FBX/OBJ with no skeleton, open Rig and choose Prepare root skeleton. The operation creates one reversible root-bound skeleton so child-bone editing and weight painting can continue; use Undo before replacing the model if you want to remove the preparation.
 - In Animate, create a named clip from the load-time Rest pose or the current bone pose, choose its duration, and then author keys with the existing timeline tools. Creation also works when the source has no animation clips and creates a reversible workspace transaction.
 - In Skin, Set mode separates the final Target weight from brush flow and falloff. Add/Subtract remain incremental; lower flow blends toward the target instead of changing the target value itself.
 - Switch between single and quad viewport layouts after a model loads; before load, the disabled controls show the active theme's default. Quad view shows Top, 3D, Front, and Side panes with visible dividers.
@@ -37,10 +38,10 @@ Both commands open the numbered launcher menu. Choose `2. Run if already install
 
 ## Format Limits
 
-- GLB/GLTF is the preferred modern format for materials, textures, static meshes, morphs, object tracks, and scale animation.
+- GLB/GLTF is the preferred modern format for materials, textures, static meshes, morphs, object tracks, and scale animation. Binary `.glb` and self-contained `.gltf` are supported; a selected `.gltf` cannot currently resolve external `.bin`, image, or other sidecar URIs.
 - SMF is preserved for compatibility. The current SMF export path does not encode scale edits, materials, morphs, or multiple skeletons.
 - FBX import is supported through Three.js. The explicit FBX action writes the current runtime root and clips through the vendored `FBXExporter-threejs` writer and rejects output that fails its pre-save re-import checks. A small independently authored Blender 5.0.0 skinned/textured/animated fixture is covered end to end, including reopening app output in Blender; other target applications may still differ.
-- OBJ support is load/preview focused; use GLB export for saved output.
+- OBJ support is load/preview focused and does not resolve a neighboring `.mtl` sidecar; use GLB export for saved rich-material output.
 - Skin-weight paint authoring and animation keyframe authoring are available for supported paths, with format-specific export limits still enforced.
 
 For developer state, backlog, and verification results, see `docs/dev/APP_STATE.md` and `docs/dev/TODO.md`.
