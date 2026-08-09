@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {
   captureAnimationPose,
   createAnimationClipFromPose,
+  formatAnimationDuration,
   normalizeAnimationDuration,
   validateAnimationSkeleton,
 } from './animationCreation';
@@ -82,4 +83,13 @@ test('animation duration normalization rejects invalid values and bounds extreme
   assert.equal(normalizeAnimationDuration(-5), 0.01);
   assert.equal(normalizeAnimationDuration(99999), 3600);
   assert.equal(normalizeAnimationDuration(1.23456), 1.235);
+});
+
+test('animation duration formatting removes floating-point display noise without changing the value', () => {
+  const storedDuration = 0.1 + 0.2;
+
+  assert.equal(formatAnimationDuration(storedDuration), '0.3');
+  assert.equal(formatAnimationDuration(1.23456), '1.235');
+  assert.equal(formatAnimationDuration(2), '2');
+  assert.equal(storedDuration, 0.30000000000000004);
 });

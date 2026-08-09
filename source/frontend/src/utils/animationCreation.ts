@@ -36,6 +36,12 @@ export function normalizeAnimationDuration(value: number): number {
   return Math.round(clamped * 1000) / 1000;
 }
 
+/** Format a duration for editable UI fields without changing stored precision. */
+export function formatAnimationDuration(value: number): string {
+  if (!Number.isFinite(value)) return '0';
+  return value.toFixed(3).replace(/\.?0+$/, '');
+}
+
 export function validateAnimationSkeleton(
   skeleton: THREE.Skeleton | null | undefined,
 ): AnimationSkeletonValidation {

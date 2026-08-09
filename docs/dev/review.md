@@ -1,24 +1,25 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-08-08
+Last reviewed: 2026-08-09
 
 This is the current repo/app integrity snapshot. `APP_STATE.md` owns current behavior, `TODO.md` owns forward work, `HISTORY.md` owns completed evidence, `PITFALL_LEDGER.md` owns recurring hazards, and `summary_bank.json` owns focused routing.
 
 ## Outcome
 
-The review covered the dirty worktree on local `main` at `27d6a9cbde3474797832ab5c5aa2cdf758dbf315`, current-state docs, source/test import surfaces, async and replacement ownership, static-root authoring, native payload validation, marker scans, and summary-bank organization. Existing user changes were preserved.
+The follow-up review started from clean local `main` at `d814574c753ece24703844a61882d132118d2ca2` and covered the two confirmed app regressions, their source/test import surfaces, declarative versus imperative viewport telemetry ownership, duration display precision, and current-state docs. Existing user-owned workspace data was preserved.
 
-The concrete integrity defects found and repaired were static-root preparation and the missing P1 animation/skin authoring safety contracts. Static-root preparation now stores a reversible rig-history transaction, restores original skin attributes on undo, reapplies the same objects on redo, and is included in the focused Rig route. Animation trim/lock policy and skin diagnostics/paint-pose policy now have pure contracts, UI telemetry, guarded runtime behavior, export-aware state, and focused regression coverage.
+The concrete defects repaired in this follow-up were the animation duration display boundary and Skin telemetry cleanup contract. Animation duration inputs now format a bounded display string without changing stored precision. Skin pose and live-warning telemetry now have one pure mapping contract, declarative canvas attributes, and reapplication on pose/editor-mode changes while transient brush fields retain view-mode cleanup. The earlier static-root and P1 animation/skin authoring contracts remain covered by the historical review entries below.
 
 No unresolved TypeScript import/export surface, production `TODO`/`FIXME`/stub marker, unchecked production `any`, or Rust production panic placeholder was found in the scoped scan. Rust `expect`/`panic` matches are test-only fixtures/assertions. The untracked `source/test-assets/female256_mix2.fbx` is not referenced by source, tests, docs, or the context bank; it remains untouched as user-owned workspace data and should either be integrated deliberately or removed by its owner.
 
 ## Current verification
 
-- `npm.cmd run verify` from `source`: passed. This includes lint coverage/ESLint, app and test typechecks, the production-`any` guard, Vite build and entry-chunk checks, 305/305 frontend units across 50 files, Rust fmt/clippy/check, and 10/10 Rust tests.
-- `node scripts/verify-context-bank.mjs`: passed with 23 groups, 36.1 KiB default orientation, and zero warnings.
+- `npm.cmd run verify` from `source`: passed. This includes lint coverage/ESLint, app and test typechecks, the production-`any` guard, Vite build and entry-chunk checks, 307/307 frontend units across 50 files, Rust fmt/clippy/check, and 10/10 Rust tests.
+- `node scripts/verify-context-bank.mjs`: passed with 23 groups, 36.4 KiB default orientation, and zero warnings.
 - `node --test scripts/context-bank.test.mjs`: 7/7 passed.
 - `npm.cmd run test:e2e:list` from `source/frontend`: discovered 63 cases across eight suites, including trim/lock and skin diagnostics/pose-mode regressions.
-- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: attempted but blocked before test bodies by managed Chromium `browserType.launch: spawn EPERM`; this is not browser-green evidence. The owner session was stopped after ports 5173 and 1420 were verified clear.
+- `npm.cmd run test:e2e -- tests/animation.spec.ts tests/skin.spec.ts --reporter=line --workers=1` from `source/frontend`: passed 13/13 focused browser cases, including the repaired duration and Skin telemetry assertions.
+- The earlier full-suite `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye` attempt remains historical harness-blocked evidence because managed Chromium reported `browserType.launch: spawn EPERM` before test bodies; the focused repaired suites ran green with the existing local browser environment.
 - `git diff --check`: passed.
 
 ## Remaining risks and next direction

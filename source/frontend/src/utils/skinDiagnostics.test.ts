@@ -4,6 +4,7 @@ import * as THREE from 'three';
 import {
   diagnoseSkinVertex,
   diagnoseSkinnedMeshes,
+  getSkinPaintPoseTelemetry,
   getSkinPaintPoseWarning,
 } from './skinDiagnostics';
 
@@ -85,4 +86,23 @@ test('live skin paint emits a visible safety warning while stable modes do not',
   assert.equal(getSkinPaintPoseWarning('live')?.includes('Frozen Current'), true);
   assert.equal(getSkinPaintPoseWarning('rest'), null);
   assert.equal(getSkinPaintPoseWarning('frozen'), null);
+});
+
+test('skin paint viewport telemetry follows mode transitions without stale live warnings', () => {
+  assert.deepEqual(getSkinPaintPoseTelemetry('live', true), {
+    pose: 'live',
+    warning: 'live-animation',
+  });
+  assert.deepEqual(getSkinPaintPoseTelemetry('frozen', true), {
+    pose: 'frozen',
+    warning: '',
+  });
+  assert.deepEqual(getSkinPaintPoseTelemetry('rest', true), {
+    pose: 'rest',
+    warning: '',
+  });
+  assert.deepEqual(getSkinPaintPoseTelemetry('live', false), {
+    pose: 'live',
+    warning: '',
+  });
 });

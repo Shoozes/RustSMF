@@ -9,6 +9,7 @@ import {
   type AnimationSnapStep,
 } from '../utils/animationEdits';
 import {
+  formatAnimationDuration,
   MAX_ANIMATION_DURATION,
   MIN_ANIMATION_DURATION,
   normalizeAnimationDuration,
@@ -284,7 +285,7 @@ export default function AnimatePanel({
             min={MIN_ANIMATION_DURATION}
             max={MAX_ANIMATION_DURATION}
             step="0.01"
-            value={duration}
+            value={formatAnimationDuration(duration)}
             disabled={!hasActiveClip}
             onChange={(event) => onClipDurationChange(normalizeAnimationDuration(Number(event.target.value)))}
           />
@@ -297,7 +298,7 @@ export default function AnimatePanel({
             min={MIN_ANIMATION_DURATION}
             max={MAX_ANIMATION_DURATION}
             step="0.01"
-            value={duration}
+            value={formatAnimationDuration(duration)}
             disabled={!hasActiveClip}
             onChange={(event) => onClipRetimeChange(normalizeAnimationDuration(Number(event.target.value)))}
           />

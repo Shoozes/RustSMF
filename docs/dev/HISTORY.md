@@ -2,6 +2,17 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-08-09 — Animation display and Skin telemetry reconciliation
+
+- Repaired the Animate duration fields so IEEE-754 display noise such as `0.30000000000000004` is shown as `0.3`; numeric duration normalization and edit semantics remain unchanged.
+- Reconciled declarative and imperative Skin viewport telemetry: pose and live-warning markers are declared on the canvas, reapplied when pose or editor mode changes, and no longer removed by view-mode cleanup. Transient brush telemetry remains cleaned when leaving Skin.
+- Added focused unit contracts for stable duration formatting and Skin telemetry transitions.
+
+### Verification
+
+- `npm.cmd run test:e2e -- tests/animation.spec.ts tests/skin.spec.ts --reporter=line --workers=1`: passed 13/13 focused browser cases.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with context validation, lint/typechecks, production build/chunk guards, 307/307 frontend units across 50 files, and 10/10 Rust tests.
+
 ## 2026-08-08 — Skin diagnostics and paint-pose safety
 
 - Completed the P1 skin diagnostics slice: the Skin workspace now exposes raw four-slot influence details for hovered vertices, aggregate invalid-reference/weight/unweighted counts, stable issue codes, and an influence legend independent of export materials.

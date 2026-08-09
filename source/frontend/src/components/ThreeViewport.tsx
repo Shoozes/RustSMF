@@ -77,7 +77,10 @@ import {
   getSkinnedVertexWorldPosition,
   type SkinPaintPoseSnapshot,
 } from '../utils/skinnedVertexPosition';
-import type { SkinPaintPoseMode } from '../utils/skinDiagnostics';
+import {
+  getSkinPaintPoseTelemetry,
+  type SkinPaintPoseMode,
+} from '../utils/skinDiagnostics';
 import { cancelPendingAnimationFrame } from '../utils/animationFrame';
 import type { EditorMode, ViewportLayout } from '../store';
 import { getAppTheme, type AppThemeId } from '../theme';
@@ -2518,10 +2521,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     skinFrozenPoseCacheRef.current = new WeakMap();
     const canvas = canvasRef.current;
     if (canvas) {
-      canvas.dataset.skinPaintPose = skinPaintPose;
-      canvas.dataset.skinPaintPoseWarning = skinPaintPose === 'live' ? 'live-animation' : '';
+      const telemetry = getSkinPaintPoseTelemetry(skinPaintPose, editorMode === 'skin');
+      canvas.dataset.skinPaintPose = telemetry.pose;
+      canvas.dataset.skinPaintPoseWarning = telemetry.warning;
     }
-  }, [skinPaintPose]);
+  }, [editorMode, skinPaintPose]);
   useEffect(() => { skinPaintTargetModeRef.current = skinPaintTargetMode; }, [skinPaintTargetMode]);
   useEffect(() => { skinPaintRadiusRef.current = skinPaintRadius; }, [skinPaintRadius]);
   useEffect(() => { skinPaintStrengthRef.current = skinPaintStrength; }, [skinPaintStrength]);
@@ -2550,8 +2554,6 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         delete canvas.dataset.skinPaintStrength;
         delete canvas.dataset.skinPaintTargetWeight;
         delete canvas.dataset.skinPaintFalloff;
-        delete canvas.dataset.skinPaintPose;
-        delete canvas.dataset.skinPaintPoseWarning;
         delete canvas.dataset.skinBrushIndexError;
         delete canvas.dataset.skinBrushX;
         delete canvas.dataset.skinBrushY;
@@ -2971,6 +2973,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         data-skin-total-vertex-count={skinTotalVertexCountRef.current}
         data-skin-paint-target-mode={skinPaintTargetMode}
         data-skin-paint-pose={skinPaintPose}
+        data-skin-paint-pose-warning={getSkinPaintPoseTelemetry(skinPaintPose, editorMode === 'skin').warning}
         data-transform-owner={boneTransformOwner}
         data-transform-attached={transformTargetRef.current ? 'true' : 'false'}
         data-transform-dragging={transformControlsDraggingRef.current ? 'true' : 'false'}

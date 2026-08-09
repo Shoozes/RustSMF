@@ -2,6 +2,11 @@ import * as THREE from 'three';
 
 export type SkinPaintPoseMode = 'rest' | 'frozen' | 'live';
 
+export interface SkinPaintPoseTelemetry {
+  pose: SkinPaintPoseMode;
+  warning: '' | 'live-animation';
+}
+
 export const SKIN_PAINT_POSE_MODES: readonly SkinPaintPoseMode[] = ['rest', 'frozen', 'live'];
 
 export const SKIN_PAINT_POSE_LABELS: Record<SkinPaintPoseMode, string> = {
@@ -218,4 +223,14 @@ export function diagnoseSkinnedMeshes(
 export function getSkinPaintPoseWarning(mode: SkinPaintPoseMode): string | null {
   if (mode !== 'live') return null;
   return 'Live Animation uses the moving viewport pose; switch to Frozen Current for repeatable brush sampling.';
+}
+
+export function getSkinPaintPoseTelemetry(
+  mode: SkinPaintPoseMode,
+  isSkinMode: boolean,
+): SkinPaintPoseTelemetry {
+  return {
+    pose: mode,
+    warning: isSkinMode && mode === 'live' ? 'live-animation' : '',
+  };
 }
