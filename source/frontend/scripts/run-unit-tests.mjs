@@ -42,7 +42,9 @@ console.log(`Discovered ${testFiles.length} frontend unit-test files.`);
 for (const testFile of testFiles) console.log(`  ${testFile}`);
 
 const runner = process.platform === 'win32' ? 'tsx.cmd' : 'tsx';
-const args = ['--test', ...testFiles];
+// Keep the deterministic discovered-file list while forwarding Node's test
+// filters and diagnostics flags (for example --test-name-pattern) to tsx.
+const args = ['--test', ...process.argv.slice(2), ...testFiles];
 const result = process.platform === 'win32'
   ? spawnSync([runner, ...args].map((value) => `"${value.replaceAll('"', '\\"')}"`).join(' '), {
       cwd: frontendRoot,

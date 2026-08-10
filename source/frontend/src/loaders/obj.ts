@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { isThreeMesh, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
 
-// Basic OBJ loader, mirroring fbx/glb for consistency.
-// OBJ is typically static meshes (no skinning/rigging), but we support any animations if present.
-// Used for preview/import parity. Export not supported (use GLB/SMF).
+// Basic OBJ loader, mirroring FBX/GLB for consistency.
+// OBJLoader supplies static geometry; it does not synthesize animation or rig data.
+// Used for preview/import parity. Export is not supported (use GLB/SMF).
 
 interface LoadedModel {
   root: THREE.Group;

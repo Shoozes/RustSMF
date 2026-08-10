@@ -103,9 +103,10 @@ The sandbox checkup is diagnostic rather than an app gate. A managed profile may
 Current inventory:
 
 - 307 frontend unit tests across 50 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
+- Extra arguments after `npm.cmd run test:unit --` are forwarded to the Node/tsx test runner, so focused flags such as `--test-name-pattern` execute only matching cases while still loading the deterministic discovered file set.
 - 63 browser cases in eight domain-owned spec files; `npm.cmd run test:e2e:list` from `source/frontend` is the discovery authority.
 - 10 Rust tests; the real-SMF native tests require and parse the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
-- 23 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; focused generation has a 256 KiB ceiling for the largest active routes.
+- 24 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; focused generation has a 256 KiB ceiling for the largest active routes.
 
 The latest command results and any environment-only warnings are recorded in `review.md`.
 

@@ -1,6 +1,26 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-08-08 (added reversible static-root preparation to the replacement/history boundary; retained the pre-materialization, worker, conversion, history, timing, and process-lifecycle lessons).
+Last reviewed: 2026-08-09 (added the focused-unit runner argument-forwarding hazard; retained the pre-materialization, worker, conversion, history, timing, and process-lifecycle lessons).
+
+### Q: What pitfall are we preventing?
+
+**What:** A focused unit command can appear filtered while silently running every case if the discovery wrapper drops forwarded Node test flags.
+
+**Context and constraints:** RustSMF owns deterministic `src/**/*.test.ts` discovery and supports `npm.cmd run test:unit -- ...` filters for fast local feedback; all discovered files must still load for registration and type-boundary coverage.
+
+**Why it happened:** `run-unit-tests.mjs` built its `tsx` argv only from discovered files and ignored `process.argv.slice(2)`.
+
+**Where:** `source/frontend/scripts/run-unit-tests.mjs`, `docs/dev/APP_STATE.md`, and `source/frontend/tests/README.md`.
+
+**Evidence:** Before repair, a named `npm.cmd run test:unit` command reported the full 307-test inventory; after forwarding, the duration-formatting command reached the matching case while retaining the 50-file discovery/load boundary.
+
+**How to catch it:** Run a named pattern through the npm script and require output for the named case without unrelated inner-case execution, then run the full `test:unit` suite.
+
+**Current solution:** The wrapper preserves deterministic discovery and inserts `process.argv.slice(2)` before the discovered test files.
+
+**Relevance check:** Current.
+
+**Next prevention step:** Keep the forwarding contract in the app-state and test-runner docs and rerun both focused and full unit commands after runner or package-script changes.
 
 ### Q: What pitfall are we preventing?
 

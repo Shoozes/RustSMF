@@ -2,6 +2,20 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-08-09 — Integrity pass, context routing, and focused-unit runner
+
+- Audited current docs, code and test import surfaces, production TODO/stub/any markers, async cleanup seams, context routes, and the active backlog. No broken imports/exports or production stubs were found.
+- Repaired `run-unit-tests.mjs` so extra Node test flags are forwarded while deterministic test-file discovery is preserved; focused commands now provide truthful feedback instead of silently running every case.
+- Added viewport-support and missing feature/test/state routes to `summary_bank.json`, corrected the OBJ loader comment to match `OBJLoader`'s static-only behavior, and kept the six active P2/P3 TODO contracts unchanged because none is complete.
+
+### Verification
+
+- `npm.cmd run verify` from `source`: passed with lint/typechecks, build/chunk guards, 307/307 frontend units across 50 files, Rust checks, and 10/10 Rust tests. Managed-environment Rust path-canonicalization warnings were nonfatal.
+- `node scripts/verify-context-bank.mjs`: passed with 24 groups, 36.6 KiB default orientation, and zero warnings; `node --test scripts/context-bank.test.mjs`: 7/7 passed.
+- `npm.cmd run test:unit -- --test-name-pattern "animation duration formatting"` from `source/frontend`: passed with the matching duration-formatting case while all 50 discovered files still loaded.
+- `npm.cmd run test:e2e -- tests/animation.spec.ts tests/skin.spec.ts --reporter=line --workers=1` from `source/frontend`: the unprivileged sandbox attempt was blocked before test bodies by managed Chromium `browserType.launch: spawn EPERM`; the same bounded command with approved local process access passed 13/13.
+- `npm.cmd run test:e2e -- --reporter=line --workers=1` from `source/frontend`: passed the complete 63-case browser inventory with approved local process access.
+
 ## 2026-08-09 — Animation display and Skin telemetry reconciliation
 
 - Repaired the Animate duration fields so IEEE-754 display noise such as `0.30000000000000004` is shown as `0.3`; numeric duration normalization and edit semantics remain unchanged.

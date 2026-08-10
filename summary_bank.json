@@ -91,6 +91,8 @@
         "source/frontend/src/utils/textureThumbnail.test.ts",
         "source/frontend/src/utils/materialPreview.ts",
         "source/frontend/src/utils/materialPreview.test.ts",
+        "source/frontend/src/utils/textureCompat.ts",
+        "source/frontend/src/utils/textureCompat.test.ts",
         "source/frontend/src/utils/viewportDisplayController.ts",
         "source/frontend/src/utils/viewportDisplayController.test.ts",
         "source/frontend/src/utils/selectionOverlay.ts",
@@ -153,6 +155,7 @@
         "source/frontend/src/loaders/threeToSmf.ts",
         "source/frontend/src/loaders/threeToSmf.test.ts",
         "source/frontend/src/loaders/glb.ts",
+        "source/frontend/src/loaders/glb.test.ts",
         "source/frontend/src/utils/materialPreview.ts",
         "source/frontend/src/utils/materialPreview.test.ts",
         "source/frontend/src/utils/materialPolicy.ts",
@@ -195,9 +198,30 @@
         "Pending RAF handles are canceled through the shared zero-safe animation-frame guard."
       ]
     },
+    "subsystem__viewport_support": {
+      "description": "Viewport-facing bone picking, labels, highlights, helper geometry, Inspector controls, display lighting, and shared Three guards.",
+      "max_kb": 64,
+      "paths": [
+        "source/frontend/src/components/Inspector.tsx",
+        "source/frontend/src/utils/index.ts",
+        "source/frontend/src/utils/bonePicker.ts",
+        "source/frontend/src/utils/boneLabels.ts",
+        "source/frontend/src/utils/boneHighlight.ts",
+        "source/frontend/src/utils/modernSkeletonHelper.ts",
+        "source/frontend/src/utils/useBoneLabels.ts",
+        "source/frontend/src/utils/legacySmfLighting.ts",
+        "source/frontend/src/utils/legacySmfLighting.test.ts",
+        "source/frontend/src/utils/threeTypeGuards.ts",
+        "source/frontend/src/utils/threeTypeGuards.test.ts"
+      ],
+      "notes": [
+        "ThreeViewport owns lifecycle and event timing; these helpers own the leaf rendering, picking, label, and type-guard contracts consumed by it and by loader/rig paths.",
+        "The utility barrel is a supported lightweight surface; keep UI/store modules out of it and verify its exports through test typechecking."
+      ]
+    },
     "feature__rig_ik_pose": {
       "description": "Bone hierarchy, pose editing, rig transforms, endpoint editing, and bounded CCD IK.",
-      "max_kb": 144,
+      "max_kb": 160,
       "paths": [
         "source/frontend/src/components/RigPanel.tsx",
         "source/frontend/src/hooks/poseEdits.ts",
@@ -209,6 +233,7 @@
         "source/frontend/src/utils/rigHierarchy.ts",
         "source/frontend/src/utils/rigHierarchy.test.ts",
         "source/frontend/src/utils/rigValidation.ts",
+        "source/frontend/src/utils/rigValidation.test.ts",
         "source/frontend/src/utils/smfRigPolicy.ts",
         "source/frontend/src/utils/smfRigPolicy.test.ts",
         "source/frontend/src/utils/staticMeshSkinPrep.ts",
@@ -339,6 +364,7 @@
         "source/frontend/tests/README.md",
         "source/frontend/src/loaders/smfSemantics.test.ts",
         "source/frontend/src/utils/modelFormat.test.ts",
+        "source/frontend/src/test/installImageTestPolyfill.ts",
         "source/frontend/tests/fixtures/invalid-model.gml",
         "source/frontend/tests/helpers/*.ts",
         "source/frontend/scripts/run-unit-tests.mjs",
@@ -479,6 +505,10 @@
         "source/frontend/src/utils/editorHistory.test.ts",
         "source/frontend/src/utils/replacementGuard.ts",
         "source/frontend/src/utils/replacementGuard.test.ts",
+        "source/frontend/src/utils/seqGuard.ts",
+        "source/frontend/src/store/index.ts",
+        "source/frontend/src/store/index.test.ts",
+        "source/frontend/src/store/README.md",
         "source/frontend/src/types/viewportEditorEvents.ts"
       ],
       "notes": [
