@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { ensureGeometryAttributes } from './geometryAttributes';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { FBXExporter } from '../vendor/FBXExporter.js';
 import { withSourceMaterialState } from '../utils/materialPreview';
@@ -98,6 +99,20 @@ async function waitForTextureImage(texture: THREE.Texture): Promise<void> {
 
 async function waitForFbxTextures(root: THREE.Object3D): Promise<void> {
   await Promise.all(collectTextures(root).map(waitForTextureImage));
+}
+
+async function waitForPromiseOrTimeout(promise: Promise<void>, timeoutMs: number): Promise<void> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  try {
+    await Promise.race([
+      promise,
+      new Promise<void>((resolve) => {
+        timeoutId = setTimeout(resolve, timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId !== undefined) clearTimeout(timeoutId);
+  }
 }
 
 function removeUnavailableFbxTextureMaps(root: THREE.Object3D): number {
@@ -209,13 +224,12 @@ export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoa
   }
 
   const root = fbx; // FBX loads as group-like
-  if (textureLoadStarted) {
-    await Promise.race([
-      textureLoads,
-      new Promise<void>((resolve) => setTimeout(resolve, FBX_TEXTURE_WAIT_MS)),
-    ]);
-  }
-  await waitForFbxTextures(root);
+  await Promise.all([
+    textureLoadStarted
+      ? waitForPromiseOrTimeout(textureLoads, FBX_TEXTURE_WAIT_MS)
+      : Promise.resolve(),
+    waitForFbxTextures(root),
+  ]);
   const removedTextureMaps = removeUnavailableFbxTextureMaps(root);
   root.name = 'FBX_Root';
 
@@ -226,18 +240,7 @@ export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoa
     if (!isThreeSkinnedMesh(obj)) {
       return;
     }
-    const geo = obj.geometry;
-    const position = geo.attributes.position;
-    if (!geo.attributes.uv && position) {
-      const count = position.count;
-      geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
-    }
-    if (!geo.attributes.normal && position) {
-      geo.computeVertexNormals();
-    }
-    if (!geo.attributes.tangent && geo.index && position && geo.attributes.normal && geo.attributes.uv) {
-      geo.computeTangents?.();
-    }
+    ensureGeometryAttributes(obj.geometry);
 
     skinnedMeshes.push(obj);
   });

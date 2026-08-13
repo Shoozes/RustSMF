@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import { isThreeMesh, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
+import { ensureGeometryAttributes } from './geometryAttributes';
 
 // Basic OBJ loader, mirroring FBX/GLB for consistency.
 // OBJLoader supplies static geometry; it does not synthesize animation or rig data.
@@ -41,17 +42,7 @@ export async function loadOBJ(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
 
   root.traverse((node) => {
     if (!isThreeMesh(node)) return;
-    const geo = node.geometry;
-    if (!geo.attributes.uv) {
-      const count = geo.attributes.position?.count || 0;
-      geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
-    }
-    if (!geo.attributes.normal) {
-      geo.computeVertexNormals();
-    }
-    if (!geo.attributes.tangent && geo.index && geo.attributes.position && geo.attributes.normal && geo.attributes.uv) {
-      geo.computeTangents?.();
-    }
+    ensureGeometryAttributes(node.geometry);
 
     // OBJ meshes are rarely skinned, but collect if so
     if (isThreeSkinnedMesh(node)) skinnedMeshes.push(node);

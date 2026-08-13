@@ -345,6 +345,36 @@
   font-size: 9px;
 }
 
+.app-shell[data-theme="original"] .outliner-rename-form {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1px;
+  margin-top: 3px;
+}
+
+.app-shell[data-theme="original"] .outliner-rename-form input,
+.app-shell[data-theme="original"] .outliner-rename-form button {
+  width: 100%;
+  height: 17px;
+  padding: 0 3px;
+  font-size: 9px;
+}
+
+.app-shell[data-theme="original"] .outliner-rename-form label,
+.app-shell[data-theme="original"] .outliner-rename-note {
+  font-size: 9px;
+}
+
+.app-shell[data-theme="original"] .outliner-order-actions {
+  gap: 1px;
+  margin-top: 2px;
+}
+
+.app-shell[data-theme="original"] .outliner-order-actions button {
+  height: 17px;
+  padding: 0 2px;
+  font-size: 9px;
+}
+
 .app-shell[data-theme="original"] .outliner-list {
   gap: 1px;
   margin-top: 4px;

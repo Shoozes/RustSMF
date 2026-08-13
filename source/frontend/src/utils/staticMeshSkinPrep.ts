@@ -24,6 +24,8 @@ export interface StaticMeshSkinPreparation {
   replacements: StaticMeshSkinReplacement[];
 }
 
+type StaticMeshSkinCandidate = Omit<StaticMeshSkinReplacement, 'skinned'>;
+
 export type PrepareStaticSkinResult =
   | {
     ok: true;
@@ -40,6 +42,18 @@ export type PrepareStaticSkinResult =
   };
 
 const DEFAULT_ROOT_BONE_NAME = 'Root';
+
+function makeUniqueObjectName(root: THREE.Object3D, requestedName: string): string {
+  const names = new Set<string>();
+  root.traverse((object) => {
+    if (object.name) names.add(object.name);
+  });
+  if (!names.has(requestedName)) return requestedName;
+
+  let suffix = 2;
+  while (names.has(`${requestedName}_${suffix}`)) suffix += 1;
+  return `${requestedName}_${suffix}`;
+}
 
 function collectStaticMeshes(root: THREE.Object3D): THREE.Mesh[] {
   const meshes: THREE.Mesh[] = [];
@@ -99,7 +113,8 @@ function replaceWithSkinnedMesh(
     }
   }
 
-  skinned.bind(skeleton, new THREE.Matrix4());
+  skinned.updateWorldMatrix(true, false);
+  skinned.bind(skeleton, skinned.matrixWorld);
   skinned.normalizeSkinWeights();
   return skinned;
 }
@@ -138,7 +153,7 @@ export function reapplyStaticMeshSkinPreparation(
   preparation: StaticMeshSkinPreparation,
 ): void {
   preparation.root.add(preparation.rootBone);
-  preparation.rootBone.updateMatrixWorld(true);
+  preparation.root.updateWorldMatrix(true, true);
   for (const replacement of preparation.replacements) {
     const { original, skinned, parent, index } = replacement;
     if (original.parent) original.parent.remove(original);
@@ -148,7 +163,8 @@ export function reapplyStaticMeshSkinPreparation(
     parent.children.splice(parent.children.indexOf(skinned), 1);
     parent.children.splice(Math.min(index, parent.children.length), 0, skinned);
     skinned.parent = parent;
-    skinned.bind(preparation.skeleton, new THREE.Matrix4());
+    skinned.updateWorldMatrix(true, false);
+    skinned.bind(preparation.skeleton, skinned.matrixWorld);
     skinned.normalizeSkinWeights();
   }
   preparation.skeleton.update();
@@ -176,14 +192,11 @@ export function prepareStaticMeshesForSkinning(
     if (isThreeSkinnedMesh(object)) existingSkinned.push(object);
   });
   if (existingSkinned.length > 0) {
-    const existingSkeleton = existingSkinned[0].skeleton;
-    if (existingSkeleton?.bones.length) {
-      return {
-        ok: false,
-        reason: 'already-skinned',
-        message: 'This model already has a skeleton. Use Rig workspace to edit bones.',
-      };
-    }
+    return {
+      ok: false,
+      reason: 'already-skinned',
+      message: 'This model already contains skinned geometry. Validate or edit its existing rig instead.',
+    };
   }
 
   const staticMeshes = collectStaticMeshes(root);
@@ -195,49 +208,51 @@ export function prepareStaticMeshesForSkinning(
     };
   }
 
-  const candidateReplacements = staticMeshes.map((mesh) => ({
-    original: mesh,
-    skinned: null as unknown as THREE.SkinnedMesh,
-    parent: mesh.parent,
-    index: mesh.parent?.children.indexOf(mesh) ?? -1,
-    skinIndexBefore: mesh.geometry.getAttribute('skinIndex'),
-    skinWeightBefore: mesh.geometry.getAttribute('skinWeight'),
-  }));
-  if (candidateReplacements.some((replacement) => !replacement.parent || replacement.index < 0)) {
-    return {
-      ok: false,
-      reason: 'unparented-mesh',
-      message: 'A static mesh is not attached to the loaded model root.',
-    };
-  }
-  const replacements: StaticMeshSkinReplacement[] = candidateReplacements.map((replacement) => ({
-    ...replacement,
-    parent: replacement.parent!,
-  }));
-
+  const candidates: StaticMeshSkinCandidate[] = [];
   for (const mesh of staticMeshes) {
-    if (ensureSkinAttributes(mesh.geometry) <= 0) {
+    const parent = mesh.parent;
+    const index = parent?.children.indexOf(mesh) ?? -1;
+    if (!parent || index < 0) {
+      return {
+        ok: false,
+        reason: 'unparented-mesh',
+        message: `Mesh "${mesh.name || 'unnamed'}" is not attached to the loaded model root.`,
+      };
+    }
+    const position = mesh.geometry.getAttribute('position');
+    if (!position || position.count <= 0) {
       return {
         ok: false,
         reason: 'empty-geometry',
         message: `Mesh "${mesh.name || 'unnamed'}" has no vertex positions to skin.`,
       };
     }
+    candidates.push({
+      original: mesh,
+      parent,
+      index,
+      skinIndexBefore: mesh.geometry.getAttribute('skinIndex'),
+      skinWeightBefore: mesh.geometry.getAttribute('skinWeight'),
+    });
+  }
+
+  for (const mesh of staticMeshes) {
+    ensureSkinAttributes(mesh.geometry);
   }
 
   const requestedName = (options?.rootBoneName ?? DEFAULT_ROOT_BONE_NAME).trim() || DEFAULT_ROOT_BONE_NAME;
   const rootBone = new THREE.Bone();
-  rootBone.name = requestedName;
+  rootBone.name = makeUniqueObjectName(root, requestedName);
   root.add(rootBone);
-  rootBone.updateMatrixWorld(true);
+  root.updateWorldMatrix(true, true);
 
   const skeleton = new THREE.Skeleton([rootBone]);
-  const skinnedMeshes: THREE.SkinnedMesh[] = [];
-  for (const replacement of replacements) {
-    const skinned = replaceWithSkinnedMesh(replacement.original, skeleton);
-    replacement.skinned = skinned;
-    skinnedMeshes.push(skinned);
-  }
+  skeleton.calculateInverses();
+  const replacements = candidates.map((candidate): StaticMeshSkinReplacement => ({
+    ...candidate,
+    skinned: replaceWithSkinnedMesh(candidate.original, skeleton),
+  }));
+  const skinnedMeshes = replacements.map((replacement) => replacement.skinned);
 
   skeleton.update();
   const preparation: StaticMeshSkinPreparation = {

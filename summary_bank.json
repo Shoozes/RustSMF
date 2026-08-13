@@ -44,9 +44,6 @@
         "scripts/context-bank.test.mjs",
         "scripts/README.md",
         ".tools/get-context.ps1",
-        ".tools/project.json",
-        "run.ps1",
-        "AGENTS.md",
         ".agents/skills/summary-bank-json/SKILL.md"
       ],
       "notes": [
@@ -54,6 +51,24 @@
         "Node.js 22 or newer is the canonical runtime.",
         "Generation never truncates a file or writes when --out - is requested.",
         "The repo-local summary-bank skill adds RustSMF ownership and native verification to the global context-bank policy."
+      ]
+    },
+    "workflow__git_main_sync": {
+      "description": "Fail-closed main-branch synchronization, token handling, configured-origin checks, and regression coverage for the local Git controls.",
+      "max_kb": 64,
+      "paths": [
+        ".tools/git-main-common.ps1",
+        ".tools/gitpush.ps1",
+        ".tools/gitpull.ps1",
+        "scripts/git-main-safety.test.mjs",
+        ".tools/project.json",
+        "run.ps1",
+        "AGENTS.md"
+      ],
+      "notes": [
+        "Synchronization is main-only and requires the configured origin URL, an existing worktree, no active Git operation, and an ignored untracked token file.",
+        "Pull performs a clean fast-forward only; push uses ordinary Git push and post-push commit equality verification. Neither workflow creates/repoints remotes, force-syncs, stashes, resets, cleans, or resolves conflicts automatically.",
+        "The Node regression test is part of run.ps1 verify and guards forbidden destructive synchronization patterns plus the current-worktree preflight."
       ]
     },
     "feature__theme_system": {
@@ -103,6 +118,25 @@
         "Raw SMF DataTexture pixels are downsampled into bounded previews; unsupported images fall back to material color."
       ]
     },
+    "feature__model_outliner_authoring": {
+      "description": "Guarded non-SMF Outliner metadata and sibling-order authoring with bounded global history.",
+      "max_kb": 112,
+      "paths": [
+        "source/frontend/src/App.tsx",
+        "source/frontend/src/components/Outliner.tsx",
+        "source/frontend/src/utils/modelOutliner.ts",
+        "source/frontend/src/utils/modelOutliner.test.ts",
+        "source/frontend/src/utils/modelAuthoring.ts",
+        "source/frontend/src/utils/modelAuthoring.test.ts",
+        "source/frontend/src/utils/editorHistory.ts",
+        "source/frontend/src/utils/editorHistory.test.ts"
+      ],
+      "notes": [
+        "Name, visibility, selection, and scoped parent order use one ID-only snapshot owner; history never stores cyclic Three.js scene graphs.",
+        "Rename is limited to binding-safe, unique, unanimated GLB/FBX/OBJ objects; SMF source names remain source-owned.",
+        "Reorder swaps only eligible siblings under one parent, preserves non-Outliner children, and is covered by exact undo/redo plus GLB re-import."
+      ]
+    },
     "feature__fbx_support": {
       "description": "Binary FBX 7500 export, import compatibility, pre-save validation, and round-trip coverage.",
       "max_kb": 120,
@@ -123,6 +157,23 @@
         "Exported bytes must re-import and preserve representative mesh, skin, bone, and clip structure before save.",
         "The independent Blender-authored fixture is test-only; Blender 5.0.0 validates both the source asset and app-exported output, but this does not claim universal FBX compatibility.",
         "FBX texture parse waits on its isolated loader manager; unavailable maps fail safe before render."
+      ]
+    },
+    "subsystem__model_geometry_preparation": {
+      "description": "Shared GLB, FBX, and OBJ geometry-attribute preparation plus loader-safe tangent prerequisites.",
+      "max_kb": 64,
+      "paths": [
+        "source/frontend/src/loaders/geometryAttributes.ts",
+        "source/frontend/src/loaders/geometryAttributes.test.ts",
+        "source/frontend/src/loaders/glb.ts",
+        "source/frontend/src/loaders/glb.test.ts",
+        "source/frontend/src/loaders/fbx.ts",
+        "source/frontend/src/loaders/fbx.test.ts",
+        "source/frontend/src/loaders/obj.ts"
+      ],
+      "notes": [
+        "Missing preview UVs and normals may be synthesized, but generated zero UVs are not evidence for tangent-space derivation.",
+        "Tangent generation requires compatible source UV and normal attributes plus a finite, in-range indexed triangle layout; non-indexed SMF/GLB triangle soup must remain warning-free."
       ]
     },
     "subsystem__smf_codec_worker": {
@@ -365,6 +416,7 @@
         "source/frontend/src/loaders/smfSemantics.test.ts",
         "source/frontend/src/utils/modelFormat.test.ts",
         "source/frontend/src/test/installImageTestPolyfill.ts",
+        "source/frontend/src/test/installFileReaderTestPolyfill.ts",
         "source/frontend/tests/fixtures/invalid-model.gml",
         "source/frontend/tests/helpers/*.ts",
         "source/frontend/scripts/run-unit-tests.mjs",
@@ -414,7 +466,7 @@
         "source/frontend/tests/export-formats.spec.ts"
       ],
       "notes": [
-        "The app enables GLB/FBX-to-SMF save and SMF roundtrip actions for compatible skinned single-root sources; static roots, scale tracks, malformed geometry, and semantic failures remain blocked.",
+        "The app enables non-SMF-to-SMF save and SMF roundtrip actions for compatible skinned single-root sources, including prepared static FBX/OBJ roots; unprepared static roots, scale tracks, malformed geometry, and semantic failures remain blocked.",
         "The builder keeps mesh arrays in model-root Three space, captures root-relative world DQs, and samples clips through a cloned Three mixer; the serializer owns the single Three-to-SMF vector boundary.",
         "Numeric tests cover non-identity mesh transforms, nested rig matrices, and mixer quaternion interpolation before browser-facing use."
       ]

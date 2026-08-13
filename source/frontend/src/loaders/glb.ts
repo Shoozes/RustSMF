@@ -5,6 +5,7 @@ import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { disposeThreeObject } from '../utils/threeDisposal';
 import { isThreeBone, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
 import { bytesToArrayBuffer } from './smfBinary';
+import { ensureGeometryAttributes } from './geometryAttributes';
 
 /**
  * GLB / GLTF loader.
@@ -53,18 +54,7 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<Loaded
     if (!isThreeSkinnedMesh(obj)) {
       return;
     }
-    // Ensure we have everything three needs
-    const geo = obj.geometry;
-    if (!geo.attributes.tangent) {
-      geo.computeTangents?.();
-    }
-    if (!geo.attributes.uv) {
-      const count = geo.attributes.position.count;
-      geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(count * 2), 2));
-    }
-    if (!geo.attributes.normal) {
-      geo.computeVertexNormals();
-    }
+    ensureGeometryAttributes(obj.geometry);
 
     skinnedMeshes.push(obj);
     // Some GLB/GLTF paths can produce skinned meshes with an empty bone list.

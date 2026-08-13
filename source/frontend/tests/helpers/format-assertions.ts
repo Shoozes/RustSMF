@@ -13,6 +13,9 @@ export const fileToBase64 = (filePath: string): string => fs.readFileSync(filePa
 export interface GlbJsonSummary {
   images?: unknown[];
   textures?: unknown[];
+  nodes?: Array<{ name?: string; children?: number[] }>;
+  scenes?: Array<{ nodes?: number[] }>;
+  scene?: number;
 }
 
 export const readGlbJson = (bytes: Buffer): GlbJsonSummary => {

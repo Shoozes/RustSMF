@@ -407,7 +407,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await input.setInputFiles(await createSkinnedGlbFixtureInputWithOptions({ withTexture: true, nonPowerOfTwoTexture: true }));
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
 
-      await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture-texture\.glb|bones: 2|clips: 1/i);
+      await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture-texture(?:-npot)?\.glb|bones: 2|clips: 1/i);
 
       await openViewportDisplayMenu(page);
       await page.getByTestId('viewport-texture-toggle').click();
@@ -505,5 +505,72 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       // Optional strict visual for OBJ static state (committed reference for parity).
       // (Run with --update-snapshots to refresh if render changes.)
       // await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000, { strict: true, name: 'obj-static-parity' });
+    });
+
+    test('OBJ submodel rename is guarded, reversible, and preserved by GLB export', async ({ page }) => {
+      await page.goto('/');
+      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+
+      const row = page.getByTestId('outliner-submodel-0');
+      const name = row.locator('.outliner-name');
+      const originalName = (await name.textContent())?.trim();
+      expect(originalName).toBeTruthy();
+      await row.locator('.outliner-name-btn').click();
+
+      await expect(page.getByTestId('outliner-rename-form')).toBeVisible();
+      await page.getByTestId('outliner-rename-input').fill('Renamed_OBJ_Part');
+      await page.getByTestId('outliner-rename-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Renamed submodel .* to Renamed_OBJ_Part/i);
+      await expect(name).toHaveText('Renamed_OBJ_Part');
+
+      await page.getByTestId('editor-undo-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Undid rename submodel/i);
+      await expect(name).toHaveText(originalName!);
+      await page.getByTestId('editor-redo-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Redid rename submodel/i);
+      await expect(name).toHaveText('Renamed_OBJ_Part');
+
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByTestId('export-glb-btn').click();
+      const download = await downloadPromise;
+      const downloadPath = await download.path();
+      expect(downloadPath).not.toBeNull();
+      const exportedGlb = readGlbJson(fs.readFileSync(downloadPath!));
+      expect(exportedGlb.nodes?.some((node) => node.name === 'Renamed_OBJ_Part')).toBe(true);
+      expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
+    });
+
+    test('GLB sibling submodel order is reversible and preserved by export', async ({ page }) => {
+      await page.goto('/');
+      const input = page.getByTestId('model-file-input');
+      await input.setInputFiles(await createSkinnedGlbFixtureInputWithOptions({ withSiblingMesh: true }));
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+
+      const names = page.getByTestId('outliner-submodel-list').locator('.outliner-name');
+      const skinnedRow = page.locator('.outliner-item').filter({ hasText: 'FixtureSkinnedMesh' });
+      await skinnedRow.locator('.outliner-name-btn').click();
+      await expect(page.getByTestId('outliner-move-later-btn')).toBeEnabled();
+      await page.getByTestId('outliner-move-later-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Moved submodel FixtureSkinnedMesh later/i);
+
+      const movedNames = await names.allTextContents();
+      expect(movedNames.indexOf('FixtureStaticSibling')).toBeLessThan(movedNames.indexOf('FixtureSkinnedMesh'));
+      await page.getByTestId('editor-undo-btn').click();
+      const undoNames = await names.allTextContents();
+      expect(undoNames.indexOf('FixtureSkinnedMesh')).toBeLessThan(undoNames.indexOf('FixtureStaticSibling'));
+      await page.getByTestId('editor-redo-btn').click();
+
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByTestId('export-glb-btn').click();
+      const download = await downloadPromise;
+      const downloadPath = await download.path();
+      expect(downloadPath).not.toBeNull();
+      const exportedGlb = readGlbJson(fs.readFileSync(downloadPath!));
+      const parent = exportedGlb.nodes?.find((node) => node.name === 'GeneratedSkinnedFixtureRoot');
+      const exportedChildNames = parent?.children?.map((index) => exportedGlb.nodes?.[index]?.name ?? '') ?? [];
+      expect(exportedChildNames).toEqual(expect.arrayContaining(['FixtureSkinnedMesh', 'FixtureStaticSibling']));
+      expect(exportedChildNames.indexOf('FixtureStaticSibling')).toBeLessThan(exportedChildNames.indexOf('FixtureSkinnedMesh'));
+      expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
     });
 });

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
+import { installFileReaderTestPolyfill } from '../../src/test/installFileReaderTestPolyfill';
 
 export const SKINNED_GLB_FIXTURE_NAME = 'generated-skinned-fixture.glb';
 
@@ -13,44 +14,10 @@ export interface SkinnedGlbFixtureOptions {
   withTexture?: boolean;
   nonPowerOfTwoTexture?: boolean;
   withMultiMaterial?: boolean;
+  withSiblingMesh?: boolean;
 }
 
-type ReaderCallback = ((event: { target: NodeFileReader }) => void) | null;
-
-class NodeFileReader {
-  result: string | ArrayBuffer | null = null;
-  onloadend: ReaderCallback = null;
-  onerror: ((error: unknown) => void) | null = null;
-
-  async readAsArrayBuffer(blob: Blob): Promise<void> {
-    try {
-      this.result = await blob.arrayBuffer();
-      this.onloadend?.({ target: this });
-    } catch (error) {
-      this.onerror?.(error);
-    }
-  }
-
-  async readAsDataURL(blob: Blob): Promise<void> {
-    try {
-      const bytes = Buffer.from(await blob.arrayBuffer());
-      this.result = `data:${blob.type || 'application/octet-stream'};base64,${bytes.toString('base64')}`;
-      this.onloadend?.({ target: this });
-    } catch (error) {
-      this.onerror?.(error);
-    }
-  }
-}
-
-let fixtureBufferPromise: Promise<Buffer> | null = null;
-let texturedFixtureBufferPromise: Promise<Buffer> | null = null;
-let multiMaterialFixtureBufferPromise: Promise<Buffer> | null = null;
-
-function installNodeFileReader(): void {
-  if (typeof globalThis.FileReader === 'undefined') {
-    globalThis.FileReader = NodeFileReader as unknown as typeof FileReader;
-  }
-}
+const fixtureBufferPromises = new Map<string, Promise<Buffer>>();
 
 function installNodeCanvasSupport(): void {
   const g = globalThis as unknown as Record<string, unknown>;
@@ -207,6 +174,16 @@ function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THR
 
   root.add(mesh);
 
+  if (options.withSiblingMesh) {
+    const sibling = new THREE.Mesh(
+      new THREE.BoxGeometry(0.25, 0.25, 0.25),
+      new THREE.MeshBasicMaterial({ color: 0xd2a84a }),
+    );
+    sibling.name = 'FixtureStaticSibling';
+    sibling.position.set(0.65, 0.25, 0);
+    root.add(sibling);
+  }
+
   const clip = new THREE.AnimationClip('FixtureBend', 0.5, [
     new THREE.QuaternionKeyframeTrack('FixtureTip.quaternion', [0, 0.5], [
       0, 0, 0, 1,
@@ -221,20 +198,27 @@ function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THR
   return { root, clips: [clip] };
 }
 
-async function createSkinnedGlbFixtureBuffer(): Promise<Buffer> {
-  installNodeFileReader();
-  const { root, clips } = createFixtureScene();
-  const exporter = new GLTFExporter();
-  const result = await exporter.parseAsync(root, { binary: true, animations: clips });
-  if (!(result instanceof ArrayBuffer)) {
-    throw new Error('Expected generated skinned GLB fixture to be an ArrayBuffer');
-  }
-  return Buffer.from(result);
+function getFixtureKey(options: SkinnedGlbFixtureOptions): string {
+  return [
+    options.withTexture ? 'textured' : 'solid',
+    options.nonPowerOfTwoTexture ? 'npot' : 'pot',
+    options.withMultiMaterial ? 'multi' : 'single',
+    options.withSiblingMesh ? 'siblings' : 'solo',
+  ].join('-');
 }
 
-async function createSkinnedGlbFixtureBufferWithOptions(options: SkinnedGlbFixtureOptions): Promise<Buffer> {
-  installNodeFileReader();
-  installNodeCanvasSupport();
+function getFixtureName(options: SkinnedGlbFixtureOptions): string {
+  const parts = ['generated-skinned-fixture'];
+  if (options.withTexture) parts.push('texture');
+  if (options.withMultiMaterial) parts.push('multi-material');
+  if (options.nonPowerOfTwoTexture) parts.push('npot');
+  if (options.withSiblingMesh) parts.push('siblings');
+  return `${parts.join('-')}.glb`;
+}
+
+async function createSkinnedGlbFixtureBuffer(options: SkinnedGlbFixtureOptions = {}): Promise<Buffer> {
+  installFileReaderTestPolyfill();
+  if (options.withTexture) installNodeCanvasSupport();
   const { root, clips } = createFixtureScene(options);
   const exporter = new GLTFExporter();
   const result = await exporter.parseAsync(root, { binary: true, animations: clips });
@@ -244,9 +228,18 @@ async function createSkinnedGlbFixtureBufferWithOptions(options: SkinnedGlbFixtu
   return Buffer.from(result);
 }
 
+function getSkinnedGlbFixtureBuffer(options: SkinnedGlbFixtureOptions = {}): Promise<Buffer> {
+  const key = getFixtureKey(options);
+  let promise = fixtureBufferPromises.get(key);
+  if (!promise) {
+    promise = createSkinnedGlbFixtureBuffer(options);
+    fixtureBufferPromises.set(key, promise);
+  }
+  return promise;
+}
+
 export async function createSkinnedGlbFixtureInput(): Promise<TestFilePayload> {
-  fixtureBufferPromise ??= createSkinnedGlbFixtureBuffer();
-  const buffer = await fixtureBufferPromise;
+  const buffer = await getSkinnedGlbFixtureBuffer();
   return {
     name: SKINNED_GLB_FIXTURE_NAME,
     mimeType: 'model/gltf-binary',
@@ -255,56 +248,14 @@ export async function createSkinnedGlbFixtureInput(): Promise<TestFilePayload> {
 }
 
 export async function createSkinnedGlbFixtureInputWithOptions(
-  options: SkinnedGlbFixtureOptions = {}
+  options: SkinnedGlbFixtureOptions = {},
 ): Promise<TestFilePayload> {
-  const fixtureKey = `${options.withTexture ? 'textured' : 'solid'}-${options.withMultiMaterial ? 'multi' : 'single'}-${options.nonPowerOfTwoTexture ? 'npot' : 'pot'}`;
-
-  if (fixtureKey === 'solid-single-pot') {
+  if (getFixtureKey(options) === getFixtureKey({})) {
     return createSkinnedGlbFixtureInput();
   }
-
-  if (options.withTexture && options.nonPowerOfTwoTexture && options.withMultiMaterial) {
-    texturedFixtureBufferPromise ??= createSkinnedGlbFixtureBufferWithOptions({
-      withTexture: true,
-      withMultiMaterial: true,
-      nonPowerOfTwoTexture: true,
-    });
-    const buffer = await texturedFixtureBufferPromise;
-    return {
-      name: `generated-skinned-fixture-texture-multi-npot.glb`,
-      mimeType: 'model/gltf-binary',
-      buffer: Buffer.from(buffer),
-    };
-  }
-
-  if (options.withTexture) {
-    texturedFixtureBufferPromise ??= createSkinnedGlbFixtureBufferWithOptions({
-      withTexture: true,
-      nonPowerOfTwoTexture: !!options.nonPowerOfTwoTexture,
-    });
-    const buffer = await texturedFixtureBufferPromise;
-    return {
-      name: options.withMultiMaterial
-        ? `generated-skinned-fixture-texture.glb`
-        : 'generated-skinned-fixture-texture.glb',
-      mimeType: 'model/gltf-binary',
-      buffer: Buffer.from(buffer),
-    };
-  }
-
-  if (options.withMultiMaterial) {
-    multiMaterialFixtureBufferPromise ??= createSkinnedGlbFixtureBufferWithOptions({ withMultiMaterial: true });
-    const buffer = await multiMaterialFixtureBufferPromise;
-    return {
-      name: 'generated-skinned-fixture-multi-material.glb',
-      mimeType: 'model/gltf-binary',
-      buffer: Buffer.from(buffer),
-    };
-  }
-
-  const buffer = await createSkinnedGlbFixtureBuffer();
+  const buffer = await getSkinnedGlbFixtureBuffer(options);
   return {
-    name: SKINNED_GLB_FIXTURE_NAME,
+    name: getFixtureName(options),
     mimeType: 'model/gltf-binary',
     buffer: Buffer.from(buffer),
   };

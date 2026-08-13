@@ -2,7 +2,7 @@
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, and OBJ models.
 
-The current app provides high-fidelity SMF import/export, worker-backed SMF codecs with visible progress, guarded conversion of compatible skinned GLB/FBX assets to SMF, validated GLB/FBX output, native Rust-owned file dialogs and binary I/O, reversible authoring history, single/quad viewport layouts, and persisted Modern/Original SMF themes. Unsupported format features fail with diagnostics instead of being silently discarded.
+The current app provides high-fidelity SMF import/export, worker-backed SMF codecs with visible progress, guarded conversion of compatible skinned or root-prepared non-SMF assets to SMF, validated GLB/FBX output, reversible non-SMF submodel rename and same-parent ordering, native Rust-owned file dialogs and binary I/O, single/quad viewport layouts, and persisted Modern/Original SMF themes. Unsupported format features fail with diagnostics instead of being silently discarded.
 
 ## State and work
 
@@ -47,11 +47,11 @@ On Windows, prefer `run.bat` or `run.ps1` for normal launches because the launch
 ## Current limits
 
 - SMF's current dual-quaternion path preserves position/rotation, not scale. Scale edits block SMF export.
-- Non-SMF-to-SMF conversion supports a compatible single named skeleton with skinned geometry and position/quaternion bone tracks. Static roots, multiple skeletons, scale animation, materials, morphs, and object tracks require GLB/FBX.
+- Non-SMF-to-SMF conversion supports a compatible single named skeleton with skinned geometry and position/quaternion bone tracks. Static FBX/OBJ roots must first use the reversible root-skeleton preparation; unprepared static roots, multiple skeletons, scale animation, materials, morphs, and object tracks require GLB/FBX.
 - `.gltf` import currently handles self-contained JSON assets. External `.bin`, image, or other sidecar URIs are not resolved from a lone selected file.
 - OBJ import is load/preview focused and does not resolve a neighboring `.mtl` sidecar; use GLB for saved rich-material output.
 - FBX compatibility is proven for the committed Three.js/generated fixtures and an independently authored Blender 5.0.0 fixture, not every third-party FBX producer or consumer.
 - The freeform TransformControls gizmo remains single-perspective. Quad/orthographic authoring uses pane-aware explicit Rig tools.
 - Native dialog behavior is covered by Rust tests and deterministic IPC browser mocks; real OS-dialog automation remains separate.
 
-Project philosophy is defined in `AGENTS.md`: safety, courtesy, show, and efficiency, in that order; prefer small dynamic modules over hard-coding; prioritize correctness and readability. Work locally on `main`, review in this workspace, and push only when explicitly requested.
+Project philosophy is defined in `AGENTS.md`: safety, courtesy, show, and efficiency, in that order; prefer small dynamic modules over hard-coding; prioritize correctness and readability. Work locally on `main`, review in this workspace, and push only when explicitly requested. Use `.tools/gitpush.ps1` for reviewed main publication; it verifies the configured remote and final local/remote commit alignment without force-pushing.

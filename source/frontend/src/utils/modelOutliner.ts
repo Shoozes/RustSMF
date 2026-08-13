@@ -32,7 +32,7 @@ const isGroupLike = (object: THREE.Object3D): boolean => {
   return object.type === 'Group' || object.children.some((child) => isMeshLike(child));
 };
 
-const getItemKind = (object: THREE.Object3D): ModelOutlinerItemKind | null => {
+export const getModelOutlinerItemKind = (object: THREE.Object3D): ModelOutlinerItemKind | null => {
   if (isThreeSkinnedMesh(object)) return 'skinnedMesh';
   if (isThreeMesh(object)) return 'mesh';
   if (isGroupLike(object)) return 'group';
@@ -78,7 +78,7 @@ export const collectModelOutlinerItems = (root: THREE.Object3D | null): ModelOut
   root.traverse((object) => {
     if (object === root) return;
 
-    const kind = getItemKind(object);
+    const kind = getModelOutlinerItemKind(object);
     if (!kind) return;
 
     const mesh = isMeshLike(object) ? object : null;

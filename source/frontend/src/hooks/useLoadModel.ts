@@ -1420,10 +1420,13 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       try {
         const rootToExport = model.root;
         const smfData = lastSmfDataRef.current;
+        const conversionSourceLabel = sourceFormat && sourceFormat !== 'smf'
+          ? sourceFormat.toUpperCase()
+          : 'non-SMF';
         if (smfData) {
           ui.setStatus('Exporting as SMF (fidelity path using imported data + coord transforms + live pose edits)...');
         } else if (!rootToExport) {
-          ui.setStatus('No model loaded for SMF export. Load a skinned GLB/FBX with skeleton or use GLB export.');
+          ui.setStatus('No model loaded for SMF export. Load or prepare a compatible skinned model, or use GLB export.');
           return;
         } else {
           ui.setStatus('Exporting as SMF via validated converter (Three skinned -> ImportedSmf)...');
@@ -1431,7 +1434,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
         const imported = buildCurrentSmfExportCandidate();
         if (!imported) {
-          ui.setStatus('No model loaded for SMF export. Load a skinned GLB/FBX with skeleton or use GLB export.');
+          ui.setStatus('No compatible skinned model is available for SMF export. Prepare a static root or use GLB export.');
           return;
         }
 
@@ -1445,7 +1448,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         }
         ui.setStatus(smfData
           ? `Exported .smf (imported data + DQ handling + pose edits applied). Test roundtrip by re-importing!${encoded.execution === 'sync-fallback' ? ' SMF codec used synchronous fallback.' : ''}`
-          : `Exported .smf (from GLB/FBX via validated threeToSmf converter + live pose). Re-import to verify fidelity!${encoded.execution === 'sync-fallback' ? ' SMF codec used synchronous fallback.' : ''}`);
+          : `Exported .smf (from ${conversionSourceLabel} via validated threeToSmf converter + live pose). Re-import to verify fidelity!${encoded.execution === 'sync-fallback' ? ' SMF codec used synchronous fallback.' : ''}`);
       } catch (e: unknown) {
         if (!isCurrentExport()) return;
         if (e instanceof SmfCodecCancelledError) return;
@@ -1462,6 +1465,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   }, [
     ui,
     model.root,
+    sourceFormat,
     withExportBusy,
     buildCurrentSmfExportCandidate,
     exportSmfInWorker,

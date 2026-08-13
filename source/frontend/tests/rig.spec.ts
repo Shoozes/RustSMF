@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { SAMPLE_SMF, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
+import { SAMPLE_OBJ, SAMPLE_SMF, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { parseSelectedBone } from './helpers/format-assertions';
 import { dragEndpointHandle, dragRigIkTarget, dragTransformHandle, setViewportLayout } from './helpers/viewport-interactions';
@@ -55,6 +55,70 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await page.keyboard.press('Control+Y');
       await expect(page.getByTestId('status-text')).toContainText(/Redid Nudge FixtureTip/i);
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
+    });
+
+  test('static OBJ root preparation is reversible, replacement-guarded, and export-safe', async ({ page }) => {
+      await page.goto('/');
+
+      const input = page.getByTestId('model-file-input');
+      await input.setInputFiles(SAMPLE_OBJ);
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      const originalRootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+      expect(originalRootId).toBeTruthy();
+
+      await page.getByTestId('mode-tab-rig').click();
+      await expect(page.getByTestId('rig-bone-count')).toHaveText('0');
+      await expect(page.getByTestId('rig-skinned-mesh-count')).toHaveText('0');
+      await expect(page.getByTestId('rig-prepare-static-panel')).toBeVisible();
+      await page.getByTestId('rig-prepare-root-skeleton').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Prepared root skeleton "Root" on 1 mesh/i);
+      await expect(page.getByTestId('rig-bone-count')).toHaveText('1');
+      await expect(page.getByTestId('rig-skinned-mesh-count')).toHaveText('1');
+      await expect(page.getByTestId('rig-prepare-static-panel')).toHaveCount(0);
+      await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
+
+      await page.getByTestId('mode-tab-export').click();
+      const diagnostics = page.getByTestId('smf-diagnostics-panel');
+      await expect(diagnostics).toHaveAttribute('data-smf-can-export', 'true');
+      await expect(page.getByTestId('export-smf-btn')).toBeEnabled();
+      await page.getByTestId('smf-roundtrip-check-btn').click();
+      await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 15000 });
+      await page.getByTestId('export-glb-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb .*1 bones/i, { timeout: 15000 });
+      await page.getByTestId('export-smf-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf .*validated threeToSmf converter/i, { timeout: 15000 });
+
+      await page.getByTestId('editor-undo-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Undid prepare root skeleton for static meshes/i);
+      await page.getByTestId('mode-tab-rig').click();
+      await expect(page.getByTestId('rig-bone-count')).toHaveText('0');
+      await expect(page.getByTestId('rig-skinned-mesh-count')).toHaveText('0');
+      await expect(page.getByTestId('rig-prepare-static-panel')).toBeVisible();
+      await page.getByTestId('mode-tab-export').click();
+      await expect(diagnostics).toHaveAttribute('data-smf-can-export', 'false');
+      await expect(diagnostics).toContainText('SMF_NO_SKINNED_SKELETON');
+      await expect(page.getByTestId('export-smf-btn')).toBeDisabled();
+
+      await page.getByTestId('editor-redo-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Redid prepare root skeleton for static meshes/i);
+      await page.getByTestId('mode-tab-rig').click();
+      await expect(page.getByTestId('rig-bone-count')).toHaveText('1');
+      await expect(page.getByTestId('rig-skinned-mesh-count')).toHaveText('1');
+
+      await input.setInputFiles(SAMPLE_SMF);
+      await expect(page.getByTestId('replacement-dialog')).toBeVisible();
+      await page.getByTestId('cancel-model-replacement').click();
+      await expect(page.getByTestId('replacement-dialog')).toHaveCount(0);
+      await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', originalRootId!);
+      await expect(page.getByTestId('rig-bone-count')).toHaveText('1');
+
+      await input.setInputFiles(SAMPLE_SMF);
+      await expect(page.getByTestId('replacement-dialog')).toBeVisible();
+      await page.getByTestId('confirm-model-replacement').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Loaded:.*\.smf/i, { timeout: 15000 });
+      await expect(page.getByTestId('three-canvas')).not.toHaveAttribute('data-model-root-id', originalRootId!);
+
+      expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
     });
 
   test('SMF rig policy gates indexed edits and bind reset is reversible', async ({ page }) => {

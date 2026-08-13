@@ -1,18 +1,18 @@
 # RustSMF TODO
 
-Last reviewed: 2026-08-09
+Last reviewed: 2026-08-13
 
 This file contains executable forward work only. Current behavior belongs in `APP_STATE.md`; completed work and command evidence belong in `HISTORY.md` and `review.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
 ## P2 — Model workspace authoring
 
-- What: Extend guarded model/submodel operations beyond the reversible static-root preparation: rename, duplicate, reorder, delete, append static model, object transforms, material assignment, winding, normals/tangents, and per-submodel diagnostics; add browser/export proof for the existing preparation flow.
-- Why: The current Model workspace is primarily inspection/visibility. Static-root preparation now has a safe reversible contract, but broader destructive geometry actions from the old editor are not represented by a safe modern contract and the new path still lacks end-to-end browser proof.
-- Where: `source/frontend/src/components/Outliner.tsx`, `App.tsx`, new model-authoring utility, export diagnostics, and editor snapshots.
+- What: Extend guarded model/submodel operations beyond reversible static-root preparation, visibility, rename, and same-parent ordering: duplicate, delete, append static model, object transforms, material assignment, winding, normals/tangents, and per-submodel diagnostics.
+- Why: The current Model workspace has inspection, visibility, safe metadata editing, and one bounded structural action. Static-root preparation has all-mesh preflight and transform-safe binding; rename has binding/source/animation guards; reorder preserves exact parent child order without storing cyclic scene graphs. All three have focused coverage, and the registered static-root, rename, and reorder browser flows passed 66/66 as part of the approved full suite on 2026-08-13. Broader destructive geometry actions from the old editor still lack a safe modern contract.
+- Where: `source/frontend/src/components/Outliner.tsx`, `source/frontend/src/App.tsx`, `source/frontend/src/utils/modelAuthoring.ts`, export diagnostics, and editor snapshots.
 - When: After animation/skin scope contracts are stable.
-- How: Start with reversible non-destructive metadata and visibility operations; add a browser regression that prepares a static OBJ/FBX root, verifies undo/redo and dirty replacement protection, and confirms the resulting SMF/GLB diagnostics; add compatibility guards for skinned append/retarget; use one root-owned snapshot per action and never mutate source materials without restoration.
-- Subtasks: static-root browser/history/export proof; reversible metadata/visibility actions; skinned append/retarget compatibility; material and geometry diagnostics.
-- Done when: supported operations are undoable, blocked compatibility cases explain why without mutation, and GLB/FBX/SMF diagnostics state exactly what survives export.
+- How: Extend the ID-only snapshot owner only for state it can restore, and use explicit structural transactions for duplicate/delete rather than storing cyclic scene graphs in generic snapshots; add compatibility guards for skinned append/retarget; never mutate source materials without restoration.
+- Subtasks: duplicate/delete transactions; transform actions; skinned append/retarget compatibility; material and geometry diagnostics.
+- Done when: each promoted operation is undoable, blocked compatibility cases explain why without mutation, and GLB/FBX/SMF diagnostics state exactly what survives export.
 - Verification: pure model-authoring/history tests, export roundtrips, browser smoke, and full `verify`.
 
 ## P2 — Sidecar-aware GLTF and OBJ import

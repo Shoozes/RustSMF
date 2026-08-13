@@ -1,6 +1,38 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-08-09 (added the focused-unit runner argument-forwarding hazard; retained the pre-materialization, worker, conversion, history, timing, and process-lifecycle lessons).
+Last reviewed: 2026-08-13 (added main-branch synchronization safety alongside the loader tangent-precondition, pre-materialization, worker, conversion, history, timing, and process-lifecycle lessons).
+
+### Q: What pitfall are we preventing?
+
+**What:** A convenience Git sync command can silently discard, overwrite, or choose between local and remote work while claiming to keep `main` aligned.
+
+**Why it happened:** The prior local push/pull controls could initialize or repoint a remote, remove ignored/tracked files, reset/clean/stash a worktree, fall back to `ours`/`theirs` conflict selection, and force-push after a failed rebase. Those actions make a review decision outside the workspace and can erase work that has not been inspected.
+
+**Where:** `.tools/git-main-common.ps1`, `.tools/gitpush.ps1`, `.tools/gitpull.ps1`, `.tools/project.json`, and `scripts/git-main-safety.test.mjs`.
+
+**How to catch it:** Parse both PowerShell entry points and run the main-safety test, including its current-worktree preflight before credential access. Before a real sync, require the configured `origin` URL, current `main`, no active Git operation or conflict, an ignored untracked token file, and a clean pull worktree. After a push, fetch and compare `HEAD` with `origin/main`.
+
+**Current solution:** Shared main-only guards refuse remote mismatch, unsafe token state, active operations, and conflicts. Pull only fast-forwards a clean worktree; push uses an ordinary push, aborts only the rebase it starts if it conflicts, and never force-pushes, resets/cleans/stashes, creates/repoints remotes, or auto-resolves files.
+
+**Relevance check:** Current. Any future GUI or automation wrapper around Git must reuse this contract rather than adding convenience fallback paths.
+
+**Next prevention step:** Keep `scripts/git-main-safety.test.mjs` in `run.ps1 -Task verify` and manually review any proposed relaxation of the main-only or conflict-stop policy.
+
+### Q: What pitfall are we preventing?
+
+**What:** Re-importing exported triangle-soup geometry can emit a Three.js tangent error even though the original source loaded cleanly.
+
+**Why it happened:** The GLB loader called `computeTangents()` before checking for compatible UV/normal attributes and a valid indexed triangle layout. Static preparation followed by GLB export can legitimately produce non-indexed skinned geometry, so the error surfaced only on the exported-file validation path.
+
+**Where:** `source/frontend/src/loaders/geometryAttributes.ts`, `glb.ts`, `fbx.ts`, `obj.ts`, and the static-root flow in `source/frontend/tests/rig.spec.ts`.
+
+**How to catch it:** Exercise source load, preparation, export, validation re-import, and browser error capture as one flow. Unit cases must cover indexed geometry, non-indexed triangle soup, synthesized UVs, and malformed indexes.
+
+**Current solution:** One shared loader helper fills preview-safe UV/normal defaults and computes tangents only when source UVs, normals, and indexes satisfy Three.js requirements. GLB, FBX, and OBJ no longer carry divergent copies of this policy.
+
+**Relevance check:** Current. Any loader or export validator that prepares runtime geometry should reuse this contract instead of calling `computeTangents()` directly.
+
+**Next prevention step:** Keep the focused geometry units and the static OBJ prepare/export browser case together when changing loader attribute preparation or export topology.
 
 ### Q: What pitfall are we preventing?
 
@@ -32,7 +64,7 @@ Last reviewed: 2026-08-09 (added the focused-unit runner argument-forwarding haz
 
 **Where:** `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/App.tsx`, `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/backend-client/binaryPayload.ts`, `source/frontend/package.json`, `source/package-lock.json`, `source/src-tauri/src/main.rs`, `source/src-tauri/Cargo.toml`, `source/frontend/src/utils/editorHistory.ts`, `source/frontend/src/utils/skinWeights.ts`, and `source/frontend/src/store/index.ts`.
 
-**Evidence:** The current flow queues dirty replacements before reading bytes and preserves the mounted root on Cancel or parse failure; static-root preparation now records a reversible rig-history entry and therefore also blocks replacement until discarded or undone; Rust rejects unselected canonical paths and owns the save dialog; frontend normalization rejects native arrays containing fractional, negative, over-255, missing, or non-numeric entries before parsing; both Tauri dialog-plugin manifests are pinned to 2.7.1; editor history is capped at 100 entries/64 MiB, skin history at 50 entries/32 MiB per direction; and parent playback publication is capped at a 50 ms display cadence. Unit and browser mock coverage exercises these boundaries.
+**Evidence:** The current flow queues dirty replacements before reading bytes and preserves the mounted root on Cancel or parse failure; static-root preparation preflights every mesh before mutation, rejects existing skinned geometry, allocates a collision-free root name, binds transformed meshes in their own world space, and records a reversible rig-history entry that blocks replacement until discarded or undone; Rust rejects unselected canonical paths and owns the save dialog; frontend normalization rejects native arrays containing fractional, negative, over-255, missing, or non-numeric entries before parsing; both Tauri dialog-plugin manifests are pinned to 2.7.1; editor history is capped at 100 entries/64 MiB, skin history at 50 entries/32 MiB per direction; and parent playback publication is capped at a 50 ms display cadence. Unit and browser mock coverage exercises these boundaries.
 
 **Developer story:** These were separate-looking reliability issues with the same root cause: integration code had no explicit ownership contract for destructive state, privileged destinations, retained snapshots, or high-frequency display updates. Shared guards and narrow owners make each boundary observable without hiding a real failure behind a fallback.
 
@@ -56,7 +88,7 @@ Last reviewed: 2026-08-09 (added the focused-unit runner argument-forwarding haz
 
 **What:** A plausible-looking GLB/FBX-to-SMF conversion can apply coordinate ownership twice and serialize bone/animation data in a different space than the SMF importer consumes.
 
-**Context and constraints:** The review covered `main` at `e77d6bc4da703e64ba389d879a44235dde3a3717`. Non-SMF conversion is supported only for skinned single-root sources whose mesh, nested-rig, and animation boundaries are covered by numeric checks; static roots and unsupported channels remain blocked.
+**Context and constraints:** The review covered `main` at `e77d6bc4da703e64ba389d879a44235dde3a3717`. Non-SMF conversion is supported only for compatible single-root skinned sources whose mesh, nested-rig, and animation boundaries are covered by numeric checks; static FBX/OBJ roots must first pass the reversible root-skeleton preparation, and unsupported channels remain blocked.
 
 **Why it happened:** The isolated builder converted mesh vectors before the serializer converted them again, captured local bone matrices while the runtime scene derives locals from world DQs, and interpolated quaternion components directly. Existing tests asserted counts and reimportability but not spatial parity.
 
@@ -725,7 +757,7 @@ Last reviewed: 2026-08-09 (added the focused-unit runner argument-forwarding haz
 
 **Where:** `source/frontend/src/loaders/threeToSmf.ts`, `source/frontend/src/loaders/threeToSmf.test.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/components/Toolbar.tsx`.
 
-**How to catch it:** Run `npm --workspace frontend run test:unit` or `pwsh -File run.ps1 -Task verify`; converter tests assert skeletal animation roundtrip and rejection of scale animation/static roots.
+**How to catch it:** Run `npm --workspace frontend run test:unit` or `pwsh -File run.ps1 -Task verify`; converter tests assert skeletal animation roundtrip and rejection of scale animation or unprepared static roots.
 
 **Solutions tried:**
 1. `35/100` Keep the old approximate helper, result: misleading incomplete conversion path with empty animation frames.

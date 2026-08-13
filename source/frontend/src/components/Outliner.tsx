@@ -1,4 +1,5 @@
 import React from 'react';
+import type { ModelObjectReorderDirection } from '../utils/modelAuthoring';
 import type { ModelOutlinerItem } from '../utils/modelOutliner';
 import TextureThumbnail from './TextureThumbnail';
 
@@ -12,6 +13,12 @@ interface OutlinerProps {
   onToggleVisibility: (id: string) => void;
   onSelectAll: () => void;
   onClearSelection: () => void;
+  onRenameSelected: (name: string) => void;
+  onMoveSelected: (direction: ModelObjectReorderDirection) => void;
+  objectEditingEnabled: boolean;
+  objectEditingDisabledReason?: string;
+  canMoveSelectedEarlier: boolean;
+  canMoveSelectedLater: boolean;
   onHideSelected: () => void;
   onHideUnselected: () => void;
   onUnhideAll: () => void;
@@ -33,6 +40,12 @@ const Outliner: React.FC<OutlinerProps> = ({
   onToggleVisibility,
   onSelectAll,
   onClearSelection,
+  onRenameSelected,
+  onMoveSelected,
+  objectEditingEnabled,
+  objectEditingDisabledReason,
+  canMoveSelectedEarlier,
+  canMoveSelectedLater,
   onHideSelected,
   onHideUnselected,
   onUnhideAll,
@@ -42,6 +55,14 @@ const Outliner: React.FC<OutlinerProps> = ({
   const selectedCount = selectedItemIds.length;
   const hasItems = items.length > 0;
   const hasSelection = selectedCount > 0;
+  const selectedItem = selectedCount === 1
+    ? items.find((item) => item.id === selectedItemIds[0]) ?? null
+    : null;
+  const [renameValue, setRenameValue] = React.useState('');
+
+  React.useEffect(() => {
+    setRenameValue(selectedItem?.name ?? '');
+  }, [selectedItem?.id, selectedItem?.name]);
 
   return (
     <div data-testid="outliner" className="sidebar">
@@ -80,6 +101,62 @@ const Outliner: React.FC<OutlinerProps> = ({
             Show all
           </button>
           <span data-testid="outliner-selection-count">{selectedCount} selected</span>
+        </div>
+      )}
+      {selectedItem && (
+        <form
+          className="outliner-rename-form"
+          data-testid="outliner-rename-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            onRenameSelected(renameValue);
+          }}
+        >
+          <label htmlFor="outliner-rename-input">Rename selected</label>
+          <input
+            id="outliner-rename-input"
+            data-testid="outliner-rename-input"
+            value={renameValue}
+            maxLength={128}
+            disabled={!objectEditingEnabled}
+            aria-describedby={objectEditingDisabledReason ? 'outliner-editing-disabled-reason' : undefined}
+            onChange={(event) => setRenameValue(event.currentTarget.value)}
+          />
+          <button
+            type="submit"
+            data-testid="outliner-rename-btn"
+            disabled={!objectEditingEnabled || !renameValue.trim() || renameValue.trim() === selectedItem.name}
+            title={objectEditingDisabledReason}
+          >
+            Rename
+          </button>
+          {objectEditingDisabledReason && (
+            <span id="outliner-editing-disabled-reason" className="outliner-rename-note">
+              {objectEditingDisabledReason}
+            </span>
+          )}
+        </form>
+      )}
+      {selectedItem && (
+        <div className="outliner-order-actions" aria-label="Selected submodel order">
+          <button
+            type="button"
+            data-testid="outliner-move-earlier-btn"
+            disabled={!objectEditingEnabled || !canMoveSelectedEarlier}
+            title={objectEditingDisabledReason ?? 'Move earlier among siblings'}
+            onClick={() => onMoveSelected('earlier')}
+          >
+            Move up
+          </button>
+          <button
+            type="button"
+            data-testid="outliner-move-later-btn"
+            disabled={!objectEditingEnabled || !canMoveSelectedLater}
+            title={objectEditingDisabledReason ?? 'Move later among siblings'}
+            onClick={() => onMoveSelected('later')}
+          >
+            Move down
+          </button>
         </div>
       )}
       <div className="outliner-list" data-testid="outliner-submodel-list">

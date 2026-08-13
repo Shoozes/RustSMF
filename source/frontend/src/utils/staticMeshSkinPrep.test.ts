@@ -77,6 +77,27 @@ describe('prepareStaticMeshesForSkinning', () => {
     }
   });
 
+  it('rejects any existing skinned geometry without mutating static meshes', () => {
+    const root = makeStaticRoot();
+    const staticMesh = root.children[0] as THREE.Mesh;
+    const skinned = new THREE.SkinnedMesh(
+      staticMesh.geometry.clone(),
+      new THREE.MeshBasicMaterial(),
+    );
+    skinned.name = 'MalformedSkinnedMesh';
+    root.add(skinned);
+    try {
+      const result = prepareStaticMeshesForSkinning(root);
+      assert.equal(result.ok, false);
+      if (result.ok) return;
+      assert.equal(result.reason, 'already-skinned');
+      assert.equal(staticMesh.geometry.getAttribute('skinIndex'), undefined);
+      assert.equal(root.getObjectByName('Root'), undefined);
+    } finally {
+      disposeThreeObject(root);
+    }
+  });
+
   it('rejects empty roots', () => {
     const root = new THREE.Group();
     try {
@@ -84,6 +105,66 @@ describe('prepareStaticMeshesForSkinning', () => {
       assert.equal(result.ok, false);
       if (result.ok) return;
       assert.equal(result.reason, 'no-static-meshes');
+    } finally {
+      disposeThreeObject(root);
+    }
+  });
+
+  it('preflights every mesh before adding skin attributes', () => {
+    const root = makeStaticRoot();
+    const validMesh = root.children[0] as THREE.Mesh;
+    const emptyMesh = new THREE.Mesh(new THREE.BufferGeometry(), new THREE.MeshBasicMaterial());
+    emptyMesh.name = 'Empty';
+    root.add(emptyMesh);
+    const childrenBefore = [...root.children];
+    try {
+      const result = prepareStaticMeshesForSkinning(root);
+      assert.equal(result.ok, false);
+      if (result.ok) return;
+      assert.equal(result.reason, 'empty-geometry');
+      assert.deepEqual(root.children, childrenBefore);
+      assert.equal(validMesh.geometry.getAttribute('skinIndex'), undefined);
+      assert.equal(validMesh.geometry.getAttribute('skinWeight'), undefined);
+      assert.equal(root.getObjectByName('Root'), undefined);
+    } finally {
+      disposeThreeObject(root);
+    }
+  });
+
+  it('uses each transformed mesh world matrix as its bind space', () => {
+    const root = makeStaticRoot();
+    const original = root.getObjectByName('Body') as THREE.Mesh;
+    original.position.set(2, 0, 0);
+    root.updateWorldMatrix(true, true);
+    try {
+      const result = prepareStaticMeshesForSkinning(root);
+      assert.equal(result.ok, true);
+      if (!result.ok) return;
+
+      const skinned = result.skinnedMeshes.find((mesh) => mesh.name === 'Body');
+      assert.ok(skinned);
+      result.skeleton.bones[0].rotation.z = Math.PI / 2;
+      root.updateWorldMatrix(true, true);
+      result.skeleton.update();
+
+      const worldVertex = skinned.getVertexPosition(1, new THREE.Vector3())
+        .applyMatrix4(skinned.matrixWorld);
+      assert.ok(worldVertex.distanceTo(new THREE.Vector3(0, 3, 0)) < 1e-5);
+    } finally {
+      disposeThreeObject(root);
+    }
+  });
+
+  it('allocates a root-bone name that cannot collide with imported object names', () => {
+    const root = makeStaticRoot();
+    root.children[0].name = 'Root';
+    root.children[1].name = 'Root_2';
+    try {
+      const result = prepareStaticMeshesForSkinning(root);
+      assert.equal(result.ok, true);
+      if (!result.ok) return;
+      assert.equal(result.rootBoneName, 'Root_3');
+      assert.equal(result.skeleton.bones[0].name, 'Root_3');
     } finally {
       disposeThreeObject(root);
     }

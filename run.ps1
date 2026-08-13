@@ -89,6 +89,26 @@ function Invoke-ContextBankVerification {
     return $true
 }
 
+function Invoke-GitMainSafetyVerification {
+    if (-not $NodeExecutable) {
+        Write-Warn "Node.js 22 or newer is required for Git main-safety verification."
+        return $false
+    }
+
+    $testPath = Join-Path $RepoRoot "scripts\git-main-safety.test.mjs"
+    if (-not (Test-Path -LiteralPath $testPath -PathType Leaf)) {
+        Write-Warn "Git main-safety test is missing: $testPath"
+        return $false
+    }
+
+    & $NodeExecutable --test $testPath 2>&1 | Out-String | Write-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warn "Git main-safety test failed"
+        return $false
+    }
+    return $true
+}
+
 function Ensure-Dirs {
     New-Item -ItemType Directory -Force -Path (Join-Path $RepoRoot "runtime-data") | Out-Null
 }
@@ -543,6 +563,7 @@ switch -Exact ($NormalizedTask) {
         Write-Info "[VERIFY] Lint coverage + lint + build + docs/context checks..."
         $ok = $true
         if (-not (Invoke-ContextBankVerification)) { $ok = $false }
+        if (-not (Invoke-GitMainSafetyVerification)) { $ok = $false }
         if (Test-Path $FrontendDir) {
             if (-not (Invoke-FrontendNpm @("run", "check:lint-coverage"))) { $ok = $false; Write-Warn "lint coverage check failed" }
             if (-not (Invoke-FrontendNpm @("run", "lint"))) { $ok = $false; Write-Warn "lint failed" }

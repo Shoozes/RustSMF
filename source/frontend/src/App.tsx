@@ -15,6 +15,18 @@ import { getAppTheme, type AppThemeId } from './theme'
 import type { BoneTransformOwner, ViewportObjectSelectEvent } from './types/viewportEditorEvents'
 import { supportedModelFormatsLabel } from './utils/modelFormat'
 import { collectModelOutlinerItems } from './utils/modelOutliner'
+import {
+  applyModelOutlinerSnapshot,
+  captureModelOutlinerSnapshot,
+  getModelObjectAuthoringDisabledReason,
+  getModelObjectReorderAvailability,
+  renameModelObject,
+  reorderModelObject,
+  sameModelOutlinerSnapshot,
+  supportsModelObjectAuthoring,
+  type ModelObjectReorderDirection,
+  type ModelOutlinerSnapshot,
+} from './utils/modelAuthoring'
 import { getClipByName, summarizeAnimationTimeline } from './utils/animationTimeline'
 import { resolveAnimationScope } from './utils/animationScope'
 import { validateRig } from './utils/rigValidation'
@@ -35,26 +47,6 @@ type WorkspaceProfile = {
   showWeightSection: boolean;
   boneLabelsEnabledByDefault: boolean;
 };
-
-interface OutlinerVisibilitySnapshot {
-  visibleById: Record<string, boolean>;
-  selectedIds: string[];
-}
-
-function sameStringList(left: string[], right: string[]): boolean {
-  return left.length === right.length && left.every((value, index) => value === right[index]);
-}
-
-function sameOutlinerVisibilitySnapshot(
-  left: OutlinerVisibilitySnapshot,
-  right: OutlinerVisibilitySnapshot,
-): boolean {
-  const leftIds = Object.keys(left.visibleById).sort();
-  const rightIds = Object.keys(right.visibleById).sort();
-  return sameStringList(leftIds, rightIds)
-    && leftIds.every((id) => left.visibleById[id] === right.visibleById[id])
-    && sameStringList(left.selectedIds, right.selectedIds);
-}
 
 const WORKSPACE_BY_MODE: Record<EditorMode, WorkspaceProfile> = {
   view: {
@@ -105,7 +97,7 @@ const WORKSPACE_BY_MODE: Record<EditorMode, WorkspaceProfile> = {
 export default function App() {
   const historyOrderRef = useRef(0);
   const hadModelRef = useRef(false);
-  const outlinerHistoryRef = useRef<EditorHistoryState<OutlinerVisibilitySnapshot>>(makeEditorHistory());
+  const outlinerHistoryRef = useRef<EditorHistoryState<ModelOutlinerSnapshot>>(makeEditorHistory());
   const outlinerHistoryIdRef = useRef(0);
   const outlinerDirtyRef = useRef(false);
   const [outlinerUndoAvailable, setOutlinerUndoAvailable] = useState(false);
@@ -328,9 +320,16 @@ export default function App() {
     : animationTimelineSummary.keyframeTimes;
   const outlinerItems = useMemo(
     () => collectModelOutlinerItems(model.root),
-    // Visibility changes mutate the retained Three root; this revision is the invalidation token.
+    // Name/visibility/order changes mutate the retained Three root; this revision is the invalidation token.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [model.root, outlinerRevision],
+  );
+  const modelObjectAuthoringEnabled = supportsModelObjectAuthoring(sourceFormat);
+  const modelObjectAuthoringDisabledReason = getModelObjectAuthoringDisabledReason(sourceFormat);
+  const selectedOutlinerReorder = (
+    selectedOutlinerIds.length === 1
+      ? getModelObjectReorderAvailability(model.root, selectedOutlinerIds[0])
+      : { canMoveEarlier: false, canMoveLater: false }
   );
   const getOutlinerItemName = useCallback((id: string): string => {
     const item = outlinerItems.find((candidate) => candidate.id === id);
@@ -343,43 +342,30 @@ export default function App() {
     setOutlinerUndoOrder(outlinerHistoryRef.current.undo.at(-1)?.order ?? 0);
     setOutlinerRedoOrder(outlinerHistoryRef.current.redo.at(-1)?.redoOrder ?? 0);
   }, []);
-  const captureOutlinerVisibilitySnapshot = useCallback((): OutlinerVisibilitySnapshot => {
-    const visibleById: Record<string, boolean> = {};
-    const knownIds = new Set<string>();
-    for (const item of outlinerItems) {
-      knownIds.add(item.id);
-      const object = model.root?.getObjectByProperty('uuid', item.id);
-      visibleById[item.id] = object ? object.visible : item.visible;
-    }
-
-    return {
-      visibleById,
-      selectedIds: selectedOutlinerIds.filter((id) => knownIds.has(id)),
-    };
-  }, [model.root, outlinerItems, selectedOutlinerIds]);
-  const applyOutlinerVisibilitySnapshot = useCallback((snapshot: OutlinerVisibilitySnapshot): number => {
-    let changed = 0;
-    for (const [id, visible] of Object.entries(snapshot.visibleById)) {
-      const object = model.root?.getObjectByProperty('uuid', id);
-      if (object && object.visible !== visible) {
-        object.visible = visible;
-        changed += 1;
-      }
-    }
-
-    const validSelection = snapshot.selectedIds.filter((id) => (
-      outlinerItems.some((item) => item.id === id)
-    ));
-    setSelectedOutlinerIds(validSelection);
+  const captureOutlinerSnapshot = useCallback((orderedParentIds: Iterable<string> = []): ModelOutlinerSnapshot => (
+    captureModelOutlinerSnapshot(
+      model.root,
+      outlinerItems.map((item) => item.id),
+      selectedOutlinerIds,
+      orderedParentIds,
+    )
+  ), [model.root, outlinerItems, selectedOutlinerIds]);
+  const applyOutlinerSnapshot = useCallback((snapshot: ModelOutlinerSnapshot): number => {
+    const result = applyModelOutlinerSnapshot(
+      model.root,
+      snapshot,
+      outlinerItems.map((item) => item.id),
+    );
+    setSelectedOutlinerIds(result.selectedIds);
     setOutlinerRevision((value) => value + 1);
-    return changed;
+    return result.changes;
   }, [model.root, outlinerItems]);
-  const pushOutlinerVisibilityHistory = useCallback((
+  const pushOutlinerHistory = useCallback((
     label: string,
-    before: OutlinerVisibilitySnapshot,
-    after: OutlinerVisibilitySnapshot,
+    before: ModelOutlinerSnapshot,
+    after: ModelOutlinerSnapshot,
   ): boolean => {
-    if (sameOutlinerVisibilitySnapshot(before, after)) return false;
+    if (sameModelOutlinerSnapshot(before, after)) return false;
 
     outlinerHistoryRef.current = pushEditorHistory(outlinerHistoryRef.current, {
       id: `outliner-${outlinerHistoryIdRef.current += 1}`,
@@ -392,26 +378,26 @@ export default function App() {
     refreshOutlinerHistoryAvailability();
     return true;
   }, [allocateHistoryOrder, refreshOutlinerHistoryAvailability]);
-  const undoOutlinerVisibility = useCallback((): boolean => {
+  const undoOutlinerHistory = useCallback((): boolean => {
     const result = popUndo(outlinerHistoryRef.current, allocateHistoryOrder());
     if (!result.entry) return false;
 
     outlinerHistoryRef.current = result.state;
-    const changed = applyOutlinerVisibilitySnapshot(result.entry.before);
+    const changed = applyOutlinerSnapshot(result.entry.before);
     refreshOutlinerHistoryAvailability();
-    ui.setStatus(`Undid ${result.entry.label}${changed > 0 ? ` (${changed} visibility change${changed === 1 ? '' : 's'})` : ''}.`);
+    ui.setStatus(`Undid ${result.entry.label}${changed > 0 ? ` (${changed} object change${changed === 1 ? '' : 's'})` : ''}.`);
     return true;
-  }, [allocateHistoryOrder, applyOutlinerVisibilitySnapshot, refreshOutlinerHistoryAvailability, ui]);
-  const redoOutlinerVisibility = useCallback((): boolean => {
+  }, [allocateHistoryOrder, applyOutlinerSnapshot, refreshOutlinerHistoryAvailability, ui]);
+  const redoOutlinerHistory = useCallback((): boolean => {
     const result = popRedo(outlinerHistoryRef.current, allocateHistoryOrder());
     if (!result.entry) return false;
 
     outlinerHistoryRef.current = result.state;
-    const changed = applyOutlinerVisibilitySnapshot(result.entry.after);
+    const changed = applyOutlinerSnapshot(result.entry.after);
     refreshOutlinerHistoryAvailability();
-    ui.setStatus(`Redid ${result.entry.label}${changed > 0 ? ` (${changed} visibility change${changed === 1 ? '' : 's'})` : ''}.`);
+    ui.setStatus(`Redid ${result.entry.label}${changed > 0 ? ` (${changed} object change${changed === 1 ? '' : 's'})` : ''}.`);
     return true;
-  }, [allocateHistoryOrder, applyOutlinerVisibilitySnapshot, refreshOutlinerHistoryAvailability, ui]);
+  }, [allocateHistoryOrder, applyOutlinerSnapshot, refreshOutlinerHistoryAvailability, ui]);
   const handleEditorUndo = useCallback((): boolean => {
     const candidates = [
       editorUndoAvailable ? { domain: 'editor' as const, order: editorUndoOrder } : null,
@@ -429,7 +415,7 @@ export default function App() {
       undoSkinPaint();
       return true;
     } else if (latest?.domain === 'outliner') {
-      undoOutlinerVisibility();
+      undoOutlinerHistory();
       return true;
     } else {
       undoEditorHistory();
@@ -443,7 +429,7 @@ export default function App() {
     skinUndoAvailable,
     skinUndoOrder,
     undoEditorHistory,
-    undoOutlinerVisibility,
+    undoOutlinerHistory,
     undoSkinPaint,
   ]);
   const handleEditorRedo = useCallback((): boolean => {
@@ -463,7 +449,7 @@ export default function App() {
       redoSkinPaint();
       return true;
     } else if (latest?.domain === 'outliner') {
-      redoOutlinerVisibility();
+      redoOutlinerHistory();
       return true;
     } else {
       redoEditorHistory();
@@ -475,7 +461,7 @@ export default function App() {
     outlinerRedoAvailable,
     outlinerRedoOrder,
     redoEditorHistory,
-    redoOutlinerVisibility,
+    redoOutlinerHistory,
     redoSkinPaint,
     skinRedoAvailable,
     skinRedoOrder,
@@ -533,17 +519,64 @@ export default function App() {
     }
     ui.setStatus(`Submodel context actions ready for ${getOutlinerItemName(event.objectId)}.`);
   }, [getOutlinerItemName, selectedOutlinerIds, ui]);
+  const handleRenameSelectedOutlinerItem = useCallback((requestedName: string) => {
+    if (selectedOutlinerIds.length !== 1) {
+      ui.setStatus('Select exactly one submodel before renaming.');
+      return;
+    }
+    const before = captureOutlinerSnapshot();
+    const result = renameModelObject(
+      model.root,
+      selectedOutlinerIds[0],
+      requestedName,
+      model.clips,
+      sourceFormat,
+    );
+    if (!result.ok) {
+      ui.setStatus(result.message);
+      return;
+    }
+
+    const after = captureOutlinerSnapshot();
+    pushOutlinerHistory(`rename submodel ${result.previousName || 'unnamed'} to ${result.name}`, before, after);
+    setOutlinerRevision((value) => value + 1);
+    ui.setStatus(`Renamed submodel ${result.previousName || 'unnamed'} to ${result.name}.`);
+  }, [captureOutlinerSnapshot, model.clips, model.root, pushOutlinerHistory, selectedOutlinerIds, sourceFormat, ui]);
+  const handleMoveSelectedOutlinerItem = useCallback((direction: ModelObjectReorderDirection) => {
+    if (selectedOutlinerIds.length !== 1) {
+      ui.setStatus('Select exactly one submodel before reordering.');
+      return;
+    }
+    const objectId = selectedOutlinerIds[0];
+    const parentId = model.root?.getObjectByProperty('uuid', objectId)?.parent?.uuid;
+    if (!parentId) {
+      ui.setStatus('The selected submodel has no current parent.');
+      return;
+    }
+
+    const before = captureOutlinerSnapshot([parentId]);
+    const result = reorderModelObject(model.root, objectId, direction, sourceFormat);
+    if (!result.ok) {
+      ui.setStatus(result.message);
+      return;
+    }
+    const after = captureOutlinerSnapshot([result.parentId]);
+    const name = result.object.name || result.object.type || 'submodel';
+    pushOutlinerHistory(`move submodel ${name} ${direction}`, before, after);
+    setOutlinerRevision((value) => value + 1);
+    ui.setStatus(`Moved submodel ${name} ${direction} among its siblings.`);
+  }, [captureOutlinerSnapshot, model.root, pushOutlinerHistory, selectedOutlinerIds, sourceFormat, ui]);
   const handleToggleOutlinerVisibility = useCallback((id: string) => {
     const object = model.root?.getObjectByProperty('uuid', id);
     if (!object) return;
-    const before = captureOutlinerVisibilitySnapshot();
+    const before = captureOutlinerSnapshot();
     object.visible = !object.visible;
-    const after = captureOutlinerVisibilitySnapshot();
-    pushOutlinerVisibilityHistory('outliner visibility toggle', before, after);
+    const after = captureOutlinerSnapshot();
+    pushOutlinerHistory('outliner visibility toggle', before, after);
     setOutlinerRevision((value) => value + 1);
     const name = object.name || object.type || 'submodel';
     ui.setStatus(`${object.visible ? 'Shown' : 'Hidden'} submodel: ${name}`);
-  }, [captureOutlinerVisibilitySnapshot, model.root, pushOutlinerVisibilityHistory, ui]);
+  }, [captureOutlinerSnapshot, model.root, pushOutlinerHistory, ui]);
   const handleSelectAllOutlinerItems = useCallback(() => {
     const ids = outlinerItems.map((item) => item.id);
     setSelectedOutlinerIds(ids);
@@ -554,7 +587,7 @@ export default function App() {
       ui.setStatus('No selected submodels to hide.');
       return;
     }
-    const before = captureOutlinerVisibilitySnapshot();
+    const before = captureOutlinerSnapshot();
     let changed = 0;
     for (const id of selectedOutlinerIds) {
       const object = model.root?.getObjectByProperty('uuid', id);
@@ -563,20 +596,20 @@ export default function App() {
         changed += 1;
       }
     }
-    const after = captureOutlinerVisibilitySnapshot();
-    pushOutlinerVisibilityHistory('hide selected submodels', before, after);
+    const after = captureOutlinerSnapshot();
+    pushOutlinerHistory('hide selected submodels', before, after);
     if (changed > 0) {
       setOutlinerRevision((value) => value + 1);
     }
     ui.setStatus(`Hidden ${changed} selected submodel${changed === 1 ? '' : 's'}.`);
-  }, [captureOutlinerVisibilitySnapshot, model.root, pushOutlinerVisibilityHistory, selectedOutlinerIds, ui]);
+  }, [captureOutlinerSnapshot, model.root, pushOutlinerHistory, selectedOutlinerIds, ui]);
   const handleHideUnselectedOutlinerItems = useCallback(() => {
     if (selectedOutlinerIds.length === 0) {
       ui.setStatus('Select submodels before hiding unselected items.');
       return;
     }
     const selected = new Set(selectedOutlinerIds);
-    const before = captureOutlinerVisibilitySnapshot();
+    const before = captureOutlinerSnapshot();
     let changed = 0;
     for (const item of outlinerItems) {
       if (selected.has(item.id)) continue;
@@ -586,15 +619,15 @@ export default function App() {
         changed += 1;
       }
     }
-    const after = captureOutlinerVisibilitySnapshot();
-    pushOutlinerVisibilityHistory('hide unselected submodels', before, after);
+    const after = captureOutlinerSnapshot();
+    pushOutlinerHistory('hide unselected submodels', before, after);
     if (changed > 0) {
       setOutlinerRevision((value) => value + 1);
     }
     ui.setStatus(`Hidden ${changed} unselected submodel${changed === 1 ? '' : 's'}.`);
-  }, [captureOutlinerVisibilitySnapshot, model.root, outlinerItems, pushOutlinerVisibilityHistory, selectedOutlinerIds, ui]);
+  }, [captureOutlinerSnapshot, model.root, outlinerItems, pushOutlinerHistory, selectedOutlinerIds, ui]);
   const handleUnhideAllOutlinerItems = useCallback(() => {
-    const before = captureOutlinerVisibilitySnapshot();
+    const before = captureOutlinerSnapshot();
     let changed = 0;
     for (const item of outlinerItems) {
       const object = model.root?.getObjectByProperty('uuid', item.id);
@@ -603,13 +636,13 @@ export default function App() {
         changed += 1;
       }
     }
-    const after = captureOutlinerVisibilitySnapshot();
-    pushOutlinerVisibilityHistory('show all submodels', before, after);
+    const after = captureOutlinerSnapshot();
+    pushOutlinerHistory('show all submodels', before, after);
     if (changed > 0) {
       setOutlinerRevision((value) => value + 1);
     }
     ui.setStatus(`Shown ${changed} submodel${changed === 1 ? '' : 's'}.`);
-  }, [captureOutlinerVisibilitySnapshot, model.root, outlinerItems, pushOutlinerVisibilityHistory, ui]);
+  }, [captureOutlinerSnapshot, model.root, outlinerItems, pushOutlinerHistory, ui]);
   const modeWorkspacePanel = (() => {
     if (editorMode === 'rig') {
       return (
@@ -871,6 +904,12 @@ export default function App() {
           onToggleVisibility={handleToggleOutlinerVisibility}
           onSelectAll={handleSelectAllOutlinerItems}
           onClearSelection={handleClearObjectSelection}
+          onRenameSelected={handleRenameSelectedOutlinerItem}
+          onMoveSelected={handleMoveSelectedOutlinerItem}
+          objectEditingEnabled={modelObjectAuthoringEnabled}
+          objectEditingDisabledReason={modelObjectAuthoringDisabledReason}
+          canMoveSelectedEarlier={selectedOutlinerReorder.canMoveEarlier}
+          canMoveSelectedLater={selectedOutlinerReorder.canMoveLater}
           onHideSelected={handleHideSelectedOutlinerItems}
           onHideUnselected={handleHideUnselectedOutlinerItems}
           onUnhideAll={handleUnhideAllOutlinerItems}

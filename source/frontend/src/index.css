@@ -309,6 +309,53 @@ html, body, #root {
   font-size: 10px;
 }
 
+.outliner-rename-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.outliner-rename-form label,
+.outliner-rename-note {
+  grid-column: 1 / -1;
+  color: #94a3b8;
+  font-size: 10px;
+}
+
+.outliner-rename-form input,
+.outliner-rename-form button {
+  min-width: 0;
+  height: 24px;
+  font-size: 10px;
+}
+
+.outliner-rename-form input {
+  width: 100%;
+  padding: 0 5px;
+  border: 1px solid #3d4d64;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+.outliner-rename-form button {
+  padding: 0 6px;
+}
+
+.outliner-order-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.outliner-order-actions button {
+  min-width: 0;
+  height: 24px;
+  padding: 0 5px;
+  font-size: 10px;
+}
+
 .outliner-list {
   display: grid;
   gap: 3px;

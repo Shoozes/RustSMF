@@ -144,8 +144,8 @@
       "label": "Git",
       "buttons": [
         {
-          "label": "Push (Auto-Creates Repo)",
-          "description": "Commits all changes and pushes. Creates a private GitHub repo if one doesn't exist.",
+          "label": "Push reviewed main",
+          "description": "Stages reviewed changes, commits them, and safely syncs configured main without remote rewrites or force pushes.",
           "type": "powershell",
           "script": ".tools/gitpush.ps1",
           "args": [
@@ -157,12 +157,12 @@
           "prompt_arg": {
             "label": "Commit message",
             "flag": "-Message",
-            "initial_value": "manual"
+            "initial_value": "chore: reviewed main update"
           }
         },
         {
-          "label": "Pull / Sync",
-          "description": "Fetches and rebases or merges from the remote repository.",
+          "label": "Fast-forward main",
+          "description": "Fetches configured main and fast-forwards only when the worktree is clean; divergent history requires manual review.",
           "type": "powershell",
           "script": ".tools/gitpull.ps1",
           "args": [

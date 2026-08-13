@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-08-09
+Last reviewed: 2026-08-13
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, and OBJ models. This document owns current behavior, architecture boundaries, format limits, and the verification contract. Forward work belongs in `TODO.md`; pass evidence belongs in `review.md`; recurring failure analysis belongs in `PITFALL_LEDGER.md`.
 
@@ -29,8 +29,8 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 
 ### Authoring workspaces
 
-- Model/View: the Outliner derives groups and meshes from the mounted root, supports row and viewport selection, multi-select, bulk visibility actions, source texture thumbnails, viewport-only selection overlays, and chronological undo/redo.
-- Rig: validation covers skeleton presence, duplicate names, orphan/cyclic hierarchy, skin tuple shape, and invalid skin indices. Non-SMF rigs support rename, reparent, child creation, move, rotate, detach/connect, 90-degree spin, and deletion of unweighted non-root branches with full snapshot undo/redo. Static non-SMF roots (for example mesh-only FBX/OBJ) can use Prepare root skeleton to promote meshes into one shared root-bound SkinnedMesh set so child bones and weight painting become available; preparation is one reversible rig-history transaction and participates in dirty replacement protection.
+- Model/View: the Outliner derives groups and meshes from the mounted root, supports row and viewport selection, multi-select, bulk visibility actions, source texture thumbnails, viewport-only selection overlays, and chronological undo/redo. A single compatible non-SMF submodel can be renamed through a binding-safe, root-unique metadata action or moved earlier/later among eligible siblings without reparenting or disturbing non-Outliner children. Source-SMF names/order, bones, and objects whose names own animation tracks fail closed rather than breaking persistence or bindings. Name, visibility, selection, and scoped parent order share one ID-only snapshot contract; GLB export/re-import preserves successful scene-object rename and order changes.
+- Rig: validation covers skeleton presence, duplicate names, orphan/cyclic hierarchy, skin tuple shape, and invalid skin indices. Non-SMF rigs support rename, reparent, child creation, move, rotate, detach/connect, 90-degree spin, and deletion of unweighted non-root branches with full snapshot undo/redo. Static non-SMF roots (for example mesh-only FBX/OBJ) can use Prepare root skeleton to promote meshes into one shared root-bound SkinnedMesh set so child bones, weight painting, and compatible SMF conversion become available. Preparation preflights every mesh before mutation, rejects existing skinned geometry, allocates a collision-free root name, binds each transformed mesh in its own world space, records one reversible rig-history transaction, and participates in dirty replacement protection.
 - SMF Rig policy is explicit: position/rotation pose edits and inverse-bind local reset are supported; scale export, rename persistence, structural detach/connect, and mirror remain unavailable when the format cannot preserve them.
 - Endpoint and bounded CCD IK are explicit Rig tools with exclusive pointer ownership, cancel restoration, and one history transaction per completed gesture. IK is pose-only; it does not silently create animation keys.
 - Skin: selected-bone paint supports set/add/subtract/auto modes, vertex/triangle targets, bounded spatial candidate indexes, configurable Auto Skin algorithms, normalize, pointer cancel, undo/redo, and supported SMF export. Set mode now separates Target weight (0–1) from brush flow and falloff; flow blends toward the target while Add/Subtract retain incremental behavior. The Skin panel reports raw four-slot influence diagnostics for the hovered vertex, including bone names, finite sums, unweighted vertices, invalid references, invalid weights, and stable issue codes. Paint sampling has explicit Rest / Bind, Frozen Current, and Live Animation modes: Rest uses bind coordinates, Frozen Current captures bone matrices until the mode changes, and Live follows the mixer with a visible safety warning. The selected paint-pose mode and live-warning marker are mirrored in viewport telemetry and reapplied across Skin-mode transitions; imperative cleanup removes only transient brush state. The optional Skin pts overlay samples posed skinned vertices during the viewport loop and remains display-only; unchanged poses skip resampling, while pose, geometry, and skin-attribute changes invalidate the cached sample.
@@ -44,9 +44,9 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 
 - Source-aware Export preserves the high-fidelity SMF path for SMF sources and uses FBX for FBX sources. Explicit GLB, FBX, and SMF actions remain available where valid.
 - SMF export preserves imported node/head structure, deform-order skin indices, finite normalized dual quaternions, normalized tangent handedness, position/rotation pose edits, supported animation edits/metadata, and dirty skin weights. Attribute shape, counts, times, strings, ranges, output size, section arithmetic, relational rig/animation/skin references, and finite numeric payloads are checked by the shared semantic validator before serialization; malformed data is rejected rather than wrapped.
-- Non-SMF-to-SMF conversion uses one explicit boundary: mesh attributes are baked once into model-root Three space, the serializer owns the single Three-to-SMF vector conversion, bones are captured as root-relative world DQs, and clips are sampled through a Three mixer. The app-facing SMF action and roundtrip check remain enabled for compatible skinned GLB/FBX sources; unsupported static roots, scale tracks, incomplete skin data, and malformed geometry remain blocked by diagnostics.
+- Non-SMF-to-SMF conversion uses one explicit boundary: mesh attributes are baked once into model-root Three space, the serializer owns the single Three-to-SMF vector conversion, bones are captured as root-relative world DQs, and clips are sampled through a Three mixer. The app-facing SMF action and roundtrip check remain enabled for compatible skinned GLB/FBX sources and prepared static FBX/OBJ roots; unprepared static roots, scale tracks, incomplete skin data, and malformed geometry remain blocked by diagnostics.
 - GLB export reparses generated bytes and checks finite transforms/tracks plus representative bone, skinned-mesh, clip, name, and track preservation before save.
-- FBX import waits for loader-owned texture work before attaching a parsed root and removes unavailable texture maps before render. Geometry still mounts when texture embeds or external absolute paths cannot be resolved; the load status reports mesh/vertex/bone/clip counts plus notes for static-only roots and skipped maps. Export writes binary FBX 7500 through the vendored MIT `FBXExporter-threejs`, emits typed index/layer arrays, then reparses the bytes and checks representative mesh, skin, bone, clip, and animation endpoint structure before save.
+- FBX import waits concurrently on loader-manager and image readiness under one bounded timeout before attaching a parsed root, then removes unavailable texture maps before render. GLB, FBX, and OBJ share one geometry-attribute preparation contract: missing preview UVs/normals are filled safely, while tangents are computed only for valid indexed triangles with compatible source UVs. Geometry still mounts when texture embeds or external absolute paths cannot be resolved; the load status reports mesh/vertex/bone/clip counts plus notes for static-only roots and skipped maps. Export writes binary FBX 7500 through the vendored MIT `FBXExporter-threejs`, emits typed index/layer arrays, then reparses the bytes and checks representative mesh, skin, bone, clip, and animation endpoint structure before save.
 - Display-only material, opacity, sampler, legacy-lighting, and weight-color previews are restored for the entire asynchronous GLB/FBX exporter call and reapplied only if the same root remains mounted.
 - Export workspace copy states texture behavior per format. GLB is the preferred high-fidelity output for static models, materials/textures, morphs, object tracks, multiple skeletons, and scale animation.
 
@@ -63,6 +63,7 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 | `src/utils/animationFrame.ts` | Shared pending-RAF cancellation guard used by the mount-owned viewport loop and resize callback. |
 | `src/utils/themeViewportGrid.ts` | Theme grid construction, pane visibility, and disposal. |
 | `src/utils/materialPreview.ts` | Source-versus-preview material boundary for async exporters. |
+| `src/utils/modelAuthoring.ts` | ID-only Outliner name/visibility/selection/order snapshots plus guarded non-SMF rename and same-parent reorder policy. |
 | `src/utils/weightPreview.ts` | Selected-bone weight-color preview with original geometry/material restoration and no export-material mutation. |
 | `src/utils/viewportDisplayController.ts` | Viewport texture/opacity preview, legacy SMF lighting substitution, source assignment restoration, and display cleanup. |
 | `src/utils/animationEdits.ts`, `rigEdits.ts`, `rigIk.ts`, `skinWeights.ts`, `skinDiagnostics.ts` | Pure authoring policy, transformations, and raw skin diagnostics with focused unit coverage; animation edits include scoped key operations, clipboard guards, finite boundary-sampled trim, locked-channel protection, and bounded duration/retime transforms; skin history snapshots use keyed indexing for batch comparisons. |
@@ -73,6 +74,7 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 | `src/utils/animationAuthoringController.ts` | Clip creation/CRUD, metadata, trim/retime, locked-bone policy, selected-bone key editing, snap, and animation-history action contract used by `useLoadModel`. |
 | `src/utils/skinPointOverlay.ts` | Viewport-only sampled skin-point construction, cached posed-vertex refresh/invalidation, and disposal; runtime source links stay outside serializable `userData`. |
 | `src/utils/staticMeshSkinPrep.ts` | Reversible promotion of static meshes to one root-bound skeleton, including original skin-attribute restoration for undo/redo. |
+| `src/loaders/geometryAttributes.ts` | Shared preview-safe UV/normal preparation and guarded indexed-tangent generation for GLB, FBX, and OBJ loaders. |
 | `src/loaders/*` | SMF/GLB/FBX/OBJ parsing, conversion, diagnostics, coordinate/DQ math, and validated export. |
 | `src/loaders/smfSemantics.ts` | Shared relational and finite-value validation for parsed, worker-fallback, and serialized `ImportedSmf` payloads. |
 | `src/workers/*` | Runtime-validated SMF worker protocol, client, and worker entry. |
@@ -94,26 +96,29 @@ Primary commands from the repository root:
 - `npm audit --omit=optional` from `source`
 - `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test` from `source/src-tauri`
 
-`verify` owns context-bank validation/tests, lint coverage, ESLint, app/test typechecks, the production-`any` guard, production build, entry-chunk guards, frontend units, and Rust fmt/clippy/tests/check. Playwright runs against one production Vite preview server. Strict screenshots are opt-in. `desktop-smoke` runs an unbundled Tauri build, all Rust tests, and native IPC browser coverage.
+`verify` owns context-bank validation/tests, the main-branch synchronization safety test, lint coverage, ESLint, app/test typechecks, the production-`any` guard, production build, entry-chunk guards, frontend units, and Rust fmt/clippy/tests/check. Playwright runs against one production Vite preview server. Strict screenshots are opt-in. `desktop-smoke` runs an unbundled Tauri build, all Rust tests, and native IPC browser coverage.
 
 When the bundled Playwright Chromium executable is rejected by a managed Windows process boundary, set `RUSTSMF_PLAYWRIGHT_EXECUTABLE` to an approved existing absolute Chrome/Edge executable for that process only. The config validates the path and does not persist or weaken the app sandbox/CSP.
+
+Main-only synchronization uses `.tools/gitpull.ps1` and `.tools/gitpush.ps1` after workspace review. The scripts require the configured `origin` and `main`, refuse active Git operations and unsafe token state, never create/rewrite remotes or force-sync, and verify final local/remote alignment after a normal push. A clean push may rebase reviewed local commits; any conflict is aborted for manual resolution.
 
 The sandbox checkup is diagnostic rather than an app gate. A managed profile may report `python_unavailable`; Python is not required by the Node/PowerShell/Rust verification lane, and the Python Blender fixture scripts are an optional external compatibility check.
 
 Current inventory:
 
-- 307 frontend unit tests across 50 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
+- 323 frontend unit tests across 52 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
 - Extra arguments after `npm.cmd run test:unit --` are forwarded to the Node/tsx test runner, so focused flags such as `--test-name-pattern` execute only matching cases while still loading the deterministic discovered file set.
-- 63 browser cases in eight domain-owned spec files; `npm.cmd run test:e2e:list` from `source/frontend` is the discovery authority.
+- 66 browser cases in eight domain-owned spec files; `npm.cmd run test:e2e:list` from `source/frontend` is the discovery authority.
 - 10 Rust tests; the real-SMF native tests require and parse the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
-- 24 context groups, including one archived compatibility test route and one archived old-editor reference route. The default orientation remains intentionally narrow; focused generation has a 256 KiB ceiling for the largest active routes.
+- 27 context groups, including one archived compatibility test route, one archived old-editor reference route, and a narrow main-synchronization safety route. The default orientation remains intentionally narrow; focused generation has a 256 KiB ceiling for the largest active routes.
 
-The latest command results and any environment-only warnings are recorded in `review.md`.
+The latest command results and any environment-only warnings are recorded in `review.md`. The full 66-case browser suite passed on 2026-08-13 using the approved local browser process; an unprivileged managed-sandbox `spawn EPERM` remains a harness permission boundary rather than an app assertion result.
 
 ## Current Limits
 
 - SMF has no scale channel in the current dual-quaternion path. Scale edits block SMF export rather than being dropped.
-- Non-SMF-to-SMF conversion does not preserve static-only roots, materials/textures in the SMF binary policy, morphs, object-level tracks, multiple skeletons, or scale animation. Mesh transforms and nested deform-bone world poses are baked into the supported single-root contract.
+- SMF scene-object names and hierarchy order are source-owned by the imported payload. Model-workspace rename and reorder are therefore limited to non-SMF sources until the SMF serializer has explicit rewrite contracts.
+- Non-SMF-to-SMF conversion does not preserve unprepared static roots, materials/textures in the SMF binary policy, morphs, object-level tracks, multiple skeletons, or scale animation. Prepared static FBX/OBJ roots become a supported single-root skinned contract; mesh transforms and nested deform-bone world poses are baked into that same boundary.
 - `.gltf` import currently supports self-contained JSON assets. External buffer, image, and other sidecar URIs are not resolved from a lone picker/drop payload; use `.glb` until resource-bundle import is implemented.
 - OBJ import does not resolve a neighboring `.mtl` sidecar and is therefore geometry-focused.
 - The freeform TransformControls gizmo remains single-perspective. Quad/ortho authoring uses pane-aware explicit Rig move/rotate/add-child/endpoint/IK tools; the freeform gizmo is intentionally not rebound across fixed cameras.

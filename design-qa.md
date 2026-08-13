@@ -65,11 +65,8 @@ The current Export tab, current load/export actions, and browser window chrome r
 
 ## Verification
 
-- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed.
-- Frontend unit suite: 241/241 passed on the 2026-08-01 verification run. The visual captures and comparisons remain dated 2026-07-30.
-- Theme visual assertions compile through the test TypeScript gate.
-- Browser-only Playwright: 54/54 passed.
-- In-app browser geometry, empty/restored quad state, source-texture thumbnails, keyframe selection, theme-switch, and responsive checks: passed with zero warnings/errors.
-- Final source/implementation comparison: no open P0, P1, or P2 findings.
+- The visual captures and comparisons remain the dated 2026-07-30 evidence described above; the final source/implementation comparison had no open P0, P1, or P2 finding at that snapshot.
+- Theme visual assertions remain owned by `source/frontend/tests/visual.spec.ts` and compile through the test TypeScript gate.
+- Current suite totals and command evidence live only in `docs/dev/review.md`; current verification commands and policy live in `docs/dev/APP_STATE.md`.
 
 final result: passed

@@ -2,6 +2,36 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-08-13 — Browser certification and safe main synchronization
+
+- Completed the post-fix browser certification: the focused static-root preparation, guarded rename, and sibling reorder flows passed, then the full Playwright suite passed 66/66 with the approved local browser process. The earlier unprivileged `spawn EPERM` result is retained only as a managed-sandbox launch limitation, not a product test failure.
+- Replaced unsafe, duplicated local push/pull automation with shared main-only guards. The controls now require the configured existing origin and `main`, reject active operations, unsafe token state, and mismatches, use a clean fast-forward pull and ordinary post-verified push, and stop for manual resolution instead of force-syncing or selecting conflict sides.
+- Added `scripts/git-main-safety.test.mjs` to the root `verify` gate, updated the local Git-control labels, narrowed the overlapping context-bank route, and moved completed browser certification out of the active authoring backlog.
+
+### Verification
+
+- `node --test scripts/git-main-safety.test.mjs`: 2/2 passed, including current-worktree preflight before credential access.
+- `pwsh -NoProfile -File .\run.ps1 -Task context`: passed with 27 groups, 39.3 KiB default orientation, zero warnings, and 7/7 context-bank tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with the main-safety test, lint/type/build/chunk/production-boundary checks, 323/323 frontend units across 52 files, and 10/10 Rust tests.
+- `npm.cmd run test:e2e -- --reporter=line --workers=1`: passed 66/66 with approved local browser-process access.
+
+## 2026-08-12 — Static-root export integrity, shared geometry preparation, and reversible model authoring
+
+- Hardened static-root skin preparation with all-mesh preflight, fail-closed existing-skinned detection, collision-free root naming, and per-mesh world bind matrices. Transformed roots now deform from their actual placement, and a later invalid mesh cannot leave earlier geometry partially mutated.
+- Replaced duplicated GLB/FBX/OBJ UV/normal/tangent setup with one tested geometry-attribute contract. Tangents are generated only for compatible source UV/normal data and valid indexed triangles, so non-indexed exported triangle soup no longer emits a Three.js error during validation re-import.
+- Made FBX texture readiness waits concurrent under one bounded timeout and cleared the manager timer on early settlement.
+- Added focused static-preparation and geometry tests plus a Rig browser flow for prepare/diagnose/roundtrip/export/undo/redo/replacement behavior. Updated non-SMF export wording to name prepared OBJ/FBX sources accurately.
+- Added guarded single-selection rename for GLB/FBX/OBJ Outliner items. Rename shares the reversible name/visibility/selection snapshot and global history contract, blocks binding-unsafe, duplicate, animated-target, bone, and source-owned SMF names, and is proven through GLB export/re-import.
+- Added guarded same-parent sibling reorder for non-SMF Outliner items. Its ID-only snapshot restores exact child order without retaining a cyclic Three scene graph, preserves interleaved rig/non-Outliner children, participates in global chronology, and is proven through GLB export/re-import.
+- Added the inline rename and move-up/down workflows plus export-format browser registrations. Consolidated duplicated Node `FileReader` export-test setup into one helper and replaced coarse generated-GLB fixture caches with one option-keyed cache so texture/material/sibling variants cannot reuse incompatible bytes.
+- Reconciled current app/user/test docs, removed stale suite totals from dated visual QA, retained only measurable forward work in TODO, recorded the recurring tangent hazard, and organized 26 context groups with separate model-material, model-authoring, and shared geometry-preparation routes.
+
+### Verification
+
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 26 context groups at 38.8 KiB default orientation, lint/type/build/chunk/production-boundary checks, 323/323 frontend units across 52 files, and 10/10 Rust tests.
+- Focused geometry/static-preparation/FBX and model-outliner/rename/reorder/GLB recovery commands passed with no failures; direct fixture generation produced distinct option variants; `npm.cmd run test:e2e:list` discovered 66 browser cases across eight specs.
+- The static-root browser case exposed the pre-fix tangent error only at its final browser-error gate after all functional assertions. The post-fix browser rerun was denied by the local execution-approval usage limit; the repaired static-root and new rename/reorder cases remain explicitly certification-open rather than being reported as browser-green.
+
 ## 2026-08-09 — Integrity pass, context routing, and focused-unit runner
 
 - Audited current docs, code and test import surfaces, production TODO/stub/any markers, async cleanup seams, context routes, and the active backlog. No broken imports/exports or production stubs were found.
