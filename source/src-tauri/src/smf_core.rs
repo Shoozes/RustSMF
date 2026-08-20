@@ -52,15 +52,31 @@ pub fn parse_smf_header_info(bytes: &[u8]) -> Result<SmfHeaderSummary, String> {
     let off_rig = read_u32_le(bytes, off)? as usize;
     off += 4;
     let off_anim = read_u32_le(bytes, off)? as usize;
+    let header_end = off
+        .checked_add(4)
+        .ok_or_else(|| "header offset overflow".to_string())?;
 
     if version != "SMF_v11_by_Snidr_and_Bart" && version != "SMF_v12_by_Snidr_and_Bart" {
         return Err(format!("unsupported version: {}", version));
     }
-    if off_tex == 0
-        || off_model < off_tex
-        || off_rig < off_model
-        || off_anim < off_rig
-        || off_anim + 1 > bytes.len()
+    let tex_count_end = off_tex
+        .checked_add(1)
+        .ok_or_else(|| "texture section offset overflow".to_string())?;
+    let model_count_end = off_model
+        .checked_add(1)
+        .ok_or_else(|| "model section offset overflow".to_string())?;
+    let rig_count_end = off_rig
+        .checked_add(4)
+        .ok_or_else(|| "rig section offset overflow".to_string())?;
+    let anim_count_end = off_anim
+        .checked_add(1)
+        .ok_or_else(|| "animation section offset overflow".to_string())?;
+
+    if off_tex < header_end
+        || tex_count_end > off_model
+        || model_count_end > off_rig
+        || rig_count_end > off_anim
+        || anim_count_end > bytes.len()
     {
         return Err("section offsets invalid or anim short".to_string());
     }
@@ -200,5 +216,36 @@ mod tests {
             parse_smf_header_info(&bytes).expect_err("non-monotonic offsets should fail"),
             "section offsets invalid or anim short",
         );
+    }
+
+    #[test]
+    fn rejects_overlapping_or_truncated_section_envelopes() {
+        let base = minimal_smf_bytes();
+        let offsets_start = b"SMF_v12_by_Snidr_and_Bart\0".len();
+        let invalid_offsets = [
+            [41_u32, 44, 48, 52],
+            [42_u32, 42, 48, 52],
+            [42_u32, 44, 49, 52],
+            [42_u32, 44, 48, base.len() as u32],
+        ];
+
+        for offsets in invalid_offsets {
+            let mut bytes = base.clone();
+            for (index, offset) in offsets.into_iter().enumerate() {
+                let start = offsets_start + index * 4;
+                bytes[start..start + 4].copy_from_slice(&offset.to_le_bytes());
+            }
+
+            let error = parse_smf_header_info(&bytes)
+                .expect_err("overlapping or truncated sections must be rejected");
+            assert_eq!(error, "section offsets invalid or anim short");
+
+            let info = build_smf_desktop_info(&bytes);
+            assert!(!info.valid);
+            assert_eq!(
+                info.error.as_deref(),
+                Some("section offsets invalid or anim short")
+            );
+        }
     }
 }

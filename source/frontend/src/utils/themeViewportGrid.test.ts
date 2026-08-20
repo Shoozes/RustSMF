@@ -5,7 +5,7 @@ import {
   createThemeViewportGrids,
   disposeThemeViewportGrids,
   updateThemeViewportGridVisibility,
-} from './index';
+} from './themeViewportGrid';
 
 describe('theme viewport grids', () => {
   it('creates the three camera-aligned grid planes', () => {

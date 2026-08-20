@@ -254,7 +254,6 @@
       "max_kb": 64,
       "paths": [
         "source/frontend/src/components/Inspector.tsx",
-        "source/frontend/src/utils/index.ts",
         "source/frontend/src/utils/bonePicker.ts",
         "source/frontend/src/utils/boneLabels.ts",
         "source/frontend/src/utils/boneHighlight.ts",
@@ -266,8 +265,7 @@
         "source/frontend/src/utils/threeTypeGuards.test.ts"
       ],
       "notes": [
-        "ThreeViewport owns lifecycle and event timing; these helpers own the leaf rendering, picking, label, and type-guard contracts consumed by it and by loader/rig paths.",
-        "The utility barrel is a supported lightweight surface; keep UI/store modules out of it and verify its exports through test typechecking."
+        "ThreeViewport owns lifecycle and event timing; these directly imported helpers own the leaf rendering, picking, label, and type-guard contracts consumed by it and by loader/rig paths."
       ]
     },
     "feature__rig_ik_pose": {
@@ -375,7 +373,8 @@
       "notes": [
         "The TypeScript codec is the full structural SMF authority; native validation reports header/offset acceptance only.",
         "SMF limits are centralized in smfBinary.ts, including the 512 MiB decoded-memory estimate, and must be changed with focused malformed-input tests and APP_STATE documentation.",
-        "Tangent handedness is normalized at import and byte-packed at export so the fourth tangent component is not silently discarded."
+        "Tangent handedness is normalized at import and byte-packed at export so the fourth tangent component is not silently discarded.",
+        "Native envelope validation requires section starts after the header, minimum count widths, strict non-overlap, and an in-file animation count byte."
       ]
     },
     "subsystem__tauri_bridge": {
@@ -397,6 +396,7 @@
       ],
       "notes": [
         "Rust owns native open/save dialogs; reads require a canonical path previously selected by the native dialog, saves do not accept a frontend path, and all blocking file work is capped at 256 MiB.",
+        "Native reads open the authorized canonical file once, reject non-regular paths, and reject a stream that grows beyond the same 256 MiB cap after metadata inspection.",
         "The frontend passes a Uint8Array byte view to save_file_binary rather than constructing an explicit Array.from number array; typed IPC remains bounded by the same native limit.",
         "Native read responses are untrusted: binaryPayload.ts accepts only ArrayBuffer, Uint8Array, or arrays of integer bytes from 0 through 255 so coercion cannot wrap malformed values.",
         "The Rust tauri-plugin-dialog and frontend @tauri-apps/plugin-dialog declarations are pinned to the same 2.7.1 release; the frontend package is a Tauri build-contract dependency even though dialog invocation is Rust-owned.",

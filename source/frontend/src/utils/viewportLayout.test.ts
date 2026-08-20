@@ -3,7 +3,6 @@ import { describe, it } from 'node:test';
 import * as THREE from 'three';
 import {
   DEFAULT_VIEWPORT_BOUNDS,
-  SimpleOrbit,
   getModelOrbitDistance,
   getMouseForViewport,
   getOrthographicPanDelta,
@@ -11,7 +10,8 @@ import {
   refreshOrthoCameras,
   refreshViewportSpecs,
   type ViewportSpec,
-} from './index';
+} from './viewportLayout';
+import { SimpleOrbit } from './SimpleOrbit';
 
 const assertVectorNear = (
   actual: THREE.Vector3,

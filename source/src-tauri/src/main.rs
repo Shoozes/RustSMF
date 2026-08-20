@@ -3,6 +3,7 @@
 // Provides native file dialogs plus binary SMF/GLB I/O commands.
 
 use std::collections::HashSet;
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::command;
@@ -72,17 +73,57 @@ fn authorize_selected_path(authority: &NativeFileAuthority, path: &str) -> Resul
     Ok(canonical)
 }
 
-fn read_file_bytes_sync(path: &Path) -> Result<Vec<u8>, String> {
-    let metadata = std::fs::metadata(path)
-        .map_err(|error| format!("Failed to inspect {}: {error}", path.display()))?;
-    if metadata.len() > MAX_NATIVE_FILE_BYTES {
+fn read_bytes_bounded<R: Read>(
+    reader: R,
+    reported_len: u64,
+    path: &Path,
+    max_bytes: u64,
+) -> Result<Vec<u8>, String> {
+    if reported_len > max_bytes {
         return Err(format!(
-            "MODEL_INPUT_TOO_LARGE: refusing to read {}: file is {} bytes; maximum is {MAX_NATIVE_FILE_BYTES}",
+            "MODEL_INPUT_TOO_LARGE: refusing to read {}: file is {} bytes; maximum is {max_bytes}",
             path.display(),
-            metadata.len()
+            reported_len
         ));
     }
-    std::fs::read(path).map_err(|error| format!("Failed to read {}: {error}", path.display()))
+
+    let capacity = usize::try_from(reported_len)
+        .map_err(|_| format!("Failed to size native file read for {}", path.display()))?;
+    let read_limit = max_bytes
+        .checked_add(1)
+        .ok_or_else(|| "Native file byte limit is invalid".to_string())?;
+    let mut bytes = Vec::with_capacity(capacity);
+    reader
+        .take(read_limit)
+        .read_to_end(&mut bytes)
+        .map_err(|error| format!("Failed to read {}: {error}", path.display()))?;
+
+    if bytes.len() as u64 > max_bytes {
+        return Err(format!(
+            "MODEL_INPUT_TOO_LARGE: refusing to read {}: file exceeded the maximum of {max_bytes} bytes while reading",
+            path.display()
+        ));
+    }
+    Ok(bytes)
+}
+
+fn read_file_bytes_with_limit(path: &Path, max_bytes: u64) -> Result<Vec<u8>, String> {
+    let file = std::fs::File::open(path)
+        .map_err(|error| format!("Failed to open {}: {error}", path.display()))?;
+    let metadata = file
+        .metadata()
+        .map_err(|error| format!("Failed to inspect {}: {error}", path.display()))?;
+    if !metadata.is_file() {
+        return Err(format!(
+            "MODEL_INPUT_NOT_A_FILE: refusing to read {}: path is not a regular file",
+            path.display()
+        ));
+    }
+    read_bytes_bounded(file, metadata.len(), path, max_bytes)
+}
+
+fn read_file_bytes_sync(path: &Path) -> Result<Vec<u8>, String> {
+    read_file_bytes_with_limit(path, MAX_NATIVE_FILE_BYTES)
 }
 
 async fn read_file_bytes(authority: &NativeFileAuthority, path: String) -> Result<Vec<u8>, String> {
@@ -360,7 +401,7 @@ mod tests {
 
     fn read_test_smf() -> Vec<u8> {
         let path = test_smf_path();
-        std::fs::read(&path).unwrap_or_else(|error| {
+        super::read_file_bytes_sync(&path).unwrap_or_else(|error| {
             panic!(
                 "required native SMF fixture is unreadable at {}: {error}",
                 path.display()
@@ -396,6 +437,49 @@ mod tests {
         );
 
         std::fs::remove_file(path).expect("temporary authority fixture should clean up");
+    }
+
+    #[test]
+    fn native_file_reads_enforce_reported_and_observed_byte_limits() {
+        let path = std::path::Path::new("bounded-reader-fixture.bin");
+
+        let exact = super::read_bytes_bounded(std::io::Cursor::new(b"1234"), 4, path, 4)
+            .expect("a file exactly at the byte limit should be accepted");
+        assert_eq!(exact, b"1234");
+
+        let metadata_rejection =
+            super::read_bytes_bounded(std::io::Cursor::new(b"12345"), 5, path, 4)
+                .expect_err("reported files over the byte limit must be rejected");
+        assert!(metadata_rejection.starts_with("MODEL_INPUT_TOO_LARGE:"));
+
+        let growth_rejection =
+            super::read_bytes_bounded(std::io::Cursor::new(b"12345"), 2, path, 4)
+                .expect_err("reads that grow past reported metadata must remain bounded");
+        assert!(growth_rejection.starts_with("MODEL_INPUT_TOO_LARGE:"));
+        assert!(growth_rejection.contains("while reading"));
+    }
+
+    #[test]
+    fn native_file_reads_reject_non_regular_paths() {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be after the Unix epoch")
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "rustsmf-native-directory-{}-{nonce}",
+            std::process::id()
+        ));
+        std::fs::create_dir(&directory).expect("temporary directory fixture should create");
+
+        let rejected = super::read_file_bytes_with_limit(&directory, 4)
+            .expect_err("directories must not be treated as model byte streams");
+        assert!(
+            rejected.starts_with("MODEL_INPUT_NOT_A_FILE:")
+                || rejected.starts_with("Failed to open"),
+            "non-regular paths must be rejected before reading: {rejected}"
+        );
+
+        std::fs::remove_dir(directory).expect("temporary directory fixture should clean up");
     }
 
     #[test]

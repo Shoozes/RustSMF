@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-08-13
+Last reviewed: 2026-08-20
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, and OBJ models. This document owns current behavior, architecture boundaries, format limits, and the verification contract. Forward work belongs in `TODO.md`; pass evidence belongs in `review.md`; recurring failure analysis belongs in `PITFALL_LEDGER.md`.
 
@@ -10,7 +10,7 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 
 - `run.bat` and `run.ps1` are the canonical Windows launchers. No-argument launch opens the numbered menu; option 2 or `pwsh -File run.ps1 -Task run` starts the installed development app.
 - Browser input, drag/drop, and the native picker accept `.smf`, `.glb`, `.gltf`, `.fbx`, and `.obj`. Unsupported or malformed files produce an error without replacing the current model.
-- Browser metadata and native/test-injected byte payloads share a 256 MiB model-input limit. Browser picker and drop paths reject oversized `File` metadata before `File.arrayBuffer()`; the load boundary repeats the byte-length check for native reads and test fixtures. Native IPC payloads must be an `ArrayBuffer`, `Uint8Array`, or byte array whose entries are integers from 0 through 255; malformed responses fail instead of being silently coerced. A selected browser file that cannot be read is reported as an Open error rather than picker cancellation.
+- Browser metadata and native/test-injected byte payloads share a 256 MiB model-input limit. Browser picker and drop paths reject oversized `File` metadata before `File.arrayBuffer()`; the load boundary repeats the byte-length check for native reads and test fixtures. Native IPC payloads must be an `ArrayBuffer`, `Uint8Array`, or byte array whose entries are integers from 0 through 255; malformed responses fail instead of being silently coerced. Rust opens an authorized canonical file once, rejects non-regular paths, and enforces both the reported and observed byte limits while reading, so replacement/growth races cannot bypass the cap. A selected browser file that cannot be read is reported as an Open error rather than picker cancellation.
 - A replacement requested while pose, animation, skin, rig, editor, or Outliner history is dirty opens an accessible Cancel/Discard decision. File bytes are not materialized until the decision is made; Cancel preserves the current root, selection, dirty flags, and status, while Discard permits one replacement. Parse failure or stale completion keeps the previous model mounted.
 - All picker, file-read, desktop-read, parse, export, and save paths use shared latest-intent ownership. A newer load invalidates older load/export UI completions; failed replacements preserve the mounted root, selection, dirty authoring state, and status.
 - SMF import/export uses a typed Web Worker with owned transferable buffers, nested payload validation, monotonic progress, cancellation, a 120-second timeout, and explicit termination. The client rechecks an abort signal after worker handlers are installed and before `postMessage`, so setup-time cancellation cannot publish or leave a task running. The codec bounds encoded input/output to 256 MiB, decoded allocation estimates to 512 MiB, section reads to declared offsets, strings to 4,095 bytes, and allocation-driving texture/mesh/rig/animation counts; non-finite numeric values and invalid byte ranges fail closed. Synchronous fallback is limited to worker construction or initial `postMessage` failure; runtime worker errors surface instead of repeating work on the UI thread.
@@ -79,7 +79,7 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 | `src/loaders/smfSemantics.ts` | Shared relational and finite-value validation for parsed, worker-fallback, and serialized `ImportedSmf` payloads. |
 | `src/workers/*` | Runtime-validated SMF worker protocol, client, and worker entry. |
 | `src/backend-client/tauri.ts`, `binaryPayload.ts` | Guarded native dialog/read/write adapters, strict native byte normalization, and browser fallbacks. |
-| `source/src-tauri/src/main.rs`, `smf_core.rs` | Tauri commands and shared native SMF header/section parsing. Rust owns the native dialogs, authorizes read paths selected by the dialog, bounds blocking reads/writes to 256 MiB, and accepts typed byte payloads for the save command; native validation reports header/offset acceptance only. |
+| `source/src-tauri/src/main.rs`, `smf_core.rs` | Tauri commands and shared native SMF header/section parsing. Rust owns the native dialogs, authorizes read paths selected by the dialog, opens each read once, rejects non-regular paths, bounds blocking reads/writes to 256 MiB, and accepts typed byte payloads for the save command; native validation reports strict header/offset envelope acceptance only. |
 | `source/frontend/tests/*` | Domain-owned browser suites and committed deterministic fixtures. |
 
 `useLoadModel.ts` and `ThreeViewport.tsx` remain deliberate integration owners for load/export and renderer lifecycle. Animation actions and display/material mutations now have explicit leaf-controller contracts; future extractions still require independent inputs, tests, and one disposal owner.
@@ -109,7 +109,7 @@ Current inventory:
 - 323 frontend unit tests across 52 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
 - Extra arguments after `npm.cmd run test:unit --` are forwarded to the Node/tsx test runner, so focused flags such as `--test-name-pattern` execute only matching cases while still loading the deterministic discovered file set.
 - 66 browser cases in eight domain-owned spec files; `npm.cmd run test:e2e:list` from `source/frontend` is the discovery authority.
-- 10 Rust tests; the real-SMF native tests require and parse the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
+- 13 Rust tests; the native boundary suite covers selected-path authority, same-handle byte limits, strict SMF section envelopes, non-regular path rejection, and the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
 - 27 context groups, including one archived compatibility test route, one archived old-editor reference route, and a narrow main-synchronization safety route. The default orientation remains intentionally narrow; focused generation has a 256 KiB ceiling for the largest active routes.
 
 The latest command results and any environment-only warnings are recorded in `review.md`. The full 66-case browser suite passed on 2026-08-13 using the approved local browser process; an unprivileged managed-sandbox `spawn EPERM` remains a harness permission boundary rather than an app assertion result.

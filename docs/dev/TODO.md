@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-08-13
+Last reviewed: 2026-08-20
 
 This file contains executable forward work only. Current behavior belongs in `APP_STATE.md`; completed work and command evidence belong in `HISTORY.md` and `review.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 

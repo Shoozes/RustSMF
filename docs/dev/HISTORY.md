@@ -2,6 +2,18 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-08-20 — Native read race hardening and context-route cleanup
+
+- Closed the native read size-of-check/size-of-use gap by opening the authorized canonical file once, rejecting non-regular paths, and bounding the observed stream to 256 MiB plus one sentinel byte before returning data.
+- Tightened the Rust SMF envelope parser to reject pre-header, overlapping, undersized, and truncated section offsets before exposing desktop metadata.
+- Removed the unused private frontend utility re-export barrel and its stale context-bank path; live code already imports each utility from its owning module.
+- Reconciled `APP_STATE.md`, `TODO.md`, `summary_bank.json`, and this history entry with the new native boundary and route ownership.
+
+### Verification
+
+- Focused verification before the full gate: `cargo fmt --all -- --check`, `cargo test --all-targets` (13/13), frontend `test:unit` (323/323), and app/test typechecks all passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with context validation, main-safety checks, lint coverage, ESLint, app/test typechecks, the production-`any` guard, Vite build and entry-chunk checks, 323/323 frontend units across 52 files, Rust fmt/clippy/check, and 13/13 Rust tests.
+
 ## 2026-08-13 — Browser certification and safe main synchronization
 
 - Completed the post-fix browser certification: the focused static-root preparation, guarded rename, and sibling reorder flows passed, then the full Playwright suite passed 66/66 with the approved local browser process. The earlier unprivileged `spawn EPERM` result is retained only as a managed-sandbox launch limitation, not a product test failure.
