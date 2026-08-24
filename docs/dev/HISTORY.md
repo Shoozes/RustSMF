@@ -2,6 +2,19 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-08-24 — Clean-checkout external GLTF fixture repair
+
+- Committed the exact nine-byte `mesh.bin` sidecar required by `scene.gltf`, while preserving the global model/weight exclusion through one narrow ignore exception and marking the fixture as binary in Git attributes.
+- Added a focused integrity suite that pins the binary length, ASCII payload, SHA-256 digest, required scene/mesh/texture files, and containment/existence of every relative external URI. The normal unit command is now available as `npm test`; no test generates or repairs the fixture at runtime.
+- Routed the fixture contract through the existing external-model-resource context group and reconciled current-state, review, and test-contract documentation.
+
+### Verification
+
+- Focused external-GLTF fixture integrity tests: 2/2 passed.
+- `npm test` from `source`: 343/343 frontend units passed across 59 files.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed the complete local repository gate, including 15/15 Rust tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: passed 72/72 browser cases with the committed fixture.
+
 ## 2026-08-24 — Recorded hand-wave journey and animation workflow polish
 
 - Added an opt-in headless Playwright journey that loads the committed SMF character, creates a two-second rest-pose clip, selects the visible right forearm through the indexed bone hierarchy, authors three alternating Z-rotation keys, previews the loop, and writes eight ordered screenshots plus a stable WebM under ignored output.

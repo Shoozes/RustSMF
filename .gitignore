@@ -57,6 +57,7 @@ source/frontend/vite.config.d.ts
 *.pt
 *.pth
 *.bin
+!source/frontend/tests/fixtures/external-gltf/mesh.bin
 *.onnx
 
 # Temporary data and directories

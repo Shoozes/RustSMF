@@ -578,6 +578,7 @@
         "source/frontend/src/utils/modelFormat.ts",
         "source/frontend/src/utils/modelResourceBundle.ts",
         "source/frontend/src/utils/modelResourceBundle.test.ts",
+        "source/frontend/src/test/externalGltfFixture.test.ts",
         "source/frontend/tests/export-formats.spec.ts",
         "source/frontend/tests/fixtures/external-gltf/scene.gltf",
         "source/frontend/tests/fixtures/external-gltf/mesh.bin",

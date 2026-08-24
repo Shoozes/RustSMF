@@ -16,6 +16,7 @@
     "typecheck": "npm --workspace frontend run typecheck",
     "typecheck:test": "npm --workspace frontend run typecheck:test",
     "check:production-any": "npm --workspace frontend run check:production-any",
+    "test": "npm run test:unit",
     "test:e2e": "npm --workspace frontend run test:e2e",
     "test:e2e:list": "npm --workspace frontend run test:e2e:list",
     "test:visual-strict": "npm --workspace frontend run test:visual-strict",
