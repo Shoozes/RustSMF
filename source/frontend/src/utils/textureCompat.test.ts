@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as THREE from 'three';
 import { findDuplicateTextureGroups, inspectMeshMaterialCompatibility, summarizeMeshTextures, summarizeObjectTextures } from './textureCompat';
+import { registerMaterialPreviewRoot, unregisterMaterialPreviewRoot, updateMaterialPreview } from './materialPreview';
 
 function makeSkinnedQuadMesh(material: THREE.Material | THREE.Material[]): THREE.SkinnedMesh {
   const geometry = new THREE.PlaneGeometry(1, 1);
@@ -28,6 +29,19 @@ describe('textureCompat.inspectMeshMaterialCompatibility', () => {
     const mesh = makeSkinnedQuadMesh(makeTexturedMaterial(3, 2));
     const diagnostics = inspectMeshMaterialCompatibility(mesh);
     assert.ok(diagnostics.some((d) => d.code === 'SMF_NON_POT_TEXTURE'), 'expected non-POT texture warning');
+  });
+
+  it('keeps source texture diagnostics stable while a viewport preview hides maps', () => {
+    const root = new THREE.Group();
+    const mesh = makeSkinnedQuadMesh(makeTexturedMaterial(3, 2));
+    root.add(mesh);
+    registerMaterialPreviewRoot(root);
+    updateMaterialPreview(root, { textureEnabled: false });
+    try {
+      assert.ok(inspectMeshMaterialCompatibility(mesh).some((d) => d.code === 'SMF_NON_POT_TEXTURE'));
+    } finally {
+      unregisterMaterialPreviewRoot(root);
+    }
   });
 
   it('warns when a skinned mesh has multiple materials', () => {

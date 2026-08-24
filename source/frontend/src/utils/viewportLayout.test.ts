@@ -201,4 +201,38 @@ describe('viewportLayout', () => {
     assert.equal(orbit.yaw, 0.6);
     assert.equal(orbit.pitch, 0.4);
   });
+
+  it('does not keep a touch orbit active after cancellation or window blur', () => {
+    const orbit = new SimpleOrbit();
+    const canvas = new EventTarget() as HTMLCanvasElement;
+    const previousWindow = globalThis.window;
+    const windowTarget = new EventTarget() as Window;
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: windowTarget });
+    try {
+      const changes: number[] = [];
+      const detach = orbit.attach(canvas, () => changes.push(orbit.yaw), () => true);
+      const touch = { clientX: 10, clientY: 10 };
+      const touchStart = new Event('touchstart');
+      Object.defineProperty(touchStart, 'touches', { value: [touch] });
+      canvas.dispatchEvent(touchStart);
+
+      const touchCancel = new Event('touchcancel');
+      canvas.dispatchEvent(touchCancel);
+      const cancelledMove = new Event('touchmove');
+      Object.defineProperty(cancelledMove, 'touches', { value: [{ clientX: 40, clientY: 10 }] });
+      canvas.dispatchEvent(cancelledMove);
+      assert.deepEqual(changes, []);
+
+      canvas.dispatchEvent(touchStart);
+      windowTarget.dispatchEvent(new Event('blur'));
+      const blurredMove = new Event('touchmove');
+      Object.defineProperty(blurredMove, 'touches', { value: [{ clientX: 70, clientY: 10 }] });
+      canvas.dispatchEvent(blurredMove);
+      assert.deepEqual(changes, []);
+
+      detach();
+    } finally {
+      Object.defineProperty(globalThis, 'window', { configurable: true, value: previousWindow });
+    }
+  });
 });

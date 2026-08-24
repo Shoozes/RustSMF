@@ -31,7 +31,8 @@ export class SimpleOrbit {
       this.lastX = e.clientX;
       this.lastY = e.clientY;
     };
-    const onUp = () => { this.dragging = false; };
+    const endDrag = () => { this.dragging = false; };
+    const onUp = endDrag;
     const onMove = (e: MouseEvent) => {
       if (!this.enabled || !this.dragging || !shouldHandle(e.clientX, e.clientY, this.dragButton)) return;
       const dx = e.clientX - this.lastX;
@@ -77,7 +78,8 @@ export class SimpleOrbit {
       this.lastX = tx;
       this.lastY = ty;
     };
-    const onTouchEnd = () => { this.dragging = false; };
+    const onTouchEnd = endDrag;
+    const onTouchCancel = endDrag;
     const onTouchMove = (e: TouchEvent) => {
       if (!this.enabled || !this.dragging || e.touches.length !== 1) return;
       const tx = e.touches[0].clientX;
@@ -93,7 +95,9 @@ export class SimpleOrbit {
     };
     canvas.addEventListener('touchstart', onTouchStart);
     canvas.addEventListener('touchend', onTouchEnd);
+    canvas.addEventListener('touchcancel', onTouchCancel);
     canvas.addEventListener('touchmove', onTouchMove);
+    window.addEventListener('blur', endDrag);
 
     return () => {
       this.dragging = false;
@@ -104,7 +108,9 @@ export class SimpleOrbit {
       canvas.removeEventListener('contextmenu', onContextMenu);
       canvas.removeEventListener('touchstart', onTouchStart);
       canvas.removeEventListener('touchend', onTouchEnd);
+      canvas.removeEventListener('touchcancel', onTouchCancel);
       canvas.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('blur', endDrag);
     };
   }
 

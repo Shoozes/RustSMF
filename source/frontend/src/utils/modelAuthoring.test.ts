@@ -7,6 +7,8 @@ import { disposeThreeObject } from './threeDisposal';
 import {
   applyModelOutlinerSnapshot,
   captureModelOutlinerSnapshot,
+  deleteModelObject,
+  duplicateModelObject,
   getModelObjectReorderAvailability,
   renameModelObject,
   reorderModelObject,
@@ -124,6 +126,67 @@ describe('reorderModelObject', () => {
     assert.equal(boundary.ok, false);
     if (!boundary.ok) assert.equal(boundary.reason, 'boundary');
     assert.deepEqual(root.children.map((child) => child.name), ['Body', 'Cape']);
+  });
+});
+
+describe('duplicateModelObject and deleteModelObject', () => {
+  it('duplicates static submodels and restores the exact parent index through structural snapshots', () => {
+    const { root, group, mesh } = makeModelRoot();
+    const sibling = addRootSibling(root);
+    const beforeState = captureModelOutlinerSnapshot(root, [group.uuid, mesh.uuid, sibling.uuid], [group.uuid], [root.uuid]);
+    const result = duplicateModelObject(root, sibling.uuid, [], 'obj');
+    assert.equal(result.ok, true);
+    if (!result.ok) return;
+    assert.notEqual(result.object, result.sourceObject);
+    assert.notEqual(Reflect.get(result.object, 'geometry'), Reflect.get(result.sourceObject, 'geometry'));
+    assert.notEqual(Reflect.get(result.object, 'material'), Reflect.get(result.sourceObject, 'material'));
+
+    const operation = {
+      object: result.object,
+      parentId: result.parentId,
+      childIndex: result.childIndex,
+    };
+    const before = { ...beforeState, structuralOperation: { ...operation, kind: 'remove' as const } };
+    const after = captureModelOutlinerSnapshot(
+      root,
+      [group.uuid, mesh.uuid, sibling.uuid, result.object.uuid],
+      [result.object.uuid],
+      [root.uuid],
+      { ...operation, kind: 'insert' },
+    );
+    assert.deepEqual(root.children.map((child) => child.name), ['Body', 'Cape', 'Cape Copy']);
+
+    const undone = applyModelOutlinerSnapshot(root, before, [group.uuid, mesh.uuid, sibling.uuid, result.object.uuid]);
+    assert.equal(undone.changes, 1);
+    assert.deepEqual(root.children.map((child) => child.name), ['Body', 'Cape']);
+    const redone = applyModelOutlinerSnapshot(root, after, [group.uuid, mesh.uuid, sibling.uuid]);
+    assert.equal(redone.changes, 1);
+    assert.deepEqual(root.children.map((child) => child.name), ['Body', 'Cape', 'Cape Copy']);
+  });
+
+  it('deletes static submodels but blocks skinned and animated targets before mutation', () => {
+    const { root, mesh } = makeModelRoot();
+    const clip = new THREE.AnimationClip('Move', 1, [
+      new THREE.VectorKeyframeTrack('Armor.position', [0, 1], [0, 0, 0, 1, 0, 0]),
+    ]);
+    const animated = deleteModelObject(root, mesh.uuid, [clip], 'obj');
+    assert.equal(animated.ok, false);
+    if (!animated.ok) assert.equal(animated.reason, 'animated-target');
+    assert.equal(mesh.parent?.name, 'Body');
+
+    const staticRoot = new THREE.Group();
+    const skinned = new THREE.SkinnedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial());
+    skinned.name = 'Skinned';
+    staticRoot.add(skinned);
+    const duplicate = duplicateModelObject(staticRoot, skinned.uuid, [], 'glb');
+    assert.equal(duplicate.ok, false);
+    if (!duplicate.ok) assert.equal(duplicate.reason, 'unsupported-subtree');
+    assert.equal(staticRoot.children.length, 1);
+
+    const animatedDuplicate = duplicateModelObject(root, mesh.uuid, [clip], 'obj');
+    assert.equal(animatedDuplicate.ok, false);
+    if (!animatedDuplicate.ok) assert.equal(animatedDuplicate.reason, 'animated-target');
+    assert.equal(mesh.parent?.name, 'Body');
   });
 });
 

@@ -35,6 +35,7 @@ _temp_payload.txt
 /playwright-report/
 /playwright/.cache/
 /e2e/screenshots/
+/output/playwright/
 source/frontend/artifacts/
 source/frontend/playwright-report/
 source/frontend/test-results/

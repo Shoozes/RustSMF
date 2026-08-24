@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { SkinnedMesh, Material } from 'three';
 
 import type { SmfDiagnostic, SmfDiagnosticLevel } from '../loaders/smfDiagnostics';
-import { getSourceMaterials } from './materialPreview';
+import { getSourceMaterialViews, type SourceMaterialView } from './materialPreview';
 import { isThreeMesh } from './threeTypeGuards';
 
 export interface TextureDiagnostic {
@@ -92,11 +92,15 @@ function addDiagnostic(
   diagnostics.push({ level, code, message, target });
 }
 
-function collectTextureMapsFromMaterial(material: Material, materialIndex: number): MaterialTextureMap[] {
+function collectTextureMapsFromMaterial(
+  material: Material,
+  materialIndex: number,
+  sourceMaps?: SourceMaterialView['sourceMaps'],
+): MaterialTextureMap[] {
   const maps: MaterialTextureMap[] = [];
 
   POT_KEYS.forEach((key) => {
-    const value = Reflect.get(material, key);
+    const value = sourceMaps?.has(key) ? sourceMaps.get(key) : Reflect.get(material, key);
     if (value instanceof THREE.Texture) {
       maps.push({ materialIndex, mapType: key, texture: value });
     }
@@ -119,7 +123,8 @@ function dedupeTextureEntries(entries: MaterialTextureMap[]): MaterialTextureMap
 
 export function inspectMeshMaterialCompatibility(mesh: SkinnedMesh): TextureDiagnostic[] {
   const diagnostics: TextureDiagnostic[] = [];
-  const materials = getSourceMaterials(mesh);
+  const materialViews = getSourceMaterialViews(mesh);
+  const materials = materialViews.map(({ material }) => material);
   const meshName = mesh.name || 'mesh';
 
   if (materials.length > 1) {
@@ -133,9 +138,9 @@ export function inspectMeshMaterialCompatibility(mesh: SkinnedMesh): TextureDiag
   }
 
   const textureMaps: MaterialTextureMap[] = [];
-  materials.forEach((material, materialIndex) => {
+  materialViews.forEach(({ material, sourceMaps }, materialIndex) => {
     if (!material) return;
-    collectTextureMapsFromMaterial(material, materialIndex).forEach((entry) => {
+    collectTextureMapsFromMaterial(material, materialIndex, sourceMaps).forEach((entry) => {
       textureMaps.push(entry);
     });
   });
@@ -179,13 +184,13 @@ export function inspectMeshMaterialCompatibility(mesh: SkinnedMesh): TextureDiag
 }
 
 export function summarizeMeshTextures(mesh: THREE.Mesh): TextureSummary[] {
-  const materials = getSourceMaterials(mesh);
+  const materialViews = getSourceMaterialViews(mesh);
   const meshName = mesh.name || 'mesh';
   const summaries: TextureSummary[] = [];
 
-  materials.forEach((material, materialIndex) => {
+  materialViews.forEach(({ material, sourceMaps }, materialIndex) => {
     if (!material) return;
-    collectTextureMapsFromMaterial(material, materialIndex).forEach((entry) => {
+    collectTextureMapsFromMaterial(material, materialIndex, sourceMaps).forEach((entry) => {
       const size = textureImageSize(entry.texture);
       summaries.push({
         meshName,

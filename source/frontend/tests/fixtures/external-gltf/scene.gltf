@@ -1,0 +1,33 @@
+{
+  "asset": { "version": "2.0", "generator": "RustSMF external-resource fixture" },
+  "scene": 0,
+  "scenes": [{ "nodes": [0] }],
+  "nodes": [{ "mesh": 0, "name": "ExternalResourceTriangle" }],
+  "meshes": [{
+    "name": "ExternalResourceTriangle",
+    "primitives": [{
+      "attributes": { "POSITION": 0 },
+      "material": 0,
+      "mode": 4
+    }]
+  }],
+  "buffers": [{ "uri": "mesh.bin", "byteLength": 9 }],
+  "bufferViews": [{ "buffer": 0, "byteOffset": 0, "byteLength": 9, "target": 34962 }],
+  "accessors": [{
+    "bufferView": 0,
+    "componentType": 5121,
+    "count": 3,
+    "type": "VEC3",
+    "min": [48, 49, 50],
+    "max": [54, 55, 56]
+  }],
+  "materials": [{
+    "name": "ExternalTextureMaterial",
+    "pbrMetallicRoughness": {
+      "baseColorFactor": [1, 1, 1, 1],
+      "baseColorTexture": { "index": 0 }
+    }
+  }],
+  "images": [{ "uri": "texture.png", "mimeType": "image/png" }],
+  "textures": [{ "source": 0 }]
+}

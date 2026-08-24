@@ -2,6 +2,51 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-08-24 — Recorded hand-wave journey and animation workflow polish
+
+- Added an opt-in headless Playwright journey that loads the committed SMF character, creates a two-second rest-pose clip, selects the visible right forearm through the indexed bone hierarchy, authors three alternating Z-rotation keys, previews the loop, and writes eight ordered screenshots plus a stable WebM under ignored output.
+- The journey audits 1440x900 at 125% device scale and fails on document overflow, blocked or disabled controls, unavailable viewport bone picking, unchanged canvas poses, missing timeline keys, critical browser errors, or missing video evidence.
+- Corrected the Animate workspace so its bone list and pose controls remain available, contained the wide toolbar internally, added symmetric `-Z rot`/`+Z rot` controls and clearer indexed-SMF/key-authoring guidance, and made pose nudges report the selected bone and resulting angle.
+- The closing dependency audit identified two high-severity transitive advisories; the lockfile now resolves `brace-expansion` 5.0.9 and `nanoid` 3.3.18, and the declared audit reports zero vulnerabilities.
+
+### Verification
+
+- `pwsh -NoProfile -File .\run.ps1 -Task test:journey`: passed 1/1 and produced `output/playwright/hand-wave-journey/hand-wave-journey.webm` plus eight checkpoint PNGs.
+- `npm audit --omit=optional` from `source`: passed with zero vulnerabilities after the bounded transitive lockfile update.
+
+## 2026-08-24 — Resource bundles, project recovery, rig metadata, and authoring closure
+
+- Added a bounded multi-file resource bundle for browser/drop/native model loading. GLTF external buffers/images and one OBJ MTL/texture bundle now resolve through normalized local names with traversal, remote/data, duplicate/case ambiguity, missing-resource, per-file, aggregate-size, stale-load, and object-URL cleanup guards. The committed external-GLTF fixture proves buffer and texture loading; missing sidecars preserve the mounted model.
+- Added a versioned `.rsproj` project envelope that embeds a validated GLB snapshot and bounded workspace state, including playback selection and rig metadata. Native saves use rotating atomic generations with temp-file synchronization and restoration on failure; browser fallback uses local storage/download, and explicit recovery discovery/read rejects corrupt or unsupported input without replacing the mounted model.
+- Added versioned per-bone rig metadata with standalone `.rig.json` save/load/clear, project embedding, primary-axis normalization, and lock/pin state. CCD IK skips locked/pinned joints, and explicit Solve & bake IK keys commits one animation history transaction while honoring clip locks.
+- Added guarded static model surface authoring: self-contained append, transforms, named material assignment, winding reversal, and normals/tangents preparation. These actions use Outliner history and fail closed for SMF-owned, skinned, animated, or unsupported targets. Added read-only geometry/UV/material/handedness/shader diagnostics and disposable rest-pose ghost, motion-trail, and onion-skin overlays that do not alter export bytes.
+- Extracted and tested the resource, project, rig metadata, diagnostics, pose-overlay, and surface-authoring seams; reconciled all durable docs, summary-bank feature/issue routes, stale TODO claims, and test ownership. The active backlog is now closed with evidence-gated external compatibility limits kept in `APP_STATE.md`.
+
+### Verification
+
+- Focused TypeScript checks: `npm run typecheck`, `npm run typecheck:test`, and 14 focused controller/surface tests passed.
+- Frontend unit gate: 341/341 tests passed across 58 files.
+- Native gate: `cargo fmt --all -- --check` and 15/15 Rust tests passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task context`: passed with 30 groups, 36.2 KiB default orientation, zero warnings, 7/7 context-bank tests, and 4/4 project-integrity tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 341/341 frontend units across 58 files, lint/typecheck/build/chunk checks, Rust fmt/clippy/check, and 15/15 Rust tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: passed 72/72 browser cases with approved local browser-process access; expected missing-resource/read-failure diagnostics remained within their asserted error paths.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:visual-strict`: passed 2/2 committed visual snapshots without refreshing baselines.
+- `pwsh -NoProfile -File .\run.ps1 -Task desktop-smoke`: passed the unbundled Tauri release build, 15/15 Rust tests, and 11/11 native IPC browser cases.
+
+## 2026-08-23 — Project-integrity gate, interrupted-orbit cleanup, and static model transactions
+
+- Added a local project-integrity guard for durable-doc presence, executable TODO fields, research-inbox review status, relative frontend imports, and Rust module declarations. Its focused workflow is routed through `summary_bank.json` and runs before context and application verification.
+- Hardened `SimpleOrbit` so touch cancellation, window blur, and disposal cannot leave a stale drag active; added a focused regression covering both interruption paths.
+- Added guarded static-submodel duplicate/delete actions to Model. Explicit parent/index structural history restores exact placement, static duplicates own cloned geometry/material/texture resources, and bones, skinned subtrees, unsupported sources, and animation targets fail closed before mutation.
+- Added unit and OBJ browser coverage for duplicate/delete guards, exact undo/redo, resource isolation, and GLB export persistence. Reconciled app state, user notes, test ownership, review evidence, TODO review date, and history; the remaining P2/P3 items stay active with duplicate/delete removed from the Model subtasks.
+
+### Verification
+
+- `pwsh -NoProfile -File .\run.ps1 -Task context`: passed with 28 groups, 40.5 KiB default orientation, zero warnings, 7/7 context-bank tests, and 4/4 project-integrity tests.
+- `npm.cmd run test:unit -- --test-name-pattern "touch orbit|resets orbit"` from `source/frontend`: passed the focused 53-test registration slice, including both orbit interruption cases.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 326/326 frontend units across 52 files, Rust fmt/clippy/check, and 13/13 Rust tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: passed 67/67 browser cases; runner-owned ports 5173 and 1420 were clear after cleanup.
+
 ## 2026-08-20 — Native read race hardening and context-route cleanup
 
 - Closed the native read size-of-check/size-of-use gap by opening the authorized canonical file once, rejecting non-regular paths, and bounding the observed stream to 256 MiB plus one sentinel byte before returning data.

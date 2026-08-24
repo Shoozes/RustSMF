@@ -50,13 +50,38 @@ import { createSeqGuard } from '../utils/seqGuard';
 import { disposeThreeObject } from '../utils/threeDisposal';
 import { isThreeBone } from '../utils/threeTypeGuards';
 import {
-  assertModelFileSize,
   assertModelInputSize,
   detectModelFormat,
   supportedModelFormatsLabel,
   type ModelSourceFormat,
 } from '../utils/modelFormat';
+import {
+  createModelResourceBundle,
+  modelResourceBundleSummary,
+  type ModelResourceBundle,
+} from '../utils/modelResourceBundle';
+import {
+  createProjectDocument,
+  decodeProjectDocument,
+  encodeProjectDocument,
+  projectAssetBytes,
+  PROJECT_EXTENSION,
+} from '../utils/projectCodec';
+import {
+  cloneRigMetadata,
+  createRigMetadata,
+  lockedRigBoneNames,
+  normalizeRigMetadata,
+  parseRigMetadata,
+  readRigMetadata,
+  serializeRigMetadata,
+  updateRigBoneMetadata,
+  writeRigMetadata,
+  type RigBoneMetadata,
+  type RigMetadata,
+} from '../utils/rigMetadata';
 import { summarizeObjectTextures } from '../utils/textureCompat';
+import { diagnoseGeometry, type GeometryDiagnosticsReport } from '../utils/geometryDiagnostics';
 import {
   makeSkinEditState,
   type SkinEditState,
@@ -176,8 +201,15 @@ const getTauriClient = async (): Promise<TauriClient> => {
   const clientMod = await import('../backend-client/tauri');
   const client: TauriClient = {
     openFile: clientMod.openFile,
+    readBrowserModelFiles: clientMod.readBrowserModelFiles,
     saveFile: clientMod.saveFile,
+    saveProjectFile: clientMod.saveProjectFile,
+    openProjectFile: clientMod.openProjectFile,
+    autosaveProject: clientMod.autosaveProject,
+    discoverProjectRecovery: clientMod.discoverProjectRecovery,
+    readProjectRecovery: clientMod.readProjectRecovery,
     readBinaryFile: clientMod.readBinaryFile,
+    readBinaryBundle: clientMod.readBinaryBundle,
     invokeCommand: clientMod.invokeCommand,
     peekSmfHeader: clientMod.peekSmfHeader,
     validateSmf: clientMod.validateSmf,
@@ -370,6 +402,12 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const [rigIkSettings, setRigIkSettings] = useState<RigIkSettings>(DEFAULT_RIG_IK_SETTINGS);
   const [rigIkLastResult, setRigIkLastResult] = useState<RigIkSolveResult | null>(null);
   const rigIkLastResultRef = useRef<RigIkSolveResult | null>(null);
+  const rigIkLastTargetRef = useRef<THREE.Vector3 | null>(null);
+  const [rigMetadata, setRigMetadata] = useState<RigMetadata>(() => createRigMetadata(null, null));
+  const [restPoseSnapshot, setRestPoseSnapshot] = useState<AnimationPoseSnapshot | null>(null);
+  const [restPoseGhostEnabled, setRestPoseGhostEnabled] = useState(false);
+  const [motionTrailsEnabled, setMotionTrailsEnabled] = useState(false);
+  const [onionSkinEnabled, setOnionSkinEnabled] = useState(false);
   const [skinEditState, setSkinEditState] = useState<SkinEditState>(() => makeSkinEditState());
   const skinEditStateRef = useRef<SkinEditState>(skinEditState);
   const skinUndoStackRef = useRef<SkinEditHistoryEntry[]>([]);
@@ -477,6 +515,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     // Skin attributes mutate in place; the edit-state identity is the explicit diagnostic revision.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- root identity and skin edit identity are the two invalidation sources.
     [model.root, skinEditState],
+  );
+  const geometryDiagnostics = useMemo<GeometryDiagnosticsReport>(
+    () => diagnoseGeometry(model.root),
+    [model.root],
   );
   const skinSelectedVertexDiagnostic = useMemo<SkinVertexDiagnostic | null>(() => {
     if (!model.root || !selectedSkinVertex) return null;
@@ -648,8 +690,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       poseEdits: clonePoseEditMap(poseEditsRef.current),
       skinEditState: cloneSkinEditState(skinEditStateRef.current),
       skinIndices: captureRigSkinIndexSnapshots(model.root),
+      metadata: cloneRigMetadata(rigMetadata),
     };
-  }, [model.root, model.skeleton, ui.selected]);
+  }, [model.root, model.skeleton, rigMetadata, ui.selected]);
 
   const capturePoseSnapshot = useCallback((boneNames: string[]): PoseHistorySnapshot => {
     const skeleton = model.skeleton;
@@ -757,6 +800,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     commitAnimationEditState(snapshot.animationEditState);
     poseEditsRef.current = clonePoseEditMap(snapshot.poseEdits);
     setPoseEditHasDirtyState(hasPoseEdits(poseEditsRef.current));
+    const nextMetadata = normalizeRigMetadata(snapshot.metadata, root, skeleton);
+    writeRigMetadata(root, nextMetadata);
+    setRigMetadata(nextMetadata);
     commitSkinEditState(cloneSkinEditState(snapshot.skinEditState));
     ui.setSelected(snapshot.selectedBoneName || 'Scene');
     return true;
@@ -976,6 +1022,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     setPoseEditHasDirtyState(false);
     rigIkLastResultRef.current = null;
     setRigIkLastResult(null);
+    rigIkLastTargetRef.current = null;
+    setRigMetadata(createRigMetadata(null, null));
+    setRestPoseSnapshot(null);
     setSmfRoundtripReport(null);
     model.clear();
     ui.setSelected('Scene');
@@ -1008,6 +1057,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       let loaded: LoadedModelResult;
       let importedSmf: ImportedSmf | null = null;
       let smfCodecExecution: SmfCodecExecution | null = null;
+      let resourceBundle: ModelResourceBundle | null = null;
       const name = res.name || res.path || '';
 
       if (res.error) {
@@ -1017,8 +1067,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       let data: Uint8Array | undefined = res.data;
 
       // Record source format for export decision and mode surfaces (FBX path etc.).
-      const detectedSourceFormat = detectModelFormat(name);
-      if (!detectedSourceFormat) {
+      const detectedLoadFormat = detectModelFormat(name);
+      const detectedSourceFormat = res.projectState ? 'glb' : detectedLoadFormat;
+      if (!detectedLoadFormat) {
         throw new Error(`Unsupported model format. Supported formats: ${supportedModelFormatsLabel()}`);
       }
       // Single dynamic import for all Tauri client fns when on desktop .smf path.
@@ -1027,6 +1078,28 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       let tauri: TauriClient | null = null;
       if (res.path) {
         tauri = await getTauriClient();
+      }
+
+      if (res.files && res.files.length > 0) {
+        const entries = [...res.files];
+        const missingNativePaths = entries
+          .filter((entry) => !entry.data && entry.path)
+          .map((entry) => entry.path as string);
+        let nativeBytes: readonly Uint8Array[] = [];
+        if (missingNativePaths.length > 0) {
+          if (!tauri) throw new Error('Tauri client unavailable for native model resource bundle read.');
+          ui.setStatus('Reading selected model resources from desktop...');
+          nativeBytes = await tauri.readBinaryBundle(missingNativePaths);
+          if (!isCurrentLoad()) return;
+        }
+        let nativeIndex = 0;
+        const resourceFiles = entries.map((entry) => {
+          const entryData = entry.data ?? nativeBytes[nativeIndex++];
+          if (!entryData) throw new Error(`Could not obtain binary data for resource "${entry.name}".`);
+          return { name: entry.name, data: entryData };
+        });
+        resourceBundle = createModelResourceBundle(resourceFiles[0], resourceFiles.slice(1));
+        data = resourceBundle.primary.data;
       }
 
       if (!data && res.path) {
@@ -1042,7 +1115,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         assertModelInputSize(name, data.byteLength);
       }
 
-      if (detectedSourceFormat === 'smf') {
+      if (detectedLoadFormat === 'smf') {
         if (!data) {
           throw new Error('Could not obtain binary data for .smf (browser provides via input; desktop uses read_file_binary)');
         }
@@ -1051,14 +1124,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         importedSmf = imported.value;
         smfCodecExecution = imported.execution;
         loaded = buildSmfScene(importedSmf);
-      } else if (detectedSourceFormat === 'fbx') {
+      } else if (detectedLoadFormat === 'fbx') {
         const urlOrBuf: string | ArrayBuffer = data ? bytesToArrayBuffer(data) : (res.path || '');
         loaded = await loadFBX(urlOrBuf);
-      } else if (detectedSourceFormat === 'obj') {
-        const urlOrBuf: string | ArrayBuffer = data ? bytesToArrayBuffer(data) : (res.path || '');
+      } else if (detectedLoadFormat === 'obj') {
+        const urlOrBuf: string | ArrayBuffer | ModelResourceBundle = resourceBundle || (data ? bytesToArrayBuffer(data) : (res.path || ''));
         loaded = await loadOBJ(urlOrBuf);
       } else {
-        const urlOrBuf: string | ArrayBuffer = data ? bytesToArrayBuffer(data) : (res.path || '');
+        const urlOrBuf: string | ArrayBuffer | ModelResourceBundle = resourceBundle || (data ? bytesToArrayBuffer(data) : (res.path || ''));
         loaded = await loadGLB(urlOrBuf);
       }
 
@@ -1078,9 +1151,17 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
       baseClipsRef.current = availableClips;
       animationRestPoseRef.current = captureAnimationPose(loaded.skeleton ?? null);
+      setRestPoseSnapshot(animationRestPoseRef.current);
       model.setRoot(root);
       model.setSkeleton(loaded.skeleton);
       model.setClips(availableClips);
+      const loadedRigMetadata = normalizeRigMetadata(
+        res.projectState?.rigMetadata ?? readRigMetadata(root, loaded.skeleton),
+        root,
+        loaded.skeleton,
+      );
+      writeRigMetadata(root, loadedRigMetadata);
+      setRigMetadata(loadedRigMetadata);
 
       if (availableClips.length > 0) {
         const first = availableClips[0];
@@ -1089,6 +1170,23 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         pb.setDuration(first.duration);
         pb.setIsPlaying(true);
         pb.setCurrentTime(0);
+      }
+
+      if (res.projectState) {
+        const restoredClip = availableClips.find((clip) => (clip.name || '') === res.projectState?.currentClipName)
+          ?? availableClips[0];
+        const pb = playbackRef.current;
+        if (restoredClip) {
+          pb.setCurrentClipName(restoredClip.name || 'clip_0');
+          pb.setDuration(restoredClip.duration);
+          pb.setCurrentTime(Math.min(res.projectState.currentTime, restoredClip.duration));
+        } else {
+          pb.setCurrentClipName('');
+          pb.setDuration(0);
+          pb.setCurrentTime(0);
+        }
+        pb.setPlaybackSpeed(res.projectState.playbackSpeed);
+        pb.setIsPlaying(res.projectState.isPlaying);
       }
 
       const boneCount = loaded.skeleton?.bones?.length ?? 0;
@@ -1114,6 +1212,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         if (smfCodecExecution === 'sync-fallback') {
           status = `${status} | SMF codec: synchronous fallback`;
         }
+        if (resourceBundle) {
+          status = `${status} | ${modelResourceBundleSummary(resourceBundle)}`;
+        }
         if (detectedSourceFormat !== 'smf' && boneCount === 0) {
           status = `${status} — static mesh (no skeleton). Use Rig → Prepare root skeleton to enable weight painting.`;
         }
@@ -1123,7 +1224,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       const primarySelection = loaded.skinnedMeshes?.[0]?.name
         || ('summary' in loaded && loaded.summary?.primaryMeshName)
         || 'root';
-      ui.setSelected(primarySelection);
+      ui.setSelected(res.projectState?.selected || primarySelection);
 
     } catch (e: unknown) {
       if (!isCurrentLoad()) return;
@@ -1188,6 +1289,122 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     if (!isCurrentExport()) return null;
     return { bytes, summary };
   }, [ui]);
+
+  const buildProjectBytes = useCallback(async (verify: boolean): Promise<Uint8Array> => {
+    if (!model.root) throw new Error('No model is loaded for project save.');
+    const assetBytes = await exportGLB(model.root, model.clips);
+    if (verify) {
+      ui.setStatus('Validating project snapshot asset...');
+      await validateExportedGLB(assetBytes, model.root, model.clips);
+    }
+    const document = createProjectDocument({
+      name: model.root.name || 'rustsmf-project',
+      assetBytes,
+      state: {
+        selected: ui.selected,
+        currentClipName: playbackRef.current.currentClipName,
+        currentTime: playbackRef.current.currentTime,
+        playbackSpeed: playbackRef.current.playbackSpeed,
+        isPlaying: playbackRef.current.isPlaying,
+        sourceFormat: sourceFormat as 'smf' | 'glb' | 'fbx' | 'obj' | '',
+        rigMetadata: cloneRigMetadata(rigMetadata),
+      },
+    });
+    return encodeProjectDocument(document);
+  }, [model.clips, model.root, playbackRef, rigMetadata, sourceFormat, ui]);
+
+  const handleSaveProject = useCallback(async () => {
+    await withExportBusy('Save Project', async (isCurrentExport) => {
+      try {
+        const data = await buildProjectBytes(true);
+        if (!isCurrentExport()) return;
+        const ok = await (await getTauriClient()).saveProjectFile(data, `rustsmf-project${PROJECT_EXTENSION}`);
+        if (!isCurrentExport()) return;
+        ui.setStatus(ok ? 'Saved RustSMF project snapshot atomically.' : 'Project save canceled.');
+      } catch (error: unknown) {
+        if (!isCurrentExport()) return;
+        const message = errorMessage(error);
+        ui.setErrorMsg(`Project save error: ${message}`);
+        ui.setStatus(`Project save error: ${message}`);
+      }
+    });
+  }, [buildProjectBytes, ui, withExportBusy]);
+
+  const handleAutosaveProject = useCallback(async () => {
+    if (!model.root || isExportingRef.current) return;
+    try {
+      const data = await buildProjectBytes(false);
+      await (await getTauriClient()).autosaveProject(data);
+    } catch (error: unknown) {
+      ui.setErrorMsg(`Project autosave error: ${errorMessage(error)}`);
+    }
+  }, [buildProjectBytes, model.root, ui]);
+
+  const startProjectLoad = useCallback(async (
+    bytes: Uint8Array,
+    fallbackName: string,
+    loadSeq: number,
+  ): Promise<void> => {
+    const document = decodeProjectDocument(bytes);
+    const result: OpenResult = {
+      name: `${document.name || fallbackName}.glb`,
+      data: projectAssetBytes(document),
+      projectState: document.state,
+    };
+    const start = () => loadModel(result, loadSeq);
+    if (queueOrStartReplacement(`${document.name || fallbackName} project`, start)) return;
+    await start();
+  }, [loadModel, queueOrStartReplacement]);
+
+  const handleOpenProject = useCallback(async () => {
+    if (ui.isLoading) return;
+    const loadSeqGuard = loadSeqGuardRef.current;
+    const loadSeq = beginLoadRequest();
+    ui.setStatus('Opening RustSMF project...');
+    ui.setIsLoading(true);
+    try {
+      const bytes = await (await getTauriClient()).openProjectFile();
+      if (!loadSeqGuard.isCurrent(loadSeq)) return;
+      if (!bytes) {
+        ui.setStatus('No project selected.');
+        return;
+      }
+      await startProjectLoad(bytes, 'rustsmf-project', loadSeq);
+    } catch (error: unknown) {
+      if (!loadSeqGuard.isCurrent(loadSeq)) return;
+      const message = errorMessage(error);
+      ui.setErrorMsg(`Project open error: ${message}`);
+      ui.setStatus(`Project open error: ${message}`);
+    } finally {
+      if (loadSeqGuard.isCurrent(loadSeq)) ui.setIsLoading(false);
+    }
+  }, [beginLoadRequest, startProjectLoad, ui]);
+
+  const handleRecoverProject = useCallback(async () => {
+    if (ui.isLoading) return;
+    const loadSeqGuard = loadSeqGuardRef.current;
+    const loadSeq = beginLoadRequest();
+    ui.setStatus('Checking RustSMF project recovery generations...');
+    ui.setIsLoading(true);
+    try {
+      const generations = await (await getTauriClient()).discoverProjectRecovery();
+      const generation = generations[0];
+      if (!generation) {
+        ui.setStatus('No recoverable project generation was found.');
+        return;
+      }
+      const bytes = await (await getTauriClient()).readProjectRecovery(generation);
+      if (!loadSeqGuard.isCurrent(loadSeq)) return;
+      await startProjectLoad(bytes, generation, loadSeq);
+    } catch (error: unknown) {
+      if (!loadSeqGuard.isCurrent(loadSeq)) return;
+      const message = errorMessage(error);
+      ui.setErrorMsg(`Project recovery error: ${message}`);
+      ui.setStatus(`Project recovery error: ${message}`);
+    } finally {
+      if (loadSeqGuard.isCurrent(loadSeq)) ui.setIsLoading(false);
+    }
+  }, [beginLoadRequest, startProjectLoad, ui]);
 
   const saveFbxExport = useCallback(async (
     root: THREE.Group,
@@ -1472,26 +1689,18 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   ]);
   const handleFileInputChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const input = e.currentTarget;
-    const file = input.files?.[0];
-    if (!file) return;
-    try {
-      assertModelFileSize(file);
-    } catch (err: unknown) {
-      const message = errorMessage(err);
-      ui.setErrorMsg(`File load blocked: ${message}`);
-      ui.setStatus(`File load blocked: ${message}`);
-      input.value = '';
-      return;
-    }
+    const files = Array.from(input.files ?? []);
+    if (files.length === 0) return;
+    const primaryName = files.find((file) => detectModelFormat(file.name) !== '')?.name || files[0].name;
     const loadSeqGuard = loadSeqGuardRef.current;
     const loadSeq = beginLoadRequest();
     const start = async (): Promise<void> => {
       ui.setStatus('Loading selected file...');
       ui.setIsLoading(true);
       try {
-        const buf = await file.arrayBuffer();
+        const result = await (await getTauriClient()).readBrowserModelFiles(files);
         if (!loadSeqGuard.isCurrent(loadSeq)) return;
-        await loadModel({ name: file.name, data: new Uint8Array(buf) }, loadSeq);
+        await loadModel(result, loadSeq);
       } catch (err: unknown) {
         if (!loadSeqGuard.isCurrent(loadSeq)) return;
         const m = errorMessage(err);
@@ -1502,7 +1711,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         if (loadSeqGuard.isCurrent(loadSeq)) ui.setIsLoading(false);
       }
     };
-    if (queueOrStartReplacement(file.name, start)) {
+    if (queueOrStartReplacement(primaryName, start)) {
       input.value = '';
       return;
     }
@@ -1641,6 +1850,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     moveCurrentAnimationClipDown,
     snapPlaybackTime,
     insertAnimationKeyframeAtTime,
+    insertAnimationKeyframesForBonesAtTime,
     insertAnimationKeyframe,
     updateAnimationKeyframe,
     deleteSelectedAnimationKeyframe,
@@ -1677,24 +1887,18 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   }, [ui]);
 
   // Extracted for modularity: drop handler (mirrors handleFileInputChange but for DataTransfer)
-  const handleDrop = useCallback(async (file: File) => {
-    try {
-      assertModelFileSize(file);
-    } catch (err: unknown) {
-      const message = errorMessage(err);
-      ui.setErrorMsg(`Drop load blocked: ${message}`);
-      ui.setStatus(`Drop load blocked: ${message}`);
-      return;
-    }
+  const handleDrop = useCallback(async (files: readonly File[]) => {
+    if (files.length === 0) return;
+    const primaryName = files.find((file) => detectModelFormat(file.name) !== '')?.name || files[0].name;
     const loadSeqGuard = loadSeqGuardRef.current;
     const loadSeq = beginLoadRequest();
     const start = async (): Promise<void> => {
       ui.setStatus('Loading dropped file...');
       ui.setIsLoading(true);
       try {
-        const buf = await file.arrayBuffer();
+        const result = await (await getTauriClient()).readBrowserModelFiles(files);
         if (!loadSeqGuard.isCurrent(loadSeq)) return;
-        await loadModel({ name: file.name, data: new Uint8Array(buf) }, loadSeq);
+        await loadModel(result, loadSeq);
       } catch (err: unknown) {
         if (!loadSeqGuard.isCurrent(loadSeq)) return;
         const m = errorMessage(err);
@@ -1704,8 +1908,44 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         if (loadSeqGuard.isCurrent(loadSeq)) ui.setIsLoading(false);
       }
     };
-    if (!queueOrStartReplacement(file.name, start)) await start();
+    if (!queueOrStartReplacement(primaryName, start)) await start();
   }, [ui, loadModel, beginLoadRequest, queueOrStartReplacement]);
+
+  const loadStaticAppend = useCallback(async (file: File): Promise<THREE.Group | null> => {
+    if (!model.root) {
+      ui.setStatus('Load a base model before appending a static model.');
+      return null;
+    }
+    const format = detectModelFormat(file.name);
+    if (!['glb', 'gltf', 'obj', 'fbx'].includes(format)) {
+      ui.setStatus('Append supports only GLB/GLTF, OBJ, or FBX static assets.');
+      return null;
+    }
+    ui.setIsLoading(true);
+    ui.setStatus(`Reading static append ${file.name}...`);
+    try {
+      const result = await (await getTauriClient()).readBrowserModelFiles([file]);
+      if (result.error) throw new Error(result.error);
+      const bytes = result.data;
+      if (!bytes) throw new Error('The selected static append has no readable bytes.');
+      const loaded = format === 'fbx'
+        ? await loadFBX(bytesToArrayBuffer(bytes))
+        : format === 'obj'
+          ? await loadOBJ(bytesToArrayBuffer(bytes))
+          : await loadGLB(bytesToArrayBuffer(bytes));
+      if (loaded.skeleton && loaded.skeleton.bones.length > 0) {
+        disposeThreeObject(loaded.root);
+        throw new Error('Static append rejected: animated/skinned assets must be opened as the primary model.');
+      }
+      return loaded.root;
+    } catch (error: unknown) {
+      ui.setErrorMsg(`Static append error: ${errorMessage(error)}`);
+      ui.setStatus(`Static append error: ${errorMessage(error)}`);
+      return null;
+    } finally {
+      ui.setIsLoading(false);
+    }
+  }, [model.root, ui]);
 
   // Extracted for modularity: bone selection updates UI state + status (used by Inspector + Viewport raycast)
   const handleSelectBone = useCallback((name: string) => {
@@ -2228,6 +2468,85 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     setPoseEditHasDirtyState(hasPoseEdits(poseEditsRef.current));
   }, []);
 
+  const onRigMetadataChange = useCallback((patch: Partial<RigBoneMetadata>) => {
+    const root = model.root;
+    const skeleton = model.skeleton;
+    const boneName = ui.selected;
+    if (!root || !skeleton || !boneName || boneName === 'Scene' || !findBoneByName(skeleton, boneName)) {
+      ui.setStatus('Select a skeleton bone before changing rig metadata.');
+      return;
+    }
+    const before = captureRigSnapshot();
+    const next = updateRigBoneMetadata(rigMetadata, boneName, patch);
+    writeRigMetadata(root, next);
+    setRigMetadata(next);
+    const after = captureRigSnapshot();
+    if (after) after.metadata = cloneRigMetadata(next);
+    const pushed = pushRigHistory(`update rig metadata for ${boneName}`, before, after);
+    ui.setStatus(pushed ? `Updated rig metadata for ${boneName}.` : `Rig metadata for ${boneName} was unchanged.`);
+  }, [captureRigSnapshot, model.root, model.skeleton, pushRigHistory, rigMetadata, ui]);
+
+  const saveRigMetadata = useCallback(async () => {
+    if (!model.root || !model.skeleton) {
+      ui.setStatus('Load a rig before saving rig metadata.');
+      return;
+    }
+    try {
+      const ok = await (await getTauriClient()).saveFile(
+        serializeRigMetadata(rigMetadata),
+        `${model.root.name || 'rig'}.rig.json`,
+      );
+      ui.setStatus(ok ? 'Saved rig metadata.' : 'Rig metadata save canceled.');
+    } catch (error: unknown) {
+      ui.setErrorMsg(`Rig metadata save error: ${errorMessage(error)}`);
+      ui.setStatus(`Rig metadata save error: ${errorMessage(error)}`);
+    }
+  }, [model.root, model.skeleton, rigMetadata, ui]);
+
+  const loadRigMetadata = useCallback(async (file: File) => {
+    const root = model.root;
+    const skeleton = model.skeleton;
+    if (!root || !skeleton) {
+      ui.setStatus('Load a rig before importing rig metadata.');
+      return;
+    }
+    if (file.size > 1024 * 1024) {
+      ui.setStatus('Rig metadata import was rejected because the file exceeds 1 MiB.');
+      return;
+    }
+    try {
+      const parsed = parseRigMetadata(new Uint8Array(await file.arrayBuffer()));
+      const before = captureRigSnapshot();
+      const next = normalizeRigMetadata(parsed, root, skeleton);
+      writeRigMetadata(root, next);
+      setRigMetadata(next);
+      const after = captureRigSnapshot();
+      if (after) after.metadata = cloneRigMetadata(next);
+      const pushed = pushRigHistory('load rig metadata', before, after);
+      ui.setStatus(pushed ? 'Loaded rig metadata.' : 'Rig metadata was unchanged.');
+    } catch (error: unknown) {
+      ui.setErrorMsg(`Rig metadata load error: ${errorMessage(error)}`);
+      ui.setStatus(`Rig metadata load error: ${errorMessage(error)}`);
+    }
+  }, [captureRigSnapshot, model.root, model.skeleton, pushRigHistory, ui]);
+
+  const clearRigMetadata = useCallback(() => {
+    const root = model.root;
+    const skeleton = model.skeleton;
+    if (!root || !skeleton) {
+      ui.setStatus('Load a rig before clearing rig metadata.');
+      return;
+    }
+    const before = captureRigSnapshot();
+    const next = createRigMetadata(root, skeleton);
+    writeRigMetadata(root, next);
+    setRigMetadata(next);
+    const after = captureRigSnapshot();
+    if (after) after.metadata = cloneRigMetadata(next);
+    const pushed = pushRigHistory('clear rig metadata', before, after);
+    ui.setStatus(pushed ? 'Cleared rig metadata.' : 'Rig metadata was already clear.');
+  }, [captureRigSnapshot, model.root, model.skeleton, pushRigHistory, ui]);
+
   const solveRigIkPose = useCallback((event: RigIkEditEvent): RigIkSolveResult | boolean => {
     const skeleton = model.skeleton;
     if (!skeleton) {
@@ -2255,6 +2574,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         before: capturePoseSnapshot(chainNames),
       };
       rigIkLastResultRef.current = null;
+      rigIkLastTargetRef.current = null;
       setRigIkLastResult(null);
       ui.setSelected(event.boneName);
       return true;
@@ -2270,13 +2590,21 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       applyPoseSnapshot(active.before);
       activeRigIkHistoryRef.current = null;
       rigIkLastResultRef.current = null;
+      rigIkLastTargetRef.current = null;
       setRigIkLastResult(null);
       ui.setStatus(`Canceled IK pose for ${event.boneName}; restored the full chain.`);
       return true;
     }
 
     if (event.phase === 'change') {
-      const result = solveRigIk(skeleton, active.session, event.targetWorld, rigIkSettings);
+      rigIkLastTargetRef.current = event.targetWorld.clone();
+      const result = solveRigIk(skeleton, active.session, event.targetWorld, {
+        ...rigIkSettings,
+        lockedBoneNames: lockedRigBoneNames(rigMetadata),
+        pinnedBoneNames: Object.entries(rigMetadata.bones)
+          .filter(([, metadata]) => metadata.pinned)
+          .map(([name]) => name),
+      });
       model.root?.updateMatrixWorld(true);
       rigIkLastResultRef.current = result;
       setRigIkLastResult((current) => current?.status === result.status ? current : result);
@@ -2326,8 +2654,41 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     pushPoseHistory,
     recordPoseBoneEdit,
     rigIkSettings,
+    rigMetadata,
     ui,
   ]);
+
+  const bakeRigIk = useCallback(() => {
+    const skeleton = model.skeleton;
+    const target = rigIkLastTargetRef.current;
+    const endEffectorName = ui.selected;
+    if (!skeleton || !endEffectorName || endEffectorName === 'Scene') {
+      ui.setStatus('Select an IK end effector before baking.');
+      return;
+    }
+    if (!target) {
+      ui.setStatus('Pose the selected end effector with IK before baking its target.');
+      return;
+    }
+    const created = createRigIkSession(skeleton, endEffectorName, rigIkSettings.chainLength);
+    if (!created.ok) {
+      ui.setStatus(created.message);
+      return;
+    }
+    const result = solveRigIk(skeleton, created.session, target, {
+      ...rigIkSettings,
+      lockedBoneNames: lockedRigBoneNames(rigMetadata),
+      pinnedBoneNames: Object.entries(rigMetadata.bones)
+        .filter(([, metadata]) => metadata.pinned)
+        .map(([name]) => name),
+    });
+    if (result.status === 'stale-chain' || result.status === 'invalid-target') {
+      ui.setStatus(`IK bake was rejected: ${result.status.replace('-', ' ')}.`);
+      return;
+    }
+    insertAnimationKeyframesForBonesAtTime(result.changedBoneNames, playbackRef.current.currentTime);
+    setRigIkLastResult(result);
+  }, [insertAnimationKeyframesForBonesAtTime, model.skeleton, playbackRef, rigIkSettings, rigMetadata, ui]);
 
   // Route bone nudge buttons through pose-edit layer so edits are captured at export time.
   // Applies the delta to the Three.js bone for immediate visual feedback, and records the
@@ -2370,6 +2731,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     skeleton.update();
     const after = capturePoseSnapshot([boneName]);
     pushPoseHistory(`Nudge ${boneName}`, before, after);
+    const changes = [
+      delta.x !== undefined ? `X ${delta.x >= 0 ? '+' : ''}${delta.x.toFixed(2)}` : '',
+      delta.y !== undefined ? `Y ${delta.y >= 0 ? '+' : ''}${delta.y.toFixed(2)}` : '',
+      delta.rotZ !== undefined
+        ? `Z rotation ${delta.rotZ >= 0 ? '+' : ''}${(delta.rotZ * 180 / Math.PI).toFixed(1)}°`
+        : '',
+    ].filter(Boolean);
+    ui.setStatus(`Posed ${boneName}: ${changes.join(', ')}.`);
   }, [capturePoseSnapshot, model.skeleton, pushPoseHistory, ui]);
 
   const handleBoneTransformEdit = useCallback((event: BoneTransformEditEvent) => {
@@ -2938,6 +3307,11 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     loadModel,
     clearLoadedModel,
     handleOpen,
+    loadStaticAppend,
+    handleOpenProject,
+    handleRecoverProject,
+    handleSaveProject,
+    handleAutosaveProject,
     pendingReplacement,
     cancelPendingReplacement,
     confirmPendingReplacement,
@@ -2969,6 +3343,12 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     setRigIkSettings: changeRigIkSettings,
     rigIkLastResult,
     solveRigIkPose,
+    rigMetadata,
+    onRigMetadataChange,
+    saveRigMetadata,
+    loadRigMetadata,
+    clearRigMetadata,
+    bakeRigIk,
     handleBoneTransformEdit,
     onNudgeBone,
     undoEditorHistory,
@@ -2997,6 +3377,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     toggleBoneLabels,
     smfDiagnosticReport,
     materialTextureSummaries,
+    geometryDiagnostics,
+    restPoseSnapshot,
+    restPoseGhostEnabled,
+    setRestPoseGhostEnabled,
+    motionTrailsEnabled,
+    setMotionTrailsEnabled,
+    onionSkinEnabled,
+    setOnionSkinEnabled,
     smfRoundtripReport,
     smfCodecActivity,
     sourceFormat,

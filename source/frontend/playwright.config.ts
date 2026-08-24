@@ -37,6 +37,7 @@ if (
  */
 export default defineConfig({
   testDir: './tests',
+  testIgnore: '**/*.journey.spec.ts',
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

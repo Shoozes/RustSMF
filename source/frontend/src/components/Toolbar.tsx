@@ -6,11 +6,14 @@ import {
   type AppThemeDefinition,
   type AppThemeId,
 } from '../theme';
-import { SUPPORTED_MODEL_ACCEPT } from '../utils/modelFormat';
+import { SUPPORTED_MODEL_RESOURCE_ACCEPT } from '../utils/modelFormat';
 import type { TextureFilterPreview } from '../utils/materialPreview';
 
 interface ToolbarProps {
   onOpen: () => void;
+  onOpenProject: () => void;
+  onSaveProject: () => void;
+  onRecoverProject: () => void;
   onExport: () => void;
   onExportGlb: () => void;
   onExportFbx: () => void;
@@ -61,6 +64,9 @@ interface ToolbarProps {
 
 const Toolbar: React.FC<ToolbarProps> = ({
   onOpen,
+  onOpenProject,
+  onSaveProject,
+  onRecoverProject,
   onExport,
   onExportGlb,
   onExportFbx,
@@ -209,10 +215,19 @@ const Toolbar: React.FC<ToolbarProps> = ({
         <div className="toolbar-brand">{theme.chromeLabel}</div>
         <div className="toolbar-action-group toolbar-file-actions" aria-label="File actions">
           <button className="toolbar-action" data-testid="open-model-btn" onClick={onOpen} disabled={isLoading}>
-            Open
+            Open Asset
           </button>
-          <button className="toolbar-action" data-testid="export-btn" onClick={onExport} disabled={isLoading}>
-            Export
+          <button className="toolbar-action toolbar-action-muted" data-testid="open-project-btn" onClick={onOpenProject} disabled={isLoading}>
+            Open Project
+          </button>
+          <button className="toolbar-action toolbar-action-muted" data-testid="save-project-btn" onClick={onSaveProject} disabled={isLoading || !hasModel}>
+            Save Project
+          </button>
+          <button className="toolbar-action toolbar-action-muted" data-testid="recover-project-btn" onClick={onRecoverProject} disabled={isLoading}>
+            Recover
+          </button>
+          <button className="toolbar-action" data-testid="export-btn" onClick={onExport} disabled={isLoading} title="Export the current project as an asset">
+            Export Asset
           </button>
           <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading}>
             GLB
@@ -418,7 +433,8 @@ const Toolbar: React.FC<ToolbarProps> = ({
         type="file"
         data-testid="model-file-input"
         style={{ display: 'none' }}
-        accept={SUPPORTED_MODEL_ACCEPT}
+        accept={SUPPORTED_MODEL_RESOURCE_ACCEPT}
+        multiple
         onChange={onFileChange}
       />
     </div>

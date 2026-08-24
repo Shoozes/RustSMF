@@ -9,6 +9,8 @@ import type { SkinWeightEditMode } from '../utils/skinWeights';
 import type { RigToolMode } from '../utils/rigEdits';
 import type { RigIkSolveResult } from '../utils/rigIk';
 import { useBoneLabelsWithScale } from '../utils/useBoneLabels';
+import { createPoseOverlaySegments } from '../utils/poseOverlay';
+import type { AnimationPoseSnapshot } from '../utils/animationCreation';
 import {
   createSkinPointOverlays,
   disposeSkinPointOverlays,
@@ -238,6 +240,10 @@ interface ThreeViewportProps {
   shaderEnabled?: boolean;
   perspectiveEnabled?: boolean;
   modelOpacity?: number;
+  restPoseSnapshot?: AnimationPoseSnapshot | null;
+  restPoseGhostEnabled?: boolean;
+  motionTrailsEnabled?: boolean;
+  onionSkinEnabled?: boolean;
   themeId?: AppThemeId;
   onPaintSkinVertices?: (paintVertices: SkinPaintVertex[]) => void;
   onSkinPaintStrokeStart?: () => void;
@@ -296,6 +302,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   shaderEnabled = false,
   perspectiveEnabled = true,
   modelOpacity = 1,
+  restPoseSnapshot = null,
+  restPoseGhostEnabled = false,
+  motionTrailsEnabled = false,
+  onionSkinEnabled = false,
   themeId = 'modern',
   onPaintSkinVertices,
   onSkinPaintStrokeStart,
@@ -371,6 +381,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const currentActionRef = useRef<THREE.AnimationAction | null>(null);
   const attachedModelRef = useRef<THREE.Object3D | null>(null);
   const skeletonHelperRef = useRef<DisposableSkeletonHelper | null>(null);
+  const poseOverlayRef = useRef<THREE.Group | null>(null);
   const playbackIntentRef = useRef<PlaybackIntent>({
     clips,
     currentClipName,
@@ -2589,7 +2600,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       transformControlsControllerRef.current = null;
       transformTargetRef.current = null;
       if (scene) {
-        [boneHighlightRef.current, boneEndpointHandleRef.current, rigIkTargetHandleRef.current, boneHoverMarkerRef.current, skinBrushMarkerRef.current].forEach(marker => {
+        [boneHighlightRef.current, boneEndpointHandleRef.current, rigIkTargetHandleRef.current, boneHoverMarkerRef.current, skinBrushMarkerRef.current, poseOverlayRef.current].forEach(marker => {
           if (!marker) return;
           scene.remove(marker);
           disposeThreeObject(marker);
@@ -2601,6 +2612,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       rigIkTargetWorldRef.current = null;
       boneHoverMarkerRef.current = null;
       skinBrushMarkerRef.current = null;
+      poseOverlayRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- unmount cleanup reads owned refs and must not rerun during the component lifetime.
   }, []);
@@ -2622,6 +2634,40 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     rebuildSelectionOverlays();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- the helper reads synchronized selection refs; the key/revision own invalidation.
   }, [root, selectedObjectIdKey, selectionOverlayRevision]);
+
+  useEffect(() => {
+    const scene = sceneRef.current;
+    const previous = poseOverlayRef.current;
+    if (previous) {
+      scene?.remove(previous);
+      disposeThreeObject(previous);
+      poseOverlayRef.current = null;
+    }
+    if (!scene || !skeleton || !restPoseSnapshot || (!restPoseGhostEnabled && !motionTrailsEnabled && !onionSkinEnabled)) {
+      return;
+    }
+    const segments = createPoseOverlaySegments(skeleton, restPoseSnapshot);
+    const overlay = new THREE.Group();
+    overlay.name = 'RustSMF_PoseDisplayOverlays';
+    const addLines = (positions: Float32Array, color: number, opacity: number): void => {
+      if (positions.length === 0) return;
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      const material = new THREE.LineBasicMaterial({ color, transparent: true, opacity, depthTest: false });
+      const lines = new THREE.LineSegments(geometry, material);
+      lines.renderOrder = 20;
+      overlay.add(lines);
+    };
+    if (restPoseGhostEnabled || onionSkinEnabled) addLines(segments.rest, 0x67e8f9, restPoseGhostEnabled ? 0.7 : 0.28);
+    if (motionTrailsEnabled || onionSkinEnabled) addLines(segments.trails, 0xfbbf24, motionTrailsEnabled ? 0.8 : 0.35);
+    scene.add(overlay);
+    poseOverlayRef.current = overlay;
+    return () => {
+      scene.remove(overlay);
+      disposeThreeObject(overlay);
+      if (poseOverlayRef.current === overlay) poseOverlayRef.current = null;
+    };
+  }, [currentTime, motionTrailsEnabled, onionSkinEnabled, restPoseGhostEnabled, restPoseSnapshot, root, skeleton]);
 
   // Bone labels management (extracted hook for modularity)
   const markerScale = isPrecisionMode ? 2 : 1;

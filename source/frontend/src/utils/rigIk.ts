@@ -15,6 +15,8 @@ export interface RigIkSettings {
   tolerance: number;
   maxJointAngleDegrees: number;
   poleAxis: RigIkPoleAxis;
+  lockedBoneNames?: readonly string[];
+  pinnedBoneNames?: readonly string[];
 }
 
 export const DEFAULT_RIG_IK_SETTINGS: RigIkSettings = {
@@ -114,6 +116,12 @@ export function normalizeRigIkSettings(settings: Partial<RigIkSettings>): RigIkS
       DEFAULT_RIG_IK_SETTINGS.maxJointAngleDegrees,
     ),
     poleAxis,
+    ...(settings.lockedBoneNames ? {
+      lockedBoneNames: Array.from(new Set(settings.lockedBoneNames.filter((name): name is string => typeof name === 'string' && name.length > 0))),
+    } : {}),
+    ...(settings.pinnedBoneNames ? {
+      pinnedBoneNames: Array.from(new Set(settings.pinnedBoneNames.filter((name): name is string => typeof name === 'string' && name.length > 0))),
+    } : {}),
   };
 }
 
@@ -274,11 +282,13 @@ function applyPoleConstraint(
   session: RigIkSession,
   poleAxis: RigIkPoleAxis,
   maxAngleRadians: number,
+  blockedBoneNames: ReadonlySet<string>,
 ): { applied: boolean; constrained: boolean } {
   const direction = poleDirection(poleAxis);
   if (!direction || session.chain.length < 3) return { applied: false, constrained: false };
 
   const rootJoint = session.joints[0];
+  if (blockedBoneNames.has(rootJoint.bone.name)) return { applied: false, constrained: false };
   const rootPosition = rootJoint.solverBone.getWorldPosition(new THREE.Vector3());
   const solverEndEffector = session.solverChain.at(-1)!;
   const endPosition = solverEndEffector.getWorldPosition(new THREE.Vector3());
@@ -349,12 +359,17 @@ export function solveRigIk(
   }
 
   const maxAngleRadians = THREE.MathUtils.degToRad(settings.maxJointAngleDegrees);
+  const blockedBoneNames = new Set([
+    ...(settings.lockedBoneNames ?? []),
+    ...(settings.pinnedBoneNames ?? []),
+  ]);
   let iterations = 0;
   let jointLimitApplied = false;
   if (unreachable) {
     const reachDirection = targetWorld.clone().sub(rootPosition).normalize();
     for (let jointIndex = 0; jointIndex < session.joints.length; jointIndex += 1) {
       const joint = session.joints[jointIndex];
+      if (blockedBoneNames.has(joint.bone.name)) continue;
       const child = session.solverChain[jointIndex + 1];
       const jointPosition = joint.solverBone.getWorldPosition(new THREE.Vector3());
       const segmentDirection = child.getWorldPosition(new THREE.Vector3()).sub(jointPosition);
@@ -373,6 +388,7 @@ export function solveRigIk(
     iterations = iteration + 1;
     for (let jointIndex = session.joints.length - 1; jointIndex >= 0; jointIndex -= 1) {
       const joint = session.joints[jointIndex];
+      if (blockedBoneNames.has(joint.bone.name)) continue;
       const jointPosition = joint.solverBone.getWorldPosition(new THREE.Vector3());
       const effectorVector = solverEndEffector.getWorldPosition(new THREE.Vector3()).sub(jointPosition);
       const targetVector = effectiveTarget.clone().sub(jointPosition);
@@ -395,9 +411,10 @@ export function solveRigIk(
     if (distance <= settings.tolerance) break;
   }
 
-  const pole = applyPoleConstraint(session, settings.poleAxis, maxAngleRadians);
+  const pole = applyPoleConstraint(session, settings.poleAxis, maxAngleRadians, blockedBoneNames);
   jointLimitApplied ||= pole.constrained;
   session.joints.forEach((joint) => {
+    if (blockedBoneNames.has(joint.bone.name)) return;
     joint.bone.quaternion.copy(joint.solverBone.quaternion);
     joint.bone.updateMatrix();
   });

@@ -45,6 +45,8 @@ html, body, #root {
   gap: 10px;
   padding: 8px 12px;
   font-size: 13px;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
 .toolbar-primary,
@@ -745,6 +747,16 @@ html, body, #root {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 5px;
   margin-top: 8px;
+}
+
+.animate-workflow-hint {
+  grid-column: 1 / -1;
+  border-left: 2px solid #38bdf8;
+  padding: 5px 7px;
+  background: rgb(14 116 144 / 12%);
+  color: #bae6fd;
+  font-size: 10px;
+  line-height: 1.35;
 }
 
 .animate-keyframe-tools button {

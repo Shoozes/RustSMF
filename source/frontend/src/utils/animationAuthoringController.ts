@@ -106,6 +106,7 @@ export interface AnimationAuthoringController {
   moveCurrentAnimationClipDown: () => void;
   snapPlaybackTime: (time: number) => number;
   insertAnimationKeyframeAtTime: (time: number) => void;
+  insertAnimationKeyframesForBonesAtTime: (boneNames: readonly string[], time: number) => void;
   insertAnimationKeyframe: () => void;
   updateAnimationKeyframe: () => void;
   deleteSelectedAnimationKeyframe: () => void;
@@ -500,6 +501,42 @@ export function createAnimationAuthoringController(
       pushAnimationHistory(`insert ${scopeKeyframeLabel()} for ${target} at ${keyTime.toFixed(2)}s`, before, next);
       playbackRef.current.scrub(keyTime);
       applyAnimationEditState(next, `Inserted ${scopeKeyframeLabel()} for ${target} at ${keyTime.toFixed(2)}s.`);
+    },
+
+    insertAnimationKeyframesForBonesAtTime(boneNames, time) {
+      const clipName = getCurrentClipKey(baseClipsRef.current, playbackRef.current.currentClipName ?? '');
+      if (!skeleton || !clipName) {
+        setStatus('Load an animated model and select an active clip before baking IK.');
+        return;
+      }
+      const locked = new Set(getActiveAnimationLockedBoneNames(clipName));
+      const requestedNames = Array.from(new Set(boneNames.filter(Boolean)))
+        .filter((name) => !locked.has(name));
+      const bones = requestedNames
+        .map((name) => skeleton.bones.find((bone) => bone.name === name))
+        .filter((bone): bone is THREE.Bone => !!bone);
+      if (bones.length === 0) {
+        setStatus('IK bake was rejected because every affected bone is locked or unavailable.');
+        return;
+      }
+      const keyTime = snapPlaybackTime(time);
+      const state = animationEditStateRef.current;
+      const before = cloneAnimationEditState(state);
+      const keyframes = Object.fromEntries(
+        bones.map((bone) => [bone.name, makeKeyframeFromBone(bone, keyTime, state.interpolation)]),
+      );
+      const next = upsertAnimationKeyframes(state, clipName, keyframes);
+      const pushed = pushAnimationHistory(
+        `bake IK keyframes for ${bones.map((bone) => bone.name).join(', ')} at ${keyTime.toFixed(2)}s`,
+        before,
+        next,
+      );
+      if (!pushed) {
+        setStatus('IK bake was unchanged; no animation transaction was created.');
+        return;
+      }
+      playbackRef.current.scrub(keyTime);
+      applyAnimationEditState(next, `Baked IK keyframes for ${bones.length} bone${bones.length === 1 ? '' : 's'} at ${keyTime.toFixed(2)}s.`);
     },
 
     insertAnimationKeyframe() {

@@ -3,6 +3,7 @@ import assert from 'node:assert';
 import * as THREE from 'three';
 import {
   getSourceMaterials,
+  getSourceMaterialViews,
   registerMaterialPreviewRoot,
   unregisterMaterialPreviewRoot,
   updateMaterialPreview,
@@ -40,6 +41,7 @@ describe('material preview isolation', () => {
 
     assert.equal(material.map, null);
     assert.equal(material.opacity, 0.4);
+    assert.equal(getSourceMaterialViews(mesh)[0]?.sourceMaps.get('map'), texture);
     assert.equal(texture.wrapS, THREE.RepeatWrapping);
     assert.equal(texture.magFilter, THREE.LinearFilter);
 

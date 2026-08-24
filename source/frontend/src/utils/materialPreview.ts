@@ -14,12 +14,14 @@ interface MeshSourceState {
   mesh: THREE.Mesh;
   material: THREE.Material | THREE.Material[];
   colorAttribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute | null;
+  sourceMaterials: MaterialSourceState[];
 }
 
 interface MaterialSourceState {
   material: THREE.Material;
   map: THREE.Texture | null | undefined;
   hasMap: boolean;
+  sourceMaps: Map<string, THREE.Texture | null | undefined>;
   opacity: number;
   transparent: boolean;
   vertexColors: boolean;
@@ -173,26 +175,31 @@ export function registerMaterialPreviewRoot(root: THREE.Object3D): void {
   root.traverse((node) => {
     if (!isThreeMesh(node)) return;
     const mesh = node;
-    const meshState = {
+    const meshState: MeshSourceState = {
       mesh,
       material: mesh.material,
       colorAttribute: mesh.geometry.getAttribute('color') ?? null,
+      sourceMaterials: [],
     };
     meshStates.push(meshState);
     meshes.set(mesh, meshState);
 
     materialList(mesh.material).forEach((material) => {
-      if (!materialStates.has(material.uuid)) {
+      let sourceState = materialStates.get(material.uuid);
+      if (!sourceState) {
         const map = materialMap(material);
-        materialStates.set(material.uuid, {
+        sourceState = {
           material,
           map: map.map,
           hasMap: map.hasMap,
+          sourceMaps: new Map(TEXTURE_KEYS.map((key) => [key, Reflect.get(material, key)])),
           opacity: material.opacity,
           transparent: material.transparent,
           vertexColors: material.vertexColors,
-        });
+        };
+        materialStates.set(material.uuid, sourceState);
       }
+      meshState.sourceMaterials.push(sourceState);
       collectTextures(material).forEach((texture) => {
         if (!textureStates.has(texture.uuid)) {
           textureStates.set(texture.uuid, {
@@ -237,6 +244,22 @@ export function unregisterMaterialPreviewRoot(root: THREE.Object3D): void {
 export function getSourceMaterials(mesh: THREE.Mesh): THREE.Material[] {
   const source = meshes.get(mesh);
   return materialList(source?.material ?? mesh.material);
+}
+
+export interface SourceMaterialView {
+  material: THREE.Material;
+  sourceMaps: ReadonlyMap<string, THREE.Texture | null | undefined>;
+}
+
+export function getSourceMaterialViews(mesh: THREE.Mesh): SourceMaterialView[] {
+  const source = meshes.get(mesh);
+  if (!source) {
+    return materialList(mesh.material).map((material) => ({
+      material,
+      sourceMaps: new Map<string, THREE.Texture | null | undefined>(),
+    }));
+  }
+  return source.sourceMaterials.map(({ material, sourceMaps }) => ({ material, sourceMaps }));
 }
 
 export async function withSourceMaterialState<T>(

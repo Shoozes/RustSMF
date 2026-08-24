@@ -1,10 +1,11 @@
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
-import { SAMPLE_FBX, SAMPLE_INDEPENDENT_FBX, SAMPLE_OBJ, SAMPLE_SMF, expectRenderedScreenshot, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
+import { SAMPLE_EXTERNAL_GLTF, SAMPLE_EXTERNAL_GLTF_BUFFER, SAMPLE_EXTERNAL_GLTF_TEXTURE, SAMPLE_FBX, SAMPLE_INDEPENDENT_FBX, SAMPLE_OBJ, SAMPLE_SMF, expectRenderedScreenshot, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput, createSkinnedGlbFixtureInputWithOptions } from './helpers/skinned-glb-fixture';
 import { readGlbJson } from './helpers/format-assertions';
 import { openViewportDisplayMenu, setViewportLayout, dragRigMoveInOrthoPane, dragRigRotateInOrthoPane } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
+import { decodeProjectDocument } from '../src/utils/projectCodec';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -68,6 +69,40 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       const exportCritical = exportErrors.filter((e: string) => e.includes('ERROR'));
       expect(exportCritical.length).toBe(0);
     });
+
+  test('project save is separate from asset export and reloads the snapshot', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded/i, { timeout: 15000 });
+
+    const projectDownloadPromise = page.waitForEvent('download');
+    await page.getByTestId('save-project-btn').click();
+    const projectDownload = await projectDownloadPromise;
+    expect(projectDownload.suggestedFilename()).toBe('rustsmf-project.rsproj');
+    const projectPath = await projectDownload.path();
+    expect(projectPath).not.toBeNull();
+    const projectBytes = fs.readFileSync(projectPath!);
+    const document = decodeProjectDocument(new Uint8Array(projectBytes));
+    expect(document.kind).toBe('rustsmf-project');
+    expect(document.asset.format).toBe('glb');
+    expect(document.asset.bytesBase64.length).toBeGreaterThan(100);
+
+    const mountedRootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+    const chooserPromise = page.waitForEvent('filechooser');
+    await page.getByTestId('open-project-btn').click();
+    const chooser = await chooserPromise;
+    await chooser.setFiles({ name: 'restored.rsproj', mimeType: 'application/json', buffer: projectBytes });
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded: .*\.glb/i, { timeout: 15000 });
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', /.+/);
+    expect(await page.getByTestId('three-canvas').getAttribute('data-model-root-id')).not.toBe(mountedRootId);
+
+    const corruptChooserPromise = page.waitForEvent('filechooser');
+    await page.getByTestId('open-project-btn').click();
+    const corruptChooser = await corruptChooserPromise;
+    await corruptChooser.setFiles({ name: 'corrupt.rsproj', mimeType: 'application/json', buffer: Buffer.from('{bad project') });
+    await expect(page.getByTestId('status-text')).toContainText(/Project open error: PROJECT_INVALID/i, { timeout: 15000 });
+    await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', /.+/);
+  });
 
   // FBX UI parity coverage: format accept/drop hint/export control presence.
     // Fixture-backed FBX coverage below exercises the loader/export dispatch; generated skinned GLB covers skinned non-SMF fidelity.
@@ -469,7 +504,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
   // OBJ static load parity (per P4 and edge case search).
     // Exercises loadOBJ (static mesh, no skeleton) + status + outliner/inspector (no bones list) + render.
     // Export uses GLB path (intentional limit). Complements SMF/FBX fixture coverage.
-    test('OBJ static load parity (full load if sample)', async ({ page }) => {
+  test('OBJ static load parity (full load if sample)', async ({ page }) => {
       await page.goto('/');
 
       const input = page.getByTestId('model-file-input');
@@ -507,6 +542,33 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       // await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000, { strict: true, name: 'obj-static-parity' });
     });
 
+    test('external GLTF bundle loads its buffer and texture sidecars', async ({ page }) => {
+      await page.goto('/');
+
+      await page.getByTestId('model-file-input').setInputFiles([
+        SAMPLE_EXTERNAL_GLTF,
+        SAMPLE_EXTERNAL_GLTF_BUFFER,
+        SAMPLE_EXTERNAL_GLTF_TEXTURE,
+      ]);
+
+      await expect(page.getByTestId('status-text')).toContainText(/Loaded: scene\.gltf/i, { timeout: 15000 });
+      await expect(page.getByTestId('status-text')).toContainText(/2 sidecar resources/i);
+      await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', /.+/);
+      await expectRenderedScreenshot(page.getByTestId('viewport-container'));
+      expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
+    });
+
+    test('missing GLTF sidecar names the URI and preserves the mounted model', async ({ page }) => {
+      await page.goto('/');
+      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
+      await expect(page.getByTestId('status-text')).toContainText(/Loaded/i, { timeout: 15000 });
+      const mountedRootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+
+      await page.getByTestId('model-file-input').setInputFiles([SAMPLE_EXTERNAL_GLTF, SAMPLE_EXTERNAL_GLTF_TEXTURE]);
+      await expect(page.getByTestId('status-text')).toContainText(/Resource URI .*mesh\.bin.*not found/i, { timeout: 15000 });
+      await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', mountedRootId || '');
+    });
+
     test('OBJ submodel rename is guarded, reversible, and preserved by GLB export', async ({ page }) => {
       await page.goto('/');
       await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
@@ -538,6 +600,79 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       expect(downloadPath).not.toBeNull();
       const exportedGlb = readGlbJson(fs.readFileSync(downloadPath!));
       expect(exportedGlb.nodes?.some((node) => node.name === 'Renamed_OBJ_Part')).toBe(true);
+      expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
+    });
+
+    test('OBJ static submodel duplicate and delete are guarded, reversible, and exportable', async ({ page }) => {
+      await page.goto('/');
+      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+
+      const names = page.getByTestId('outliner-submodel-list').locator('.outliner-name');
+      const originalCount = await names.count();
+      expect(originalCount).toBeGreaterThan(0);
+
+      await page.getByTestId('outliner-submodel-0').locator('.outliner-name-btn').click();
+      await page.getByTestId('outliner-duplicate-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Duplicated submodel .* as .*Copy/i);
+      const duplicatedCount = await names.count();
+      expect(duplicatedCount).toBeGreaterThan(originalCount);
+      await expect(page.locator('.outliner-item').filter({ hasText: /Copy/ }).last()).toHaveAttribute('data-selected', 'true');
+
+      await page.getByTestId('outliner-delete-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Deleted submodel/i);
+      await expect(names).toHaveCount(originalCount);
+
+      await page.getByTestId('editor-undo-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Undid delete submodel/i);
+      await expect(names).toHaveCount(duplicatedCount);
+      await page.getByTestId('editor-undo-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Undid duplicate submodel/i);
+      await expect(names).toHaveCount(originalCount);
+      await page.getByTestId('editor-redo-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Redid duplicate submodel/i);
+      await expect(names).toHaveCount(duplicatedCount);
+
+      const downloadPromise = page.waitForEvent('download');
+      await page.getByTestId('export-glb-btn').click();
+      const download = await downloadPromise;
+      const downloadPath = await download.path();
+      expect(downloadPath).not.toBeNull();
+      const exportedGlb = readGlbJson(fs.readFileSync(downloadPath!));
+      expect(exportedGlb.nodes?.some((node) => /Copy/.test(node.name ?? ''))).toBe(true);
+      expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
+    });
+
+    test('OBJ static authoring transforms, prepares geometry, and appends a second asset', async ({ page }) => {
+      await page.goto('/');
+      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await page.getByTestId('outliner-submodel-0').locator('.outliner-name-btn').click();
+
+      const positionX = page.getByTestId('outliner-position-0');
+      await positionX.fill('1.25');
+      await positionX.press('Tab');
+      await expect(page.getByTestId('status-text')).toContainText(/Transformed/i);
+      await page.getByTestId('editor-undo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Undid transform static submodel/i);
+      await page.getByTestId('editor-redo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Redid transform static submodel/i);
+
+      await page.getByTestId('outliner-flip-winding-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Flipped winding/i);
+      await page.getByTestId('outliner-prepare-geometry-btn').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Prepared geometry attributes/i);
+
+      const names = page.getByTestId('outliner-submodel-list').locator('.outliner-name');
+      const beforeAppend = await names.count();
+      await page.getByTestId('outliner-append-static').locator('input[type="file"]').setInputFiles(SAMPLE_OBJ);
+      await expect(page.getByTestId('status-text')).toContainText(/Appended static model/i, { timeout: 15000 });
+      // OBJ imports retain their asset group and mesh as two Outliner rows,
+      // while the append history entry remains one asset-level operation.
+      await expect(names).toHaveCount(beforeAppend + 2);
+      await page.getByTestId('editor-undo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Undid append static model/i);
+      await expect(names).toHaveCount(beforeAppend);
       expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
     });
 

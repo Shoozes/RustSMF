@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import * as THREE from 'three'
 import ThreeViewport from './components/ThreeViewport'
 import Timeline from './components/Timeline'
 import Outliner from './components/Outliner'
@@ -18,15 +19,25 @@ import { collectModelOutlinerItems } from './utils/modelOutliner'
 import {
   applyModelOutlinerSnapshot,
   captureModelOutlinerSnapshot,
+  deleteModelObject,
+  duplicateModelObject,
   getModelObjectAuthoringDisabledReason,
   getModelObjectReorderAvailability,
   renameModelObject,
   reorderModelObject,
   sameModelOutlinerSnapshot,
   supportsModelObjectAuthoring,
+  type ModelStructuralOperation,
   type ModelObjectReorderDirection,
   type ModelOutlinerSnapshot,
 } from './utils/modelAuthoring'
+import {
+  assignStaticModelMaterial,
+  flipStaticModelWinding,
+  prepareStaticModelGeometry,
+  transformStaticModelObject,
+  type ModelTransformPatch,
+} from './utils/modelSurfaceAuthoring'
 import { getClipByName, summarizeAnimationTimeline } from './utils/animationTimeline'
 import { resolveAnimationScope } from './utils/animationScope'
 import { validateRig } from './utils/rigValidation'
@@ -38,6 +49,7 @@ import {
   pushEditorHistory,
   type EditorHistoryState,
 } from './utils/editorHistory'
+import { disposeThreeObject } from './utils/threeDisposal'
 
 type WorkspaceProfile = {
   showTimeline: boolean;
@@ -76,8 +88,8 @@ const WORKSPACE_BY_MODE: Record<EditorMode, WorkspaceProfile> = {
   animate: {
     showTimeline: true,
     showClipList: true,
-    showBonePanel: false,
-    showTransformControls: false,
+    showBonePanel: true,
+    showTransformControls: true,
     showWeightSection: false,
     boneLabelsEnabledByDefault: false,
   },
@@ -116,6 +128,11 @@ export default function App() {
     model,
     playback,
     handleOpen,
+    loadStaticAppend,
+    handleOpenProject,
+    handleRecoverProject,
+    handleSaveProject,
+    handleAutosaveProject,
     pendingReplacement,
     cancelPendingReplacement,
     confirmPendingReplacement,
@@ -147,6 +164,12 @@ export default function App() {
     setRigIkSettings,
     rigIkLastResult,
     solveRigIkPose,
+    rigMetadata,
+    onRigMetadataChange,
+    saveRigMetadata,
+    loadRigMetadata,
+    clearRigMetadata,
+    bakeRigIk,
     handleBoneTransformEdit,
     onNudgeBone,
     undoEditorHistory,
@@ -175,6 +198,14 @@ export default function App() {
     toggleBoneLabels,
     smfDiagnosticReport,
     materialTextureSummaries,
+    geometryDiagnostics,
+    restPoseSnapshot,
+    restPoseGhostEnabled,
+    setRestPoseGhostEnabled,
+    motionTrailsEnabled,
+    setMotionTrailsEnabled,
+    onionSkinEnabled,
+    setOnionSkinEnabled,
     smfRoundtripReport,
     smfCodecActivity,
     skinEditHasDirtyState,
@@ -282,6 +313,17 @@ export default function App() {
         : 'disabled';
   const shouldShowBoneLabels = showBoneLabels || workspace.boneLabelsEnabledByDefault;
   const hasModel = !!model.root;
+  const autosaveProjectRef = useRef(handleAutosaveProject);
+  useEffect(() => {
+    autosaveProjectRef.current = handleAutosaveProject;
+  }, [handleAutosaveProject]);
+  useEffect(() => {
+    if (!hasModel) return;
+    const timer = window.setTimeout(() => {
+      void autosaveProjectRef.current();
+    }, 1200);
+    return () => window.clearTimeout(timer);
+  }, [hasModel, model.root, editorUndoOrder, outlinerRevision, skinUndoOrder]);
   const handleThemeChange = useCallback((nextThemeId: AppThemeId) => {
     const nextTheme = getAppTheme(nextThemeId);
     setThemeId(nextThemeId);
@@ -342,24 +384,39 @@ export default function App() {
     setOutlinerUndoOrder(outlinerHistoryRef.current.undo.at(-1)?.order ?? 0);
     setOutlinerRedoOrder(outlinerHistoryRef.current.redo.at(-1)?.redoOrder ?? 0);
   }, []);
-  const captureOutlinerSnapshot = useCallback((orderedParentIds: Iterable<string> = []): ModelOutlinerSnapshot => (
+  const releaseDetachedOutlinerHistoryObjects = useCallback((snapshots: readonly ModelOutlinerSnapshot[]): void => {
+    const objects = new Set<THREE.Object3D>();
+    for (const snapshot of snapshots) {
+      const operation = snapshot.structuralOperation;
+      if (operation?.disposeOnRelease) objects.add(operation.object);
+    }
+    for (const object of objects) {
+      if (!object.parent) disposeThreeObject(object);
+    }
+  }, []);
+  const captureOutlinerSnapshot = useCallback((
+    orderedParentIds: Iterable<string> = [],
+    selectedIds: Iterable<string> = selectedOutlinerIds,
+    structuralOperation?: ModelStructuralOperation,
+  ): ModelOutlinerSnapshot => (
     captureModelOutlinerSnapshot(
       model.root,
-      outlinerItems.map((item) => item.id),
-      selectedOutlinerIds,
+      collectModelOutlinerItems(model.root).map((item) => item.id),
+      selectedIds,
       orderedParentIds,
+      structuralOperation,
     )
-  ), [model.root, outlinerItems, selectedOutlinerIds]);
+  ), [model.root, selectedOutlinerIds]);
   const applyOutlinerSnapshot = useCallback((snapshot: ModelOutlinerSnapshot): number => {
     const result = applyModelOutlinerSnapshot(
       model.root,
       snapshot,
-      outlinerItems.map((item) => item.id),
+      collectModelOutlinerItems(model.root).map((item) => item.id),
     );
     setSelectedOutlinerIds(result.selectedIds);
     setOutlinerRevision((value) => value + 1);
     return result.changes;
-  }, [model.root, outlinerItems]);
+  }, [model.root]);
   const pushOutlinerHistory = useCallback((
     label: string,
     before: ModelOutlinerSnapshot,
@@ -367,7 +424,8 @@ export default function App() {
   ): boolean => {
     if (sameModelOutlinerSnapshot(before, after)) return false;
 
-    outlinerHistoryRef.current = pushEditorHistory(outlinerHistoryRef.current, {
+    const previousEntries = [...outlinerHistoryRef.current.undo, ...outlinerHistoryRef.current.redo];
+    const nextHistory = pushEditorHistory(outlinerHistoryRef.current, {
       id: `outliner-${outlinerHistoryIdRef.current += 1}`,
       label,
       domain: 'outliner',
@@ -375,9 +433,23 @@ export default function App() {
       after,
       order: allocateHistoryOrder(),
     });
+    const retainedSnapshots = nextHistory.undo.flatMap((entry) => [entry.before, entry.after])
+      .concat(nextHistory.redo.flatMap((entry) => [entry.before, entry.after]));
+    const retainedObjects = new Set(
+      retainedSnapshots.map((snapshot) => snapshot.structuralOperation?.object).filter((object): object is THREE.Object3D => !!object),
+    );
+    releaseDetachedOutlinerHistoryObjects(
+      previousEntries
+        .flatMap((entry) => [entry.before, entry.after])
+        .filter((snapshot) => {
+          const object = snapshot.structuralOperation?.object;
+          return !!object && !retainedObjects.has(object);
+        }),
+    );
+    outlinerHistoryRef.current = nextHistory;
     refreshOutlinerHistoryAvailability();
     return true;
-  }, [allocateHistoryOrder, refreshOutlinerHistoryAvailability]);
+  }, [allocateHistoryOrder, refreshOutlinerHistoryAvailability, releaseDetachedOutlinerHistoryObjects]);
   const undoOutlinerHistory = useCallback((): boolean => {
     const result = popUndo(outlinerHistoryRef.current, allocateHistoryOrder());
     if (!result.entry) return false;
@@ -542,6 +614,114 @@ export default function App() {
     setOutlinerRevision((value) => value + 1);
     ui.setStatus(`Renamed submodel ${result.previousName || 'unnamed'} to ${result.name}.`);
   }, [captureOutlinerSnapshot, model.clips, model.root, pushOutlinerHistory, selectedOutlinerIds, sourceFormat, ui]);
+  const handleDuplicateSelectedOutlinerItem = useCallback(() => {
+    if (selectedOutlinerIds.length !== 1) {
+      ui.setStatus('Select exactly one submodel before duplicating.');
+      return;
+    }
+    const beforeState = captureOutlinerSnapshot();
+    const result = duplicateModelObject(model.root, selectedOutlinerIds[0], model.clips, sourceFormat);
+    if (!result.ok) {
+      ui.setStatus(result.message);
+      return;
+    }
+    const structural = {
+      object: result.object,
+      parentId: result.parentId,
+      childIndex: result.childIndex,
+      disposeOnRelease: true,
+    } satisfies Omit<ModelStructuralOperation, 'kind'>;
+    const before: ModelOutlinerSnapshot = {
+      ...beforeState,
+      structuralOperation: { ...structural, kind: 'remove' },
+    };
+    const after = captureOutlinerSnapshot([], [result.object.uuid], { ...structural, kind: 'insert' });
+    pushOutlinerHistory(`duplicate submodel ${result.sourceObject.name || 'unnamed'}`, before, after);
+    setSelectedOutlinerIds([result.object.uuid]);
+    setOutlinerRevision((value) => value + 1);
+    ui.setStatus(`Duplicated submodel ${result.sourceObject.name || 'unnamed'} as ${result.object.name}.`);
+  }, [captureOutlinerSnapshot, model.clips, model.root, pushOutlinerHistory, selectedOutlinerIds, sourceFormat, ui]);
+  const handleAppendStaticModel = useCallback(async (file: File) => {
+    const appendRoot = await loadStaticAppend(file);
+    if (!appendRoot || !model.root) return;
+    const parent = model.root;
+    const beforeState = captureOutlinerSnapshot();
+    parent.add(appendRoot);
+    appendRoot.name = appendRoot.name || file.name.replace(/\.[^.]+$/, '');
+    const structural = {
+      object: appendRoot,
+      parentId: parent.uuid,
+      childIndex: parent.children.indexOf(appendRoot),
+      disposeOnRelease: true,
+    } satisfies Omit<ModelStructuralOperation, 'kind'>;
+    const before: ModelOutlinerSnapshot = {
+      ...beforeState,
+      structuralOperation: { ...structural, kind: 'remove' },
+    };
+    const after = captureOutlinerSnapshot([], [appendRoot.uuid], { ...structural, kind: 'insert' });
+    pushOutlinerHistory(`append static model ${appendRoot.name}`, before, after);
+    setSelectedOutlinerIds([appendRoot.uuid]);
+    setOutlinerRevision((value) => value + 1);
+    ui.setStatus(`Appended static model ${appendRoot.name}.`);
+  }, [captureOutlinerSnapshot, loadStaticAppend, model.root, pushOutlinerHistory, ui]);
+  const applySelectedSurfaceEdit = useCallback((
+    label: string,
+    operation: (objectId: string) => { ok: true; object: THREE.Object3D; message: string } | { ok: false; message: string },
+  ) => {
+    if (selectedOutlinerIds.length !== 1) {
+      ui.setStatus('Select exactly one submodel before editing its surface.');
+      return;
+    }
+    const before = captureOutlinerSnapshot();
+    const result = operation(selectedOutlinerIds[0]);
+    if (!result.ok) {
+      ui.setStatus(result.message);
+      return;
+    }
+    const after = captureOutlinerSnapshot();
+    const pushed = pushOutlinerHistory(label, before, after);
+    setOutlinerRevision((value) => value + 1);
+    ui.setStatus(pushed ? result.message : `${result.message} No change was recorded.`);
+  }, [captureOutlinerSnapshot, pushOutlinerHistory, selectedOutlinerIds, ui]);
+  const handleTransformSelectedOutlinerItem = useCallback((patch: ModelTransformPatch) => {
+    applySelectedSurfaceEdit('transform static submodel', (objectId) => transformStaticModelObject(model.root, objectId, patch, model.clips, sourceFormat));
+  }, [applySelectedSurfaceEdit, model.clips, model.root, sourceFormat]);
+  const handleAssignSelectedMaterial = useCallback((name: string) => {
+    applySelectedSurfaceEdit(`assign material ${name}`, (objectId) => assignStaticModelMaterial(model.root, objectId, name, model.clips, sourceFormat));
+  }, [applySelectedSurfaceEdit, model.clips, model.root, sourceFormat]);
+  const handleFlipSelectedWinding = useCallback(() => {
+    applySelectedSurfaceEdit('flip static submodel winding', (objectId) => flipStaticModelWinding(model.root, objectId, model.clips, sourceFormat));
+  }, [applySelectedSurfaceEdit, model.clips, model.root, sourceFormat]);
+  const handlePrepareSelectedGeometry = useCallback(() => {
+    applySelectedSurfaceEdit('prepare static geometry attributes', (objectId) => prepareStaticModelGeometry(model.root, objectId, model.clips, sourceFormat));
+  }, [applySelectedSurfaceEdit, model.clips, model.root, sourceFormat]);
+  const handleDeleteSelectedOutlinerItem = useCallback(() => {
+    if (selectedOutlinerIds.length !== 1) {
+      ui.setStatus('Select exactly one submodel before deleting.');
+      return;
+    }
+    const beforeState = captureOutlinerSnapshot();
+    const result = deleteModelObject(model.root, selectedOutlinerIds[0], model.clips, sourceFormat);
+    if (!result.ok) {
+      ui.setStatus(result.message);
+      return;
+    }
+    const structural = {
+      object: result.object,
+      parentId: result.parentId,
+      childIndex: result.childIndex,
+      disposeOnRelease: false,
+    } satisfies Omit<ModelStructuralOperation, 'kind'>;
+    const before: ModelOutlinerSnapshot = {
+      ...beforeState,
+      structuralOperation: { ...structural, kind: 'insert' },
+    };
+    const after = captureOutlinerSnapshot([], [], { ...structural, kind: 'remove' });
+    pushOutlinerHistory(`delete submodel ${result.object.name || 'unnamed'}`, before, after);
+    setSelectedOutlinerIds([]);
+    setOutlinerRevision((value) => value + 1);
+    ui.setStatus(`Deleted submodel ${result.object.name || 'unnamed'}.`);
+  }, [captureOutlinerSnapshot, model.clips, model.root, pushOutlinerHistory, selectedOutlinerIds, sourceFormat, ui]);
   const handleMoveSelectedOutlinerItem = useCallback((direction: ModelObjectReorderDirection) => {
     if (selectedOutlinerIds.length !== 1) {
       ui.setStatus('Select exactly one submodel before reordering.');
@@ -667,6 +847,13 @@ export default function App() {
           rigIkSettings={rigIkSettings}
           onRigIkSettingsChange={setRigIkSettings}
           rigIkLastResult={rigIkLastResult}
+          rigMetadata={rigMetadata}
+          onRigMetadataChange={onRigMetadataChange}
+          onSaveRigMetadata={saveRigMetadata}
+          onLoadRigMetadata={loadRigMetadata}
+          onClearRigMetadata={clearRigMetadata}
+          onBakeRigIk={bakeRigIk}
+          hasActiveClip={!!playback.currentClipName && model.clips.length > 0}
           editorMode={editorMode}
         />
       );
@@ -769,6 +956,13 @@ export default function App() {
           editorMode={editorMode}
           smfDiagnosticReport={smfDiagnosticReport}
           materialTextures={materialTextureSummaries}
+          geometryDiagnostics={geometryDiagnostics}
+          restPoseGhostEnabled={restPoseGhostEnabled}
+          onRestPoseGhostEnabledChange={setRestPoseGhostEnabled}
+          motionTrailsEnabled={motionTrailsEnabled}
+          onMotionTrailsEnabledChange={setMotionTrailsEnabled}
+          onionSkinEnabled={onionSkinEnabled}
+          onOnionSkinEnabledChange={setOnionSkinEnabled}
           smfRoundtripReport={smfRoundtripReport}
           onRunSmfRoundtripCheck={handleRunSmfRoundtripCheck}
           onSaveSmfDiagnosticReport={handleSaveSmfDiagnosticReport}
@@ -818,9 +1012,13 @@ export default function App() {
   useEffect(() => {
     setOutlinerRevision((value) => value + 1);
     setSelectedOutlinerIds([]);
+    releaseDetachedOutlinerHistoryObjects(
+      [...outlinerHistoryRef.current.undo, ...outlinerHistoryRef.current.redo]
+        .flatMap((entry) => [entry.before, entry.after]),
+    );
     outlinerHistoryRef.current = makeEditorHistory();
     refreshOutlinerHistoryAvailability();
-  }, [model.root, refreshOutlinerHistoryAvailability]);
+  }, [model.root, refreshOutlinerHistoryAvailability, releaseDetachedOutlinerHistoryObjects]);
 
   return (
     <div
@@ -831,6 +1029,9 @@ export default function App() {
     >
       <Toolbar
         onOpen={handleOpen}
+        onOpenProject={handleOpenProject}
+        onSaveProject={handleSaveProject}
+        onRecoverProject={handleRecoverProject}
         onExport={handleExport}
         onExportGlb={handleExportGlb}
         onExportFbx={handleExportFbx}
@@ -905,6 +1106,8 @@ export default function App() {
           onSelectAll={handleSelectAllOutlinerItems}
           onClearSelection={handleClearObjectSelection}
           onRenameSelected={handleRenameSelectedOutlinerItem}
+          onDuplicateSelected={handleDuplicateSelectedOutlinerItem}
+          onDeleteSelected={handleDeleteSelectedOutlinerItem}
           onMoveSelected={handleMoveSelectedOutlinerItem}
           objectEditingEnabled={modelObjectAuthoringEnabled}
           objectEditingDisabledReason={modelObjectAuthoringDisabledReason}
@@ -913,6 +1116,11 @@ export default function App() {
           onHideSelected={handleHideSelectedOutlinerItems}
           onHideUnselected={handleHideUnselectedOutlinerItems}
           onUnhideAll={handleUnhideAllOutlinerItems}
+          onTransformSelected={handleTransformSelectedOutlinerItem}
+          onAssignMaterial={handleAssignSelectedMaterial}
+          onFlipWinding={handleFlipSelectedWinding}
+          onPrepareGeometry={handlePrepareSelectedGeometry}
+          onAppendStaticModel={handleAppendStaticModel}
         />
 
         <div
@@ -921,8 +1129,8 @@ export default function App() {
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => {
             e.preventDefault()
-            const file = e.dataTransfer.files?.[0]
-            if (file) handleDrop(file)
+            const files = Array.from(e.dataTransfer.files ?? [])
+            if (files.length > 0) handleDrop(files)
           }}
         >
           <ThreeViewport
@@ -967,6 +1175,10 @@ export default function App() {
             shaderEnabled={shaderEnabled}
             perspectiveEnabled={perspectiveEnabled}
             modelOpacity={modelOpacity}
+            restPoseSnapshot={restPoseSnapshot}
+            restPoseGhostEnabled={restPoseGhostEnabled}
+            motionTrailsEnabled={motionTrailsEnabled}
+            onionSkinEnabled={onionSkinEnabled}
             themeId={themeId}
             onPaintSkinVertices={applySkinPaint}
             onSkinPaintStrokeStart={beginSkinPaintStroke}

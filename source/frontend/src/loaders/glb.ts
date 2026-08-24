@@ -6,6 +6,10 @@ import { disposeThreeObject } from '../utils/threeDisposal';
 import { isThreeBone, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
 import { bytesToArrayBuffer } from './smfBinary';
 import { ensureGeometryAttributes } from './geometryAttributes';
+import {
+  createResourceUrlRegistry,
+  type ModelResourceBundle,
+} from '../utils/modelResourceBundle';
 
 /**
  * GLB / GLTF loader.
@@ -30,67 +34,83 @@ function collectSkeletonBones(root: THREE.Object3D): THREE.Bone[] {
   return bones;
 }
 
-export async function loadGLB(urlOrBuffer: string | ArrayBuffer): Promise<LoadedModel> {
-  const loader = new GLTFLoader();
+export async function loadGLB(urlOrBuffer: string | ArrayBuffer | ModelResourceBundle): Promise<LoadedModel> {
+  const isBundle = typeof urlOrBuffer === 'object' && !(urlOrBuffer instanceof ArrayBuffer);
+  const bundle = isBundle ? urlOrBuffer as ModelResourceBundle : null;
+  const registry = bundle ? createResourceUrlRegistry(bundle) : null;
+  const manager = new THREE.LoadingManager();
+  if (registry) manager.setURLModifier((url) => registry.resolve(url));
+  const loader = new GLTFLoader(manager);
 
-  let gltf: GLTF;
-  if (typeof urlOrBuffer === 'string') {
-    gltf = await loader.loadAsync(urlOrBuffer);
-  } else {
-    gltf = await new Promise<GLTF>((resolve, reject) => {
-      loader.parse(urlOrBuffer, '', resolve, reject);
-    });
-  }
-
-  const scene = gltf.scene || gltf.scenes?.[0];
-  if (!scene) throw new Error('No scene in GLB');
-
-  // Collect skinned meshes
-  const skinnedMeshes: THREE.SkinnedMesh[] = [];
-  const allClips: THREE.AnimationClip[] = gltf.animations || [];
-  const sceneBones = collectSkeletonBones(scene);
-
-  scene.traverse((obj) => {
-    if (!isThreeSkinnedMesh(obj)) {
-      return;
+  try {
+    let gltf: GLTF;
+    if (typeof urlOrBuffer === 'string') {
+      gltf = await loader.loadAsync(urlOrBuffer);
+    } else {
+      const bytes = bundle ? bytesToArrayBuffer(bundle.primary.data) : urlOrBuffer as ArrayBuffer;
+      const basePath = bundle ? resourceBasePath(bundle.primary.name) : '';
+      gltf = await new Promise<GLTF>((resolve, reject) => {
+        loader.parse(bytes, basePath, resolve, reject);
+      });
     }
-    ensureGeometryAttributes(obj.geometry);
 
-    skinnedMeshes.push(obj);
-    // Some GLB/GLTF paths can produce skinned meshes with an empty bone list.
-    // Build a fallback local skeleton so skinning and animation pipelines can still proceed.
-    if (!obj.skeleton || !obj.skeleton.bones.length) {
-      if (sceneBones.length > 0) {
-        obj.bind(new THREE.Skeleton(sceneBones), obj.bindMatrix);
+    const scene = gltf.scene || gltf.scenes?.[0];
+    if (!scene) throw new Error('No scene in GLB');
+
+    // Collect skinned meshes
+    const skinnedMeshes: THREE.SkinnedMesh[] = [];
+    const allClips: THREE.AnimationClip[] = gltf.animations || [];
+    const sceneBones = collectSkeletonBones(scene);
+
+    scene.traverse((obj) => {
+      if (!isThreeSkinnedMesh(obj)) {
+        return;
       }
+      ensureGeometryAttributes(obj.geometry);
+
+      skinnedMeshes.push(obj);
+      // Some GLB/GLTF paths can produce skinned meshes with an empty bone list.
+      // Build a fallback local skeleton so skinning and animation pipelines can still proceed.
+      if (!obj.skeleton || !obj.skeleton.bones.length) {
+        if (sceneBones.length > 0) {
+          obj.bind(new THREE.Skeleton(sceneBones), obj.bindMatrix);
+        }
+      }
+    });
+
+    if (skinnedMeshes.length === 0) {
+      // Fallback: just use the whole scene as non-skinned for preview
+      const root = scene;
+      const mixer = new THREE.AnimationMixer(root);
+      return { root, skinnedMeshes: [], clips: allClips, mixer };
     }
-  });
 
-  if (skinnedMeshes.length === 0) {
-    // Fallback: just use the whole scene as non-skinned for preview
-    const root = scene;
+    // Use the first skinned mesh's skeleton as the main one (common case)
+    const mainSkinned = skinnedMeshes[0];
+    const skeleton = mainSkinned.skeleton;
+
+    // Attach all skinned to a clean root (preserve hierarchy)
+    const root = new THREE.Group();
+    root.name = 'GLB_Root';
+    root.add(scene); // keep original hierarchy for now
+
     const mixer = new THREE.AnimationMixer(root);
-    return { root, skinnedMeshes: [], clips: allClips, mixer };
+
+    return {
+      root,
+      skeleton,
+      skinnedMeshes,
+      clips: allClips,
+      mixer,
+    };
+  } finally {
+    registry?.dispose();
   }
+}
 
-  // Use the first skinned mesh's skeleton as the main one (common case)
-  const mainSkinned = skinnedMeshes[0];
-  const skeleton = mainSkinned.skeleton;
-
-  // Attach all skinned to a clean root (preserve hierarchy)
-  const root = new THREE.Group();
-  root.name = 'GLB_Root';
-  root.add(scene); // keep original hierarchy for now
-
-  const mixer = new THREE.AnimationMixer(root);
-
-  return {
-    root,
-    skeleton,
-    skinnedMeshes,
-    clips: allClips,
-    mixer,
-  };
+function resourceBasePath(name: string): string {
+  const slash = name.lastIndexOf('/');
+  return slash >= 0 ? `${name.slice(0, slash + 1)}` : '';
 }
 
 

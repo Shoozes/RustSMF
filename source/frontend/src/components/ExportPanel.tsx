@@ -1,6 +1,7 @@
 import type { SmfDiagnosticReport, SmfRoundtripReport } from '../loaders';
 import { LEGACY_SHELF_DECISIONS, getTextureExportPolicies } from '../utils/materialPolicy';
 import { findDuplicateTextureGroups, type TextureSummary } from '../utils/textureCompat';
+import type { GeometryDiagnosticsReport } from '../utils/geometryDiagnostics';
 
 interface ExportPanelProps {
   sourceFormat: string;
@@ -8,6 +9,13 @@ interface ExportPanelProps {
   editorMode?: string;
   smfDiagnosticReport: SmfDiagnosticReport;
   materialTextures: TextureSummary[];
+  geometryDiagnostics: GeometryDiagnosticsReport;
+  restPoseGhostEnabled: boolean;
+  onRestPoseGhostEnabledChange: (enabled: boolean) => void;
+  motionTrailsEnabled: boolean;
+  onMotionTrailsEnabledChange: (enabled: boolean) => void;
+  onionSkinEnabled: boolean;
+  onOnionSkinEnabledChange: (enabled: boolean) => void;
   smfRoundtripReport: SmfRoundtripReport | null;
   onRunSmfRoundtripCheck: () => void;
   onSaveSmfDiagnosticReport: () => void;
@@ -19,6 +27,13 @@ export default function ExportPanel({
   editorMode = 'export',
   smfDiagnosticReport,
   materialTextures,
+  geometryDiagnostics,
+  restPoseGhostEnabled,
+  onRestPoseGhostEnabledChange,
+  motionTrailsEnabled,
+  onMotionTrailsEnabledChange,
+  onionSkinEnabled,
+  onOnionSkinEnabledChange,
   smfRoundtripReport,
   onRunSmfRoundtripCheck,
   onSaveSmfDiagnosticReport,
@@ -55,6 +70,46 @@ export default function ExportPanel({
       </div>
       <div className="text-[10px] text-slate-500 mt-1">
         GLB remains the default fidelity path for runtime/scale/material-heavy workflows.
+      </div>
+      <div className="smf-material-textures" data-testid="geometry-diagnostics-panel">
+        <div className="smf-diagnostics-title">Geometry and shader diagnostics</div>
+        <div className="smf-diagnostics-summary">
+          {geometryDiagnostics.meshes.length} submodel{geometryDiagnostics.meshes.length === 1 ? '' : 's'} · {geometryDiagnostics.totalVertices} vertices · {geometryDiagnostics.missingNormals} missing normals · {geometryDiagnostics.missingTangents} missing tangents · {geometryDiagnostics.missingUvs} missing UV sets · {geometryDiagnostics.leftHandedMeshes} left-handed
+        </div>
+        <div className="smf-diagnostics-summary" data-testid="shader-capability-summary">
+          Shader: {geometryDiagnostics.shader.webgl2 ? 'WebGL2' : 'fallback'} · standard materials available · legacy preview {geometryDiagnostics.shader.legacyShaderPreview ? 'available' : 'not applicable'}
+        </div>
+        {geometryDiagnostics.meshes.length > 0 && (
+          <ul className="smf-diagnostics-list" data-testid="geometry-diagnostic-list">
+            {geometryDiagnostics.meshes.map((mesh) => (
+              <li key={mesh.objectId} className="smf-diagnostic smf-diagnostic-info" data-testid="geometry-diagnostic-row">
+                <span className="smf-diagnostic-code">{mesh.objectName}</span>
+                <span>{mesh.submodelId} · {mesh.vertexCount} verts</span>
+                <span>normal {mesh.normalStatus} · tangent {mesh.tangentStatus} · UV {mesh.uvStatus}</span>
+                <span>{mesh.handedness} · materials {mesh.materialNames.join(', ') || 'none'}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {geometryDiagnostics.shader.notes.map((note) => <div key={note} className="text-[10px] text-slate-500">{note}</div>)}
+      </div>
+      <div className="smf-material-textures" data-testid="pose-display-panel">
+        <div className="smf-diagnostics-title">Pose display</div>
+        <div className="grid gap-1 text-[10px] text-slate-400">
+          <label className="flex items-center gap-1">
+            <input type="checkbox" data-testid="rest-pose-ghost-toggle" checked={restPoseGhostEnabled} onChange={(event) => onRestPoseGhostEnabledChange(event.target.checked)} />
+            Rest-pose ghost
+          </label>
+          <label className="flex items-center gap-1">
+            <input type="checkbox" data-testid="motion-trails-toggle" checked={motionTrailsEnabled} onChange={(event) => onMotionTrailsEnabledChange(event.target.checked)} />
+            Motion trails
+          </label>
+          <label className="flex items-center gap-1">
+            <input type="checkbox" data-testid="onion-skin-toggle" checked={onionSkinEnabled} onChange={(event) => onOnionSkinEnabledChange(event.target.checked)} />
+            Onion span
+          </label>
+        </div>
+        <div className="mt-1 text-[10px] text-slate-500">Overlays are viewport-only and are excluded from asset/project export.</div>
       </div>
       <div className="smf-material-textures" data-testid="texture-export-policy-panel">
         <div className="smf-diagnostics-title">Texture export policy</div>

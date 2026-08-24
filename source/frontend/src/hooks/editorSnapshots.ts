@@ -12,6 +12,7 @@ import {
   type PoseEditMap,
 } from './poseEdits';
 import type { StaticMeshSkinPreparation } from '../utils/staticMeshSkinPrep';
+import type { RigMetadata } from '../utils/rigMetadata';
 
 export interface PoseBoneSnapshot {
   position: [number, number, number];
@@ -60,6 +61,7 @@ export interface RigHistorySnapshot {
   poseEdits: PoseEditMap;
   skinEditState: SkinEditState;
   skinIndices: RigSkinIndexHistorySnapshot[];
+  metadata?: RigMetadata;
 }
 
 export interface StaticMeshSkinPreparationHistorySnapshot {

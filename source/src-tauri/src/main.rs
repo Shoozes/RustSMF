@@ -6,12 +6,16 @@ use std::collections::HashSet;
 use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use tauri::command;
+use tauri::{command, Manager};
 use tauri_plugin_dialog::DialogExt;
 mod smf_core;
 use smf_core::{build_smf_desktop_info, parse_smf_header_info, SmfDesktopInfo};
 
 const MAX_NATIVE_FILE_BYTES: u64 = 256 * 1024 * 1024;
+const MAX_NATIVE_SIDECAR_BYTES: u64 = 64 * 1024 * 1024;
+const MAX_NATIVE_BUNDLE_FILES: usize = 64;
+const PROJECT_RECOVERY_DIRECTORY: &str = "rustsmf-recovery";
+const PROJECT_RECOVERY_TARGET: &str = "rustsmf-autosave.rsproj";
 
 #[derive(Default)]
 struct NativeFileAuthority(Mutex<HashSet<String>>);
@@ -126,6 +130,67 @@ fn read_file_bytes_sync(path: &Path) -> Result<Vec<u8>, String> {
     read_file_bytes_with_limit(path, MAX_NATIVE_FILE_BYTES)
 }
 
+fn read_file_bundle_sync(paths: Vec<PathBuf>) -> Result<Vec<Vec<u8>>, String> {
+    if paths.is_empty() {
+        return Err("MODEL_RESOURCE_BUNDLE_EMPTY: no files were selected".to_string());
+    }
+    if paths.len() > MAX_NATIVE_BUNDLE_FILES {
+        return Err(format!(
+            "RESOURCE_BUNDLE_TOO_MANY_FILES: selected {} files; maximum is {}",
+            paths.len(),
+            MAX_NATIVE_BUNDLE_FILES
+        ));
+    }
+
+    let mut total_bytes = 0_u64;
+    let mut metadata = Vec::with_capacity(paths.len());
+    for (index, path) in paths.iter().enumerate() {
+        let file = std::fs::File::open(path)
+            .map_err(|error| format!("Failed to open {}: {error}", path.display()))?;
+        let file_metadata = file
+            .metadata()
+            .map_err(|error| format!("Failed to inspect {}: {error}", path.display()))?;
+        if !file_metadata.is_file() {
+            return Err(format!(
+                "MODEL_INPUT_NOT_A_FILE: refusing to read {}: path is not a regular file",
+                path.display()
+            ));
+        }
+        let limit = if index == 0 {
+            MAX_NATIVE_FILE_BYTES
+        } else {
+            MAX_NATIVE_SIDECAR_BYTES
+        };
+        if file_metadata.len() > limit {
+            return Err(format!(
+                "MODEL_INPUT_TOO_LARGE: refusing to read {}: file is {} bytes; maximum is {limit}",
+                path.display(),
+                file_metadata.len()
+            ));
+        }
+        total_bytes = total_bytes
+            .checked_add(file_metadata.len())
+            .ok_or_else(|| {
+                "RESOURCE_BUNDLE_TOO_LARGE: selected file sizes overflowed the bundle limit"
+                    .to_string()
+            })?;
+        if total_bytes > MAX_NATIVE_FILE_BYTES {
+            return Err(format!(
+                "RESOURCE_BUNDLE_TOO_LARGE: selected files total {} bytes; maximum is {}",
+                total_bytes, MAX_NATIVE_FILE_BYTES
+            ));
+        }
+        metadata.push((path.clone(), file, file_metadata.len(), limit));
+    }
+
+    metadata
+        .into_iter()
+        .map(|(path, file, reported_len, limit)| {
+            read_bytes_bounded(file, reported_len, &path, limit)
+        })
+        .collect()
+}
+
 async fn read_file_bytes(authority: &NativeFileAuthority, path: String) -> Result<Vec<u8>, String> {
     let authorized_path = authorize_selected_path(authority, &path)?;
     tauri::async_runtime::spawn_blocking(move || read_file_bytes_sync(&authorized_path))
@@ -133,17 +198,149 @@ async fn read_file_bytes(authority: &NativeFileAuthority, path: String) -> Resul
         .map_err(|error| format!("Native file read task failed: {error}"))?
 }
 
+async fn read_file_bundle_bytes(
+    authority: &NativeFileAuthority,
+    paths: Vec<String>,
+) -> Result<Vec<Vec<u8>>, String> {
+    let authorized_paths = paths
+        .iter()
+        .map(|path| authorize_selected_path(authority, path))
+        .collect::<Result<Vec<_>, _>>()?;
+    tauri::async_runtime::spawn_blocking(move || read_file_bundle_sync(authorized_paths))
+        .await
+        .map_err(|error| format!("Native file bundle read task failed: {error}"))?
+}
+
+fn project_backup_path(target: &Path, generation: usize) -> PathBuf {
+    let name = target
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("rustsmf-project.rsproj");
+    target.with_file_name(format!("{name}.bak{generation}"))
+}
+
+fn write_project_rotating(target: &Path, data: &[u8]) -> Result<(), String> {
+    if data.is_empty() {
+        return Err("PROJECT_EMPTY: refusing to write an empty project".to_string());
+    }
+    if data.len() as u64 > MAX_NATIVE_FILE_BYTES {
+        return Err(format!(
+            "MODEL_INPUT_TOO_LARGE: refusing to write project: file is {} bytes; maximum is {MAX_NATIVE_FILE_BYTES}",
+            data.len()
+        ));
+    }
+    let parent = target
+        .parent()
+        .ok_or_else(|| "Project destination has no parent directory".to_string())?;
+    std::fs::create_dir_all(parent).map_err(|error| {
+        format!(
+            "Failed to create project directory {}: {error}",
+            parent.display()
+        )
+    })?;
+
+    let temp = target.with_file_name(format!(
+        ".{}.tmp-{}",
+        target
+            .file_name()
+            .and_then(|value| value.to_str())
+            .unwrap_or("project"),
+        std::process::id()
+    ));
+    let mut file = std::fs::OpenOptions::new()
+        .create_new(true)
+        .write(true)
+        .open(&temp)
+        .map_err(|error| {
+            format!(
+                "Failed to create project temp file {}: {error}",
+                temp.display()
+            )
+        })?;
+    use std::io::Write;
+    if let Err(error) = file.write_all(data).and_then(|_| file.sync_all()) {
+        let _ = std::fs::remove_file(&temp);
+        return Err(format!(
+            "Failed to flush project temp file {}: {error}",
+            temp.display()
+        ));
+    }
+    drop(file);
+
+    let backup_one = project_backup_path(target, 1);
+    let backup_two = project_backup_path(target, 2);
+    if backup_two.exists() {
+        std::fs::remove_file(&backup_two).map_err(|error| {
+            format!(
+                "Failed to rotate project backup {}: {error}",
+                backup_two.display()
+            )
+        })?;
+    }
+    if backup_one.exists() {
+        std::fs::rename(&backup_one, &backup_two).map_err(|error| {
+            format!(
+                "Failed to rotate project backup {}: {error}",
+                backup_one.display()
+            )
+        })?;
+    }
+    if target.exists() {
+        std::fs::rename(target, &backup_one)
+            .map_err(|error| format!("Failed to preserve previous project generation: {error}"))?;
+    }
+    if let Err(error) = std::fs::rename(&temp, target) {
+        let _ = std::fs::rename(&backup_one, target);
+        let _ = std::fs::remove_file(&temp);
+        return Err(format!(
+            "Failed to install project generation {}: {error}",
+            target.display()
+        ));
+    }
+    Ok(())
+}
+
+fn project_recovery_directory(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    Ok(app
+        .path()
+        .app_data_dir()
+        .map_err(|error| format!("Failed to resolve RustSMF app data directory: {error}"))?
+        .join(PROJECT_RECOVERY_DIRECTORY))
+}
+
 #[command]
 async fn open_file(
+    app: tauri::AppHandle,
+    authority: tauri::State<'_, NativeFileAuthority>,
+) -> Result<Option<Vec<String>>, String> {
+    let file_paths = app.dialog().file().blocking_pick_files();
+    match file_paths {
+        Some(paths) => {
+            let selected = paths
+                .into_iter()
+                .map(|path| path.into_path().map_err(|error| error.to_string()))
+                .collect::<Result<Vec<_>, _>>()?;
+            let registered = selected
+                .into_iter()
+                .map(|path| register_selected_path(&authority, path))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(Some(registered))
+        }
+        None => Ok(None),
+    }
+}
+
+#[command]
+async fn open_project_file(
     app: tauri::AppHandle,
     authority: tauri::State<'_, NativeFileAuthority>,
 ) -> Result<Option<String>, String> {
     let file_path = app.dialog().file().blocking_pick_file();
     match file_path {
-        Some(p) => {
-            let path = p.into_path().map_err(|e| e.to_string())?;
-            Ok(Some(register_selected_path(&authority, path)?))
-        }
+        Some(path) => Ok(Some(register_selected_path(
+            &authority,
+            path.into_path().map_err(|error| error.to_string())?,
+        )?)),
         None => Ok(None),
     }
 }
@@ -171,6 +368,14 @@ async fn read_file_binary(
     // Binary read for SMF/GLB/FBX etc. Returns raw bytes so frontend can pass to loaders.
     // The path is accepted only after open_file authorizes the native dialog result.
     read_file_bytes(&authority, path).await
+}
+
+#[command]
+async fn read_files_binary(
+    paths: Vec<String>,
+    authority: tauri::State<'_, NativeFileAuthority>,
+) -> Result<Vec<Vec<u8>>, String> {
+    read_file_bundle_bytes(&authority, paths).await
 }
 
 #[command]
@@ -217,6 +422,92 @@ async fn save_file_binary(
     .await
     .map_err(|error| format!("Native file write task failed: {error}"))??;
     Ok(true)
+}
+
+#[command]
+async fn save_project_atomic(
+    app: tauri::AppHandle,
+    suggested_name: String,
+    data: Vec<u8>,
+) -> Result<bool, String> {
+    if data.len() as u64 > MAX_NATIVE_FILE_BYTES {
+        return Err(format!(
+            "MODEL_INPUT_TOO_LARGE: refusing to write project: file is {} bytes; maximum is {MAX_NATIVE_FILE_BYTES}",
+            data.len()
+        ));
+    }
+    let file_path = app
+        .dialog()
+        .file()
+        .set_file_name(suggested_name)
+        .blocking_save_file();
+    let Some(file_path) = file_path else {
+        return Ok(false);
+    };
+    let path = file_path.into_path().map_err(|error| error.to_string())?;
+    let parent = path
+        .parent()
+        .ok_or_else(|| "Native project destination has no parent directory".to_string())?;
+    let canonical_parent = std::fs::canonicalize(parent).map_err(|error| {
+        format!(
+            "Failed to resolve native project save directory {}: {error}",
+            parent.display()
+        )
+    })?;
+    let file_name = path
+        .file_name()
+        .ok_or_else(|| "Native project destination has no file name".to_string())?
+        .to_owned();
+    let output_path = canonical_parent.join(file_name);
+    tauri::async_runtime::spawn_blocking(move || write_project_rotating(&output_path, &data))
+        .await
+        .map_err(|error| format!("Native project write task failed: {error}"))??;
+    Ok(true)
+}
+
+#[command]
+async fn autosave_project(app: tauri::AppHandle, data: Vec<u8>) -> Result<bool, String> {
+    let directory = project_recovery_directory(&app)?;
+    let target = directory.join(PROJECT_RECOVERY_TARGET);
+    tauri::async_runtime::spawn_blocking(move || write_project_rotating(&target, &data))
+        .await
+        .map_err(|error| format!("Native autosave task failed: {error}"))??;
+    Ok(true)
+}
+
+#[command]
+fn discover_project_recovery(app: tauri::AppHandle) -> Result<Vec<String>, String> {
+    let directory = project_recovery_directory(&app)?;
+    if !directory.exists() {
+        return Ok(Vec::new());
+    }
+    let mut names = std::fs::read_dir(&directory)
+        .map_err(|error| format!("Failed to inspect project recovery directory: {error}"))?
+        .filter_map(|entry| entry.ok())
+        .filter_map(|entry| {
+            let path = entry.path();
+            let name = path.file_name()?.to_str()?.to_string();
+            if name.starts_with(PROJECT_RECOVERY_TARGET) && path.is_file() {
+                Some(name)
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+    names.sort();
+    Ok(names)
+}
+
+#[command]
+fn read_project_recovery(app: tauri::AppHandle, name: String) -> Result<Vec<u8>, String> {
+    if name.is_empty() || name.contains('/') || name.contains('\\') || name.contains("..") {
+        return Err(
+            "PROJECT_RECOVERY_INVALID_NAME: recovery name must be a local generation name"
+                .to_string(),
+        );
+    }
+    let path = project_recovery_directory(&app)?.join(name);
+    read_file_bytes_with_limit(&path, MAX_NATIVE_FILE_BYTES)
 }
 
 #[command]
@@ -366,10 +657,16 @@ fn main() {
         .manage(NativeFileAuthority::default())
         .invoke_handler(tauri::generate_handler![
             open_file,
+            open_project_file,
             greet,
             read_file_text,
             read_file_binary,
+            read_files_binary,
             save_file_binary,
+            save_project_atomic,
+            autosave_project,
+            discover_project_recovery,
+            read_project_recovery,
             peek_smf_header,
             validate_smf,
             peek_smf_rig_basic,
@@ -480,6 +777,63 @@ mod tests {
         );
 
         std::fs::remove_dir(directory).expect("temporary directory fixture should clean up");
+    }
+
+    #[test]
+    fn project_rotation_preserves_previous_generations() {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be after the Unix epoch")
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "rustsmf-project-rotation-{}-{nonce}",
+            std::process::id()
+        ));
+        let target = directory.join("project.rsproj");
+
+        super::write_project_rotating(&target, b"generation-one")
+            .expect("first generation should write");
+        super::write_project_rotating(&target, b"generation-two")
+            .expect("second generation should write");
+        assert_eq!(
+            std::fs::read(&target).expect("target should exist"),
+            b"generation-two"
+        );
+        assert_eq!(
+            std::fs::read(super::project_backup_path(&target, 1)).expect("backup one should exist"),
+            b"generation-one"
+        );
+        super::write_project_rotating(&target, b"generation-three")
+            .expect("third generation should write");
+        assert_eq!(
+            std::fs::read(super::project_backup_path(&target, 1))
+                .expect("new backup one should exist"),
+            b"generation-two"
+        );
+        assert_eq!(
+            std::fs::read(super::project_backup_path(&target, 2)).expect("backup two should exist"),
+            b"generation-one"
+        );
+
+        std::fs::remove_dir_all(directory).expect("temporary project directory should clean up");
+    }
+
+    #[test]
+    fn project_rotation_rejects_empty_payloads_without_creating_files() {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock should be after the Unix epoch")
+            .as_nanos();
+        let directory = std::env::temp_dir().join(format!(
+            "rustsmf-project-empty-{}-{nonce}",
+            std::process::id()
+        ));
+        let target = directory.join("project.rsproj");
+        let error = super::write_project_rotating(&target, &[])
+            .expect_err("empty project writes must fail closed");
+        assert!(error.starts_with("PROJECT_EMPTY:"));
+        assert!(!target.exists());
+        assert!(!directory.exists());
     }
 
     #[test]

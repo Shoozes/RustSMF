@@ -98,7 +98,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
         await chooser.setFiles({ ...fixture, name: failedName });
 
         await expect(page.getByTestId('status-text')).toContainText(
-          /Open error: Could not read model file "unreadable-selection\.glb": simulated browser read failure/i,
+          /Open error: Could not read model bundle "unreadable-selection\.glb": simulated browser read failure/i,
         );
         await expect(page.getByTestId('error-banner')).toContainText(/simulated browser read failure/i);
         await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', '');

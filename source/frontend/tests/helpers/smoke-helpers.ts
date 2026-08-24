@@ -20,6 +20,9 @@ export const SAMPLE_FBX = requireFixture('../test.fbx');
 export const SAMPLE_INDEPENDENT_FBX = requireFixture('../fixtures/independent-fbx/independent_skinned.fbx');
 export const SAMPLE_OBJ = requireFixture('../test.obj');
 export const BAD_INPUT_FOR_ERROR_TEST = requireFixture('../fixtures/invalid-model.gml');
+export const SAMPLE_EXTERNAL_GLTF = requireFixture('../fixtures/external-gltf/scene.gltf');
+export const SAMPLE_EXTERNAL_GLTF_BUFFER = requireFixture('../fixtures/external-gltf/mesh.bin');
+export const SAMPLE_EXTERNAL_GLTF_TEXTURE = requireFixture('../fixtures/external-gltf/texture.png');
 
 export interface SmfDesktopInfo {
   valid: boolean;
@@ -249,8 +252,10 @@ export function getBrowserErrors(page: Page): string[] {
 
 export interface TauriMockInit {
   openPath: string;
+  openPaths?: string[];
   savePath: string;
   sampleBytes: number[];
+  resourceBytes?: number[][];
   desktopInfo: SmfDesktopInfo;
   cancelOpen?: boolean;
   cancelSave?: boolean;
@@ -308,13 +313,19 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
               await new Promise((resolve) => setTimeout(resolve, state.openDelayMs));
             }
             if (state.failOpen) throw new Error('mock open failed');
-            return state.cancelOpen ? null : state.openPath;
+            return state.cancelOpen ? null : (state.openPaths ?? state.openPath);
           case 'read_file_binary':
             if (typeof state.readDelayMs === 'number' && state.readDelayMs > 0) {
               await new Promise((resolve) => setTimeout(resolve, state.readDelayMs));
             }
             if (state.failRead) throw new Error('mock read failed');
             return state.sampleBytes;
+          case 'read_files_binary':
+            if (typeof state.readDelayMs === 'number' && state.readDelayMs > 0) {
+              await new Promise((resolve) => setTimeout(resolve, state.readDelayMs));
+            }
+            if (state.failRead) throw new Error('mock read failed');
+            return state.resourceBytes ?? [state.sampleBytes];
           case 'get_smf_desktop_info':
             return state.desktopInfo;
           case 'save_file_binary': {

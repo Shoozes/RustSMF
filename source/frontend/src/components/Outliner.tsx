@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ModelObjectReorderDirection } from '../utils/modelAuthoring';
+import type { ModelTransformPatch } from '../utils/modelSurfaceAuthoring';
 import type { ModelOutlinerItem } from '../utils/modelOutliner';
 import TextureThumbnail from './TextureThumbnail';
 
@@ -14,6 +15,8 @@ interface OutlinerProps {
   onSelectAll: () => void;
   onClearSelection: () => void;
   onRenameSelected: (name: string) => void;
+  onDuplicateSelected: () => void;
+  onDeleteSelected: () => void;
   onMoveSelected: (direction: ModelObjectReorderDirection) => void;
   objectEditingEnabled: boolean;
   objectEditingDisabledReason?: string;
@@ -22,6 +25,11 @@ interface OutlinerProps {
   onHideSelected: () => void;
   onHideUnselected: () => void;
   onUnhideAll: () => void;
+  onTransformSelected: (patch: ModelTransformPatch) => void;
+  onAssignMaterial: (name: string) => void;
+  onFlipWinding: () => void;
+  onPrepareGeometry: () => void;
+  onAppendStaticModel: (file: File) => void;
 }
 
 const getKindLabel = (kind: ModelOutlinerItem['kind']): string => {
@@ -41,6 +49,8 @@ const Outliner: React.FC<OutlinerProps> = ({
   onSelectAll,
   onClearSelection,
   onRenameSelected,
+  onDuplicateSelected,
+  onDeleteSelected,
   onMoveSelected,
   objectEditingEnabled,
   objectEditingDisabledReason,
@@ -49,6 +59,11 @@ const Outliner: React.FC<OutlinerProps> = ({
   onHideSelected,
   onHideUnselected,
   onUnhideAll,
+  onTransformSelected,
+  onAssignMaterial,
+  onFlipWinding,
+  onPrepareGeometry,
+  onAppendStaticModel,
 }) => {
   const meshCount = items.filter((item) => item.kind !== 'group').length;
   const selectedSet = new Set(selectedItemIds);
@@ -59,10 +74,18 @@ const Outliner: React.FC<OutlinerProps> = ({
     ? items.find((item) => item.id === selectedItemIds[0]) ?? null
     : null;
   const [renameValue, setRenameValue] = React.useState('');
+  const [positionValue, setPositionValue] = React.useState<[string, string, string]>(['0', '0', '0']);
+  const [scaleValue, setScaleValue] = React.useState('1');
+  const [materialValue, setMaterialValue] = React.useState('');
 
   React.useEffect(() => {
     setRenameValue(selectedItem?.name ?? '');
-  }, [selectedItem?.id, selectedItem?.name]);
+    setPositionValue(selectedItem
+      ? selectedItem.position.map((value) => String(Number(value.toFixed(4)))) as [string, string, string]
+      : ['0', '0', '0']);
+    setScaleValue(selectedItem ? String(Number(selectedItem.scale[0].toFixed(4))) : '1');
+    setMaterialValue(selectedItem?.materialNames[0] ?? '');
+  }, [selectedItem]);
 
   return (
     <div data-testid="outliner" className="sidebar">
@@ -103,6 +126,20 @@ const Outliner: React.FC<OutlinerProps> = ({
           <span data-testid="outliner-selection-count">{selectedCount} selected</span>
         </div>
       )}
+      <label className="outliner-append-action" data-testid="outliner-append-static">
+        Append static
+        <input
+          type="file"
+          accept=".glb,.gltf,.obj,.fbx"
+          className="hidden"
+          disabled={!objectEditingEnabled}
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            if (file) onAppendStaticModel(file);
+            event.currentTarget.value = '';
+          }}
+        />
+      </label>
       {selectedItem && (
         <form
           className="outliner-rename-form"
@@ -141,6 +178,24 @@ const Outliner: React.FC<OutlinerProps> = ({
         <div className="outliner-order-actions" aria-label="Selected submodel order">
           <button
             type="button"
+            data-testid="outliner-duplicate-btn"
+            disabled={!objectEditingEnabled}
+            title={objectEditingDisabledReason ?? 'Duplicate selected static submodel'}
+            onClick={onDuplicateSelected}
+          >
+            Duplicate
+          </button>
+          <button
+            type="button"
+            data-testid="outliner-delete-btn"
+            disabled={!objectEditingEnabled}
+            title={objectEditingDisabledReason ?? 'Delete selected static submodel'}
+            onClick={onDeleteSelected}
+          >
+            Delete
+          </button>
+          <button
+            type="button"
             data-testid="outliner-move-earlier-btn"
             disabled={!objectEditingEnabled || !canMoveSelectedEarlier}
             title={objectEditingDisabledReason ?? 'Move earlier among siblings'}
@@ -157,6 +212,58 @@ const Outliner: React.FC<OutlinerProps> = ({
           >
             Move down
           </button>
+        </div>
+      )}
+      {selectedItem && (
+        <div className="outliner-surface-actions" data-testid="outliner-surface-actions">
+          <div className="outliner-rename-note">Static model authoring</div>
+          <div className="grid grid-cols-3 gap-1">
+            {positionValue.map((value, index) => (
+              <input
+                key={index}
+                type="number"
+                step="0.01"
+                value={value}
+                disabled={!objectEditingEnabled}
+                aria-label={`Position ${['X', 'Y', 'Z'][index]}`}
+                data-testid={`outliner-position-${index}`}
+                onChange={(event) => {
+                  const next = [...positionValue] as [string, string, string];
+                  next[index] = event.target.value;
+                  setPositionValue(next);
+                }}
+                onBlur={() => onTransformSelected({ position: positionValue.map((item) => Number(item)) as [number, number, number] })}
+              />
+            ))}
+          </div>
+          <div className="flex gap-1 mt-1">
+            <input
+              type="number"
+              step="0.01"
+              value={scaleValue}
+              disabled={!objectEditingEnabled}
+              aria-label="Uniform scale"
+              data-testid="outliner-scale-input"
+              onChange={(event) => setScaleValue(event.target.value)}
+              onBlur={() => {
+                const value = Number(scaleValue);
+                onTransformSelected({ scale: [value, value, value] });
+              }}
+            />
+            <input
+              value={materialValue}
+              disabled={!objectEditingEnabled}
+              aria-label="Material name"
+              placeholder="Material name"
+              data-testid="outliner-material-input"
+              onChange={(event) => setMaterialValue(event.target.value)}
+            />
+            <button type="button" disabled={!objectEditingEnabled || !materialValue.trim()} data-testid="outliner-material-btn" onClick={() => onAssignMaterial(materialValue)}>Material</button>
+          </div>
+          <div className="flex gap-1 mt-1">
+            <button type="button" disabled={!objectEditingEnabled} data-testid="outliner-flip-winding-btn" onClick={onFlipWinding}>Flip winding</button>
+            <button type="button" disabled={!objectEditingEnabled} data-testid="outliner-prepare-geometry-btn" onClick={onPrepareGeometry}>Normals/tangents</button>
+          </div>
         </div>
       )}
       <div className="outliner-list" data-testid="outliner-submodel-list">

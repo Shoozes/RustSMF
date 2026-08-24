@@ -31,6 +31,9 @@ test.describe('RustSMF animation flow (Chromium)', () => {
 
       await page.getByTestId('mode-tab-animate').click({ force: true });
       await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
+      await expect(page.getByTestId('animation-workflow-hint')).toContainText(/Select a bone.*pose it.*Insert/i);
+      await page.getByTestId('transform-rot-negative-btn').scrollIntoViewIfNeeded();
+      await expect(page.getByTestId('transform-rot-negative-btn')).toBeVisible();
       await pausePlaybackIfRunning(page);
       await page.getByTestId('animation-snap-step-select').selectOption('0.1');
       await expect(page.getByTestId('status-text')).toContainText(/Animation snap set to 0\.10s/i);

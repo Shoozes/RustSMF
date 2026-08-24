@@ -266,4 +266,18 @@ describe('animation authoring controller', () => {
     assert.equal(fixture.history.length, 1);
     assert.match(fixture.statuses.at(-1) ?? '', /all bones.*locked/i);
   });
+
+  it('bakes an explicit bone list as one animation transaction while honoring clip locks', () => {
+    const fixture = makeControllerFixture();
+    fixture.skeleton.bones[0].position.x = 2;
+    fixture.controller.insertAnimationKeyframesForBonesAtTime(['Tip'], 0.5);
+    assert.deepEqual(fixture.animationEditStateRef.current.editsByClip.Idle?.Tip?.map((key) => key.time), [0.5]);
+    assert.equal(fixture.history.length, 1);
+
+    fixture.controller.toggleAnimationBoneLock();
+    const historyBefore = fixture.history.length;
+    fixture.controller.insertAnimationKeyframesForBonesAtTime(['Tip'], 0.75);
+    assert.equal(fixture.history.length, historyBefore);
+    assert.match(fixture.statuses.at(-1) ?? '', /locked or unavailable/i);
+  });
 });

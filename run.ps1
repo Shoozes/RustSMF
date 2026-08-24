@@ -89,6 +89,26 @@ function Invoke-ContextBankVerification {
     return $true
 }
 
+function Invoke-ProjectIntegrityVerification {
+    if (-not $NodeExecutable) {
+        Write-Warn "Node.js 22 or newer is required for project-integrity verification."
+        return $false
+    }
+
+    & $NodeExecutable scripts/verify-project-integrity.mjs --root $RepoRoot 2>&1 | Out-String | Write-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warn "project-integrity validation failed"
+        return $false
+    }
+
+    & $NodeExecutable --test scripts/project-integrity.test.mjs 2>&1 | Out-String | Write-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warn "project-integrity tests failed"
+        return $false
+    }
+    return $true
+}
+
 function Invoke-GitMainSafetyVerification {
     if (-not $NodeExecutable) {
         Write-Warn "Node.js 22 or newer is required for Git main-safety verification."
@@ -555,13 +575,15 @@ switch -Exact ($NormalizedTask) {
         Invoke-Clean
     }
     "context" {
-        Write-Info "[CONTEXT] Validating and testing summary-bank routing..."
+        Write-Info "[CONTEXT] Validating project docs, imports, Rust modules, and summary-bank routing..."
+        if (-not (Invoke-ProjectIntegrityVerification)) { exit 1 }
         if (-not (Invoke-ContextBankVerification)) { exit 1 }
         Write-Ok "[CONTEXT] Passed."
     }
     "verify" {
         Write-Info "[VERIFY] Lint coverage + lint + build + docs/context checks..."
         $ok = $true
+        if (-not (Invoke-ProjectIntegrityVerification)) { $ok = $false }
         if (-not (Invoke-ContextBankVerification)) { $ok = $false }
         if (-not (Invoke-GitMainSafetyVerification)) { $ok = $false }
         if (Test-Path $FrontendDir) {
@@ -603,6 +625,11 @@ switch -Exact ($NormalizedTask) {
     "test:unit" {
         Write-Info "[UNIT] Running frontend unit tests..."
         if (-not (Invoke-FrontendNpm @("run", "test:unit"))) { exit 1 }
+    }
+    "test:journey" {
+        Write-Info "[JOURNEY] Recording the headless hand-wave authoring journey..."
+        if (-not (Invoke-FrontendNpm @("run", "test:journey:hand-wave"))) { exit 1 }
+        Write-Ok "[JOURNEY] WebM and screenshots are available under output/playwright/hand-wave-journey/."
     }
     "test:visual-strict" {
         Write-Info "[VISUAL] Running strict SMF visual snapshot checks..."
@@ -674,9 +701,10 @@ Tasks:
   compile       - production desktop build
   clean         - stop dev servers and remove generated build artifacts
   verify        - lint coverage/lint/typecheck/build/chunk/unit/Rust fmt+clippy+test+check
-  context       - validate and test summary-bank routing
+  context       - validate project docs/imports/modules and summary-bank routing
   test:unit     - frontend unit tests only
   test:e2e      - Playwright (optional GenEye advisory wrapper; use -NoGenEye for browser-only)
+  test:journey  - headless hand-wave authoring journey with retained WebM/screenshots
   test:visual-strict - opt-in strict SMF visual snapshot checks
   test:visual-update - refresh opt-in strict SMF visual snapshots
   desktop-smoke - release build + Rust tests + native IPC browser checks
@@ -691,6 +719,7 @@ Examples:
   .\run.ps1 -Task verify
   .\run.ps1 -Task test:e2e -GenEyeRoot C:\DevStuff\Three-sisters\GenEye
   .\run.ps1 -Task test:e2e -NoGenEye
+  .\run.ps1 -Task test:journey
 
 See docs/dev/TODO.md, docs/dev/APP_STATE.md and summary_bank.json for current state, commands, known gaps, and focused file routes. Source/frontend and src-tauri contain the current implementation and verification surfaces.
 "@

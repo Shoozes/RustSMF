@@ -11,6 +11,7 @@ import {
 } from '../utils/rigIk';
 import type { RigValidationReport } from '../utils/rigValidation';
 import { getSmfRigControlPolicy, listSmfRigPolicies, type SmfRigControl } from '../utils/smfRigPolicy';
+import type { RigBoneMetadata, RigMetadata } from '../utils/rigMetadata';
 
 interface RigPanelProps {
   report: RigValidationReport;
@@ -33,6 +34,13 @@ interface RigPanelProps {
   rigIkSettings: RigIkSettings;
   onRigIkSettingsChange: (settings: Partial<RigIkSettings>) => void;
   rigIkLastResult: RigIkSolveResult | null;
+  rigMetadata: RigMetadata;
+  onRigMetadataChange: (patch: Partial<RigBoneMetadata>) => void;
+  onSaveRigMetadata: () => void;
+  onLoadRigMetadata: (file: File) => void;
+  onClearRigMetadata: () => void;
+  onBakeRigIk: () => void;
+  hasActiveClip: boolean;
   editorMode?: string;
 }
 
@@ -63,6 +71,13 @@ export default function RigPanel({
   rigIkSettings,
   onRigIkSettingsChange,
   rigIkLastResult,
+  rigMetadata,
+  onRigMetadataChange,
+  onSaveRigMetadata,
+  onLoadRigMetadata,
+  onClearRigMetadata,
+  onBakeRigIk,
+  hasActiveClip,
   editorMode = 'rig',
 }: RigPanelProps) {
   const visibleIssues = report.issues.slice(0, 6);
@@ -81,6 +96,7 @@ export default function RigPanel({
   const canSpinRig = report.boneCount > 0 && !isSmfSource;
   const canUseEndpoint = selectedIsDeformBone && report.boneCount > 0;
   const canUseIk = selectedIsDeformBone && report.boneCount > 1;
+  const selectedMetadata = selected && selected !== 'Scene' ? rigMetadata.bones[selected] : undefined;
 
   useEffect(() => {
     setRenameValue(selected === 'Scene' ? '' : selected);
@@ -263,8 +279,77 @@ export default function RigPanel({
                 {rigIkLastResult.status.replace('-', ' ')} · {rigIkLastResult.distanceToTarget.toFixed(4)} target distance
               </div>
             )}
+            <button
+              type="button"
+              data-testid="rig-ik-bake-btn"
+              className="mt-1 w-full px-1 py-0.5 text-xs bg-amber-500 text-slate-950 hover:bg-amber-400 disabled:opacity-50"
+              disabled={!canUseIk || !hasActiveClip || !rigIkLastResult}
+              onClick={onBakeRigIk}
+              title="Solve the last IK target and write the affected chain as one animation transaction"
+            >
+              Solve &amp; bake IK keys
+            </button>
           </div>
         )}
+        <div className="mb-2 rounded border border-slate-700 bg-slate-950/40 p-1" data-testid="rig-metadata-panel">
+          <div className="mb-1 text-[10px] text-slate-300">Rig metadata</div>
+          {selectedMetadata && selectedIsDeformBone ? (
+            <>
+              <label className="block text-[10px] text-slate-400">
+                Primary axis
+                <select
+                  data-testid="rig-primary-axis"
+                  value={selectedMetadata.primaryAxis}
+                  onChange={(event) => onRigMetadataChange({ primaryAxis: event.target.value as RigBoneMetadata['primaryAxis'] })}
+                  className="block w-full bg-slate-900 border border-slate-700 px-1 py-0.5 text-xs text-slate-100"
+                >
+                  <option value="x">X</option>
+                  <option value="y">Y</option>
+                  <option value="z">Z</option>
+                </select>
+              </label>
+              <label className="mt-1 flex items-center gap-1 text-[10px] text-slate-400">
+                <input
+                  type="checkbox"
+                  data-testid="rig-lock-toggle"
+                  checked={selectedMetadata.locked}
+                  onChange={(event) => onRigMetadataChange({ locked: event.target.checked })}
+                />
+                Lock for IK
+              </label>
+              <label className="mt-1 flex items-center gap-1 text-[10px] text-slate-400">
+                <input
+                  type="checkbox"
+                  data-testid="rig-pin-toggle"
+                  checked={selectedMetadata.pinned}
+                  onChange={(event) => onRigMetadataChange({ pinned: event.target.checked })}
+                />
+                Pin for IK
+              </label>
+            </>
+          ) : (
+            <div className="text-[10px] text-slate-500">Select a deform bone to edit its axis, lock, and pin metadata.</div>
+          )}
+          <div className="mt-1 grid grid-cols-3 gap-1">
+            <button type="button" data-testid="rig-save-metadata" className="px-1 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50" disabled={!report.boneCount} onClick={onSaveRigMetadata}>Save</button>
+            <label className="px-1 py-0.5 text-xs text-center bg-slate-700 hover:bg-slate-600 cursor-pointer">
+              Load
+              <input
+                type="file"
+                accept=".rig.json,application/json"
+                data-testid="rig-load-metadata"
+                className="hidden"
+                disabled={!report.boneCount}
+                onChange={(event) => {
+                  const file = event.currentTarget.files?.[0];
+                  if (file) onLoadRigMetadata(file);
+                  event.currentTarget.value = '';
+                }}
+              />
+            </label>
+            <button type="button" data-testid="rig-clear-metadata" className="px-1 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50" disabled={!report.boneCount} onClick={onClearRigMetadata}>Clear</button>
+          </div>
+        </div>
         <label className="flex items-center gap-1 mb-2 text-[10px] text-slate-400">
           <span className="shrink-0">Snap</span>
           <select

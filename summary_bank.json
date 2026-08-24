@@ -53,6 +53,22 @@
         "The repo-local summary-bank skill adds RustSMF ownership and native verification to the global context-bank policy."
       ]
     },
+    "workflow__project_integrity": {
+      "description": "Durable project-doc contracts, active TODO shape, research-note status, relative frontend imports, and Rust module declarations.",
+      "max_kb": 64,
+      "paths": [
+        "scripts/project-integrity-lib.mjs",
+        "scripts/verify-project-integrity.mjs",
+        "scripts/project-integrity.test.mjs",
+        "scripts/README.md",
+        "run.ps1",
+        "docs/dev/TODO.md",
+        "docs/research-inbox/README.md"
+      ],
+      "notes": [
+        "The guard is local and read-only: it reports missing durable docs, incomplete active tasks, unreviewed inbox notes, unresolved relative frontend imports, and unresolved Rust mod declarations before the application verification lane runs."
+      ]
+    },
     "workflow__git_main_sync": {
       "description": "Fail-closed main-branch synchronization, token handling, configured-origin checks, and regression coverage for the local Git controls.",
       "max_kb": 64,
@@ -119,8 +135,8 @@
       ]
     },
     "feature__model_outliner_authoring": {
-      "description": "Guarded non-SMF Outliner metadata and sibling-order authoring with bounded global history.",
-      "max_kb": 112,
+      "description": "Guarded non-SMF Outliner metadata, static structural/surface authoring, and bounded global history.",
+      "max_kb": 128,
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/components/Outliner.tsx",
@@ -128,18 +144,22 @@
         "source/frontend/src/utils/modelOutliner.test.ts",
         "source/frontend/src/utils/modelAuthoring.ts",
         "source/frontend/src/utils/modelAuthoring.test.ts",
+        "source/frontend/src/utils/modelSurfaceAuthoring.ts",
+        "source/frontend/src/utils/modelSurfaceAuthoring.test.ts",
         "source/frontend/src/utils/editorHistory.ts",
         "source/frontend/src/utils/editorHistory.test.ts"
       ],
       "notes": [
         "Name, visibility, selection, and scoped parent order use one ID-only snapshot owner; history never stores cyclic Three.js scene graphs.",
         "Rename is limited to binding-safe, unique, unanimated GLB/FBX/OBJ objects; SMF source names remain source-owned.",
-        "Reorder swaps only eligible siblings under one parent, preserves non-Outliner children, and is covered by exact undo/redo plus GLB re-import."
+        "Reorder swaps only eligible siblings under one parent, preserves non-Outliner children, and is covered by exact undo/redo plus GLB re-import.",
+        "Duplicate/delete use explicit parent/index structural operations, independently clone static disposable resources, and reject bones, skinned subtrees, unsupported sources, and animation targets before mutation.",
+        "Static append, transforms, named material assignment, winding reversal, and geometry preparation use guarded non-SMF/static targets and the same undoable Outliner snapshot contract; appended asset groups are removed as one structural transaction."
       ]
     },
     "feature__fbx_support": {
       "description": "Binary FBX 7500 export, import compatibility, pre-save validation, and round-trip coverage.",
-      "max_kb": 120,
+      "max_kb": 128,
       "paths": [
         "source/frontend/src/loaders/fbx.ts",
         "source/frontend/src/loaders/fbx.test.ts",
@@ -238,6 +258,8 @@
         "source/frontend/src/utils/themeViewportGrid.test.ts",
         "source/frontend/src/utils/viewportDisplayController.ts",
         "source/frontend/src/utils/viewportDisplayController.test.ts",
+        "source/frontend/src/utils/poseOverlay.ts",
+        "source/frontend/src/utils/poseOverlay.test.ts",
         "source/frontend/src/utils/threeDisposal.ts",
         "source/frontend/src/utils/threeDisposal.test.ts"
       ],
@@ -269,8 +291,8 @@
       ]
     },
     "feature__rig_ik_pose": {
-      "description": "Bone hierarchy, pose editing, rig transforms, endpoint editing, and bounded CCD IK.",
-      "max_kb": 160,
+      "description": "Bone hierarchy, pose editing, rig transforms, persisted rig metadata, endpoint editing, bounded CCD IK, and explicit keyed bake.",
+      "max_kb": 176,
       "paths": [
         "source/frontend/src/components/RigPanel.tsx",
         "source/frontend/src/hooks/poseEdits.ts",
@@ -279,6 +301,8 @@
         "source/frontend/src/utils/rigEdits.test.ts",
         "source/frontend/src/utils/rigIk.ts",
         "source/frontend/src/utils/rigIk.test.ts",
+        "source/frontend/src/utils/rigMetadata.ts",
+        "source/frontend/src/utils/rigMetadata.test.ts",
         "source/frontend/src/utils/rigHierarchy.ts",
         "source/frontend/src/utils/rigHierarchy.test.ts",
         "source/frontend/src/utils/rigValidation.ts",
@@ -290,7 +314,25 @@
         "source/frontend/tests/rig.spec.ts"
       ],
       "notes": [
-        "Static non-SMF meshes can be promoted to one root-bound skeleton; preparation is reversible through the shared rig history and participates in dirty replacement protection."
+        "Static non-SMF meshes can be promoted to one root-bound skeleton; preparation is reversible through the shared rig history and participates in dirty replacement protection.",
+        "Rig metadata persists primary axis, lock, and pin fields through standalone bounded JSON and project envelopes. IK skips locked/pinned joints; explicit solve-and-bake creates one animation history transaction and honors clip locks."
+      ]
+    },
+    "feature__model_diagnostics": {
+      "description": "Read-only geometry, UV, material, shader-capability, handedness, and viewport pose-overlay diagnostics.",
+      "max_kb": 192,
+      "paths": [
+        "source/frontend/src/components/ExportPanel.tsx",
+        "source/frontend/src/components/ThreeViewport.tsx",
+        "source/frontend/src/utils/geometryDiagnostics.ts",
+        "source/frontend/src/utils/geometryDiagnostics.test.ts",
+        "source/frontend/src/utils/poseOverlay.ts",
+        "source/frontend/src/utils/poseOverlay.test.ts",
+        "source/frontend/tests/export-formats.spec.ts"
+      ],
+      "notes": [
+        "Reports are finite and named per-mesh values with explicit shader support notes; they do not mutate source geometry or export bytes.",
+        "Rest ghost, current-to-rest trails, and onion-skin lines are viewport-owned disposable helpers and are rebuilt only from current display state."
       ]
     },
     "feature__animation_authoring": {
@@ -409,6 +451,7 @@
       "paths": [
         "source/frontend/package.json",
         "source/frontend/playwright.config.ts",
+        "source/frontend/playwright.journey.config.ts",
         "source/frontend/eslint.config.js",
         "source/frontend/tsconfig.json",
         "source/frontend/tsconfig.test.json",
@@ -448,6 +491,40 @@
         "Dirty replacement coverage asserts Cancel preserves the mounted model and Discard clears authoring state before the selected model is committed.",
         "The stress fixture supplies triangle metadata for every generated triangle-soup vertex, and overlap tests explicitly confirm each queued replacement so semantic and async regressions fail at the intended boundary.",
         "Native mock coverage treats Rust-owned open/read/save/cancel commands and selected-path authorization as explicit IPC contracts."
+      ]
+    },
+    "workflow__recorded_browser_journey": {
+      "description": "Opt-in recorded browser journey for real-SMF animation authoring, DPI containment, actionability, screenshots, and WebM evidence.",
+      "max_kb": 80,
+      "paths": [
+        "source/frontend/playwright.journey.config.ts",
+        "source/frontend/tests/journeys/hand-wave.journey.spec.ts",
+        "source/frontend/tests/helpers/smoke-helpers.ts",
+        "source/frontend/tests/helpers/timeline-interactions.ts",
+        "source/frontend/tests/helpers/viewport-interactions.ts",
+        "source/frontend/package.json",
+        "source/frontend/tests/README.md"
+      ],
+      "notes": [
+        "The journey is excluded from the default browser gate and records one deterministic 1440x900, 125%-DPI hand-wave workflow through the production preview server.",
+        "Generated screenshots, test results, traces, and WebM evidence remain ignored runtime output; rerun test:journey to produce current evidence."
+      ]
+    },
+    "feature__project_recovery": {
+      "description": "Versioned RustSMF project envelopes, bounded browser/native save adapters, rotating recovery generations, and fail-closed restore flows.",
+      "max_kb": 256,
+      "paths": [
+        "source/frontend/src/utils/projectCodec.ts",
+        "source/frontend/src/utils/projectCodec.test.ts",
+        "source/frontend/src/hooks/useLoadModel.ts",
+        "source/frontend/src/backend-client/tauri.ts",
+        "source/src-tauri/src/main.rs",
+        "source/frontend/tests/lifecycle.spec.ts",
+        "source/frontend/tests/native.spec.ts"
+      ],
+      "notes": [
+        "The project envelope embeds a validated GLB snapshot and bounded workspace state, including rig metadata, without replacing asset export formats.",
+        "Native save rotates bounded generations with temp-file sync and restoration on failure; recovery discovery/read is explicit, and corrupt or unsupported envelopes fail closed while preserving the mounted model."
       ]
     },
     "issue__smf_conversion_spatial_fidelity": {
@@ -491,21 +568,27 @@
       ]
     },
     "issue__external_model_resources": {
-      "description": "Current single-file GLTF/OBJ import boundary and the planned safe sidecar-resource contract.",
-      "max_kb": 192,
+      "description": "Bounded GLTF/OBJ sidecar resource resolution, native/browser authorization, missing-resource diagnostics, and cleanup.",
+      "max_kb": 320,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/loaders/glb.ts",
         "source/frontend/src/loaders/obj.ts",
         "source/frontend/src/utils/modelFormat.ts",
+        "source/frontend/src/utils/modelResourceBundle.ts",
+        "source/frontend/src/utils/modelResourceBundle.test.ts",
         "source/frontend/tests/export-formats.spec.ts",
-        "docs/dev/TODO.md"
+        "source/frontend/tests/fixtures/external-gltf/scene.gltf",
+        "source/frontend/tests/fixtures/external-gltf/mesh.bin",
+        "source/frontend/tests/fixtures/external-gltf/texture.png",
+        "source/src-tauri/src/main.rs",
+        "docs/dev/APP_STATE.md"
       ],
       "notes": [
-        "The current picker/drop contract supplies one primary file and GLTFLoader receives an empty resource base, so only GLB or self-contained GLTF can resolve reliably.",
-        "OBJ currently parses geometry bytes without loading an adjacent MTL bundle.",
-        "Any sidecar design must preserve user authorization, URI traversal guards, aggregate input limits, latest-intent cancellation, object-URL cleanup, and actionable missing-resource errors."
+        "Browser and native open paths normalize one primary plus selected relative sidecars into a bounded bundle; GLTFLoader and OBJLoader resolve only authorized local names.",
+        "Traversal, remote/data, duplicate/case-ambiguous, per-file/aggregate size, missing-resource, stale-load, and object-URL cleanup guards are implemented and tested.",
+        "OBJ supports one MTL bundle with relative textures; multiple material libraries and unsafe or unresolved resources fail closed while geometry-only OBJ remains supported."
       ]
     },
     "issue__smf_resource_contract": {
@@ -527,7 +610,7 @@
       "description": "Archived compatibility route for the former combined browser authoring/format pack.",
       "archived": true,
       "archive_note": "Use feature__rig_ik_pose, feature__skin_authoring, feature__animation_authoring, feature__fbx_support, and feature__theme_system.",
-      "max_kb": 144,
+      "max_kb": 160,
       "paths": [
         "source/frontend/tests/animation.spec.ts",
         "source/frontend/tests/export-formats.spec.ts",

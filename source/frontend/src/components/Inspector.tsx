@@ -56,6 +56,8 @@ const Inspector: React.FC<InspectorProps> = ({
     [displayBones, skeleton],
   );
   const visibleBoneSet = React.useMemo(() => new Set(visibleBones), [visibleBones]);
+  const usesIndexedSmfBoneNames = visibleBones.length > 0
+    && visibleBones.every((bone) => /^SMF_Node_\d+$/.test(bone.name));
   const rootBones = getRigRootBones(visibleBones);
   const rootBoneUuidKey = rootBones.map((bone) => bone.uuid).join('|');
 
@@ -154,28 +156,40 @@ const Inspector: React.FC<InspectorProps> = ({
                 {rootBones.map((root) => renderBoneTree(root, 0))}
               </ul>
             </div>
+            {usesIndexedSmfBoneNames && (
+              <div data-testid="smf-indexed-bone-guidance" className="mt-1 text-[10px] leading-snug text-slate-500">
+                SMF stores indexed bone IDs. Click the visible rig to match an ID to a body part.
+              </div>
+            )}
           </div>
         )}
 
         {/* Quick pose controls write through the pose-edit layer; Rig also owns the viewport gizmo. */}
         {showTransformControls && selected && selected !== 'Scene' && (
-          <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
+          <div
+            className="mt-2 text-[9px] border-t border-slate-700 pt-1"
+            role="group"
+            aria-label="Selected bone pose controls"
+          >
             <div>
               Pose for: <span className="font-mono text-amber-300">{selected}</span>
               {editorMode === 'rig' ? ' (Rig Select owns the viewport gizmo)' : ' (viewport gizmo detached)'}
             </div>
-            <button data-testid="transform-x-btn" className="mr-1 mt-0.5 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
+            <button data-testid="transform-x-btn" aria-label="Move selected bone positive X" title="Move +0.1 on X" className="mr-1 mt-0.5 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
               onNudgeBone?.(selected, { x: 0.1 });
             }}> +X </button>
-            <button data-testid="transform-y-btn" className="mr-1 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
+            <button data-testid="transform-y-btn" aria-label="Move selected bone positive Y" title="Move +0.1 on Y" className="mr-1 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
               onNudgeBone?.(selected, { y: 0.1 });
             }}> +Y </button>
-            <button data-testid="transform-rot-btn" className="px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
+            <button data-testid="transform-rot-negative-btn" aria-label="Rotate selected bone negative Z" title="Rotate -11.5 degrees around Z" className="mr-1 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
+              onNudgeBone?.(selected, { rotZ: -0.2 });
+            }}> −Z rot </button>
+            <button data-testid="transform-rot-btn" aria-label="Rotate selected bone positive Z" title="Rotate +11.5 degrees around Z" className="px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
               onNudgeBone?.(selected, { rotZ: 0.2 });
-            }}> rot </button>
-            <button data-testid="transform-reset-btn" className="ml-1 px-1 py-0 bg-slate-800 text-xs" title="Restore the selected deform bone local bind transform" onClick={() => {
+            }}> +Z rot </button>
+            <button data-testid="transform-reset-btn" aria-label="Restore selected bone bind pose" className="ml-1 px-1 py-0 bg-slate-800 text-xs" title="Restore the selected deform bone local bind transform" onClick={() => {
               onNudgeBone?.(selected, { reset: true });
-            }}> bind </button>
+            }}> Bind </button>
             {onToggleWeightPreview && (
               <button
                 data-testid="weight-preview-btn"
@@ -206,8 +220,10 @@ const Inspector: React.FC<InspectorProps> = ({
             )}
             <span className="ml-1 text-slate-500">
               {editorMode === 'rig'
-                ? '(gizmo + pose nudges; T/R/S selects mode; pause playback to hold a manual pose)'
-                : '(pose nudges only; Skin owns paint input; pause playback to hold a manual pose)'}
+                ? '(gizmo + pose controls; T/R/S selects mode; pause playback to hold a manual pose)'
+                : editorMode === 'animate'
+                  ? '(pose the bone, scrub to a time, then Insert or Update the key)'
+                  : '(pose controls only; Skin owns paint input; pause playback to hold a manual pose)'}
             </span>
           </div>
         )}

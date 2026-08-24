@@ -14,6 +14,9 @@ export interface ModelOutlinerItem {
   materialCount: number;
   color: string | null;
   texture: THREE.Texture | null;
+  position: [number, number, number];
+  scale: [number, number, number];
+  materialNames: string[];
 }
 
 const unnamedCounts = new Map<string, number>();
@@ -93,6 +96,9 @@ export const collectModelOutlinerItems = (root: THREE.Object3D | null): ModelOut
       materialCount: materials.length,
       color: getMaterialColor(materials),
       texture: getMaterialTexture(materials),
+      position: [object.position.x, object.position.y, object.position.z],
+      scale: [object.scale.x, object.scale.y, object.scale.z],
+      materialNames: materials.map((material, index) => material.name || `material_${index}`),
     });
   });
 

@@ -1,6 +1,9 @@
 import { expect, test } from '@playwright/test';
 import fs from 'fs';
 import {
+  SAMPLE_EXTERNAL_GLTF,
+  SAMPLE_EXTERNAL_GLTF_BUFFER,
+  SAMPLE_EXTERNAL_GLTF_TEXTURE,
   SAMPLE_OBJ,
   SAMPLE_SMF,
   getBrowserErrors,
@@ -68,6 +71,28 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
 
     snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.writes).toHaveLength(1);
+  });
+
+  test('native mock bundle authorizes and reads GLTF sidecars as one bounded request', async ({ page }) => {
+    const selectedPaths = [SAMPLE_EXTERNAL_GLTF, SAMPLE_EXTERNAL_GLTF_BUFFER, SAMPLE_EXTERNAL_GLTF_TEXTURE];
+    await installTauriMock(page, {
+      openPath: SAMPLE_EXTERNAL_GLTF,
+      openPaths: selectedPaths,
+      savePath: 'C:\\tmp\\unused-native-bundle.glb',
+      sampleBytes: readSampleBytes(SAMPLE_EXTERNAL_GLTF),
+      resourceBytes: selectedPaths.map(readSampleBytes),
+      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array([])),
+    });
+
+    await page.goto('/');
+    await page.getByTestId('open-model-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded: scene\.gltf/i, { timeout: 15000 });
+    await expect(page.getByTestId('status-text')).toContainText(/2 sidecar resources/i);
+
+    const snapshot = await getTauriMockSnapshot(page);
+    expect(snapshot.calls.map((call) => call.cmd)).toEqual(expect.arrayContaining(['open_file', 'read_files_binary']));
+    expect(snapshot.calls.filter((call) => call.cmd === 'read_file_binary')).toHaveLength(0);
+    expect(snapshot.calls.find((call) => call.cmd === 'read_files_binary')?.args).toMatchObject({ paths: selectedPaths });
   });
 
   test('native open uses read_binary for non-SMF desktop paths', async ({ page }) => {

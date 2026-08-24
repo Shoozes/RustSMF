@@ -109,6 +109,26 @@ describe('rigIk', () => {
     assert.equal(rigIkLocalLengthsUnchanged(created.session), true);
   });
 
+  it('keeps locked and pinned chain joints unchanged while solving', () => {
+    const { skeleton, root, middle, end } = makeChain();
+    const created = createRigIkSession(skeleton, end.name, 2);
+    assert.equal(created.ok, true);
+    if (!created.ok) return;
+    const rootBefore = root.quaternion.clone();
+    const result = solveRigIk(skeleton, created.session, new THREE.Vector3(0.5, 1, 0), {
+      poleAxis: 'z',
+      maxJointAngleDegrees: 180,
+      maxIterations: 64,
+      tolerance: 0.001,
+      lockedBoneNames: [root.name],
+      pinnedBoneNames: [middle.name],
+    });
+
+    assert.notEqual(result.status, 'stale-chain');
+    assert.ok(rootBefore.angleTo(root.quaternion) <= 1e-7);
+    assert.ok(result.changedBoneNames.every((name) => name !== root.name && name !== middle.name));
+  });
+
   it('rejects stale chains after hierarchy changes', () => {
     const { skeleton, root, middle, end } = makeChain();
     const created = createRigIkSession(skeleton, end.name, 2);
