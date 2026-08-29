@@ -11,13 +11,15 @@ import {
   type PoseHistorySnapshot,
 } from './editorSnapshots';
 
-function poseSnapshot(positionX = 0): PoseHistorySnapshot {
+function poseSnapshot(positionX = 0, dRotX = 0, dRotY = 0): PoseHistorySnapshot {
   return {
     selectedBoneName: 'Bone',
     poseEdits: {
       Bone: {
         dx: positionX,
         dy: 0,
+        dRotX,
+        dRotY,
         dRotZ: 0,
         dirty: positionX !== 0,
         hasScale: false,
@@ -36,6 +38,8 @@ function poseSnapshot(positionX = 0): PoseHistorySnapshot {
 test('pose snapshots compare all edit and transform state', () => {
   assert.equal(samePoseSnapshot(poseSnapshot(), poseSnapshot()), true);
   assert.equal(samePoseSnapshot(poseSnapshot(), poseSnapshot(1)), false);
+  assert.equal(samePoseSnapshot(poseSnapshot(), poseSnapshot(0, 0.2)), false);
+  assert.equal(samePoseSnapshot(poseSnapshot(), poseSnapshot(0, 0, -0.2)), false);
 });
 
 test('animation workspace clones own clip and edit buffers', () => {

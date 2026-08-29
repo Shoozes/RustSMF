@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { makeBoneLabel } from './boneLabels';
+import { deriveMixamoMinimalBoneAliases } from './boneAliases';
 import { disposeThreeObject } from './threeDisposal';
 
 /**
@@ -32,9 +33,11 @@ export function useBoneLabelsWithScale(
     if (!boneLabelsEnabled || !skeleton) return;
 
     const markerScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+    const aliases = deriveMixamoMinimalBoneAliases(skeleton.bones);
     const created: THREE.Object3D[] = [];
     skeleton.bones.forEach((bone, index) => {
-      const labelText = showIndexLabels ? String(index) : bone.name;
+      const alias = aliases.get(bone.name)?.replace(/^mixamorig:/, '');
+      const labelText = showIndexLabels ? String(index) : alias ?? bone.name;
       const label = makeBoneLabel(labelText, { scale: markerScale });
       bone.add(label);
       created.push(label);

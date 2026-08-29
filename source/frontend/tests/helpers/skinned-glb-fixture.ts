@@ -15,6 +15,7 @@ export interface SkinnedGlbFixtureOptions {
   nonPowerOfTwoTexture?: boolean;
   withMultiMaterial?: boolean;
   withSiblingMesh?: boolean;
+  rootScale?: number;
 }
 
 const fixtureBufferPromises = new Map<string, Promise<Buffer>>();
@@ -111,6 +112,11 @@ function makeTextureMaterial(width: number, height: number): THREE.MeshStandardM
 function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THREE.Group; clips: THREE.AnimationClip[] } {
   const root = new THREE.Group();
   root.name = 'GeneratedSkinnedFixtureRoot';
+  const rootScale = options.rootScale ?? 1;
+  if (!Number.isFinite(rootScale) || rootScale <= 0) {
+    throw new Error('Skinned GLB fixture rootScale must be finite and greater than zero');
+  }
+  root.scale.setScalar(rootScale);
 
   const rootBone = new THREE.Bone();
   rootBone.name = 'FixtureRoot';
@@ -204,6 +210,7 @@ function getFixtureKey(options: SkinnedGlbFixtureOptions): string {
     options.nonPowerOfTwoTexture ? 'npot' : 'pot',
     options.withMultiMaterial ? 'multi' : 'single',
     options.withSiblingMesh ? 'siblings' : 'solo',
+    `scale-${options.rootScale ?? 1}`,
   ].join('-');
 }
 
@@ -213,6 +220,9 @@ function getFixtureName(options: SkinnedGlbFixtureOptions): string {
   if (options.withMultiMaterial) parts.push('multi-material');
   if (options.nonPowerOfTwoTexture) parts.push('npot');
   if (options.withSiblingMesh) parts.push('siblings');
+  if (options.rootScale !== undefined) {
+    parts.push(`scale-${String(options.rootScale).split('.').join('_').split('+').join('')}`);
+  }
   return `${parts.join('-')}.glb`;
 }
 

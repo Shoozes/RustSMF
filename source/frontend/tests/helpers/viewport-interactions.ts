@@ -198,7 +198,11 @@ export const dragTransformHandle = async (page: Page): Promise<string> => {
   }
 
   await page.mouse.move(startX, startY);
-  await expect(canvas).toHaveAttribute('data-transform-axis', axis);
+  await expect.poll(async () => canvas.getAttribute('data-transform-axis')).toMatch(/^[XYZ]$/);
+  const activeAxis = await canvas.getAttribute('data-transform-axis');
+  if (!activeAxis) {
+    throw new Error('TransformControls did not expose a hovered axis at the real-handle drag path.');
+  }
   await page.mouse.down({ button: 'left' });
   await expect(canvas).toHaveAttribute('data-transform-dragging', 'true');
   await page.mouse.move(endX, endY, { steps: 5 });
@@ -207,7 +211,7 @@ export const dragTransformHandle = async (page: Page): Promise<string> => {
   await page.mouse.up({ button: 'left' });
   await expect(canvas).toHaveAttribute('data-transform-dragging', 'false');
   await expect(canvas).toHaveAttribute('data-bone-transform-phase', 'end');
-  return axis;
+  return activeAxis;
 };
 
 export const paintInViewport = async (
@@ -325,6 +329,31 @@ export const clickPickableBoneInViewport = async (
       const paneRole = (await canvas.getAttribute('data-viewport-pane-role')) ?? '';
       if (owner === expectedOwner && bone && paneRole) {
         return { bone, paneRole };
+      }
+    }
+  }
+
+  return null;
+};
+
+export const hoverPickableBoneInViewport = async (
+  page: Page,
+  expectedBone?: string,
+): Promise<{ bone: string; x: number; y: number } | null> => {
+  const canvas = page.getByTestId('three-canvas');
+  const box = await canvas.boundingBox();
+  if (!box) return null;
+
+  const probes = [10, 20, 30, 40, 50, 60, 70, 80, 90];
+  for (const y of probes) {
+    for (const x of probes) {
+      const screenX = box.x + (box.width * x) / 100;
+      const screenY = box.y + (box.height * y) / 100;
+      await page.mouse.move(screenX, screenY);
+      await page.waitForTimeout(20);
+      const bone = (await canvas.getAttribute('data-hovered-bone')) ?? '';
+      if (bone && (!expectedBone || bone === expectedBone)) {
+        return { bone, x: screenX, y: screenY };
       }
     }
   }

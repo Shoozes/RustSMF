@@ -14,7 +14,11 @@ export function createSmfStressFixtureInput(vertexCount = DEFAULT_VERTEX_COUNT):
   const tangents = new Float32Array(boundedVertexCount * 4);
   const skinIndices = new Uint16Array(boundedVertexCount * 4);
   const skinWeights = new Float32Array(boundedVertexCount * 4);
-  const triangles = Array.from({ length: boundedVertexCount / 3 }, (_, triangle) => [
+  const triangleCount = boundedVertexCount / 3;
+  const gridWidth = Math.ceil(Math.sqrt(triangleCount));
+  const triangleSize = 0.001;
+  const gridStep = triangleSize * 2;
+  const triangles = Array.from({ length: triangleCount }, (_, triangle) => [
     triangle * 3,
     triangle * 3 + 1,
     triangle * 3 + 2,
@@ -23,9 +27,11 @@ export function createSmfStressFixtureInput(vertexCount = DEFAULT_VERTEX_COUNT):
   for (let vertex = 0; vertex < boundedVertexCount; vertex += 1) {
     const triangleVertex = vertex % 3;
     const triangle = Math.floor(vertex / 3);
-    positions[vertex * 3] = triangleVertex === 1 ? 0.01 : 0;
-    positions[vertex * 3 + 1] = triangleVertex === 2 ? 0.01 : 0;
-    positions[vertex * 3 + 2] = (triangle % 100) * 0.0001;
+    const originX = (triangle % gridWidth) * gridStep;
+    const originY = Math.floor(triangle / gridWidth) * gridStep;
+    positions[vertex * 3] = originX + (triangleVertex === 1 ? triangleSize : 0);
+    positions[vertex * 3 + 1] = originY + (triangleVertex === 2 ? triangleSize : 0);
+    positions[vertex * 3 + 2] = 0;
     normals[vertex * 3 + 2] = 1;
     uvs[vertex * 2] = triangleVertex === 1 ? 1 : 0;
     uvs[vertex * 2 + 1] = triangleVertex === 2 ? 1 : 0;

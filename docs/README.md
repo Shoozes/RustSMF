@@ -16,6 +16,7 @@ This folder is intentionally flat at the top level. Use the narrowest durable do
 ## Reference Material
 
 - `docs/references/old-src/`: preserved GameMaker/GLBtoSMF source, screenshots, and samples used as compatibility references.
+- `docs/references/theme-qa/`: preserved Original-theme comparison images and their durable QA record.
 - `docs/research-inbox/`: raw or partially reviewed research notes before they are converted into state, TODOs, pitfalls, tests, or context groups.
 
 ## Policy

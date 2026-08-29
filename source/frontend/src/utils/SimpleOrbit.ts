@@ -12,6 +12,8 @@ export class SimpleOrbit {
   yaw = 0.6;
   pitch = 0.4;
   distance = 4.5;
+  minDistance = 1.2;
+  maxDistance = 18;
   target = new THREE.Vector3(0, 0.8, 0);
 
   private dragging = false;
@@ -56,7 +58,8 @@ export class SimpleOrbit {
     const onWheel = (e: WheelEvent) => {
       if (!this.enabled || !shouldHandle(e.clientX, e.clientY)) return;
       e.preventDefault();
-      this.distance = Math.max(1.2, Math.min(18, this.distance + e.deltaY * 0.003));
+      const zoomFactor = Math.exp(Math.max(-2, Math.min(2, e.deltaY * 0.0015)));
+      this.distance = this.clampDistance(this.distance * zoomFactor);
       onChange();
     };
     const onContextMenu = (e: MouseEvent) => e.preventDefault();
@@ -114,10 +117,18 @@ export class SimpleOrbit {
     };
   }
 
+  setDistanceLimits(minDistance: number, maxDistance: number): void {
+    const safeMin = Number.isFinite(minDistance) && minDistance > 0 ? minDistance : 1.2;
+    const safeMax = Number.isFinite(maxDistance) && maxDistance > safeMin ? maxDistance : safeMin * 15;
+    this.minDistance = safeMin;
+    this.maxDistance = safeMax;
+    this.distance = this.clampDistance(this.distance);
+  }
+
   reset(target?: THREE.Vector3, distance = 4.5) {
     this.yaw = 0.6;
     this.pitch = 0.4;
-    this.distance = Number.isFinite(distance) && distance > 0 ? distance : 4.5;
+    this.distance = this.clampDistance(Number.isFinite(distance) && distance > 0 ? distance : 4.5);
     if (target) {
       this.target.copy(target);
     } else {
@@ -130,6 +141,10 @@ export class SimpleOrbit {
     const y = Math.sin(this.pitch) * this.distance;
     const z = Math.cos(this.pitch) * Math.cos(this.yaw) * this.distance;
     return new THREE.Vector3(x, y, z).add(this.target);
+  }
+
+  private clampDistance(distance: number): number {
+    return Math.max(this.minDistance, Math.min(this.maxDistance, distance));
   }
 }
 

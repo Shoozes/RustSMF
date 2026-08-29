@@ -2,6 +2,7 @@ import React from 'react';
 import * as THREE from 'three';
 import type { BoneNudgeDelta } from '../hooks/poseEdits';
 import type { EditorMode } from '../store';
+import { deriveMixamoMinimalBoneAliases } from '../utils/boneAliases';
 import { getRigRootBones, isRigBone, isRigBoneDetached } from '../utils/rigHierarchy';
 
 interface InspectorProps {
@@ -25,6 +26,21 @@ interface InspectorProps {
   showTransformControls?: boolean;
   editorMode?: EditorMode;
 }
+
+const ROTATION_STEP_RADIANS = 0.2;
+const rotationNudgeControls: readonly {
+  axis: 'X' | 'Y' | 'Z';
+  direction: -1 | 1;
+  testId: string;
+  delta: BoneNudgeDelta;
+}[] = [
+  { axis: 'X', direction: -1, testId: 'transform-rot-x-negative-btn', delta: { rotX: -ROTATION_STEP_RADIANS } },
+  { axis: 'X', direction: 1, testId: 'transform-rot-x-btn', delta: { rotX: ROTATION_STEP_RADIANS } },
+  { axis: 'Y', direction: -1, testId: 'transform-rot-y-negative-btn', delta: { rotY: -ROTATION_STEP_RADIANS } },
+  { axis: 'Y', direction: 1, testId: 'transform-rot-y-btn', delta: { rotY: ROTATION_STEP_RADIANS } },
+  { axis: 'Z', direction: -1, testId: 'transform-rot-negative-btn', delta: { rotZ: -ROTATION_STEP_RADIANS } },
+  { axis: 'Z', direction: 1, testId: 'transform-rot-btn', delta: { rotZ: ROTATION_STEP_RADIANS } },
+];
 
 const Inspector: React.FC<InspectorProps> = ({
   title = 'Inspector',
@@ -56,6 +72,10 @@ const Inspector: React.FC<InspectorProps> = ({
     [displayBones, skeleton],
   );
   const visibleBoneSet = React.useMemo(() => new Set(visibleBones), [visibleBones]);
+  const boneAliases = React.useMemo(
+    () => deriveMixamoMinimalBoneAliases(visibleBones),
+    [visibleBones],
+  );
   const usesIndexedSmfBoneNames = visibleBones.length > 0
     && visibleBones.every((bone) => /^SMF_Node_\d+$/.test(bone.name));
   const rootBones = getRigRootBones(visibleBones);
@@ -84,6 +104,7 @@ const Inspector: React.FC<InspectorProps> = ({
     const hasChildren = childBones.length > 0;
     const isExpanded = expandedBones.has(bone.uuid);
     const isDetached = isRigBoneDetached(bone, skeleton);
+    const alias = boneAliases.get(bone.name);
     return (
       <li key={bone.uuid} className="list-none">
         <div
@@ -92,6 +113,8 @@ const Inspector: React.FC<InspectorProps> = ({
           style={{ paddingLeft: `${depth * 12}px` }}
           data-testid={`bone-tree-item-${bone.name || bone.uuid}`}
           data-rig-bone-detached={isDetached ? 'true' : 'false'}
+          data-bone-alias={alias ?? ''}
+          title={alias ? `${bone.name} uses the display alias ${alias}` : bone.name}
         >
           {hasChildren && (
             <span
@@ -101,7 +124,8 @@ const Inspector: React.FC<InspectorProps> = ({
               {isExpanded ? '−' : '+'}
             </span>
           )}
-          {bone.name}
+          <span className="font-mono">{bone.name}</span>
+          {alias && <span className="ml-1 text-cyan-300">· {alias}</span>}
           {isDetached && <span className="ml-1 text-slate-500">(detached)</span>}
         </div>
         {hasChildren && isExpanded && (
@@ -158,7 +182,9 @@ const Inspector: React.FC<InspectorProps> = ({
             </div>
             {usesIndexedSmfBoneNames && (
               <div data-testid="smf-indexed-bone-guidance" className="mt-1 text-[10px] leading-snug text-slate-500">
-                SMF stores indexed bone IDs. Click the visible rig to match an ID to a body part.
+                {boneAliases.size > 0
+                  ? 'Mixamo-style aliases identify this known humanoid layout for editing. Source IDs stay unchanged for SMF export fidelity.'
+                  : 'SMF stores indexed bone IDs. Hover or click the visible rig to match an ID to a body part.'}
               </div>
             )}
           </div>
@@ -181,15 +207,28 @@ const Inspector: React.FC<InspectorProps> = ({
             <button data-testid="transform-y-btn" aria-label="Move selected bone positive Y" title="Move +0.1 on Y" className="mr-1 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
               onNudgeBone?.(selected, { y: 0.1 });
             }}> +Y </button>
-            <button data-testid="transform-rot-negative-btn" aria-label="Rotate selected bone negative Z" title="Rotate -11.5 degrees around Z" className="mr-1 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
-              onNudgeBone?.(selected, { rotZ: -0.2 });
-            }}> −Z rot </button>
-            <button data-testid="transform-rot-btn" aria-label="Rotate selected bone positive Z" title="Rotate +11.5 degrees around Z" className="px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
-              onNudgeBone?.(selected, { rotZ: 0.2 });
-            }}> +Z rot </button>
             <button data-testid="transform-reset-btn" aria-label="Restore selected bone bind pose" className="ml-1 px-1 py-0 bg-slate-800 text-xs" title="Restore the selected deform bone local bind transform" onClick={() => {
               onNudgeBone?.(selected, { reset: true });
             }}> Bind </button>
+            <div className="mt-1 flex flex-wrap items-center gap-0.5" role="group" aria-label="Rotate selected bone by axis">
+              <span className="mr-0.5 text-slate-400">Rotate</span>
+              {rotationNudgeControls.map(({ axis, direction, testId, delta }) => {
+                const directionWord = direction < 0 ? 'negative' : 'positive';
+                const sign = direction < 0 ? '−' : '+';
+                return (
+                  <button
+                    key={testId}
+                    data-testid={testId}
+                    aria-label={`Rotate selected bone ${directionWord} ${axis}`}
+                    title={`Rotate ${sign}11.5 degrees around ${axis}`}
+                    className="px-1 py-0 bg-slate-700 hover:bg-slate-600"
+                    onClick={() => onNudgeBone?.(selected, delta)}
+                  >
+                    {sign}{axis}
+                  </button>
+                );
+              })}
+            </div>
             {onToggleWeightPreview && (
               <button
                 data-testid="weight-preview-btn"

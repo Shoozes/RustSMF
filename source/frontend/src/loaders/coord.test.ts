@@ -147,7 +147,7 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
 // Domain-owned Playwright specs cover visuals and full UI flows.
 import { exportSMFToBuffer, importSMF, buildThreeScene, ImportedSmf } from './smf';
 import { buildRigHierarchy } from './smfRig';
-import { makeBoneLabel } from '../utils/boneLabels';
+import { makeBoneLabel, updateBoneLabelText } from '../utils/boneLabels';
 import { makeBoneHighlightMarker, makeBoneHoverMarker, updateHighlightPosition } from '../utils/boneHighlight';
 import { ModernSkeletonHelper, findBoneNameFromSkeletonHelperHit } from '../utils/modernSkeletonHelper';
 import { createSeqGuard } from '../utils/seqGuard';
@@ -468,6 +468,7 @@ describe('smf export roundtrip (data-driven)', () => {
                 drawImage() {},
                 getImageData() { return { data: new Uint8ClampedArray(4) }; },
                 scale() {},
+                clearRect() {},
                 fillRect() {},
                 fillText(t: string) { lastFillText = t; },
               };
@@ -495,6 +496,8 @@ describe('smf export roundtrip (data-driven)', () => {
       // test truncation polish for long names (branch in makeBoneLabel)
       makeBoneLabel('SMF_Node_VeryLongName12345');
       assert.ok(lastFillText.includes('...'), 'long name truncated in fillText for polish');
+      updateBoneLabelText(label, 'SMF_Node_12 · LeftArm');
+      assert.equal((label as any).userData.labelText, 'SMF_Node_12 · LeftArm');
     } finally {
       if (origCreate && !restored) {
         g.document.createElement = origCreate;

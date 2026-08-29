@@ -102,12 +102,12 @@
         "source/frontend/src/utils/themeViewportGrid.ts",
         "source/frontend/src/utils/themeViewportGrid.test.ts",
         "source/frontend/tests/visual.spec.ts",
-        "design-qa.md"
+        "docs/references/theme-qa/README.md"
       ],
       "notes": [
         "Original preserves the old editor's simplicity and compact hierarchy, including quad view before model load.",
         "Theme definitions own labels, panel copy, camera scale, and grid behavior; components should not branch on theme IDs.",
-        "design-qa.md owns the preserved-source comparison and final fidelity evidence paths."
+        "docs/references/theme-qa/README.md owns the preserved-source comparison and final fidelity evidence paths."
       ]
     },
     "feature__model_outliner_materials": {
@@ -158,7 +158,7 @@
       ]
     },
     "feature__fbx_support": {
-      "description": "Binary FBX 7500 export, import compatibility, pre-save validation, and round-trip coverage.",
+      "description": "FBX import with bounded selected texture sidecars, binary FBX 7500 export, pre-save validation, and round-trip coverage.",
       "max_kb": 128,
       "paths": [
         "source/frontend/src/loaders/fbx.ts",
@@ -168,6 +168,7 @@
         "source/frontend/src/vendor/FBXExporter.d.ts",
         "source/frontend/src/vendor/FBXExporter-threejs.LICENSE.txt",
         "source/frontend/tests/export-formats.spec.ts",
+        "source/frontend/tests/helpers/external-fbx-fixture.ts",
         "source/frontend/tests/fixtures/independent-fbx/generate_fixture.py",
         "source/frontend/tests/fixtures/independent-fbx/validate_fixture.py",
         "docs/dev/fixtures/INDEPENDENT_FBX_PROVENANCE.md"
@@ -176,7 +177,7 @@
         "The bundled exporter is the implementation authority.",
         "Exported bytes must re-import and preserve representative mesh, skin, bone, and clip structure before save.",
         "The independent Blender-authored fixture is test-only; Blender 5.0.0 validates both the source asset and app-exported output, but this does not claim universal FBX compatibility.",
-        "FBX texture parse waits on its isolated loader manager; unavailable maps fail safe before render."
+        "FBX texture parse waits on its isolated loader manager; authorized selected relative maps resolve through the shared resource bundle and unavailable maps fail safe before render."
       ]
     },
     "subsystem__model_geometry_preparation": {
@@ -254,12 +255,6 @@
         "source/frontend/src/utils/viewportTransformControls.ts",
         "source/frontend/src/utils/viewportLayout.ts",
         "source/frontend/src/utils/viewportLayout.test.ts",
-        "source/frontend/src/utils/themeViewportGrid.ts",
-        "source/frontend/src/utils/themeViewportGrid.test.ts",
-        "source/frontend/src/utils/viewportDisplayController.ts",
-        "source/frontend/src/utils/viewportDisplayController.test.ts",
-        "source/frontend/src/utils/poseOverlay.ts",
-        "source/frontend/src/utils/poseOverlay.test.ts",
         "source/frontend/src/utils/threeDisposal.ts",
         "source/frontend/src/utils/threeDisposal.test.ts"
       ],
@@ -267,16 +262,19 @@
         "Mount-owned listeners and controls require one explicit dispose owner.",
         "Long-lived callbacks read current mutable state through refs.",
         "Perspective and orthographic panes keep distinct directions and zoom while sharing one pan/focus target.",
+        "Model framing, clip planes, orbit limits, wheel zoom, and orthographic extents scale from finite geometry bounds without mutating the authored model transform.",
         "Animation actions bind only when the mixer root matches the current root; attachment applies one complete current playback intent.",
         "Pending RAF handles are canceled through the shared zero-safe animation-frame guard."
       ]
     },
     "subsystem__viewport_support": {
-      "description": "Viewport-facing bone picking, labels, highlights, helper geometry, Inspector controls, display lighting, and shared Three guards.",
+      "description": "Viewport-facing bone picking, fail-closed humanoid aliases, labels, highlights, helper geometry, Inspector controls, display lighting, and shared Three guards.",
       "max_kb": 64,
       "paths": [
         "source/frontend/src/components/Inspector.tsx",
         "source/frontend/src/utils/bonePicker.ts",
+        "source/frontend/src/utils/boneAliases.ts",
+        "source/frontend/src/utils/boneAliases.test.ts",
         "source/frontend/src/utils/boneLabels.ts",
         "source/frontend/src/utils/boneHighlight.ts",
         "source/frontend/src/utils/modernSkeletonHelper.ts",
@@ -388,7 +386,7 @@
       "notes": [
         "Brush queries use bounded spatial candidates and verify world-space distance before mutation.",
         "Completed strokes and batch actions own one undoable snapshot transaction.",
-        "Set paint separates target weight from brush flow and falloff; the optional Skin pts overlay refreshes posed vertex positions through a non-serializable runtime WeakMap link.",
+        "Set paint separates target weight from brush flow and falloff; selected-weight Skin pts refresh posed positions through a non-serializable runtime WeakMap link and provide exact source-vertex paint targets while surface brushing remains the broad-stroke fallback.",
         "Skin diagnostics reads raw four-slot attributes for the hovered vertex and aggregate mesh counts, preserving invalid references/weights as stable issue codes instead of silently clamping them.",
         "Brush sampling exposes Rest / Bind, Frozen Current, and Live Animation modes; Frozen Current owns a captured bone-matrix snapshot and Live Animation displays a safety warning.",
         "Weight preview is a non-destructive vertex-color display; original color attributes and material vertex-color modes are restored on disable/export.",
@@ -470,12 +468,11 @@
       ]
     },
     "tests__browser_shell_lifecycle": {
-      "description": "Browser shell, model load, async ownership, worker responsiveness, and native IPC flows.",
+      "description": "Browser shell, model load, async ownership, and worker responsiveness flows.",
       "max_kb": 128,
       "paths": [
         "source/frontend/tests/shell-model.spec.ts",
         "source/frontend/tests/lifecycle.spec.ts",
-        "source/frontend/tests/native.spec.ts",
         "source/frontend/tests/fixtures/invalid-model.gml",
         "source/frontend/tests/helpers/smoke-helpers.ts",
         "source/frontend/tests/helpers/format-assertions.ts",
@@ -490,14 +487,15 @@
         "Non-SMF-to-SMF browser cases assert the enabled action for compatible skinned sources and diagnostic blocking for static or unsupported sources; source-SMF export cases remain enabled.",
         "Dirty replacement coverage asserts Cancel preserves the mounted model and Discard clears authoring state before the selected model is committed.",
         "The stress fixture supplies triangle metadata for every generated triangle-soup vertex, and overlap tests explicitly confirm each queued replacement so semantic and async regressions fail at the intended boundary.",
-        "Native mock coverage treats Rust-owned open/read/save/cancel commands and selected-path authorization as explicit IPC contracts."
+        "Native mock coverage is routed through subsystem__native_io rather than duplicated in this browser shell group."
       ]
     },
     "workflow__recorded_browser_journey": {
-      "description": "Opt-in recorded browser journey for real-SMF animation authoring, DPI containment, actionability, screenshots, and WebM evidence.",
+      "description": "Opt-in recorded browser journey for real-SMF animation and skin authoring, DPI containment, mini-node precision targeting, screenshots, and WebM evidence.",
       "max_kb": 80,
       "paths": [
         "source/frontend/playwright.journey.config.ts",
+        "source/frontend/src/loaders/handWaveWeightRepair.test.ts",
         "source/frontend/tests/journeys/hand-wave.journey.spec.ts",
         "source/frontend/tests/helpers/smoke-helpers.ts",
         "source/frontend/tests/helpers/timeline-interactions.ts",
@@ -506,7 +504,7 @@
         "source/frontend/tests/README.md"
       ],
       "notes": [
-        "The journey is excluded from the default browser gate and records one deterministic 1440x900, 125%-DPI hand-wave workflow through the production preview server.",
+        "The journey is excluded from the default browser gate and records one deterministic 1440x900, 125%-DPI hand-wave workflow through the production preview server, including exact mini-node repair of the fixture's torso/sleeve weighting defect.",
         "Generated screenshots, test results, traces, and WebM evidence remain ignored runtime output; rerun test:journey to produce current evidence."
       ]
     },
@@ -568,18 +566,20 @@
       ]
     },
     "issue__external_model_resources": {
-      "description": "Bounded GLTF/OBJ sidecar resource resolution, native/browser authorization, missing-resource diagnostics, and cleanup.",
+      "description": "Bounded GLTF/FBX/OBJ sidecar resource resolution, native/browser authorization, missing-resource diagnostics, and cleanup.",
       "max_kb": 320,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/loaders/glb.ts",
+        "source/frontend/src/loaders/fbx.ts",
         "source/frontend/src/loaders/obj.ts",
         "source/frontend/src/utils/modelFormat.ts",
         "source/frontend/src/utils/modelResourceBundle.ts",
         "source/frontend/src/utils/modelResourceBundle.test.ts",
         "source/frontend/src/test/externalGltfFixture.test.ts",
         "source/frontend/tests/export-formats.spec.ts",
+        "source/frontend/tests/helpers/external-fbx-fixture.ts",
         "source/frontend/tests/fixtures/external-gltf/scene.gltf",
         "source/frontend/tests/fixtures/external-gltf/mesh.bin",
         "source/frontend/tests/fixtures/external-gltf/texture.png",
@@ -587,9 +587,9 @@
         "docs/dev/APP_STATE.md"
       ],
       "notes": [
-        "Browser and native open paths normalize one primary plus selected relative sidecars into a bounded bundle; GLTFLoader and OBJLoader resolve only authorized local names.",
+        "Browser and native open paths normalize one primary plus selected relative sidecars into a bounded bundle; GLTFLoader, FBXLoader, and OBJLoader resolve only authorized local names.",
         "Traversal, remote/data, duplicate/case-ambiguous, per-file/aggregate size, missing-resource, stale-load, and object-URL cleanup guards are implemented and tested.",
-        "OBJ supports one MTL bundle with relative textures; multiple material libraries and unsafe or unresolved resources fail closed while geometry-only OBJ remains supported."
+        "FBX resolves only texture paths referenced by the file; unrelated selected maps are not guessed into material slots. OBJ supports one MTL bundle with relative textures; multiple material libraries and unsafe or unresolved resources fail closed while geometry-only OBJ remains supported."
       ]
     },
     "issue__smf_resource_contract": {
@@ -632,7 +632,6 @@
       "max_kb": 176,
       "paths": [
         "source/frontend/src/hooks/useLoadModel.ts",
-        "source/frontend/src/hooks/useSmfCodecTask.ts",
         "source/frontend/src/hooks/smfExportCandidate.ts",
         "source/frontend/src/hooks/smfExportCandidate.test.ts",
         "source/frontend/src/hooks/editorSnapshots.ts",
@@ -648,7 +647,7 @@
         "source/frontend/src/types/viewportEditorEvents.ts"
       ],
       "notes": [
-        "useLoadModel keeps its public return contract while pure snapshots, codec tasks, and export candidates own focused policy.",
+        "useLoadModel keeps its public return contract while pure snapshots and export candidates own focused policy; the codec-task lifecycle is routed through subsystem__export_pipeline.",
         "Renderer and requestAnimationFrame ownership remain in ThreeViewport; mount listeners and TransformControls have explicit dispose owners.",
         "Replacement decisions are centralized before byte materialization, and editor history is capped at 100 entries/64 MiB with eviction status."
       ]

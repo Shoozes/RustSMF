@@ -3,6 +3,7 @@ export interface ViewportInteractionHandlers {
   onPointerDown: (event: PointerEvent) => void;
   onPointerUp: (event: PointerEvent) => void;
   onPointerMove: (event: PointerEvent) => void;
+  onPointerLeave: (event: PointerEvent) => void;
   onContextMenu: (event: MouseEvent) => void;
   onWindowPointerUp: (event: PointerEvent) => void;
   onWindowPointerCancel: (event: PointerEvent) => void;
@@ -21,6 +22,7 @@ export function attachViewportInteractionRuntime(
   canvas.addEventListener('pointerdown', handlers.onPointerDown);
   canvas.addEventListener('pointerup', handlers.onPointerUp);
   canvas.addEventListener('pointermove', handlers.onPointerMove);
+  canvas.addEventListener('pointerleave', handlers.onPointerLeave);
   canvas.addEventListener('contextmenu', handlers.onContextMenu);
   globalTarget.addEventListener('keydown', handlers.onKeyDown);
   globalTarget.addEventListener('pointerup', handlers.onWindowPointerUp);
@@ -34,6 +36,7 @@ export function attachViewportInteractionRuntime(
       canvas.removeEventListener('pointerdown', handlers.onPointerDown);
       canvas.removeEventListener('pointerup', handlers.onPointerUp);
       canvas.removeEventListener('pointermove', handlers.onPointerMove);
+      canvas.removeEventListener('pointerleave', handlers.onPointerLeave);
       canvas.removeEventListener('contextmenu', handlers.onContextMenu);
       globalTarget.removeEventListener('keydown', handlers.onKeyDown);
       globalTarget.removeEventListener('pointerup', handlers.onWindowPointerUp);

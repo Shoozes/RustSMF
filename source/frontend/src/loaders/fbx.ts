@@ -5,6 +5,10 @@ import { FBXExporter } from '../vendor/FBXExporter.js';
 import { withSourceMaterialState } from '../utils/materialPreview';
 import { disposeThreeObject } from '../utils/threeDisposal';
 import { isThreeBone, isThreeMesh, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
+import {
+  createResourceUrlRegistry,
+  type ModelResourceBundle,
+} from '../utils/modelResourceBundle';
 import { bytesToArrayBuffer } from './smfBinary';
 
 // Basic FBX loader, mirroring glb.ts structure for consistency.
@@ -17,6 +21,7 @@ export interface FbxLoadSummary {
   boneCount: number;
   vertexCount: number;
   clipCount: number;
+  textureMapCount: number;
   removedTextureMaps: number;
   primaryMeshName: string | null;
   notes: string[];
@@ -154,6 +159,7 @@ function buildFbxLoadSummary(
   skinnedMeshes: THREE.SkinnedMesh[],
   skeleton: THREE.Skeleton | undefined,
   clips: THREE.AnimationClip[],
+  textureMapCount: number,
   removedTextureMaps: number,
 ): FbxLoadSummary {
   let meshCount = 0;
@@ -195,13 +201,24 @@ function buildFbxLoadSummary(
     boneCount,
     vertexCount,
     clipCount: clips.length,
+    textureMapCount,
     removedTextureMaps,
     primaryMeshName,
     notes,
   };
 }
 
-export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoadedModel> {
+function resourceBasePath(name: string): string {
+  const slash = name.lastIndexOf('/');
+  return slash >= 0 ? `${name.slice(0, slash + 1)}` : '';
+}
+
+export async function loadFBX(
+  urlOrBuffer: string | ArrayBuffer | ModelResourceBundle,
+): Promise<FbxLoadedModel> {
+  const isBundle = typeof urlOrBuffer === 'object' && !(urlOrBuffer instanceof ArrayBuffer);
+  const bundle = isBundle ? urlOrBuffer as ModelResourceBundle : null;
+  const registry = bundle && bundle.files.length > 1 ? createResourceUrlRegistry(bundle) : null;
   const textureManager = new THREE.LoadingManager();
   let textureLoadStarted = false;
   let resolveTextureLoads: () => void = () => {};
@@ -212,55 +229,71 @@ export async function loadFBX(urlOrBuffer: string | ArrayBuffer): Promise<FbxLoa
     textureLoadStarted = true;
   };
   textureManager.onLoad = () => resolveTextureLoads();
+  if (registry) textureManager.setURLModifier((url) => registry.resolve(url));
   const loader = new FBXLoader(textureManager);
 
-  let fbx: THREE.Group;
-  if (typeof urlOrBuffer === 'string') {
-    fbx = await loader.loadAsync(urlOrBuffer);
-  } else {
-    // FBXLoader parse expects ArrayBuffer or string; for buffer, use parse.
-    // Note: FBXLoader's parse is sync but may require additional setup for some FBX features.
-    fbx = loader.parse(urlOrBuffer, '');
-  }
-
-  const root = fbx; // FBX loads as group-like
-  await Promise.all([
-    textureLoadStarted
-      ? waitForPromiseOrTimeout(textureLoads, FBX_TEXTURE_WAIT_MS)
-      : Promise.resolve(),
-    waitForFbxTextures(root),
-  ]);
-  const removedTextureMaps = removeUnavailableFbxTextureMaps(root);
-  root.name = 'FBX_Root';
-
-  const skinnedMeshes: THREE.SkinnedMesh[] = [];
-  const allClips: THREE.AnimationClip[] = fbx.animations || [];
-
-  root.traverse((obj) => {
-    if (!isThreeSkinnedMesh(obj)) {
-      return;
+  let fbx: THREE.Group | null = null;
+  try {
+    if (typeof urlOrBuffer === 'string') {
+      fbx = await loader.loadAsync(urlOrBuffer);
+    } else {
+      const bytes = bundle ? bytesToArrayBuffer(bundle.primary.data) : urlOrBuffer as ArrayBuffer;
+      const basePath = bundle ? resourceBasePath(bundle.primary.name) : '';
+      fbx = loader.parse(bytes, basePath);
     }
-    ensureGeometryAttributes(obj.geometry);
 
-    skinnedMeshes.push(obj);
-  });
+    const root = fbx;
+    await Promise.all([
+      textureLoadStarted
+        ? waitForPromiseOrTimeout(textureLoads, FBX_TEXTURE_WAIT_MS)
+        : Promise.resolve(),
+      waitForFbxTextures(root),
+    ]);
+    const removedTextureMaps = removeUnavailableFbxTextureMaps(root);
+    const textureMapCount = collectTextures(root).length;
+    root.name = 'FBX_Root';
 
-  let skeleton: THREE.Skeleton | undefined;
-  if (skinnedMeshes.length > 0) {
-    skeleton = skinnedMeshes[0].skeleton;
+    const skinnedMeshes: THREE.SkinnedMesh[] = [];
+    const allClips: THREE.AnimationClip[] = fbx.animations || [];
+
+    root.traverse((obj) => {
+      if (!isThreeSkinnedMesh(obj)) {
+        return;
+      }
+      ensureGeometryAttributes(obj.geometry);
+
+      skinnedMeshes.push(obj);
+    });
+
+    let skeleton: THREE.Skeleton | undefined;
+    if (skinnedMeshes.length > 0) {
+      skeleton = skinnedMeshes[0].skeleton;
+    }
+
+    const mixer = new THREE.AnimationMixer(root);
+    const summary = buildFbxLoadSummary(
+      root,
+      skinnedMeshes,
+      skeleton,
+      allClips,
+      textureMapCount,
+      removedTextureMaps,
+    );
+
+    return {
+      root,
+      skeleton,
+      skinnedMeshes,
+      clips: allClips,
+      mixer,
+      summary,
+    };
+  } catch (error) {
+    if (fbx) disposeThreeObject(fbx);
+    throw error;
+  } finally {
+    registry?.dispose();
   }
-
-  const mixer = new THREE.AnimationMixer(root);
-  const summary = buildFbxLoadSummary(root, skinnedMeshes, skeleton, allClips, removedTextureMaps);
-
-  return {
-    root,
-    skeleton,
-    skinnedMeshes,
-    clips: allClips,
-    mixer,
-    summary,
-  };
 }
 
 export async function exportFBX(root: THREE.Group, clips: THREE.AnimationClip[] = []): Promise<Uint8Array> {

@@ -1,6 +1,89 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-08-20 (added native same-handle growth and strict SMF-envelope checks alongside the loader tangent-precondition, pre-materialization, worker, conversion, history, timing, and process-lifecycle lessons).
+Last reviewed: 2026-08-29 (added explicit failure-value handling for precision Skin targets alongside scale-independent framing, dense-model overdraw, selected FBX sidecar, precision journey targeting, native same-handle growth, strict SMF-envelope, loader, worker, conversion, history, timing, and process-lifecycle lessons).
+
+### Q: What pitfall are we preventing?
+
+**What:** A helper that returns `FailureCode | null` can be treated like a success boolean and invert a user interaction while remaining type-correct.
+
+**Context and constraints:** Show Vertices maps a raycast point index and overlay stride back to one skinned source vertex. A valid hit must drive exact world-space painting; missing attributes, stale indexes, or invalid bone data must fail closed without mutating weights.
+
+**Why it happened:** `getSkinnedVertexWorldPosition` returns `null` on success and a string on failure. The first precision-target integration used the call directly as an `if` condition, so successful work returned early while failure continued with the vector's initial `(0, 0, 0)` value. TypeScript accepted both branches because the union is intentionally nullable.
+
+**Where:** `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/utils/skinnedVertexPosition.ts`, `source/frontend/src/utils/skinPointOverlay.ts`, and `source/frontend/src/utils/skinPointOverlay.test.ts`.
+
+**Evidence:** The repository gate passed 352 units, lint, and both typechecks before review found the inverted conditional. The new focused test proves a valid point resolves to the same world position as Three.js, while out-of-range and malformed-skin inputs return `null`; the 74-case browser suite and recorded Skin/animation journey pass with the corrected wiring.
+
+**Developer story:** Static inspection compared the caller at `ThreeViewport.tsx` with the helper's declared return contract and exposed that success was the falsy case. A one-line conditional reversal would restore behavior but leave the unusual contract easy to misuse again. Moving index/stride/geometry/failure handling into `resolveSkinPointSourceVertex` made the call site consume a positive target-or-null contract, and the focused test plus recorded journey separated local math correctness from real pointer-path integration.
+
+**How to catch it:** Name nullable error results `failure`, test both success and failure branches, and expose positive `Result | null` adapters at interaction boundaries instead of passing `Failure | null` through UI conditionals. For precision Skin changes, run the focused overlay unit and the recorded journey.
+
+**Solutions tried:**
+
+1. `35/100` Rely on typecheck and existing overlay tests, result: the inverted conditional compiled and all 352 units passed.
+2. `72/100` Reverse the component conditional only, result: it would restore the immediate path but leave duplicated validation and the failure-valued contract exposed to the next caller.
+3. `97/100` Centralize point/stride/source validation in a positive target resolver and cover valid plus invalid inputs, result: the component is smaller and both focused and end-to-end proof pass.
+
+**Current solution:** `resolveSkinPointSourceVertex` returns the exact `{ vertexIndex, worldPosition }` only after bounds and skin validation succeed. `ThreeViewport` consumes that positive result and ignores invalid targets before brush collection.
+
+**Decision rationale:** The small resolver reuses the existing skinned-position authority, removes repeated checks, and makes the safe branch obvious without changing the lower-level error codes used by brush diagnostics.
+
+**Effectiveness:** `97/100`, durable. The solution has direct failing-path coverage, real browser/journey proof, no new dependency, and a narrow reusable boundary.
+
+**Relevance check:** Current. Any future overlay, diagnostic, or precision-picking integration can repeat the same nullable-failure inversion.
+
+**Next prevention step:** Keep new `Failure | null` calls assigned to an explicitly named variable and require a success-plus-failure regression whenever they enter UI control flow.
+
+### Q: What pitfall are we preventing?
+
+**What:** Fixed world-unit camera padding can make tiny assets disappear and huge assets clip, while a correct auto-fit can expose hidden render-overdraw and test-coordinate assumptions.
+
+**Why it happened:** Perspective distance used `maxDim * 0.85 + 2`, orthographic extent used a one-unit floor, wheel zoom used a fixed world-unit delta, and near/far/orbit ranges were unrelated to the loaded model. The 300,000-vertex worker fixture also stacked 100,000 triangles in the same pixels; once a tiny model was correctly framed, that unrelated codec test saturated rendering. TransformControls and journey helpers encoded screen paths learned from the old composition.
+
+**Where:** `source/frontend/src/utils/viewportLayout.ts`, `SimpleOrbit.ts`, `components/ThreeViewport.tsx`, `tests/shell-model.spec.ts`, `tests/helpers/smf-stress-fixture.ts`, `tests/helpers/viewport-interactions.ts`, and `tests/journeys/hand-wave.journey.spec.ts`.
+
+**How to catch it:** Load equivalent generated roots at extreme scales and compare authored root scale, perspective/orthographic pixel coverage, camera distance, clip planes, and orbit limits as ratios of model bounds. Keep a large worker fixture in the full parallel suite, but distribute geometry so it measures codec responsiveness rather than fragment overdraw. Derive interactive test axes from the actual hovered handle, and allow occluded precision targets to be reached through deterministic camera movement.
+
+**Current solution:** Camera fit, clipping, orbit limits, reset, and zoom are model-relative and never normalize the root. Skinned bounds are exact through 100,000 vertices and switch to a conservative bone-transform bound above that threshold. The worker fixture retains 300,000 vertices on a compact non-overlapping grid, the TransformControls helper accepts the visible hovered axis, and the journey uses single-view quarter-turn fallbacks after its quad checkpoint.
+
+**Decision rationale:** Mutating model scale would break authored transforms and skin binds; fixed minimum distances merely move the failure between unit systems. Exact bounds preserve ordinary visual composition, while the threshold keeps worst-case load work bounded. Test fixtures must isolate the subsystem they claim to exercise.
+
+**Effectiveness:** `98/100`, durable. Focused units cover proportional math and the large-skinned fallback, the browser suite proves `1e-5`/`1e5` composition plus the 300,000-vertex worker path, and the journey/strict snapshots provide temporal and visual evidence.
+
+**Next prevention step:** Treat camera, model-scale, renderer-density, and screen-coordinate changes as one visual-integration surface; run the tiny/huge browser case, worker case, journey, and strict snapshots together.
+
+### Q: What pitfall are we preventing?
+
+**What:** Valid animation keys and plausible joint motion can still produce a visibly broken emote when nearby mesh vertices are weighted to the wrong downstream bone.
+
+**Context and constraints:** The opt-in 1440x900, 125%-DPI journey uses `source/frontend/tests/mixamo_smf_baldguy.smf` to author a two-second hand wave. Source bone IDs and SMF export identity must remain unchanged; the workflow must use the same viewport, animation controls, Skin diagnostics, and paint path available to a user.
+
+**Why it happened:** Several `Mesh_4` torso-seam vertices carried about 51–61% `SMF_Node_13` (`LeftForeArm`) influence, while outer upper-sleeve vertices followed `LeftForeArm`/`LeftHand` instead of the upper arm. Elbow and hand rotation therefore pulled the shirt into a long triangle and left a rigid torso-to-arm bridge even after the gesture envelope was safe.
+
+**Where:** `source/frontend/tests/journeys/hand-wave.journey.spec.ts`, `source/frontend/src/loaders/handWaveWeightRepair.test.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/src/components/SkinPanel.tsx`, `source/frontend/src/utils/skinPointOverlay.ts`, `source/frontend/src/utils/skinWeights.ts`, and ignored evidence under `output/playwright/hand-wave-journey/`.
+
+**Evidence:** The recorded frames first exposed head clipping, whole-arm sweeping, torso stretching, and a cyan torso-to-arm wing that key-count assertions did not. A real-fixture unit probe measured a worst posed/rest triangle-edge ratio of 2.775 and identified both bad influence groups. The tested repair removes forearm influence from the four duplicated torso-seam clusters while preserving the existing torso/upper-arm blend, assigns the three outer sleeve-edge clusters to `LeftArm`, and reduces the same ratio to 1.190. The browser journey reaches those vertices through actual pointer interaction, verifies exact source-vertex telemetry and raw semantic diagnostics, and records the corrected playback.
+
+**Developer story:** The initial wrist-only wave was widened, which made the gesture more readable but introduced head clipping and a tube-man sweep. Holding the shoulder and matching posed loop endpoints fixed the motion envelope, while the torso spike persisted. A first broad reassignment could reduce one spike yet leave a rigid wing because triangle-soup duplicates and the sleeve edge did not share one correct owner. The journey then made the old-editor-style vertex nodes first-class Skin controls, targeted every visible/depth-separated duplicate, subtracted only the bad forearm component from the seam, and bound the outer sleeve edge to the upper arm. The correction stays inside the same user workflow instead of mutating the fixture at runtime or shrinking the animation until the defect is hidden.
+
+**How to catch it:** For a representative authored pose, record both static checkpoints and a temporal sequence. If geometry stretches, inspect the visible vertex's four raw influence slots before changing curves. Do not infer the painted source vertex from only the nearest diagnostic: depth filtering and triangle-soup duplicates can make that a false positive. Require exact mesh/vertex paint telemetry, both seam faces, the adjoining sleeve edge, dirty skin state, semantic source/alias names, corrected playback, and no critical browser errors.
+
+**Solutions tried:**
+
+1. `32/100` Rotate only the wrist, result: technically valid keys but an unreadable twitch.
+2. `48/100` Increase whole-chain travel, result: a more obvious gesture that clipped the head, swept from T-pose endpoints, and amplified bad shoulder weights.
+3. `64/100` Set or Spine-paint only the nearest torso point, result: the large spike shrinks but an unpainted duplicate or forearm/hand-driven sleeve edge still forms a rigid wing.
+4. `98/100` Hold the shoulder, key matched loop endpoints, bound motion to elbow/hand, use exact posed mini-node targets to subtract forearm influence from both seam faces, and assign the outer sleeve edge to `LeftArm`, result: readable motion plus deterministic numerical and visual regression evidence.
+
+**Current solution:** The journey authors five held poses, selects the hips before playback to keep the hand unobstructed, detects the fixture's bad seam/sleeve influences, and exposes Mixamo-minimal aliases in Skin diagnostics. Show Vertices renders depth-tested selected-weight mini nodes that follow the pose and act as precision paint targets with a forgiving invisible hit area. Frozen Current Subtract removes `LeftForeArm` from both seam faces while preserving the torso/upper-arm blend; Frozen Current Set assigns the outer sleeve edge to `LeftArm` before final playback.
+
+**Decision rationale:** The combined animation-and-skin workflow fixes the actual owners of the symptoms. Reducing the motion would conceal bad weights, broad Auto Skin chose the forearm segment for the tested seam, replacing every seam influence with `LeftArm` would discard a useful torso blend, and runtime fixture mutation would bypass the user workflow the journey is intended to validate. Exact mini-node targeting is a small reusable interaction seam: it improves precision while preserving the existing broad surface brush.
+
+**Effectiveness:** `98/100`, durable. The guard uses the real fixture and UI path, pins the deformation ratio numerically, and records semantic and visual evidence. Its remaining limitation is that the recorded journey is opt-in rather than part of the default 74-case browser gate.
+
+**Relevance check:** Current. Any change to pose controls, animation key scope, skin diagnostics, brush sampling, weight preview, or the known humanoid fixture can regress this show-ready path.
+
+**Next prevention step:** Keep `pwsh -NoProfile -File .\run.ps1 -Task test:journey` as the visual certification lane and inspect its final WebM whenever animation or skinning behavior changes.
 
 ### Q: What pitfall are we preventing?
 
@@ -1213,15 +1296,15 @@ Last reviewed: 2026-08-20 (added native same-handle growth and strict SMF-envelo
 
 ### Q: What pitfall are we preventing?
 
-**What:** A binary FBX can pass the app's Three.js re-import check while failing a real target application, and an imported embedded texture can trigger a renderer warning if the scene is attached before its asynchronous image load completes.
+**What:** A binary FBX can pass the app's Three.js re-import check while failing a real target application; selected texture sidecars can be silently discarded at the format branch; and an imported texture can trigger a renderer warning if the scene is attached before its asynchronous image load completes.
 
 **Context and constraints:** RustSMF exports FBX 7500 from a live Three.js root and must preserve mesh topology, skin indices, animation, and material texture behavior without making Blender a runtime dependency. The browser loader and the external validator have different timing and type expectations.
 
-**Why it happened:** The vendored writer serialized integer-valued FBX arrays as double arrays and omitted required layer `Name` nodes. Three.js accepted the bytes, but Blender 5.0.0 rejected the geometry/layer contract. Separately, Three.js `TextureLoader.load()` returns a texture before its image is assigned; the app attached the root immediately, allowing WebGL to inspect an empty texture before the loader manager settled.
+**Why it happened:** The vendored writer serialized integer-valued FBX arrays as double arrays and omitted required layer `Name` nodes. Three.js accepted the bytes, but Blender 5.0.0 rejected the geometry/layer contract. Separately, the picker correctly built a bounded multi-file bundle but `useLoadModel` passed only the FBX bytes, so external textures could not resolve. Three.js `TextureLoader.load()` also returns a texture before its image is assigned; attaching the root immediately allowed WebGL to inspect an empty texture before the loader manager settled.
 
 **Where:** `source/frontend/src/vendor/FBXExporter.js`, `source/frontend/src/loaders/fbx.ts`, `source/frontend/tests/export-formats.spec.ts`, `source/frontend/tests/fixtures/independent-fbx/validate_fixture.py`, and `docs/dev/fixtures/INDEPENDENT_FBX_PROVENANCE.md`.
 
-**Evidence:** The first app-exported roundtrip passed the browser re-import but Blender failed with `TypeError: ufunc 'bitwise_xor'` on `PolygonVertexIndex`; after integer arrays were corrected, Blender failed on a missing layer name. The final output passed Blender 5.0.0 validation with one mesh, two bones, two weighted groups, 20 animation curves, and two packed images. The browser flow passed with no renderer warning after manager-aware texture waiting.
+**Evidence:** The first app-exported roundtrip passed the browser re-import but Blender failed with `TypeError: ufunc 'bitwise_xor'` on `PolygonVertexIndex`; after integer arrays were corrected, Blender failed on a missing layer name. The final output passed Blender 5.0.0 validation with one mesh, two bones, two weighted groups, 20 animation curves, and two packed images. The supplied Grim FBX then proved the import-side gap: after bundle forwarding, it loaded one source-referenced base-color texture with 1 mesh, 13,935 vertices, 65 bones, and one clip; its three unreferenced maps remained unused. A generated ASCII FBX/PNG browser case now owns that sidecar contract.
 
 **Developer story:** Self-roundtrip success initially looked sufficient. A second application exposed the external wire-contract mismatch, and the failure location narrowed the fix to typed geometry/layer metadata rather than app-side conversion. A separate browser diagnostic showed that the texture warning came from the loader's intentionally early return, not from a corrupt image. The final fix keeps the exporter format stable, waits only on the loader-owned resource manager, and removes unavailable maps before render.
 
@@ -1232,7 +1315,7 @@ Last reviewed: 2026-08-20 (added native same-handle growth and strict SMF-envelo
 2. `68/100` Suppress the WebGL warning or filter it in the test, result: it would hide an attach-before-load race and lose texture diagnostics.
 3. `99/100` Emit explicit FBX integer arrays and layer names, await the isolated texture `LoadingManager`, remove unavailable maps before attach, and validate app output in Blender, result: both internal and external proof pass with a narrow runtime cost and no sandbox/toolchain dependency.
 
-**Current solution:** `FBXExporter.js` uses a shared `int32Values` encoder for polygon, material, skin, and animation integer arrays and supplies layer names. `loadFBX` owns a `LoadingManager` for parse-time texture requests, waits up to the bounded texture timeout, then fails safe on unavailable maps. The independent fixture and validator remain test-only.
+**Current solution:** `FBXExporter.js` uses a shared `int32Values` encoder for polygon, material, skin, and animation integer arrays and supplies layer names. `useLoadModel` forwards the selected bounded bundle; `loadFBX` resolves only referenced relative resources through owned object URLs, waits up to the bounded texture timeout, reports retained/skipped maps, revokes URLs, and fails safe on unavailable maps. The independent fixture, generated sidecar fixture, and validator remain test-only.
 
 **Decision rationale:** External target validation is the only evidence that can catch a file-format dialect mismatch; suppressing a warning cannot. The manager wait is scoped to FBX parse work and preserves a usable material fallback when an external texture is genuinely unavailable.
 

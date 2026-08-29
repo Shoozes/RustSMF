@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { useMemo } from 'react';
+import { deriveMixamoMinimalBoneAliases, formatBoneDisplayName } from '../utils/boneAliases';
 import {
   SKIN_AUTO_WEIGHT_ALGORITHMS,
   SKIN_AUTO_WEIGHT_ALGORITHM_LABELS,
@@ -23,6 +25,8 @@ interface SkinPanelProps {
   onToggleWeightPreview?: () => void;
   showBoneLabels: boolean;
   onToggleBoneLabels?: () => void;
+  showPaintVertices: boolean;
+  onTogglePaintVertices?: () => void;
   editorMode?: string;
   skinEditHasDirtyState: boolean;
   skinEditBlockReason: string | null;
@@ -66,6 +70,8 @@ export default function SkinPanel({
   onToggleWeightPreview,
   showBoneLabels,
   onToggleBoneLabels,
+  showPaintVertices,
+  onTogglePaintVertices,
   skinEditHasDirtyState,
   skinEditBlockReason,
   skinPaintMode,
@@ -102,6 +108,10 @@ export default function SkinPanel({
 }: SkinPanelProps) {
   const selectedBonePresent = !!selected && selected !== 'Scene';
   const hasSkeleton = !!skeleton && skeleton.bones.length > 0;
+  const boneAliases = useMemo(
+    () => deriveMixamoMinimalBoneAliases(skeleton?.bones ?? []),
+    [skeleton],
+  );
   const isPaintEnabled = selectedBonePresent && hasSkeleton;
   const sliderDisabled = !isPaintEnabled;
   const skinPaintPoseWarning = getSkinPaintPoseWarning(skinPaintPose);
@@ -112,12 +122,14 @@ export default function SkinPanel({
   return (
     <div className="inspector" data-testid="skin-workspace-panel" data-editor-mode={editorMode}>
       <div className="panel-title">Skin Workspace</div>
-      <div className="text-xs text-slate-300 mb-2">Skinned workflow for viewport-weight + bone selection checks</div>
+      <div className="text-xs text-slate-300 mb-2">Inspect and refine per-bone vertex influences.</div>
       <div className="text-[10px] text-slate-400">Source format: {sourceFormat || 'unknown'}</div>
       <div className="text-[10px] text-slate-400 mt-1">Skin targets available: {hasSkeleton ? 'yes' : 'no'}</div>
       <div className="text-xs mt-3">
         <div className="mb-1 text-slate-400">Selected</div>
-        <div className="font-mono text-amber-300 break-all">{selected || 'Scene'}</div>
+        <div className="font-mono text-amber-300 break-all">
+          {formatBoneDisplayName(selected || 'Scene', boneAliases)}
+        </div>
         <div className="text-[10px] mt-1 text-slate-400">
           {selectedBonePresent
             ? 'Transforms from Inspector and gizmo affect this bone immediately.'
@@ -130,6 +142,7 @@ export default function SkinPanel({
             data-testid="skin-weight-preview-btn"
             className="px-1 py-0 bg-slate-700 hover:bg-slate-600 text-xs mr-1"
             onClick={onToggleWeightPreview}
+            aria-pressed={showWeightPreview}
           >
             {showWeightPreview ? 'Hide' : 'Show'} Weights
           </button>
@@ -137,17 +150,33 @@ export default function SkinPanel({
         {onToggleBoneLabels && (
           <button
             data-testid="skin-bone-label-btn"
-            className="px-1 py-0 bg-slate-700 hover:bg-slate-600 text-xs"
+            className="px-1 py-0 bg-slate-700 hover:bg-slate-600 text-xs mr-1"
             onClick={onToggleBoneLabels}
+            aria-pressed={showBoneLabels}
           >
             {showBoneLabels ? 'Hide' : 'Show'} Labels
+          </button>
+        )}
+        {onTogglePaintVertices && (
+          <button
+            data-testid="skin-paint-vertices-btn"
+            className="px-1 py-0 bg-slate-700 hover:bg-slate-600 text-xs"
+            onClick={onTogglePaintVertices}
+            aria-pressed={showPaintVertices}
+            title="Show mini vertex nodes colored by the selected bone's weight"
+          >
+            {showPaintVertices ? 'Hide' : 'Show'} Vertices
           </button>
         )}
       </div>
       <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
         <div className="text-slate-400 mb-1">Skin paint</div>
         <div className="text-slate-300 text-[10px] mb-2">
-          {isPaintEnabled ? 'Brush on painted mesh vertices to edit weights.' : 'Select a bone to enable skin painting.'}
+          {isPaintEnabled
+            ? showPaintVertices
+              ? 'Select a mini vertex node for exact targeting, or brush the surface for a broader stroke.'
+              : 'Brush the surface to edit nearby mesh vertices; Show Vertices enables exact mini-node targeting.'
+            : 'Select a bone to enable skin painting.'}
         </div>
         <label className="flex items-center justify-between gap-2 text-slate-400 mb-2">
           <span>Paint pose</span>
@@ -415,9 +444,19 @@ export default function SkinPanel({
             </div>
             <div className="grid grid-cols-[auto_1fr_auto] gap-x-2 gap-y-0.5 mt-1">
               {skinSelectedVertex.slots.map((slot) => (
-                <div key={slot.slot} className={slot.issue ? 'text-rose-300 contents' : 'text-slate-300 contents'}>
+                <div
+                  key={slot.slot}
+                  className={slot.issue ? 'text-rose-300 contents' : 'text-slate-300 contents'}
+                  data-testid={`skin-influence-slot-${slot.slot}`}
+                  data-bone-name={slot.boneName ?? ''}
+                  data-weight={slot.weight ?? ''}
+                >
                   <span>#{slot.slot + 1}</span>
-                  <span>{slot.boneName ?? (slot.boneIndex === null ? 'invalid reference' : `Bone ${slot.boneIndex}`)}</span>
+                  <span>
+                    {slot.boneName
+                      ? formatBoneDisplayName(slot.boneName, boneAliases)
+                      : slot.boneIndex === null ? 'invalid reference' : `Bone ${slot.boneIndex}`}
+                  </span>
                   <span>{slot.weight === null ? '—' : slot.weight.toFixed(4)}</span>
                 </div>
               ))}

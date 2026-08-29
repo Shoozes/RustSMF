@@ -6,6 +6,7 @@ import { readGlbJson } from './helpers/format-assertions';
 import { openViewportDisplayMenu, setViewportLayout, dragRigMoveInOrthoPane, dragRigRotateInOrthoPane } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
 import { decodeProjectDocument } from '../src/utils/projectCodec';
+import { createExternalFbxFixtureInputs } from './helpers/external-fbx-fixture';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -553,6 +554,20 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
 
       await expect(page.getByTestId('status-text')).toContainText(/Loaded: scene\.gltf/i, { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/2 sidecar resources/i);
+      await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', /.+/);
+      await expectRenderedScreenshot(page.getByTestId('viewport-container'));
+      expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
+    });
+
+    test('external FBX bundle resolves its selected texture sidecar', async ({ page }) => {
+      await page.goto('/');
+      await page.getByTestId('model-file-input').setInputFiles(createExternalFbxFixtureInputs());
+
+      const status = page.getByTestId('status-text');
+      await expect(status).not.toContainText('Loading', { timeout: 15000 });
+      await expect(status).toContainText(/Loaded FBX: external-textured\.fbx/i);
+      await expect(status).toContainText(/textures: 1/i);
+      await expect(status).not.toContainText(/textures skipped/i);
       await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', /.+/);
       await expectRenderedScreenshot(page.getByTestId('viewport-container'));
       expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);

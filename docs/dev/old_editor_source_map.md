@@ -1,6 +1,6 @@
 # RustSMF: old-Editor parity source map (active reference)
 
-Last reconciled: 2026-08-01
+Last reconciled: 2026-08-29
 
 This map tracks legacy GameMaker behavior that must be preserved while implementing parity in RustSMF.
 
@@ -100,7 +100,7 @@ Sources used:
   - Core workspace mode switches and a modern toolbar are implemented.
   - Wireframe, grid, axes, texture visibility, bone-index labels, perspective/ortho, rig opacity/thickness, model opacity, and display-only submodel visibility are implemented.
   - The `Legacy` display toggle now swaps in viewport-only SMF-lit material clones with diffuse/specular/rim behavior and restores original materials on disable so export material fidelity is not mutated.
-  - The `Skin pts` display toggle now adds a viewport-only skinned vertex point overlay colored by selected-bone influence.
+  - The `Skin pts` display toggle now adds a viewport-only skinned vertex point overlay colored by selected-bone influence. Skin also exposes it as Show Vertices; depth-tested mini nodes keep a stable screen-space size and resolve through a guarded point-to-source-vertex contract before providing exact paint targets with a larger precision hit area. Invalid or stale skin data is ignored, while surface brushing remains available.
   - View-mode model/Outliner selection now adds viewport-only selected-object overlays inspired by the old `sh_selection` blue overlay behavior; overlays are display helpers only and rebuild on selection/visibility changes.
   - Shader/display reference files preserved for future display work:
     - `docs/references/old-src/shaders/sh_smf_animate/sh_smf_animate.vsh` and `.fsh`
@@ -110,7 +110,7 @@ Sources used:
     - `docs/references/old-src/shaders/sh_skinning_weights/sh_skinning_weights.vsh` and `.fsh`
     - `docs/references/old-src/shaders/sh_skinning_weight_paint/sh_skinning_weight_paint.vsh` and `.fsh`
     - `docs/references/old-src/shaders/sh_selection/sh_selection.vsh` and `.fsh`
-  - The current weight preview is intentionally implemented in `source/frontend/src/utils/weightPreview.ts` as a non-destructive Three.js vertex-color heat map. It restores the original color attribute and each material's prior `vertexColors` mode when disabled and keeps export materials untouched; exact legacy texture modulation and shader uniform parity are reference material, not an unresolved runtime stub.
+  - The current weight preview is intentionally implemented in `source/frontend/src/utils/weightPreview.ts` as a non-destructive Three.js vertex-color heat map, paired with posed selected-weight mini nodes from `source/frontend/src/utils/skinPointOverlay.ts`. Both keep export materials and source geometry untouched; exact legacy texture modulation and shader uniform parity are reference material, not an unresolved runtime stub.
   - Outliner bulk Select All, Clear, Hide selected, Hide unselected, and Show all are implemented as display-only visibility actions, and visibility mutations use toolbar/Ctrl+Z/Ctrl+Y undo-redo.
   - Global shelf/material policy is resolved: repeat wrapping and source/nearest/linear filtering are viewport-only previews; source samplers and material assignments are restored during export; Rig and Animate own separate snap units; include-textures behavior is format-owned and visible in Export; and merge-same-textures is a shared-texture preflight rather than the legacy destructive geometry merge. Culling remains owned by the modern viewport rather than this material policy.
   - Global undo/redo covers current pose, Rig, Animate, Skin, and Outliner mutators through ordered domain histories. `source/frontend/tests/README.md` owns the current mutator inventory; new authoring actions must join an undoable row or be explicitly classified as non-destructive.

@@ -253,6 +253,13 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       const paintCanvas = page.getByTestId('three-canvas');
       expect(await paintOnMeshInViewport(page)).toBe(true);
       await expect(paintCanvas).toHaveAttribute('data-skin-brush-hover', 'active');
+      await expect(paintCanvas).toHaveAttribute('data-skin-inspected-vertex', /\d+/);
+      await expect(paintCanvas).toHaveAttribute('data-skin-paint-vertex-refs', /:\d+/);
+      await page.mouse.move(4, 4);
+      await expect(paintCanvas).toHaveAttribute('data-skin-brush-hover', 'inactive');
+      expect(await paintCanvas.getAttribute('data-skin-brush-x')).toBe(null);
+      expect(await paintCanvas.getAttribute('data-skin-inspected-vertex')).toBe(null);
+      await expect(paintCanvas).toHaveAttribute('data-skin-paint-vertex-refs', '');
 
       await page.getByTestId('mode-tab-view').click({ force: true });
       await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-editor-mode', 'view');

@@ -5,6 +5,7 @@ import {
   createSkinPointOverlay,
   createSkinPointOverlays,
   disposeSkinPointOverlays,
+  resolveSkinPointSourceVertex,
   updateSkinPointOverlay,
 } from './skinPointOverlay';
 
@@ -48,28 +49,51 @@ describe('skinPointOverlay', () => {
 
     assert.ok(overlay);
     assert.equal(overlay.userData.skinPointOverlay, true);
-    assert.equal(overlay.userData.displayOnly, true);
-    assert.equal(overlay.userData.interactionTarget, false);
+    assert.equal(overlay.userData.interactionTarget, true);
     assert.equal(overlay.userData.sourceMeshUuid, mesh.uuid);
     assert.equal(overlay.userData.sourceVertexCount, 4);
     assert.equal(overlay.userData.pointCount, 4);
+    assert.equal((overlay.material as THREE.PointsMaterial).size, 4);
+    assert.equal((overlay.material as THREE.PointsMaterial).sizeAttenuation, false);
     const colors = overlay.geometry.getAttribute('color');
     assert.equal(colors.count, 4);
     assert.ok(colors.getX(1) > colors.getX(0), 'selected-bone weight increases red channel');
     assert.ok(colors.getZ(1) < colors.getZ(0), 'selected-bone weight decreases blue channel');
   });
 
-  it('is display-only and cannot be raycast-picked', () => {
+  it('supports explicit precision raycast picking', () => {
     const mesh = makeSkinnedMesh();
     const overlay = createSkinPointOverlay(mesh);
 
     assert.ok(overlay);
     const raycaster = new THREE.Raycaster(
-      new THREE.Vector3(0, 0, 1),
+      new THREE.Vector3(1, 0, 1),
       new THREE.Vector3(0, 0, -1),
     );
+    raycaster.params.Points = { threshold: 0.1 };
+    overlay.updateMatrixWorld(true);
 
-    assert.deepEqual(raycaster.intersectObject(overlay, true), []);
+    const hits = raycaster.intersectObject(overlay, true);
+    assert.ok(hits.some((hit) => hit.index === 1));
+  });
+
+  it('resolves valid overlay points to world-space source vertices and rejects invalid skin data', () => {
+    const mesh = makeSkinnedMesh();
+    mesh.position.x = 4;
+    mesh.updateMatrixWorld(true);
+    mesh.skeleton.update();
+
+    const target = resolveSkinPointSourceVertex(mesh, 1, 1);
+    const expectedWorld = mesh.getVertexPosition(1, new THREE.Vector3()).applyMatrix4(mesh.matrixWorld);
+
+    assert.ok(target);
+    assert.equal(target.vertexIndex, 1);
+    assert.ok(target.worldPosition.distanceTo(expectedWorld) < 1e-6);
+    assert.ok(target.worldPosition.lengthSq() > 0, 'valid picks do not fall back to the origin');
+    assert.equal(resolveSkinPointSourceVertex(mesh, 10, 1), null);
+
+    mesh.geometry.deleteAttribute('skinWeight');
+    assert.equal(resolveSkinPointSourceVertex(mesh, 0, 1), null);
   });
 
   it('caps large overlays by sampling vertices', () => {

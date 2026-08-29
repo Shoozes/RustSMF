@@ -112,6 +112,8 @@ describe('buildSmfExportCandidate', () => {
           SMF_Node_0: {
             dx: 0,
             dy: 0,
+            dRotX: 0,
+            dRotY: 0,
             dRotZ: 0,
             dirty: true,
             hasScale: true,
@@ -158,6 +160,8 @@ describe('buildSmfExportCandidate', () => {
         SMF_Node_0: {
           dx: 2,
           dy: 0,
+          dRotX: 0,
+          dRotY: 0,
           dRotZ: 0,
           dirty: true,
           hasScale: false,

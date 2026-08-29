@@ -868,6 +868,8 @@ export default function App() {
           onToggleWeightPreview={workspace.showWeightSection ? toggleWeightPreview : undefined}
           showBoneLabels={shouldShowBoneLabels}
           onToggleBoneLabels={toggleBoneLabels}
+          showPaintVertices={skinPointOverlayEnabled}
+          onTogglePaintVertices={() => setSkinPointOverlayEnabled(!skinPointOverlayEnabled)}
           skinEditHasDirtyState={skinEditHasDirtyState}
           skinEditBlockReason={skinEditBlockReason}
           skinPaintMode={skinPaintMode}

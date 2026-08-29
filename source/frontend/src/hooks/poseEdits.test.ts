@@ -53,9 +53,13 @@ test('pose edit helpers track absolute viewport edits separately from nudge delt
   assert.equal(hasUnsupportedPoseScaleEdits(scaleReset), false);
 });
 
-test('nudge reset clears dirty nudge deltas without forcing scale state', () => {
-  const moved = applyNudgeDelta(emptyPoseEdit(), { x: 1, rotZ: 0.25 });
+test('nudge reset clears three-axis rotation and translation deltas without forcing scale state', () => {
+  const moved = applyNudgeDelta(emptyPoseEdit(), { x: 1, rotX: -0.5, rotY: 0.75, rotZ: 0.25 });
   assert.equal(hasPoseEdits({ Bone: moved }), true);
+  assert.deepEqual(
+    [moved.dRotX, moved.dRotY, moved.dRotZ],
+    [-0.5, 0.75, 0.25],
+  );
 
   const reset = applyNudgeDelta(moved, { reset: true });
   assert.equal(hasPoseEdits({ Bone: reset }), false);

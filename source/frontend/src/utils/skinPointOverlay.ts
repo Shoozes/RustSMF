@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { getSkinnedVertexWorldPosition } from './skinnedVertexPosition';
 import { isThreeSkinnedMesh } from './threeTypeGuards';
 
 export interface SkinPointOverlayOptions {
@@ -8,7 +9,7 @@ export interface SkinPointOverlayOptions {
 }
 
 const DEFAULT_MAX_POINTS = 8000;
-const DEFAULT_POINT_SIZE = 0.035;
+const DEFAULT_POINT_SIZE = 4;
 const sourceMeshByOverlay = new WeakMap<THREE.Points, THREE.SkinnedMesh>();
 const poseStateByOverlay = new WeakMap<THREE.Points, number[]>();
 const tempPositionByOverlay = new WeakMap<THREE.Points, THREE.Vector3>();
@@ -18,6 +19,29 @@ interface SkinPointOverlayUpdateData {
   sourcePosition: THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
   overlayPosition: THREE.BufferAttribute | THREE.InterleavedBufferAttribute;
   stride: number;
+}
+
+export interface SkinPointSourceVertex {
+  vertexIndex: number;
+  worldPosition: THREE.Vector3;
+}
+
+export function resolveSkinPointSourceVertex(
+  mesh: THREE.SkinnedMesh,
+  pointIndex: unknown,
+  sourceVertexStride: unknown,
+): SkinPointSourceVertex | null {
+  const stride = Number(sourceVertexStride);
+  if (typeof pointIndex !== 'number' || !Number.isInteger(pointIndex) || pointIndex < 0) return null;
+  if (!Number.isInteger(stride) || stride < 1) return null;
+
+  const vertexIndex = pointIndex * stride;
+  const position = mesh.geometry.getAttribute('position');
+  if (!position || vertexIndex >= position.count) return null;
+
+  const worldPosition = new THREE.Vector3();
+  const failure = getSkinnedVertexWorldPosition(mesh, vertexIndex, worldPosition);
+  return failure ? null : { vertexIndex, worldPosition };
 }
 
 function selectedBoneIndex(mesh: THREE.SkinnedMesh, selectedBoneName?: string): number {
@@ -135,21 +159,20 @@ export function createSkinPointOverlay(
   geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   const material = new THREE.PointsMaterial({
     size: Math.max(0.001, options.pointSize ?? DEFAULT_POINT_SIZE),
+    sizeAttenuation: false,
     vertexColors: true,
     transparent: true,
     opacity: 0.9,
-    depthTest: false,
+    depthTest: true,
     depthWrite: false,
   });
   const points = new THREE.Points(geometry, material);
   points.name = `${mesh.name || 'skinned mesh'} skin point overlay`;
   points.frustumCulled = false;
   points.renderOrder = 20;
-  points.raycast = (): void => {};
   points.userData = {
     skinPointOverlay: true,
-    displayOnly: true,
-    interactionTarget: false,
+    interactionTarget: true,
     sourceMeshUuid: mesh.uuid,
     sourceVertexStride: stride,
     selectedBoneName: options.selectedBoneName ?? '',

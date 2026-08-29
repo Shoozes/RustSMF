@@ -1125,7 +1125,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         smfCodecExecution = imported.execution;
         loaded = buildSmfScene(importedSmf);
       } else if (detectedLoadFormat === 'fbx') {
-        const urlOrBuf: string | ArrayBuffer = data ? bytesToArrayBuffer(data) : (res.path || '');
+        const urlOrBuf: string | ArrayBuffer | ModelResourceBundle = resourceBundle || (data ? bytesToArrayBuffer(data) : (res.path || ''));
         loaded = await loadFBX(urlOrBuf);
       } else if (detectedLoadFormat === 'obj') {
         const urlOrBuf: string | ArrayBuffer | ModelResourceBundle = resourceBundle || (data ? bytesToArrayBuffer(data) : (res.path || ''));
@@ -1199,6 +1199,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           `bones: ${summary.boneCount}`,
           `clips: ${summary.clipCount}`,
         ];
+        if (summary.textureMapCount > 0) {
+          parts.push(`textures: ${summary.textureMapCount}`);
+        }
         if (summary.removedTextureMaps > 0) {
           parts.push(`textures skipped: ${summary.removedTextureMaps}`);
         }
@@ -2726,6 +2729,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
     if (delta.x !== undefined) bone.position.x += delta.x;
     if (delta.y !== undefined) bone.position.y += delta.y;
+    if (delta.rotX !== undefined) bone.rotation.x += delta.rotX;
+    if (delta.rotY !== undefined) bone.rotation.y += delta.rotY;
     if (delta.rotZ !== undefined) bone.rotation.z += delta.rotZ;
     bone.updateMatrix();
     skeleton.update();
@@ -2734,6 +2739,12 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     const changes = [
       delta.x !== undefined ? `X ${delta.x >= 0 ? '+' : ''}${delta.x.toFixed(2)}` : '',
       delta.y !== undefined ? `Y ${delta.y >= 0 ? '+' : ''}${delta.y.toFixed(2)}` : '',
+      delta.rotX !== undefined
+        ? `X rotation ${delta.rotX >= 0 ? '+' : ''}${(delta.rotX * 180 / Math.PI).toFixed(1)}°`
+        : '',
+      delta.rotY !== undefined
+        ? `Y rotation ${delta.rotY >= 0 ? '+' : ''}${(delta.rotY * 180 / Math.PI).toFixed(1)}°`
+        : '',
       delta.rotZ !== undefined
         ? `Z rotation ${delta.rotZ >= 0 ? '+' : ''}${(delta.rotZ * 180 / Math.PI).toFixed(1)}°`
         : '',

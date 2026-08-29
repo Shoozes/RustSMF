@@ -1,6 +1,6 @@
 # Original SMF Theme Design QA
 
-Date: 2026-07-30
+Evidence date: 2026-07-30
 
 ## Visual Truth
 

@@ -342,7 +342,7 @@ export default function AnimatePanel({
       </div>
       <div className="animate-keyframe-tools" data-testid="animate-keyframe-tools">
         <div className="animate-workflow-hint" data-testid="animation-workflow-hint">
-          Select a bone in the viewport or Bones list, pose it, scrub to a time, then Insert a key. Use Update to replace the selected key.
+          Select a bone and pose it, scrub to a time, then Insert. For a multi-joint gesture, select its root and use Branch to key the whole chain together. Use Update to replace selected keys.
         </div>
         <label className="animate-scope-selector">
           <span>Key scope</span>

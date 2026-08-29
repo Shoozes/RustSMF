@@ -2,6 +2,48 @@ import * as THREE from 'three';
 
 interface BoneLabelOptions {
   scale?: number;
+  showAxes?: boolean;
+  maxCharacters?: number;
+  backgroundColor?: string;
+  textColor?: string;
+  spriteWidth?: number;
+  spriteHeight?: number;
+  offsetY?: number;
+}
+
+interface BoneLabelState {
+  canvas: HTMLCanvasElement;
+  context: CanvasRenderingContext2D;
+  texture: THREE.CanvasTexture;
+  maxCharacters: number;
+  backgroundColor: string;
+  textColor: string;
+  fontSize: number;
+}
+
+const boneLabelStates = new WeakMap<THREE.Object3D, BoneLabelState>();
+
+function displayBoneLabelText(text: string, maxCharacters: number): string {
+  if (text.length <= maxCharacters) return text;
+  return `${text.slice(0, Math.max(1, maxCharacters - 3))}...`;
+}
+
+function drawBoneLabel(label: THREE.Object3D, text: string): void {
+  const state = boneLabelStates.get(label);
+  if (!state) return;
+  const { canvas, context, texture } = state;
+  if (typeof context.clearRect === 'function') {
+    context.clearRect(0, 0, canvas.width, canvas.height);
+  }
+  context.fillStyle = state.backgroundColor;
+  context.fillRect(0, 0, 256, 48);
+  context.fillStyle = state.textColor;
+  context.font = `bold ${state.fontSize}px monospace`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText(displayBoneLabelText(text, state.maxCharacters), 128, 24);
+  texture.needsUpdate = true;
+  label.userData.labelText = text;
 }
 
 /**
@@ -15,33 +57,40 @@ export function makeBoneLabel(text: string, options: BoneLabelOptions = {}): THR
   const group = new THREE.Group();
   group.userData = { isBoneLabel: true };
 
-  // Small AxesHelper for visual bone marker/glyph (advances editor affordances)
-  const axes = new THREE.AxesHelper(0.08 * scale);
-  axes.material.depthTest = false;
-  axes.material.transparent = true;
-  group.add(axes);
+  if (options.showAxes !== false) {
+    const axes = new THREE.AxesHelper(0.08 * scale);
+    axes.material.depthTest = false;
+    axes.material.transparent = true;
+    group.add(axes);
+  }
 
-  // Canvas name sprite (cheap text label, no extra deps)
   const canvas = document.createElement('canvas');
-  const dpr = Math.min((typeof window !== 'undefined' && window.devicePixelRatio) || 1, 2); // polish for retina/quality, node-safe
+  const dpr = Math.min((typeof window !== 'undefined' && window.devicePixelRatio) || 1, 2);
   canvas.width = 256 * dpr; canvas.height = 48 * dpr;
   const ctx = canvas.getContext('2d')!;
   ctx.scale(dpr, dpr);
-  ctx.fillStyle = 'rgba(0,0,0,0.75)';
-  ctx.fillRect(0, 0, 256, 48);
-  ctx.fillStyle = '#a5b4fc';
-  ctx.font = `bold ${Math.round(20 * scale)}px monospace`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  const displayText = text.length > 12 ? text.substring(0, 9) + '...' : text; // polish for long names
-  ctx.fillText(displayText, 128, 24);
   const tex = new THREE.CanvasTexture(canvas);
   const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
   const spr = new THREE.Sprite(mat);
-  spr.scale.set(0.6 * scale, 0.11 * scale, 1);
-  spr.position.set(0, 0.18 * scale, 0); // above the axes
+  spr.scale.set((options.spriteWidth ?? 0.6) * scale, (options.spriteHeight ?? 0.11) * scale, 1);
+  spr.position.set(0, (options.offsetY ?? 0.18) * scale, 0);
   group.add(spr);
+
+  boneLabelStates.set(group, {
+    canvas,
+    context: ctx,
+    texture: tex,
+    maxCharacters: Math.max(4, options.maxCharacters ?? 12),
+    backgroundColor: options.backgroundColor ?? 'rgba(0,0,0,0.75)',
+    textColor: options.textColor ?? '#a5b4fc',
+    fontSize: Math.round(20 * scale),
+  });
+  drawBoneLabel(group, text);
 
   group.position.set(0, 0.05 * scale, 0);
   return group;
+}
+
+export function updateBoneLabelText(label: THREE.Object3D, text: string): void {
+  drawBoneLabel(label, text);
 }

@@ -3,7 +3,10 @@ import { describe, it } from 'node:test';
 import * as THREE from 'three';
 import {
   DEFAULT_VIEWPORT_BOUNDS,
+  deriveModelBounds,
+  getModelClipPlanes,
   getModelOrbitDistance,
+  getModelOrbitDistanceLimits,
   getMouseForViewport,
   getOrthographicPanDelta,
   getViewportAt,
@@ -43,10 +46,10 @@ describe('viewportLayout', () => {
     assert.equal(singleOrtho.length, 1);
     assert.equal(singleOrtho[0].role, 'front');
     assert.equal(singleOrtho[0].camera, cameras[0]);
-    assert.equal(cameras[0].left, -8);
-    assert.equal(cameras[0].right, 8);
-    assert.equal(cameras[0].top, 4);
-    assert.equal(cameras[0].bottom, -4);
+    assert.equal(cameras[0].left, -5.2);
+    assert.equal(cameras[0].right, 5.2);
+    assert.equal(cameras[0].top, 2.6);
+    assert.equal(cameras[0].bottom, -2.6);
 
     refreshOrthoCameras(cameras, bounds);
     const quad = refreshViewportSpecs(801, 601, 'quad', bounds, perspective, cameras, true);
@@ -184,7 +187,111 @@ describe('viewportLayout', () => {
 
   it('derives a finite model-fit orbit distance', () => {
     assert.equal(getModelOrbitDistance({ center: new THREE.Vector3(), maxDim: 4 }), 5.4);
-    assert.equal(getModelOrbitDistance({ center: new THREE.Vector3(), maxDim: Number.NaN }), 2.85);
+    assert.equal(getModelOrbitDistance({ center: new THREE.Vector3(), maxDim: Number.NaN }), 1.35);
+    assert.equal(getModelOrbitDistance({ center: new THREE.Vector3(), maxDim: 4 }, 0.5), 10.8);
+  });
+
+  it('keeps camera fit, clipping, and navigation proportional across extreme model scales', () => {
+    for (const maxDim of [1e-6, 1e6]) {
+      const bounds = { center: new THREE.Vector3(), maxDim };
+      const distance = getModelOrbitDistance(bounds);
+      const limits = getModelOrbitDistanceLimits(bounds);
+      const clip = getModelClipPlanes(bounds);
+
+      assert.ok(Math.abs(distance / maxDim - 1.35) < 1e-12);
+      assert.equal(limits.minDistance / maxDim, 0.05);
+      assert.equal(limits.maxDistance / maxDim, 50);
+      assert.equal(clip.near / maxDim, 0.001);
+      assert.equal(clip.far / maxDim, 100);
+      assert.ok(clip.near < distance - maxDim / 2);
+      assert.ok(clip.far > limits.maxDistance + maxDim / 2);
+
+      const perspective = new THREE.PerspectiveCamera(55, 1, 0.1, 100);
+      const cameras = makeOrthoCameras();
+      const orbit = new SimpleOrbit();
+      orbit.setDistanceLimits(limits.minDistance, limits.maxDistance);
+      orbit.reset(bounds.center, distance);
+      perspective.position.copy(orbit.getPosition());
+      perspective.lookAt(orbit.target);
+      perspective.updateMatrixWorld();
+      refreshOrthoCameras(cameras, bounds);
+      refreshViewportSpecs(800, 800, 'single', bounds, perspective, cameras, true);
+
+      assert.equal(perspective.near / maxDim, 0.001);
+      assert.equal(perspective.far / maxDim, 100);
+      assert.ok(cameras.every((camera) => camera.near / maxDim === 0.001));
+      assert.ok(cameras.every((camera) => camera.far / maxDim === 100));
+
+      const projectedCenter = bounds.center.clone().project(perspective);
+      assert.ok(projectedCenter.toArray().every(Number.isFinite));
+      assert.ok(Math.abs(projectedCenter.x) < 1e-9);
+      assert.ok(Math.abs(projectedCenter.y) < 1e-9);
+      assert.ok(Math.abs(projectedCenter.z) < 1);
+    }
+  });
+
+  it('derives authored world bounds without normalizing root scale', () => {
+    for (const scale of [1e-6, 1e6]) {
+      const root = new THREE.Group();
+      root.scale.setScalar(scale);
+      root.add(new THREE.Mesh(new THREE.BoxGeometry(1, 2, 0.5)));
+      const bounds = deriveModelBounds(root);
+      assert.ok(Math.abs(bounds.maxDim / scale - 2) < 1e-9);
+      assert.equal(root.scale.x, scale);
+      assert.equal(root.scale.y, scale);
+      assert.equal(root.scale.z, scale);
+    }
+
+    const emptyBounds = deriveModelBounds(new THREE.Group());
+    assert.deepEqual(emptyBounds.center.toArray(), DEFAULT_VIEWPORT_BOUNDS.center.toArray());
+    assert.equal(emptyBounds.maxDim, DEFAULT_VIEWPORT_BOUNDS.maxDim);
+  });
+
+  it('uses transformed geometry bounds instead of posed per-vertex skinned bounds', () => {
+    const root = new THREE.Group();
+    const mesh = new THREE.SkinnedMesh(
+      new THREE.BoxGeometry(2, 4, 6),
+      new THREE.MeshBasicMaterial(),
+    );
+    mesh.position.set(10, 20, 30);
+    mesh.computeBoundingBox = () => {
+      throw new Error('deriveModelBounds must not evaluate every skinned vertex');
+    };
+    root.add(mesh);
+
+    const bounds = deriveModelBounds(root);
+
+    assert.deepEqual(bounds.center.toArray(), [10, 20, 30]);
+    assert.equal(bounds.maxDim, 6);
+  });
+
+  it('conservatively includes skinned bone transforms without scanning vertices', () => {
+    const root = new THREE.Group();
+    const rootBone = new THREE.Bone();
+    const tipBone = new THREE.Bone();
+    tipBone.position.y = 1;
+    rootBone.add(tipBone);
+    root.add(rootBone);
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute(
+      'position',
+      new THREE.Float32BufferAttribute(new Float32Array(100_001 * 3), 3),
+    );
+    geometry.boundingBox = new THREE.Box3(
+      new THREE.Vector3(-0.35, 0, 0),
+      new THREE.Vector3(0.35, 1, 0),
+    );
+    const mesh = new THREE.SkinnedMesh(geometry, new THREE.MeshBasicMaterial());
+    mesh.bind(new THREE.Skeleton([rootBone, tipBone]));
+    mesh.computeBoundingBox = () => {
+      throw new Error('deriveModelBounds must not evaluate every skinned vertex');
+    };
+    root.add(mesh);
+
+    const bounds = deriveModelBounds(root);
+
+    assert.deepEqual(bounds.center.toArray(), [0, 1, 0]);
+    assert.equal(bounds.maxDim, 2);
   });
 
   it('resets orbit around a copied model focus and model-fit distance', () => {
@@ -200,6 +307,56 @@ describe('viewportLayout', () => {
     assert.deepEqual(orbit.target.toArray(), [12, -3, 7]);
     assert.equal(orbit.yaw, 0.6);
     assert.equal(orbit.pitch, 0.4);
+  });
+
+  it('clamps proportional orbit zoom to model-relative limits', () => {
+    const orbit = new SimpleOrbit();
+    orbit.setDistanceLimits(1e-8, 1e-3);
+    orbit.reset(new THREE.Vector3(), 1e-5);
+    assert.equal(orbit.distance, 1e-5);
+
+    orbit.reset(undefined, 1);
+    assert.equal(orbit.distance, 1e-3);
+    orbit.reset(undefined, 1e-12);
+    assert.equal(orbit.distance, 1e-8);
+  });
+
+  it('zooms by ratio instead of fixed world-unit steps', () => {
+    const orbit = new SimpleOrbit();
+    orbit.setDistanceLimits(1e-8, 1e-3);
+    orbit.reset(new THREE.Vector3(), 1e-5);
+    const canvas = new EventTarget() as HTMLCanvasElement;
+    const previousWindow = globalThis.window;
+    const windowTarget = new EventTarget() as Window;
+    Object.defineProperty(globalThis, 'window', { configurable: true, value: windowTarget });
+    try {
+      const changes: number[] = [];
+      const detach = orbit.attach(canvas, () => changes.push(orbit.distance));
+      const wheelOut = new Event('wheel', { cancelable: true });
+      Object.defineProperties(wheelOut, {
+        clientX: { value: 10 },
+        clientY: { value: 10 },
+        deltaY: { value: 100 },
+      });
+      canvas.dispatchEvent(wheelOut);
+      assert.ok(orbit.distance > 1e-5);
+      assert.ok(orbit.distance < 1.2e-5);
+      assert.equal(changes.length, 1);
+
+      const wheelToMinimum = new Event('wheel', { cancelable: true });
+      Object.defineProperties(wheelToMinimum, {
+        clientX: { value: 10 },
+        clientY: { value: 10 },
+        deltaY: { value: -100000 },
+      });
+      for (let index = 0; index < 5; index += 1) {
+        canvas.dispatchEvent(wheelToMinimum);
+      }
+      assert.equal(orbit.distance, orbit.minDistance);
+      detach();
+    } finally {
+      Object.defineProperty(globalThis, 'window', { configurable: true, value: previousWindow });
+    }
   });
 
   it('does not keep a touch orbit active after cancellation or window blur', () => {

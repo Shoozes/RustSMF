@@ -2,6 +2,58 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-08-29 — Precision Skin target contract and integrity closeout
+
+- Found a type-correct return-contract inversion in the new mini-node precision path: `getSkinnedVertexWorldPosition` returns `null` on success and a failure code on error, but the component rejected the success case and could continue from an invalid result with an origin vector. Extracted `resolveSkinPointSourceVertex` as the single point-index/stride/source-position guard; valid hits now return the exact world-space source vertex and invalid skin data fails closed.
+- Added focused success, out-of-range, and malformed-skin regression coverage. The real recorded journey then completed both torso-seam faces and the outer-sleeve repair through pointer interaction, proving that the helper is wired into the user path rather than only passing in isolation.
+- Confirmed that the research inbox has no active architect or source-review drop-ins; no production TODO/FIXME/stub markers, unresolved relative frontend imports/re-exports, or unresolved Rust module declarations remain. Kept all 31 summary-bank groups focused and moved the Original-theme QA record beside its four durable comparison artifacts under `docs/references/theme-qa/`.
+- Curtailed the current review snapshot and backlog closure so current behavior, completed evidence, recurring hazards, and forward work remain in their declared owners instead of repeating the full feature history.
+
+### Verification
+
+- Focused `skinPointOverlay` unit suite: 7/7 passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task context`: passed with 188 frontend source/test files, 11 durable docs, 31 groups, 41.0 KiB default orientation, zero warnings, 7/7 context-bank tests, and 5/5 project-integrity tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 353/353 frontend units across 61 files, lint/type/build/chunk checks, and 15/15 Rust tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: passed 74/74 browser cases.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:journey`: passed 1/1 and produced 12 reviewed checkpoints plus the hand-wave WebM.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:visual-strict`: passed 2/2 without refreshing baselines.
+- `pwsh -NoProfile -File .\run.ps1 -Task desktop-smoke`: passed the unbundled Tauri build, 15/15 Rust tests, and 11/11 native IPC browser cases.
+- `npm audit --omit=optional` from `source`: found zero vulnerabilities.
+
+## 2026-08-26 — Scale-independent framing and selected FBX texture bundles
+
+- Replaced fixed-world camera padding and wheel increments with model-relative perspective distance, near/far clipping, orbit limits, orthographic extents, and ratio zoom. Tiny and huge authored roots keep their transforms and occupy comparable perspective/orthographic screen space. Ordinary skinned models retain exact posed bounds; meshes above 100,000 vertices use a conservative bone-transform bound so fitting cost does not scale with every skinned vertex.
+- Added canvas scale telemetry and deterministic unit/browser coverage at root scales `1e-5` and `1e5`. The scale browser case verifies authored-transform preservation, proportional camera values, nonblank pixel coverage, and equivalent composition at both extremes.
+- Fixed the FBX load branch to pass its selected `ModelResourceBundle` into `FBXLoader`. Referenced relative textures now resolve only from authorized selected sidecars, temporary object URLs are revoked after image readiness, retained texture count is reported, and unrelated maps are not guessed into slots. A generated ASCII FBX plus PNG owns the permanent regression.
+- Validated the owner-local Grim FBX with all four supplied images: one mesh, 13,935 vertices, 65 bones, one clip, and the one source-referenced base-color map loaded with finite proportional framing in perspective, orthographic, and quad views. Three.js reported that the source contains vertices with more than four skin influences and retained four; the unreferenced metallic, normal, and roughness files correctly remained unattached.
+- Removed a hidden performance coupling from the 300,000-vertex worker fixture by laying its triangles out on a compact grid instead of stacking 100,000 triangles in the same pixels. The worker test now measures codec responsiveness rather than pathological overdraw. TransformControls browser dragging now accepts the actual visible hovered axis, and the hand-wave journey uses deterministic single-view quarter turns when a precision paint target is occluded or too thin in quad view.
+- Reviewed the intentional camera composition change, accepted the full-character framing that keeps head, feet, rig, and floor context visible, and refreshed only the two owned strict WebGL baselines.
+
+### Verification
+
+- Focused viewport units passed 17/17; focused FBX sidecar, tiny/huge framing, TransformControls, and 300,000-vertex worker browser cases passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task context`: passed with 188 frontend source/test files, 11 durable docs, 31 groups, 39.8 KiB default orientation, zero warnings, 7/7 context-bank tests, and 5/5 project-integrity tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 352/352 frontend units across 61 files, lint/type/build/chunk checks, and 15/15 Rust tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: passed 74/74 browser cases; the large worker case completed in 3.2 seconds in the full parallel run.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:journey`: passed 1/1 and produced the reviewed 12-checkpoint animation/weight-paint evidence plus `hand-wave-journey.webm`.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:visual-strict`: passed 2/2 after the two intentional full-character camera baselines were reviewed and refreshed.
+
+## 2026-08-25 — Bone identification and multi-joint hand-wave journey
+
+- Added a fail-closed display alias contract for the exact known 24-bone SMF humanoid. The Inspector and optional labels expose Mixamo-minimal equivalents such as `mixamorig:LeftArm`, while source IDs remain authoritative for selection, tracks, project state, and SMF export.
+- Added a reusable dynamic 3D hover badge to the viewport, including source ID plus semantic alias, high-contrast camera-facing presentation, canvas telemetry/title fallback, selected-bone hover visibility, and pointer-leave cleanup under the viewport listener owner.
+- Expanded quick pose rotation from Z-only to positive/negative X, Y, and Z controls. Pose-edit state, history equality, SMF candidate capture, status feedback, and focused tests now cover every rotation axis without changing the no-scale SMF policy.
+- Reworked the recorded journey to hold the shoulder outside the head silhouette and alternate a bounded elbow-and-hand arc across five Branch-keyed times, including matching posed loop endpoints instead of T-pose transitions. It proves aliases and the hover badge, catches the fixture's forearm-weighted torso wing, and repairs both sides of the seam through the real Skin workflow: subtract stray `LeftForeArm` influence while preserving the torso/upper-arm blend, then Set the outer upper-sleeve edge to `LeftArm`. Show Vertices is now a first-class Skin control whose selected-weight-colored mini nodes follow the posed mesh and provide exact source-vertex targeting with a forgiving hit area; broad surface brushing remains available. The journey previews playback without an obscuring hand gizmo and emits 12 ordered screenshots plus WebM evidence. The reviewed output reads as a controlled, corrected wave rather than a wrist twitch, whole-arm tube-man sweep, stretched shirt triangle, or torso-to-arm wing.
+- Narrowed context routing by adding aliases to viewport support, removing duplicated codec-task ownership from the load-editor pack, and extracting the journey-specific deformation proof from the coordinate suite into `handWaveWeightRepair.test.ts`; 31 groups remain within the existing 256 KiB ceiling and 39.8 KiB default orientation.
+
+### Verification
+
+- Focused app/test typechecks, pose/alias/label/listener unit registration, hover browser coverage, and the stale-copy browser regression all passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task context`: passed across 187 frontend source/test files and 11 durable docs with 31 groups, 39.8 KiB default orientation, zero warnings, 7/7 context-bank tests, and 5/5 project-integrity tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 346/346 frontend units across 61 files, lint/type/build/chunk checks, and 15/15 Rust tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: passed 72/72 browser cases after the improved workflow copy and its existing assertion were reconciled.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:journey`: passed 1/1 and produced the reviewed 12-checkpoint animation/weight-paint evidence plus `hand-wave-journey.webm`.
+
 ## 2026-08-24 — Clean-checkout external GLTF fixture repair
 
 - Committed the exact nine-byte `mesh.bin` sidecar required by `scene.gltf`, while preserving the global model/weight exclusion through one narrow ignore exception and marking the fixture as binary in Git attributes.

@@ -1,8 +1,16 @@
 import { test, expect } from '@playwright/test';
 import { BAD_INPUT_FOR_ERROR_TEST, SAMPLE_SMF, expectRenderedScreenshot, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
-import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
+import {
+  createSkinnedGlbFixtureInput,
+  createSkinnedGlbFixtureInputWithOptions,
+} from './helpers/skinned-glb-fixture';
 import { parseSelectedBone, escapeRegex } from './helpers/format-assertions';
-import { paintOnMeshInViewport, openViewportDisplayMenu, setViewportLayout } from './helpers/viewport-interactions';
+import {
+  hoverPickableBoneInViewport,
+  paintOnMeshInViewport,
+  openViewportDisplayMenu,
+  setViewportLayout,
+} from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
 
 // Browser integration coverage is split by feature ownership.
@@ -479,6 +487,126 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000, { strict: true, name: 'loaded-smf-bone-flow' });
     });
 
+  test('auto-frames tiny and huge authored model scales without changing their transforms', async ({ page }) => {
+      await page.goto('/');
+
+      const canvas = page.getByTestId('three-canvas');
+      const cameraToggle = page.getByTestId('viewport-perspective-toggle');
+      const coverageByScale: Array<{
+        scale: number;
+        perspective: { widthRatio: number; heightRatio: number; pixelCount: number };
+        orthographic: { widthRatio: number; heightRatio: number; pixelCount: number };
+      }> = [];
+
+      const waitForFrame = async (): Promise<void> => {
+        await page.evaluate(() => new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }));
+      };
+
+      const readGreenModelCoverage = async (): Promise<{
+        widthRatio: number;
+        heightRatio: number;
+        pixelCount: number;
+      }> => {
+        await waitForFrame();
+        const screenshot = await canvas.screenshot();
+        return page.evaluate(async (base64) => {
+          const image = new Image();
+          image.src = `data:image/png;base64,${base64}`;
+          await image.decode();
+          const sample = document.createElement('canvas');
+          sample.width = image.width;
+          sample.height = image.height;
+          const context = sample.getContext('2d', { willReadFrequently: true });
+          if (!context) throw new Error('2D screenshot analysis context is unavailable');
+          context.drawImage(image, 0, 0);
+          const pixels = context.getImageData(0, 0, image.width, image.height).data;
+          let minX = image.width;
+          let minY = image.height;
+          let maxX = -1;
+          let maxY = -1;
+          let pixelCount = 0;
+          for (let y = 0; y < image.height; y += 1) {
+            for (let x = 0; x < image.width; x += 1) {
+              const index = (y * image.width + x) * 4;
+              const red = pixels[index];
+              const green = pixels[index + 1];
+              const blue = pixels[index + 2];
+              if (green <= red + 35 || green <= blue + 15) continue;
+              pixelCount += 1;
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+            }
+          }
+          return {
+            widthRatio: maxX >= minX ? (maxX - minX + 1) / image.width : 0,
+            heightRatio: maxY >= minY ? (maxY - minY + 1) / image.height : 0,
+            pixelCount,
+          };
+        }, screenshot.toString('base64'));
+      };
+
+      for (const scale of [1e-5, 1e5]) {
+        await page.getByTestId('model-file-input').setInputFiles(
+          await createSkinnedGlbFixtureInputWithOptions({ rootScale: scale }),
+        );
+        await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+        await expect(canvas).toHaveAttribute('data-model-root-id', /.+/);
+        await pausePlaybackIfRunning(page);
+
+        await openViewportDisplayMenu(page);
+        for (const toggleId of ['viewport-grid-toggle', 'viewport-axes-toggle']) {
+          const toggle = page.getByTestId(toggleId);
+          if (await toggle.getAttribute('aria-pressed') === 'true') await toggle.click();
+        }
+
+        await expect.poll(async () => (
+          Number(await canvas.getAttribute('data-model-max-dimension')) / scale
+        )).toBeCloseTo(2, 6);
+        const modelDimension = Number(await canvas.getAttribute('data-model-max-dimension'));
+        const cameraDistance = Number(await canvas.getAttribute('data-camera-distance'));
+        const minDistance = Number(await canvas.getAttribute('data-camera-min-distance'));
+        const maxDistance = Number(await canvas.getAttribute('data-camera-max-distance'));
+        const near = Number(await canvas.getAttribute('data-viewport-camera-near'));
+        const far = Number(await canvas.getAttribute('data-viewport-camera-far'));
+        expect(cameraDistance / modelDimension).toBeCloseTo(1.35, 8);
+        expect(minDistance / modelDimension).toBeCloseTo(0.05, 8);
+        expect(maxDistance / modelDimension).toBeCloseTo(50, 8);
+        expect(near / modelDimension).toBeCloseTo(0.001, 8);
+        expect(far / modelDimension).toBeCloseTo(100, 8);
+
+        const perspective = await readGreenModelCoverage();
+        expect(perspective.pixelCount).toBeGreaterThan(500);
+        expect(perspective.widthRatio).toBeGreaterThan(0.12);
+        expect(perspective.widthRatio).toBeLessThan(0.9);
+        expect(perspective.heightRatio).toBeGreaterThan(0.25);
+        expect(perspective.heightRatio).toBeLessThan(0.9);
+
+        await cameraToggle.click();
+        await expect(canvas).toHaveAttribute('data-viewport-camera-type', 'OrthographicCamera');
+        const orthographic = await readGreenModelCoverage();
+        expect(orthographic.pixelCount).toBeGreaterThan(500);
+        expect(orthographic.widthRatio).toBeGreaterThan(0.15);
+        expect(orthographic.widthRatio).toBeLessThan(0.9);
+        expect(orthographic.heightRatio).toBeGreaterThan(0.5);
+        expect(orthographic.heightRatio).toBeLessThan(0.9);
+
+        coverageByScale.push({ scale, perspective, orthographic });
+        await cameraToggle.click();
+        await expect(canvas).toHaveAttribute('data-viewport-camera-type', 'PerspectiveCamera');
+      }
+
+      const [tiny, huge] = coverageByScale;
+      expect(Math.abs(tiny.perspective.widthRatio - huge.perspective.widthRatio)).toBeLessThan(0.03);
+      expect(Math.abs(tiny.perspective.heightRatio - huge.perspective.heightRatio)).toBeLessThan(0.03);
+      expect(Math.abs(tiny.orthographic.widthRatio - huge.orthographic.widthRatio)).toBeLessThan(0.03);
+      expect(Math.abs(tiny.orthographic.heightRatio - huge.orthographic.heightRatio)).toBeLessThan(0.03);
+      expect(getBrowserErrors(page).filter((error) => error.includes('ERROR'))).toEqual([]);
+    });
+
   test('viewport layout toggle works in single/quad modes', async ({ page }) => {
       await page.goto('/');
 
@@ -889,6 +1017,17 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
 
       // Canvas/raycast click for 3D bone select belongs to Rig mode; View mode now handles model/submodel picking.
       await page.getByTestId('mode-tab-rig').click({ force: true });
+      const hover = await hoverPickableBoneInViewport(page);
+      expect(hover).not.toBeNull();
+      await expect(canvas).toHaveAttribute('data-hover-label-visible', 'true');
+      await expect(canvas).toHaveAttribute(
+        'title',
+        new RegExp(`Bone: ${escapeRegex(hover!.bone)} · [A-Za-z_]+`),
+      );
+      await page.mouse.move(5, 5);
+      await expect(canvas).toHaveAttribute('data-hover-label-visible', 'false');
+      await expect(canvas).toHaveAttribute('title', '');
+
       await canvas.click({ position: { x: 70, y: 70 } });
       await page.waitForTimeout(80);
       await expect(canvas).toHaveAttribute('data-pointer-owner', 'rig-select');

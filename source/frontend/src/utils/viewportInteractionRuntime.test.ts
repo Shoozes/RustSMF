@@ -10,6 +10,7 @@ test('viewport interaction runtime owns listener attachment and idempotent dispo
   const globalTarget = new EventTarget();
   const calls = {
     pointerDown: 0,
+    pointerLeave: 0,
     keyDown: 0,
     disposed: 0,
   };
@@ -18,6 +19,7 @@ test('viewport interaction runtime owns listener attachment and idempotent dispo
     onPointerDown: () => { calls.pointerDown += 1; },
     onPointerUp: () => {},
     onPointerMove: () => {},
+    onPointerLeave: () => { calls.pointerLeave += 1; },
     onContextMenu: () => {},
     onWindowPointerUp: () => {},
     onWindowPointerCancel: () => {},
@@ -30,12 +32,14 @@ test('viewport interaction runtime owns listener attachment and idempotent dispo
   );
 
   canvasTarget.dispatchEvent(new Event('pointerdown'));
+  canvasTarget.dispatchEvent(new Event('pointerleave'));
   globalTarget.dispatchEvent(new Event('keydown'));
-  assert.deepEqual(calls, { pointerDown: 1, keyDown: 1, disposed: 0 });
+  assert.deepEqual(calls, { pointerDown: 1, pointerLeave: 1, keyDown: 1, disposed: 0 });
 
   runtime.dispose();
   runtime.dispose();
   canvasTarget.dispatchEvent(new Event('pointerdown'));
+  canvasTarget.dispatchEvent(new Event('pointerleave'));
   globalTarget.dispatchEvent(new Event('keydown'));
-  assert.deepEqual(calls, { pointerDown: 1, keyDown: 1, disposed: 1 });
+  assert.deepEqual(calls, { pointerDown: 1, pointerLeave: 1, keyDown: 1, disposed: 1 });
 });

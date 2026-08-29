@@ -97,6 +97,8 @@ export function samePoseEditMap(left: PoseEditMap, right: PoseEditMap): boolean 
     if (
       Math.abs(leftEdit.dx - rightEdit.dx) > SNAPSHOT_EPSILON
       || Math.abs(leftEdit.dy - rightEdit.dy) > SNAPSHOT_EPSILON
+      || Math.abs(leftEdit.dRotX - rightEdit.dRotX) > SNAPSHOT_EPSILON
+      || Math.abs(leftEdit.dRotY - rightEdit.dRotY) > SNAPSHOT_EPSILON
       || Math.abs(leftEdit.dRotZ - rightEdit.dRotZ) > SNAPSHOT_EPSILON
       || (leftEdit.dirty ?? false) !== (rightEdit.dirty ?? false)
       || (leftEdit.hasScale ?? false) !== (rightEdit.hasScale ?? false)
