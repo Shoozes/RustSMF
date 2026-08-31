@@ -211,12 +211,6 @@ const getTauriClient = async (): Promise<TauriClient> => {
     readBinaryFile: clientMod.readBinaryFile,
     readBinaryBundle: clientMod.readBinaryBundle,
     invokeCommand: clientMod.invokeCommand,
-    peekSmfHeader: clientMod.peekSmfHeader,
-    validateSmf: clientMod.validateSmf,
-    peekSmfRigBasic: clientMod.peekSmfRigBasic,
-    peekSmfAnimBasic: clientMod.peekSmfAnimBasic,
-    peekSmfModelBasic: clientMod.peekSmfModelBasic,
-    getSmfDesktopInfo: clientMod.getSmfDesktopInfo,
   };
   cachedTauriClient = client;
   return client;
@@ -440,7 +434,11 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   // Stable seq guards prevent stale async results across React re-renders.
   const loadSeqGuardRef = useRef(createSeqGuard());
   const exportSeqGuardRef = useRef(createSeqGuard());
+  const autosaveSeqGuardRef = useRef(createSeqGuard());
   const isExportingRef = useRef(false);
+  const isAutosavingRef = useRef(false);
+  const activeAutosavePromiseRef = useRef<Promise<void> | null>(null);
+  const pendingAutosaveTaskRef = useRef<(() => Promise<void>) | null>(null);
   const {
     smfCodecActivity,
     cancelActiveSmfCodec,
@@ -451,6 +449,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   useEffect(() => () => {
     loadSeqGuardRef.current.next();
     exportSeqGuardRef.current.next();
+    autosaveSeqGuardRef.current.next();
+    pendingAutosaveTaskRef.current = null;
   }, []);
 
   const smfDiagnosticReport = useMemo<SmfDiagnosticReport>(() => {
@@ -572,35 +572,6 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     cancelActiveSmfCodec();
     return loadSeq;
   }, [cancelActiveSmfCodec]);
-
-  const withExportBusy = useCallback(async (
-    actionLabel: string,
-    action: (isCurrentExport: () => boolean) => Promise<void>,
-  ) => {
-    if (isExportingRef.current) {
-      ui.setStatus(`${actionLabel} already in progress. Wait for the current save to finish.`);
-      return;
-    }
-
-    const exportSeq = exportSeqGuardRef.current.next();
-    const isCurrentExport = () => exportSeqGuardRef.current.isCurrent(exportSeq);
-
-    isExportingRef.current = true;
-    ui.setIsLoading(true);
-
-    try {
-      await action(isCurrentExport);
-    } catch (e: unknown) {
-      if (!isCurrentExport()) return;
-      if (e instanceof SmfCodecCancelledError) return;
-      const msg = errorMessage(e);
-      ui.setErrorMsg(`${actionLabel} error: ${msg}`);
-      ui.setStatus(`${actionLabel} error: ${msg}`);
-    } finally {
-      isExportingRef.current = false;
-      if (isCurrentExport()) ui.setIsLoading(false);
-    }
-  }, [ui]);
 
   const refreshSkinHistoryAvailability = useCallback(() => {
     setSkinUndoAvailable(skinUndoStackRef.current.length > 0);
@@ -1140,6 +1111,15 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         return;
       }
 
+      autosaveSeqGuardRef.current.next();
+      pendingAutosaveTaskRef.current = null;
+      const activeAutosave = activeAutosavePromiseRef.current;
+      if (activeAutosave) await activeAutosave;
+      if (!isCurrentLoad()) {
+        disposeThreeObject(loaded.root);
+        return;
+      }
+
       clearLoadedModel();
       lastSmfDataRef.current = importedSmf;
       lastSourceFormatRef.current = detectedSourceFormat;
@@ -1316,6 +1296,67 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     return encodeProjectDocument(document);
   }, [model.clips, model.root, playbackRef, rigMetadata, sourceFormat, ui]);
 
+  const drainPendingAutosave = useCallback((): Promise<void> => {
+    if (activeAutosavePromiseRef.current) return activeAutosavePromiseRef.current;
+    if (isExportingRef.current) return Promise.resolve();
+
+    const drainPromise = (async () => {
+      isAutosavingRef.current = true;
+      try {
+        while (!isExportingRef.current) {
+          const task = pendingAutosaveTaskRef.current;
+          if (!task) break;
+          pendingAutosaveTaskRef.current = null;
+          try {
+            await task();
+          } catch (error: unknown) {
+            ui.setErrorMsg(`Project autosave error: ${errorMessage(error)}`);
+          }
+        }
+      } finally {
+        isAutosavingRef.current = false;
+      }
+    })();
+    activeAutosavePromiseRef.current = drainPromise;
+    const clearActiveDrain = () => {
+      if (activeAutosavePromiseRef.current === drainPromise) {
+        activeAutosavePromiseRef.current = null;
+      }
+    };
+    void drainPromise.then(clearActiveDrain, clearActiveDrain);
+    return drainPromise;
+  }, [ui]);
+
+  const withExportBusy = useCallback(async (
+    actionLabel: string,
+    action: (isCurrentExport: () => boolean) => Promise<void>,
+  ) => {
+    if (isExportingRef.current || isAutosavingRef.current) {
+      ui.setStatus(`${actionLabel} already has another save in progress. Wait for it to finish.`);
+      return;
+    }
+
+    const exportSeq = exportSeqGuardRef.current.next();
+    const isCurrentExport = () => exportSeqGuardRef.current.isCurrent(exportSeq);
+
+    isExportingRef.current = true;
+    ui.setIsLoading(true);
+
+    try {
+      await action(isCurrentExport);
+    } catch (e: unknown) {
+      if (!isCurrentExport()) return;
+      if (e instanceof SmfCodecCancelledError) return;
+      const msg = errorMessage(e);
+      ui.setErrorMsg(`${actionLabel} error: ${msg}`);
+      ui.setStatus(`${actionLabel} error: ${msg}`);
+    } finally {
+      isExportingRef.current = false;
+      if (isCurrentExport()) ui.setIsLoading(false);
+      await drainPendingAutosave();
+    }
+  }, [drainPendingAutosave, ui]);
+
   const handleSaveProject = useCallback(async () => {
     await withExportBusy('Save Project', async (isCurrentExport) => {
       try {
@@ -1334,14 +1375,26 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   }, [buildProjectBytes, ui, withExportBusy]);
 
   const handleAutosaveProject = useCallback(async () => {
-    if (!model.root || isExportingRef.current) return;
-    try {
-      const data = await buildProjectBytes(false);
-      await (await getTauriClient()).autosaveProject(data);
-    } catch (error: unknown) {
-      ui.setErrorMsg(`Project autosave error: ${errorMessage(error)}`);
+    if (!model.root) {
+      autosaveSeqGuardRef.current.next();
+      pendingAutosaveTaskRef.current = null;
+      return;
     }
-  }, [buildProjectBytes, model.root, ui]);
+    const autosaveSeqGuard = autosaveSeqGuardRef.current;
+    const autosaveSeq = autosaveSeqGuard.next();
+    const isCurrentAutosave = () => autosaveSeqGuard.isCurrent(autosaveSeq);
+    pendingAutosaveTaskRef.current = async () => {
+      try {
+        if (!isCurrentAutosave()) return;
+        const data = await buildProjectBytes(false);
+        if (!isCurrentAutosave()) return;
+        await (await getTauriClient()).autosaveProject(data);
+      } catch (error: unknown) {
+        if (isCurrentAutosave()) throw error;
+      }
+    };
+    await drainPendingAutosave();
+  }, [buildProjectBytes, drainPendingAutosave, model.root]);
 
   const startProjectLoad = useCallback(async (
     bytes: Uint8Array,

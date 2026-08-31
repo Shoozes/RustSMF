@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-08-29
+Last reviewed: 2026-08-30
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, and OBJ models. This document owns current behavior, architecture boundaries, format limits, and the verification contract. Forward work belongs in `TODO.md`; pass evidence belongs in `review.md`; recurring failure analysis belongs in `PITFALL_LEDGER.md`.
 
@@ -14,7 +14,7 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 - A replacement requested while pose, animation, skin, rig, editor, or Outliner history is dirty opens an accessible Cancel/Discard decision. File bytes are not materialized until the decision is made; Cancel preserves the current root, selection, dirty flags, and status, while Discard permits one replacement. Parse failure or stale completion keeps the previous model mounted.
 - All picker, file-read, desktop-read, parse, export, and save paths use shared latest-intent ownership. A newer load invalidates older load/export UI completions; failed replacements preserve the mounted root, selection, dirty authoring state, and status.
 - SMF import/export uses a typed Web Worker with owned transferable buffers, nested payload validation, monotonic progress, cancellation, a 120-second timeout, and explicit termination. The client rechecks an abort signal after worker handlers are installed and before `postMessage`, so setup-time cancellation cannot publish or leave a task running. The codec bounds encoded input/output to 256 MiB, decoded allocation estimates to 512 MiB, section reads to declared offsets, strings to 4,095 bytes, and allocation-driving texture/mesh/rig/animation counts; non-finite numeric values and invalid byte ranges fail closed. Synchronous fallback is limited to worker construction or initial `postMessage` failure; runtime worker errors surface instead of repeating work on the UI thread.
-- Save operations are globally single-flight and freshness-checked. User cancellation is distinct from failure. Save Project writes a versioned `.rsproj` envelope containing a validated GLB snapshot plus bounded workspace state; native writes use rotating atomic generations, browser fallback uses local storage/download, and recovery discovery/read is explicit and fail-closed.
+- Foreground save operations are globally single-flight and freshness-checked. Autosave keeps at most the newest trailing request while a write is active, so slow writes cannot overlap or lose the latest edit. A successful model replacement invalidates queued old-model work and waits for any issued autosave write before swapping roots; canceled or failed pickers leave recovery work intact. User cancellation is distinct from failure. Save Project writes a versioned `.rsproj` envelope containing a validated GLB snapshot plus bounded workspace state; all native writes share one async serialization owner, stage and sync complete bytes before replacement, preserve the prior destination on install failure, and rotate bounded project generations. Browser fallback uses local storage/download, and native recovery discovery/read accepts only the owned target plus `.bak1` and `.bak2` regular files.
 
 ### Viewport and themes
 
@@ -88,7 +88,7 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 | `src/loaders/smfSemantics.ts` | Shared relational and finite-value validation for parsed, worker-fallback, and serialized `ImportedSmf` payloads. |
 | `src/workers/*` | Runtime-validated SMF worker protocol, client, and worker entry. |
 | `src/backend-client/tauri.ts`, `binaryPayload.ts` | Guarded native dialog/read/write adapters, strict native byte normalization, and browser fallbacks. |
-| `source/src-tauri/src/main.rs`, `smf_core.rs` | Tauri commands and shared native SMF header/section parsing. Rust owns native dialogs, authorized multi-file reads, rotating atomic project generations, selected-path authority, non-regular-path rejection, bounded blocking reads/writes, and typed byte payload validation; native validation reports strict header/offset envelope acceptance. |
+| `source/src-tauri/src/main.rs` | Tauri commands and native file ownership. Rust owns dialogs, authorized multi-file reads, selected-path authority, non-regular-path rejection, bounded byte payloads, globally serialized blocking writes, staged export replacement, rotating project generations, and the exact recovery-name allowlist. Full SMF structure remains owned by the TypeScript worker codec. |
 | `source/frontend/tests/*` | Domain-owned browser suites and committed deterministic fixtures. |
 
 `useLoadModel.ts` and `ThreeViewport.tsx` remain deliberate integration owners for load/export and renderer lifecycle. Animation actions and display/material mutations now have explicit leaf-controller contracts; future extractions still require independent inputs, tests, and one disposal owner.
@@ -118,12 +118,12 @@ Current inventory:
 
 - 353 frontend unit tests across 61 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
 - Extra arguments after `npm.cmd run test:unit --` are forwarded to the Node/tsx test runner, so focused flags such as `--test-name-pattern` execute only matching cases while still loading the deterministic discovered file set.
-- 74 browser cases in eight domain-owned spec files; `npm.cmd run test:e2e:list` from `source/frontend` is the discovery authority. The added cases prove tiny/huge scale parity and selected external FBX texture resolution.
+- 75 browser cases in eight domain-owned spec files; `npm.cmd run test:e2e:list` from `source/frontend` is the discovery authority. Coverage includes tiny/huge scale parity, selected external FBX texture resolution, and trailing autosave coalescing without overlapping native writes.
 - One opt-in recorded browser journey validates real-SMF load, new animation creation, hover identification, fail-closed Mixamo display aliases, three-axis pose controls, Branch keying across upper arm/forearm/hand, and a shoulder-held five-time elbow-and-hand wave with matched loop endpoints and no head-silhouette intersection. It also catches the fixture's visible forearm-driven torso wing, presents semantic aliases in Skin influence diagnostics, uses Frozen Current exact mini-node targeting to subtract `LeftForeArm` from both faces of the torso seam and Set the outer upper-sleeve edge to `LeftArm`, and proves corrected playback, pointer actionability, and viewport containment; its generated evidence is not committed.
-- 15 Rust tests; the native boundary suite covers selected-path authority, same-handle byte limits, strict SMF section envelopes, non-regular path rejection, rotating project generations, and the committed `source/frontend/tests/mixamo_smf_baldguy.smf` fixture instead of silently skipping.
+- 10 Rust tests; the native boundary suite covers selected-path authority, same-handle byte limits, non-regular path rejection, staged export replacement, temp cleanup, exact recovery allowlisting, rotating project generations, and concurrent write serialization.
 - 31 context groups, including one archived compatibility test route, one archived old-editor reference route, a narrow recorded-browser-journey route, a narrow project-integrity route, and a narrow main-synchronization safety route. The default orientation remains intentionally narrow at 41.0 KiB; focused generation has a 256 KiB ceiling for the largest active routes.
 
-The latest command results and any environment-only warnings are recorded in `review.md`. The full 74-case browser suite, 1-case recorded hand-wave journey, and 2-case strict visual suite passed on 2026-08-29 using the approved local browser process. An unprivileged managed-sandbox `spawn EPERM` remains a harness permission boundary rather than an app assertion result.
+The latest command results and any environment-only warnings are recorded in `review.md`. The full 75-case browser suite, 1-case recorded hand-wave journey, and 2-case strict visual suite use the approved local browser process. An unprivileged managed-sandbox `spawn EPERM` remains a harness permission boundary rather than an app assertion result.
 
 ## Current Limits
 

@@ -10,7 +10,6 @@ import {
   getTauriMockSnapshot,
   installTauriMock,
   pausePlaybackIfRunning,
-  simulateGetSmfDesktopInfo,
   setupBrowserDiagnostics,
   updateTauriMock,
 } from './helpers/smoke-helpers';
@@ -37,7 +36,6 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
       openPath: SAMPLE_SMF,
       savePath,
       sampleBytes,
-      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes)),
     });
 
     await page.goto('/');
@@ -54,7 +52,6 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
       ]),
     );
     expect(snapshot.calls.filter((call) => call.cmd === 'read_file_binary')).toHaveLength(1);
-    expect(snapshot.calls.find((call) => call.cmd === 'get_smf_desktop_info')).toBeUndefined();
     expect(snapshot.calls.find((call) => call.cmd === 'read_file_binary')?.args).toMatchObject({ path: SAMPLE_SMF });
 
     await page.getByTestId('export-btn').click();
@@ -81,7 +78,6 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
       savePath: 'C:\\tmp\\unused-native-bundle.glb',
       sampleBytes: readSampleBytes(SAMPLE_EXTERNAL_GLTF),
       resourceBytes: selectedPaths.map(readSampleBytes),
-      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array([])),
     });
 
     await page.goto('/');
@@ -101,7 +97,6 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
       openPath: SAMPLE_OBJ,
       savePath: 'C:\\tmp\\exported_obj.obj',
       sampleBytes,
-      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array([])),
     });
 
     await page.goto('/');
@@ -116,7 +111,6 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
         'read_file_binary',
       ]),
     );
-    expect(snapshot.calls.find((call) => call.cmd === 'get_smf_desktop_info')).toBeUndefined();
     const readCall = snapshot.calls.find((call) => call.cmd === 'read_file_binary');
     expect(readCall?.args).toMatchObject({ path: SAMPLE_OBJ });
     expect(snapshot.writes).toHaveLength(0);
@@ -128,7 +122,6 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
       openPath: invalidPath,
       savePath: 'C:\\tmp\\unused-malformed-native.glb',
       sampleBytes: [256],
-      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array([])),
     });
 
     await page.goto('/');
@@ -150,7 +143,6 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
       openPath: SAMPLE_SMF,
       savePath: 'C:\\tmp\\unused-picker-race.smf',
       sampleBytes,
-      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes)),
       openDelayMs: 350,
     });
 
@@ -203,7 +195,6 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
       openPath: SAMPLE_SMF,
       savePath: 'C:\\tmp\\unused-read-race.smf',
       sampleBytes,
-      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes)),
       readDelayMs: 350,
     });
 
@@ -257,7 +248,6 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
       openPath: SAMPLE_SMF,
       savePath: 'C:\\tmp\\export-load-race.smf',
       sampleBytes,
-      desktopInfo: simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes)),
       writeDelayMs: 350,
     });
 
@@ -327,14 +317,12 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     test.setTimeout(120000);
 
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
-    const desktopInfo = simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes));
     const savePath = 'C:\\tmp\\exported_model.smf';
 
     await installTauriMock(page, {
       openPath: SAMPLE_SMF,
       savePath,
       sampleBytes,
-      desktopInfo,
       writeDelayMs: 120,
     });
 
@@ -376,15 +364,76 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     expect(snapshot.writes).toHaveLength(2);
   });
 
+  test('native autosave coalesces edits and settles before model replacement', async ({ page }) => {
+    test.setTimeout(90000);
+    const sampleBytes = readSampleBytes(SAMPLE_SMF);
+    await installTauriMock(page, {
+      openPath: SAMPLE_SMF,
+      savePath: 'C:\\tmp\\unused-autosave.rsproj',
+      sampleBytes,
+      writeDelayMs: 3000,
+    });
+
+    await page.goto('/');
+    await page.getByTestId('open-model-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded:/i, { timeout: 15000 });
+    await pausePlaybackIfRunning(page);
+    await expect.poll(async () => (
+      await getTauriMockSnapshot(page)
+    ).activeWrites, { timeout: 15000 }).toBe(1);
+
+    await page.getByTestId('mode-tab-rig').click({ force: true });
+    const firstBone = page.getByTestId('inspector').locator('li > div').filter({ hasText: /SMF_Node_/ }).first();
+    await expect(firstBone).toBeVisible();
+    await firstBone.click({ force: true });
+    await page.getByTestId('transform-x-btn').click({ force: true });
+    await page.waitForTimeout(1400);
+    await updateTauriMock(page, { writeDelayMs: 50 });
+
+    await expect.poll(async () => (
+      await getTauriMockSnapshot(page)
+    ).autosaves.length, { timeout: 15000 }).toBe(2);
+    const snapshot = await getTauriMockSnapshot(page);
+    expect(snapshot.maxActiveWrites).toBe(1);
+    expect(snapshot.calls.filter((call) => call.cmd === 'autosave_project')).toHaveLength(2);
+    await expect(page.getByTestId('error-banner')).not.toContainText('Project autosave error');
+
+    const canvas = page.getByTestId('three-canvas');
+    const previousRootId = await canvas.getAttribute('data-model-root-id');
+    expect(previousRootId).toBeTruthy();
+    await updateTauriMock(page, { writeDelayMs: 3000 });
+    await page.getByTestId('transform-y-btn').click({ force: true });
+    await expect.poll(async () => (
+      await getTauriMockSnapshot(page)
+    ).activeWrites, { timeout: 15000 }).toBe(1);
+
+    await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+    await page.getByTestId('confirm-model-replacement').click();
+    await page.waitForTimeout(250);
+    await expect(canvas).toHaveAttribute('data-model-root-id', previousRootId!);
+    await expect.poll(async () => (
+      await getTauriMockSnapshot(page)
+    ).activeWrites).toBe(1);
+
+    await updateTauriMock(page, { writeDelayMs: 50 });
+    await expect.poll(async () => (
+      await getTauriMockSnapshot(page)
+    ).activeWrites, { timeout: 15000 }).toBe(0);
+    await expect(canvas).not.toHaveAttribute('data-model-root-id', previousRootId!, { timeout: 15000 });
+    await expect.poll(async () => (
+      await getTauriMockSnapshot(page)
+    ).autosaves.length, { timeout: 15000 }).toBe(4);
+    const finalSnapshot = await getTauriMockSnapshot(page);
+    expect(finalSnapshot.maxActiveWrites).toBe(1);
+  });
+
   test('native open cancel reports no selected file', async ({ page }) => {
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
-    const desktopInfo = simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes));
 
     await installTauriMock(page, {
       openPath: SAMPLE_SMF,
       savePath: 'C:\\tmp\\unused.smf',
       sampleBytes,
-      desktopInfo,
       cancelOpen: true,
     });
 
@@ -395,14 +444,12 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
 
   test('native export cancel keeps edited skin state dirty status', async ({ page }) => {
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
-    const desktopInfo = simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes));
     const savePath = 'C:\\tmp\\exported_model.smf';
 
     await installTauriMock(page, {
       openPath: SAMPLE_SMF,
       savePath,
       sampleBytes,
-      desktopInfo,
       cancelSave: true,
       writeDelayMs: 150,
     });
@@ -463,14 +510,12 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
 
   test('native export cancel keeps edited animation state dirty status', async ({ page }) => {
     const sampleBytes = readSampleBytes(SAMPLE_SMF);
-    const desktopInfo = simulateGetSmfDesktopInfo(new Uint8Array(sampleBytes));
     const savePath = 'C:\\tmp\\exported_animation_model.smf';
 
     await installTauriMock(page, {
       openPath: SAMPLE_SMF,
       savePath,
       sampleBytes,
-      desktopInfo,
       cancelSave: true,
       writeDelayMs: 150,
     });

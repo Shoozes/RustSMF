@@ -3,19 +3,24 @@
 // Provides native file dialogs plus binary SMF/GLB I/O commands.
 
 use std::collections::HashSet;
-use std::io::Read;
+use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{
+    atomic::{AtomicU64, Ordering},
+    Mutex, OnceLock,
+};
 use tauri::{command, Manager};
 use tauri_plugin_dialog::DialogExt;
-mod smf_core;
-use smf_core::{build_smf_desktop_info, parse_smf_header_info, SmfDesktopInfo};
 
 const MAX_NATIVE_FILE_BYTES: u64 = 256 * 1024 * 1024;
 const MAX_NATIVE_SIDECAR_BYTES: u64 = 64 * 1024 * 1024;
 const MAX_NATIVE_BUNDLE_FILES: usize = 64;
 const PROJECT_RECOVERY_DIRECTORY: &str = "rustsmf-recovery";
 const PROJECT_RECOVERY_TARGET: &str = "rustsmf-autosave.rsproj";
+const TEMP_FILE_ATTEMPTS: usize = 64;
+
+static NATIVE_WRITE_LOCK: OnceLock<tauri::async_runtime::Mutex<()>> = OnceLock::new();
+static TEMP_FILE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 #[derive(Default)]
 struct NativeFileAuthority(Mutex<HashSet<String>>);
@@ -219,6 +224,166 @@ fn project_backup_path(target: &Path, generation: usize) -> PathBuf {
     target.with_file_name(format!("{name}.bak{generation}"))
 }
 
+fn native_write_lock() -> &'static tauri::async_runtime::Mutex<()> {
+    NATIVE_WRITE_LOCK.get_or_init(tauri::async_runtime::Mutex::default)
+}
+
+async fn run_native_write<T, F>(task_name: &str, task: F) -> Result<T, String>
+where
+    T: Send + 'static,
+    F: FnOnce() -> Result<T, String> + Send + 'static,
+{
+    let _guard = native_write_lock().lock().await;
+    tauri::async_runtime::spawn_blocking(task)
+        .await
+        .map_err(|error| format!("{task_name} task failed: {error}"))?
+}
+
+#[derive(Debug)]
+struct TemporaryFile {
+    path: PathBuf,
+    remove_on_drop: bool,
+}
+
+impl TemporaryFile {
+    fn path(&self) -> &Path {
+        &self.path
+    }
+
+    fn disarm(&mut self) {
+        self.remove_on_drop = false;
+    }
+}
+
+impl Drop for TemporaryFile {
+    fn drop(&mut self) {
+        if self.remove_on_drop {
+            let _ = std::fs::remove_file(&self.path);
+        }
+    }
+}
+
+fn next_temporary_path(target: &Path, purpose: &str) -> PathBuf {
+    let sequence = TEMP_FILE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    target.with_file_name(format!(
+        ".rustsmf-{purpose}-{}-{sequence}.tmp",
+        std::process::id()
+    ))
+}
+
+fn create_temporary_file(
+    target: &Path,
+    purpose: &str,
+) -> Result<(TemporaryFile, std::fs::File), String> {
+    for _ in 0..TEMP_FILE_ATTEMPTS {
+        let path = next_temporary_path(target, purpose);
+        match std::fs::OpenOptions::new()
+            .create_new(true)
+            .write(true)
+            .open(&path)
+        {
+            Ok(file) => {
+                return Ok((
+                    TemporaryFile {
+                        path,
+                        remove_on_drop: true,
+                    },
+                    file,
+                ));
+            }
+            Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+            Err(error) => {
+                return Err(format!(
+                    "Failed to create staged file beside {}: {error}",
+                    target.display()
+                ));
+            }
+        }
+    }
+
+    Err(format!(
+        "Failed to reserve a unique staged file beside {} after {TEMP_FILE_ATTEMPTS} attempts",
+        target.display()
+    ))
+}
+
+fn stage_file_bytes(target: &Path, data: &[u8], purpose: &str) -> Result<TemporaryFile, String> {
+    let (temporary, mut file) = create_temporary_file(target, purpose)?;
+    file.write_all(data)
+        .and_then(|_| file.sync_all())
+        .map_err(|error| {
+            format!(
+                "Failed to flush staged file {}: {error}",
+                temporary.path().display()
+            )
+        })?;
+    drop(file);
+    Ok(temporary)
+}
+
+fn reserve_temporary_path(target: &Path, purpose: &str) -> Result<PathBuf, String> {
+    let (mut reservation, file) = create_temporary_file(target, purpose)?;
+    drop(file);
+    std::fs::remove_file(reservation.path()).map_err(|error| {
+        format!(
+            "Failed to release staged path {}: {error}",
+            reservation.path().display()
+        )
+    })?;
+    reservation.disarm();
+    Ok(reservation.path.clone())
+}
+
+fn write_file_replacing(target: &Path, data: &[u8]) -> Result<(), String> {
+    let mut staged = stage_file_bytes(target, data, "export")?;
+    if !target.exists() {
+        std::fs::rename(staged.path(), target).map_err(|error| {
+            format!(
+                "Failed to install staged export {}: {error}",
+                target.display()
+            )
+        })?;
+        staged.disarm();
+        return Ok(());
+    }
+
+    let previous = reserve_temporary_path(target, "previous")?;
+    std::fs::rename(target, &previous).map_err(|error| {
+        format!(
+            "Failed to preserve previous export {}: {error}",
+            target.display()
+        )
+    })?;
+
+    match std::fs::rename(staged.path(), target) {
+        Ok(()) => {
+            staged.disarm();
+            if let Err(error) = std::fs::remove_file(&previous) {
+                eprintln!(
+                    "RustSMF warning: installed export {}, but could not remove the previous generation at {}: {error}",
+                    target.display(),
+                    previous.display()
+                );
+            }
+            Ok(())
+        }
+        Err(install_error) => {
+            let rollback = std::fs::rename(&previous, target);
+            match rollback {
+                Ok(()) => Err(format!(
+                    "Failed to install staged export {}; the previous file was restored: {install_error}",
+                    target.display()
+                )),
+                Err(rollback_error) => Err(format!(
+                    "Failed to install staged export {} ({install_error}) and failed to restore the previous file from {} ({rollback_error})",
+                    target.display(),
+                    previous.display()
+                )),
+            }
+        }
+    }
+}
+
 fn write_project_rotating(target: &Path, data: &[u8]) -> Result<(), String> {
     if data.is_empty() {
         return Err("PROJECT_EMPTY: refusing to write an empty project".to_string());
@@ -239,33 +404,7 @@ fn write_project_rotating(target: &Path, data: &[u8]) -> Result<(), String> {
         )
     })?;
 
-    let temp = target.with_file_name(format!(
-        ".{}.tmp-{}",
-        target
-            .file_name()
-            .and_then(|value| value.to_str())
-            .unwrap_or("project"),
-        std::process::id()
-    ));
-    let mut file = std::fs::OpenOptions::new()
-        .create_new(true)
-        .write(true)
-        .open(&temp)
-        .map_err(|error| {
-            format!(
-                "Failed to create project temp file {}: {error}",
-                temp.display()
-            )
-        })?;
-    use std::io::Write;
-    if let Err(error) = file.write_all(data).and_then(|_| file.sync_all()) {
-        let _ = std::fs::remove_file(&temp);
-        return Err(format!(
-            "Failed to flush project temp file {}: {error}",
-            temp.display()
-        ));
-    }
-    drop(file);
+    let mut temporary = stage_file_bytes(target, data, "project")?;
 
     let backup_one = project_backup_path(target, 1);
     let backup_two = project_backup_path(target, 2);
@@ -277,7 +416,8 @@ fn write_project_rotating(target: &Path, data: &[u8]) -> Result<(), String> {
             )
         })?;
     }
-    if backup_one.exists() {
+    let rotated_backup_one = backup_one.exists();
+    if rotated_backup_one {
         std::fs::rename(&backup_one, &backup_two).map_err(|error| {
             format!(
                 "Failed to rotate project backup {}: {error}",
@@ -285,18 +425,45 @@ fn write_project_rotating(target: &Path, data: &[u8]) -> Result<(), String> {
             )
         })?;
     }
-    if target.exists() {
-        std::fs::rename(target, &backup_one)
-            .map_err(|error| format!("Failed to preserve previous project generation: {error}"))?;
+    let preserved_target = target.exists();
+    if preserved_target {
+        if let Err(preserve_error) = std::fs::rename(target, &backup_one) {
+            if rotated_backup_one {
+                return match std::fs::rename(&backup_two, &backup_one) {
+                    Ok(()) => Err(format!(
+                        "Failed to preserve previous project generation; the prior backup was restored: {preserve_error}"
+                    )),
+                    Err(rollback_error) => Err(format!(
+                        "Failed to preserve previous project generation ({preserve_error}) and failed to restore {} ({rollback_error})",
+                        backup_one.display()
+                    )),
+                };
+            }
+            return Err(format!(
+                "Failed to preserve previous project generation: {preserve_error}"
+            ));
+        }
     }
-    if let Err(error) = std::fs::rename(&temp, target) {
-        let _ = std::fs::rename(&backup_one, target);
-        let _ = std::fs::remove_file(&temp);
+    if let Err(install_error) = std::fs::rename(temporary.path(), target) {
+        if preserved_target {
+            return match std::fs::rename(&backup_one, target) {
+                Ok(()) => Err(format!(
+                    "Failed to install project generation {}; the previous generation was restored: {install_error}",
+                    target.display()
+                )),
+                Err(rollback_error) => Err(format!(
+                    "Failed to install project generation {} ({install_error}) and failed to restore {} ({rollback_error})",
+                    target.display(),
+                    backup_one.display()
+                )),
+            };
+        }
         return Err(format!(
-            "Failed to install project generation {}: {error}",
+            "Failed to install project generation {}: {install_error}",
             target.display()
         ));
     }
+    temporary.disarm();
     Ok(())
 }
 
@@ -306,6 +473,65 @@ fn project_recovery_directory(app: &tauri::AppHandle) -> Result<PathBuf, String>
         .app_data_dir()
         .map_err(|error| format!("Failed to resolve RustSMF app data directory: {error}"))?
         .join(PROJECT_RECOVERY_DIRECTORY))
+}
+
+fn is_project_recovery_generation_name(name: &str) -> bool {
+    name == PROJECT_RECOVERY_TARGET
+        || matches!(
+            name.strip_prefix(PROJECT_RECOVERY_TARGET),
+            Some(".bak1" | ".bak2")
+        )
+}
+
+fn discover_project_recovery_in(directory: &Path) -> Result<Vec<String>, String> {
+    if !directory.exists() {
+        return Ok(Vec::new());
+    }
+
+    let mut names = Vec::new();
+    for entry in std::fs::read_dir(directory)
+        .map_err(|error| format!("Failed to inspect project recovery directory: {error}"))?
+    {
+        let entry = entry
+            .map_err(|error| format!("Failed to inspect a project recovery entry: {error}"))?;
+        let file_type = entry.file_type().map_err(|error| {
+            format!(
+                "Failed to inspect project recovery entry {}: {error}",
+                entry.path().display()
+            )
+        })?;
+        let Some(name) = entry.file_name().to_str().map(str::to_owned) else {
+            continue;
+        };
+        if file_type.is_file() && is_project_recovery_generation_name(&name) {
+            names.push(name);
+        }
+    }
+    names.sort();
+    Ok(names)
+}
+
+fn read_project_recovery_from(directory: &Path, name: &str) -> Result<Vec<u8>, String> {
+    if !is_project_recovery_generation_name(name) {
+        return Err(
+            "PROJECT_RECOVERY_INVALID_NAME: recovery name is not an owned project generation"
+                .to_string(),
+        );
+    }
+    let path = directory.join(name);
+    let metadata = std::fs::symlink_metadata(&path).map_err(|error| {
+        format!(
+            "Failed to inspect project recovery {}: {error}",
+            path.display()
+        )
+    })?;
+    if !metadata.file_type().is_file() {
+        return Err(format!(
+            "PROJECT_RECOVERY_NOT_A_FILE: refusing to read {} because it is not a regular recovery file",
+            path.display()
+        ));
+    }
+    read_file_bytes_with_limit(&path, MAX_NATIVE_FILE_BYTES)
 }
 
 #[command]
@@ -415,12 +641,10 @@ async fn save_file_binary(
         .ok_or_else(|| "Native save destination has no file name".to_string())?
         .to_owned();
     let output_path = canonical_parent.join(file_name);
-    tauri::async_runtime::spawn_blocking(move || {
-        std::fs::write(&output_path, data)
-            .map_err(|error| format!("Failed to write {}: {error}", output_path.display()))
+    run_native_write("Native file write", move || {
+        write_file_replacing(&output_path, &data)
     })
-    .await
-    .map_err(|error| format!("Native file write task failed: {error}"))??;
+    .await?;
     Ok(true)
 }
 
@@ -459,9 +683,10 @@ async fn save_project_atomic(
         .ok_or_else(|| "Native project destination has no file name".to_string())?
         .to_owned();
     let output_path = canonical_parent.join(file_name);
-    tauri::async_runtime::spawn_blocking(move || write_project_rotating(&output_path, &data))
-        .await
-        .map_err(|error| format!("Native project write task failed: {error}"))??;
+    run_native_write("Native project write", move || {
+        write_project_rotating(&output_path, &data)
+    })
+    .await?;
     Ok(true)
 }
 
@@ -469,186 +694,23 @@ async fn save_project_atomic(
 async fn autosave_project(app: tauri::AppHandle, data: Vec<u8>) -> Result<bool, String> {
     let directory = project_recovery_directory(&app)?;
     let target = directory.join(PROJECT_RECOVERY_TARGET);
-    tauri::async_runtime::spawn_blocking(move || write_project_rotating(&target, &data))
-        .await
-        .map_err(|error| format!("Native autosave task failed: {error}"))??;
+    run_native_write("Native autosave", move || {
+        write_project_rotating(&target, &data)
+    })
+    .await?;
     Ok(true)
 }
 
 #[command]
 fn discover_project_recovery(app: tauri::AppHandle) -> Result<Vec<String>, String> {
     let directory = project_recovery_directory(&app)?;
-    if !directory.exists() {
-        return Ok(Vec::new());
-    }
-    let mut names = std::fs::read_dir(&directory)
-        .map_err(|error| format!("Failed to inspect project recovery directory: {error}"))?
-        .filter_map(|entry| entry.ok())
-        .filter_map(|entry| {
-            let path = entry.path();
-            let name = path.file_name()?.to_str()?.to_string();
-            if name.starts_with(PROJECT_RECOVERY_TARGET) && path.is_file() {
-                Some(name)
-            } else {
-                None
-            }
-        })
-        .collect::<Vec<_>>();
-    names.sort();
-    Ok(names)
+    discover_project_recovery_in(&directory)
 }
 
 #[command]
 fn read_project_recovery(app: tauri::AppHandle, name: String) -> Result<Vec<u8>, String> {
-    if name.is_empty() || name.contains('/') || name.contains('\\') || name.contains("..") {
-        return Err(
-            "PROJECT_RECOVERY_INVALID_NAME: recovery name must be a local generation name"
-                .to_string(),
-        );
-    }
-    let path = project_recovery_directory(&app)?.join(name);
-    read_file_bytes_with_limit(&path, MAX_NATIVE_FILE_BYTES)
-}
-
-#[command]
-async fn peek_smf_header(
-    path: String,
-    authority: tauri::State<'_, NativeFileAuthority>,
-) -> Result<String, String> {
-    // Real small SMF header peek for desktop validation / rust-smf-parser progress.
-    // Uses shared parse helper for modularity. Frontend uses for desktop .smf to surface Rust I/O in status.
-    let bytes = read_file_bytes(&authority, path).await?;
-    match parse_smf_header_info(&bytes) {
-        Ok(header) => {
-            if header.version.starts_with("SMF_v") {
-                Ok(format!(
-                    "Rust SMF peek: {} (size: {} bytes)",
-                    header.version, header.size
-                ))
-            } else {
-                Ok(format!(
-                    "not SMF header or unknown (size: {} bytes)",
-                    header.size
-                ))
-            }
-        }
-        Err(msg) => Ok(msg),
-    }
-}
-
-// Small real subtask for rust-smf-parser breakdown (header peek + size done; this adds basic validation).
-#[command]
-async fn validate_smf(
-    path: String,
-    authority: tauri::State<'_, NativeFileAuthority>,
-) -> Result<String, String> {
-    // This command validates the native header/offset envelope only. Full
-    // structural validation remains in the shared TypeScript SMF codec.
-    // Uses shared parse helper. Can be used for early desktop .smf checks before full load.
-    let bytes = read_file_bytes(&authority, path).await?;
-    match parse_smf_header_info(&bytes) {
-        Ok(header) => {
-            if header.version.starts_with("SMF_v") {
-                Ok("SMF header accepted; full structural validation runs in the codec".to_string())
-            } else {
-                Ok(format!(
-                    "invalid: not SMF header (starts with '{}')",
-                    header.version.chars().take(20).collect::<String>()
-                ))
-            }
-        }
-        Err(msg) => Ok(format!("invalid: {}", msg)),
-    }
-}
-
-// Small real subtask for rust-smf-parser (after header/size/validate): basic rig peek.
-// Parses header for RIG offset, reads first u32 at RIG as approx bone count (format has data starting with count-like in ref).
-// Returns info string for desktop .smf status. Real minimal parse, no full dupe of TS.
-#[command]
-async fn peek_smf_rig_basic(
-    path: String,
-    authority: tauri::State<'_, NativeFileAuthority>,
-) -> Result<String, String> {
-    let bytes = read_file_bytes(&authority, path).await?;
-    match parse_smf_header_info(&bytes) {
-        Ok(header) => {
-            if header.off_rig + 4 > bytes.len() {
-                return Ok(format!("rig offset {} beyond file", header.off_rig));
-            }
-            let bone_count = u32::from_le_bytes([
-                bytes[header.off_rig],
-                bytes[header.off_rig + 1],
-                bytes[header.off_rig + 2],
-                bytes[header.off_rig + 3],
-            ]);
-            Ok(format!(
-                "SMF rig basic: ~{} bones (at rig offset {})",
-                bone_count, header.off_rig
-            ))
-        }
-        Err(msg) => Ok(msg),
-    }
-}
-
-// Small real subtask for rust-smf-parser (after rig): basic anim peek.
-// Parses header for ANIM offset, reads first u32 as clip count (format similar to rig).
-// Returns info for desktop .smf status. Real minimal, no full parse.
-#[command]
-async fn peek_smf_anim_basic(
-    path: String,
-    authority: tauri::State<'_, NativeFileAuthority>,
-) -> Result<String, String> {
-    let bytes = read_file_bytes(&authority, path).await?;
-    match parse_smf_header_info(&bytes) {
-        Ok(header) => {
-            if header.off_anim + 1 > bytes.len() {
-                return Ok(format!("anim offset {} beyond file", header.off_anim));
-            }
-            // u8 per TS loader (SMF: after header offs, TEX u8, MODEL u8, RIG u32, ANIM u8)
-            let clip_count = bytes[header.off_anim] as u32;
-            Ok(format!(
-                "SMF anim basic: ~{} clips (at anim offset {})",
-                clip_count, header.off_anim
-            ))
-        }
-        Err(msg) => Ok(msg),
-    }
-}
-
-// Small real subtask for rust-smf-parser breakdown (after anim): basic model peek.
-// Parses header for MODEL offset, reads u8 at MODEL as approx mesh count (per SMF format: u8 modelCount after offset).
-// Returns info string for desktop .smf status. Real minimal parse, no full dupe of TS loader.
-#[command]
-async fn peek_smf_model_basic(
-    path: String,
-    authority: tauri::State<'_, NativeFileAuthority>,
-) -> Result<String, String> {
-    let bytes = read_file_bytes(&authority, path).await?;
-    match parse_smf_header_info(&bytes) {
-        Ok(header) => {
-            if header.off_model + 1 > bytes.len() {
-                return Ok(format!("model offset {} beyond file", header.off_model));
-            }
-            let model_count = bytes[header.off_model] as u32; // u8 count of meshes per format
-            Ok(format!(
-                "SMF model basic: ~{} meshes (at model offset {})",
-                model_count, header.off_model
-            ))
-        }
-        Err(msg) => Ok(msg),
-    }
-}
-
-// Polish for timing/async: one desktop metadata command to reduce multiple IPC
-// round-trips and avoid duplicated FS reads in .smf desktop load.
-// Real, small structured summary command for frontend status formatting.
-#[command]
-async fn get_smf_desktop_info(
-    path: String,
-    authority: tauri::State<'_, NativeFileAuthority>,
-) -> Result<SmfDesktopInfo, String> {
-    let bytes = read_file_bytes(&authority, path).await?;
-    Ok(build_smf_desktop_info(&bytes))
+    let directory = project_recovery_directory(&app)?;
+    read_project_recovery_from(&directory, &name)
 }
 
 fn main() {
@@ -666,13 +728,7 @@ fn main() {
             save_project_atomic,
             autosave_project,
             discover_project_recovery,
-            read_project_recovery,
-            peek_smf_header,
-            validate_smf,
-            peek_smf_rig_basic,
-            peek_smf_anim_basic,
-            peek_smf_model_basic,
-            get_smf_desktop_info
+            read_project_recovery
         ])
         .run(tauri::generate_context!());
 
@@ -684,38 +740,37 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    // Desktop e2e gap closure (Rust/native side): real binary read + peek parsing smoke tests.
-    // These exercise the exact offset/header/rig/anim/model/combined logic used by the Tauri commands
-    // (get_smf_desktop_info, peek_*_basic, validate_smf, etc.) against the committed real .smf sample.
-    // Complements the web Playwright smoke (which covers shared TS load/export/UI) and manual tauri-dev.
-    // Anchor the fixture to the crate instead of the caller's working directory.
-
-    const TEST_SMF_RELATIVE_PATH: &str = "../frontend/tests/mixamo_smf_baldguy.smf";
-
-    fn test_smf_path() -> std::path::PathBuf {
-        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join(TEST_SMF_RELATIVE_PATH)
+    struct TestDirectory {
+        path: std::path::PathBuf,
     }
 
-    fn read_test_smf() -> Vec<u8> {
-        let path = test_smf_path();
-        super::read_file_bytes_sync(&path).unwrap_or_else(|error| {
-            panic!(
-                "required native SMF fixture is unreadable at {}: {error}",
-                path.display()
-            )
-        })
+    impl TestDirectory {
+        fn new(label: &str) -> Self {
+            let nonce = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .expect("system clock should be after the Unix epoch")
+                .as_nanos();
+            let path = std::env::temp_dir()
+                .join(format!("rustsmf-{label}-{}-{nonce}", std::process::id()));
+            std::fs::create_dir(&path).expect("temporary test directory should create");
+            Self { path }
+        }
+
+        fn path(&self) -> &std::path::Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TestDirectory {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.path);
+        }
     }
 
     #[test]
     fn native_file_authority_rejects_unselected_paths() {
-        let nonce = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("system clock should be after the Unix epoch")
-            .as_nanos();
-        let path = std::env::temp_dir().join(format!(
-            "rustsmf-native-authority-{}-{nonce}.bin",
-            std::process::id()
-        ));
+        let directory = TestDirectory::new("native-authority");
+        let path = directory.path().join("fixture.bin");
         std::fs::write(&path, b"authority-test").expect("temporary authority fixture should write");
 
         let authority = super::NativeFileAuthority::default();
@@ -732,8 +787,6 @@ mod tests {
             authorized,
             std::fs::canonicalize(&path).expect("fixture should canonicalize")
         );
-
-        std::fs::remove_file(path).expect("temporary authority fixture should clean up");
     }
 
     #[test]
@@ -758,38 +811,21 @@ mod tests {
 
     #[test]
     fn native_file_reads_reject_non_regular_paths() {
-        let nonce = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("system clock should be after the Unix epoch")
-            .as_nanos();
-        let directory = std::env::temp_dir().join(format!(
-            "rustsmf-native-directory-{}-{nonce}",
-            std::process::id()
-        ));
-        std::fs::create_dir(&directory).expect("temporary directory fixture should create");
+        let directory = TestDirectory::new("native-directory");
 
-        let rejected = super::read_file_bytes_with_limit(&directory, 4)
+        let rejected = super::read_file_bytes_with_limit(directory.path(), 4)
             .expect_err("directories must not be treated as model byte streams");
         assert!(
             rejected.starts_with("MODEL_INPUT_NOT_A_FILE:")
                 || rejected.starts_with("Failed to open"),
             "non-regular paths must be rejected before reading: {rejected}"
         );
-
-        std::fs::remove_dir(directory).expect("temporary directory fixture should clean up");
     }
 
     #[test]
     fn project_rotation_preserves_previous_generations() {
-        let nonce = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("system clock should be after the Unix epoch")
-            .as_nanos();
-        let directory = std::env::temp_dir().join(format!(
-            "rustsmf-project-rotation-{}-{nonce}",
-            std::process::id()
-        ));
-        let target = directory.join("project.rsproj");
+        let directory = TestDirectory::new("project-rotation");
+        let target = directory.path().join("project.rsproj");
 
         super::write_project_rotating(&target, b"generation-one")
             .expect("first generation should write");
@@ -814,223 +850,174 @@ mod tests {
             std::fs::read(super::project_backup_path(&target, 2)).expect("backup two should exist"),
             b"generation-one"
         );
-
-        std::fs::remove_dir_all(directory).expect("temporary project directory should clean up");
     }
 
     #[test]
     fn project_rotation_rejects_empty_payloads_without_creating_files() {
-        let nonce = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .expect("system clock should be after the Unix epoch")
-            .as_nanos();
-        let directory = std::env::temp_dir().join(format!(
-            "rustsmf-project-empty-{}-{nonce}",
-            std::process::id()
-        ));
-        let target = directory.join("project.rsproj");
+        let directory = TestDirectory::new("project-empty");
+        let target = directory.path().join("project.rsproj");
         let error = super::write_project_rotating(&target, &[])
             .expect_err("empty project writes must fail closed");
         assert!(error.starts_with("PROJECT_EMPTY:"));
         assert!(!target.exists());
-        assert!(!directory.exists());
-    }
-
-    #[test]
-    fn test_real_smf_binary_read_and_desktop_info_peek_smoke() {
-        let bytes = read_test_smf();
-        assert!(bytes.len() > 32, "sample too small for SMF");
-
-        // Exercise the same header + offset parse as get_smf_desktop_info / peek_* (real native path)
-        let mut off = 0;
-        while off < bytes.len() && bytes[off] != 0 {
-            off += 1;
-        }
-        off += 1; // null
-        assert!(off + 16 <= bytes.len(), "header too short in sample");
-
-        // Use usize for offsets (matches the real peek command implementations)
-        let off_tex =
-            u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
-        off += 4;
-        let off_model =
-            u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
-        off += 4;
-        let off_rig =
-            u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
-        off += 4;
-        let off_anim =
-            u32::from_le_bytes([bytes[off], bytes[off + 1], bytes[off + 2], bytes[off + 3]]);
-
-        let desktop_info = super::build_smf_desktop_info(&bytes);
-        assert!(
-            desktop_info.valid,
-            "Expected valid info for SMF sample, got: {:?}",
-            desktop_info.error
-        );
-        assert!(
-            desktop_info.version.starts_with("SMF_v"),
-            "expected SMF header in real sample, got: {}",
-            desktop_info.version
-        );
-
-        // Basic count reads (rig/anim like the peek basics) - cast u32 offsets to usize for indexing
-        assert_eq!(desktop_info.off_rig, off_rig as usize);
-        assert_eq!(desktop_info.off_anim, off_anim as usize);
-        let rig_count = if (off_rig as usize) + 4 <= bytes.len() {
-            u32::from_le_bytes([
-                bytes[off_rig as usize],
-                bytes[(off_rig as usize) + 1],
-                bytes[(off_rig as usize) + 2],
-                bytes[(off_rig as usize) + 3],
-            ])
-        } else {
-            0
-        };
-        // anim u8 width (match TS loader + fixed peeks); would have been wrong/large if u32 le used on count byte
-        let anim_count = if (off_anim as usize) < bytes.len() {
-            bytes[off_anim as usize] as u32
-        } else {
-            0
-        };
-        let model_count = if (off_model as usize) < bytes.len() {
-            bytes[off_model as usize] as u32
-        } else {
-            0
-        };
-
-        println!(
-            "Rust desktop peek smoke on {}: model~{} rig~{} anim~{} (offsets t{} m{} r{} a{})",
-            test_smf_path().display(),
-            model_count,
-            rig_count,
-            anim_count,
-            off_tex,
-            off_model,
-            off_rig,
-            off_anim
-        );
-        assert!(
-            model_count < 1000 && rig_count < 1000 && anim_count < 100,
-            "implausible counts from real sample parse"
-        );
-    }
-
-    #[test]
-    fn test_get_smf_desktop_info_struct_shape() {
-        let mut bad_version = b"NOTSMF\0".to_vec();
-        bad_version.extend_from_slice(&[0; 32]);
-        let info = super::build_smf_desktop_info(&bad_version);
-        assert!(!info.valid);
-        assert_eq!(info.error.as_deref(), Some("unsupported version: NOTSMF"));
-
-        let mut bytes = b"SMF_v12_by_Snidr_and_Bart\0".to_vec();
-        let off_tex: u32 = 42;
-        let off_model: u32 = 44;
-        let off_rig: u32 = 48;
-        let off_anim: u32 = 52;
-        bytes.extend_from_slice(&off_tex.to_le_bytes());
-        bytes.extend_from_slice(&off_model.to_le_bytes());
-        bytes.extend_from_slice(&off_rig.to_le_bytes());
-        bytes.extend_from_slice(&off_anim.to_le_bytes());
-        while bytes.len() <= 56 {
-            bytes.push(0);
-        }
-        // u8 counts in model/rig/anim positions
-        bytes[off_model as usize] = 1;
-        bytes[off_rig as usize] = 2;
-        bytes[off_rig as usize + 1] = 0;
-        bytes[off_rig as usize + 2] = 0;
-        bytes[off_rig as usize + 3] = 0;
-        bytes[off_anim as usize] = 3;
-
-        let info = super::build_smf_desktop_info(&bytes);
-        assert!(info.valid);
-        assert_eq!(info.model_count, Some(1));
-        assert_eq!(info.rig_bone_count, Some(2));
-        assert_eq!(info.anim_clip_count, Some(3));
-    }
-
-    #[test]
-    fn test_validate_smoke_on_sample() {
-        let bytes = read_test_smf();
-        let mut s = String::new();
-        let mut tmp_off = 0;
-        while tmp_off < bytes.len() && bytes[tmp_off] != 0 {
-            s.push(bytes[tmp_off] as char);
-            tmp_off += 1;
-        }
-        assert!(s.starts_with("SMF_v"), "validate expects SMF_v header");
-    }
-
-    #[test]
-    fn test_peek_header_and_invalid_cases() {
-        let bytes = read_test_smf();
-        let mut s = String::new();
-        let mut tmp_off = 0;
-        while tmp_off < bytes.len() && bytes[tmp_off] != 0 {
-            s.push(bytes[tmp_off] as char);
-            tmp_off += 1;
-        }
-        assert!(s.starts_with("SMF_v"));
-
-        // Negative: too small
-        let small: Vec<u8> = vec![0; 10];
-        assert!(small.len() < 32);
-        // Invalid header sim
-        let bad_header: Vec<u8> = b"NOTSMF\0".to_vec();
-        let mut s = String::new();
-        let mut o = 0;
-        while o < bad_header.len() && bad_header[o] != 0 {
-            s.push(bad_header[o] as char);
-            o += 1;
-        }
-        assert!(!s.starts_with("SMF_v"));
-    }
-
-    #[test]
-    fn test_anim_count_width_u8_and_section_validation() {
-        // Minimal binary fixture to prove anim count is read as u8 (not u32) and basic validation fires.
-        // Layout: versionZ + 4x u32 offs (tex/model/rig/anim) + at animOff: u8 count (small) + garbage that would inflate u32.
-        // If code wrongly did u32::from_le at anim for count, and we set low byte=5 high bytes high, count would be huge.
-        // With u8 read + validation in parse, count==5 and no err for good case.
-        let mut bytes: Vec<u8> = b"SMF_v12_by_Snidr_and_Bart\0".to_vec();
-        // offs: tex=64, model=80, rig=96, anim=100 (after header ~28+16=44, pad to 100)
-        // write 4 LE u32 offs (will point inside our vec after extend)
-        let off_tex: u32 = 80;
-        let off_model: u32 = 90;
-        let off_rig: u32 = 96;
-        let off_anim: u32 = 100;
-        bytes.extend_from_slice(&off_tex.to_le_bytes());
-        bytes.extend_from_slice(&off_model.to_le_bytes());
-        bytes.extend_from_slice(&off_rig.to_le_bytes());
-        bytes.extend_from_slice(&off_anim.to_le_bytes());
-        // ensure len covers animOff + at least 2 (u8 count + next)
-        while bytes.len() < (off_anim as usize) + 5 {
-            bytes.push(0);
-        }
-        // At animOff: u8 count=5 , then 0xFF,0xFF,0xFF to make u32-le=0xFFFFFF05 huge if misread as u32
-        bytes[off_anim as usize] = 5u8;
-        bytes[(off_anim as usize) + 1] = 0xFF;
-        bytes[(off_anim as usize) + 2] = 0xFF;
-        bytes[(off_anim as usize) + 3] = 0xFF;
-        // Now parse via the shared helper (exercises version exact + section validation + u8 anim count)
-        let header = super::parse_smf_header_info(&bytes).expect("valid fixture header+sections");
-        // anim count in combined info path would use the u8 logic now
-        let anim_u8 = if (header.off_anim + 1) <= bytes.len() {
-            bytes[header.off_anim] as u32
-        } else {
-            99
-        };
         assert_eq!(
-            anim_u8, 5,
-            "anim count must be u8 read (5), not inflated u32 from following 0xFF bytes"
+            std::fs::read_dir(directory.path())
+                .expect("temporary project directory should remain readable")
+                .count(),
+            0
         );
-        // also direct peek fn would return the ~5
-        // Negative validation: bad version
-        let mut badv = bytes.clone();
-        badv[0] = b'X';
-        let bad_res = super::parse_smf_header_info(&badv);
-        assert!(bad_res.is_err() && bad_res.unwrap_err().contains("unsupported version"));
+    }
+
+    #[test]
+    fn staged_export_replacement_keeps_complete_files_and_cleans_temporary_paths() {
+        let directory = TestDirectory::new("staged-export");
+        let target = directory.path().join("model.glb");
+
+        super::write_file_replacing(&target, b"first-export")
+            .expect("first staged export should install");
+        super::write_file_replacing(&target, b"second-export")
+            .expect("replacement export should install");
+
+        assert_eq!(
+            std::fs::read(&target).expect("replacement export should remain readable"),
+            b"second-export"
+        );
+        let leftover = std::fs::read_dir(directory.path())
+            .expect("staged export directory should remain readable")
+            .filter_map(Result::ok)
+            .filter_map(|entry| entry.file_name().to_str().map(str::to_owned))
+            .filter(|name| name.starts_with(".rustsmf-"))
+            .collect::<Vec<_>>();
+        assert!(
+            leftover.is_empty(),
+            "staged paths must be cleaned: {leftover:?}"
+        );
+    }
+
+    #[test]
+    fn project_rotation_cleans_staged_file_when_backup_rotation_fails() {
+        let directory = TestDirectory::new("project-cleanup");
+        let target = directory.path().join("project.rsproj");
+        std::fs::write(&target, b"current").expect("current project fixture should write");
+        std::fs::create_dir(super::project_backup_path(&target, 2))
+            .expect("blocking backup directory should create");
+
+        let error = super::write_project_rotating(&target, b"replacement")
+            .expect_err("a non-file backup generation must block rotation");
+        assert!(error.contains("Failed to rotate project backup"));
+        assert_eq!(
+            std::fs::read(&target).expect("failed rotation must preserve the current project"),
+            b"current"
+        );
+        let staged = std::fs::read_dir(directory.path())
+            .expect("project directory should remain readable")
+            .filter_map(Result::ok)
+            .filter_map(|entry| entry.file_name().to_str().map(str::to_owned))
+            .filter(|name| name.starts_with(".rustsmf-project-"))
+            .collect::<Vec<_>>();
+        assert!(
+            staged.is_empty(),
+            "failed rotation left staged files: {staged:?}"
+        );
+    }
+
+    #[test]
+    fn recovery_discovery_and_reads_accept_only_owned_generations() {
+        let directory = TestDirectory::new("project-recovery");
+        let expected = [
+            super::PROJECT_RECOVERY_TARGET.to_string(),
+            format!("{}.bak1", super::PROJECT_RECOVERY_TARGET),
+            format!("{}.bak2", super::PROJECT_RECOVERY_TARGET),
+        ];
+        for (index, name) in expected.iter().enumerate() {
+            std::fs::write(directory.path().join(name), format!("generation-{index}"))
+                .expect("owned recovery fixture should write");
+        }
+        std::fs::write(
+            directory
+                .path()
+                .join(format!("{}.evil", super::PROJECT_RECOVERY_TARGET)),
+            b"not-owned",
+        )
+        .expect("sibling app-data fixture should write");
+        std::fs::write(directory.path().join("settings.json"), b"private-app-data")
+            .expect("unrelated app-data fixture should write");
+
+        assert_eq!(
+            super::discover_project_recovery_in(directory.path())
+                .expect("recovery discovery should succeed"),
+            expected
+        );
+        assert_eq!(
+            super::read_project_recovery_from(directory.path(), super::PROJECT_RECOVERY_TARGET)
+                .expect("owned recovery generation should read"),
+            b"generation-0"
+        );
+        for rejected in [
+            "settings.json",
+            "rustsmf-autosave.rsproj.evil",
+            "rustsmf-autosave.rsproj.bak3",
+            "../rustsmf-autosave.rsproj",
+        ] {
+            let error = super::read_project_recovery_from(directory.path(), rejected)
+                .expect_err("unowned app-data names must be rejected before filesystem access");
+            assert!(error.starts_with("PROJECT_RECOVERY_INVALID_NAME:"));
+        }
+    }
+
+    #[test]
+    fn recovery_reader_rejects_an_owned_name_that_is_not_a_regular_file() {
+        let directory = TestDirectory::new("project-recovery-non-file");
+        std::fs::create_dir(directory.path().join(super::PROJECT_RECOVERY_TARGET))
+            .expect("non-file recovery fixture should create");
+
+        let error =
+            super::read_project_recovery_from(directory.path(), super::PROJECT_RECOVERY_TARGET)
+                .expect_err("recovery directories must not be read as project bytes");
+        assert!(error.starts_with("PROJECT_RECOVERY_NOT_A_FILE:"));
+        assert!(super::discover_project_recovery_in(directory.path())
+            .expect("recovery discovery should succeed")
+            .is_empty());
+    }
+
+    #[test]
+    fn native_write_tasks_serialize_concurrent_project_rotations() {
+        let directory = TestDirectory::new("serialized-writes");
+        let target = directory.path().join("project.rsproj");
+        let first_target = target.clone();
+        let second_target = target.clone();
+
+        tauri::async_runtime::block_on(async {
+            let first = tauri::async_runtime::spawn(async move {
+                super::run_native_write("test project write", move || {
+                    std::thread::sleep(std::time::Duration::from_millis(20));
+                    super::write_project_rotating(&first_target, b"first")
+                })
+                .await
+            });
+            let second = tauri::async_runtime::spawn(async move {
+                super::run_native_write("test project write", move || {
+                    super::write_project_rotating(&second_target, b"second")
+                })
+                .await
+            });
+            first
+                .await
+                .expect("first native write task should join")
+                .expect("first native write should succeed");
+            second
+                .await
+                .expect("second native write task should join")
+                .expect("second native write should succeed");
+        });
+
+        let current = std::fs::read(&target).expect("serialized target should exist");
+        let previous = std::fs::read(super::project_backup_path(&target, 1))
+            .expect("serialized previous generation should exist");
+        assert!(
+            (current == b"first" && previous == b"second")
+                || (current == b"second" && previous == b"first"),
+            "serialized writes must preserve two complete generations"
+        );
     }
 }

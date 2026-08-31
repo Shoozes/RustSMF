@@ -24,78 +24,6 @@ export const SAMPLE_EXTERNAL_GLTF = requireFixture('../fixtures/external-gltf/sc
 export const SAMPLE_EXTERNAL_GLTF_BUFFER = requireFixture('../fixtures/external-gltf/mesh.bin');
 export const SAMPLE_EXTERNAL_GLTF_TEXTURE = requireFixture('../fixtures/external-gltf/texture.png');
 
-export interface SmfDesktopInfo {
-  valid: boolean;
-  version: string;
-  size: number;
-  off_tex: number;
-  off_model: number;
-  off_rig: number;
-  off_anim: number;
-  model_count?: number;
-  rig_bone_count?: number;
-  anim_clip_count?: number;
-  error?: string;
-}
-
-
-export function simulateSmfHeaderParse(bytes: Uint8Array): { version: string; size: number; offTex: number; offModel: number; offRig: number; offAnim: number } | { error: string } {
-  if (!bytes || bytes.length === 0) return { error: 'empty file' };
-  if (bytes.length < 32) return { error: 'too small' };
-  let off = 0;
-  while (off < bytes.length && bytes[off] !== 0) off++;
-  const versionEnd = off;
-  let version = '';
-  for (let i = 0; i < versionEnd; i++) version += String.fromCharCode(bytes[i]);
-  off += 1;
-  if (off + 16 > bytes.length) return { error: 'header short' };
-  const offTex = (bytes[off] | (bytes[off + 1] << 8) | (bytes[off + 2] << 16) | (bytes[off + 3] << 24)) >>> 0; off += 4;
-  const offModel = (bytes[off] | (bytes[off + 1] << 8) | (bytes[off + 2] << 16) | (bytes[off + 3] << 24)) >>> 0; off += 4;
-  const offRig = (bytes[off] | (bytes[off + 1] << 8) | (bytes[off + 2] << 16) | (bytes[off + 3] << 24)) >>> 0; off += 4;
-  const offAnim = (bytes[off] | (bytes[off + 1] << 8) | (bytes[off + 2] << 16) | (bytes[off + 3] << 24)) >>> 0;
-  return { version, size: bytes.length, offTex, offModel, offRig, offAnim };
-}
-
-export function simulateGetSmfDesktopInfo(bytes: Uint8Array): SmfDesktopInfo {
-  const p = simulateSmfHeaderParse(bytes);
-  if ('error' in p) {
-    return {
-      valid: false,
-      version: '',
-      size: bytes.length,
-      off_tex: 0,
-      off_model: 0,
-      off_rig: 0,
-      off_anim: 0,
-      error: p.error,
-    };
-  }
-
-  const valid = p.version.startsWith('SMF_v');
-  const rigCount = (p.offRig + 4 <= bytes.length) ? (bytes[p.offRig] | (bytes[p.offRig + 1] << 8) | (bytes[p.offRig + 2] << 16) | (bytes[p.offRig + 3] << 24)) >>> 0 : 0;
-  const animCount = (p.offAnim + 1 <= bytes.length) ? bytes[p.offAnim] : 0;
-  return {
-    valid,
-    version: p.version,
-    size: p.size,
-    off_tex: p.offTex,
-    off_model: p.offModel,
-    off_rig: p.offRig,
-    off_anim: p.offAnim,
-    model_count: (p.offModel + 1 <= bytes.length) ? bytes[p.offModel] : undefined,
-    rig_bone_count: rigCount,
-    anim_clip_count: animCount,
-    error: valid ? undefined : `not SMF header (starts with '${p.version.slice(0, 20)}')`,
-  };
-}
-
-export function simulateValidateSmf(bytes: Uint8Array): string {
-  const p = simulateSmfHeaderParse(bytes);
-  if ('error' in p) return `invalid: ${p.error}`;
-  if (p.version.startsWith('SMF_v')) return 'valid SMF';
-  return `invalid: not SMF header (starts with '${p.version.slice(0, 20)}')`;
-}
-
 export async function pausePlaybackIfRunning(page: Page): Promise<void> {
   const pauseButton = page.locator('button').filter({ hasText: /Pause|⏸/i }).first();
   if (await pauseButton.count() > 0) {
@@ -243,7 +171,7 @@ export function setupBrowserDiagnostics(page: Page): void {
     browserErrors.push(text);
   });
   diagnosticPage._browserErrors = browserErrors;
-  diagnosticPage._tauriTestContext = { simulated: true, note: 'Tauri IPC mocks drive desktop read/peek branches in browser e2e.' };
+  diagnosticPage._tauriTestContext = { simulated: true, note: 'Tauri IPC mocks drive desktop read/write branches in browser e2e.' };
 }
 
 export function getBrowserErrors(page: Page): string[] {
@@ -256,7 +184,7 @@ export interface TauriMockInit {
   savePath: string;
   sampleBytes: number[];
   resourceBytes?: number[][];
-  desktopInfo: SmfDesktopInfo;
+  recoveryBytes?: number[];
   cancelOpen?: boolean;
   cancelSave?: boolean;
   failWrite?: boolean;
@@ -281,7 +209,9 @@ interface TauriMockWrite {
 export interface TauriMockSnapshot {
   calls: TauriMockCall[];
   writes: TauriMockWrite[];
+  autosaves: TauriMockWrite[];
   activeWrites: number;
+  maxActiveWrites: number;
 }
 
 interface TauriMockWindow extends Window {
@@ -296,7 +226,9 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
       ...mockInit,
       calls: [],
       writes: [],
+      autosaves: [],
       activeWrites: 0,
+      maxActiveWrites: 0,
     };
     const w = window as TauriMockWindow;
     w.__TAURI__ = {};
@@ -304,6 +236,35 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
 
     let nextCallbackId = 1;
     const callbacks = new Map<number, unknown>();
+    const writeBytes = async (
+      args: Record<string, unknown> | undefined,
+      destination: TauriMockWrite[],
+      path: string,
+      canCancel: boolean,
+    ): Promise<boolean> => {
+      if (canCancel && state.cancelSave) return false;
+      state.activeWrites += 1;
+      state.maxActiveWrites = Math.max(state.maxActiveWrites, state.activeWrites);
+      try {
+        if (typeof state.writeDelayMs === 'number' && state.writeDelayMs > 0) {
+          await new Promise((resolve) => setTimeout(resolve, state.writeDelayMs));
+        }
+        if (state.failWrite) throw new Error('mock write failed');
+        const rawData = args?.data;
+        const data = rawData instanceof Uint8Array
+          ? Array.from(rawData)
+          : Array.isArray(rawData) ? rawData as number[] : [];
+        destination.push({
+          path,
+          length: data.length,
+          firstBytes: data.slice(0, 8),
+        });
+        if (destination === state.autosaves) state.recoveryBytes = data;
+        return true;
+      } finally {
+        state.activeWrites -= 1;
+      }
+    };
     w.__TAURI_INTERNALS__ = {
       invoke: async (cmd: string, args?: Record<string, unknown>) => {
         state.calls.push({ cmd, args });
@@ -326,30 +287,20 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
             }
             if (state.failRead) throw new Error('mock read failed');
             return state.resourceBytes ?? [state.sampleBytes];
-          case 'get_smf_desktop_info':
-            return state.desktopInfo;
-          case 'save_file_binary': {
-            if (state.cancelSave) return false;
-            state.activeWrites += 1;
-            try {
-              if (typeof state.writeDelayMs === 'number' && state.writeDelayMs > 0) {
-                await new Promise((resolve) => setTimeout(resolve, state.writeDelayMs));
-              }
-              if (state.failWrite) throw new Error('mock write failed');
-              const rawData = args?.data;
-              const data = rawData instanceof Uint8Array
-                ? Array.from(rawData)
-                : Array.isArray(rawData) ? rawData as number[] : [];
-              state.writes.push({
-                path: state.savePath,
-                length: data.length,
-                firstBytes: data.slice(0, 8),
-              });
-              return true;
-            } finally {
-              state.activeWrites -= 1;
+          case 'open_project_file':
+            return state.cancelOpen ? null : state.openPath;
+          case 'save_file_binary':
+          case 'save_project_atomic':
+            return writeBytes(args, state.writes, state.savePath, true);
+          case 'autosave_project':
+            return writeBytes(args, state.autosaves, 'rustsmf-autosave.rsproj', false);
+          case 'discover_project_recovery':
+            return state.recoveryBytes ? ['rustsmf-autosave.rsproj'] : [];
+          case 'read_project_recovery':
+            if (args?.name !== 'rustsmf-autosave.rsproj' || !state.recoveryBytes) {
+              throw new Error('mock recovery generation was not found');
             }
-          }
+            return state.recoveryBytes;
           case 'greet':
             return `Hello, ${String(args?.name || 'RustSMF')}!`;
           default:
@@ -393,7 +344,9 @@ export async function getTauriMockSnapshot(page: Page): Promise<TauriMockSnapsho
     return {
       calls: state?.calls ?? [],
       writes: state?.writes ?? [],
+      autosaves: state?.autosaves ?? [],
       activeWrites: state?.activeWrites ?? 0,
+      maxActiveWrites: state?.maxActiveWrites ?? 0,
     };
   });
 }

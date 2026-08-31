@@ -411,14 +411,14 @@
         "source/frontend/src/loaders/smfSemantics.test.ts"
       ],
       "notes": [
-        "The TypeScript codec is the full structural SMF authority; native validation reports header/offset acceptance only.",
+        "The TypeScript worker codec is the sole structural SMF authority; the native bridge transports only authorized bounded bytes.",
         "SMF limits are centralized in smfBinary.ts, including the 512 MiB decoded-memory estimate, and must be changed with focused malformed-input tests and APP_STATE documentation.",
         "Tangent handedness is normalized at import and byte-packed at export so the fourth tangent component is not silently discarded.",
-        "Native envelope validation requires section starts after the header, minimum count widths, strict non-overlap, and an in-file animation count byte."
+        "Envelope validation requires section starts after the header, minimum count widths, strict non-overlap, and an in-file animation count byte."
       ]
     },
     "subsystem__tauri_bridge": {
-      "description": "Tauri command adapters, native file dialogs and binary IO, Rust peeks, and native smoke coverage.",
+      "description": "Tauri command adapters, native file dialogs, authorized bounded reads, staged serialized writes, recovery ownership, and native smoke coverage.",
       "max_kb": 96,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
@@ -429,7 +429,6 @@
         "source/frontend/tests/native.spec.ts",
         "source/frontend/package.json",
         "source/src-tauri/src/main.rs",
-        "source/src-tauri/src/smf_core.rs",
         "source/src-tauri/Cargo.toml",
         "source/src-tauri/tauri.conf.json",
         "source/src-tauri/capabilities/default.json"
@@ -439,8 +438,9 @@
         "Native reads open the authorized canonical file once, reject non-regular paths, and reject a stream that grows beyond the same 256 MiB cap after metadata inspection.",
         "The frontend passes a Uint8Array byte view to save_file_binary rather than constructing an explicit Array.from number array; typed IPC remains bounded by the same native limit.",
         "Native read responses are untrusted: binaryPayload.ts accepts only ArrayBuffer, Uint8Array, or arrays of integer bytes from 0 through 255 so coercion cannot wrap malformed values.",
-        "The Rust tauri-plugin-dialog and frontend @tauri-apps/plugin-dialog declarations are pinned to the same 2.7.1 release; the frontend package is a Tauri build-contract dependency even though dialog invocation is Rust-owned.",
-        "validate_smf is an envelope/header check; full structural validation remains in the TypeScript worker codec."
+        "Rust owns dialog invocation through its pinned tauri-plugin-dialog dependency; the frontend has no unused dialog-plugin package.",
+        "All native writes share one async serialization owner, stage and sync complete payloads before replacement, and restore the previous destination when installation fails.",
+        "Project recovery discovery and reads accept only the owned target plus .bak1 and .bak2 regular files; arbitrary app-data siblings fail before filesystem access."
       ]
     },
     "tests__quality": {
@@ -522,7 +522,8 @@
       ],
       "notes": [
         "The project envelope embeds a validated GLB snapshot and bounded workspace state, including rig metadata, without replacing asset export formats.",
-        "Native save rotates bounded generations with temp-file sync and restoration on failure; recovery discovery/read is explicit, and corrupt or unsupported envelopes fail closed while preserving the mounted model."
+        "Native writes are serialized and use unique staged files; project save rotates bounded generations with restoration on failure, while recovery discovery/read accepts only the exact owned regular-file generations.",
+        "Foreground saves remain single-flight. Autosave coalesces work to the newest trailing request while a write is active; successful model replacement invalidates queued old-model work and waits for an issued write before swapping roots, while canceled/failed pickers leave recovery work intact."
       ]
     },
     "issue__smf_conversion_spatial_fidelity": {
@@ -599,8 +600,7 @@
         "source/frontend/src/loaders/smf.ts",
         "source/frontend/src/loaders/smfBinary.ts",
         "source/frontend/src/loaders/smfBinary.test.ts",
-        "source/src-tauri/src/main.rs",
-        "source/src-tauri/src/smf_core.rs"
+        "source/src-tauri/src/main.rs"
       ],
       "notes": [
         "Keep limits broad enough for committed fixtures but fail closed before allocation or numeric coercion.",

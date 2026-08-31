@@ -640,30 +640,16 @@ switch -Exact ($NormalizedTask) {
         if (-not (Invoke-FrontendNpm @("run", "test:visual-update"))) { exit 1 }
     }
     "desktop-smoke" {
-        Write-Info "[SMOKE] Unbundled Tauri build + native Rust peek validation..."
+        Write-Info "[SMOKE] Unbundled Tauri build + native Rust boundary validation..."
         if (Test-Path $SrcTauriDir) {
             if (-not (Invoke-FrontendNpm @("run", "tauri:build:smoke"))) { throw "tauri build --no-bundle failed" }
             Push-Location $SrcTauriDir
-            # Rust tests exercise native binary reads and the same SMF peek parser used by Tauri commands.
-            # Playwright native.spec covers deterministic open/read/save/cancel IPC behavior.
+            # Rust tests exercise native path authority, bounded reads, staged writes, project rotation,
+            # recovery allowlisting, and write serialization. Playwright native.spec covers the IPC contract.
             $cargoOutput = cargo test 2>&1 | Out-String
             Write-Host $cargoOutput
-            if ($LASTEXITCODE -ne 0) { throw "cargo test (desktop peek smoke) failed" }
-            if ($cargoOutput -match 'model~') {
-                Write-Ok "Rust desktop peek tests used real sample (mixamo or old-src) for native binary read + header/rig/anim/model validation."
-            }
-            if ($cargoOutput -match 'valid SMF|rig ~|anim ~') {
-                Write-Ok "Rust tests exercised combined desktop info + rig/anim counts (get_smf_desktop_info, peek basics)."
-            }
-            if ($cargoOutput -match 'SMF rig basic|SMF anim basic|SMF model basic') {
-                Write-Ok "Rust tests validated individual peek basics (rig/anim/model counts from real sample or sim)."
-            }
-            if ($cargoOutput -match 'SMF rig basic|SMF anim basic|SMF model basic|valid SMF') {
-                Write-Ok "Desktop-smoke validated native peeks and info for .smf samples (rig/anim/model + header/validate)."
-            }
-            if ($cargoOutput -match 'Rust desktop peek smoke on') {
-                Write-Ok "Rust desktop peek smoke println executed (sample used for real binary read + parse)."
-            }
+            if ($LASTEXITCODE -ne 0) { throw "cargo test (desktop native boundary smoke) failed" }
+            Write-Ok "Rust native boundary tests passed."
             Pop-Location
             if (Test-Path $FrontendDir) {
                 Write-Info "[SMOKE] Running Playwright native IPC mock suite..."
@@ -671,7 +657,7 @@ switch -Exact ($NormalizedTask) {
                     throw "Playwright native IPC mock suite failed"
                 }
             }
-            Write-Ok "[SMOKE] Unbundled build, Rust native peek tests, and Playwright native IPC mock suite complete."
+            Write-Ok "[SMOKE] Unbundled build, Rust native boundary tests, and Playwright native IPC mock suite complete."
         } else {
             Write-Warn "src-tauri missing."
             exit 1

@@ -139,33 +139,34 @@ Last reviewed: 2026-08-29 (added explicit failure-value handling for precision S
 
 ### Q: What pitfall are we preventing?
 
-**What:** A replacement, native file operation, or long editing session can discard user work, read an unselected path, grow history without a memory contract, or publish timeline state on every render frame.
+**What:** A replacement, native file operation, or long editing session can discard user work, read an unowned recovery path, overlap writes to one destination, grow history without a memory contract, or publish timeline state on every render frame.
 
-**Context and constraints:** Model loading is latest-intent owned and may begin from browser input, drag/drop, or a native dialog. Tauri reads must remain dialog-authorized, returned IPC values are untrusted until validated, Rust and frontend dialog-plugin declarations must stay version-aligned, saves must remain user-directed, authoring history must be bounded, and the viewport mixer must stay responsive while the timeline remains visibly current.
+**Context and constraints:** Model loading is latest-intent owned and may begin from browser input, drag/drop, or a native dialog. Tauri reads must remain dialog-authorized, returned IPC values are untrusted until validated, Rust owns dialog invocation, project recovery may expose only app-owned generations, foreground saves and autosaves must not race, authoring history must be bounded, and the viewport mixer must stay responsive while the timeline remains visibly current.
 
-**Why it happened:** The load path started reading before it knew whether authoring state was dirty, the frontend supplied native paths to the bridge, histories used count-only retention, and the parent timeline subscribed directly to the viewport's requestAnimationFrame cadence.
+**Why it happened:** The load path started reading before it knew whether authoring state was dirty, the frontend supplied native paths to the bridge, project save/autosave tasks could enter independent blocking writes, recovery reads trusted a frontend-provided file name, histories used count-only retention, and the parent timeline subscribed directly to the viewport's requestAnimationFrame cadence.
 
 **Where:** `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/App.tsx`, `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/backend-client/binaryPayload.ts`, `source/frontend/package.json`, `source/package-lock.json`, `source/src-tauri/src/main.rs`, `source/src-tauri/Cargo.toml`, `source/frontend/src/utils/editorHistory.ts`, `source/frontend/src/utils/skinWeights.ts`, and `source/frontend/src/store/index.ts`.
 
-**Evidence:** The current flow queues dirty replacements before reading bytes and preserves the mounted root on Cancel or parse failure; static-root preparation preflights every mesh before mutation, rejects existing skinned geometry, allocates a collision-free root name, binds transformed meshes in their own world space, and records a reversible rig-history entry that blocks replacement until discarded or undone; Rust rejects unselected canonical paths, opens the authorized file once, rejects non-regular paths, and detects stream growth beyond the 256 MiB limit; native SMF metadata rejects pre-header, overlapping, undersized, and truncated section envelopes; frontend normalization rejects native arrays containing fractional, negative, over-255, missing, or non-numeric entries before parsing; both Tauri dialog-plugin manifests are pinned to 2.7.1; editor history is capped at 100 entries/64 MiB, skin history at 50 entries/32 MiB per direction; and parent playback publication is capped at a 50 ms display cadence. Unit and browser mock coverage exercises these boundaries.
+**Evidence:** The current flow queues dirty replacements before reading bytes and preserves the mounted root on Cancel or parse failure; static-root preparation preflights every mesh before mutation and records one reversible rig-history entry; Rust rejects unselected or non-regular paths and detects stream growth beyond the 256 MiB limit; native writes share one async mutex, use unique staged files, sync before replacement, and restore the prior destination on install failure; recovery discovery/read accepts only the exact autosave target plus `.bak1` and `.bak2` regular files; frontend autosave coalesces to the newest trailing request, and successful replacement waits for issued recovery I/O before swapping roots without canceling recovery on picker failure; malformed native byte arrays fail before parsing; editor and skin histories have count and byte limits; and parent playback publication is capped at a 50 ms display cadence. Rust, unit, and browser mock coverage exercise these boundaries.
 
 **Developer story:** These were separate-looking reliability issues with the same root cause: integration code had no explicit ownership contract for destructive state, privileged destinations, retained snapshots, or high-frequency display updates. Shared guards and narrow owners make each boundary observable without hiding a real failure behind a fallback.
 
-**How to catch it:** Test Cancel before byte materialization, Discard after dirty authoring, stale load/export completion, unselected native reads, exact-limit and growth-over-limit native reads, non-regular paths, strict SMF section envelopes, save cancellation, exact history budget eviction, oversized current edits, and throttled versus immediate playback updates. Run focused unit slices plus the full verification gate.
+**How to catch it:** Test Cancel before byte materialization, Discard after dirty authoring, stale load/export completion, unselected native reads, exact-limit and growth-over-limit reads, non-regular paths, arbitrary recovery names, concurrent project rotations, complete staged replacement, trailing autosave coalescing, save cancellation, exact history budget eviction, oversized current edits, and throttled versus immediate playback updates. Run focused Rust/browser slices plus the full verification gate.
 
 **Solutions tried:**
 1. `34/100` Rely on a downstream parse guard and frontend-provided native destination, result: destructive replacement, arbitrary path reads, and excess retained memory remained possible.
 2. `95/100` Centralize replacement decisions, keep native path/destination authority in Rust, bound retained snapshots by count and bytes, and throttle only parent display publication, result: user state and privileged I/O fail closed while imperative rendering remains responsive.
+3. `98/100` Serialize all native writes, stage unique synchronized payloads, exact-match recovery generations, coalesce autosave at the integration owner, and remove duplicate unused native SMF parser surfaces, result: write timing and parser ownership are explicit without redundant bridge contracts.
 
-**Current solution:** `replacementGuard.ts`, `assertModelInputSize`, `normalizeBinaryPayload`, `staticMeshSkinPrep.ts`, `smfBinary.ts` decoded reservations, Rust `NativeFileAuthority`, same-handle bounded native reads, strict `smf_core.rs` section envelopes, `save_file_binary`, the exact-match Tauri plugin declarations, bounded history helpers, and `playbackDisplayThrottle.ts` each own one narrow invariant; `useLoadModel` and `App` compose them at the integration boundary.
+**Current solution:** `replacementGuard.ts`, `assertModelInputSize`, `normalizeBinaryPayload`, `staticMeshSkinPrep.ts`, `smfBinary.ts` decoded reservations, Rust `NativeFileAuthority`, same-handle bounded reads, `run_native_write`, `TemporaryFile`, exact recovery-name guards, bounded history helpers, and `playbackDisplayThrottle.ts` each own one narrow invariant; `useLoadModel` owns foreground-save exclusion and latest-trailing autosave coalescing, while the TypeScript worker remains the sole structural SMF authority.
 
 **Decision rationale:** A single broad integration fallback would obscure which state was protected. Explicit guards preserve the current model on failure, keep OS dialogs authoritative, retain useful recent history, and reduce React work without altering mixer timing.
 
-**Effectiveness:** `95/100`, good. The focused tests cover the current failure modes; future changes must preserve both the safety boundary and the user-visible status explanation.
+**Effectiveness:** `98/100`, durable. Focused tests cover the current failure modes; future changes must preserve both the safety boundary and the user-visible status explanation.
 
 **Relevance check:** Current. Revisit this entry when load sources, native commands, history shapes, or timeline rendering cadence change.
 
-**Next prevention step:** Keep completion evidence in `review.md` current and require any new asynchronous or memory-retaining integration surface to declare its owner, limit, cancellation behavior, and user-facing failure state.
+**Next prevention step:** Keep completion evidence in `review.md` current and require any new asynchronous, write-owning, or memory-retaining integration surface to declare its owner, serialization/cancellation behavior, limit, and user-facing failure state.
 
 ### Q: What pitfall are we preventing?
 
@@ -764,28 +765,6 @@ Last reviewed: 2026-08-29 (added explicit failure-value handling for precision S
 **Relevance check:** Current. The app is TypeScript-heavy and future loader/viewport changes can regress contracts without this check.
 
 **Next prevention step:** Keep representative source/test targets in the coverage probe when lint ownership or directory layout changes.
-
-### Q: What pitfall are we preventing?
-
-**What:** Desktop SMF parser simulations can diverge from the Rust/Tauri command behavior.
-
-**Why it happened:** The Playwright helper read animation count as `u32` while Rust `get_smf_desktop_info`, Rust tests, and the TS SMF loader read the SMF animation count as `u8`.
-
-**Where:** `source/frontend/tests/native.spec.ts`, `source/frontend/tests/helpers/smoke-helpers.ts`, `source/src-tauri/src/main.rs`, and `source/frontend/src/loaders/smf.ts`.
-
-**How to catch it:** Keep Rust native tests for `parse_smf_header_info` and run Playwright desktop-info simulation against real `.smf` bytes. When parser width/offset semantics change, update Rust, TS loader, and JS simulation together.
-
-**Solutions tried:**
-1. `60/100` Comment-only documentation of desktop simulation, result: stale behavior remained possible.
-2. `91/100` Align JS simulation with Rust `u8` behavior and add a pitfall entry, result: simulation now matches the runtime contract and the failure mode is documented.
-
-**Current solution:** `simulateGetSmfDesktopInfo` reads `bytes[p.offAnim]` as `u8`; Rust has a fixture proving `u8` width.
-
-**Effectiveness:** `91/100`, durable. The fix is verified by the app test suite and aligns all three parser surfaces.
-
-**Relevance check:** Current. Desktop validation status is user-visible for `.smf` loads and easy to regress when extending parser peeks.
-
-**Next prevention step:** Factor shared parser-width notes into a small SMF format doc if Rust parser work expands beyond peeks.
 
 ### Q: What pitfall are we preventing?
 

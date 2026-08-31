@@ -37,20 +37,6 @@ export interface OpenResult {
   error?: string
 }
 
-export interface SmfDesktopInfo {
-  valid: boolean
-  version: string
-  size: number
-  off_tex: number
-  off_model: number
-  off_rig: number
-  off_anim: number
-  model_count?: number
-  rig_bone_count?: number
-  anim_clip_count?: number
-  error?: string
-}
-
 export interface TauriClient {
   openFile: () => Promise<OpenResult | null>;
   readBrowserModelFiles: (files: readonly File[]) => Promise<OpenResult>;
@@ -63,12 +49,6 @@ export interface TauriClient {
   readBinaryFile: (path: string) => Promise<Uint8Array>;
   readBinaryBundle: (paths: readonly string[]) => Promise<readonly Uint8Array[]>;
   invokeCommand: <T>(cmd: string, args?: Record<string, unknown>) => Promise<T>;
-  peekSmfHeader: (path: string) => Promise<string>;
-  validateSmf: (path: string) => Promise<string>;
-  peekSmfRigBasic: (path: string) => Promise<string>;
-  peekSmfAnimBasic: (path: string) => Promise<string>;
-  peekSmfModelBasic: (path: string) => Promise<string>;
-  getSmfDesktopInfo: (path: string) => Promise<SmfDesktopInfo>;
 }
 
 function isTauriEnv(): boolean {
@@ -361,61 +341,4 @@ function nativeBundleName(primaryDirectory: string, path: string): string {
     return normalizedPath.slice(normalizedPrimary.length + 1)
   }
   return normalizedPath
-}
-
-export async function peekSmfHeader(path: string): Promise<string> {
-  const isTauri = isTauriEnv()
-  if (!isTauri) {
-    return 'peek_smf_header only in Tauri desktop'
-  }
-  return invokeCommand<string>('peek_smf_header', { path })
-}
-
-export async function validateSmf(path: string): Promise<string> {
-  const isTauri = isTauriEnv()
-  if (!isTauri) {
-    return 'validateSmf only in Tauri desktop'
-  }
-  return invokeCommand<string>('validate_smf', { path })
-}
-
-export async function peekSmfRigBasic(path: string): Promise<string> {
-  const isTauri = isTauriEnv()
-  if (!isTauri) {
-    return 'peekSmfRigBasic only in Tauri desktop'
-  }
-  return invokeCommand<string>('peek_smf_rig_basic', { path })
-}
-
-export async function peekSmfAnimBasic(path: string): Promise<string> {
-  const isTauri = isTauriEnv()
-  if (!isTauri) {
-    return 'peekSmfAnimBasic only in Tauri desktop'
-  }
-  return invokeCommand<string>('peek_smf_anim_basic', { path })
-}
-
-export async function peekSmfModelBasic(path: string): Promise<string> {
-  const isTauri = isTauriEnv()
-  if (!isTauri) {
-    return 'peekSmfModelBasic only in Tauri desktop'
-  }
-  return invokeCommand<string>('peek_smf_model_basic', { path })
-}
-
-export async function getSmfDesktopInfo(path: string): Promise<SmfDesktopInfo> {
-  const isTauri = isTauriEnv()
-  if (!isTauri) {
-    return {
-      valid: false,
-      version: '',
-      size: 0,
-      off_tex: 0,
-      off_model: 0,
-      off_rig: 0,
-      off_anim: 0,
-      error: 'getSmfDesktopInfo only in Tauri desktop',
-    }
-  }
-  return invokeCommand<SmfDesktopInfo>('get_smf_desktop_info', { path })
 }

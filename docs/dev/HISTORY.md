@@ -2,6 +2,23 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-08-30 — Native I/O ownership and recovery integrity
+
+- Replaced independent native write tasks with one async serialization owner that keeps blocking filesystem work off the async runtime. Export and project saves now use unique staged files, flush payloads before replacement, clean temporary paths, restore the prior destination on install failure, and avoid reporting a false failed save after a successful install whose obsolete-generation cleanup only warned.
+- Restricted project recovery discovery and reads to the exact app-owned target, `.bak1`, and `.bak2` regular files. Arbitrary app-data siblings, suffix lookalikes, traversal names, directories, and symlink-shaped inputs fail closed before project bytes are returned.
+- Coalesced autosave to the newest trailing request without overlapping foreground/native writes. A successful model replacement invalidates queued old-model work and waits for issued recovery I/O before swapping roots; canceled and failed pickers do not discard recovery work.
+- Removed the unused Rust SMF parser module, six dead native peek/info commands, matching frontend bridge and Playwright simulation code, unused direct Rust serialization dependencies, and the unused frontend Tauri dialog package. The TypeScript worker remains the sole structural SMF authority, while Rust owns dialogs and bounded native I/O.
+- Reconciled the launcher smoke wording, current app/test contracts, closed TODO, native I/O pitfall, and existing Tauri/project-recovery/SMF-resource context groups. The research inbox had no active architect or source-review drop-in, and no new summary-bank group was needed.
+
+### Verification
+
+- Focused delayed autosave/model-replacement browser regression: 1/1 passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task context`: passed across 188 frontend source/test files and 11 durable docs with 31 groups, zero warnings, 7/7 context-bank tests, and 5/5 project-integrity tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 353/353 frontend units across 61 files, lint/type/build/chunk checks, and 10/10 Rust tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: passed 75/75 browser cases.
+- `pwsh -NoProfile -File .\run.ps1 -Task desktop-smoke`: passed the unbundled Tauri release build, 10/10 Rust tests, and 12/12 native IPC browser cases.
+- `npm audit --omit=optional` from `source`: found zero vulnerabilities.
+
 ## 2026-08-29 — Precision Skin target contract and integrity closeout
 
 - Found a type-correct return-contract inversion in the new mini-node precision path: `getSkinnedVertexWorldPosition` returns `null` on success and a failure code on error, but the component rejected the success case and could continue from an invalid result with an origin vector. Extracted `resolveSkinPointSourceVertex` as the single point-index/stride/source-position guard; valid hits now return the exact world-space source vertex and invalid skin data fails closed.

@@ -42,7 +42,7 @@ On Windows, prefer `run.bat` or `run.ps1` for normal launches because the launch
 - `source/frontend/src/loaders/`: SMF/GLB/FBX/OBJ parsing, coordinate/DQ boundaries, conversion, diagnostics, and validated exports.
 - `source/frontend/src/workers/`: typed SMF codec protocol, runtime validation, transfer ownership, cancellation, timeout, and progress.
 - `source/frontend/src/backend-client/`: validated native IPC adapters and browser file/download fallbacks.
-- `source/src-tauri/src/`: Rust-owned native dialogs, authorized bounded file I/O, and optional SMF envelope peeks.
+- `source/src-tauri/src/`: Rust-owned native dialogs, authorized bounded reads, staged writes, and rotating project recovery generations.
 - `source/frontend/tests/`: focused unit coverage, eight default Playwright suites, and opt-in recorded user journeys.
 
 `useLoadModel.ts` and `ThreeViewport.tsx` remain deliberate integration owners. Pure policy, timing, validation, history, display, and authoring behavior lives in focused modules with tests; new extraction should establish an independent contract instead of only moving lines.
