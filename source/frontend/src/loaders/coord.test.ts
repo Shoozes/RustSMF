@@ -147,7 +147,12 @@ describe('coord.ts - SMF <-> Three coordinate and dual-quat math', () => {
 // Domain-owned Playwright specs cover visuals and full UI flows.
 import { exportSMFToBuffer, importSMF, buildThreeScene, ImportedSmf } from './smf';
 import { buildRigHierarchy } from './smfRig';
-import { makeBoneLabel, updateBoneLabelText } from '../utils/boneLabels';
+import {
+  compactBoneLabelText,
+  getPersistentBoneLabelScale,
+  makeBoneLabel,
+  updateBoneLabelText,
+} from '../utils/boneLabels';
 import { makeBoneHighlightMarker, makeBoneHoverMarker, updateHighlightPosition } from '../utils/boneHighlight';
 import { ModernSkeletonHelper, findBoneNameFromSkeletonHelperHit } from '../utils/modernSkeletonHelper';
 import { createSeqGuard } from '../utils/seqGuard';
@@ -498,6 +503,11 @@ describe('smf export roundtrip (data-driven)', () => {
       assert.ok(lastFillText.includes('...'), 'long name truncated in fillText for polish');
       updateBoneLabelText(label, 'SMF_Node_12 · LeftArm');
       assert.equal((label as any).userData.labelText, 'SMF_Node_12 · LeftArm');
+      assert.equal(compactBoneLabelText('mixamorig:LeftForeArm'), 'LeftForeArm');
+      assert.equal(compactBoneLabelText('Armature|mixamorig_RightForeArm'), 'RightForeArm');
+      assert.equal(getPersistentBoneLabelScale(2), 0.5, 'labels occupy a bounded fraction of model size');
+      assert.equal(getPersistentBoneLabelScale(200), 50, 'large models receive proportionally readable labels');
+      assert.equal(getPersistentBoneLabelScale(Number.NaN), 0.25, 'invalid model scale uses the safe default');
     } finally {
       if (origCreate && !restored) {
         g.document.createElement = origCreate;

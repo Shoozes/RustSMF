@@ -1,0 +1,28 @@
+{
+  "schema": "geneye.playwright.project_command.v1",
+  "executable": "node",
+  "argv": [
+    "scripts/run-playwright-geneye.mjs",
+    "test",
+    "--config=playwright.journey.config.ts",
+    "--reporter=json"
+  ],
+  "working_directory": ".",
+  "environment_allowlist": [
+    "PATH",
+    "PATHEXT",
+    "LOCALAPPDATA",
+    "USERPROFILE",
+    "RUSTSMF_PLAYWRIGHT_EXECUTABLE"
+  ],
+  "requirements": {
+    "geneye_api": "none",
+    "geneye_browser_scenarios": false,
+    "artifact_review": "deterministic"
+  },
+  "timeout_ms": 600000,
+  "expected_reports": [],
+  "artifact_roots": [
+    "test-results/hand-wave-journey"
+  ]
+}

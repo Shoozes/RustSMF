@@ -15,7 +15,7 @@ import {
   setViewportLayout,
 } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
-import { revealSecondaryCommands, showAnimateTimeline, showModernPanel } from './helpers/modern-shell';
+import { revealSecondaryCommands, showAnimateTimeline, showModernPanel, showSkinAdvanced } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -479,10 +479,17 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
 
       const canvas = page.getByTestId('three-canvas');
       const cameraToggle = page.getByTestId('viewport-perspective-toggle');
+      type RenderedCoverage = {
+        widthRatio: number;
+        heightRatio: number;
+        pixelCount: number;
+        imageWidth: number;
+        imageHeight: number;
+      };
       const coverageByScale: Array<{
         scale: number;
-        perspective: { widthRatio: number; heightRatio: number; pixelCount: number };
-        orthographic: { widthRatio: number; heightRatio: number; pixelCount: number };
+        perspective: RenderedCoverage;
+        orthographic: RenderedCoverage;
       }> = [];
 
       const waitForFrame = async (): Promise<void> => {
@@ -491,11 +498,7 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
         }));
       };
 
-      const readGreenModelCoverage = async (): Promise<{
-        widthRatio: number;
-        heightRatio: number;
-        pixelCount: number;
-      }> => {
+      const readGreenModelCoverage = async (): Promise<RenderedCoverage> => {
         await waitForFrame();
         const screenshot = await canvas.screenshot();
         return page.evaluate(async (base64) => {
@@ -532,8 +535,26 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
             widthRatio: maxX >= minX ? (maxX - minX + 1) / image.width : 0,
             heightRatio: maxY >= minY ? (maxY - minY + 1) / image.height : 0,
             pixelCount,
+            imageWidth: image.width,
+            imageHeight: image.height,
           };
         }, screenshot.toString('base64'));
+      };
+
+      const expectCoverageParity = (
+        first: RenderedCoverage,
+        second: RenderedCoverage,
+        maxWidthDelta: number,
+        maxHeightDelta: number,
+      ): void => {
+        const widthPixelTolerance = 1 / Math.min(first.imageWidth, second.imageWidth);
+        const heightPixelTolerance = 1 / Math.min(first.imageHeight, second.imageHeight);
+        expect(Math.abs(first.widthRatio - second.widthRatio)).toBeLessThanOrEqual(
+          maxWidthDelta + widthPixelTolerance,
+        );
+        expect(Math.abs(first.heightRatio - second.heightRatio)).toBeLessThanOrEqual(
+          maxHeightDelta + heightPixelTolerance,
+        );
       };
 
       for (const scale of [1e-5, 1e5]) {
@@ -590,10 +611,8 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       }
 
       const [tiny, huge] = coverageByScale;
-      expect(Math.abs(tiny.perspective.widthRatio - huge.perspective.widthRatio)).toBeLessThan(0.03);
-      expect(Math.abs(tiny.perspective.heightRatio - huge.perspective.heightRatio)).toBeLessThan(0.03);
-      expect(Math.abs(tiny.orthographic.widthRatio - huge.orthographic.widthRatio)).toBeLessThan(0.06);
-      expect(Math.abs(tiny.orthographic.heightRatio - huge.orthographic.heightRatio)).toBeLessThan(0.03);
+      expectCoverageParity(tiny.perspective, huge.perspective, 0.03, 0.03);
+      expectCoverageParity(tiny.orthographic, huge.orthographic, 0.06, 0.03);
       expect(getBrowserErrors(page).filter((error) => error.includes('ERROR'))).toEqual([]);
     });
 
@@ -833,7 +852,7 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
         await tab.click();
         await expect(tab).toHaveAttribute('aria-selected', 'true');
         if (panelTestId) {
-          await showModernPanel(page, 'properties');
+          if (mode !== 'skin') await showModernPanel(page, 'properties');
           await expect(page.getByTestId(panelTestId)).toBeVisible();
         }
         await expect(page.getByTestId('three-canvas')).toBeVisible();
@@ -879,6 +898,8 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       const scrubState = await canvas.getAttribute('data-playback-time');
 
       await page.getByTestId('mode-tab-skin').click();
+      await showSkinAdvanced(page);
+      await page.getByTestId('modern-skin-tool-paint').click();
       await page.getByTestId('skin-paint-mode-add').click();
       await setRangeValue(page, 'skin-paint-target', 1);
       await setRangeValue(page, 'skin-paint-radius', 1);
@@ -944,6 +965,7 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
         await page.getByTestId(`mode-tab-${mode}`).click();
         await assertContinuity();
         if (mode === 'skin') {
+          await showSkinAdvanced(page);
           await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
         } else if (mode === 'animate') {
           await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');

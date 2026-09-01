@@ -26,6 +26,21 @@ export interface EditorHistoryState<TSnapshot> {
 
 export const EDITOR_HISTORY_BYTE_LIMIT = 64 * 1024 * 1024;
 
+export interface HistoryChronologyCandidate<TDomain extends string> {
+  domain: TDomain;
+  available: boolean;
+  order: number;
+}
+
+export function selectLatestHistoryDomain<TDomain extends string>(
+  candidates: readonly HistoryChronologyCandidate<TDomain>[],
+  fallback: TDomain,
+): TDomain {
+  return candidates.reduce<HistoryChronologyCandidate<TDomain> | null>((latest, candidate) => (
+    candidate.available && (!latest || candidate.order > latest.order) ? candidate : latest
+  ), null)?.domain ?? fallback;
+}
+
 function estimateHistoryValue(
   value: unknown,
   seen: WeakSet<object>,

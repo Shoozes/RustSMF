@@ -6,40 +6,32 @@ This is the current repo/app integrity snapshot. `APP_STATE.md` owns current beh
 
 ## Outcome
 
-Complete. The selected focused-studio direction is implemented as a calm, canvas-first Modern shell while Original SMF retains its legacy-parity structure and behavior.
+Complete. The Calm Modern shell, direct-paint Skin workflow, setup-pose ownership, model authoring, verification contracts, and focused context routes are reconciled.
 
-- Modern and Original now have explicit shell variants with shared editor state and command semantics but separately owned chrome. Modern presents two short navigation rows, one supporting panel, compact overlay drawers, and viewport-local layout, camera, and display controls.
-- Open, Save, Undo, Redo, and Export remain primary. Project recovery, explicit format exports, diagnostics, and appearance remain reachable through named progressive disclosure; every existing command is exercised in browser coverage.
-- The unloaded Modern shell presents one focused Open/drop task. The full Timeline mounts only in Animate, compact drawers are mutually exclusive, and focus is trapped, dismissed, and restored predictably.
-- Renderer density refreshes when the viewport or display changes and remains capped at DPR 2. Responsive coverage owns wide, compact, narrow, coarse-pointer, and DPR behavior without document or shell overflow.
-- Original SMF keeps its quad default, mode labels, legacy geometry, responsive behavior, and strict visual baseline. Modern screenshot changes are intentional and isolated to the new composition.
-- The selected visual, implementation comparison record, current-state docs, test guide, pitfall story, closed backlog, history, and focused context routes are reconciled. No active architect or research-inbox drop-in, production TODO/FIXME/stub, or unresolved import/export seam remains in scope.
-
-## Issues found and resolved
-
-- A shared narrow-layout rule expanded the Modern viewport overlay to full width and clipped controls at 800 pixels. Modern now overrides inherited width, wrapping, overflow, and alignment at the shell boundary.
-- Older behavior tests assumed both supporting panels and the Timeline were permanently mounted. Shared helpers now open the required Modern surface, while legacy behavior-heavy suites explicitly select Original when they test Original geometry.
-- The recorded animation journey could race active playback and used an obsolete orbit coefficient. It now pauses before authoring, opens the contextual panel, expands the selected hierarchy path, and derives drag distance from the current orbit contract.
-- The expanded export-format browser test exceeded its prior summary-bank route budget. The existing narrow route was retained and its explicit budget adjusted; no redundant group was added.
+- Skin Smooth is now real regional weight averaging instead of an alias for Auto. It works without a selected bone, shares the simple rail and Advanced mode contract, records undoable edits, and indexes skinned meshes once per stroke instead of traversing the scene for every candidate vertex.
+- Async static-model append commits only while the initiating model root remains current. A replacement during file loading disposes the stale loaded subtree and cannot attach it to a detached scene or create misleading history.
+- Global undo/redo chronology now uses one data-driven selector rather than duplicated filtering and reduction logic.
+- Project integrity rejects relative imports that resolve only to a directory, accepts a deliberately empty backlog only through the explicit marker, rejects silently empty TODO files, and catches machine-local absolute paths in current-facing docs.
+- Generated browser, journey, and design-review output is ignored under one repository-level `output/` rule. The durable design QA record now references only checked, portable evidence.
+- The active TODO is genuinely empty; completed work lives here and in `HISTORY.md`. The research inbox contains no actionable drop-in, and the production source contains no unresolved TODO/FIXME/stub marker or broken relative import/export seam.
+- `summary_bank.json` retains 31 narrow groups. Existing Skin, model-authoring, load-orchestration, external-resource, and project-integrity routes were updated instead of adding redundant groups; validation reports 43.2 KiB of default context and zero warnings.
 
 ## Verification
 
-- `pwsh -NoProfile -File .\run.ps1 -Task context`: passed with 31 focused groups, a 43.0 KiB default context, zero warnings, 7/7 context-bank tests, and 5/5 project-integrity tests.
-- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed project-integrity/context and synchronization guards, ESLint, app/test typechecks, the production-`any` guard, Vite build and entry-chunk checks, 353/353 frontend units across 61 files, Rust fmt/clippy/check, and 10/10 Rust tests.
-- `npm run test:e2e --workspace frontend`: passed 85/85 browser cases.
-- `pwsh -NoProfile -File .\run.ps1 -Task test:journey`: passed 1/1 recorded real-model animation and skinning journey.
-- `pwsh -NoProfile -File .\run.ps1 -Task test:visual-strict`: passed 3/3 strict visual cases, including Original SMF.
-- `pwsh -NoProfile -File .\run.ps1 -Task desktop-smoke`: passed the Tauri release build, 10/10 Rust tests, and 12/12 native IPC browser cases.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed 8/8 project-integrity tests, 7/7 context-bank tests, 2/2 main-sync safety tests, ESLint, app/test typechecks, production-`any` and entry-chunk guards, the Vite production build, 359/359 frontend units across 62 files, Rust fmt/clippy/check, and 10/10 Rust tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: passed 86/86 browser cases across nine files after the scale-parity assertion was made tolerant of one-pixel screenshot quantization.
+- Focused Skin browser coverage: passed 7/7. Focused scale-parity browser coverage: passed 1/1.
 - `npm audit --omit=optional` from `source`: found zero vulnerabilities.
-- Final test typecheck, context validation, and `git diff --check` passed immediately before commit.
+- `pwsh -NoProfile -File .\run.ps1 -Task context`: passed with 31 groups, 43.2 KiB default context, and zero warnings.
+- Final `git diff --check` and marker/path searches passed.
 
 ## Blockers and verified limits
 
 There is no code, test, documentation, context-routing, or local verification blocker in the reviewed scope.
 
-- Local Node 26.5 emits Playwright 1.60's upstream `[DEP0205] module.register()` warning while the suites remain green; the warning does not originate in application code.
-- Universal third-party FBX behavior, unreferenced material-map inference, producer-specific influences beyond Three.js's four retained weights, true OS-dialog automation, and future evidence-driven strict-baseline refreshes remain explicit limits in `APP_STATE.md`, not hidden implementation TODOs.
+- Node 26.5 emits Playwright 1.60's upstream `[DEP0205] module.register()` and `NO_COLOR`/`FORCE_COLOR` warnings while the suites remain green; neither warning originates in application code.
+- Universal third-party FBX behavior, automatic assignment of unreferenced material maps, producer-specific influences beyond Three.js's four retained weights, true OS-dialog automation, and future evidence-driven strict-baseline refreshes remain explicit limits in `APP_STATE.md`, not hidden implementation TODOs.
 
 ## Next direction
 
-The active backlog is closed. Add a new What/Why/When/Where/How/Done-when item only when new product evidence, an external compatibility fixture, or a requested feature creates executable work.
+The active backlog is closed. Add a new What/Why/Where/When/How/Done-when/Verification item only when product evidence, an external compatibility fixture, or a requested feature creates executable work.

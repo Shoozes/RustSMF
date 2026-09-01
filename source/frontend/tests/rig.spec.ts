@@ -25,6 +25,9 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('editor-redo-btn')).toBeDisabled();
 
       await page.getByTestId('mode-tab-rig').click({ force: true });
+      const canvas = page.getByTestId('three-canvas');
+      await expect(canvas).toHaveAttribute('data-workspace-pose', 'rest');
+      await expect(canvas).toHaveAttribute('data-bone-labels-enabled', 'false');
       const inspector = page.getByTestId('inspector');
       const boneEntry = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
       await expect(boneEntry).toBeVisible();
@@ -36,6 +39,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('editor-redo-btn')).toBeDisabled();
 
       await page.getByTestId('mode-tab-animate').click({ force: true });
+      await expect(canvas).toHaveAttribute('data-workspace-pose', 'animation');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
 
       await page.getByTestId('editor-undo-btn').click({ force: true });

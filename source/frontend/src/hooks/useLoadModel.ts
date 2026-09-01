@@ -84,6 +84,9 @@ import { summarizeObjectTextures } from '../utils/textureCompat';
 import { diagnoseGeometry, type GeometryDiagnosticsReport } from '../utils/geometryDiagnostics';
 import {
   makeSkinEditState,
+  averageVertexSkinWeights,
+  blendVertexSkinWeights,
+  collectBoneBranchIndices,
   type SkinEditState,
   type SkinEditHistoryEntry,
   type SkinWeightEditMode,
@@ -100,10 +103,14 @@ import {
   autoSkinSkinnedMeshWeights,
   autoSkinSkinnedMeshVertexWeights,
   getSkinVertexSnapshotKey,
+  getSkinAttributes,
   indexSkinVertexSnapshots,
+  readVertexSkinWeights,
   resolveSkinAutoWeightOptions,
   SKIN_AUTO_WEIGHT_ALGORITHM_LABELS,
   appendSkinHistoryEntry,
+  writeVertexSkinWeights,
+  type VertexSkinWeights,
 } from '../utils/skinWeights';
 import {
   diagnoseSkinVertex,
@@ -295,21 +302,6 @@ const getBoneIndex = (skeleton: THREE.Skeleton | null, boneName: string): number
   return index;
 };
 
-const getBoneBranchIndices = (skeleton: THREE.Skeleton, boneName: string): Set<number> => {
-  const root = skeleton.bones.find((bone) => bone.name === boneName);
-  if (!root) return new Set();
-  const branch = new Set<number>();
-  const visit = (bone: THREE.Bone): void => {
-    const index = skeleton.bones.indexOf(bone);
-    if (index >= 0) branch.add(index);
-    bone.children.forEach((child) => {
-      if (isThreeBone(child)) visit(child);
-    });
-  };
-  visit(root);
-  return branch;
-};
-
 const makeUniqueChildBoneName = (
   skeleton: THREE.Skeleton,
   parentName: string,
@@ -413,7 +405,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const [skinRedoOrder, setSkinRedoOrder] = useState(0);
 
   const [skinPaintMode, setSkinPaintMode] = useState<SkinWeightEditMode>('set');
-  const [skinPaintPose, setSkinPaintPose] = useState<SkinPaintPoseMode>('live');
+  const [skinPaintPose, setSkinPaintPose] = useState<SkinPaintPoseMode>('rest');
   const [selectedSkinVertex, setSelectedSkinVertex] = useState<{ meshId: string; vertexIndex: number } | null>(null);
   const [skinPaintTargetMode, setSkinPaintTargetMode] = useState<'vertex' | 'triangle'>('vertex');
   const [skinPaintRadius, setSkinPaintRadius] = useState(0.2);
@@ -3135,7 +3127,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     const before = captureAllSkinSnapshots(meshes);
     const selectedBoneName = skinEditStateRef.current.selectedBoneName || ui.selected;
     const restrictToBoneIndices = skinAutoWeightAlgorithm === 'selected-branch'
-      ? getBoneBranchIndices(skeleton, selectedBoneName)
+      ? collectBoneBranchIndices(skeleton, selectedBoneName)
       : undefined;
     if (skinAutoWeightAlgorithm === 'selected-branch' && (!restrictToBoneIndices || restrictToBoneIndices.size === 0)) {
       ui.setStatus('Select a bone before using selected branch auto skin.');
@@ -3188,22 +3180,22 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       return;
     }
     const source = skinEditStateRef.current;
+    const mode = skinPaintMode;
     const selectedBoneName = source.selectedBoneName || ui.selected;
-    if (!selectedBoneName || selectedBoneName === 'Scene') {
+    if (mode !== 'smooth' && (!selectedBoneName || selectedBoneName === 'Scene')) {
       ui.setStatus('Select a bone to paint skin weights.');
       return;
     }
 
     const skeleton = model.skeleton;
-    const boneIndex = getBoneIndex(skeleton, selectedBoneName);
-    if (boneIndex < 0) {
+    const boneIndex = mode === 'smooth' ? -1 : getBoneIndex(skeleton, selectedBoneName);
+    if (mode !== 'smooth' && boneIndex < 0) {
       ui.setStatus('Selected bone is not in current skeleton.');
       return;
     }
 
-    const mode = skinPaintMode;
     const restrictToBoneIndices = mode === 'auto' && skinAutoWeightAlgorithm === 'selected-branch'
-      ? getBoneBranchIndices(skeleton, selectedBoneName)
+      ? collectBoneBranchIndices(skeleton, selectedBoneName)
       : undefined;
     if (mode === 'auto' && skinAutoWeightAlgorithm === 'selected-branch' && (!restrictToBoneIndices || restrictToBoneIndices.size === 0)) {
       ui.setStatus('Select a bone before using selected branch auto paint.');
@@ -3235,6 +3227,30 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       return;
     }
 
+    const meshById = new Map(
+      collectSkinnedMeshes(model.root).map((mesh) => [mesh.uuid, mesh]),
+    );
+    const smoothCurrentByKey = new Map<string, VertexSkinWeights>();
+    const smoothSourcesByMesh = new Map<string, VertexSkinWeights[]>();
+    if (mode === 'smooth') {
+      unique.forEach(({ mesh, index }, key) => {
+        const meshObj = meshById.get(mesh);
+        const attributes = meshObj ? getSkinAttributes(meshObj.geometry) : null;
+        const current = attributes ? readVertexSkinWeights(attributes, index) : null;
+        if (!current) return;
+        smoothCurrentByKey.set(key, current);
+        const sources = smoothSourcesByMesh.get(mesh) ?? [];
+        sources.push(current);
+        smoothSourcesByMesh.set(mesh, sources);
+      });
+    }
+    const smoothTargetByMesh = new Map(
+      [...smoothSourcesByMesh].flatMap(([meshId, vertices]) => {
+        const target = averageVertexSkinWeights(vertices);
+        return target ? [[meshId, target] as const] : [];
+      }),
+    );
+
     let changed = 0;
     let touched = 0;
     let nextState = source;
@@ -3243,8 +3259,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       beginSkinPaintStroke();
       implicitStroke = true;
     }
-    unique.forEach(({ mesh, index, amount }) => {
-      const meshObj = collectSkinnedMeshById(model.root, mesh);
+    unique.forEach(({ mesh, index, amount }, key) => {
+      const meshObj = meshById.get(mesh);
       if (!meshObj) return;
       const snapshotKey = `${mesh}:${index}`;
       const activeStroke = activeSkinStrokeRef.current;
@@ -3254,20 +3270,38 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           activeStroke.beforeSnapshots.set(snapshotKey, snapshot);
         }
       }
-      const result = mode === 'auto' && autoWeightOptions
-        ? autoSkinSkinnedMeshVertexWeights(meshObj, skeleton, index, {
-          ...autoWeightOptions,
-          blendAmount: amount,
-        })
-        : editVertexBoneWeight(
-          meshObj,
-          index,
-          boneIndex,
-          mode,
-          amount,
-          mode === 'set' ? skinPaintTargetWeight : undefined,
-        );
+      const smoothCurrent = smoothCurrentByKey.get(key);
+      const smoothTarget = smoothTargetByMesh.get(mesh);
+      const smoothAttributes = mode === 'smooth' ? getSkinAttributes(meshObj.geometry) : null;
+      const smoothNext = smoothCurrent && smoothTarget
+        ? blendVertexSkinWeights(smoothCurrent, smoothTarget, amount, 4)
+        : null;
+      const result = mode === 'smooth'
+        ? smoothAttributes && smoothCurrent && smoothNext
+          ? {
+            ok: true as const,
+            vertex: smoothNext,
+            slot: 0,
+            changed: !sameVertexSkinWeights(smoothCurrent, smoothNext, 1e-5),
+          }
+          : { ok: false as const, reason: 'invalid-vertex' as const }
+        : mode === 'auto' && autoWeightOptions
+          ? autoSkinSkinnedMeshVertexWeights(meshObj, skeleton, index, {
+            ...autoWeightOptions,
+            blendAmount: amount,
+          })
+          : editVertexBoneWeight(
+            meshObj,
+            index,
+            boneIndex,
+            mode,
+            amount,
+            mode === 'set' ? skinPaintTargetWeight : undefined,
+          );
       if (!result.ok) return;
+      if (mode === 'smooth' && smoothAttributes && result.changed) {
+        writeVertexSkinWeights(smoothAttributes, index, result.vertex);
+      }
       touched += 1;
       if (result.changed) {
         nextState = markSkinEdit(nextState, mesh, index);
@@ -3280,10 +3314,11 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       const modeLabel = mode === 'auto'
         ? `auto ${SKIN_AUTO_WEIGHT_ALGORITHM_LABELS[skinAutoWeightAlgorithm]}`
         : mode;
+      const targetLabel = mode === 'smooth' ? 'across the brush region' : `on ${selectedBoneName}`;
       if (changed > 0) {
-        ui.setStatus(`Painted ${changed} skin vertices on ${selectedBoneName} (${modeLabel} mode).`);
+        ui.setStatus(`${mode === 'smooth' ? 'Smoothed' : 'Painted'} ${changed} skin vertices ${targetLabel} (${modeLabel} mode).`);
       } else {
-        ui.setStatus(`Paint stroke touched ${touched} vertices on ${selectedBoneName} (${modeLabel} mode) but kept equivalent weights.`);
+        ui.setStatus(`Paint stroke touched ${touched} vertices ${targetLabel} (${modeLabel} mode) but kept equivalent weights.`);
       }
     } else {
       ui.setStatus('No skin vertices changed during paint stroke.');

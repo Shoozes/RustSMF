@@ -54,7 +54,7 @@
       ]
     },
     "workflow__project_integrity": {
-      "description": "Durable project-doc contracts, active TODO shape, research-note status, relative frontend imports, and Rust module declarations.",
+      "description": "Durable project-doc contracts, explicit empty/active TODO shape, portable current-doc references, relative frontend imports, research-note status, and Rust module declarations.",
       "max_kb": 64,
       "paths": [
         "scripts/project-integrity-lib.mjs",
@@ -66,7 +66,8 @@
         "docs/research-inbox/README.md"
       ],
       "notes": [
-        "The guard is local and read-only: it reports missing durable docs, incomplete active tasks, unreviewed inbox notes, unresolved relative frontend imports, and unresolved Rust mod declarations before the application verification lane runs."
+        "The guard is local and read-only: it reports missing durable docs, malformed or silently empty backlogs, machine-local paths in current-facing docs, unreviewed inbox notes, unresolved relative frontend imports, and unresolved Rust mod declarations before the application verification lane runs.",
+        "Relative-import candidates must be files; a bare directory without an index module fails even when the directory itself exists."
       ]
     },
     "workflow__git_main_sync": {
@@ -140,7 +141,7 @@
     },
     "feature__model_outliner_authoring": {
       "description": "Guarded non-SMF Outliner metadata, static structural/surface authoring, and bounded global history.",
-      "max_kb": 128,
+      "max_kb": 136,
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/components/Outliner.tsx",
@@ -158,7 +159,7 @@
         "Rename is limited to binding-safe, unique, unanimated GLB/FBX/OBJ objects; SMF source names remain source-owned.",
         "Reorder swaps only eligible siblings under one parent, preserves non-Outliner children, and is covered by exact undo/redo plus GLB re-import.",
         "Duplicate/delete use explicit parent/index structural operations, independently clone static disposable resources, and reject bones, skinned subtrees, unsupported sources, and animation targets before mutation.",
-        "Static append, transforms, named material assignment, winding reversal, and geometry preparation use guarded non-SMF/static targets and the same undoable Outliner snapshot contract; appended asset groups are removed as one structural transaction."
+        "Static append, transforms, named material assignment, winding reversal, and geometry preparation use guarded non-SMF/static targets and the same undoable Outliner snapshot contract; async append commits only when the initiating model root is still current."
       ]
     },
     "feature__fbx_support": {
@@ -338,7 +339,7 @@
       ]
     },
     "feature__animation_authoring": {
-      "description": "Timeline interaction, pose-based clip creation, Bone/Branch/Full Rig key authoring, clip management, metadata, history, and browser ownership.",
+      "description": "Timeline interaction, workspace-aware playback, pose-based clip creation, Bone/Branch/Full Rig key authoring, clip management, metadata, history, and browser ownership.",
       "max_kb": 208,
       "paths": [
         "source/frontend/src/components/AnimatePanel.tsx",
@@ -357,6 +358,8 @@
         "source/frontend/src/utils/animationTimeline.test.ts",
         "source/frontend/src/utils/playbackDisplayThrottle.ts",
         "source/frontend/src/utils/playbackDisplayThrottle.test.ts",
+        "source/frontend/src/utils/workspacePlayback.ts",
+        "source/frontend/src/utils/workspacePlayback.test.ts",
         "source/frontend/tests/helpers/timeline-interactions.ts",
         "source/frontend/tests/animation.spec.ts"
       ],
@@ -366,14 +369,16 @@
         "Quadratic interpolation is preserved as SMF metadata and previews linearly in Three.js.",
         "Scoped key operations resolve a selected hierarchy, commit one history transaction, union timeline markers, and validate the clipboard's source scope, skeleton fingerprint, and target bone names before mutation.",
         "Animation edit and clipboard maps use null-prototype records so hostile but valid names such as __proto__ cannot become prototype reads or writes; bounded duration set/extension, retime, trim, and locked-bone policy are implemented with one workspace transaction per action.",
-        "The viewport advances the mixer imperatively; parent timeline publication is throttled to a 50 ms display cadence while scrub and playback-intent setters remain immediate."
+        "The viewport advances the mixer imperatively; parent timeline publication is throttled to a 50 ms display cadence while scrub and playback-intent setters remain immediate.",
+        "Rig and Skin suppress mixer playback and restore the authored rest pose; Animate reactivates the selected clip through the shared workspace playback boundary."
       ]
     },
     "feature__skin_authoring": {
-      "description": "Skin paint state, brush indexing, auto-weight algorithms, history, exportability, and browser ownership.",
-      "max_kb": 144,
+      "description": "Skin paint and regional smoothing, Modern direct-paint chrome, brush indexing, auto-weight algorithms, history, exportability, and browser ownership.",
+      "max_kb": 152,
       "paths": [
         "source/frontend/src/components/SkinPanel.tsx",
+        "source/frontend/src/components/ModernSkinWorkspace.tsx",
         "source/frontend/src/utils/skinWeights.ts",
         "source/frontend/src/utils/skinWeights.test.ts",
         "source/frontend/src/utils/skinBrushIndex.ts",
@@ -388,12 +393,13 @@
         "source/frontend/tests/skin.spec.ts"
       ],
       "notes": [
-        "Brush queries use bounded spatial candidates and verify world-space distance before mutation.",
+        "Brush queries use bounded spatial candidates and verify world-space distance before mutation; one mesh index is reused across each stroke instead of traversing the scene per vertex.",
         "Completed strokes and batch actions own one undoable snapshot transaction.",
         "Set paint separates target weight from brush flow and falloff; selected-weight Skin pts refresh posed positions through a non-serializable runtime WeakMap link and provide exact source-vertex paint targets while surface brushing remains the broad-stroke fallback.",
         "Skin diagnostics reads raw four-slot attributes for the hovered vertex and aggregate mesh counts, preserving invalid references/weights as stable issue codes instead of silently clamping them.",
         "Brush sampling exposes Rest / Bind, Frozen Current, and Live Animation modes; Frozen Current owns a captured bone-matrix snapshot and Live Animation displays a safety warning.",
         "Weight preview is a non-destructive vertex-color display; original color attributes and material vertex-color modes are restored on disable/export.",
+        "Modern starts Skin with a slim Pick/Paint/Erase/Smooth rail and contextual brush card; Pick routes viewport clicks to bone selection, Smooth performs bounded regional weight averaging without requiring a selected bone, and diagnostics/exact controls stay behind Advanced. Original keeps the full legacy panel.",
         "Batch history comparisons use a mesh/vertex snapshot index rather than repeated linear scans.",
         "Skin undo/redo entries are bounded to 50 entries and 32 MiB per direction; oldest-entry eviction reports through the status surface."
       ]
@@ -454,6 +460,8 @@
         "source/frontend/package.json",
         "source/frontend/playwright.config.ts",
         "source/frontend/playwright.journey.config.ts",
+        "source/frontend/geneye-playwright.json",
+        "source/frontend/geneye-journey.json",
         "source/frontend/eslint.config.js",
         "source/frontend/tsconfig.json",
         "source/frontend/tsconfig.test.json",
@@ -468,7 +476,8 @@
         "source/frontend/scripts/check-entry-chunks.mjs",
         "source/frontend/scripts/check-eslint-coverage.mjs",
         "source/frontend/scripts/check-production-any.mjs",
-        "source/frontend/scripts/run-strict-visuals.mjs"
+        "source/frontend/scripts/run-strict-visuals.mjs",
+        "source/frontend/scripts/run-playwright-geneye.mjs"
       ]
     },
     "tests__browser_shell_lifecycle": {
@@ -496,9 +505,11 @@
     },
     "workflow__recorded_browser_journey": {
       "description": "Opt-in recorded browser journey for real-SMF animation and skin authoring, DPI containment, mini-node precision targeting, screenshots, and WebM evidence.",
-      "max_kb": 80,
+      "max_kb": 82,
       "paths": [
         "source/frontend/playwright.journey.config.ts",
+        "source/frontend/geneye-journey.json",
+        "source/frontend/scripts/run-playwright-geneye.mjs",
         "source/frontend/src/loaders/handWaveWeightRepair.test.ts",
         "source/frontend/tests/journeys/hand-wave.journey.spec.ts",
         "source/frontend/tests/helpers/smoke-helpers.ts",
@@ -509,7 +520,7 @@
       ],
       "notes": [
         "The journey is excluded from the default browser gate and records one deterministic 1440x900, 125%-DPI hand-wave workflow through the production preview server, including exact mini-node repair of the fixture's torso/sleeve weighting defect.",
-        "Generated screenshots, test results, traces, and WebM evidence remain ignored runtime output; rerun test:journey to produce current evidence."
+        "Generated screenshots, test results, traces, WebM, and GenEye temporal evidence remain ignored runtime output; rerun test:journey to produce current evidence through the checked argv manifest."
       ]
     },
     "feature__project_recovery": {
@@ -572,7 +583,7 @@
     },
     "issue__external_model_resources": {
       "description": "Bounded GLTF/FBX/OBJ sidecar resource resolution, native/browser authorization, missing-resource diagnostics, and cleanup.",
-      "max_kb": 320,
+      "max_kb": 328,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -615,7 +626,7 @@
       "description": "Archived compatibility route for the former combined browser authoring/format pack.",
       "archived": true,
       "archive_note": "Use feature__rig_ik_pose, feature__skin_authoring, feature__animation_authoring, feature__fbx_support, and feature__theme_system.",
-      "max_kb": 160,
+      "max_kb": 162,
       "paths": [
         "source/frontend/tests/animation.spec.ts",
         "source/frontend/tests/export-formats.spec.ts",
@@ -633,7 +644,7 @@
     },
     "subsystem__load_editor_orchestration": {
       "description": "Load/export intent ownership, editor snapshots, candidate construction, and stable cross-component event contracts.",
-      "max_kb": 176,
+      "max_kb": 184,
       "paths": [
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/hooks/smfExportCandidate.ts",
@@ -653,7 +664,7 @@
       "notes": [
         "useLoadModel keeps its public return contract while pure snapshots and export candidates own focused policy; the codec-task lifecycle is routed through subsystem__export_pipeline.",
         "Renderer and requestAnimationFrame ownership remain in ThreeViewport; mount listeners and TransformControls have explicit dispose owners.",
-        "Replacement decisions are centralized before byte materialization, and editor history is capped at 100 entries/64 MiB with eviction status."
+        "Replacement decisions are centralized before byte materialization, async static append verifies current-root ownership before scene mutation, and editor history is capped at 100 entries/64 MiB with eviction status."
       ]
     },
     "subsystem__dev_process_lifecycle": {

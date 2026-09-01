@@ -5,6 +5,7 @@ import {
   popRedo,
   popUndo,
   pushEditorHistory,
+  selectLatestHistoryDomain,
   type EditorHistoryEntry,
 } from './editorHistory';
 
@@ -21,6 +22,19 @@ function entry(id: string, before: number, after: number): EditorHistoryEntry<Sn
 }
 
 describe('editorHistory', () => {
+  it('selects the newest available history domain with a stable fallback', () => {
+    const candidates = [
+      { domain: 'editor' as const, available: true, order: 4 },
+      { domain: 'skin' as const, available: false, order: 9 },
+      { domain: 'outliner' as const, available: true, order: 7 },
+    ];
+    assert.equal(selectLatestHistoryDomain(candidates, 'editor'), 'outliner');
+    assert.equal(
+      selectLatestHistoryDomain(candidates.map((candidate) => ({ ...candidate, available: false })), 'editor'),
+      'editor',
+    );
+  });
+
   it('pushes undo entries and clears redo history', () => {
     const first = pushEditorHistory(makeEditorHistory<Snapshot>(), entry('1', 0, 1));
     const undone = popUndo(first);

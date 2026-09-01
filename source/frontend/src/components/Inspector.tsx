@@ -136,6 +136,13 @@ const Inspector: React.FC<InspectorProps> = ({
       </li>
     );
   };
+  const workspaceHelp = editorMode === 'rig'
+    ? ['Rig opens on the model rest pose.', 'Animation resumes when you return to Animate.']
+    : editorMode === 'skin'
+      ? ['Skin opens on the model rest pose.', 'Advanced can opt into Frozen or Live sampling.']
+      : editorMode === 'animate'
+        ? ['Animation playback and key editing are active here.', 'Use the Timeline to scrub or author poses.']
+        : ['Skinned meshes, skeletons, and clips are ready.', 'Open Animate when you want playback.'];
   return (
     <div data-testid="inspector" className="inspector" data-editor-mode={editorMode}>
       <div className="panel-title">{title}</div>
@@ -143,8 +150,8 @@ const Inspector: React.FC<InspectorProps> = ({
         <div className="mb-1 text-slate-400">Selected</div>
         <div data-testid="inspector-selected" className="font-mono text-amber-300 break-all">{selected}</div>
         <div className="inspector-help-copy mt-3 text-[10px] text-slate-400">
-          Real SkinnedMesh + Skeleton + clips loaded here.<br />
-          Timeline below drives the AnimationMixer.
+          {workspaceHelp[0]}<br />
+          {workspaceHelp[1]}
         </div>
         {showClipList && clips.length > 0 && (
           <div className="mt-3">
@@ -172,7 +179,7 @@ const Inspector: React.FC<InspectorProps> = ({
                 className="text-[9px] px-1 py-0 bg-slate-700 hover:bg-slate-600 mb-1"
                 onClick={() => onToggleBoneLabels()}
               >
-                {showBoneLabels ? 'Hide' : 'Show'} labels (off by default for perf)
+                {showBoneLabels ? 'Hide' : 'Show'} labels
               </button>
             )}
             <div className="max-h-24 overflow-auto text-[10px]">
@@ -259,10 +266,10 @@ const Inspector: React.FC<InspectorProps> = ({
             )}
             <span className="ml-1 text-slate-500">
               {editorMode === 'rig'
-                ? '(gizmo + pose controls; T/R/S selects mode; pause playback to hold a manual pose)'
+                ? '(rest-pose workspace; T/R/S selects the gizmo mode)'
                 : editorMode === 'animate'
                   ? '(pose the bone, scrub to a time, then Insert or Update the key)'
-                  : '(pose controls only; Skin owns paint input; pause playback to hold a manual pose)'}
+                  : '(rest-pose workspace; Skin owns paint input)'}
             </span>
           </div>
         )}

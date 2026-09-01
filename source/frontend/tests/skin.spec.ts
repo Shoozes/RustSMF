@@ -2,9 +2,9 @@ import { test, expect } from '@playwright/test';
 import { pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { parseSelectedBone } from './helpers/format-assertions';
-import { paintInViewport, paintOnMeshInViewport, cancelPaintOnMeshInViewport, setViewportLayout } from './helpers/viewport-interactions';
+import { cancelPaintOnMeshInViewport, hoverPickableBoneInViewport, paintInViewport, paintOnMeshInViewport, setViewportLayout } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
-import { clickSecondaryCommand, showModernPanel } from './helpers/modern-shell';
+import { clickSecondaryCommand, showModernPanel, showSkinAdvanced } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -23,12 +23,22 @@ test.describe('RustSMF skin flow (Chromium)', () => {
 
       await page.getByTestId('mode-tab-skin').click({ force: true });
       await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+      await expect(page.getByTestId('modern-skin-tool-pick')).toHaveAttribute('aria-pressed', 'true');
+      await showSkinAdvanced(page);
       await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: false');
+      await page.getByTestId('modern-panel-close').click();
 
       const canvas = page.getByTestId('three-canvas');
-      await paintInViewport(page);
-      await expect(canvas).toHaveAttribute('data-pointer-owner', 'rig-select');
-      await expect(canvas).toHaveAttribute('data-skin-brush-hover', 'inactive');
+      await expect(page.getByTestId('skin-workspace-panel')).toHaveAttribute('data-active-tool', 'pick');
+      await expect(page.getByTestId('modern-skin-tool-paint')).toBeDisabled();
+      await expect(page.getByTestId('modern-skin-tool-smooth')).toBeEnabled();
+      await page.keyboard.press('s');
+      await expect(page.getByTestId('skin-workspace-panel')).toHaveAttribute('data-active-tool', 'smooth');
+      await page.getByTestId('modern-skin-advanced').click();
+      await expect(page.getByTestId('skin-paint-mode-smooth')).toHaveClass(/bg-emerald-500/);
+      await page.getByTestId('modern-panel-close').click();
+      await page.keyboard.press('q');
+      await expect(canvas).not.toHaveAttribute('data-skin-brush-hover', 'active');
       const noBoneHitCount = Number(await canvas.getAttribute('data-skin-paint-hit-count'));
       expect(noBoneHitCount).toBe(0);
       expect(await canvas.getAttribute('data-skin-brush-x')).toBe(null);
@@ -37,6 +47,52 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(reason).toHaveCount(0);
       await clickSecondaryCommand(page, 'export-smf-btn');
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
+    });
+
+  test('modern Skin stays canvas-first and keeps expert controls behind Advanced', async ({ page }) => {
+      await page.goto('/');
+      await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+
+      await page.getByTestId('mode-tab-skin').click();
+      const workspace = page.getByTestId('skin-workspace-panel');
+      await expect(workspace).toBeVisible();
+      await expect(workspace).toHaveAttribute('data-active-tool', 'pick');
+      await expect(page.getByTestId('modern-support-panel')).toHaveCount(0);
+      await expect(page.getByTestId('modern-skin-float')).toContainText('Choose a bone');
+      await expect(page.getByTestId('modern-skin-tool-paint')).toBeDisabled();
+
+      const hit = await hoverPickableBoneInViewport(page);
+      expect(hit).not.toBeNull();
+      await page.mouse.click(hit!.x, hit!.y);
+      await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-picked-bone', hit!.bone);
+      await expect(workspace).toHaveAttribute('data-active-tool', 'paint');
+      await expect(page.getByTestId('modern-skin-float')).not.toContainText('Choose a bone');
+
+      await page.getByTestId('modern-skin-advanced').click();
+      await expect(page.getByTestId('skin-advanced-panel')).toBeVisible();
+      await expect(page.getByTestId('inspector-selected')).toHaveText(hit!.bone);
+      await page.getByTestId('modern-panel-close').click();
+      await expect(page.getByTestId('modern-skin-tool-paint')).toBeEnabled();
+
+      await page.keyboard.press('p');
+      await expect(workspace).toHaveAttribute('data-active-tool', 'paint');
+      await page.keyboard.press('e');
+      await expect(workspace).toHaveAttribute('data-active-tool', 'erase');
+      await page.keyboard.press('s');
+      await expect(workspace).toHaveAttribute('data-active-tool', 'smooth');
+      await page.getByTestId('modern-skin-advanced').click();
+      await expect(page.getByTestId('skin-paint-mode-smooth')).toHaveClass(/bg-emerald-500/);
+      await page.getByTestId('modern-panel-close').click();
+      await page.keyboard.press('q');
+      await expect(workspace).toHaveAttribute('data-active-tool', 'pick');
+
+      const overflow = await page.evaluate(() => ({
+        document: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        body: document.body.scrollWidth - document.body.clientWidth,
+      }));
+      expect(overflow.document).toBeLessThanOrEqual(1);
+      expect(overflow.body).toBeLessThanOrEqual(1);
     });
 
   test('skin paint pointer cancel clears active gesture state', async ({ page }) => {
@@ -48,6 +104,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
 
       await page.getByTestId('mode-tab-skin').click({ force: true });
       await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+      await showSkinAdvanced(page);
 
       const inspector = page.getByTestId('inspector');
       const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
@@ -81,6 +138,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await pausePlaybackIfRunning(page);
 
       await page.getByTestId('mode-tab-skin').click({ force: true });
+      await showSkinAdvanced(page);
       const inspector = page.getByTestId('inspector');
       const bone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
       await expect(bone).toBeVisible();
@@ -115,6 +173,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await skinTab.click({ force: true });
       await expect(skinTab).toHaveAttribute('aria-selected', 'true');
       await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+      await showSkinAdvanced(page);
 
       const inspector = page.getByTestId('inspector');
       const bone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
@@ -238,6 +297,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       const skinTab = page.getByTestId('mode-tab-skin');
       await skinTab.click({ force: true });
       await expect(skinTab).toHaveAttribute('aria-selected', 'true');
+      await showSkinAdvanced(page);
       const inspector = page.getByTestId('inspector');
       const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
       await expect(bone).toBeVisible();
@@ -278,14 +338,17 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await pausePlaybackIfRunning(page);
       await page.getByTestId('mode-tab-skin').click({ force: true });
+      await showSkinAdvanced(page);
 
       await expect(page.getByTestId('skin-diagnostics')).toContainText(/Meshes \/ vertices/i);
       await expect(page.getByTestId('skin-diagnostics')).toContainText(/Invalid references/i);
-      await expect(page.getByTestId('skin-paint-pose')).toHaveValue('live');
-      await expect(page.getByTestId('skin-paint-pose-warning')).toContainText(/Frozen Current/i);
+      await expect(page.getByTestId('skin-paint-pose')).toHaveValue('rest');
+      await expect(page.getByTestId('skin-paint-pose-warning')).toHaveCount(0);
 
       const canvas = page.getByTestId('three-canvas');
-      await expect(canvas).toHaveAttribute('data-skin-paint-pose', 'live');
+      await expect(canvas).toHaveAttribute('data-skin-paint-pose', 'rest');
+      await expect(canvas).toHaveAttribute('data-workspace-pose', 'rest');
+      await expect(canvas).toHaveAttribute('data-bone-labels-enabled', 'false');
       await page.getByTestId('skin-paint-pose').selectOption('frozen');
       await expect(page.getByTestId('skin-paint-pose')).toHaveValue('frozen');
       await expect(page.getByTestId('skin-paint-pose-warning')).toHaveCount(0);

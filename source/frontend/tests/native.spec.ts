@@ -14,7 +14,7 @@ import {
   updateTauriMock,
 } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
-import { clickSecondaryCommand } from './helpers/modern-shell';
+import { clickSecondaryCommand, showSkinAdvanced } from './helpers/modern-shell';
 import { cancelPaintOnMeshInViewport } from './helpers/viewport-interactions';
 
 function readSampleBytes(samplePath: string | null): number[] {
@@ -464,6 +464,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
 
     await page.getByTestId('mode-tab-skin').click({ force: true });
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+    await showSkinAdvanced(page);
     const inspector = page.getByTestId('inspector');
     const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
     await expect(bone).toBeVisible();
@@ -494,6 +495,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(canvas).toHaveAttribute('data-model-root-id', rootId!);
     await page.getByTestId('mode-tab-view').click();
     await page.getByTestId('mode-tab-skin').click();
+    await showSkinAdvanced(page);
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
     await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
     await expect(page.getByTestId('status-text')).toContainText('Export canceled.');

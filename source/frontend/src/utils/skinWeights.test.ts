@@ -4,9 +4,12 @@ import * as THREE from 'three';
 import {
   autoSkinSkinnedMeshWeights,
   autoSkinSkinnedMeshVertexWeights,
+  averageVertexSkinWeights,
+  blendVertexSkinWeights,
   appendSkinHistoryEntry,
   captureSkinVertexSnapshot,
   cloneSkinEditState,
+  collectBoneBranchIndices,
   editVertexBoneWeight,
   getDirtySkinExportBlockReason,
   getSkinVertexSnapshotKey,
@@ -170,6 +173,33 @@ describe('skinWeights', () => {
       indices: [4, 5, 6, 7],
       weights: [1, 0, 0, 0],
     });
+  });
+
+  it('averages and blends a paint region for real smoothing', () => {
+    const first = {
+      indices: [0, 1, 2, 3] as [number, number, number, number],
+      weights: [1, 0, 0, 0] as [number, number, number, number],
+    };
+    const second = {
+      indices: [1, 0, 2, 3] as [number, number, number, number],
+      weights: [1, 0, 0, 0] as [number, number, number, number],
+    };
+    const average = averageVertexSkinWeights([first, second]);
+    assert.ok(average);
+    assert.deepEqual(average.indices.slice(0, 2), [0, 1]);
+    assert.deepEqual(average.weights.slice(0, 2), [0.5, 0.5]);
+
+    const smoothed = blendVertexSkinWeights(first, average, 0.5, 4);
+    assert.ok(smoothed);
+    assert.deepEqual(smoothed.indices.slice(0, 2), [0, 1]);
+    assert.deepEqual(smoothed.weights.slice(0, 2), [0.75, 0.25]);
+    assert.deepEqual(blendVertexSkinWeights(first, average, 0, 4), first);
+  });
+
+  it('collects selected-branch indices without repeated skeleton scans', () => {
+    const mesh = makeSkinnedMesh();
+    assert.deepEqual([...collectBoneBranchIndices(mesh.skeleton, mesh.skeleton.bones[0].name)], [0, 1]);
+    assert.deepEqual([...collectBoneBranchIndices(mesh.skeleton, 'Missing')], []);
   });
 
   it('normalizes all writable vertices in a skinned mesh', () => {

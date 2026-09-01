@@ -2,6 +2,59 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-01 — Integrity guard, real Skin smoothing, and async append ownership
+
+- Replaced Modern Skin's misleading Smooth-to-Auto alias with undoable regional weight averaging that works without a selected bone. The paint loop now indexes skinned meshes once per stroke, and selected-branch lookup avoids repeated skeleton scans.
+- Guarded async static-model append by initiating-root identity so a model replacement during loading disposes the stale subtree instead of attaching it to detached state or recording invalid history.
+- Consolidated undo/redo domain chronology behind one selector and added focused regressions for history ordering, append ownership, smoothing math, and branch collection.
+- Strengthened project integrity so relative imports must resolve to files, current-facing docs cannot contain machine-local paths, and an empty backlog requires the explicit `Backlog status: empty` contract. Generated evidence now shares one ignored `output/` boundary, and the current review/design/backlog docs are portable and non-duplicative.
+- Updated the existing project-integrity, model-authoring, load-orchestration, external-resource, and Skin context routes without creating redundant groups.
+
+### Verification
+
+- `run.ps1 -Task verify`: passed 359/359 frontend units across 62 files, 8/8 project-integrity tests, 7/7 context-bank tests, 2/2 main-sync safety tests, lint/type/build guards, and 10/10 Rust tests.
+- `run.ps1 -Task test:e2e -NoGenEye`: passed 86/86 browser cases; focused Skin passed 7/7 and focused scale parity passed 1/1.
+- `npm audit --omit=optional` from `source`: found zero vulnerabilities. Context validation passed with 31 groups, 43.2 KiB default context, and zero warnings.
+
+## 2026-09-01 — Rest-pose setup workspaces and bounded bone tags
+
+- Stopped viewport animation evaluation in Rig and Skin and restored the pre-animation rest/base pose on entry; Animate reactivates the selected clip at the controlled time.
+- Made Rest / Bind the default Skin paint sample, while preserving explicit Frozen Current and Live Animation options in Advanced.
+- Removed forced Modern bone-name overlays from Rig and Skin. Optional labels now strip common Mixamo prefixes, use translucent compact tags without redundant axes, and derive world size from model bounds so meter-scale GLB and legacy-scale SMF rigs remain readable.
+- Replaced stale Inspector playback guidance, added focused mixer/label unit coverage and Rig/Skin browser assertions, and captured current real-SMF Rig and Skin evidence in the in-app browser.
+
+### Verification
+
+- Focused workspace-playback and bone-label units: 64/64 selected/loaded cases passed across the deterministic 62-file discovery set; app typecheck and ESLint passed.
+- Focused production browser cases passed 2/2: Rig rest-pose/label defaults and Skin Rest / Bind telemetry.
+- In-app browser verification with `mixamo_smf_baldguy.smf` confirmed Rig and Skin rest-pose telemetry, labels off by default, and model-relative optional tags without the oversized billboard failure.
+
+## 2026-09-01 — Direct-paint Modern Skin workspace
+
+- Implemented the selected hybrid of the contextual floating brush menu and slim left tool rail. Modern Skin now opens without a persistent Properties panel, starts in Pick, selects bones directly in the viewport, and hands off to Paint; Paint, Erase, Smooth, brush size/strength, Undo/Redo, and P/E/S/Q/bracket shortcuts stay on the canvas.
+- Kept every existing diagnostic and exact authoring command behind the focused Advanced drawer, preserved source-safe bone identities there, and limited the simple card to friendly fail-closed aliases. Original SMF retains its full legacy Skin panel and shared behavior.
+- Added explicit Skin selection ownership to the viewport, aligned hover and click hit radii, removed redundant supporting-panel triggers from Skin, and added responsive/coarse-pointer styling, Advanced focus restoration, a canvas-first browser regression, updated journey/test helpers, current user/app state documentation, focused summary-bank routing, and a passed hybrid design comparison record.
+
+### Verification
+
+- Frontend app and test typechecks passed; ESLint passed; production build passed.
+- Frontend units passed 353/353 across 61 files.
+- In-app browser verification with the real SMF fixture proved Pick-to-Paint handoff, P/E/Q shortcuts, Advanced open/Escape/focus restoration, zero console errors, DPR 1.5 canvas backing dimensions, and zero document/body overflow at 1280 x 720.
+- The full local `verify` gate passed, GenEye-wrapped browser coverage passed 86/86, and the final GenEye-wrapped journey passed 1/1 with 12 refreshed checkpoints and one current 5.6 MB WebM.
+
+## 2026-09-01 — Skin journey and GenEye manifest integration
+
+- Re-ran all six browser Skin flows and 39 focused skin/weight/diagnostic units, including pointer cancellation, Set flow/target/falloff, dirty/export ownership, exact mini-node mapping, weight-preview restoration, and the real SMF torso-wing deformation repair.
+- Replaced the stale GenEye shell-command wrapper with checked `geneye.playwright.project_command.v1` manifests and a local pinned-CLI entry. Both the 85-case browser gate and recorded journey now run through `shell=false` argv ownership while `-NoGenEye` preserves the independent product gate.
+- Regenerated the journey as one current Calm Modern UI WebM plus 12 checkpoints. The test removes its redundant raw video after securing the report attachment, and GenEye samples the single source instead of double-counting the same recording.
+
+### Verification
+
+- GenEye-wrapped `test:e2e`: passed 85/85 with `execution.boundary=argv_manifest` and completed cleanup.
+- GenEye-wrapped `test:journey`: passed 1/1; deterministic temporal verdict `pass`, one 5.6 MB WebM, 12 checkpoints, and no detected temporal defect. The expected low-severity sparse-sampling caveat remains advisory.
+- GenEye MCP comparison of the before/corrected Skin checkpoints: both captures `quality=ok`, `quality_disposition=usable`, 1800x1125; changed distance 10 exceeded threshold 8.
+- Focused Skin units: passed 39/39.
+
 ## 2026-09-01 — Calm canvas-first Modern shell
 
 - Implemented the selected focused-studio visual direction as a separate Modern shell while leaving Original SMF's legacy-parity structure intact. Modern now has a two-row command/workspace header, primary Open/Save/Undo/Redo/Export actions, a named More menu for lower-frequency operations, one Scene/Properties supporting panel, and canvas-overlay layout/camera/display controls.

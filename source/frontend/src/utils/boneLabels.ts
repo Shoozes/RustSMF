@@ -23,9 +23,16 @@ interface BoneLabelState {
 
 const boneLabelStates = new WeakMap<THREE.Object3D, BoneLabelState>();
 
-function displayBoneLabelText(text: string, maxCharacters: number): string {
-  if (text.length <= maxCharacters) return text;
-  return `${text.slice(0, Math.max(1, maxCharacters - 3))}...`;
+export function compactBoneLabelText(text: string, maxCharacters = 12): string {
+  const leafName = text.trim().split(/[|/\\]/).filter(Boolean).at(-1) ?? text.trim();
+  const withoutRigPrefix = leafName.replace(/^mixamorig(?::|_|-)?/i, '') || leafName;
+  if (withoutRigPrefix.length <= maxCharacters) return withoutRigPrefix;
+  return `${withoutRigPrefix.slice(0, Math.max(1, maxCharacters - 3))}...`;
+}
+
+export function getPersistentBoneLabelScale(scale: number): number {
+  const safeScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+  return Math.max(0.0001, safeScale * 0.25);
 }
 
 function drawBoneLabel(label: THREE.Object3D, text: string): void {
@@ -41,9 +48,11 @@ function drawBoneLabel(label: THREE.Object3D, text: string): void {
   context.font = `bold ${state.fontSize}px monospace`;
   context.textAlign = 'center';
   context.textBaseline = 'middle';
-  context.fillText(displayBoneLabelText(text, state.maxCharacters), 128, 24);
+  const displayText = compactBoneLabelText(text, state.maxCharacters);
+  context.fillText(displayText, 128, 24);
   texture.needsUpdate = true;
   label.userData.labelText = text;
+  label.userData.displayText = displayText;
 }
 
 /**
@@ -53,7 +62,7 @@ function drawBoneLabel(label: THREE.Object3D, text: string): void {
  * Off-by-default for perf; caller manages attach/dispose.
  */
 export function makeBoneLabel(text: string, options: BoneLabelOptions = {}): THREE.Group {
-  const scale = Math.max(0.25, options.scale ?? 1);
+  const scale = Math.max(0.0001, options.scale ?? 1);
   const group = new THREE.Group();
   group.userData = { isBoneLabel: true };
 
@@ -83,7 +92,7 @@ export function makeBoneLabel(text: string, options: BoneLabelOptions = {}): THR
     maxCharacters: Math.max(4, options.maxCharacters ?? 12),
     backgroundColor: options.backgroundColor ?? 'rgba(0,0,0,0.75)',
     textColor: options.textColor ?? '#a5b4fc',
-    fontSize: Math.round(20 * scale),
+    fontSize: 16,
   });
   drawBoneLabel(group, text);
 

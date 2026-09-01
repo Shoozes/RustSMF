@@ -373,7 +373,11 @@ function Read-GenEyeProjectStatus([string]$ReportPath) {
     }
 }
 
-function Invoke-GenEyePlaywright {
+function Invoke-GenEyePlaywright(
+    [Parameter(Mandatory = $true)][string]$ManifestPath,
+    [Parameter(Mandatory = $true)][string]$RunName,
+    [ValidateRange(1, 64)][int]$VideoFrameLimit = 4
+) {
     if ($NoGenEye -or $env:RUSTSMF_NO_GENEYE -eq "1") {
         Write-Info "[GENEYE] Disabled for this run; running browser-only Playwright."
         return $false
@@ -384,28 +388,31 @@ function Invoke-GenEyePlaywright {
         Write-Warn "[GENEYE] GenEye not found; running browser-only Playwright."
         return $false
     }
+    if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
+        Write-Warn "[GENEYE] Project manifest missing: $ManifestPath"
+        return $false
+    }
 
     Ensure-Dirs
     $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $outDir = Join-Path $RepoRoot "runtime-data\geneye-playwright-runs\rustsmf-e2e-$stamp"
+    $outDir = Join-Path $RepoRoot "runtime-data\geneye-playwright-runs\$RunName-$stamp"
     New-Item -ItemType Directory -Force -Path $outDir | Out-Null
     $reportJson = Join-Path $outDir "project-report.json"
-    $projectCommand = Get-NpmShellCommand @("run", "test:e2e", "--", "--reporter=json")
     $genEyeRoot = Split-Path -Path $runBat -Parent
     $args = @(
         "-Task", "playwright-full",
         "-Group", "geneye-watch-fixture",
-        "-PlaywrightTestCwd", $FrontendDir,
-        "-PlaywrightTestCommand", $projectCommand,
+        "-PlaywrightTestManifest", $ManifestPath,
         "-PlaywrightTestReportJson", $reportJson,
+        "-ProjectOnly",
         "-AllowGenEyeFailure",
         "-Out", $outDir,
         "-DurationMs", "600000",
-        "-VideoFrameLimit", "4",
+        "-VideoFrameLimit", [string]$VideoFrameLimit,
         "-MaxFrames", "0"
     )
 
-    Write-Info "[GENEYE] Running advisory GenEye Playwright wrapper."
+    Write-Info "[GENEYE] Running advisory GenEye Playwright wrapper with $ManifestPath."
     Write-Info "[GENEYE] Evidence output: $outDir"
     Push-Location -LiteralPath $genEyeRoot
     try {
@@ -426,24 +433,25 @@ function Invoke-GenEyePlaywright {
         Write-Warn "[GENEYE] run_path=$outDir project_tests.status=unknown project_tests.exit_code=na"
     }
 
+    if ($projectStatus -and $projectStatus.ExitCode -ne 0) {
+        Write-Warn "[GENEYE] RustSMF Playwright project failed under GenEye wrapper (exit $($projectStatus.ExitCode))."
+        exit $projectStatus.ExitCode
+    }
+
     if ($exitCode -eq 0) {
-        if (Test-Path -LiteralPath $summaryPath) {
+        if ($projectStatus -and (Test-Path -LiteralPath $summaryPath)) {
             Write-Ok "[GENEYE] Advisory subagent evidence ready: $summaryPath"
             return $true
         }
-        if (Test-Path -LiteralPath $fallbackPath) {
+        if ($projectStatus -and (Test-Path -LiteralPath $fallbackPath)) {
             Write-Warn "[GENEYE] Enrichment fell back to direct RustSMF tests: $fallbackPath"
             return $true
         }
-        Write-Warn "[GENEYE] Wrapper exited 0 without an expected report; rerunning browser-only Playwright."
+        Write-Warn "[GENEYE] Wrapper exited 0 without successful project-test evidence; rerunning browser-only Playwright."
         return $false
     }
 
     if ($projectStatus) {
-        if ($projectStatus.ExitCode -ne 0) {
-            Write-Warn "[E2E] RustSMF Playwright failed under GenEye wrapper (exit $($projectStatus.ExitCode))."
-            exit $projectStatus.ExitCode
-        }
         Write-Warn "[GENEYE] GenEye wrapper failed after RustSMF tests passed; treating GenEye as advisory."
         return $true
     }
@@ -617,7 +625,9 @@ switch -Exact ($NormalizedTask) {
     }
     "test:e2e" {
         Write-Info "[E2E] Running Playwright..."
-        $genEyeRanProject = Invoke-GenEyePlaywright
+        $genEyeRanProject = Invoke-GenEyePlaywright `
+            -ManifestPath (Join-Path $FrontendDir "geneye-playwright.json") `
+            -RunName "rustsmf-e2e"
         if (-not $genEyeRanProject) {
             if (-not (Invoke-FrontendNpm @("run", "test:e2e"))) { exit 1 }
         }
@@ -628,7 +638,13 @@ switch -Exact ($NormalizedTask) {
     }
     "test:journey" {
         Write-Info "[JOURNEY] Recording the headless hand-wave authoring journey..."
-        if (-not (Invoke-FrontendNpm @("run", "test:journey:hand-wave"))) { exit 1 }
+        $genEyeRanJourney = Invoke-GenEyePlaywright `
+            -ManifestPath (Join-Path $FrontendDir "geneye-journey.json") `
+            -RunName "rustsmf-hand-wave-journey" `
+            -VideoFrameLimit 12
+        if (-not $genEyeRanJourney) {
+            if (-not (Invoke-FrontendNpm @("run", "test:journey:hand-wave"))) { exit 1 }
+        }
         Write-Ok "[JOURNEY] WebM and screenshots are available under output/playwright/hand-wave-journey/."
     }
     "test:visual-strict" {
@@ -689,8 +705,8 @@ Tasks:
   verify        - lint coverage/lint/typecheck/build/chunk/unit/Rust fmt+clippy+test+check
   context       - validate project docs/imports/modules and summary-bank routing
   test:unit     - frontend unit tests only
-  test:e2e      - Playwright (optional GenEye advisory wrapper; use -NoGenEye for browser-only)
-  test:journey  - headless hand-wave authoring journey with retained WebM/screenshots
+  test:e2e      - Playwright through the checked GenEye argv manifest (use -NoGenEye for browser-only)
+  test:journey  - GenEye-reviewed hand-wave journey with retained Modern-shell WebM/screenshots
   test:visual-strict - opt-in strict SMF visual snapshot checks
   test:visual-update - refresh opt-in strict SMF visual snapshots
   desktop-smoke - release build + Rust tests + native IPC browser checks

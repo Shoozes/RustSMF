@@ -5,6 +5,7 @@ import { afterEach, describe, it } from 'node:test'
 import {
   collectRelativeModuleSpecifiers,
   findBrokenRelativeImports,
+  findNonPortableCurrentDocReferences,
   validateTodoDocument,
   validateProjectIntegrity,
 } from './project-integrity-lib.mjs'
@@ -40,10 +41,30 @@ describe('project integrity checks', () => {
     assert.deepEqual(findBrokenRelativeImports(root), [])
   })
 
+  it('rejects a bare directory without an index module', () => {
+    const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-integrity-'))
+    temporaryRoots.push(root)
+    mkdirSync(join(root, 'source/frontend/src/empty'), { recursive: true })
+    writeFileSync(join(root, 'source/frontend/src/main.ts'), "import './empty';\n")
+    assert.match(findBrokenRelativeImports(root).join('\n'), /unresolved relative import: \.\/empty/)
+  })
+
   it('requires all executable TODO fields', () => {
     const errors = validateTodoDocument('## P2 — Example\n\n- What: work\n- Why: reason\n')
     assert.ok(errors.some((error) => error.includes('missing - Where:')))
     assert.ok(errors.some((error) => error.includes('missing - Verification:')))
+  })
+
+  it('accepts an explicitly empty backlog without a fake completed task', () => {
+    assert.deepEqual(validateTodoDocument('# TODO\n\nBacklog status: empty\n'), [])
+    assert.match(validateTodoDocument('# TODO\n')[0], /no executable task sections/)
+  })
+
+  it('rejects machine-local paths from current-facing docs', () => {
+    const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-integrity-'))
+    temporaryRoots.push(root)
+    writeFileSync(join(root, 'README.md'), 'Local proof: `C:\\Users\\owner\\capture.png`\n')
+    assert.match(findNonPortableCurrentDocReferences(root).join('\n'), /non-portable absolute path/)
   })
 
   it('passes the current repository contract', () => {

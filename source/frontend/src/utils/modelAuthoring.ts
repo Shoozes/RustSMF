@@ -107,6 +107,10 @@ export type DeleteModelObjectResult =
   }
   | { ok: false; reason: ModelDeleteFailureReason; message: string };
 
+export type AttachLoadedStaticModelResult =
+  | { ok: true; object: THREE.Object3D; parentId: string; childIndex: number }
+  | { ok: false; reason: 'missing-root' | 'stale-root' | 'already-attached'; message: string };
+
 export interface ModelObjectReorderAvailability {
   canMoveEarlier: boolean;
   canMoveLater: boolean;
@@ -560,6 +564,30 @@ function objectOwnsAnimationTrack(object: THREE.Object3D, clips: readonly THREE.
   return [...names].some((name) => clips.some((clip) => (
     clip.tracks.some((track) => trackTargetsObjectName(track.name, name))
   )));
+}
+
+export function attachLoadedStaticModel(
+  expectedRoot: THREE.Object3D | null | undefined,
+  currentRoot: THREE.Object3D | null | undefined,
+  object: THREE.Object3D,
+): AttachLoadedStaticModelResult {
+  if (!expectedRoot) {
+    return { ok: false, reason: 'missing-root', message: 'Load a primary model before appending a static model.' };
+  }
+  if (currentRoot !== expectedRoot) {
+    return { ok: false, reason: 'stale-root', message: 'Static append cancelled because the primary model changed while loading.' };
+  }
+  if (object.parent) {
+    return { ok: false, reason: 'already-attached', message: 'Static append rejected because the loaded object already has a parent.' };
+  }
+
+  expectedRoot.add(object);
+  return {
+    ok: true,
+    object,
+    parentId: expectedRoot.uuid,
+    childIndex: expectedRoot.children.indexOf(object),
+  };
 }
 
 export function deleteModelObject(

@@ -10,7 +10,7 @@ import {
   setupBrowserDiagnostics,
 } from '../helpers/smoke-helpers';
 import { setRangeValue } from '../helpers/timeline-interactions';
-import { showModernPanel } from '../helpers/modern-shell';
+import { showModernPanel, showSkinAdvanced } from '../helpers/modern-shell';
 import {
   clickPickableBoneInViewport,
   hoverPickableBoneInViewport,
@@ -145,10 +145,30 @@ async function expandBonePath(page: Page): Promise<void> {
 }
 
 async function selectBone(page: Page, boneName: string): Promise<void> {
+  if (!await page.getByTestId('inspector').isVisible()) {
+    await showModernPanel(page, 'properties');
+  }
   const bone = page.getByTestId(`bone-tree-item-${boneName}`);
   await bone.scrollIntoViewIfNeeded();
   await expectActionable(bone);
   await bone.click();
+  await expect(page.getByTestId('inspector-selected')).toHaveText(boneName);
+}
+
+async function selectSkinBoneOnCanvas(page: Page, boneName: string): Promise<void> {
+  const workspace = page.getByTestId('skin-workspace-panel');
+  await expect(workspace).toBeVisible();
+  if (await workspace.getAttribute('data-active-tool') !== 'pick') {
+    await page.getByTestId('modern-skin-tool-pick').click();
+  }
+
+  const hit = await hoverPickableBoneInViewport(page, boneName);
+  expect(hit, `Expected ${boneName} to be pickable in the Skin viewport`).not.toBeNull();
+  await page.mouse.click(hit!.x, hit!.y);
+  await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-picked-bone', boneName);
+  await expect(workspace).toHaveAttribute('data-active-tool', 'paint');
+
+  await showSkinAdvanced(page);
   await expect(page.getByTestId('inspector-selected')).toHaveText(boneName);
 }
 
@@ -327,7 +347,10 @@ async function orbitViewport(page: Page, selectedBoneName: string, radians: numb
   await page.mouse.up({ button: 'left' });
   await page.getByTestId('mode-tab-skin').click();
   await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
-  await selectBone(page, selectedBoneName);
+  await expect(page.getByTestId('modern-skin-tool-paint')).toBeEnabled();
+  await page.getByTestId('modern-skin-tool-paint').click();
+  await showSkinAdvanced(page);
+  await expect(page.getByTestId('inspector-selected')).toHaveText(selectedBoneName);
 }
 
 async function orbitViewportPasses(page: Page, selectedBoneName: string, passes: number): Promise<void> {
@@ -345,11 +368,13 @@ async function resetViewportCamera(page: Page, selectedBoneName: string): Promis
   await page.getByTestId('outliner-scene-root').click();
   await page.keyboard.press('r');
   await page.waitForTimeout(120);
-  await page.getByTestId('mode-tab-skin').click();
-  await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
   await showModernPanel(page, 'properties');
   await expandBonePath(page);
   await selectBone(page, selectedBoneName);
+  await page.getByTestId('mode-tab-skin').click();
+  await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+  await page.getByTestId('modern-skin-tool-paint').click();
+  await showSkinAdvanced(page);
 }
 
 type RotationAxis = 'x' | 'y' | 'z';
@@ -503,7 +528,7 @@ test('headless user journey creates and previews a hand-wave animation', async (
 
     await page.getByTestId('mode-tab-skin').click();
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
-    await selectBone(page, skinRepairBone);
+    await selectSkinBoneOnCanvas(page, skinRepairBone);
     await expect(page.getByTestId('skin-workspace-panel')).toContainText('LeftForeArm');
     await page.getByTestId('skin-paint-pose').selectOption('frozen');
     await page.getByTestId('skin-paint-target-mode').selectOption('vertex');
@@ -607,6 +632,8 @@ test('headless user journey creates and previews a hand-wave animation', async (
         });
       } catch {
         // The primary assertion remains authoritative when the runner closes a timed-out browser.
+      } finally {
+        await video.delete().catch(() => {});
       }
     }
   }

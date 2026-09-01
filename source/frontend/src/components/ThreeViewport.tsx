@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { SimpleOrbit } from '../utils/SimpleOrbit';
 import { disposeThreeObject } from '../utils/threeDisposal';
@@ -9,7 +9,7 @@ import type { SkinWeightEditMode } from '../utils/skinWeights';
 import type { RigToolMode } from '../utils/rigEdits';
 import type { RigIkSolveResult } from '../utils/rigIk';
 import { useBoneLabelsWithScale } from '../utils/useBoneLabels';
-import { makeBoneLabel, updateBoneLabelText } from '../utils/boneLabels';
+import { getPersistentBoneLabelScale, makeBoneLabel, updateBoneLabelText } from '../utils/boneLabels';
 import {
   deriveMixamoMinimalBoneAliases,
   formatBoneDisplayName,
@@ -17,6 +17,11 @@ import {
 } from '../utils/boneAliases';
 import { createPoseOverlaySegments } from '../utils/poseOverlay';
 import type { AnimationPoseSnapshot } from '../utils/animationCreation';
+import {
+  activateWorkspacePlayback,
+  workspaceUsesRestPose,
+  type WorkspacePlaybackIntent,
+} from '../utils/workspacePlayback';
 import {
   createSkinPointOverlays,
   disposeSkinPointOverlays,
@@ -193,37 +198,6 @@ const writeViewportScaleTelemetry = (
 // Receives declarative props from App for the loaded model and playback intent.
 // No dead code or duplication with parent. All imperative three isolated here.
 
-interface PlaybackIntent {
-  clips: THREE.AnimationClip[];
-  currentClipName?: string;
-  isPlaying: boolean;
-  currentTime: number;
-  playbackSpeed: number;
-}
-
-function activateMixerClip(
-  mixer: THREE.AnimationMixer,
-  intent: PlaybackIntent,
-): THREE.AnimationAction | null {
-  if (intent.clips.length === 0) return null;
-
-  const clip = (
-    intent.currentClipName
-      ? intent.clips.find(candidate => (candidate.name || 'clip') === intent.currentClipName)
-      : undefined
-  ) ?? intent.clips[0];
-  if (!clip) return null;
-
-  const action = mixer.clipAction(clip);
-  action.reset();
-  action.play();
-  action.paused = !intent.isPlaying;
-  action.setEffectiveTimeScale(intent.playbackSpeed);
-  action.time = Math.max(0, Math.min(intent.currentTime, clip.duration || 0));
-  mixer.update(0);
-  return action;
-}
-
 interface ThreeViewportProps {
   root: THREE.Group | null;
   skeleton?: THREE.Skeleton;
@@ -282,6 +256,7 @@ interface ThreeViewportProps {
   skinPaintStrength?: number;
   skinPaintTargetWeight?: number;
   skinPaintFalloff?: number;
+  skinSelectionEnabled?: boolean;
 }
 
 // SimpleOrbit imported from ../utils/SimpleOrbit (filled modularity dir, single source of truth)
@@ -344,6 +319,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   skinPaintStrength = 0.2,
   skinPaintTargetWeight = 1,
   skinPaintFalloff = 2,
+  skinSelectionEnabled = false,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
@@ -380,6 +356,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const onSkinPaintStrokeEndRef = useRef(onSkinPaintStrokeEnd);
   const onInspectSkinVertexRef = useRef(onInspectSkinVertex);
   const skinPaintModeRef = useRef<SkinWeightEditMode>(skinPaintMode);
+  const skinSelectionEnabledRef = useRef(skinSelectionEnabled);
   const skinPaintPoseRef = useRef<SkinPaintPoseMode>(skinPaintPose);
   const skinPaintTargetModeRef = useRef<'vertex' | 'triangle'>(skinPaintTargetMode);
   const skinPaintRadiusRef = useRef<number>(skinPaintRadius);
@@ -388,6 +365,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const skinPaintFalloffRef = useRef<number>(skinPaintFalloff);
   const pickDistanceRef = useRef(DEFAULT_MAX_BONE_PICK_DIST);
   const editorModeRef = useRef(editorMode);
+  editorModeRef.current = editorMode;
   const cursorModeRef = useRef<string>('default');
   const isPrecisionModeRef = useRef(false);
   const endpointDragRef = useRef<EndpointDragState | null>(null);
@@ -408,7 +386,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   const attachedModelRef = useRef<THREE.Object3D | null>(null);
   const skeletonHelperRef = useRef<DisposableSkeletonHelper | null>(null);
   const poseOverlayRef = useRef<THREE.Group | null>(null);
-  const playbackIntentRef = useRef<PlaybackIntent>({
+  const playbackIntentRef = useRef<WorkspacePlaybackIntent>({
     clips,
     currentClipName,
     isPlaying,
@@ -671,7 +649,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
   const isPrecisionMode = editorMode === 'rig' || editorMode === 'skin';
   const bonePickDist = isPrecisionMode ? 2.5 : DEFAULT_MAX_BONE_PICK_DIST;
-  const boneLabelScale = isPrecisionMode ? 1.8 : 1;
+  const boneLabelScale = useMemo(
+    () => getPersistentBoneLabelScale(root ? deriveModelBounds(root).maxDim : 1),
+    [root],
+  );
   pickDistanceRef.current = bonePickDist;
   isPrecisionModeRef.current = isPrecisionMode;
   perspectiveEnabledRef.current = perspectiveEnabled;
@@ -1855,10 +1836,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     };
 
     const hasValidSkinPaintTarget = (): boolean => {
-      const name = selectedBoneNameRef.current;
-      if (!name || name === 'Scene') return false;
       const paintSkel = skeletonRefForPick.current;
-      return Boolean(paintSkel && findBoneByName(paintSkel, name));
+      if (!paintSkel || paintSkel.bones.length === 0) return false;
+      if (skinPaintModeRef.current === 'smooth') return true;
+      const name = selectedBoneNameRef.current;
+      return Boolean(name && name !== 'Scene' && findBoneByName(paintSkel, name));
     };
 
     const updateBrushMarker = (center: THREE.Vector3 | null, brushRadius: number): void => {
@@ -1976,7 +1958,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         button: event.button,
         hasModel: !!attachedModelRef.current,
         hasSkeleton: !!activeSkeleton && activeSkeleton.bones.length > 0,
-        hasSelectedBone: hasValidSkinPaintTarget(),
+        hasSelectedBone: hasValidSkinPaintTarget() && !skinSelectionEnabledRef.current,
         isPrecisionMode: isPrecisionModeRef.current,
         isPickingViewport: !!activeViewport,
         hitEndpointHandle: !!endpointState,
@@ -2147,7 +2129,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         canvas.dataset.rigAddChildResult = 'miss';
       }
 
-      const closestName = pickBoneName(event, pickDistanceRef.current);
+      const selectionDistance = editorModeRef.current === 'skin' && skinSelectionEnabledRef.current
+        ? pickDistanceRef.current * 1.8
+        : pickDistanceRef.current;
+      const closestName = pickBoneName(event, selectionDistance);
       if (closestName) {
         canvas.dataset.viewportPickedBone = closestName;
         onSelectBoneRef.current?.(closestName);
@@ -2276,7 +2261,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         }
         return;
       }
-      if (editorModeRef.current === 'skin') {
+      if (editorModeRef.current === 'skin' && !skinSelectionEnabledRef.current) {
         const center = getBrushCenterForPaint(event);
         if (center) {
           collectPaintVerticesWithTelemetry(event);
@@ -2284,6 +2269,20 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
           getBrushTelemetry(0);
         }
         updateBrushMarker(center, skinPaintRadiusRef.current);
+        return;
+      }
+      if (editorModeRef.current === 'skin' && skinSelectionEnabledRef.current) {
+        if (!isInPickingViewport(event.clientX, event.clientY)) {
+          setHoveredBone(null);
+          return;
+        }
+        const closestName = pickBoneName(event, pickDistanceRef.current * 1.8);
+        setHoveredBone(closestName);
+        const nextCursor = closestName ? 'pointer' : 'default';
+        if (cursorModeRef.current !== nextCursor) {
+          canvas.style.cursor = nextCursor;
+          cursorModeRef.current = nextCursor;
+        }
         return;
       }
       if (!isInPickingViewport(event.clientX, event.clientY)) {
@@ -2369,9 +2368,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
     const animate = () => {
       const mixer = mixerRef.current;
+      const delta = clockRef.current.getDelta();
       if (mixer) {
-        const delta = clockRef.current.getDelta();
-        mixer.update(delta);
+        if (!workspaceUsesRestPose(editorModeRef.current)) {
+          mixer.update(delta);
+        }
         const action = currentActionRef.current;
         const report = onTimeUpdateRef.current;
         if (action && report) {
@@ -2596,7 +2597,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => {
     const action = currentActionRef.current;
     const mixer = mixerRef.current;
-    if (!action || !mixer) return;
+    if (!action || !mixer || workspaceUsesRestPose(editorMode)) return;
 
     action.paused = !isPlaying;
     // Apply scrub position (clamped by caller)
@@ -2606,18 +2607,19 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // Force skinning/matrix update immediately for scrub
     mixer.update(0);
     if (attachedModelRef.current) attachedModelRef.current.updateMatrixWorld(true);
-  }, [isPlaying, currentTime]);
+  }, [editorMode, isPlaying, currentTime]);
 
   // React to clip selection change from parent (inspector list)
   useEffect(() => {
     const mixer = mixerRef.current;
     if (!mixer || !root || mixer.getRoot() !== root) return;
 
-    if (currentActionRef.current) {
-      currentActionRef.current.stop();
+    currentActionRef.current = activateWorkspacePlayback(mixer, playbackIntentRef.current, editorMode);
+    if (workspaceUsesRestPose(editorMode)) {
+      root.updateMatrixWorld(true);
+      skeleton?.update();
     }
-    currentActionRef.current = activateMixerClip(mixer, playbackIntentRef.current);
-  }, [currentClipName, clips, root]);
+  }, [currentClipName, clips, editorMode, root, skeleton]);
 
   // Keep latest onSelectBone and skeleton for raycast handler (stable click listener)
   useEffect(() => { onSelectBoneRef.current = onSelectBone; }, [onSelectBone]);
@@ -2644,6 +2646,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => { onSkinPaintStrokeEndRef.current = onSkinPaintStrokeEnd; }, [onSkinPaintStrokeEnd]);
   useEffect(() => { onInspectSkinVertexRef.current = onInspectSkinVertex; }, [onInspectSkinVertex]);
   useEffect(() => { skinPaintModeRef.current = skinPaintMode; }, [skinPaintMode]);
+  useEffect(() => { skinSelectionEnabledRef.current = skinSelectionEnabled; }, [skinSelectionEnabled]);
   useEffect(() => {
     skinPaintPoseRef.current = skinPaintPose;
     skinBrushIndexCacheRef.current = new WeakMap();
@@ -2660,7 +2663,6 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => { skinPaintStrengthRef.current = skinPaintStrength; }, [skinPaintStrength]);
   useEffect(() => { skinPaintTargetWeightRef.current = skinPaintTargetWeight; }, [skinPaintTargetWeight]);
   useEffect(() => { skinPaintFalloffRef.current = skinPaintFalloff; }, [skinPaintFalloff]);
-  useEffect(() => { editorModeRef.current = editorMode; }, [editorMode]);
   useEffect(() => { rigToolModeRef.current = rigToolMode; }, [rigToolMode]);
   useEffect(() => {
     if (editorMode !== 'skin') {
@@ -2900,7 +2902,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // Keep a shared hover marker for visual contrast/affordance.
     const hoverMarker = makeBoneHoverMarker(isPrecisionMode ? markerScale : Math.max(markerScale * 0.7, 0.6));
     const hoverLabel = makeBoneLabel('', {
-      scale: isPrecisionMode ? 1.15 : 1,
+      scale: boneLabelScale,
       showAxes: false,
       maxCharacters: 24,
       backgroundColor: 'rgba(15, 23, 42, 0.94)',
@@ -2914,7 +2916,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     scene.add(hoverMarker);
     boneHoverMarkerRef.current = hoverMarker;
     boneHoverLabelRef.current = hoverLabel;
-  }, [editorMode, selectedBoneName, skeleton, markerScale, isPrecisionMode, rigToolMode]);
+  }, [boneLabelScale, editorMode, selectedBoneName, skeleton, markerScale, isPrecisionMode, rigToolMode]);
 
   // Weight preview visualization for the selected bone.
   // Delegates to extracted pure helpers in utils/weightPreview.ts.
@@ -3115,7 +3117,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
     // Clip effects run before this attachment effect. Initialize from the latest complete
     // playback intent so a root swap never binds the new clips to the previous mixer.
-    currentActionRef.current = activateMixerClip(mixer, playbackIntentRef.current);
+    currentActionRef.current = activateWorkspacePlayback(mixer, playbackIntentRef.current, editorModeRef.current);
 
     return () => {
       // cleanup handled on next root change or unmount via the top of this effect
@@ -3132,6 +3134,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         data-model-root-id={root?.uuid ?? ''}
         data-playback-time={currentTime.toFixed(6)}
         data-editor-mode={editorMode}
+        data-workspace-pose={workspaceUsesRestPose(editorMode) ? 'rest' : 'animation'}
         data-viewport-layout={viewportLayout}
         data-wireframe-enabled={wireframeEnabled ? 'true' : 'false'}
         data-grid-enabled={gridEnabled ? 'true' : 'false'}
@@ -3142,6 +3145,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         data-shader-enabled={shaderEnabled ? 'true' : 'false'}
         data-shader-mode={shaderEnabled ? 'legacy-smf' : 'standard'}
         data-perspective-enabled={perspectiveEnabled ? 'true' : 'false'}
+        data-bone-labels-enabled={boneLabelsEnabled ? 'true' : 'false'}
         data-bone-index-labels-enabled={boneIndexLabelsEnabled ? 'true' : 'false'}
         data-rig-opacity={rigOpacity}
         data-model-opacity={modelOpacity}

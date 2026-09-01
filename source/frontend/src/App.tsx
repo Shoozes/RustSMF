@@ -9,6 +9,7 @@ import Toolbar from './components/Toolbar'
 import ViewportControls, { type ViewportControlsProps } from './components/ViewportControls'
 import { ListBullets, SlidersHorizontal, X } from '@phosphor-icons/react'
 import SkinPanel from './components/SkinPanel';
+import ModernSkinWorkspace, { type ModernSkinTool } from './components/ModernSkinWorkspace';
 import RigPanel from './components/RigPanel';
 import AnimatePanel from './components/AnimatePanel';
 import ExportPanel from './components/ExportPanel';
@@ -21,6 +22,7 @@ import { supportedModelFormatsLabel } from './utils/modelFormat'
 import { collectModelOutlinerItems } from './utils/modelOutliner'
 import {
   applyModelOutlinerSnapshot,
+  attachLoadedStaticModel,
   captureModelOutlinerSnapshot,
   deleteModelObject,
   duplicateModelObject,
@@ -50,9 +52,11 @@ import {
   popRedo,
   popUndo,
   pushEditorHistory,
+  selectLatestHistoryDomain,
   type EditorHistoryState,
 } from './utils/editorHistory'
 import { disposeThreeObject } from './utils/threeDisposal'
+import type { SkinWeightEditMode } from './utils/skinWeights'
 
 type WorkspaceProfile = {
   showTimeline: boolean;
@@ -124,6 +128,7 @@ export default function App() {
   const [outlinerRevision, setOutlinerRevision] = useState(0);
   const [selectedOutlinerIds, setSelectedOutlinerIds] = useState<string[]>([]);
   const [modernPanel, setModernPanel] = useState<ModernPanel>('scene');
+  const [modernSkinTool, setModernSkinTool] = useState<ModernSkinTool>('pick');
   const modernPanelRef = useRef<HTMLDivElement | null>(null);
   const modernPanelTriggerRef = useRef<HTMLButtonElement | null>(null);
   const { theme, themeId, setThemeId } = useAppTheme();
@@ -319,8 +324,11 @@ export default function App() {
       : editorMode === 'animate'
         ? 'animation'
         : 'disabled';
-  const shouldShowBoneLabels = showBoneLabels || workspace.boneLabelsEnabledByDefault;
+  const shouldShowBoneLabels = showBoneLabels
+    || (theme.shellVariant === 'original' && workspace.boneLabelsEnabledByDefault);
   const hasModel = !!model.root;
+  const modelRootRef = useRef(model.root);
+  modelRootRef.current = model.root;
   const autosaveProjectRef = useRef(handleAutosaveProject);
   useEffect(() => {
     autosaveProjectRef.current = handleAutosaveProject;
@@ -381,6 +389,11 @@ export default function App() {
       ? getModelObjectReorderAvailability(model.root, selectedOutlinerIds[0])
       : { canMoveEarlier: false, canMoveLater: false }
   );
+  const handleSkinPaintModeChange = useCallback((next: SkinWeightEditMode) => {
+    onSkinPaintModeChange(next);
+    if (theme.shellVariant !== 'modern' || editorMode !== 'skin') return;
+    setModernSkinTool(next === 'smooth' ? 'smooth' : next === 'subtract' ? 'erase' : 'paint');
+  }, [editorMode, onSkinPaintModeChange, theme.shellVariant]);
   const getOutlinerItemName = useCallback((id: string): string => {
     const item = outlinerItems.find((candidate) => candidate.id === id);
     return item?.name ?? 'submodel';
@@ -479,28 +492,13 @@ export default function App() {
     return true;
   }, [allocateHistoryOrder, applyOutlinerSnapshot, refreshOutlinerHistoryAvailability, ui]);
   const handleEditorUndo = useCallback((): boolean => {
-    const candidates = [
-      editorUndoAvailable ? { domain: 'editor' as const, order: editorUndoOrder } : null,
-      skinUndoAvailable ? { domain: 'skin' as const, order: skinUndoOrder } : null,
-      outlinerUndoAvailable ? { domain: 'outliner' as const, order: outlinerUndoOrder } : null,
-    ].filter((candidate): candidate is { domain: 'editor' | 'skin' | 'outliner'; order: number } => !!candidate);
-    const latest = candidates.reduce<{ domain: 'editor' | 'skin' | 'outliner'; order: number } | null>((best, candidate) => (
-      !best || candidate.order > best.order ? candidate : best
-    ), null);
-
-    if (latest?.domain === 'editor') {
-      undoEditorHistory();
-      return true;
-    } else if (latest?.domain === 'skin') {
-      undoSkinPaint();
-      return true;
-    } else if (latest?.domain === 'outliner') {
-      undoOutlinerHistory();
-      return true;
-    } else {
-      undoEditorHistory();
-      return true;
-    }
+    const domain = selectLatestHistoryDomain([
+      { domain: 'editor' as const, available: editorUndoAvailable, order: editorUndoOrder },
+      { domain: 'skin' as const, available: skinUndoAvailable, order: skinUndoOrder },
+      { domain: 'outliner' as const, available: outlinerUndoAvailable, order: outlinerUndoOrder },
+    ], 'editor');
+    ({ editor: undoEditorHistory, skin: undoSkinPaint, outliner: undoOutlinerHistory })[domain]();
+    return true;
   }, [
     editorUndoAvailable,
     editorUndoOrder,
@@ -513,28 +511,13 @@ export default function App() {
     undoSkinPaint,
   ]);
   const handleEditorRedo = useCallback((): boolean => {
-    const candidates = [
-      editorRedoAvailable ? { domain: 'editor' as const, order: editorRedoOrder } : null,
-      skinRedoAvailable ? { domain: 'skin' as const, order: skinRedoOrder } : null,
-      outlinerRedoAvailable ? { domain: 'outliner' as const, order: outlinerRedoOrder } : null,
-    ].filter((candidate): candidate is { domain: 'editor' | 'skin' | 'outliner'; order: number } => !!candidate);
-    const latest = candidates.reduce<{ domain: 'editor' | 'skin' | 'outliner'; order: number } | null>((best, candidate) => (
-      !best || candidate.order > best.order ? candidate : best
-    ), null);
-
-    if (latest?.domain === 'editor') {
-      redoEditorHistory();
-      return true;
-    } else if (latest?.domain === 'skin') {
-      redoSkinPaint();
-      return true;
-    } else if (latest?.domain === 'outliner') {
-      redoOutlinerHistory();
-      return true;
-    } else {
-      redoEditorHistory();
-      return true;
-    }
+    const domain = selectLatestHistoryDomain([
+      { domain: 'editor' as const, available: editorRedoAvailable, order: editorRedoOrder },
+      { domain: 'skin' as const, available: skinRedoAvailable, order: skinRedoOrder },
+      { domain: 'outliner' as const, available: outlinerRedoAvailable, order: outlinerRedoOrder },
+    ], 'editor');
+    ({ editor: redoEditorHistory, skin: redoSkinPaint, outliner: redoOutlinerHistory })[domain]();
+    return true;
   }, [
     editorRedoAvailable,
     editorRedoOrder,
@@ -650,16 +633,25 @@ export default function App() {
     ui.setStatus(`Duplicated submodel ${result.sourceObject.name || 'unnamed'} as ${result.object.name}.`);
   }, [captureOutlinerSnapshot, model.clips, model.root, pushOutlinerHistory, selectedOutlinerIds, sourceFormat, ui]);
   const handleAppendStaticModel = useCallback(async (file: File) => {
+    const expectedParent = modelRootRef.current;
+    if (!expectedParent) {
+      ui.setStatus('Load a primary model before appending a static model.');
+      return;
+    }
     const appendRoot = await loadStaticAppend(file);
-    if (!appendRoot || !model.root) return;
-    const parent = model.root;
-    const beforeState = captureOutlinerSnapshot();
-    parent.add(appendRoot);
+    if (!appendRoot) return;
     appendRoot.name = appendRoot.name || file.name.replace(/\.[^.]+$/, '');
+    const beforeState = captureOutlinerSnapshot();
+    const attachment = attachLoadedStaticModel(expectedParent, modelRootRef.current, appendRoot);
+    if (!attachment.ok) {
+      disposeThreeObject(appendRoot);
+      ui.setStatus(attachment.message);
+      return;
+    }
     const structural = {
       object: appendRoot,
-      parentId: parent.uuid,
-      childIndex: parent.children.indexOf(appendRoot),
+      parentId: attachment.parentId,
+      childIndex: attachment.childIndex,
       disposeOnRelease: true,
     } satisfies Omit<ModelStructuralOperation, 'kind'>;
     const before: ModelOutlinerSnapshot = {
@@ -671,7 +663,7 @@ export default function App() {
     setSelectedOutlinerIds([appendRoot.uuid]);
     setOutlinerRevision((value) => value + 1);
     ui.setStatus(`Appended static model ${appendRoot.name}.`);
-  }, [captureOutlinerSnapshot, loadStaticAppend, model.root, pushOutlinerHistory, ui]);
+  }, [captureOutlinerSnapshot, loadStaticAppend, pushOutlinerHistory, ui]);
   const applySelectedSurfaceEdit = useCallback((
     label: string,
     operation: (objectId: string) => { ok: true; object: THREE.Object3D; message: string } | { ok: false; message: string },
@@ -869,6 +861,7 @@ export default function App() {
     if (editorMode === 'skin') {
       return (
         <SkinPanel
+          dataTestId={theme.shellVariant === 'modern' ? 'skin-advanced-panel' : 'skin-workspace-panel'}
           selected={ui.selected}
           skeleton={model.skeleton}
           sourceFormat={sourceFormat}
@@ -891,7 +884,7 @@ export default function App() {
           skinAutoWeightPower={skinAutoWeightPower}
           skinAutoWeightNormalWeighting={skinAutoWeightNormalWeighting}
           skinAutoWeightMaxInfluences={skinAutoWeightMaxInfluences}
-          onSkinPaintModeChange={onSkinPaintModeChange}
+          onSkinPaintModeChange={handleSkinPaintModeChange}
           onSkinPaintPoseChange={onSkinPaintPoseChange}
           onSkinPaintTargetModeChange={onSkinPaintTargetModeChange}
           onSkinPaintRadiusChange={onSkinPaintRadiusChange}
@@ -1021,11 +1014,55 @@ export default function App() {
     }
   }, [closeModernPanel]);
 
+  const handleEditorModeChange = useCallback((mode: EditorMode) => {
+    if (mode === 'skin') setModernSkinTool('pick');
+    setEditorMode(mode);
+  }, [setEditorMode]);
+
+  const handleViewportBoneSelect = useCallback((boneName: string) => {
+    handleSelectBone(boneName);
+    if (theme.shellVariant === 'modern' && editorMode === 'skin' && modernSkinTool === 'pick') {
+      handleSkinPaintModeChange('set');
+    }
+  }, [editorMode, handleSelectBone, handleSkinPaintModeChange, modernSkinTool, theme.shellVariant]);
+
+  useEffect(() => {
+    if (theme.shellVariant !== 'modern' || editorMode !== 'skin') return;
+    const onSkinShortcut = (event: KeyboardEvent) => {
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const tagName = target?.tagName.toLowerCase();
+      if (event.ctrlKey || event.metaKey || event.altKey || target?.isContentEditable || tagName === 'input' || tagName === 'select' || tagName === 'textarea') return;
+      const shortcuts: Partial<Record<string, ModernSkinTool>> = {
+        q: 'pick',
+        p: 'paint',
+        e: 'erase',
+        s: 'smooth',
+      };
+      const tool = shortcuts[event.key.toLowerCase()];
+      if (tool) {
+        if (tool !== 'pick' && tool !== 'smooth' && !selectedBoneName) return;
+        event.preventDefault();
+        setModernSkinTool(tool);
+        if (tool === 'paint') handleSkinPaintModeChange('set');
+        if (tool === 'erase') handleSkinPaintModeChange('subtract');
+        if (tool === 'smooth') handleSkinPaintModeChange('smooth');
+        return;
+      }
+      if (event.key === '[' || event.key === ']') {
+        event.preventDefault();
+        const delta = event.key === '[' ? -0.05 : 0.05;
+        onSkinPaintRadiusChange(skinPaintRadius + delta);
+      }
+    };
+    window.addEventListener('keydown', onSkinShortcut);
+    return () => window.removeEventListener('keydown', onSkinShortcut);
+  }, [editorMode, handleSkinPaintModeChange, onSkinPaintRadiusChange, selectedBoneName, skinPaintRadius, theme.shellVariant]);
+
   useEffect(() => {
     if (theme.shellVariant !== 'modern') return;
     const compactQuery = window.matchMedia('(max-width: 1100px)');
     const syncPanelForViewport = () => {
-      setModernPanel(compactQuery.matches ? null : editorMode === 'view' ? 'scene' : 'properties');
+      setModernPanel(compactQuery.matches || editorMode === 'skin' ? null : editorMode === 'view' ? 'scene' : 'properties');
     };
     syncPanelForViewport();
     compactQuery.addEventListener('change', syncPanelForViewport);
@@ -1153,7 +1190,7 @@ export default function App() {
         onChangeClip={changeClip}
         skeleton={model.skeleton}
         displayBones={rigHierarchyBones}
-        onSelectBone={handleSelectBone}
+        onSelectBone={handleViewportBoneSelect}
         showWeightPreview={workspace.showWeightSection ? showWeightPreview : false}
         onToggleWeightPreview={workspace.showWeightSection ? toggleWeightPreview : undefined}
         transformMode={transformMode}
@@ -1197,7 +1234,7 @@ export default function App() {
         redoAvailable={editorRedoAvailable || outlinerRedoAvailable || skinRedoAvailable}
         onFileChange={handleFileInputChange}
         editorMode={editorMode}
-        setEditorMode={setEditorMode}
+        setEditorMode={handleEditorModeChange}
         {...viewportControlsProps}
         theme={theme}
         themeId={themeId}
@@ -1265,7 +1302,7 @@ export default function App() {
             currentClipName={playback.currentClipName}
             playbackSpeed={playback.playbackSpeed}
             onTimeUpdate={playback.reportCurrentTime}
-            onSelectBone={handleSelectBone}
+            onSelectBone={handleViewportBoneSelect}
             onSelectObject={handleSelectViewportObject}
             onClearObjectSelection={handleClearObjectSelection}
             onObjectContextMenu={handleViewportObjectContextMenu}
@@ -1314,7 +1351,28 @@ export default function App() {
             skinPaintStrength={skinPaintStrength}
             skinPaintTargetWeight={skinPaintTargetWeight}
             skinPaintFalloff={skinPaintFalloff}
+            skinSelectionEnabled={theme.shellVariant === 'modern' && editorMode === 'skin' && modernSkinTool === 'pick'}
           />
+          {theme.shellVariant === 'modern' && editorMode === 'skin' && hasModel && (
+            <ModernSkinWorkspace
+              selected={selectedBoneName}
+              skeleton={model.skeleton}
+              activeTool={modernSkinTool}
+              radius={skinPaintRadius}
+              strength={skinPaintStrength}
+              dirty={skinEditHasDirtyState}
+              blockReason={skinEditBlockReason}
+              undoAvailable={skinUndoAvailable}
+              redoAvailable={skinRedoAvailable}
+              onToolChange={setModernSkinTool}
+              onPaintModeChange={handleSkinPaintModeChange}
+              onRadiusChange={onSkinPaintRadiusChange}
+              onStrengthChange={onSkinPaintStrengthChange}
+              onUndo={undoSkinPaint}
+              onRedo={redoSkinPaint}
+              onOpenAdvanced={(trigger) => openModernPanel('properties', trigger)}
+            />
+          )}
           {theme.shellVariant === 'modern' && (
             <ViewportControls {...viewportControlsProps} variant="overlay" />
           )}
@@ -1328,7 +1386,7 @@ export default function App() {
               </button>
             </div>
           )}
-          {theme.shellVariant === 'modern' && hasModel && (
+          {theme.shellVariant === 'modern' && hasModel && editorMode !== 'skin' && (
             <div className="modern-panel-triggers" aria-label="Supporting panels">
               <button type="button" aria-pressed={modernPanel === 'scene'} data-testid="modern-scene-trigger" onClick={(event) => openModernPanel('scene', event.currentTarget)}>
                 <ListBullets size={17} aria-hidden="true" /><span>Scene</span>

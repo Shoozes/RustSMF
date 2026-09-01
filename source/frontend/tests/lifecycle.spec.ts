@@ -7,7 +7,7 @@ import { startSmfCodecProbe, stopSmfCodecProbe } from './helpers/smf-codec-probe
 import { parseSelectedBone, fileToBase64 } from './helpers/format-assertions';
 import { paintOnMeshInViewport } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
-import { clickSecondaryCommand, showModernPanel } from './helpers/modern-shell';
+import { clickSecondaryCommand, showModernPanel, showSkinAdvanced } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -201,6 +201,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await expect(page.getByTestId('rig-bone-count')).toContainText('2');
       await page.getByTestId('mode-tab-skin').click({ force: true });
       await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+      await showSkinAdvanced(page);
       await expect(page.getByTestId('skin-normalize-btn')).toBeEnabled();
       await expect(page.getByTestId('skin-autoskin-btn')).toBeEnabled();
       await expect(page.getByTestId('skin-autoskin-algorithm')).toHaveValue('segment-inverse-distance');
@@ -241,6 +242,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
         await expect(page.getByTestId('status-text')).toContainText('Loaded FBX', { timeout: 15000 });
         await expect(page.getByTestId('status-text')).not.toContainText(/Loaded:.*\.smf|mixamo|FixtureRoot|FixtureTip/i);
         await page.getByTestId('mode-tab-skin').click({ force: true });
+        await showSkinAdvanced(page);
         await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: false');
         await expect(page.getByTestId('skin-export-block')).toHaveCount(0);
       } finally {

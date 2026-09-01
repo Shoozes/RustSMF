@@ -41,11 +41,17 @@ test.describe('Calm Modern shell', () => {
     for (const mode of MODES) {
       await page.getByTestId(`mode-tab-${mode}`).click();
       await expect(page.getByTestId(`mode-tab-${mode}`)).toHaveAttribute('aria-selected', 'true');
-      await expect(page.getByTestId('modern-support-panel')).toBeVisible();
-      if (mode === 'view') {
+      if (mode === 'skin') {
+        await expect(page.getByTestId('modern-support-panel')).toHaveCount(0);
+        await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+        await expect(page.getByTestId('modern-skin-advanced')).toBeVisible();
+        await expect(page.getByTestId('timeline')).toHaveCount(0);
+      } else if (mode === 'view') {
+        await expect(page.getByTestId('modern-support-panel')).toBeVisible();
         await expect(page.getByTestId('outliner')).toBeVisible();
         await expect(page.getByTestId('timeline')).toHaveCount(0);
       } else {
+        await expect(page.getByTestId('modern-support-panel')).toBeVisible();
         await expect(page.getByTestId('inspector')).toBeVisible();
         if (mode === 'animate') {
           await expect(page.getByTestId('timeline')).toBeVisible();

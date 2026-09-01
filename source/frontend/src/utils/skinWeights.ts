@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { ModelSourceFormat } from './modelFormat';
 
-export type SkinWeightEditMode = 'set' | 'add' | 'subtract' | 'auto';
+export type SkinWeightEditMode = 'set' | 'add' | 'subtract' | 'smooth' | 'auto';
 
 export interface VertexSkinWeights {
   indices: [number, number, number, number];
@@ -218,6 +218,24 @@ export function resolveSkinAutoWeightOptions(
     blendAmount: clamp01(options.blendAmount ?? 1),
     restrictToBoneIndices,
   };
+}
+
+export function collectBoneBranchIndices(
+  skeleton: THREE.Skeleton,
+  boneName: string,
+): Set<number> {
+  const root = skeleton.bones.find((bone) => bone.name === boneName);
+  if (!root) return new Set<number>();
+
+  const indexByObject = new Map<THREE.Object3D, number>(
+    skeleton.bones.map((bone, index) => [bone, index]),
+  );
+  const branch = new Set<number>();
+  root.traverse((object) => {
+    const index = indexByObject.get(object);
+    if (index !== undefined) branch.add(index);
+  });
+  return branch;
 }
 
 function cloneVertex(vertex: VertexSkinWeights): VertexSkinWeights {
@@ -640,14 +658,34 @@ function computeAutoSkinVertexWeights(
   return makeWeightedVertex(makeAutoWeightEntries(candidates, context.resolved), context.resolved.maxInfluences);
 }
 
-function blendVertexWeights(
+export function averageVertexSkinWeights(
+  vertices: readonly VertexSkinWeights[],
+  maxInfluences = 4,
+): VertexSkinWeights | null {
+  if (vertices.length === 0) return null;
+  const weightsByBone = new Map<number, number>();
+  for (const vertex of vertices) {
+    const normalized = normalizeVertexSkinWeights(vertex);
+    normalized.indices.forEach((boneIndex, slot) => {
+      const weight = normalized.weights[slot];
+      if (weight > 0) weightsByBone.set(boneIndex, (weightsByBone.get(boneIndex) ?? 0) + weight);
+    });
+  }
+  return makeWeightedVertex(
+    [...weightsByBone.entries()].map(([boneIndex, weight]) => ({ boneIndex, weight: weight / vertices.length })),
+    clampIntegerRange(maxInfluences, 1, 4, 4),
+  );
+}
+
+export function blendVertexSkinWeights(
   current: VertexSkinWeights,
   target: VertexSkinWeights,
   blendAmount: number,
   maxInfluences: number,
 ): VertexSkinWeights | null {
   const blend = clamp01(blendAmount);
-  if (blend >= 1) return target;
+  if (blend <= 0) return cloneVertex(current);
+  if (blend >= 1) return cloneVertex(target);
 
   const weightsByBone = new Map<number, number>();
   current.indices.forEach((boneIndex, slot) => {
@@ -684,7 +722,7 @@ export function autoSkinSkinnedMeshWeights(
 
     const target = computeAutoSkinVertexWeights(context, vertexIndex);
     const next = target
-      ? blendVertexWeights(current, target, context.resolved.blendAmount, context.resolved.maxInfluences)
+      ? blendVertexSkinWeights(current, target, context.resolved.blendAmount, context.resolved.maxInfluences)
       : null;
     if (!next) continue;
 
@@ -716,7 +754,7 @@ export function autoSkinSkinnedMeshVertexWeights(
 
   const target = computeAutoSkinVertexWeights(context, vertexIndex);
   const next = target
-    ? blendVertexWeights(current, target, context.resolved.blendAmount, context.resolved.maxInfluences)
+    ? blendVertexSkinWeights(current, target, context.resolved.blendAmount, context.resolved.maxInfluences)
     : null;
   if (!next) {
     return { ok: false, reason: 'invalid-bone' };

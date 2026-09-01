@@ -32,13 +32,19 @@ export function useBoneLabelsWithScale(
 
     if (!boneLabelsEnabled || !skeleton) return;
 
-    const markerScale = Number.isFinite(scale) && scale > 0 ? scale : 1;
+    const markerScale = Number.isFinite(scale) && scale > 0 ? scale : 0.25;
     const aliases = deriveMixamoMinimalBoneAliases(skeleton.bones);
     const created: THREE.Object3D[] = [];
     skeleton.bones.forEach((bone, index) => {
       const alias = aliases.get(bone.name)?.replace(/^mixamorig:/, '');
       const labelText = showIndexLabels ? String(index) : alias ?? bone.name;
-      const label = makeBoneLabel(labelText, { scale: markerScale });
+      const label = makeBoneLabel(labelText, {
+        scale: markerScale,
+        showAxes: false,
+        maxCharacters: 14,
+        backgroundColor: 'rgba(8, 15, 28, 0.68)',
+        textColor: '#dbeafe',
+      });
       bone.add(label);
       created.push(label);
     });

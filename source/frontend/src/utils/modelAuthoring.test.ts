@@ -6,6 +6,7 @@ import { installFileReaderTestPolyfill } from '../test/installFileReaderTestPoly
 import { disposeThreeObject } from './threeDisposal';
 import {
   applyModelOutlinerSnapshot,
+  attachLoadedStaticModel,
   captureModelOutlinerSnapshot,
   deleteModelObject,
   duplicateModelObject,
@@ -55,6 +56,29 @@ describe('model outliner snapshots', () => {
     assert.deepEqual(applied.selectedIds, [mesh.uuid]);
     assert.equal(group.visible, true);
     assert.equal(mesh.name, 'Armor');
+  });
+});
+
+describe('attachLoadedStaticModel', () => {
+  it('attaches only to the model root that owned the async request', () => {
+    const expectedRoot = new THREE.Group();
+    const replacementRoot = new THREE.Group();
+    const staleObject = new THREE.Group();
+    const stale = attachLoadedStaticModel(expectedRoot, replacementRoot, staleObject);
+
+    assert.deepEqual(stale, {
+      ok: false,
+      reason: 'stale-root',
+      message: 'Static append cancelled because the primary model changed while loading.',
+    });
+    assert.equal(staleObject.parent, null);
+    assert.equal(expectedRoot.children.length, 0);
+
+    const currentObject = new THREE.Group();
+    const attached = attachLoadedStaticModel(expectedRoot, expectedRoot, currentObject);
+    assert.equal(attached.ok, true);
+    assert.equal(currentObject.parent, expectedRoot);
+    assert.equal(expectedRoot.children[0], currentObject);
   });
 });
 

@@ -18,6 +18,7 @@ import {
 } from '../utils/skinDiagnostics';
 
 interface SkinPanelProps {
+  dataTestId?: string;
   selected: string;
   skeleton?: THREE.Skeleton;
   sourceFormat: string;
@@ -63,6 +64,7 @@ interface SkinPanelProps {
 }
 
 export default function SkinPanel({
+  dataTestId = 'skin-workspace-panel',
   selected,
   skeleton,
   sourceFormat,
@@ -120,7 +122,7 @@ export default function SkinPanel({
   const maxInfluenceOptionActive = ['segment-inverse-distance', 'segment-distance-normal', 'selected-branch'].includes(skinAutoWeightAlgorithm);
 
   return (
-    <div className="inspector" data-testid="skin-workspace-panel" data-editor-mode={editorMode}>
+    <div className="inspector" data-testid={dataTestId} data-editor-mode={editorMode}>
       <div className="panel-title">Skin Workspace</div>
       <div className="text-xs text-slate-300 mb-2">Inspect and refine per-bone vertex influences.</div>
       <div className="text-[10px] text-slate-400">Source format: {sourceFormat || 'unknown'}</div>
@@ -221,6 +223,14 @@ export default function SkinPanel({
             onClick={() => onSkinPaintModeChange('subtract')}
           >
             Subtract
+          </button>
+          <button
+            data-testid="skin-paint-mode-smooth"
+            className={`px-1 py-0 text-xs ${skinPaintMode === 'smooth' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
+            disabled={!hasSkeleton}
+            onClick={() => onSkinPaintModeChange('smooth')}
+          >
+            Smooth
           </button>
           <button
             data-testid="skin-paint-mode-auto"

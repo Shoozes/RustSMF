@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { dirname, extname, relative, resolve, sep } from 'node:path'
 
 const FRONTEND_SOURCE_EXTENSIONS = new Set(['.js', '.jsx', '.mjs', '.ts', '.tsx'])
@@ -16,6 +16,17 @@ const REQUIRED_DOCS = [
   'summary_bank.json',
 ]
 const TODO_FIELDS = ['What', 'Why', 'Where', 'When', 'How', 'Done when', 'Verification']
+const EMPTY_BACKLOG_MARKER = 'Backlog status: empty'
+const PORTABLE_CURRENT_DOCS = [
+  'README.md',
+  'design-qa.md',
+  'docs/README.md',
+  'docs/dev/README.md',
+  'docs/dev/APP_STATE.md',
+  'docs/dev/TODO.md',
+  'docs/dev/review.md',
+  'docs/user/README.md',
+]
 
 function toPosix(path) {
   return path.split(sep).join('/')
@@ -61,6 +72,14 @@ function moduleCandidates(absolutePath) {
   return candidates
 }
 
+function isFile(path) {
+  try {
+    return statSync(path).isFile()
+  } catch {
+    return false
+  }
+}
+
 function isWithin(root, target) {
   const rootRelative = relative(root, target)
   return rootRelative === '' || (rootRelative !== '..' && !rootRelative.startsWith(`..${sep}`) && !rootRelative.startsWith('../'))
@@ -81,7 +100,7 @@ export function findBrokenRelativeImports(repoRoot) {
         errors.push(`${sourceLabel}: relative import escapes source/frontend: ${specifier}`)
         continue
       }
-      if (!moduleCandidates(target).some((candidate) => existsSync(candidate))) {
+      if (!moduleCandidates(target).some(isFile)) {
         errors.push(`${sourceLabel}: unresolved relative import: ${specifier}`)
       }
     }
@@ -111,7 +130,11 @@ export function findBrokenRustModules(repoRoot) {
 export function validateTodoDocument(content) {
   const errors = []
   const sections = [...content.matchAll(/^##\s+(.+)$/gm)]
-  if (sections.length === 0) return ['docs/dev/TODO.md: no executable task sections found']
+  if (sections.length === 0) {
+    return new RegExp(`^${EMPTY_BACKLOG_MARKER}$`, 'm').test(content)
+      ? []
+      : [`docs/dev/TODO.md: no executable task sections or "${EMPTY_BACKLOG_MARKER}" marker found`]
+  }
 
   sections.forEach((section, index) => {
     const start = section.index + section[0].length
@@ -123,6 +146,19 @@ export function validateTodoDocument(content) {
       }
     }
   })
+  return errors
+}
+
+export function findNonPortableCurrentDocReferences(repoRoot) {
+  const root = resolve(repoRoot)
+  const errors = []
+  for (const path of PORTABLE_CURRENT_DOCS) {
+    const absolutePath = resolve(root, ...path.split('/'))
+    if (!existsSync(absolutePath)) continue
+    const source = readFileSync(absolutePath, 'utf8')
+    const match = source.match(/(?:^|[\s`(])([A-Za-z]:[\\/][^\s`)]+)/m)
+    if (match) errors.push(`${path}: non-portable absolute path: ${match[1]}`)
+  }
   return errors
 }
 
@@ -152,6 +188,7 @@ export function validateProjectIntegrity(repoRoot) {
   const todoPath = resolve(root, 'docs/dev/TODO.md')
   if (existsSync(todoPath)) errors.push(...validateTodoDocument(readFileSync(todoPath, 'utf8')))
   errors.push(...researchNotesWithoutStatus(root))
+  errors.push(...findNonPortableCurrentDocReferences(root))
   errors.push(...findBrokenRelativeImports(root))
   errors.push(...findBrokenRustModules(root))
 
