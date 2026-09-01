@@ -336,6 +336,54 @@ export const clickPickableBoneInViewport = async (
   return null;
 };
 
+export const clickPickableObjectInViewport = async (page: Page): Promise<boolean> => {
+  const canvas = page.getByTestId('three-canvas');
+  const box = await canvas.boundingBox();
+  if (!box) return false;
+
+  const probes = [20, 30, 40, 50, 60, 70, 80];
+  for (const y of probes) {
+    for (const x of probes) {
+      await page.mouse.click(
+        box.x + (box.width * x) / 100,
+        box.y + (box.height * y) / 100,
+      );
+      await page.waitForTimeout(30);
+      if (
+        await canvas.getAttribute('data-pointer-owner') === 'model-select'
+        && await page.getByTestId('outliner-selection-count').textContent() !== '0 selected'
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
+export const openPickableObjectContextInViewport = async (page: Page): Promise<boolean> => {
+  const canvas = page.getByTestId('three-canvas');
+  const box = await canvas.boundingBox();
+  if (!box) return false;
+
+  const probes = [20, 30, 40, 50, 60, 70, 80];
+  for (const y of probes) {
+    for (const x of probes) {
+      await page.mouse.click(
+        box.x + (box.width * x) / 100,
+        box.y + (box.height * y) / 100,
+        { button: 'right' },
+      );
+      await page.waitForTimeout(30);
+      if (/Submodel context actions ready/i.test(
+        await page.getByTestId('status-text').textContent() ?? '',
+      )) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
 export const hoverPickableBoneInViewport = async (
   page: Page,
   expectedBone?: string,

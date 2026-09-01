@@ -3,6 +3,7 @@ import { SAMPLE_OBJ, SAMPLE_SMF, getBrowserErrors, pausePlaybackIfRunning, setup
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { parseSelectedBone } from './helpers/format-assertions';
 import { dragEndpointHandle, dragRigIkTarget, dragTransformHandle, setViewportLayout } from './helpers/viewport-interactions';
+import { clickSecondaryCommand } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -83,9 +84,9 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('export-smf-btn')).toBeEnabled();
       await page.getByTestId('smf-roundtrip-check-btn').click();
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 15000 });
-      await page.getByTestId('export-glb-btn').click();
+      await clickSecondaryCommand(page, 'export-glb-btn');
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb .*1 bones/i, { timeout: 15000 });
-      await page.getByTestId('export-smf-btn').click();
+      await clickSecondaryCommand(page, 'export-smf-btn');
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf .*validated threeToSmf converter/i, { timeout: 15000 });
 
       await page.getByTestId('editor-undo-btn').click();
@@ -290,9 +291,9 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 5000 });
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-status', 'passed');
 
-      await page.getByTestId('export-glb-btn').click();
+      await clickSecondaryCommand(page, 'export-glb-btn');
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb/i, { timeout: 5000 });
-      await page.getByTestId('export-smf-btn').click();
+      await clickSecondaryCommand(page, 'export-smf-btn');
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf .*pose edits applied/i, { timeout: 5000 });
 
       const errors = getBrowserErrors(page).filter((entry) => entry.includes('ERROR'));

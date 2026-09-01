@@ -1186,7 +1186,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     };
 
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    const initialPixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
+    renderer.setPixelRatio(initialPixelRatio);
+    canvas.dataset.rendererPixelRatio = String(initialPixelRatio);
     renderer.setSize(800, 600);
     rendererRef.current = renderer;
 
@@ -2475,6 +2477,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const onResize = () => {
       const w = container.clientWidth || 800;
       const h = container.clientHeight || 600;
+      const pixelRatio = Math.min(Math.max(window.devicePixelRatio || 1, 1), 2);
+      renderer.setPixelRatio(pixelRatio);
+      canvas.dataset.rendererPixelRatio = String(pixelRatio);
       renderer.setSize(w, h);
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
@@ -2499,6 +2504,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     };
     const ro = new ResizeObserver(onResize);
     ro.observe(container);
+    window.addEventListener('resize', onResize);
     resizeObsRef.current = ro;
     resizeFrameRef.current = requestAnimationFrame(onResize);
 
@@ -2506,6 +2512,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       frameRef.current = cancelPendingAnimationFrame(frameRef.current, cancelAnimationFrame);
       resizeFrameRef.current = cancelPendingAnimationFrame(resizeFrameRef.current, cancelAnimationFrame);
       resizeObsRef.current?.disconnect();
+      window.removeEventListener('resize', onResize);
       interactionRuntime.dispose();
       detachOrbit();
       canvas.removeEventListener('mousedown', onOrthoPanDown);

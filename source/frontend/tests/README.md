@@ -12,7 +12,7 @@ The test layout mirrors runtime ownership. Keep behavior in the narrowest suite 
 - `pwsh -File run.ps1 -Task test:visual-strict`: opt-in committed WebGL snapshots.
 - `pwsh -File run.ps1 -Task test:visual-update`: intentional strict-baseline refresh only.
 
-Playwright may require execution outside a managed sandbox when Chromium launch is rejected with `spawn EPERM`. That is a harness permission failure, not an application test failure. The approved local browser lane is the authority for the current full 75-case suite and the 2-case strict visual suite; retain the caveat only for future managed-launch failures.
+Playwright may require execution outside a managed sandbox when Chromium launch is rejected with `spawn EPERM`. That is a harness permission failure, not an application test failure. The approved local browser lane is the authority for the current full 85-case suite and the 2-case strict visual suite; retain the caveat only for future managed-launch failures.
 
 The local Node 26.5 lane emits `[DEP0205] module.register()` from Playwright 1.60's TypeScript ESM loader. It is an upstream runner deprecation warning, not an app/test failure; do not suppress it or disable Playwright's TypeScript loader. The repository continues to require Node 22 or newer.
 
@@ -36,11 +36,14 @@ npm.cmd run test:e2e -- --reporter=line
 | `skin.spec.ts` | Paint gating, cancel, undo/redo, Auto Skin, SMF export |
 | `export-formats.spec.ts` | GLB/GLTF/FBX sidecar, SMF, FBX, and OBJ flows; indexed-mesh conversion; non-SMF rename/order/duplicate/delete/static surface authoring persistence; material policy; non-SMF-to-SMF fail-closed diagnostics; FBX re-import |
 | `native.spec.ts` | Deterministic Tauri IPC dialog-owned open/read/save/cancel, stale-completion, project recovery, and autosave-coalescing matrices |
+| `modern-shell.spec.ts` | Modern command/workspace reachability, one-drawer focus ownership, coarse-pointer targets, and DPR backing dimensions |
 | `visual.spec.ts` | Modern/Original geometry/defaults, source texture thumbnails, reference-derived shelves/top strip/keyframe lane, narrow layout, viewport/menu visual coherence |
 
-The 37 tests formerly in `smoke.spec.ts` retain their titles across the current domain-owned browser suites. Playwright currently discovers 75 browser cases total; use `npm.cmd run test:e2e:list` for the authoritative count after adding or moving cases. The dedicated script prevents npm from consuming Playwright's `--list` flag and accidentally starting the full suite.
+The 37 tests formerly in `smoke.spec.ts` retain their titles across the current domain-owned browser suites. Playwright currently discovers 85 browser cases total; use `npm.cmd run test:e2e:list` for the authoritative count after adding or moving cases. The dedicated script prevents npm from consuming Playwright's `--list` flag and accidentally starting the full suite.
 
-`tests/journeys/hand-wave.journey.spec.ts` is intentionally excluded from the default 75-case gate. Its dedicated config records one deterministic end-to-end authoring path: load the real SMF fixture, create a rest-pose clip, prove viewport bone picking and the camera-facing hover badge are unobstructed, confirm display-only `LeftArm`/`LeftForeArm`/`LeftHand` aliases, hold the shoulder outside the head silhouette, and Branch-key a bounded elbow-and-hand wave at 0, 0.5, 1, 1.5, and 2 seconds with matching loop endpoints. It then finds the visible `Mesh_4` torso seam with stray `LeftForeArm` influence, exposes semantic names in Skin diagnostics, captures the pose with Frozen Current sampling, and enables selected-weight mini vertex nodes for exact source-vertex targeting. It subtracts forearm influence from both seam faces, Set-paints the outer upper-sleeve edge to `LeftArm`, and previews the corrected loop. Precision targeting checks the current view and uses deterministic quarter-turn single-view fallbacks when a seam is occluded or quad panes make a thin edge impractical. The journey fails on document overflow, blocked or disabled primary controls, unavailable viewport picking, missing aliases/hover telemetry, unchanged canvas poses, missing scoped keys, an unreachable or unchanged skin target, critical browser errors, or a missing/empty WebM.
+`tests/journeys/hand-wave.journey.spec.ts` is intentionally excluded from the default 85-case gate. Its dedicated config records one deterministic real-SMF path through clip creation, viewport selection and hover aliases, Branch-keyed animation, precision Skin repair, and corrected playback.
+
+The journey fails on document overflow, blocked or disabled primary controls, missing pointer/alias telemetry, unchanged poses, missing scoped keys, unreachable Skin targets, critical browser errors, or missing evidence. Precision targets use deterministic camera fallbacks when occluded.
 
 ## Shared Browser Helpers
 

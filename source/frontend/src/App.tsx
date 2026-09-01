@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
 import * as THREE from 'three'
 import ThreeViewport from './components/ThreeViewport'
 import Timeline from './components/Timeline'
 import Outliner from './components/Outliner'
 import Inspector from './components/Inspector'
 import Toolbar from './components/Toolbar'
+import ViewportControls, { type ViewportControlsProps } from './components/ViewportControls'
+import { ListBullets, SlidersHorizontal, X } from '@phosphor-icons/react'
 import SkinPanel from './components/SkinPanel';
 import RigPanel from './components/RigPanel';
 import AnimatePanel from './components/AnimatePanel';
@@ -59,6 +62,8 @@ type WorkspaceProfile = {
   showWeightSection: boolean;
   boneLabelsEnabledByDefault: boolean;
 };
+
+type ModernPanel = 'scene' | 'properties' | null;
 
 const WORKSPACE_BY_MODE: Record<EditorMode, WorkspaceProfile> = {
   view: {
@@ -118,6 +123,9 @@ export default function App() {
   const [outlinerRedoOrder, setOutlinerRedoOrder] = useState(0);
   const [outlinerRevision, setOutlinerRevision] = useState(0);
   const [selectedOutlinerIds, setSelectedOutlinerIds] = useState<string[]>([]);
+  const [modernPanel, setModernPanel] = useState<ModernPanel>('scene');
+  const modernPanelRef = useRef<HTMLDivElement | null>(null);
+  const modernPanelTriggerRef = useRef<HTMLButtonElement | null>(null);
   const { theme, themeId, setThemeId } = useAppTheme();
   const allocateHistoryOrder = useCallback(() => {
     historyOrderRef.current += 1;
@@ -974,6 +982,56 @@ export default function App() {
     return null;
   })();
 
+  const openModernPanel = useCallback((panel: Exclude<ModernPanel, null>, trigger: HTMLButtonElement) => {
+    modernPanelTriggerRef.current = trigger;
+    setModernPanel(panel);
+    window.requestAnimationFrame(() => modernPanelRef.current?.focus());
+  }, []);
+
+  const closeModernPanel = useCallback(() => {
+    setModernPanel(null);
+    window.requestAnimationFrame(() => modernPanelTriggerRef.current?.focus());
+  }, []);
+
+  const handleModernPanelKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeModernPanel();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const panel = modernPanelRef.current;
+    if (!panel) return;
+    const focusable = Array.from(panel.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    ));
+    if (focusable.length === 0) {
+      event.preventDefault();
+      panel.focus();
+      return;
+    }
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }, [closeModernPanel]);
+
+  useEffect(() => {
+    if (theme.shellVariant !== 'modern') return;
+    const compactQuery = window.matchMedia('(max-width: 1100px)');
+    const syncPanelForViewport = () => {
+      setModernPanel(compactQuery.matches ? null : editorMode === 'view' ? 'scene' : 'properties');
+    };
+    syncPanelForViewport();
+    compactQuery.addEventListener('change', syncPanelForViewport);
+    return () => compactQuery.removeEventListener('change', syncPanelForViewport);
+  }, [editorMode, theme.shellVariant]);
+
   // Setup keyboard once
   useEffect(() => {
     const cleanup = setupKeyboard({
@@ -1022,11 +1080,104 @@ export default function App() {
     refreshOutlinerHistoryAvailability();
   }, [model.root, refreshOutlinerHistoryAvailability, releaseDetachedOutlinerHistoryObjects]);
 
+  const viewportControlsProps: Omit<ViewportControlsProps, 'variant'> = {
+    hasModel,
+    isLoading: ui.isLoading,
+    viewportLayout,
+    setViewportLayout,
+    wireframeEnabled: ui.wireframeEnabled,
+    setWireframeEnabled: ui.setWireframeEnabled,
+    gridEnabled,
+    setGridEnabled,
+    axesEnabled,
+    setAxesEnabled,
+    textureEnabled,
+    setTextureEnabled,
+    textureRepeatPreviewEnabled,
+    setTextureRepeatPreviewEnabled,
+    textureFilterPreview,
+    setTextureFilterPreview,
+    boneIndexLabelsEnabled,
+    setBoneIndexLabelsEnabled,
+    rigOpacity,
+    setRigOpacity,
+    rigThicknessScale,
+    setRigThicknessScale,
+    skinPointOverlayEnabled,
+    setSkinPointOverlayEnabled,
+    shaderEnabled,
+    setShaderEnabled,
+    perspectiveEnabled,
+    setPerspectiveEnabled,
+    modelOpacity,
+    setModelOpacity,
+  };
+
+  const outlinerPanel = (
+    <Outliner
+      title={theme.panelTitles.outliner}
+      clipsCount={model.clips.length}
+      items={outlinerItems}
+      selectedItemIds={selectedOutlinerIds}
+      onSelectScene={handleSelectScene}
+      onSelectItem={handleSelectOutlinerItem}
+      onToggleVisibility={handleToggleOutlinerVisibility}
+      onSelectAll={handleSelectAllOutlinerItems}
+      onClearSelection={handleClearObjectSelection}
+      onRenameSelected={handleRenameSelectedOutlinerItem}
+      onDuplicateSelected={handleDuplicateSelectedOutlinerItem}
+      onDeleteSelected={handleDeleteSelectedOutlinerItem}
+      onMoveSelected={handleMoveSelectedOutlinerItem}
+      objectEditingEnabled={modelObjectAuthoringEnabled}
+      objectEditingDisabledReason={modelObjectAuthoringDisabledReason}
+      canMoveSelectedEarlier={selectedOutlinerReorder.canMoveEarlier}
+      canMoveSelectedLater={selectedOutlinerReorder.canMoveLater}
+      onHideSelected={handleHideSelectedOutlinerItems}
+      onHideUnselected={handleHideUnselectedOutlinerItems}
+      onUnhideAll={handleUnhideAllOutlinerItems}
+      onTransformSelected={handleTransformSelectedOutlinerItem}
+      onAssignMaterial={handleAssignSelectedMaterial}
+      onFlipWinding={handleFlipSelectedWinding}
+      onPrepareGeometry={handlePrepareSelectedGeometry}
+      onAppendStaticModel={handleAppendStaticModel}
+    />
+  );
+
+  const propertiesPanel = (
+    <div className="inspector-stack">
+      <Inspector
+        title={theme.panelTitles.inspector}
+        selected={ui.selected}
+        clips={model.clips}
+        currentClipName={playback.currentClipName}
+        onChangeClip={changeClip}
+        skeleton={model.skeleton}
+        displayBones={rigHierarchyBones}
+        onSelectBone={handleSelectBone}
+        showWeightPreview={workspace.showWeightSection ? showWeightPreview : false}
+        onToggleWeightPreview={workspace.showWeightSection ? toggleWeightPreview : undefined}
+        transformMode={transformMode}
+        onSetTransformMode={boneTransformOwner !== 'disabled' ? setTransformMode : undefined}
+        onNudgeBone={onNudgeBone}
+        showBoneLabels={shouldShowBoneLabels}
+        onToggleBoneLabels={toggleBoneLabels}
+        showBonePanel={workspace.showBonePanel}
+        showClipList={workspace.showClipList}
+        showTransformControls={workspace.showTransformControls}
+        editorMode={editorMode}
+      />
+      {modeWorkspacePanel}
+    </div>
+  );
+
+  const showTimeline = theme.shellVariant === 'original' ? workspace.showTimeline : editorMode === 'animate';
+
   return (
     <div
       className="app-shell"
       data-testid="app-shell"
       data-theme={themeId}
+      data-shell-variant={theme.shellVariant}
       data-editor-mode={editorMode}
     >
       <Toolbar
@@ -1044,39 +1195,10 @@ export default function App() {
         onRedo={handleEditorRedo}
         undoAvailable={editorUndoAvailable || outlinerUndoAvailable || skinUndoAvailable}
         redoAvailable={editorRedoAvailable || outlinerRedoAvailable || skinRedoAvailable}
-        isLoading={ui.isLoading}
         onFileChange={handleFileInputChange}
-        hasModel={hasModel}
         editorMode={editorMode}
         setEditorMode={setEditorMode}
-        viewportLayout={viewportLayout}
-        setViewportLayout={setViewportLayout}
-        wireframeEnabled={ui.wireframeEnabled}
-        setWireframeEnabled={ui.setWireframeEnabled}
-        gridEnabled={gridEnabled}
-        setGridEnabled={setGridEnabled}
-        axesEnabled={axesEnabled}
-        setAxesEnabled={setAxesEnabled}
-        textureEnabled={textureEnabled}
-        setTextureEnabled={setTextureEnabled}
-        textureRepeatPreviewEnabled={textureRepeatPreviewEnabled}
-        setTextureRepeatPreviewEnabled={setTextureRepeatPreviewEnabled}
-        textureFilterPreview={textureFilterPreview}
-        setTextureFilterPreview={setTextureFilterPreview}
-        boneIndexLabelsEnabled={boneIndexLabelsEnabled}
-        setBoneIndexLabelsEnabled={setBoneIndexLabelsEnabled}
-        rigOpacity={rigOpacity}
-        setRigOpacity={setRigOpacity}
-        rigThicknessScale={rigThicknessScale}
-        setRigThicknessScale={setRigThicknessScale}
-        skinPointOverlayEnabled={skinPointOverlayEnabled}
-        setSkinPointOverlayEnabled={setSkinPointOverlayEnabled}
-        shaderEnabled={shaderEnabled}
-        setShaderEnabled={setShaderEnabled}
-        perspectiveEnabled={perspectiveEnabled}
-        setPerspectiveEnabled={setPerspectiveEnabled}
-        modelOpacity={modelOpacity}
-        setModelOpacity={setModelOpacity}
+        {...viewportControlsProps}
         theme={theme}
         themeId={themeId}
         setThemeId={handleThemeChange}
@@ -1097,33 +1219,32 @@ export default function App() {
       </div>
 
       <div className="main-area">
-        <Outliner
-          title={theme.panelTitles.outliner}
-          clipsCount={model.clips.length}
-          items={outlinerItems}
-          selectedItemIds={selectedOutlinerIds}
-          onSelectScene={handleSelectScene}
-          onSelectItem={handleSelectOutlinerItem}
-          onToggleVisibility={handleToggleOutlinerVisibility}
-          onSelectAll={handleSelectAllOutlinerItems}
-          onClearSelection={handleClearObjectSelection}
-          onRenameSelected={handleRenameSelectedOutlinerItem}
-          onDuplicateSelected={handleDuplicateSelectedOutlinerItem}
-          onDeleteSelected={handleDeleteSelectedOutlinerItem}
-          onMoveSelected={handleMoveSelectedOutlinerItem}
-          objectEditingEnabled={modelObjectAuthoringEnabled}
-          objectEditingDisabledReason={modelObjectAuthoringDisabledReason}
-          canMoveSelectedEarlier={selectedOutlinerReorder.canMoveEarlier}
-          canMoveSelectedLater={selectedOutlinerReorder.canMoveLater}
-          onHideSelected={handleHideSelectedOutlinerItems}
-          onHideUnselected={handleHideUnselectedOutlinerItems}
-          onUnhideAll={handleUnhideAllOutlinerItems}
-          onTransformSelected={handleTransformSelectedOutlinerItem}
-          onAssignMaterial={handleAssignSelectedMaterial}
-          onFlipWinding={handleFlipSelectedWinding}
-          onPrepareGeometry={handlePrepareSelectedGeometry}
-          onAppendStaticModel={handleAppendStaticModel}
-        />
+        {theme.shellVariant === 'original' && outlinerPanel}
+        {theme.shellVariant === 'modern' && hasModel && modernPanel && (
+          <div
+            ref={modernPanelRef}
+            className={`modern-support-panel modern-support-panel-${modernPanel}`}
+            data-testid="modern-support-panel"
+            data-panel={modernPanel}
+            role="dialog"
+            aria-label={modernPanel === 'scene' ? 'Scene panel' : 'Properties panel'}
+            tabIndex={-1}
+            onKeyDown={handleModernPanelKeyDown}
+          >
+            <button type="button" className="modern-panel-close" data-testid="modern-panel-close" aria-label="Close supporting panel" onClick={closeModernPanel}>
+              <X size={18} aria-hidden="true" />
+            </button>
+            {modernPanel === 'scene' ? outlinerPanel : propertiesPanel}
+            <div className="modern-panel-switcher" role="group" aria-label="Supporting panel">
+              <button type="button" className={modernPanel === 'scene' ? 'active' : ''} aria-pressed={modernPanel === 'scene'} data-testid="modern-panel-scene" onClick={(event) => openModernPanel('scene', event.currentTarget)}>
+                <ListBullets size={17} aria-hidden="true" /><span>Scene</span>
+              </button>
+              <button type="button" className={modernPanel === 'properties' ? 'active' : ''} aria-pressed={modernPanel === 'properties'} data-testid="modern-panel-properties" onClick={(event) => openModernPanel('properties', event.currentTarget)}>
+                <SlidersHorizontal size={17} aria-hidden="true" /><span>Properties</span>
+              </button>
+            </div>
+          </div>
+        )}
 
         <div
           data-testid="viewport-container"
@@ -1194,6 +1315,29 @@ export default function App() {
             skinPaintTargetWeight={skinPaintTargetWeight}
             skinPaintFalloff={skinPaintFalloff}
           />
+          {theme.shellVariant === 'modern' && (
+            <ViewportControls {...viewportControlsProps} variant="overlay" />
+          )}
+          {theme.shellVariant === 'modern' && !hasModel && !ui.isLoading && (
+            <div className="modern-empty-state" data-testid="modern-empty-state">
+              <div className="modern-empty-eyebrow">Model workspace</div>
+              <h1>Start with a model</h1>
+              <p>Open or drop an SMF, GLB, GLTF, FBX, or OBJ asset to inspect it.</p>
+              <button type="button" className="modern-empty-open" data-testid="modern-empty-open" onClick={handleOpen}>
+                Open model
+              </button>
+            </div>
+          )}
+          {theme.shellVariant === 'modern' && hasModel && (
+            <div className="modern-panel-triggers" aria-label="Supporting panels">
+              <button type="button" aria-pressed={modernPanel === 'scene'} data-testid="modern-scene-trigger" onClick={(event) => openModernPanel('scene', event.currentTarget)}>
+                <ListBullets size={17} aria-hidden="true" /><span>Scene</span>
+              </button>
+              <button type="button" aria-pressed={modernPanel === 'properties'} data-testid="modern-properties-trigger" onClick={(event) => openModernPanel('properties', event.currentTarget)}>
+                <SlidersHorizontal size={17} aria-hidden="true" /><span>Properties</span>
+              </button>
+            </div>
+          )}
           {/* Simple pure loading overlay (no deps) */}
           {ui.isLoading && (
             <div
@@ -1231,33 +1375,10 @@ export default function App() {
           <div className="viewport-drop-hint absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 pointer-events-none">Drop {supportedModelFormatsLabel()} here</div>
         </div>
 
-        <div className="inspector-stack">
-          <Inspector
-          title={theme.panelTitles.inspector}
-          selected={ui.selected}
-          clips={model.clips}
-          currentClipName={playback.currentClipName}
-          onChangeClip={changeClip}
-          skeleton={model.skeleton}
-          displayBones={rigHierarchyBones}
-          onSelectBone={handleSelectBone}
-          showWeightPreview={workspace.showWeightSection ? showWeightPreview : false}
-          onToggleWeightPreview={workspace.showWeightSection ? toggleWeightPreview : undefined}
-          transformMode={transformMode}
-          onSetTransformMode={boneTransformOwner !== 'disabled' ? setTransformMode : undefined}
-          onNudgeBone={onNudgeBone}
-          showBoneLabels={shouldShowBoneLabels}
-          onToggleBoneLabels={toggleBoneLabels}
-          showBonePanel={workspace.showBonePanel}
-          showClipList={workspace.showClipList}
-          showTransformControls={workspace.showTransformControls}
-          editorMode={editorMode}
-          />
-          {modeWorkspacePanel}
-        </div>
+        {theme.shellVariant === 'original' && propertiesPanel}
       </div>
 
-      {workspace.showTimeline && (
+      {showTimeline && (
         <Timeline
           isPlaying={playback.isPlaying}
           currentTime={playback.currentTime}

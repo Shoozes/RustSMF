@@ -5,6 +5,7 @@ export const APP_THEME_STORAGE_KEY = 'rustsmf.appearance.theme';
 export const APP_THEMES = [
   {
     id: 'modern',
+    shellVariant: 'modern',
     label: 'Modern',
     description: 'The current RustSMF workspace with spacious panels and a single-view default.',
     chromeLabel: 'RustSMF',
@@ -26,12 +27,13 @@ export const APP_THEMES = [
       export: 'Export',
     },
     panelTitles: {
-      outliner: 'Outliner',
-      inspector: 'Inspector',
+      outliner: 'Scene',
+      inspector: 'Properties',
     },
   },
   {
     id: 'original',
+    shellVariant: 'original',
     label: 'Original SMF',
     description: 'The dense original editor format with narrow tool shelves, right-side submodels, and a quad-view default.',
     chromeLabel: 'Settings',
@@ -59,6 +61,7 @@ export const APP_THEMES = [
   },
 ] as const satisfies ReadonlyArray<{
   id: string;
+  shellVariant: 'modern' | 'original';
   label: string;
   description: string;
   chromeLabel: string;

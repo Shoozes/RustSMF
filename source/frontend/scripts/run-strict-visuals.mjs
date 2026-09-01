@@ -14,8 +14,9 @@ const result = spawnSync(
     'test',
     'tests/shell-model.spec.ts',
     'tests/export-formats.spec.ts',
+    'tests/visual.spec.ts',
     '--grep',
-    'can load a real SMF sample|export flow',
+    'can load a real SMF sample|export flow|Original SMF theme',
     ...passthroughArgs,
   ],
   {

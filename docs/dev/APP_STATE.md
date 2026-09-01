@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-08-30
+Last reviewed: 2026-09-01
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, and OBJ models. This document owns current behavior, architecture boundaries, format limits, and the verification contract. Forward work belongs in `TODO.md`; pass evidence belongs in `review.md`; recurring failure analysis belongs in `PITFALL_LEDGER.md`.
 
@@ -20,9 +20,10 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 
 - The viewport owns one Three.js renderer, scene, animation mixer, requestAnimationFrame loop, resize observer, input listeners, model attachment, and resource disposal lifecycle.
 - Hovering a pickable bone uses one viewport-owned high-contrast marker and camera-facing name badge, clears on pointer leave, and mirrors the active source ID in canvas telemetry/title text. The exact known 24-bone SMF humanoid layout receives fail-closed Mixamo-minimal display aliases; unknown indexed rigs keep source names only, and aliases never rewrite export-owned IDs.
-- Modern defaults to a single perspective pane. Original SMF defaults to quad view before model load and after restoration. Layout controls remain disabled until a model is loaded.
+- Modern uses a canvas-first shell with two short navigation rows, one bounded supporting panel on wide screens, mutually exclusive Scene/Properties overlay drawers on compact screens, and viewport layout/camera/display controls over the canvas. Open, Save, Undo, Redo, and Export remain primary; project recovery, explicit format exports, backend status, and appearance live in the named More menu. The empty state shows one Open/drop task instead of empty panels and a timeline.
+- Modern defaults to a single perspective pane and shows the full Timeline only in Animate. Original SMF defaults to quad view before model load and after restoration. Layout controls remain disabled until a model is loaded.
 - Quad view exposes Top, 3D, Front, and Side panes. Perspective and orthographic panes retain their own direction/zoom while sharing one world-space focus target. Right-dragging any pane moves that target for every view; reset refits the loaded model center, distance, clip planes, orbit limits, and orthographic extent from finite authored bounds without changing root scale or skin binds. Perspective wheel zoom is ratio-based, so tiny and huge assets receive equivalent navigation. Ordinary skinned meshes use exact posed bounds; very large skinned meshes use a conservative bone-transform bound above 100,000 vertices to keep load-time fitting bounded.
-- Pane hit-testing uses CSS coordinates, half-open internal boundaries, inclusive outer edges, and remains stable with fractional/high-DPI layout values.
+- Pane hit-testing uses CSS coordinates, half-open internal boundaries, inclusive outer edges, and remains stable with fractional/high-DPI layout values. Resize and display-change handling refreshes renderer pixel ratio from the current display and caps it at 2, keeping the CSS and backing dimensions aligned without unbounded GPU cost.
 - Modern and Original SMF share one editor state. The persisted theme registry rejects stale values and treats storage failure as non-blocking.
 - Original SMF restores the compact old-editor frame: narrow Settings and Submodels shelves, two-row top strip, numbered red mode tabs, dense square controls, dark quad viewports, camera-aligned grids, legacy framing, and the Animation-only upper keyframe strip. The keyframe lane retains current scrub, insert, selection, drag, and playback behavior.
 - The Submodels shelf renders bounded previews from source base-color maps, including raw SMF `DataTexture` pixels. Material color remains the fallback for untextured or unsupported sources.
@@ -57,6 +58,7 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 | Owner | Responsibility |
 | --- | --- |
 | `src/App.tsx` | Workspace composition, theme/layout policy, shared UI chronology, and component wiring. |
+| `src/components/Toolbar.tsx`, `ViewportControls.tsx` | Shared command semantics with separate Modern/Original chrome plus reusable viewport controls for the Modern overlay and Original toolbar. |
 | `src/hooks/useLoadModel.ts` | Load/export intent integration, editor state coordination, save serialization, and the stable app-facing contract. Animation actions are delegated to `src/utils/animationAuthoringController.ts`. |
 | `src/hooks/useSmfCodecTask.ts` | SMF worker task lifecycle, progress, abort, timeout, and startup fallback. |
 | `src/hooks/smfExportCandidate.ts` | One pure authority for pose, animation, metadata, and live-skin application before SMF export. |
@@ -118,12 +120,12 @@ Current inventory:
 
 - 353 frontend unit tests across 61 discovered unit-test files; `source/frontend/scripts/run-unit-tests.mjs` is the discovery authority.
 - Extra arguments after `npm.cmd run test:unit --` are forwarded to the Node/tsx test runner, so focused flags such as `--test-name-pattern` execute only matching cases while still loading the deterministic discovered file set.
-- 75 browser cases in eight domain-owned spec files; `npm.cmd run test:e2e:list` from `source/frontend` is the discovery authority. Coverage includes tiny/huge scale parity, selected external FBX texture resolution, and trailing autosave coalescing without overlapping native writes.
+- 85 browser cases in nine domain-owned spec files; `npm.cmd run test:e2e:list` from `source/frontend` is the discovery authority. Coverage includes the Calm Modern shell at six responsive sizes, drawer focus behavior, coarse-pointer targets, DPR 1/1.25/2 backing dimensions, tiny/huge scale parity, selected external FBX texture resolution, and trailing autosave coalescing without overlapping native writes.
 - One opt-in recorded browser journey validates real-SMF load, new animation creation, hover identification, fail-closed Mixamo display aliases, three-axis pose controls, Branch keying across upper arm/forearm/hand, and a shoulder-held five-time elbow-and-hand wave with matched loop endpoints and no head-silhouette intersection. It also catches the fixture's visible forearm-driven torso wing, presents semantic aliases in Skin influence diagnostics, uses Frozen Current exact mini-node targeting to subtract `LeftForeArm` from both faces of the torso seam and Set the outer upper-sleeve edge to `LeftArm`, and proves corrected playback, pointer actionability, and viewport containment; its generated evidence is not committed.
 - 10 Rust tests; the native boundary suite covers selected-path authority, same-handle byte limits, non-regular path rejection, staged export replacement, temp cleanup, exact recovery allowlisting, rotating project generations, and concurrent write serialization.
-- 31 context groups, including one archived compatibility test route, one archived old-editor reference route, a narrow recorded-browser-journey route, a narrow project-integrity route, and a narrow main-synchronization safety route. The default orientation remains intentionally narrow at 41.0 KiB; focused generation has a 256 KiB ceiling for the largest active routes.
+- 31 context groups, including one archived compatibility test route, one archived old-editor reference route, a narrow recorded-browser-journey route, a narrow project-integrity route, and a narrow main-synchronization safety route. The default orientation remains intentionally narrow at 43.0 KiB; focused generation has a 256 KiB ceiling for the largest active routes.
 
-The latest command results and any environment-only warnings are recorded in `review.md`. The full 75-case browser suite, 1-case recorded hand-wave journey, and 2-case strict visual suite use the approved local browser process. An unprivileged managed-sandbox `spawn EPERM` remains a harness permission boundary rather than an app assertion result.
+The latest command results and any environment-only warnings are recorded in `review.md`. The full 85-case browser suite, 1-case recorded hand-wave journey, and 3-case strict visual suite use the approved local browser process. An unprivileged managed-sandbox `spawn EPERM` remains a harness permission boundary rather than an app assertion result.
 
 ## Current Limits
 

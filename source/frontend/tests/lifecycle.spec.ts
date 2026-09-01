@@ -7,6 +7,7 @@ import { startSmfCodecProbe, stopSmfCodecProbe } from './helpers/smf-codec-probe
 import { parseSelectedBone, fileToBase64 } from './helpers/format-assertions';
 import { paintOnMeshInViewport } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
+import { clickSecondaryCommand, showModernPanel } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -162,6 +163,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await page.getByTestId('mode-tab-export').click();
+      await expect(page.getByTestId('save-smf-report-btn')).toBeVisible();
 
       const downloadNames: string[] = [];
       page.on('download', (download) => downloadNames.push(download.suggestedFilename()));
@@ -357,6 +359,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await page.getByTestId('editor-undo-btn').click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Undid Nudge FixtureTip/i);
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
+      await showModernPanel(page, 'scene');
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
 
       await page.getByTestId('editor-undo-btn').click({ force: true });
@@ -366,6 +369,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await page.getByTestId('editor-redo-btn').click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Redid outliner visibility toggle/i);
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
+      await showModernPanel(page, 'properties');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
 
       await page.getByTestId('editor-redo-btn').click({ force: true });
@@ -397,7 +401,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
 
       await startSmfCodecProbe(page);
       const downloadPromise = page.waitForEvent('download');
-      await page.getByTestId('export-smf-btn').click();
+      await clickSecondaryCommand(page, 'export-smf-btn');
       const download = await downloadPromise;
       expect(download.suggestedFilename()).toBe('exported_model.smf');
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, {

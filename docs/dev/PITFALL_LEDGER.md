@@ -1,6 +1,18 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-08-29 (added explicit failure-value handling for precision Skin targets alongside scale-independent framing, dense-model overdraw, selected FBX sidecar, precision journey targeting, native same-handle growth, strict SMF-envelope, loader, worker, conversion, history, timing, and process-lifecycle lessons).
+Last reviewed: 2026-08-31 (added Modern shell overflow and inherited responsive-style prevention alongside explicit failure-value handling, scale-independent framing, loader, worker, conversion, timing, and process-lifecycle lessons).
+
+### Q: What pitfall are we preventing?
+
+**What:** A shell can pass document-level overflow checks while a toolbar or overlay silently clips controls, and shared legacy media rules can make a new Modern overlay expand or collide at narrow widths.
+
+**Why it happened:** The original layout intentionally used horizontally scrollable shelves and a full-width wrapped toolbar below 800 px. Reusing the same class names for Modern preserved behavior but also inherited `width: 100%`, wrapping, and cross-axis alignment that were wrong for an absolute viewport overlay and full-width command bar.
+
+**Where:** `source/frontend/src/index.css`, `components/Toolbar.tsx`, `components/ViewportControls.tsx`, `tests/modern-shell.spec.ts`, and `tests/visual.spec.ts`.
+
+**How to catch it:** Assert `scrollWidth <= clientWidth` for the document, toolbar, app bar, workspace switcher, and main area at every declared width. Visually inspect the narrow loaded state for status/drawer/control collisions, and keep Original and Modern selectors scoped by `data-shell-variant`.
+
+**Current solution:** Modern overrides inherited width, wrapping, overflow, and alignment at its shell boundary; compact drawers start closed; status reserves both drawer triggers; six responsive lanes plus focus, target-size, and DPI checks own the regression. Effectiveness: `97/100`, durable.
 
 ### Q: What pitfall are we preventing?
 

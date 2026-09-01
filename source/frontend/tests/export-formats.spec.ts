@@ -7,6 +7,7 @@ import { openViewportDisplayMenu, setViewportLayout, dragRigMoveInOrthoPane, dra
 import { setRangeValue } from './helpers/timeline-interactions';
 import { decodeProjectDocument } from '../src/utils/projectCodec';
 import { createExternalFbxFixtureInputs } from './helpers/external-fbx-fixture';
+import { clickSecondaryCommand, revealSecondaryCommands, showAnimateTimeline, showModernPanel } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -28,6 +29,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       // Visual after load (normalization framing for export flow test)
       const canvas = page.getByTestId('three-canvas');
       await pausePlaybackIfRunning(page);
+      await showAnimateTimeline(page);
       await setRangeValue(page, 'scrub-slider', 0);
       await expectRenderedScreenshot(canvas);
 
@@ -54,7 +56,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await exportBtn.click();
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.(smf|glb)/i, { timeout: 5000 });
       await expect(page.getByTestId('status-text')).toContainText(/pose edit/i);
-      await page.getByTestId('export-glb-btn').click();
+      await clickSecondaryCommand(page, 'export-glb-btn');
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.glb/i, { timeout: 5000 });
       await expect(page.getByTestId('status-text')).toContainText(/verified \d+ bones, \d+ clips/i);
       await setRangeValue(page, 'scrub-slider', 0);
@@ -90,7 +92,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
 
     const mountedRootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
     const chooserPromise = page.waitForEvent('filechooser');
-    await page.getByTestId('open-project-btn').click();
+    await clickSecondaryCommand(page, 'open-project-btn');
     const chooser = await chooserPromise;
     await chooser.setFiles({ name: 'restored.rsproj', mimeType: 'application/json', buffer: projectBytes });
     await expect(page.getByTestId('status-text')).toContainText(/Loaded: .*\.glb/i, { timeout: 15000 });
@@ -98,7 +100,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
     expect(await page.getByTestId('three-canvas').getAttribute('data-model-root-id')).not.toBe(mountedRootId);
 
     const corruptChooserPromise = page.waitForEvent('filechooser');
-    await page.getByTestId('open-project-btn').click();
+    await clickSecondaryCommand(page, 'open-project-btn');
     const corruptChooser = await corruptChooserPromise;
     await corruptChooser.setFiles({ name: 'corrupt.rsproj', mimeType: 'application/json', buffer: Buffer.from('{bad project') });
     await expect(page.getByTestId('status-text')).toContainText(/Project open error: PROJECT_INVALID/i, { timeout: 15000 });
@@ -118,6 +120,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.locator('text=/Drop .* here/')).toContainText(/fbx/i);
 
       // Dedicated FBX export is available independently of source-aware Export.
+      await revealSecondaryCommands(page);
       await expect(page.getByTestId('export-fbx-btn')).toBeVisible();
 
       // Full FBX parsing runs when the self-authored local fixture is present.
@@ -153,6 +156,8 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
         { timeout: 15000 },
       );
       await expect(page.getByTestId('status-text')).toContainText(/bones: 2|clips: 1/i);
+      await showAnimateTimeline(page);
+      await showModernPanel(page, 'properties');
       await expect(page.getByTestId('inspector')).toContainText(/IndependentRoot|IndependentTip/i);
       await expect(page.getByTestId('timeline')).toBeVisible();
       await expectRenderedScreenshot(page.getByTestId('three-canvas'));
@@ -164,7 +169,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await page.getByTestId('mode-tab-view').click({ force: true });
 
       const downloadPromise = page.waitForEvent('download');
-      await page.getByTestId('export-fbx-btn').click();
+      await clickSecondaryCommand(page, 'export-fbx-btn');
       const download = await downloadPromise;
       const downloadPath = await download.path();
       expect(downloadPath).not.toBeNull();
@@ -183,6 +188,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
         { timeout: 15000 },
       );
       await expect(page.getByTestId('status-text')).toContainText(/bones: 2|clips: 1/i);
+      await showAnimateTimeline(page);
       await expect(page.getByTestId('timeline')).toBeVisible();
       expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
     });
@@ -198,7 +204,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       );
 
       const downloadPromise = page.waitForEvent('download');
-      await page.getByTestId('export-fbx-btn').click();
+      await clickSecondaryCommand(page, 'export-fbx-btn');
       const download = await downloadPromise;
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.fbx \(binary FBX 7500\)/i, { timeout: 5000 });
       expect(download.suggestedFilename()).toBe('exported_model.fbx');
@@ -215,6 +221,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       });
       await expect(page.getByTestId('status-text')).toContainText(/Loaded FBX: generated-skinned-roundtrip\.fbx/i, { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/bones: 2|clips: 1/i);
+      await showAnimateTimeline(page);
       await expect(page.getByTestId('timeline')).toBeVisible();
       expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
     });
@@ -228,6 +235,8 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture\.glb|bones: 2|clips: 1/i);
 
+      await showAnimateTimeline(page);
+      await showModernPanel(page, 'properties');
       const inspector = page.getByTestId('inspector');
       await expect(inspector).toContainText(/Bones \(2\)/i);
       await expect(inspector).toContainText(/FixtureRoot|FixtureTip/i);
@@ -485,7 +494,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('duplicate-texture-groups-empty')).toBeVisible();
 
       const downloadPromise = page.waitForEvent('download');
-      await page.getByTestId('export-glb-btn').click();
+      await clickSecondaryCommand(page, 'export-glb-btn');
       const download = await downloadPromise;
       expect(download.suggestedFilename()).toBe('exported_model.glb');
       const downloadPath = await download.path();
@@ -515,9 +524,11 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Loaded|model|OBJ/i);  // OBJ loader sets "OBJ_Root", status typically shows Loaded or verts
 
       // No skeleton/bones for pure static OBJ
+      await showModernPanel(page, 'properties');
       const inspector = page.getByTestId('inspector');
       await expect(inspector).not.toContainText(/Bones \(\d+\)/i);
 
+      await showModernPanel(page, 'scene');
       const outliner = page.getByTestId('outliner');
       await expect(outliner).not.toContainText(/Bones/i);  // or + clips if any
 
@@ -609,7 +620,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(name).toHaveText('Renamed_OBJ_Part');
 
       const downloadPromise = page.waitForEvent('download');
-      await page.getByTestId('export-glb-btn').click();
+      await clickSecondaryCommand(page, 'export-glb-btn');
       const download = await downloadPromise;
       const downloadPath = await download.path();
       expect(downloadPath).not.toBeNull();
@@ -649,7 +660,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(names).toHaveCount(duplicatedCount);
 
       const downloadPromise = page.waitForEvent('download');
-      await page.getByTestId('export-glb-btn').click();
+      await clickSecondaryCommand(page, 'export-glb-btn');
       const download = await downloadPromise;
       const downloadPath = await download.path();
       expect(downloadPath).not.toBeNull();
@@ -712,7 +723,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await page.getByTestId('editor-redo-btn').click();
 
       const downloadPromise = page.waitForEvent('download');
-      await page.getByTestId('export-glb-btn').click();
+      await clickSecondaryCommand(page, 'export-glb-btn');
       const download = await downloadPromise;
       const downloadPath = await download.path();
       expect(downloadPath).not.toBeNull();

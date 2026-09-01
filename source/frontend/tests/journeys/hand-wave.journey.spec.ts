@@ -10,6 +10,7 @@ import {
   setupBrowserDiagnostics,
 } from '../helpers/smoke-helpers';
 import { setRangeValue } from '../helpers/timeline-interactions';
+import { showModernPanel } from '../helpers/modern-shell';
 import {
   clickPickableBoneInViewport,
   hoverPickableBoneInViewport,
@@ -222,9 +223,6 @@ async function findFixturePaintTarget(
     return points;
   };
 
-  // Scan the model framing across both camera angles. The fixture vertex IDs prove
-  // the target; the second pass minimizes distance to its known posed world position
-  // so the brush paints the vertex rather than merely intersecting its large triangle.
   const candidates = await probeBatch(makeGrid(10, 90, 10, 72, 1.5));
 
   if (candidates.length === 0) {
@@ -319,7 +317,7 @@ async function orbitViewport(page: Page, selectedBoneName: string, radians: numb
   const box = await canvas.boundingBox();
   if (!box) throw new Error('The viewport canvas has no screen bounds.');
   const y = box.y + box.height * 0.45;
-  const dragPixels = Math.min(box.width * 0.4, Math.abs(radians) / 0.01);
+  const dragPixels = Math.min(box.width * 0.4, Math.abs(radians) / 0.0035);
   const direction = Math.sign(radians) || 1;
   const startX = box.x + box.width * 0.5 - (dragPixels * direction) / 2;
   const endX = box.x + box.width * 0.5 + (dragPixels * direction) / 2;
@@ -343,11 +341,14 @@ async function resetViewportCamera(page: Page, selectedBoneName: string): Promis
   await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
   // R controls the selected bone's rotate gizmo while a bone owns transform input.
   // Clear that owner first so the same shortcut reaches the camera reset path.
+  await showModernPanel(page, 'scene');
   await page.getByTestId('outliner-scene-root').click();
   await page.keyboard.press('r');
   await page.waitForTimeout(120);
   await page.getByTestId('mode-tab-skin').click();
   await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
+  await showModernPanel(page, 'properties');
+  await expandBonePath(page);
   await selectBone(page, selectedBoneName);
 }
 
@@ -430,6 +431,7 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15_000 });
     await expect(page.getByTestId('status-text')).toContainText(/bones:\s*24|clips:\s*12/i);
     await pausePlaybackIfRunning(page);
+    await showModernPanel(page, 'properties');
     await expect(page.getByTestId('smf-indexed-bone-guidance')).toBeVisible();
     await expectNoDocumentOverflow(page);
     await captureStep(page, '02-character-loaded.png');
@@ -448,6 +450,7 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await createButton.click();
     await expect(page.getByTestId('status-text')).toContainText(/Created animation clip Hand Wave from the rest pose/i);
     await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Hand Wave');
+    await pausePlaybackIfRunning(page);
     await captureStep(page, '03-new-animation.png');
 
     const restPose = await page.getByTestId('viewport-container').locator('canvas').first().screenshot();

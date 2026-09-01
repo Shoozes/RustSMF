@@ -4,6 +4,7 @@ import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { parseSelectedBone } from './helpers/format-assertions';
 import { paintInViewport, paintOnMeshInViewport, cancelPaintOnMeshInViewport, setViewportLayout } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
+import { clickSecondaryCommand, showModernPanel } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -34,7 +35,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
 
       const reason = page.getByTestId('skin-export-block');
       await expect(reason).toHaveCount(0);
-      await page.getByTestId('export-smf-btn').click();
+      await clickSecondaryCommand(page, 'export-smf-btn');
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
     });
 
@@ -222,7 +223,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Redid skin edit/i);
       await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
 
-      await page.getByTestId('export-smf-btn').click();
+      await clickSecondaryCommand(page, 'export-smf-btn');
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
       await expect(page.getByTestId('skin-export-block')).toHaveCount(0);
     });
@@ -266,6 +267,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       expect(await paintCanvas.getAttribute('data-skin-brush-hover')).toBe(null);
       expect(await paintCanvas.getAttribute('data-skin-paint-active')).toBe(null);
       expect(await paintCanvas.getAttribute('data-skin-paint-mode')).toBe(null);
+      await showModernPanel(page, 'properties');
       await expect(inspector).toContainText(/Selected\s*FixtureTip/i);
     });
 

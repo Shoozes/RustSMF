@@ -27,6 +27,8 @@ test('theme registry exposes guarded modern and original themes', () => {
   assert.equal(isAppThemeId('original'), true);
   assert.equal(isAppThemeId('classic'), false);
   assert.equal(getAppTheme('original').preferredViewportLayout, 'quad');
+  assert.equal(getAppTheme('modern').shellVariant, 'modern');
+  assert.equal(getAppTheme('original').shellVariant, 'original');
   assert.equal(getAppTheme('original').viewportCameraZoom, 1.2);
   assert.equal(getAppTheme('original').viewportBackground, 0x1b1b1b);
   assert.deepEqual(getAppTheme('original').viewportGrid, {
@@ -39,6 +41,8 @@ test('theme registry exposes guarded modern and original themes', () => {
   assert.equal(getAppTheme('original').chromeLabel, 'Settings');
   assert.equal(getAppTheme('original').workspaceLabels.rig, 'Rigging [2]');
   assert.equal(getAppTheme('original').panelTitles.outliner, 'Submodels');
+  assert.equal(getAppTheme('modern').panelTitles.outliner, 'Scene');
+  assert.equal(getAppTheme('modern').panelTitles.inspector, 'Properties');
 });
 
 test('every registered theme owns complete workspace and panel copy', () => {
@@ -47,6 +51,7 @@ test('every registered theme owns complete workspace and panel copy', () => {
     assert.deepEqual(Object.keys(theme.workspaceLabels), modeKeys);
     assert.ok(Object.values(theme.workspaceLabels).every((label) => label.trim().length > 0));
     assert.ok(theme.chromeLabel.trim().length > 0);
+    assert.ok(['modern', 'original'].includes(theme.shellVariant));
     assert.ok(theme.viewportCameraZoom > 0);
     assert.ok(['floor', 'camera-planes'].includes(theme.viewportGrid.mode));
     assert.ok(theme.viewportGrid.size > 0);

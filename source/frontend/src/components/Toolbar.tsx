@@ -1,5 +1,14 @@
 import React from 'react';
-import { isEditorMode, type EditorMode, type ViewportLayout } from '../store';
+import {
+  ArrowUUpLeft,
+  ArrowUUpRight,
+  DotsThreeVertical,
+  Export as ExportIcon,
+  FloppyDisk,
+  FolderOpen,
+  Palette,
+} from '@phosphor-icons/react';
+import { isEditorMode, type EditorMode } from '../store';
 import {
   APP_THEMES,
   isAppThemeId,
@@ -7,9 +16,9 @@ import {
   type AppThemeId,
 } from '../theme';
 import { SUPPORTED_MODEL_RESOURCE_ACCEPT } from '../utils/modelFormat';
-import type { TextureFilterPreview } from '../utils/materialPreview';
+import ViewportControls, { type ViewportControlsProps } from './ViewportControls';
 
-interface ToolbarProps {
+interface ToolbarProps extends Omit<ViewportControlsProps, 'variant'> {
   onOpen: () => void;
   onOpenProject: () => void;
   onSaveProject: () => void;
@@ -24,421 +33,232 @@ interface ToolbarProps {
   onRedo: () => void;
   undoAvailable: boolean;
   redoAvailable: boolean;
-  isLoading: boolean;
-  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  hasModel: boolean;
+  onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   editorMode: EditorMode;
   setEditorMode: (mode: EditorMode) => void;
-  viewportLayout: ViewportLayout;
-  setViewportLayout: (layout: ViewportLayout) => void;
-  wireframeEnabled: boolean;
-  setWireframeEnabled: (enabled: boolean) => void;
-  gridEnabled: boolean;
-  setGridEnabled: (enabled: boolean) => void;
-  axesEnabled: boolean;
-  setAxesEnabled: (enabled: boolean) => void;
-  textureEnabled: boolean;
-  setTextureEnabled: (enabled: boolean) => void;
-  textureRepeatPreviewEnabled: boolean;
-  setTextureRepeatPreviewEnabled: (enabled: boolean) => void;
-  textureFilterPreview: TextureFilterPreview;
-  setTextureFilterPreview: (filter: TextureFilterPreview) => void;
-  boneIndexLabelsEnabled: boolean;
-  setBoneIndexLabelsEnabled: (enabled: boolean) => void;
-  rigOpacity: number;
-  setRigOpacity: (opacity: number) => void;
-  rigThicknessScale: number;
-  setRigThicknessScale: (scale: number) => void;
-  skinPointOverlayEnabled: boolean;
-  setSkinPointOverlayEnabled: (enabled: boolean) => void;
-  shaderEnabled: boolean;
-  setShaderEnabled: (enabled: boolean) => void;
-  perspectiveEnabled: boolean;
-  setPerspectiveEnabled: (enabled: boolean) => void;
-  modelOpacity: number;
-  setModelOpacity: (opacity: number) => void;
   theme: AppThemeDefinition;
   themeId: AppThemeId;
   setThemeId: (themeId: AppThemeId) => void;
 }
 
-const Toolbar: React.FC<ToolbarProps> = ({
-  onOpen,
-  onOpenProject,
-  onSaveProject,
-  onRecoverProject,
-  onExport,
-  onExportGlb,
-  onExportFbx,
-  onExportSmf,
-  smfExportEnabled,
-  onPing,
-  onUndo,
-  onRedo,
-  undoAvailable,
-  redoAvailable,
-  isLoading,
-  onFileChange,
-  hasModel,
-  editorMode,
-  setEditorMode,
-  viewportLayout,
-  setViewportLayout,
-  wireframeEnabled,
-  setWireframeEnabled,
-  gridEnabled,
-  setGridEnabled,
-  axesEnabled,
-  setAxesEnabled,
-  textureEnabled,
-  setTextureEnabled,
-  textureRepeatPreviewEnabled,
-  setTextureRepeatPreviewEnabled,
-  textureFilterPreview,
-  setTextureFilterPreview,
-  boneIndexLabelsEnabled,
-  setBoneIndexLabelsEnabled,
-  rigOpacity,
-  setRigOpacity,
-  rigThicknessScale,
-  setRigThicknessScale,
-  skinPointOverlayEnabled,
-  setSkinPointOverlayEnabled,
-  shaderEnabled,
-  setShaderEnabled,
-  perspectiveEnabled,
-  setPerspectiveEnabled,
-  modelOpacity,
-  setModelOpacity,
-  theme,
-  themeId,
-  setThemeId,
-}) => {
-  const nextTextureFilter: Record<TextureFilterPreview, TextureFilterPreview> = {
-    source: 'nearest',
-    nearest: 'linear',
-    linear: 'source',
-  };
-  const modes: EditorMode[] = ['view', 'rig', 'skin', 'animate', 'export'];
-  const modeLabels = theme.workspaceLabels;
-  const displayControls = [
-    {
-      testId: 'viewport-wireframe-toggle',
-      label: 'Wire',
-      title: 'Toggle viewport wireframe',
-      active: wireframeEnabled,
-      onClick: () => setWireframeEnabled(!wireframeEnabled),
-    },
-    {
-      testId: 'viewport-grid-toggle',
-      label: 'Grid',
-      title: 'Toggle viewport grid',
-      active: gridEnabled,
-      onClick: () => setGridEnabled(!gridEnabled),
-    },
-    {
-      testId: 'viewport-axes-toggle',
-      label: 'Axes',
-      title: 'Toggle viewport axes helper',
-      active: axesEnabled,
-      onClick: () => setAxesEnabled(!axesEnabled),
-    },
-    {
-      testId: 'viewport-texture-toggle',
-      label: 'Tex',
-      title: 'Toggle texture maps in the viewport only',
-      active: textureEnabled,
-      onClick: () => setTextureEnabled(!textureEnabled),
-    },
-    {
-      testId: 'viewport-texture-repeat-toggle',
-      label: textureRepeatPreviewEnabled ? 'Wrap repeat' : 'Wrap source',
-      title: 'Toggle repeat wrapping preview; export always uses the source sampler',
-      active: textureRepeatPreviewEnabled,
-      onClick: () => setTextureRepeatPreviewEnabled(!textureRepeatPreviewEnabled),
-    },
-    {
-      testId: 'viewport-texture-filter-toggle',
-      label: `Filter ${textureFilterPreview}`,
-      title: 'Cycle source, nearest, and linear filtering previews; export always uses the source sampler',
-      active: textureFilterPreview !== 'source',
-      onClick: () => setTextureFilterPreview(nextTextureFilter[textureFilterPreview]),
-    },
-    {
-      testId: 'viewport-shader-toggle',
-      label: 'Legacy',
-      title: 'Toggle legacy SMF-lit viewport material',
-      active: shaderEnabled,
-      onClick: () => setShaderEnabled(!shaderEnabled),
-    },
-    {
-      testId: 'viewport-bone-index-toggle',
-      label: 'Index',
-      title: 'Toggle bone index overlay text',
-      active: boneIndexLabelsEnabled,
-      onClick: () => setBoneIndexLabelsEnabled(!boneIndexLabelsEnabled),
-    },
-    {
-      testId: 'viewport-rig-opacity-toggle',
-      label: 'Rig fade',
-      title: 'Toggle rig opacity',
-      active: rigOpacity < 1,
-      onClick: () => setRigOpacity(rigOpacity < 1 ? 1 : 0.35),
-    },
-    {
-      testId: 'viewport-model-opacity-toggle',
-      label: 'Mesh fade',
-      title: 'Toggle model mesh opacity',
-      active: modelOpacity < 1,
-      onClick: () => setModelOpacity(modelOpacity < 1 ? 1 : 0.35),
-    },
-    {
-      testId: 'viewport-rig-thickness-toggle',
-      label: 'Thin rig',
-      title: 'Toggle rig thickness',
-      active: rigThicknessScale !== 1,
-      onClick: () => setRigThicknessScale(rigThicknessScale === 1 ? 0.45 : 1),
-    },
-    {
-      testId: 'viewport-skin-points-toggle',
-      label: 'Skin pts',
-      title: 'Toggle skinned vertex point overlay',
-      active: skinPointOverlayEnabled,
-      onClick: () => setSkinPointOverlayEnabled(!skinPointOverlayEnabled),
-    },
-  ];
-  const viewportControlsDisabled = isLoading || !hasModel;
+const MODES: EditorMode[] = ['view', 'rig', 'skin', 'animate', 'export'];
 
+interface WorkspaceTabsProps {
+  editorMode: EditorMode;
+  isLoading: boolean;
+  labels: AppThemeDefinition['workspaceLabels'];
+  setEditorMode: (mode: EditorMode) => void;
+}
+
+const WorkspaceTabs: React.FC<WorkspaceTabsProps> = ({ editorMode, isLoading, labels, setEditorMode }) => (
+  <div className="toolbar-workspace">
+    <div role="tablist" aria-label="Editor workspace mode" className="mode-tablist">
+      {MODES.map((mode) => {
+        const selected = editorMode === mode;
+        return (
+          <button
+            key={mode}
+            role="tab"
+            aria-selected={selected}
+            data-testid={`mode-tab-${mode}`}
+            className={`mode-tab ${selected ? 'mode-tab-active' : ''}`}
+            onClick={() => setEditorMode(mode)}
+            disabled={isLoading}
+            type="button"
+          >
+            {labels[mode]}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
+
+const HiddenWorkspaceSelect: React.FC<WorkspaceTabsProps> = ({ editorMode, isLoading, labels, setEditorMode }) => (
+  <select
+    data-testid="editor-mode-select"
+    value={editorMode}
+    onChange={(event) => {
+      if (isEditorMode(event.target.value)) setEditorMode(event.target.value);
+    }}
+    disabled={isLoading}
+    className="sr-only"
+    title="Editor mode (foundation for quad/mode-specific tools)"
+  >
+    {MODES.map((mode) => <option key={mode} value={mode}>{labels[mode]}</option>)}
+  </select>
+);
+
+interface ThemeSwitcherProps {
+  theme: AppThemeDefinition;
+  themeId: AppThemeId;
+  setThemeId: (themeId: AppThemeId) => void;
+}
+
+const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ theme, themeId, setThemeId }) => (
+  <label className="theme-switcher">
+    <span className="theme-switcher-label">Theme</span>
+    <select
+      data-testid="theme-select"
+      className="theme-select"
+      value={themeId}
+      onChange={(event) => {
+        if (isAppThemeId(event.target.value)) setThemeId(event.target.value);
+      }}
+      aria-describedby="appearance-theme-description"
+      title={theme.description}
+    >
+      {APP_THEMES.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+    </select>
+    <span id="appearance-theme-description" data-testid="theme-description" className="sr-only">
+      {theme.description}
+    </span>
+  </label>
+);
+
+const SecondaryCommands: React.FC<Pick<ToolbarProps,
+  'onOpenProject' | 'onRecoverProject' | 'onExportGlb' | 'onExportFbx' | 'onExportSmf' | 'smfExportEnabled' | 'onPing' | 'isLoading'
+>> = ({ onOpenProject, onRecoverProject, onExportGlb, onExportFbx, onExportSmf, smfExportEnabled, onPing, isLoading }) => (
+  <div className="modern-command-menu-grid">
+    <button className="toolbar-action" data-testid="open-project-btn" onClick={onOpenProject} disabled={isLoading}>Open Project</button>
+    <button className="toolbar-action" data-testid="recover-project-btn" onClick={onRecoverProject} disabled={isLoading}>Recover</button>
+    <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading}>Export GLB</button>
+    <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={isLoading}>Export FBX</button>
+    <button
+      className="toolbar-action"
+      data-testid="export-smf-btn"
+      onClick={onExportSmf}
+      disabled={isLoading || !smfExportEnabled}
+      title={smfExportEnabled ? 'Export as SMF' : 'SMF export is blocked by the current compatibility diagnostics'}
+    >
+      Export SMF
+    </button>
+    <button className="toolbar-action toolbar-action-muted" data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>Backend status</button>
+  </div>
+);
+
+const ModernToolbar: React.FC<ToolbarProps> = (props) => {
+  const {
+    onOpen,
+    onSaveProject,
+    onExport,
+    onUndo,
+    onRedo,
+    undoAvailable,
+    redoAvailable,
+    isLoading,
+    hasModel,
+    editorMode,
+    setEditorMode,
+    theme,
+    themeId,
+    setThemeId,
+  } = props;
   return (
-    <div className="toolbar">
-      <div className="toolbar-primary">
+    <header className="toolbar modern-toolbar">
+      <div className="modern-appbar">
         <div className="toolbar-brand">{theme.chromeLabel}</div>
-        <div className="toolbar-action-group toolbar-file-actions" aria-label="File actions">
-          <button className="toolbar-action" data-testid="open-model-btn" onClick={onOpen} disabled={isLoading}>
-            Open Asset
+        <div className="toolbar-action-group modern-primary-actions" aria-label="Primary file actions">
+          <button className="toolbar-action" data-testid="open-model-btn" onClick={onOpen} disabled={isLoading} aria-label="Open asset">
+            <FolderOpen size={18} aria-hidden="true" /><span>Open</span>
           </button>
-          <button className="toolbar-action toolbar-action-muted" data-testid="open-project-btn" onClick={onOpenProject} disabled={isLoading}>
-            Open Project
-          </button>
-          <button className="toolbar-action toolbar-action-muted" data-testid="save-project-btn" onClick={onSaveProject} disabled={isLoading || !hasModel}>
-            Save Project
-          </button>
-          <button className="toolbar-action toolbar-action-muted" data-testid="recover-project-btn" onClick={onRecoverProject} disabled={isLoading}>
-            Recover
-          </button>
-          <button className="toolbar-action" data-testid="export-btn" onClick={onExport} disabled={isLoading} title="Export the current project as an asset">
-            Export Asset
-          </button>
-          <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading}>
-            GLB
-          </button>
-          <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={isLoading}>
-            FBX
-          </button>
-          <button
-            className="toolbar-action"
-            data-testid="export-smf-btn"
-            onClick={onExportSmf}
-            disabled={isLoading || !smfExportEnabled}
-            title={smfExportEnabled ? 'Export as SMF' : 'SMF export is blocked by the current compatibility diagnostics'}
-          >
-            SMF
-          </button>
-          <button className="toolbar-action toolbar-action-muted" data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>
-            Ping
+          <button className="toolbar-action toolbar-action-muted" data-testid="save-project-btn" onClick={onSaveProject} disabled={isLoading || !hasModel} aria-label="Save project">
+            <FloppyDisk size={18} aria-hidden="true" /><span>Save</span>
           </button>
         </div>
-        <div className="toolbar-action-group toolbar-history-actions" aria-label="Editor history">
-          <button
-            className="toolbar-action toolbar-action-muted"
-            data-testid="editor-undo-btn"
-            onClick={onUndo}
-            disabled={isLoading || !undoAvailable}
-            title="Undo editor transaction"
-            type="button"
-          >
-            Undo
+        <div className="toolbar-action-group modern-history-actions" aria-label="Editor history">
+          <button className="toolbar-action toolbar-action-muted" data-testid="editor-undo-btn" onClick={onUndo} disabled={isLoading || !undoAvailable} title="Undo editor transaction" aria-label="Undo" type="button">
+            <ArrowUUpLeft size={18} aria-hidden="true" /><span>Undo</span>
           </button>
-          <button
-            className="toolbar-action toolbar-action-muted"
-            data-testid="editor-redo-btn"
-            onClick={onRedo}
-            disabled={isLoading || !redoAvailable}
-            title="Redo editor transaction"
-            type="button"
-          >
-            Redo
+          <button className="toolbar-action toolbar-action-muted" data-testid="editor-redo-btn" onClick={onRedo} disabled={isLoading || !redoAvailable} title="Redo editor transaction" aria-label="Redo" type="button">
+            <ArrowUUpRight size={18} aria-hidden="true" /><span>Redo</span>
           </button>
         </div>
-      </div>
-
-      <div className="toolbar-workspace">
-        <div
-          role="tablist"
-          aria-label="Editor workspace mode"
-          className="mode-tablist"
-        >
-          {modes.map((mode) => {
-            const label = modeLabels[mode];
-            const selected = editorMode === mode;
-            return (
-              <button
-                key={mode}
-                role="tab"
-                aria-selected={selected}
-                data-testid={`mode-tab-${mode}`}
-                className={`mode-tab ${selected ? 'mode-tab-active' : ''}`}
-                onClick={() => setEditorMode(mode)}
-                disabled={isLoading}
-                type="button"
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Keep select for existing selectors and accessibility fallback paths. */}
-      <select
-        data-testid="editor-mode-select"
-        value={editorMode}
-        onChange={(e) => {
-          if (isEditorMode(e.target.value)) {
-            setEditorMode(e.target.value);
-          }
-        }}
-        disabled={isLoading}
-        className="sr-only"
-        title="Editor mode (foundation for quad/mode-specific tools)"
-      >
-        {modes.map((mode) => (
-          <option key={mode} value={mode}>
-            {modeLabels[mode]}
-          </option>
-        ))}
-      </select>
-
-      <div className="toolbar-viewport">
-        <div
-          role="group"
-          aria-label="Viewport layout"
-          className="control-group layout-switch"
-        >
-          <span className="control-label">Layout</span>
-          <button
-            type="button"
-            role="button"
-            data-testid="viewport-layout-single"
-            className={`layout-btn ${viewportLayout === 'single' ? 'layout-btn-active' : ''}`}
-            onClick={() => setViewportLayout('single')}
-            disabled={viewportControlsDisabled}
-            aria-pressed={viewportLayout === 'single'}
-          >
-            Single
-          </button>
-          <button
-            type="button"
-            role="button"
-            data-testid="viewport-layout-quad"
-            className={`layout-btn ${viewportLayout === 'quad' ? 'layout-btn-active' : ''}`}
-            onClick={() => setViewportLayout('quad')}
-            disabled={viewportControlsDisabled}
-            aria-pressed={viewportLayout === 'quad'}
-          >
-            Quad
-          </button>
-        </div>
-        <div
-          role="group"
-          aria-label="Camera mode"
-          className="control-group camera-switch"
-        >
-          <span className="control-label">Camera</span>
-          <button
-            type="button"
-            data-testid="viewport-perspective-toggle"
-            className={`layout-btn camera-btn ${perspectiveEnabled ? 'layout-btn-active' : ''}`}
-            onClick={() => setPerspectiveEnabled(!perspectiveEnabled)}
-            disabled={viewportControlsDisabled}
-            aria-pressed={perspectiveEnabled}
-            title="Switch single-view camera between 3D perspective and orthographic front view"
-          >
-            {perspectiveEnabled ? '3D' : 'Ortho'}
-          </button>
-        </div>
-        <details className="toolbar-menu viewport-display-menu">
-          <summary
-            className="toolbar-menu-summary"
-            data-testid="viewport-display-menu-button"
-            aria-label="Viewport display controls"
-          >
-            Display
+        <button className="toolbar-action modern-export-action" data-testid="export-btn" onClick={onExport} disabled={isLoading} title="Export the current project as an asset" aria-label="Export asset">
+          <ExportIcon size={18} aria-hidden="true" /><span>Export</span>
+        </button>
+        <details className="toolbar-menu modern-command-menu">
+          <summary className="toolbar-menu-summary" data-testid="modern-more-menu-button" aria-label="More commands">
+            <DotsThreeVertical size={20} aria-hidden="true" />
           </summary>
-          <div
-            className="toolbar-menu-panel"
-            data-testid="viewport-display-menu-panel"
-            role="group"
-            aria-label="Viewport display toggles"
-          >
-            {displayControls.map((control) => (
-              <button
-                key={control.testId}
-                type="button"
-                data-testid={control.testId}
-                className={`layout-btn display-toggle ${control.active ? 'layout-btn-active' : ''}`}
-                onClick={control.onClick}
-                disabled={viewportControlsDisabled}
-                aria-pressed={control.active}
-                title={control.title}
-              >
-                {control.label}
-              </button>
-            ))}
+          <div className="toolbar-menu-panel modern-command-menu-panel" data-testid="modern-more-menu-panel">
+            <div className="modern-menu-heading">Project and formats</div>
+            <SecondaryCommands {...props} />
+            <div className="modern-menu-heading"><Palette size={16} aria-hidden="true" />Appearance</div>
+            <ThemeSwitcher theme={theme} themeId={themeId} setThemeId={setThemeId} />
           </div>
         </details>
       </div>
+      <WorkspaceTabs editorMode={editorMode} isLoading={isLoading} labels={theme.workspaceLabels} setEditorMode={setEditorMode} />
+      <HiddenWorkspaceSelect editorMode={editorMode} isLoading={isLoading} labels={theme.workspaceLabels} setEditorMode={setEditorMode} />
+    </header>
+  );
+};
 
-      <label className="theme-switcher">
-        <span className="theme-switcher-label">Theme</span>
-        <select
-          data-testid="theme-select"
-          className="theme-select"
-          value={themeId}
-          onChange={(event) => {
-            if (isAppThemeId(event.target.value)) {
-              setThemeId(event.target.value);
-            }
-          }}
-          aria-describedby="appearance-theme-description"
-          title={theme.description}
-        >
-          {APP_THEMES.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-        <span
-          id="appearance-theme-description"
-          data-testid="theme-description"
-          className="sr-only"
-        >
-          {theme.description}
-        </span>
-      </label>
-
-      {/* Persistent hidden file input for reliable e2e file simulation (Playwright setInputFiles) */}
-      <input
-        type="file"
-        data-testid="model-file-input"
-        style={{ display: 'none' }}
-        accept={SUPPORTED_MODEL_RESOURCE_ACCEPT}
-        multiple
-        onChange={onFileChange}
-      />
+const OriginalToolbar: React.FC<ToolbarProps> = (props) => {
+  const {
+    onOpen,
+    onOpenProject,
+    onSaveProject,
+    onRecoverProject,
+    onExport,
+    onExportGlb,
+    onExportFbx,
+    onExportSmf,
+    smfExportEnabled,
+    onPing,
+    onUndo,
+    onRedo,
+    undoAvailable,
+    redoAvailable,
+    isLoading,
+    hasModel,
+    editorMode,
+    setEditorMode,
+    theme,
+    themeId,
+    setThemeId,
+  } = props;
+  return (
+    <div className="toolbar original-toolbar">
+      <div className="toolbar-primary">
+        <div className="toolbar-brand">{theme.chromeLabel}</div>
+        <div className="toolbar-action-group toolbar-file-actions" aria-label="File actions">
+          <button className="toolbar-action" data-testid="open-model-btn" onClick={onOpen} disabled={isLoading}>Open Asset</button>
+          <button className="toolbar-action toolbar-action-muted" data-testid="open-project-btn" onClick={onOpenProject} disabled={isLoading}>Open Project</button>
+          <button className="toolbar-action toolbar-action-muted" data-testid="save-project-btn" onClick={onSaveProject} disabled={isLoading || !hasModel}>Save Project</button>
+          <button className="toolbar-action toolbar-action-muted" data-testid="recover-project-btn" onClick={onRecoverProject} disabled={isLoading}>Recover</button>
+          <button className="toolbar-action" data-testid="export-btn" onClick={onExport} disabled={isLoading}>Export Asset</button>
+          <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading}>GLB</button>
+          <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={isLoading}>FBX</button>
+          <button className="toolbar-action" data-testid="export-smf-btn" onClick={onExportSmf} disabled={isLoading || !smfExportEnabled}>SMF</button>
+          <button className="toolbar-action toolbar-action-muted" data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>Ping</button>
+        </div>
+        <div className="toolbar-action-group toolbar-history-actions" aria-label="Editor history">
+          <button className="toolbar-action toolbar-action-muted" data-testid="editor-undo-btn" onClick={onUndo} disabled={isLoading || !undoAvailable} type="button">Undo</button>
+          <button className="toolbar-action toolbar-action-muted" data-testid="editor-redo-btn" onClick={onRedo} disabled={isLoading || !redoAvailable} type="button">Redo</button>
+        </div>
+      </div>
+      <WorkspaceTabs editorMode={editorMode} isLoading={isLoading} labels={theme.workspaceLabels} setEditorMode={setEditorMode} />
+      <HiddenWorkspaceSelect editorMode={editorMode} isLoading={isLoading} labels={theme.workspaceLabels} setEditorMode={setEditorMode} />
+      <ViewportControls {...props} variant="toolbar" />
+      <ThemeSwitcher theme={theme} themeId={themeId} setThemeId={setThemeId} />
     </div>
   );
 };
+
+const Toolbar: React.FC<ToolbarProps> = (props) => (
+  <>
+    {props.theme.shellVariant === 'modern' ? <ModernToolbar {...props} /> : <OriginalToolbar {...props} />}
+    <input
+      type="file"
+      data-testid="model-file-input"
+      style={{ display: 'none' }}
+      accept={SUPPORTED_MODEL_RESOURCE_ACCEPT}
+      multiple
+      onChange={props.onFileChange}
+    />
+  </>
+);
 
 export default Toolbar;

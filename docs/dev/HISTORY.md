@@ -2,6 +2,18 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-01 — Calm canvas-first Modern shell
+
+- Implemented the selected focused-studio visual direction as a separate Modern shell while leaving Original SMF's legacy-parity structure intact. Modern now has a two-row command/workspace header, primary Open/Save/Undo/Redo/Export actions, a named More menu for lower-frequency operations, one Scene/Properties supporting panel, and canvas-overlay layout/camera/display controls.
+- Removed persistent empty cockpit surfaces: the unloaded app shows one Open/drop task, compact screens start with drawers closed, and the full Timeline mounts only in Animate. Drawers trap focus, dismiss on Escape, restore their trigger, and remain mutually exclusive.
+- Added display-change DPI refresh capped at 2, a shared `ViewportControls` component, Phosphor icons, six responsive overflow lanes, coarse-pointer target checks, DPR 1/1.25/2 backing-size coverage, and a dedicated Modern command/workspace reachability suite. Existing behavior-heavy browser suites run against Original so legacy contracts remain explicit rather than depending on hidden Modern menus.
+- Preserved the selected reference under `docs/references/modern-ui/` and recorded same-frame wide/narrow visual QA in `design-qa.md` without turning runtime screenshots into source assets.
+
+### Verification
+
+- The complete 85-case browser suite, recorded hand-wave journey, three strict visual baselines, native desktop smoke lane, frontend/Rust verification gate, context-bank validation, and dependency audit passed.
+- The authoritative closing commands are recorded in `docs/dev/review.md`.
+
 ## 2026-08-30 — Native I/O ownership and recovery integrity
 
 - Replaced independent native write tasks with one async serialization owner that keeps blocking filesystem work off the async runtime. Export and project saves now use unique staged files, flush payloads before replacement, clean temporary paths, restore the prior destination on install failure, and avoid reporting a false failed save after a successful install whose obsolete-generation cleanup only warned.

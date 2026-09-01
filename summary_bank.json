@@ -88,25 +88,29 @@
       ]
     },
     "feature__theme_system": {
-      "description": "Persisted theme registry, Modern and Original SMF presentation, workspace labels, and visual behavior.",
-      "max_kb": 160,
+      "description": "Persisted theme registry, canvas-first Modern shell, Original SMF presentation, responsive behavior, and visual evidence.",
+      "max_kb": 192,
       "paths": [
         "source/frontend/src/theme.ts",
         "source/frontend/src/theme.test.ts",
         "source/frontend/src/hooks/useAppTheme.ts",
         "source/frontend/src/App.tsx",
         "source/frontend/src/components/Toolbar.tsx",
+        "source/frontend/src/components/ViewportControls.tsx",
         "source/frontend/src/main.tsx",
         "source/frontend/src/index.css",
         "source/frontend/src/styles/themes/original.css",
         "source/frontend/src/utils/themeViewportGrid.ts",
         "source/frontend/src/utils/themeViewportGrid.test.ts",
         "source/frontend/tests/visual.spec.ts",
+        "source/frontend/tests/modern-shell.spec.ts",
+        "design-qa.md",
         "docs/references/theme-qa/README.md"
       ],
       "notes": [
         "Original preserves the old editor's simplicity and compact hierarchy, including quad view before model load.",
-        "Theme definitions own labels, panel copy, camera scale, and grid behavior; components should not branch on theme IDs.",
+        "Theme definitions own shell variants, labels, panel copy, camera scale, and grid behavior; shared behavior should not branch on theme IDs.",
+        "Modern keeps one supporting panel, closes drawers by default on compact screens, and mounts the full timeline only in Animate.",
         "docs/references/theme-qa/README.md owns the preserved-source comparison and final fidelity evidence paths."
       ]
     },
@@ -159,7 +163,7 @@
     },
     "feature__fbx_support": {
       "description": "FBX import with bounded selected texture sidecars, binary FBX 7500 export, pre-save validation, and round-trip coverage.",
-      "max_kb": 128,
+      "max_kb": 132,
       "paths": [
         "source/frontend/src/loaders/fbx.ts",
         "source/frontend/src/loaders/fbx.test.ts",
@@ -318,7 +322,7 @@
     },
     "feature__model_diagnostics": {
       "description": "Read-only geometry, UV, material, shader-capability, handedness, and viewport pose-overlay diagnostics.",
-      "max_kb": 192,
+      "max_kb": 196,
       "paths": [
         "source/frontend/src/components/ExportPanel.tsx",
         "source/frontend/src/components/ThreeViewport.tsx",

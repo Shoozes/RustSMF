@@ -14,6 +14,7 @@ import {
   updateTauriMock,
 } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
+import { clickSecondaryCommand } from './helpers/modern-shell';
 import { cancelPaintOnMeshInViewport } from './helpers/viewport-interactions';
 
 function readSampleBytes(samplePath: string | null): number[] {
@@ -280,7 +281,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('status-text')).toContainText('newer-after-export-success.glb');
 
     await updateTauriMock(page, { failWrite: true });
-    await page.getByTestId('export-glb-btn').click();
+    await clickSecondaryCommand(page, 'export-glb-btn');
     await waitForWriteStart();
     fixture = await createSkinnedGlbFixtureInput();
     await input.setInputFiles({ ...fixture, name: 'newer-after-export-error.glb' });
@@ -292,7 +293,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('error-banner')).toBeHidden();
 
     await updateTauriMock(page, { failWrite: false });
-    await page.getByTestId('export-glb-btn').click();
+    await clickSecondaryCommand(page, 'export-glb-btn');
     await waitForWriteStart();
     const rootBeforeFailedReplacement = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
     expect(rootBeforeFailedReplacement).toBeTruthy();
@@ -483,7 +484,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     expect(await cancelPaintOnMeshInViewport(page, { requireDirty: true })).toBe(true);
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
 
-    await page.getByTestId('export-smf-btn').click();
+    await clickSecondaryCommand(page, 'export-smf-btn');
     await expect(page.getByTestId('status-text')).toContainText('Export canceled.', { timeout: 5000 });
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
     await expect(page.getByTestId('skin-export-block')).toHaveCount(0);
@@ -501,7 +502,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     expect(snapshot.writes).toHaveLength(0);
 
     await updateTauriMock(page, { cancelSave: false });
-    await page.getByTestId('export-smf-btn').click();
+    await clickSecondaryCommand(page, 'export-smf-btn');
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
     snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.writes).toHaveLength(1);
@@ -541,7 +542,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     const rootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
     expect(rootId).toBeTruthy();
 
-    await page.getByTestId('export-smf-btn').click();
+    await clickSecondaryCommand(page, 'export-smf-btn');
     await expect(page.getByTestId('status-text')).toContainText('Export canceled.', { timeout: 5000 });
     await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
@@ -556,7 +557,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     expect(snapshot.writes).toHaveLength(0);
 
     await updateTauriMock(page, { cancelSave: false });
-    await page.getByTestId('export-smf-btn').click();
+    await clickSecondaryCommand(page, 'export-smf-btn');
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
     snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.writes).toHaveLength(1);

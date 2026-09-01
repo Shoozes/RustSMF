@@ -4,6 +4,7 @@ import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { escapeRegex } from './helpers/format-assertions';
 import { clickPickableBoneInViewport, setViewportLayout } from './helpers/viewport-interactions';
 import { setRangeValue, clickTimelineLaneAt, dragSelectedTimelineMarkerTo } from './helpers/timeline-interactions';
+import { clickSecondaryCommand, showAnimateTimeline } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -378,6 +379,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
 
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/mixamo|Loaded|bones|clips|verts/i);
+      await showAnimateTimeline(page);
 
       // Loading overlay should not be visible after load
       await expect(page.getByTestId('loading-overlay')).toBeHidden();
@@ -410,9 +412,9 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await page.goto('/');
       await page.getByTestId('export-btn').click();
       await expect(page.getByTestId('status-text')).toContainText(/Nothing to export/i);
-      await page.getByTestId('export-glb-btn').click();
+      await clickSecondaryCommand(page, 'export-glb-btn');
       await expect(page.getByTestId('status-text')).toContainText(/Nothing to export as GLB/i);
-      await page.getByTestId('export-fbx-btn').click();
+      await clickSecondaryCommand(page, 'export-fbx-btn');
       await expect(page.getByTestId('status-text')).toContainText(/Nothing to export as FBX/i);
       await expect(page.getByTestId('export-smf-btn')).toBeDisabled();
 

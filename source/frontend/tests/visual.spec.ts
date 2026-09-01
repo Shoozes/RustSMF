@@ -25,7 +25,11 @@ type Rect = {
 };
 
 const VIEWPORTS: ViewportCase[] = [
-  { name: 'desktop', width: 1280, height: 720, screenshotMinBytes: 3000 },
+  { name: 'full-hd', width: 1920, height: 1080, screenshotMinBytes: 3000 },
+  { name: 'scaled-desktop', width: 1440, height: 900, screenshotMinBytes: 3000 },
+  { name: 'compact-desktop', width: 1280, height: 800, screenshotMinBytes: 3000 },
+  { name: 'small-desktop', width: 1024, height: 768, screenshotMinBytes: 2600 },
+  { name: 'portrait-desktop', width: 800, height: 900, screenshotMinBytes: 2400 },
   { name: 'narrow', width: 390, height: 844, screenshotMinBytes: 2200 },
 ];
 
@@ -56,12 +60,34 @@ function rectsOverlap(a: Rect, b: Rect, padding = 0): boolean {
 }
 
 async function expectNoHorizontalOverflow(page: Page): Promise<void> {
-  const metrics = await page.evaluate(() => ({
-    doc: document.documentElement.scrollWidth,
-    body: document.body.scrollWidth,
-    viewport: window.innerWidth,
-  }));
+  const metrics = await page.evaluate(() => {
+    const scoped = document.querySelector('[data-shell-variant="modern"]')
+      ? ['.toolbar', '.modern-appbar', '.mode-tablist']
+      .map((selector) => document.querySelector<HTMLElement>(selector))
+      .filter((element): element is HTMLElement => element !== null)
+      .map((element) => ({
+        className: element.className,
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }))
+      : [];
+    const overlay = document.querySelector<HTMLElement>('.viewport-controls-overlay')?.getBoundingClientRect();
+    return {
+      doc: document.documentElement.scrollWidth,
+      body: document.body.scrollWidth,
+      viewport: window.innerWidth,
+      scoped,
+      overlay: overlay ? { left: overlay.left, right: overlay.right } : null,
+    };
+  });
   expect(Math.max(metrics.doc, metrics.body)).toBeLessThanOrEqual(metrics.viewport + 2);
+  for (const region of metrics.scoped) {
+    expect(region.scrollWidth, region.className).toBeLessThanOrEqual(region.clientWidth + 2);
+  }
+  if (metrics.overlay) {
+    expect(metrics.overlay.left).toBeGreaterThanOrEqual(-2);
+    expect(metrics.overlay.right).toBeLessThanOrEqual(metrics.viewport + 2);
+  }
 }
 
 async function expectNoCriticalBrowserErrors(page: Page): Promise<void> {
@@ -108,12 +134,19 @@ test.describe('RustSMF visual confirmations', () => {
       await expect(page.getByTestId('status-text')).toContainText('Three.js viewport ready');
       await expect(page.getByTestId('open-model-btn')).toBeVisible();
       await expect(page.getByTestId('export-btn')).toBeVisible();
-      await expect(page.getByTestId('export-smf-btn')).toBeVisible();
       await expect(page.getByTestId('viewport-container')).toBeVisible();
       await expect(page.getByTestId('three-canvas')).toBeVisible();
-      await expect(page.getByTestId('timeline')).toBeVisible();
-      await expect(page.getByTestId('outliner')).toBeVisible();
-      await expect(page.getByTestId('inspector')).toBeVisible();
+      await expect(page.getByTestId('modern-empty-state')).toBeVisible();
+      await expect(page.getByTestId('timeline')).toHaveCount(0);
+      await expect(page.getByTestId('outliner')).toHaveCount(0);
+      await expect(page.getByTestId('inspector')).toHaveCount(0);
+
+      await page.getByTestId('modern-more-menu-button').click();
+      await expect(page.getByTestId('export-smf-btn')).toBeVisible();
+      await expect(page.getByTestId('open-project-btn')).toBeVisible();
+      await expect(page.getByTestId('recover-project-btn')).toBeVisible();
+      await expect(page.getByTestId('ping-rust-btn')).toBeVisible();
+      await page.getByTestId('modern-more-menu-button').click();
 
       await expectNoHorizontalOverflow(page);
       await expectRenderedScreenshot(page.getByTestId('viewport-container'), viewport.screenshotMinBytes);
@@ -126,8 +159,9 @@ test.describe('RustSMF visual confirmations', () => {
     await page.goto('/');
 
     const appShell = page.getByTestId('app-shell');
-    const themeSelect = page.getByTestId('theme-select');
     await expect(appShell).toHaveAttribute('data-theme', 'modern');
+    await page.getByTestId('modern-more-menu-button').click();
+    const themeSelect = page.getByTestId('theme-select');
     await themeSelect.selectOption('original');
     await expect(appShell).toHaveAttribute('data-theme', 'original');
     await expect(page.getByTestId('theme-description')).toContainText(/dense original editor format/i);
@@ -207,7 +241,7 @@ test.describe('RustSMF visual confirmations', () => {
     expect(sampleFrameCount).toBeGreaterThanOrEqual(keyframeCount);
 
     await expectNoHorizontalOverflow(page);
-    await expectRenderedScreenshot(appShell, 5000);
+    await expectRenderedScreenshot(appShell, 5000, { strict: true, name: 'original-smf-theme' });
     await page.screenshot({ path: testInfo.outputPath('original-smf-theme.png'), fullPage: true });
     await expectNoCriticalBrowserErrors(page);
 
@@ -222,15 +256,21 @@ test.describe('RustSMF visual confirmations', () => {
     await expectNoCriticalBrowserErrors(page);
   });
 
-  test('loaded SMF visual state keeps viewport, timeline, and skeleton panels coherent', async ({ page }) => {
+  test('loaded SMF visual state keeps one supporting panel and an Animate-only timeline', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 720 });
     await page.goto('/');
     await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
 
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips/i);
-    await expect(page.getByTestId('inspector')).toContainText(/Bones \(\d+\)/i);
     await expect(page.getByTestId('outliner')).toContainText(/Scene Root|Bone|Mesh/i);
+    await expect(page.getByTestId('inspector')).toHaveCount(0);
+    await expect(page.getByTestId('timeline')).toHaveCount(0);
+
+    await page.getByTestId('modern-panel-properties').click();
+    await expect(page.getByTestId('inspector')).toContainText(/Bones \(\d+\)/i);
+    await expect(page.getByTestId('outliner')).toHaveCount(0);
+    await page.getByTestId('mode-tab-animate').click();
     await expect(page.getByTestId('timeline')).toBeVisible();
 
     await pausePlaybackIfRunning(page);
