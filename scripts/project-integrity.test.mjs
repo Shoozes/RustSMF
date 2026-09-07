@@ -60,6 +60,15 @@ describe('project integrity checks', () => {
     assert.match(validateTodoDocument('# TODO\n')[0], /no executable task sections/)
   })
 
+  it('requires populated completion fields and rejects contradictory backlog status', () => {
+    const fields = ['What', 'Why', 'Where', 'When', 'How', 'Done when', 'Verification']
+    const task = `## P2 - Example\n\n${fields.map((field) => `- ${field}: concrete ${field.toLowerCase()}`).join('\n')}\n`
+    assert.deepEqual(validateTodoDocument(task), [])
+    assert.deepEqual(validateTodoDocument(task.replace('- How: concrete how', '- How:\n  1. Implement the bounded change.')), [])
+    assert.match(validateTodoDocument(task.replace('- Done when: concrete done when', '- Done when:  ')).join('\n'), /empty - Done when:/)
+    assert.match(validateTodoDocument(`Backlog status: empty\n\n${task}`).join('\n'), /conflicts with active task/)
+  })
+
   it('rejects machine-local paths from current-facing docs', () => {
     const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-integrity-'))
     temporaryRoots.push(root)

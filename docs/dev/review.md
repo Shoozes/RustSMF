@@ -1,37 +1,20 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-09-01
+Last reviewed: 2026-09-07
 
-This is the current repo/app integrity snapshot. `APP_STATE.md` owns current behavior, `TODO.md` owns forward work, `HISTORY.md` owns completed evidence, `PITFALL_LEDGER.md` owns recurring hazards, and `summary_bank.json` owns focused routing.
+Complete. Current behavior and format limits belong in `APP_STATE.md`; completed work and exact command results belong in [HISTORY.md](HISTORY.md#2026-09-07---native-dialog-acceptance-and-save-coordination); forward work belongs in `TODO.md`.
 
-## Outcome
+## Findings resolved
 
-Complete. The Calm Modern shell, direct-paint Skin workflow, setup-pose ownership, model authoring, verification contracts, and focused context routes are reconciled.
+- Skin previously forced Rest even when Frozen Current or Live Animation was selected. The shared workspace policy now activates the requested pose; the unchanged recorded repair journey passes with its original world-position bounds.
+- Launcher cleanup previously selected unrelated Vite/Tauri processes by generic command text or port. It now matches this checkout's normalized Node script argument; non-dev tasks do not register dev-exit cleanup. Setup propagates Rust failure, and Vite resolution supports package hoisting.
+- Context generation now applies configured exclusions to scanning, globs, trees, and explicit routes; runtime output and symlink/drive-relative escapes are rejected. TODO validation requires populated fields and consistent backlog status.
+- Browserslist was updated from 4.28.2 to 4.28.9 with only its required data-package dependencies. The current audit reports zero vulnerabilities.
+- Current docs now route to one dated command record instead of repeating completed progress and drifting test counts. Existing context groups own the fixes; defaults remain narrow.
+- Real Windows dialog testing exposed a native CSP sidecar failure and foreground saves rejected during autosave. The shipped policy permits local blob resources and the actual IPC hostname; foreground saves reserve their turn and await active autosave. Focused regressions cover both boundaries.
 
-- Skin Smooth is now real regional weight averaging instead of an alias for Auto. It works without a selected bone, shares the simple rail and Advanced mode contract, records undoable edits, and indexes skinned meshes once per stroke instead of traversing the scene for every candidate vertex.
-- Async static-model append commits only while the initiating model root remains current. A replacement during file loading disposes the stale loaded subtree and cannot attach it to a detached scene or create misleading history.
-- Global undo/redo chronology now uses one data-driven selector rather than duplicated filtering and reduction logic.
-- Project integrity rejects relative imports that resolve only to a directory, accepts a deliberately empty backlog only through the explicit marker, rejects silently empty TODO files, and catches machine-local absolute paths in current-facing docs.
-- Generated browser, journey, and design-review output is ignored under one repository-level `output/` rule. The durable design QA record now references only checked, portable evidence.
-- The active TODO is genuinely empty; completed work lives here and in `HISTORY.md`. The research inbox contains no actionable drop-in, and the production source contains no unresolved TODO/FIXME/stub marker or broken relative import/export seam.
-- `summary_bank.json` retains 31 narrow groups. Existing Skin, model-authoring, load-orchestration, external-resource, and project-integrity routes were updated instead of adding redundant groups; validation reports 43.2 KiB of default context and zero warnings.
+## App and follow-up state
 
-## Verification
+The reviewed source has no unresolved production TODO/FIXME/stub marker or broken relative import/export seam. Existing load, worker, authoring, recovery, and export behavior remains covered by local verification. Existing worker transfer and thumbnail contracts were retained after rechecking suspected issues.
 
-- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed 8/8 project-integrity tests, 7/7 context-bank tests, 2/2 main-sync safety tests, ESLint, app/test typechecks, production-`any` and entry-chunk guards, the Vite production build, 359/359 frontend units across 62 files, Rust fmt/clippy/check, and 10/10 Rust tests.
-- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: passed 86/86 browser cases across nine files after the scale-parity assertion was made tolerant of one-pixel screenshot quantization.
-- Focused Skin browser coverage: passed 7/7. Focused scale-parity browser coverage: passed 1/1.
-- `npm audit --omit=optional` from `source`: found zero vulnerabilities.
-- `pwsh -NoProfile -File .\run.ps1 -Task context`: passed with 31 groups, 43.2 KiB default context, and zero warnings.
-- Final `git diff --check` and marker/path searches passed.
-
-## Blockers and verified limits
-
-There is no code, test, documentation, context-routing, or local verification blocker in the reviewed scope.
-
-- Node 26.5 emits Playwright 1.60's upstream `[DEP0205] module.register()` and `NO_COLOR`/`FORCE_COLOR` warnings while the suites remain green; neither warning originates in application code.
-- Universal third-party FBX behavior, automatic assignment of unreferenced material maps, producer-specific influences beyond Three.js's four retained weights, true OS-dialog automation, and future evidence-driven strict-baseline refreshes remain explicit limits in `APP_STATE.md`, not hidden implementation TODOs.
-
-## Next direction
-
-The active backlog is closed. Add a new What/Why/Where/When/How/Done-when/Verification item only when product evidence, an external compatibility fixture, or a requested feature creates executable work.
+`TODO.md` is empty after actual built-app Windows dialog acceptance completed every remaining condition. Other format/interchange limits remain explicit in `APP_STATE.md`; they become executable work when a concrete failing fixture or requested contract exists.

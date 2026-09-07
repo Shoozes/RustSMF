@@ -1,6 +1,42 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-09-01 (added GenEye argv-manifest ownership and Modern shell overflow prevention alongside explicit failure-value handling, scale-independent framing, loader, worker, conversion, timing, and process-lifecycle lessons).
+Last reviewed: 2026-09-07 (native resource policy and save coordination, Skin pose-policy integration, process ownership, and context exclusions).
+
+### Q: What pitfall are we preventing?
+
+**What:** Passing native IPC mocks can hide failures in the shipped WebView content policy and background-save timing.
+
+**Why it happened:** Preview did not apply Tauri's CSP, so selected GLTF sidecars passed mock tests while native blob fetches failed. Foreground save also rejected a click during autosave instead of waiting for the background write.
+
+**Where:** `source/src-tauri/tauri.conf.json`, `source/frontend/src/hooks/useLoadModel.ts`, and `source/frontend/tests/native.spec.ts`.
+
+**How to catch it:** Apply the actual native connection policy to the sidecar browser test. Start a delayed autosave, click Export once, and assert completion with no overlapping writes. Use a separately identified built app for real dialog, focus, failure, and recovery acceptance; never substitute mocks for those observations.
+
+**Current solution:** Permit the local blob resource scheme and actual WebView2 IPC hostname. Reserve foreground save ownership before awaiting active autosave, then recheck freshness. This preserves existing serialization and stale-result handling without creating another queue. Exact Windows results and build identity belong in `HISTORY.md`.
+
+### Q: What pitfall are we preventing?
+
+**What:** A workspace default can silently disable explicit authoring modes while selectors and telemetry still appear correct.
+
+**Why it happened:** Making Skin a rest-pose workspace unconditionally stopped its mixer. Frozen Current captured the rest pose, and Live Animation could not advance. The recorded wave repair then missed a known torso vertex by 2.05 world units despite correct source-vertex IDs.
+
+**Where:** `source/frontend/src/utils/workspacePlayback.ts`, `source/frontend/src/components/ThreeViewport.tsx`, `source/frontend/tests/skin.spec.ts`, and `source/frontend/tests/journeys/hand-wave.journey.spec.ts`.
+
+**How to catch it:** Test actual bone transforms and action time across Rest, Frozen, Live, and Rig transitions, then run the real repair journey. Selector values alone do not prove effective behavior. Keep the journey's original source-vertex and world-distance assertions.
+
+**Current solution:** One workspace policy governs action activation, pause, frame advancement, scrub, attachment, and effective-pose telemetry. Rest remains the default, Frozen evaluates and holds the selected animation, and Live honors playback. The new unit fails before the fix; it and the unchanged journey pass afterward.
+
+### Q: What pitfall are we preventing?
+
+**What:** A context bank can declare exclusions that its generator does not enforce.
+
+**Why it happened:** `defaults.skip_dirs` was checked for shape but unused during scanning. Explicit paths also bypassed scan exclusions and could cross a symlink ancestor.
+
+**Where:** `scripts/context-bank-lib.mjs`, `scripts/context-bank.test.mjs`, and `summary_bank.json`.
+
+**How to catch it:** Exercise glob expansion, optional tree output, explicit group paths, and ad hoc paths against generated output and a custom skip directory. Check symlink ancestors and Windows drive-relative inputs separately.
+
+**Current solution:** The same exclusions apply to every retrieval path, runtime `output/` is excluded, unsafe ancestors/drive paths fail before content reads, and temporary test fixtures are removed after each case.
 
 ### Q: What pitfall are we preventing?
 
@@ -1019,7 +1055,7 @@ Last reviewed: 2026-09-01 (added GenEye argv-manifest ownership and Modern shell
 2. `65/100` Add simple finally { Stop-Process ... } around & npm in run.ps1, result: helped Ctrl+C but not title-bar X (pwsh abrupt term) and not the full grandchild tree reliably.
 3. `93/100` Multi-layer defense (Windows JobObject with KILL_ON_JOB_CLOSE assigned to owned Start-Process pwsh for the dev subtree + recursive Stop-ProcessTree via Win32_Process + three-sweep Stop-DevServers (exact 5173 node owners + cmdline 'vite|start-vite-dev|tauri') + Stop-Stale on every dev entry + trap + PowerShell.Exiting register + mjs wrapper for the tauri-close path (SIGTERM/'exit'/taskkill /T + parentPid poll + delay)), result: X-close, tauri-close, Ctrl+C, and re-launch all clean; redundant but low-cost and effective on primary Windows launcher path.
 
-**Current solution:** The 3rd (layered) solution above. run.ps1 owns the long-running dev tasks via Start-Process + Job + finally/tree/stale; the mjs (now the beforeDevCommand) guarantees its direct Vite child is reaped on tauri CLI term (signals + poll + tree kill) and now has a unix fallback (`pkill`/`kill`) path when available. Entry sweep + port check makes re-launch robust. See `subsystem__dev_process_lifecycle` in `summary_bank.json` for the maintained path group and notes.
+**Current solution:** Keep the owned JobObject, child-tree, and managed-wrapper layers, but replace the old global port/name sweeps with exact normalized Node script argument matching. Only this checkout confers ownership; other apps on port 5173 and unrelated commands mentioning a Vite/Tauri path are preserved. run.ps1 owns the long-running dev tasks via Start-Process + Job + finally/tree/stale; the mjs (now the beforeDevCommand) guarantees its direct Vite child is reaped on tauri CLI term (signals + poll + tree kill) and now has a unix fallback (`pkill`/`kill`) path when available. The checkout-specific entry sweep supports relaunch without terminating other projects. The pure matcher and actual cleanup function are tested against a mixed mocked process inventory in `scripts/dev-process-ownership.test.mjs`. See `subsystem__dev_process_lifecycle` in `summary_bank.json` for the maintained path group and notes.
 
 **Effectiveness:** `93/100`, durable. Verified by construction (checks: cargo/context/typecheck/verify all green post-change), manual X-close + re-launch scenarios (no rogue node, port free), and the prior orphan class being the exact motivator. Low runtime cost (scans only on dev entry or explicit close paths; poll is 1.8s win32-only in mjs).
 

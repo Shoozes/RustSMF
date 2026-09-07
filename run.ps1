@@ -7,6 +7,8 @@ param(
 
 $ErrorActionPreference = "Stop"
 $RepoRoot = $PSScriptRoot
+$ProcessOwnershipScript = Join-Path $RepoRoot "scripts/dev-process-ownership.ps1"
+. $ProcessOwnershipScript
 $SourceDir = Join-Path $RepoRoot "source"
 $FrontendDir = Join-Path $SourceDir "frontend"
 $SrcTauriDir = Join-Path $SourceDir "src-tauri"
@@ -145,38 +147,21 @@ function Stop-ProcessTree([int]$ProcessId) {
 }
 
 function Stop-DevServers {
-    # 1. Exact port owner (5173 is our dev/preview port)
-    try {
-        $conns = Get-NetTCPConnection -LocalPort 5173 -State Listen -ErrorAction SilentlyContinue
-        foreach ($c in $conns) {
-            $p = Get-Process -Id $c.OwningProcess -ErrorAction SilentlyContinue
-            if ($p -and ($p.ProcessName -eq 'node' -or $p.ProcessName -eq 'node.exe')) {
-                Write-Warn "  Killing node (pid $($p.Id)) listening on :5173"
-                Stop-ProcessTree $p.Id
-            }
-        }
-    } catch {}
-
-    # 2. Any node whose command line mentions vite or our managed wrapper
+    $ownedPaths = @(
+        (Join-Path $FrontendDir "scripts/start-vite-dev.mjs"),
+        (Join-Path $FrontendDir "node_modules/vite/bin/vite.js"),
+        (Join-Path $SourceDir "node_modules/vite/bin/vite.js"),
+        (Join-Path $SourceDir "node_modules/@tauri-apps/cli/tauri.js"),
+        (Join-Path $FrontendDir "node_modules/@tauri-apps/cli/tauri.js")
+    )
     try {
         $procs = Get-CimInstance Win32_Process -Filter "Name='node.exe' OR Name='node'" -ErrorAction SilentlyContinue |
-            Where-Object { $_.CommandLine -match 'vite' -or $_.CommandLine -match 'start-vite-dev' }
+            Where-Object { Test-RepoOwnedProcessCommandLine $_.CommandLine $ownedPaths }
         foreach ($n in $procs) {
-            Write-Warn "  Killing node (pid $($n.ProcessId)) (vite dev / wrapper)"
+            Write-Warn "  Killing repo-owned dev process (pid $($n.ProcessId))"
             Stop-ProcessTree $n.ProcessId
         }
-    } catch {}
-
-    # 3. Extra sweep for tauri-cli node processes that may be lingering from outer shell close
-    try {
-        Get-Process -Name node -ErrorAction SilentlyContinue | ForEach-Object {
-            $cmd = (Get-CimInstance Win32_Process -Filter "ProcessId=$($_.Id)" -ErrorAction SilentlyContinue).CommandLine
-            if ($cmd -and ($cmd -match 'tauri' -or $cmd -match 'start-vite-dev')) {
-                Write-Warn "  Killing node (pid $($_.Id)) (tauri cli / dev manager)"
-                Stop-ProcessTree $_.Id
-            }
-        }
-    } catch {}
+    } catch { Write-Warn "Could not inspect repo-owned dev processes: $($_.Exception.Message)" }
 }
 
 function Stop-StaleDevStack {
@@ -475,16 +460,6 @@ function Invoke-SourceNpm([string[]]$NpmArgs) {
     }
 }
 
-# Global safety nets: always attempt to reap dev servers on Ctrl+C / terminating errors / normal pwsh exit.
-# (Job object above provides the hard guarantee for window X close of the launcher.)
-trap {
-    Stop-DevServers
-    break
-}
-try {
-    Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action { Stop-DevServers } -ErrorAction SilentlyContinue | Out-Null
-} catch {}
-
 while ($Task.ToLowerInvariant() -eq "menu") {
     $Task = Show-RunMenu
 }
@@ -506,6 +481,17 @@ $NormalizedTask = switch -Exact ($Task.ToLowerInvariant()) {
     default { $Task.ToLowerInvariant() }
 }
 
+# Cleanup belongs only to an active dev launch, including menu-selected tasks.
+trap {
+    if ($NormalizedTask -in @('dev', 'tauri-dev')) { Stop-DevServers }
+    break
+}
+if ($NormalizedTask -in @('dev', 'tauri-dev')) {
+    try {
+        Register-EngineEvent -SourceIdentifier PowerShell.Exiting -Action { Stop-DevServers } -ErrorAction SilentlyContinue | Out-Null
+    } catch {}
+}
+
 switch -Exact ($NormalizedTask) {
     "exit" {
         Write-Info "Exiting."
@@ -522,7 +508,11 @@ switch -Exact ($NormalizedTask) {
         }
         if (Test-Path $SrcTauriDir) {
             Write-Info "[SETUP] cargo check in src-tauri..."
-            Push-Location $SrcTauriDir; cargo check; Pop-Location
+            Push-Location $SrcTauriDir
+            try {
+                & cargo check
+                if ($LASTEXITCODE -ne 0) { throw "cargo check failed" }
+            } finally { Pop-Location }
         }
         Write-Ok "[SETUP] Complete (or partial if source not scaffolded)."
     }
@@ -594,6 +584,8 @@ switch -Exact ($NormalizedTask) {
         if (-not (Invoke-ProjectIntegrityVerification)) { $ok = $false }
         if (-not (Invoke-ContextBankVerification)) { $ok = $false }
         if (-not (Invoke-GitMainSafetyVerification)) { $ok = $false }
+        & $NodeExecutable --test scripts/dev-process-ownership.test.mjs
+        if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "dev-process ownership tests failed" }
         if (Test-Path $FrontendDir) {
             if (-not (Invoke-FrontendNpm @("run", "check:lint-coverage"))) { $ok = $false; Write-Warn "lint coverage check failed" }
             if (-not (Invoke-FrontendNpm @("run", "lint"))) { $ok = $false; Write-Warn "lint failed" }

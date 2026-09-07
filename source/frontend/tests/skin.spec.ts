@@ -353,7 +353,13 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(page.getByTestId('skin-paint-pose')).toHaveValue('frozen');
       await expect(page.getByTestId('skin-paint-pose-warning')).toHaveCount(0);
       await expect(canvas).toHaveAttribute('data-skin-paint-pose', 'frozen');
+      await expect(canvas).toHaveAttribute('data-workspace-pose', 'animation');
+      await page.getByTestId('skin-paint-pose').selectOption('live');
+      await expect(canvas).toHaveAttribute('data-skin-paint-pose', 'live');
+      await expect(canvas).toHaveAttribute('data-workspace-pose', 'animation');
+      await expect(page.getByTestId('skin-paint-pose-warning')).toBeVisible();
       await page.getByTestId('skin-paint-pose').selectOption('rest');
       await expect(canvas).toHaveAttribute('data-skin-paint-pose', 'rest');
+      await expect(canvas).toHaveAttribute('data-workspace-pose', 'rest');
     });
 });

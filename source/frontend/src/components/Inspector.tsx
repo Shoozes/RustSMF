@@ -139,7 +139,7 @@ const Inspector: React.FC<InspectorProps> = ({
   const workspaceHelp = editorMode === 'rig'
     ? ['Rig opens on the model rest pose.', 'Animation resumes when you return to Animate.']
     : editorMode === 'skin'
-      ? ['Skin opens on the model rest pose.', 'Advanced can opt into Frozen or Live sampling.']
+      ? ['Skin defaults to the model rest pose.', 'Advanced can opt into Frozen or Live sampling.']
       : editorMode === 'animate'
         ? ['Animation playback and key editing are active here.', 'Use the Timeline to scrub or author poses.']
         : ['Skinned meshes, skeletons, and clips are ready.', 'Open Animate when you want playback.'];

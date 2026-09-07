@@ -2,6 +2,83 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-07 - Session close review
+
+- Reviewed the complete pending integrity/native-dialog change set locally on `main`. No open app blocker or active backlog item remains. The instrumented-session shutdown observation and external compatibility limits remain disclosed below and in `APP_STATE.md`.
+- Reran `pwsh -NoProfile -File ./run.ps1 -Task verify`: exit 0, including 360 frontend unit tests, 10 Rust tests, lint/type/build checks and repository guards. Log: `runtime-data/session-close-2026-09-07-verify.log`. The unchanged behavioral change set also passed the 87-case browser gate, 13-case native IPC suite, and actual Windows dialog journey recorded below.
+- `npm.cmd --prefix source audit --omit=dev --audit-level=low` reported zero production dependency vulnerabilities. Final whitespace, current-doc, import/module, and context-bank checks passed.
+- Closing process inventory found no remaining repository-owned app, WebView profile, or dev-server process. No unrelated process was stopped.
+- Existing Git policy already permits the explicitly requested reviewed push directly to `main` through `.tools/gitpush.ps1`; no policy change or PR is needed. Local runtime evidence, test profiles, and credentials remain excluded from publication.
+
+## 2026-09-07 - Native dialog acceptance and save coordination
+
+Completed the final TODO's actual Windows-dialog done-when conditions. Testing used the built Tauri application, real Rust IPC and filesystem writes, Windows dialog controls scoped by process/handle, and Playwright attached to the test WebView2 through loopback CDP. No native IPC response was mocked in this journey. A separate application identifier and WebView profile isolated autosave and recovery from the normal app. The first exploratory instance acquired an independently opened FBX session and was preserved; acceptance continued in the clearly titled `RustSMF Native Acceptance Test` instance.
+
+Two actual defects were fixed in their existing owners:
+
+- `useLoadModel.ts` rejected foreground saves during background autosave. The foreground operation now reserves its single-flight ownership, waits for the active autosave, rechecks freshness, and continues. A browser regression starts a delayed autosave and proves one Export click completes with maximum concurrent writes of one. Removed the redundant autosaving flag.
+- Native CSP blocked GLTF sidecar blob fetches and the WebView2 `http://ipc.localhost` transport. `tauri.conf.json` now permits those exact sources. The existing selected-sidecar browser test applies the shipped native connection policy before import, preventing mock-only coverage from hiding this boundary again.
+
+### Actual dialog results
+
+All three final acceptance commands exited 0: `node runtime-data/native-dialog-acceptance-final/journey.cjs dirty`, then `sidecars`, then `failure`.
+
+| Journey | Observed result |
+| --- | --- |
+| Open committed SMF and edit animation | Loaded 24 bones, 12 clips, 132 vertices; inserted a key and verified dirty state. |
+| Cancel native Open, asset Save, and project Save | Current model identity and animation dirty state remained intact; cancellation status was explicit. |
+| Save and reopen model/project | Actual `.smf` and `.rsproj` files were written and reopened through OS dialogs; the project restored a 24-bone, 12-clip, 132-vertex snapshot. |
+| Select GLTF plus buffer and texture | The real multi-select dialog loaded `scene.gltf`, `mesh.bin`, and `texture.png`; status confirmed both sidecars, 1,141 total bytes. |
+| Failed project destination | A test-owned directory occupying `failed.rsproj.bak2` forced backup rotation failure. The app displayed the failing destination, retained the model and dirty edit, created no target project, and preserved the sentinel. |
+| Recover after failure | Saving to a valid destination succeeded; Recover loaded an actual isolated autosave generation and subsequent workspace controls remained usable. |
+| Focus and ownership | Foreground PID returned to the acceptance app after each journey. All controlled dialogs belonged to that PID; output and failure fixtures stayed under the owned run directory. |
+
+Evidence: `runtime-data/native-dialog-acceptance-final/report.json` contains platform/build identity, source and saved-file hashes, and native dialog/focus records. The runnable local acceptance driver and scoped Windows-control adapter are retained beside it. Final app version: 0.1.0, Windows 11 Home 10.0.26100, PowerShell 7.6.5, Node 26.5.0, working tree based on `0b7efbc0c8af6dee25b5b6bfe76538969055a558`. The acceptance executable SHA-256 is `6F91ADFC12DD87C327E4268C625951CDAD5FB4BAB39DE1DD58D56AB4D53A333F`; final PID was 19216, main HWND 72682942. Only the test identifier/window title differed from the normal build configuration.
+
+GenEye captured the real Save As dialog at HWND 70518396/PID 27312 during the earlier save pass, SHA-256 `893e0faff4be0846ca42cfb8a81d336f557d4439ed64007e64b73d4fb950ff05`, and the final recovered app at HWND 72682942/PID 19216, SHA-256 `cd2365eb9c147883294d8c967b4baaf39834957efd1f45f44ca115c836c3decf`. Both captures were exact-handle, usable quality, without fallback; total capture times were 329 ms and 380 ms. Images were inspected in the task; metadata is retained in `captures.json` beside the report.
+
+Cleanup observation: the CDP-instrumented acceptance window and debug endpoint closed, but its process required an exact-PID stop after executable-path verification. A fresh instance of the same executable without debugging, PID 48712, exited normally on window close. The fresh normal-launch close passed; the cause of the instrumented-session shutdown delay was not established. Both dedicated acceptance/probe processes were cleaned up. Details are in `cleanup.json`.
+
+### Local verification
+
+- `pwsh -NoProfile -File ./run.ps1 -Task verify`: exit 0; 360 frontend unit tests, 10 Rust tests, context/project/process guards, lint, both typechecks, build and Rust checks passed. Log: `runtime-data/native-dialog-acceptance-final/verify.log`.
+- `pwsh -NoProfile -File ./run.ps1 -Task test:e2e -NoGenEye`: exit 0; 87/87 browser cases passed. Log: `runtime-data/native-dialog-acceptance-final/e2e.log`.
+- The 13-case focused native IPC suite passed separately in `native-mocks.log`. Actual-dialog evidence above is additional to those mocks.
+- `pwsh -NoProfile -File ./run.ps1 -Task desktop-smoke`: the sequential final run exited 0; normal unbundled release build, 10 Rust boundary tests, and 13 native IPC cases passed. Log: `runtime-data/native-dialog-acceptance-final/desktop-smoke.log`. This also restored the normal application identifier in the release build output.
+- One `desktop-smoke` attempt built successfully and passed Rust tests but encountered an occupied preview port because the browser gate was running concurrently. Its evidence remains in `desktop-smoke-port-conflict.log`; verification commands using that port must run sequentially.
+
+The active backlog is empty. This closes the recorded Windows acceptance scope; it does not claim universal external-format or other-OS compatibility. No commit or push was made.
+
+## 2026-09-07 - Launcher ownership and context integrity
+
+- Fixed a real Skin/animation integration regression: workspace policy forced Rest even after selecting Frozen Current or Live Animation. The policy now evaluates and pauses the selected clip/time for Frozen, permits Live playback, and preserves Rest as the default and Rig as a rest-pose workspace. Action activation, scrubbing, frame advancement, root attachment, and effective-pose telemetry share that policy.
+- Added a regression that fails against the prior implementation, asserting actual bone transforms and action time through Rest/Frozen/Live/Rig transitions. Browser diagnostics now check effective pose as well as the selected option. The existing recorded wave/Skin repair journey passes without changing fixture positions, vertex IDs, or distance tolerances; its current correction/playback screenshots were inspected.
+- Replaced launcher-wide port/name process sweeps with exact normalized Node script argument ownership. Quoted paths, slash/case differences, and npm's `.bin/../` paths resolve correctly; other repositories, filename suffixes, `--eval`, and unrelated later arguments confer no ownership. Dev-exit cleanup is limited to normalized dev tasks, including menu selections. Setup propagates Rust-check failure, and the Vite wrapper resolves either a hoisted or frontend-local package.
+- Applied configured context exclusions to scanning, globs, trees, and explicit routes. Generated `output/` stays excluded, symlink ancestors and Windows drive-relative paths fail before reads, and context-test temporary directories are cleaned. TODO validation rejects empty fields and an empty-backlog marker alongside active tasks.
+- Consolidated current README/review guidance around app state and this dated evidence record. Removed drifting test-count prose, corrected obsolete native SMF peek claims and a stale context-group reference, updated existing Skin/animation/process/context routes, and recorded regression prevention in the pitfall ledger. No new context group or speculative integration-owner split was needed.
+- Updated Browserslist 4.28.2 to 4.28.9 and its five transitive dependencies after the audit reported [cache-growth](https://github.com/advisories/GHSA-c83g-rgw3-j3cx) and [custom-statistics](https://github.com/advisories/GHSA-73wf-gq98-2v4g) advisories. Direct dependency manifests were unchanged; the post-update audit reports zero vulnerabilities.
+
+### Verification
+
+All closing commands below exited 0 on Windows, PowerShell 7.6.5, Node 26.5.0, and Cargo 1.91.0. Evidence applies to the local working tree based on `0b7efbc0c8af6dee25b5b6bfe76538969055a558`; no commit or push was made.
+
+| Command | Result | Retained evidence |
+| --- | --- | --- |
+| `node --import tsx --test src/utils/workspacePlayback.test.ts` from `source/frontend` | New regression failed before the fix; 3/3 pass after it. | Final suite included in the verify log. |
+| `pwsh -NoProfile -File ./run.ps1 -Task verify` | 9 project-integrity, 9 context-bank, 2 main-sync, 2 dev-process, 360 frontend unit tests across 62 files, and 10 Rust tests pass; lint, both typechecks, build/chunk/type guards, Rust fmt/clippy/check pass. | `runtime-data/integrity-2026-09-07-verify-final.log` |
+| `pwsh -NoProfile -File ./run.ps1 -Task test:e2e -NoGenEye` | 86/86 cases in nine spec files pass, including the updated Skin effective-pose checks. | `runtime-data/integrity-2026-09-07-e2e-final.log` |
+| `pwsh -NoProfile -File ./run.ps1 -Task test:journey -NoGenEye` | 1/1 passes with original precision invariants; 12 checkpoints and WebM regenerated. | `runtime-data/integrity-2026-09-07-journey-fixed.log` and `output/playwright/hand-wave-journey/` |
+| `pwsh -NoProfile -File ./run.ps1 -Task test:visual-strict` | 3/3 pass; no committed baseline changed. | `runtime-data/integrity-2026-09-07-visual-final.log` |
+| `pwsh -NoProfile -File ./run.ps1 -Task desktop-smoke` | Unbundled Tauri release build, 10/10 Rust tests, and 12/12 native IPC browser cases pass. | `runtime-data/integrity-2026-09-07-desktop.log` |
+| `npm.cmd audit --omit=optional` from `source` | Zero vulnerabilities after the bounded lock update. | Local npm result. |
+| `pwsh -NoProfile -File ./run.ps1 -Task context`; `git diff --check` | 31 groups, about 42.0 KiB default orientation, zero context warnings; no whitespace errors. | Local context and diff results. |
+
+Current production-marker and relative import/export checks found no unresolved stubs or broken module seams. Node/Playwright emit the existing `DEP0205` and color-environment warnings; negative-path browser tests intentionally log rejected inputs.
+
+### Remaining evidence boundary
+
+The TODO now contains one gated real-native-dialog acceptance task with explicit scope and done-when conditions. This pass built the desktop app and exercised native contracts, but did not drive actual OS dialogs. Existing producer-specific format limits remain documented rather than recast as unfinished implementation.
+
 ## 2026-09-01 — Integrity guard, real Skin smoothing, and async append ownership
 
 - Replaced Modern Skin's misleading Smooth-to-Auto alias with undoable regional weight averaging that works without a selected bone. The paint loop now indexes skinned meshes once per stroke, and selected-branch lookup avoids repeated skeleton scans.

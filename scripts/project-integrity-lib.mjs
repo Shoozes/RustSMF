@@ -130,19 +130,27 @@ export function findBrokenRustModules(repoRoot) {
 export function validateTodoDocument(content) {
   const errors = []
   const sections = [...content.matchAll(/^##\s+(.+)$/gm)]
+  const markedEmpty = new RegExp(`^${EMPTY_BACKLOG_MARKER}$`, 'm').test(content)
   if (sections.length === 0) {
-    return new RegExp(`^${EMPTY_BACKLOG_MARKER}$`, 'm').test(content)
+    return markedEmpty
       ? []
       : [`docs/dev/TODO.md: no executable task sections or "${EMPTY_BACKLOG_MARKER}" marker found`]
   }
+  if (markedEmpty) errors.push('docs/dev/TODO.md: empty backlog marker conflicts with active task sections')
 
   sections.forEach((section, index) => {
     const start = section.index + section[0].length
     const end = sections[index + 1]?.index ?? content.length
     const body = content.slice(start, end)
     for (const field of TODO_FIELDS) {
-      if (!new RegExp(`^- ${field.replace(/[.*+?^${}()|[\\]\\]/g, '\\$&')}:`, 'm').test(body)) {
+      const match = new RegExp(`^- ${field}:`, 'm').exec(body)
+      if (!match) {
         errors.push(`TODO section "${section[1]}" is missing - ${field}:`)
+      } else {
+        const remaining = body.slice(match.index + match[0].length)
+        const nextField = remaining.search(/^-[ \t]+[^\r\n]+:/m)
+        const value = (nextField < 0 ? remaining : remaining.slice(0, nextField)).trim()
+        if (!value) errors.push(`TODO section "${section[1]}" has empty - ${field}:`)
       }
     }
   })

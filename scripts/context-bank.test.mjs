@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, resolve } from 'node:path'
 import { spawnSync } from 'node:child_process'
-import test from 'node:test'
+import test, { afterEach } from 'node:test'
 import { fileURLToPath } from 'node:url'
 import {
   buildContext,
+  expandContextPath,
   readContextBank,
   validateContextBank,
 } from './context-bank-lib.mjs'
@@ -14,9 +15,15 @@ import {
 const scriptDirectory = dirname(fileURLToPath(import.meta.url))
 const verifyScript = resolve(scriptDirectory, 'verify-context-bank.mjs')
 const generateScript = resolve(scriptDirectory, 'generate-context.mjs')
+const temporaryRoots = []
+
+afterEach(() => {
+  for (const root of temporaryRoots.splice(0)) rmSync(root, { recursive: true, force: true })
+})
 
 function fixture(bank, files = { 'README.md': 'hello\n' }) {
   const root = mkdtempSync(resolve(tmpdir(), 'rustsmf-context-'))
+  temporaryRoots.push(root)
   for (const [relativePath, content] of Object.entries(files)) {
     const absolutePath = resolve(root, relativePath)
     mkdirSync(dirname(absolutePath), { recursive: true })
@@ -106,6 +113,32 @@ test('generator emits binary metadata and never truncates an over-budget file', 
   assert.equal(oversized.complete, false)
   assert.deepEqual(oversized.manifest.skipped, ['README.md'])
   assert.doesNotMatch(oversized.content, /truncated/)
+})
+
+test('skip directories apply to glob expansion, tree output, and explicit paths', () => {
+  const bank = validBank(['**/*.md'])
+  bank.defaults.skip_dirs = ['local-cache']
+  const root = fixture(bank, {
+    'README.md': 'hello\n',
+    'output/capture.md': 'runtime output\n',
+    'local-cache/private.md': 'local cache\n',
+  })
+  const context = buildContext({ root, bank, includeTree: true })
+  assert.deepEqual(context.manifest.included, ['README.md'])
+  assert.doesNotMatch(context.content, /capture|private|runtime output|local cache/)
+  for (const path of ['output/capture.md', 'local-cache/private.md']) {
+    assert.throws(() => buildContext({ root, bank, paths: [path] }), /excluded runtime\/dependency path/)
+    const explicitBank = structuredClone(bank)
+    explicitBank.groups.docs__orientation.paths = [path]
+    assert.match(validateContextBank({ root, bank: explicitBank }).errors.join('\n'), /excluded runtime\/dependency path/)
+  }
+})
+
+test('explicit paths reject symlink ancestors and drive-relative escapes', () => {
+  const root = fixture(validBank(), { 'README.md': 'hello\n', 'actual/value.md': 'value\n' })
+  symlinkSync(resolve(root, 'actual'), resolve(root, 'linked'), process.platform === 'win32' ? 'junction' : 'dir')
+  assert.match(expandContextPath(root, 'linked/value.md').errors.join('\n'), /symlink paths/)
+  assert.match(expandContextPath(root, 'C:outside.md').errors.join('\n'), /unsafe or non-repository/)
 })
 
 test('CLI exits nonzero for invalid fixtures', () => {

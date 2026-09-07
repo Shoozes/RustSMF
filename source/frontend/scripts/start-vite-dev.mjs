@@ -10,6 +10,7 @@
 import { spawn, execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,7 +19,8 @@ const __dirname = path.dirname(__filename);
 // Frontend lives at ../frontend relative to that.
 const frontendDir = path.resolve(__dirname, '..');
 
-const viteCli = path.join(frontendDir, 'node_modules', 'vite', 'bin', 'vite.js');
+const require = createRequire(import.meta.url);
+const viteCli = path.resolve(path.dirname(require.resolve('vite/package.json')), 'bin', 'vite.js');
 
 const child = spawn(process.execPath, [viteCli], {
   cwd: frontendDir,

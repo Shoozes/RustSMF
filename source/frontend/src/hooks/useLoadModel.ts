@@ -428,7 +428,6 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const exportSeqGuardRef = useRef(createSeqGuard());
   const autosaveSeqGuardRef = useRef(createSeqGuard());
   const isExportingRef = useRef(false);
-  const isAutosavingRef = useRef(false);
   const activeAutosavePromiseRef = useRef<Promise<void> | null>(null);
   const pendingAutosaveTaskRef = useRef<(() => Promise<void>) | null>(null);
   const {
@@ -1293,20 +1292,15 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     if (isExportingRef.current) return Promise.resolve();
 
     const drainPromise = (async () => {
-      isAutosavingRef.current = true;
-      try {
-        while (!isExportingRef.current) {
-          const task = pendingAutosaveTaskRef.current;
-          if (!task) break;
-          pendingAutosaveTaskRef.current = null;
-          try {
-            await task();
-          } catch (error: unknown) {
-            ui.setErrorMsg(`Project autosave error: ${errorMessage(error)}`);
-          }
+      while (!isExportingRef.current) {
+        const task = pendingAutosaveTaskRef.current;
+        if (!task) break;
+        pendingAutosaveTaskRef.current = null;
+        try {
+          await task();
+        } catch (error: unknown) {
+          ui.setErrorMsg(`Project autosave error: ${errorMessage(error)}`);
         }
-      } finally {
-        isAutosavingRef.current = false;
       }
     })();
     activeAutosavePromiseRef.current = drainPromise;
@@ -1323,7 +1317,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     actionLabel: string,
     action: (isCurrentExport: () => boolean) => Promise<void>,
   ) => {
-    if (isExportingRef.current || isAutosavingRef.current) {
+    if (isExportingRef.current) {
       ui.setStatus(`${actionLabel} already has another save in progress. Wait for it to finish.`);
       return;
     }
@@ -1335,6 +1329,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     ui.setIsLoading(true);
 
     try {
+      // Reserve the foreground save before draining background work so a click
+      // during autosave completes without overlapping writes or requiring retry.
+      await activeAutosavePromiseRef.current;
+      if (!isCurrentExport()) return;
       await action(isCurrentExport);
     } catch (e: unknown) {
       if (!isCurrentExport()) return;

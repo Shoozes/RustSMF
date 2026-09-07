@@ -8,6 +8,7 @@ const DEFAULT_SCAN_SKIP_DIRS = new Set([
   'build',
   'dist',
   'node_modules',
+  'output',
   'playwright-report',
   'runtime-data',
   'target',
@@ -15,7 +16,7 @@ const DEFAULT_SCAN_SKIP_DIRS = new Set([
 ])
 
 const GLOB_META = /[*?[]/
-const WINDOWS_ABSOLUTE = /^[a-zA-Z]:\//
+const WINDOWS_ABSOLUTE = /^[a-zA-Z]:/
 const UTF8_DECODER = new TextDecoder('utf-8', { fatal: true })
 
 export class ContextBankError extends Error {}
@@ -63,12 +64,12 @@ export function globToRegExp(pattern) {
   return new RegExp(`${expression}$`)
 }
 
-function walkFiles(root, directory = root, output = []) {
+function walkFiles(root, directory, output, skipDirs) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
     if (entry.isSymbolicLink()) continue
     const absolutePath = resolve(directory, entry.name)
     if (entry.isDirectory()) {
-      if (!DEFAULT_SCAN_SKIP_DIRS.has(entry.name)) walkFiles(root, absolutePath, output)
+      if (!skipDirs.has(entry.name)) walkFiles(root, absolutePath, output, skipDirs)
       continue
     }
     if (!entry.isFile()) continue
@@ -77,8 +78,9 @@ function walkFiles(root, directory = root, output = []) {
   return output
 }
 
-export function listRepoFiles(root) {
-  return walkFiles(resolve(root)).sort()
+export function listRepoFiles(root, skipDirs = []) {
+  const absoluteRoot = resolve(root)
+  return walkFiles(absoluteRoot, absoluteRoot, [], new Set([...DEFAULT_SCAN_SKIP_DIRS, ...skipDirs])).sort()
 }
 
 function parsePositiveNumber(value, field, errors) {
@@ -120,14 +122,18 @@ export function readContextBank(bankPath) {
   }
 }
 
-export function expandContextPath(root, rawPath, repoFiles = listRepoFiles(root)) {
+export function expandContextPath(root, rawPath, repoFiles, skipDirs = []) {
   const normalized = normalizeContextPath(rawPath)
   if (!isSafeRepoPath(normalized)) {
     return { errors: [`unsafe or non-repository path: ${rawPath}`], files: [] }
   }
+  const excluded = new Set([...DEFAULT_SCAN_SKIP_DIRS, ...skipDirs])
+  if (normalized.split('/').some((segment) => excluded.has(segment))) {
+    return { errors: [`excluded runtime/dependency path: ${rawPath}`], files: [] }
+  }
   if (hasGlob(normalized)) {
     const matcher = globToRegExp(normalized)
-    const matches = repoFiles.filter((file) => matcher.test(file))
+    const matches = (repoFiles ?? listRepoFiles(root, skipDirs)).filter((file) => matcher.test(file))
     return {
       errors: matches.length === 0 ? [`glob matched no files: ${rawPath}`] : [],
       files: matches,
@@ -137,6 +143,13 @@ export function expandContextPath(root, rawPath, repoFiles = listRepoFiles(root)
   const absolutePath = resolve(root, ...normalized.split('/'))
   if (!existsSync(absolutePath)) {
     return { errors: [`missing path: ${rawPath}`], files: [] }
+  }
+  let ancestor = resolve(root)
+  for (const segment of normalized.split('/')) {
+    ancestor = resolve(ancestor, segment)
+    if (lstatSync(ancestor).isSymbolicLink()) {
+      return { errors: [`symlink paths are not allowed: ${rawPath}`], files: [] }
+    }
   }
   const stat = lstatSync(absolutePath)
   if (stat.isDirectory()) {
@@ -177,7 +190,7 @@ function regionForFile(root, relativePath) {
   }
 }
 
-function collectGroupFiles(root, groupNames, groups, repoFiles, errors) {
+function collectGroupFiles(root, groupNames, groups, repoFiles, errors, skipDirs) {
   const files = []
   const seen = new Set()
   for (const groupName of groupNames) {
@@ -188,7 +201,7 @@ function collectGroupFiles(root, groupNames, groups, repoFiles, errors) {
     }
     const paths = readStringArray(group.paths, `${groupName}.paths`, errors, { allowEmpty: false })
     for (const path of paths) {
-      const expanded = expandContextPath(root, path, repoFiles)
+      const expanded = expandContextPath(root, path, repoFiles, skipDirs)
       for (const error of expanded.errors) errors.push(`${groupName}.paths ${error}`)
       for (const file of expanded.files) {
         if (!seen.has(file)) {
@@ -214,7 +227,6 @@ export function buildContext({
   budgetKb,
 }) {
   const errors = []
-  const repoFiles = listRepoFiles(root)
   const defaults = bank?.defaults
   const groups = bank?.groups
   if (!defaults || typeof defaults !== 'object' || Array.isArray(defaults)) {
@@ -231,10 +243,12 @@ export function buildContext({
   const effectiveBudgetKb = budgetKb ?? defaults.max_kb
   parsePositiveNumber(effectiveBudgetKb, 'context budget', errors)
   if (typeof effectiveTree !== 'boolean') errors.push('tree setting must be a boolean')
+  const skipDirs = readStringArray(defaults.skip_dirs, 'defaults.skip_dirs', errors)
+  const repoFiles = listRepoFiles(root, skipDirs)
 
-  const selectedFiles = collectGroupFiles(root, selectedGroups, groups, repoFiles, errors)
+  const selectedFiles = collectGroupFiles(root, selectedGroups, groups, repoFiles, errors, skipDirs)
   for (const path of requestedPaths) {
-    const expanded = expandContextPath(root, path, repoFiles)
+    const expanded = expandContextPath(root, path, repoFiles, skipDirs)
     for (const error of expanded.errors) errors.push(`ad hoc path ${error}`)
     for (const file of expanded.files) {
       if (!selectedFiles.includes(file)) selectedFiles.push(file)
@@ -315,7 +329,7 @@ export function validateContextBank({ root, bank }) {
       ? null
       : parsePositiveNumber(defaults.max_path_fanout, 'defaults.max_path_fanout', errors)
   const skipDirs = readStringArray(defaults.skip_dirs, 'defaults.skip_dirs', errors)
-  const repoFiles = listRepoFiles(root)
+  const repoFiles = listRepoFiles(root, skipDirs)
   const fanout = new Map()
   const groupMetrics = {}
 
@@ -345,7 +359,7 @@ export function validateContextBank({ root, bank }) {
     const seen = new Set()
     for (const path of paths) {
       const normalized = normalizeContextPath(path)
-      const expanded = expandContextPath(root, normalized, repoFiles)
+      const expanded = expandContextPath(root, normalized, repoFiles, skipDirs)
       for (const error of expanded.errors) errors.push(`${groupName}.paths ${error}`)
       for (const file of expanded.files) {
         if (!seen.has(file)) {
@@ -378,7 +392,7 @@ export function validateContextBank({ root, bank }) {
       const group = groups[groupName]
       if (!group || typeof group !== 'object') continue
       for (const path of group.paths ?? []) {
-        const expanded = expandContextPath(root, path, repoFiles)
+        const expanded = expandContextPath(root, path, repoFiles, skipDirs)
         for (const file of expanded.files) {
           if (seen.has(file)) continue
           seen.add(file)

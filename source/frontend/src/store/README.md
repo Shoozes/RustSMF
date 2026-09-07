@@ -9,4 +9,4 @@ Current:
 
 `useLoadModel` composes these slices and keeps `App.tsx` as a thin shell.
 
-See docs/dev/APP_STATE.md and modularity group in summary_bank.
+See `docs/dev/APP_STATE.md` and `subsystem__load_editor_orchestration` in `summary_bank.json`.

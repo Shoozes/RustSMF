@@ -12,6 +12,7 @@
       "build",
       "dist",
       "node_modules",
+      "output",
       "playwright-report",
       "runtime-data",
       "target",
@@ -49,7 +50,8 @@
       "notes": [
         "Exact files and explicit globs are the only path contract; bare directories fail.",
         "Node.js 22 or newer is the canonical runtime.",
-        "Generation never truncates a file or writes when --out - is requested.",
+        "Generation never truncates a file or writes when --out - is requested; scans, globs, explicit paths, and trees honor runtime and configured directory exclusions.",
+        "Explicit paths reject symlink ancestors and Windows drive-relative escapes.",
         "The repo-local summary-bank skill adds RustSMF ownership and native verification to the global context-bank policy."
       ]
     },
@@ -67,7 +69,8 @@
       ],
       "notes": [
         "The guard is local and read-only: it reports missing durable docs, malformed or silently empty backlogs, machine-local paths in current-facing docs, unreviewed inbox notes, unresolved relative frontend imports, and unresolved Rust mod declarations before the application verification lane runs.",
-        "Relative-import candidates must be files; a bare directory without an index module fails even when the directory itself exists."
+        "Relative-import candidates must be files; a bare directory without an index module fails even when the directory itself exists.",
+        "Active TODO fields must contain completion criteria and cannot coexist with the empty-backlog marker."
       ]
     },
     "workflow__git_main_sync": {
@@ -370,7 +373,7 @@
         "Scoped key operations resolve a selected hierarchy, commit one history transaction, union timeline markers, and validate the clipboard's source scope, skeleton fingerprint, and target bone names before mutation.",
         "Animation edit and clipboard maps use null-prototype records so hostile but valid names such as __proto__ cannot become prototype reads or writes; bounded duration set/extension, retime, trim, and locked-bone policy are implemented with one workspace transaction per action.",
         "The viewport advances the mixer imperatively; parent timeline publication is throttled to a 50 ms display cadence while scrub and playback-intent setters remain immediate.",
-        "Rig and Skin suppress mixer playback and restore the authored rest pose; Animate reactivates the selected clip through the shared workspace playback boundary."
+        "Rig and default Rest / Bind Skin restore the authored rest pose. Explicit Frozen Current Skin evaluates the selected clip/time and pauses it; Live Animation follows playback through the same workspace policy."
       ]
     },
     "feature__skin_authoring": {
@@ -386,6 +389,8 @@
         "source/frontend/src/utils/skinnedVertexPosition.ts",
         "source/frontend/src/utils/skinDiagnostics.ts",
         "source/frontend/src/utils/skinDiagnostics.test.ts",
+        "source/frontend/src/utils/workspacePlayback.ts",
+        "source/frontend/src/utils/workspacePlayback.test.ts",
         "source/frontend/src/utils/skinPointOverlay.ts",
         "source/frontend/src/utils/skinPointOverlay.test.ts",
         "source/frontend/src/utils/weightPreview.ts",
@@ -397,7 +402,7 @@
         "Completed strokes and batch actions own one undoable snapshot transaction.",
         "Set paint separates target weight from brush flow and falloff; selected-weight Skin pts refresh posed positions through a non-serializable runtime WeakMap link and provide exact source-vertex paint targets while surface brushing remains the broad-stroke fallback.",
         "Skin diagnostics reads raw four-slot attributes for the hovered vertex and aggregate mesh counts, preserving invalid references/weights as stable issue codes instead of silently clamping them.",
-        "Brush sampling exposes Rest / Bind, Frozen Current, and Live Animation modes; Frozen Current owns a captured bone-matrix snapshot and Live Animation displays a safety warning.",
+        "Brush sampling exposes Rest / Bind, Frozen Current, and Live Animation modes; workspacePlayback is intentionally shared with animation authoring so the selected sample matches the displayed pose. Frozen Current owns a captured bone-matrix snapshot and Live Animation displays a safety warning.",
         "Weight preview is a non-destructive vertex-color display; original color attributes and material vertex-color modes are restored on disable/export.",
         "Modern starts Skin with a slim Pick/Paint/Erase/Smooth rail and contextual brush card; Pick routes viewport clicks to bone selection, Smooth performs bounded regional weight averaging without requiring a selected bone, and diagnostics/exact controls stay behind Advanced. Original keeps the full legacy panel.",
         "Batch history comparisons use a mesh/vertex snapshot index rather than repeated linear scans.",
@@ -449,7 +454,7 @@
         "The frontend passes a Uint8Array byte view to save_file_binary rather than constructing an explicit Array.from number array; typed IPC remains bounded by the same native limit.",
         "Native read responses are untrusted: binaryPayload.ts accepts only ArrayBuffer, Uint8Array, or arrays of integer bytes from 0 through 255 so coercion cannot wrap malformed values.",
         "Rust owns dialog invocation through its pinned tauri-plugin-dialog dependency; the frontend has no unused dialog-plugin package.",
-        "All native writes share one async serialization owner, stage and sync complete payloads before replacement, and restore the previous destination when installation fails.",
+        "The native CSP permits local blob fetches and the WebView2 IPC hostname. Foreground saves await active autosave before opening their destination dialog. All native writes share one async serialization owner, stage and sync complete payloads before replacement, and restore the previous destination when installation fails.",
         "Project recovery discovery and reads accept only the owned target plus .bak1 and .bak2 regular files; arbitrary app-data siblings fail before filesystem access."
       ]
     },
@@ -500,7 +505,7 @@
         "Non-SMF-to-SMF browser cases assert the enabled action for compatible skinned sources and diagnostic blocking for static or unsupported sources; source-SMF export cases remain enabled.",
         "Dirty replacement coverage asserts Cancel preserves the mounted model and Discard clears authoring state before the selected model is committed.",
         "The stress fixture supplies triangle metadata for every generated triangle-soup vertex, and overlap tests explicitly confirm each queued replacement so semantic and async regressions fail at the intended boundary.",
-        "Native mock coverage is routed through subsystem__native_io rather than duplicated in this browser shell group."
+        "Native mock coverage is routed through subsystem__tauri_bridge rather than duplicated in this browser shell group."
       ]
     },
     "workflow__recorded_browser_journey": {
@@ -673,6 +678,8 @@
       "paths": [
         "run.ps1",
         "run.bat",
+        "scripts/dev-process-ownership.ps1",
+        "scripts/dev-process-ownership.test.mjs",
         "source/package.json",
         "source/frontend/package.json",
         "source/frontend/playwright.config.ts",
@@ -682,7 +689,8 @@
       "notes": [
         "The launcher prefers the npm CLI bundled beside the active Node executable before falling back to PATH.",
         "Playwright owns one build-and-preview server; independent test commands must not compete for port 5173.",
-        "Long-running Windows dev processes remain launcher-owned and recursively cleaned."
+        "Cleanup recognizes the exact normalized script argument of this checkout's Vite, Tauri CLI, or managed wrapper; ports, unrelated command arguments, and other checkouts do not confer ownership.",
+        "Dev exit cleanup runs only for dev tasks, including menu selections; Vite resolves through the installed package so workspace hoisting remains supported."
       ]
     },
     "workflow__old_editor_reference": {

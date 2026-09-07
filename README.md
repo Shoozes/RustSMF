@@ -2,60 +2,35 @@
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, and OBJ models.
 
-The current app provides high-fidelity SMF import/export, worker-backed SMF codecs with visible progress, guarded conversion of compatible skinned or root-prepared non-SMF assets to SMF, validated GLB/FBX output, reversible non-SMF model authoring, bounded GLTF/FBX/OBJ sidecar loading, scale-independent model framing, versioned project save/recovery, rig metadata and explicit keyed IK bake, read-only geometry/shader diagnostics, native Rust-owned file dialogs and binary I/O, single/quad viewport layouts, and persisted Modern/Original SMF themes. Unsupported format features fail with diagnostics instead of being silently discarded.
+The editor provides worker-backed SMF codecs, validated conversion/export, reversible model/rig/animation/Skin authoring, bounded multi-file resource loading, project save/recovery, single/quad viewports, and persisted Modern/Original SMF themes. Unsupported format features produce diagnostics before export.
 
-## State and work
+## Start here
 
-- Current app contract: `docs/dev/APP_STATE.md`
-- Active executable backlog: `docs/dev/TODO.md`
-- Latest integrity evidence: `docs/dev/review.md`
-- Durable regression lessons: `docs/dev/PITFALL_LEDGER.md`
-- Focused feature/subsystem/issue routes: `summary_bank.json`
+- [User guide](docs/user/README.md): workflows and format choices.
+- [App state](docs/dev/APP_STATE.md): current behavior, architecture, limits, and verification commands.
+- [TODO](docs/dev/TODO.md): executable forward work and completion conditions.
+- [Latest review](docs/dev/review.md): integrity findings and current verification evidence.
+- [History](docs/dev/HISTORY.md): completed work and dated command records.
+- [Context bank](summary_bank.json): focused feature, subsystem, issue, and workflow routes.
 
-## Quick commands
+## Local commands
 
-Run these from the repository root:
+From the repository root in PowerShell 7:
 
 ```powershell
 .\run.bat
-.\run.bat 2
 pwsh -NoProfile -File .\run.ps1 -Task run
 pwsh -NoProfile -File .\run.ps1 -Task context
 pwsh -NoProfile -File .\run.ps1 -Task verify
 pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye
-pwsh -NoProfile -File .\run.ps1 -Task test:journey
-pwsh -NoProfile -File .\run.ps1 -Task test:visual-strict
-pwsh -NoProfile -File .\run.ps1 -Task desktop-smoke
 ```
 
-`test:e2e` may use GenEye as an advisory wrapper when it is already discoverable; RustSMF's Playwright result remains authoritative. `-NoGenEye` or `RUSTSMF_NO_GENEYE=1` runs Playwright directly. Ignored advisory evidence is written under `runtime-data/geneye-playwright-runs/`.
+The menu provides setup, run, build, clean, and verify tasks. Windows dev launchers own their child processes; cleanup recognizes only this checkout's exact dev script paths. A foreign server occupying port 5173 must be handled by its owner. Direct Vite/Tauri commands have fewer lifecycle guarantees.
 
-`test:journey` runs the opt-in 1440x900, 125%-DPI headless hand-wave workflow. It loads the committed SMF character, checks the in-scene bone hover badge and Mixamo-style display aliases, creates a new animation, holds the shoulder outside the head silhouette, and Branch-keys a bounded elbow-and-hand wave at five times including matched loop endpoints. The same journey catches the fixture's visible forearm-driven torso wing, uses Frozen Current weight painting plus selected-weight mini vertex nodes to subtract stray `LeftForeArm` influence from the torso seam and bind the upper-sleeve edge to `LeftArm`, previews the corrected playback, verifies actionable controls/document containment, and writes review-only screenshots plus `hand-wave-journey.webm` under `output/playwright/hand-wave-journey/`.
+Optional recorded journeys, strict visuals, and desktop smoke commands are documented in [App state](docs/dev/APP_STATE.md#verification). [The test contract](source/frontend/tests/README.md) describes fixtures, suite ownership, and advisory GenEye integration. Generated captures, videos, reports, and logs remain ignored runtime artifacts.
 
-On Windows, prefer `run.bat` or `run.ps1` for normal launches because the launcher owns stale-process cleanup and child-process shutdown. Direct Vite/Tauri commands remain useful for intentional ad-hoc work but have fewer lifecycle guarantees.
+## Development
 
-## Architecture
+TypeScript/React owns the editor; Rust owns native dialogs and bounded file I/O. `useLoadModel.ts` coordinates load/export and authoring state; `ThreeViewport.tsx` owns renderer and interaction lifecycle. Their focused leaf modules own testable policy, timing, validation, and resource cleanup. See the [architecture ownership map](docs/dev/APP_STATE.md#architecture-ownership) before extracting or adding another owner.
 
-- `source/frontend/src/App.tsx`: application shell, workspace composition, theme/layout policy, and shared history chronology.
-- `source/frontend/src/hooks/useLoadModel.ts`: latest-intent load/export integration and stable app-facing editor contract.
-- `source/frontend/src/components/ThreeViewport.tsx`: renderer, mixer, camera, input, selection, and disposal ownership.
-- `source/frontend/src/loaders/`: SMF/GLB/FBX/OBJ parsing, coordinate/DQ boundaries, conversion, diagnostics, and validated exports.
-- `source/frontend/src/workers/`: typed SMF codec protocol, runtime validation, transfer ownership, cancellation, timeout, and progress.
-- `source/frontend/src/backend-client/`: validated native IPC adapters and browser file/download fallbacks.
-- `source/src-tauri/src/`: Rust-owned native dialogs, authorized bounded reads, staged writes, and rotating project recovery generations.
-- `source/frontend/tests/`: focused unit coverage, eight default Playwright suites, and opt-in recorded user journeys.
-
-`useLoadModel.ts` and `ThreeViewport.tsx` remain deliberate integration owners. Pure policy, timing, validation, history, display, and authoring behavior lives in focused modules with tests; new extraction should establish an independent contract instead of only moving lines.
-
-## Current limits
-
-- SMF's current dual-quaternion path preserves position/rotation, not scale. Scale edits block SMF export.
-- Non-SMF-to-SMF conversion supports a compatible single named skeleton with skinned geometry and position/quaternion bone tracks. Static FBX/OBJ roots must first use the reversible root-skeleton preparation; unprepared static roots, multiple skeletons, scale animation, materials, morphs, and object tracks require GLB/FBX.
-- `.gltf` import resolves selected relative `.bin` and image sidecars through a bounded multi-file contract; remote, traversal, missing, ambiguous, and over-budget resources fail closed. A lone `.gltf` remains limited to self-contained assets.
-- FBX import resolves relative texture paths only from explicitly selected sidecars; unrelated maps are not guessed into material slots.
-- OBJ can resolve one selected `.mtl` and its authorized relative textures; geometry-only OBJ remains supported and unsafe or incomplete material bundles fail closed.
-- FBX compatibility is proven for the committed Three.js/generated fixtures and an independently authored Blender 5.0.0 fixture, not every third-party FBX producer or consumer.
-- The freeform TransformControls gizmo remains single-perspective. Quad/orthographic authoring uses pane-aware explicit Rig tools.
-- Native dialog behavior is covered by Rust tests and deterministic IPC browser mocks; real OS-dialog automation remains separate.
-
-Project philosophy is defined in `AGENTS.md`: safety, courtesy, show, and efficiency, in that order; prefer small dynamic modules over hard-coding; prioritize correctness and readability. Work locally on `main`, review in this workspace, and push only when explicitly requested. Use `.tools/gitpush.ps1` for reviewed main publication; it verifies the configured remote and final local/remote commit alignment without force-pushing.
+Our philosophy is safety, courtesy, show, and efficiency, in that order. Work locally on `main`, preserve owner changes, review here, and push only when explicitly requested through `.tools/gitpush.ps1`. See `AGENTS.md` for the full local contract.

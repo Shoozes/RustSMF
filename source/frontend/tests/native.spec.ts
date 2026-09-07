@@ -72,6 +72,10 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
   });
 
   test('native mock bundle authorizes and reads GLTF sidecars as one bounded request', async ({ page }) => {
+    const nativeConfig = JSON.parse(fs.readFileSync(new URL('../../src-tauri/tauri.conf.json', import.meta.url), 'utf8'));
+    const nativeConnectPolicy = nativeConfig.app.security.csp.split(';')
+      .find((directive: string) => directive.trim().startsWith('connect-src '));
+    expect(nativeConnectPolicy).toBeTruthy();
     const selectedPaths = [SAMPLE_EXTERNAL_GLTF, SAMPLE_EXTERNAL_GLTF_BUFFER, SAMPLE_EXTERNAL_GLTF_TEXTURE];
     await installTauriMock(page, {
       openPath: SAMPLE_EXTERNAL_GLTF,
@@ -82,6 +86,13 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     });
 
     await page.goto('/');
+    // Exercise the shipped native fetch policy as well as the IPC adapter.
+    await page.evaluate((policy: string) => {
+      const meta = document.createElement('meta');
+      meta.httpEquiv = 'Content-Security-Policy';
+      meta.content = policy;
+      document.head.appendChild(meta);
+    }, nativeConnectPolicy);
     await page.getByTestId('open-model-btn').click();
     await expect(page.getByTestId('status-text')).toContainText(/Loaded: scene\.gltf/i, { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/2 sidecar resources/i);
@@ -363,6 +374,26 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 30000 });
     snapshot = await getTauriMockSnapshot(page);
     expect(snapshot.writes).toHaveLength(2);
+  });
+
+  test('native export waits for active autosave without requiring another click', async ({ page }) => {
+    await installTauriMock(page, {
+      openPath: SAMPLE_SMF,
+      savePath: 'C:\\tmp\\queued-export.smf',
+      sampleBytes: readSampleBytes(SAMPLE_SMF),
+      writeDelayMs: 3000,
+    });
+    await page.goto('/');
+    await page.getByTestId('open-model-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Loaded:/i);
+    await pausePlaybackIfRunning(page);
+    await expect.poll(async () => (await getTauriMockSnapshot(page)).activeWrites).toBe(1);
+    await page.getByTestId('export-btn').click();
+    await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 15000 });
+    const snapshot = await getTauriMockSnapshot(page);
+    expect(snapshot.writes).toHaveLength(1);
+    expect(snapshot.autosaves.length).toBeGreaterThanOrEqual(1);
+    expect(snapshot.maxActiveWrites).toBe(1);
   });
 
   test('native autosave coalesces edits and settles before model replacement', async ({ page }) => {

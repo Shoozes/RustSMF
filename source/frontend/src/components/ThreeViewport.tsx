@@ -19,6 +19,7 @@ import { createPoseOverlaySegments } from '../utils/poseOverlay';
 import type { AnimationPoseSnapshot } from '../utils/animationCreation';
 import {
   activateWorkspacePlayback,
+  workspaceAllowsPlayback,
   workspaceUsesRestPose,
   type WorkspacePlaybackIntent,
 } from '../utils/workspacePlayback';
@@ -313,7 +314,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   onSkinPaintStrokeEnd,
   onInspectSkinVertex,
   skinPaintMode = 'set',
-  skinPaintPose = 'live',
+  skinPaintPose = 'rest',
   skinPaintTargetMode = 'vertex',
   skinPaintRadius = 0.2,
   skinPaintStrength = 0.2,
@@ -2370,7 +2371,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       const mixer = mixerRef.current;
       const delta = clockRef.current.getDelta();
       if (mixer) {
-        if (!workspaceUsesRestPose(editorModeRef.current)) {
+        if (workspaceAllowsPlayback(editorModeRef.current, skinPaintPoseRef.current)) {
           mixer.update(delta);
         }
         const action = currentActionRef.current;
@@ -2597,9 +2598,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => {
     const action = currentActionRef.current;
     const mixer = mixerRef.current;
-    if (!action || !mixer || workspaceUsesRestPose(editorMode)) return;
+    if (!action || !mixer || workspaceUsesRestPose(editorMode, skinPaintPose)) return;
 
-    action.paused = !isPlaying;
+    action.paused = !isPlaying || !workspaceAllowsPlayback(editorMode, skinPaintPose);
     // Apply scrub position (clamped by caller)
     if (typeof currentTime === 'number') {
       action.time = Math.max(0, Math.min(currentTime, action.getClip().duration || 0));
@@ -2607,19 +2608,17 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // Force skinning/matrix update immediately for scrub
     mixer.update(0);
     if (attachedModelRef.current) attachedModelRef.current.updateMatrixWorld(true);
-  }, [editorMode, isPlaying, currentTime]);
+  }, [editorMode, skinPaintPose, isPlaying, currentTime]);
 
   // React to clip selection change from parent (inspector list)
   useEffect(() => {
     const mixer = mixerRef.current;
     if (!mixer || !root || mixer.getRoot() !== root) return;
 
-    currentActionRef.current = activateWorkspacePlayback(mixer, playbackIntentRef.current, editorMode);
-    if (workspaceUsesRestPose(editorMode)) {
-      root.updateMatrixWorld(true);
-      skeleton?.update();
-    }
-  }, [currentClipName, clips, editorMode, root, skeleton]);
+    currentActionRef.current = activateWorkspacePlayback(mixer, playbackIntentRef.current, editorMode, skinPaintPose);
+    root.updateMatrixWorld(true);
+    skeleton?.update();
+  }, [currentClipName, clips, editorMode, skinPaintPose, root, skeleton]);
 
   // Keep latest onSelectBone and skeleton for raycast handler (stable click listener)
   useEffect(() => { onSelectBoneRef.current = onSelectBone; }, [onSelectBone]);
@@ -3117,7 +3116,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
     // Clip effects run before this attachment effect. Initialize from the latest complete
     // playback intent so a root swap never binds the new clips to the previous mixer.
-    currentActionRef.current = activateWorkspacePlayback(mixer, playbackIntentRef.current, editorModeRef.current);
+    currentActionRef.current = activateWorkspacePlayback(mixer, playbackIntentRef.current, editorModeRef.current, skinPaintPoseRef.current);
 
     return () => {
       // cleanup handled on next root change or unmount via the top of this effect
@@ -3134,7 +3133,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         data-model-root-id={root?.uuid ?? ''}
         data-playback-time={currentTime.toFixed(6)}
         data-editor-mode={editorMode}
-        data-workspace-pose={workspaceUsesRestPose(editorMode) ? 'rest' : 'animation'}
+        data-workspace-pose={workspaceUsesRestPose(editorMode, skinPaintPose) ? 'rest' : 'animation'}
         data-viewport-layout={viewportLayout}
         data-wireframe-enabled={wireframeEnabled ? 'true' : 'false'}
         data-grid-enabled={gridEnabled ? 'true' : 'false'}

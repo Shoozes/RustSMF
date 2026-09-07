@@ -46,3 +46,29 @@ test('setup workspaces stop animation and restore the underlying rest pose', () 
   assert.equal(activateWorkspacePlayback(mixer, intent, 'skin'), null);
   assert.ok(Math.abs(bone.rotation.z) < 1e-6, 'Skin restores the pose that existed before animation');
 });
+
+test('explicit Skin frozen/live modes sample animation and returning to Rest restores the bind pose', () => {
+  const { bone, mixer, intent } = makeFixture();
+  const playing = { ...intent, isPlaying: true };
+  assert.equal(workspaceUsesRestPose('skin', 'frozen'), false);
+  assert.equal(workspaceUsesRestPose('skin', 'live'), false);
+  assert.equal(workspaceUsesRestPose('rig', 'live'), true);
+
+  const frozen = activateWorkspacePlayback(mixer, playing, 'skin', 'frozen');
+  assert.ok(frozen);
+  assert.equal(frozen.paused, true);
+  assert.ok(Math.abs(bone.rotation.z - Math.PI / 4) < 1e-6);
+  mixer.update(0.2);
+  assert.equal(frozen.time, 0.5);
+  assert.ok(Math.abs(bone.rotation.z - Math.PI / 4) < 1e-6);
+
+  const live = activateWorkspacePlayback(mixer, playing, 'skin', 'live');
+  assert.ok(live);
+  mixer.update(0.2);
+  assert.ok(live.time > 0.5);
+  assert.ok(bone.rotation.z > Math.PI / 4);
+
+  assert.equal(activateWorkspacePlayback(mixer, playing, 'skin', 'rest'), null);
+  assert.ok(Math.abs(bone.rotation.z) < 1e-6);
+  assert.equal(activateWorkspacePlayback(mixer, playing, 'rig', 'live'), null);
+});
