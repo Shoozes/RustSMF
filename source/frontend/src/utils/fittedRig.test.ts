@@ -60,6 +60,26 @@ test('fitted GLB export preserves source streams and rejects unmapped influences
   assert.equal(new DataView(output.binary.buffer, output.binary.byteOffset).getUint16(36, true), 2);
   const incomplete = { ...fitted, sourceToTarget: new Map([[source.bones[0], fitted.skeleton.bones[0]]]) };
   assert.throws(() => exportFittedRigGlb(input, incomplete, []), /Unmapped weighted/);
+  // Separate meshes can use the same joints with different inverse bindings.
+  const distinct = parseGlbContainer(input), expanded = new Uint8Array(36 + 256);
+  expanded.set(distinct.binary);
+  for (const [index, translation] of [10, 20].entries()) {
+    const matrices = Float32Array.from([...new THREE.Matrix4().toArray(), ...new THREE.Matrix4().makeTranslation(translation, 0, 0).toArray()]);
+    expanded.set(new Uint8Array(matrices.buffer), 36 + index * 128);
+    distinct.json.bufferViews!.push({ buffer: 0, byteOffset: 36 + index * 128, byteLength: 128 });
+    distinct.json.accessors!.push({ bufferView: 3 + index, componentType: 5126, count: 2, type: 'MAT4' });
+  }
+  distinct.json.buffers![0].byteLength = expanded.length;
+  distinct.json.skins = [{ joints: [0, 1], inverseBindMatrices: 3 }, { joints: [0, 1], inverseBindMatrices: 4 }];
+  (distinct.json.nodes as object[]).push({ mesh: 0, skin: 1 });
+  (distinct.json.scenes as Array<{ nodes: number[] }>)[0].nodes.push(3);
+  const multi = parseGlbContainer(exportFittedRigGlb(buildGlbContainer(distinct.json, expanded), fitted, []));
+  const skins = multi.json.skins as Array<{ inverseBindMatrices: number }>;
+  assert.equal(skins.length, 2);
+  assert.deepEqual(skins.map(skin => {
+    const accessor = multi.json.accessors![skin.inverseBindMatrices], view = multi.json.bufferViews![accessor.bufferView!];
+    return new DataView(multi.binary.buffer, multi.binary.byteOffset).getFloat32(view.byteOffset! + 2 * 64 + 12 * 4, true);
+  }), [10, 20]);
   fitted.skeleton.dispose(); source.dispose(); template.dispose();
 });
 

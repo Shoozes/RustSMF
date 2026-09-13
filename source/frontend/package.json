@@ -20,6 +20,8 @@
     "test:visual-strict": "node scripts/run-strict-visuals.mjs",
     "test:visual-update": "node scripts/run-strict-visuals.mjs --update-snapshots",
     "game-ready": "tsx scripts/game-ready-cli.ts",
+    "fit-rig": "tsx scripts/fit-rig-cli.ts",
+    "fit-rig-preview": "tsx scripts/fit-rig-preview.ts",
     "tauri:dev": "cd ../src-tauri && tauri dev",
     "tauri:build": "cd ../src-tauri && tauri build",
     "tauri:build:smoke": "cd ../src-tauri && tauri build --no-bundle",

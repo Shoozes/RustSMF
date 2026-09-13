@@ -165,10 +165,6 @@
         "source/frontend/src/utils/rigMapping.test.ts",
         "source/frontend/src/utils/rigCompatibility.ts",
         "source/frontend/src/utils/rigCompatibility.test.ts",
-        "source/frontend/src/utils/fittedRig.ts",
-        "source/frontend/src/utils/fittedRig.test.ts",
-        "source/frontend/src/utils/fittedRigAnimation.ts",
-        "source/frontend/src/utils/fittedRigGlb.ts",
         "source/frontend/src/utils/animationRetarget.ts",
         "source/frontend/src/utils/animationRetarget.test.ts"
       ],
@@ -763,6 +759,26 @@
       "notes": [
         "Do not load the full archived source by default.",
         "Use explicit file or screenshot globs only for a named parity question; the listed weight shaders are the selected-bone heat-map and paint-transport references."
+      ]
+    },
+    "workflow__fitted_rig": {
+      "description": "Explicit topology fitting, preserved skin bindings, saved-job export verification and three-state visual comparison.",
+      "max_kb": 80,
+      "paths": [
+        "docs/dev/FITTED_RIG.md",
+        "source/frontend/src/utils/fittedRig.ts",
+        "source/frontend/src/utils/fittedRig.test.ts",
+        "source/frontend/src/utils/fittedRigAnimation.ts",
+        "source/frontend/src/utils/fittedRigGlb.ts",
+        "source/frontend/src/utils/fittedRigVerification.ts",
+        "source/frontend/src/utils/fitRigJob.test.ts",
+        "source/frontend/scripts/fit-rig-cli.ts",
+        "source/frontend/scripts/node-three-runtime.ts",
+        "source/frontend/scripts/fit-rig-preview.ts",
+        "source/frontend/src/rig-comparison/index.html",
+        "source/frontend/src/rig-comparison/comparison.js",
+        "source/frontend/src/utils/fitRigPreview.test.ts",
+        "source/frontend/scripts/bounded-file-read.ts"
       ]
     }
   },

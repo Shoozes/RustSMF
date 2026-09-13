@@ -163,6 +163,10 @@ The latest review links the dated command results and any observed limitations i
 The reusable fitted-rig utilities fit explicit source bind frames onto a template
 hierarchy, reject lost weighted influences, bake mapped world motion, and append
 replacement skin/animation streams while retaining source GLB bytes. They are
-currently programmatic diagnostic utilities, not a frontend action or saved-job
-CLI. Actual animated export equivalence and three-state visual comparison remain
-open in TODO.md; fixture tests do not establish private-model acceptance.
+available through the saved-job `fit-rig` CLI and programmatic utilities. The
+actual private Mario model has passed re-imported vertex equivalence
+across all 37 clips at sampled 60 Hz frames after preserving each source skin's
+inverse binds. Three-state visual comparison remains open in TODO.md; numerical
+equivalence does not establish wolf visual acceptance.
+
+Command schema, outputs, limits and preview controls are in [FITTED_RIG.md](FITTED_RIG.md).

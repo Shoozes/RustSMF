@@ -2,6 +2,18 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-13 - Fitted-rig session closeout
+
+The fitted-rig CLI, per-skin inverse-bind repair and three-model comparison viewer
+pass the fresh `pwsh -NoProfile -File run.ps1 -Task verify` gate: 393 frontend
+tests, 10 Rust tests, lint, both typechecks, build, context and repository guards;
+exit 0. The receiving game's retained log is
+`C:/DevStuff/fight-game-study/.artifacts/fighter-authoring/closeout-smf-verify.log`.
+Actual 37-clip re-import and Chrome comparison evidence is recorded below.
+Operator appearance acceptance remains open; no infrastructure blocker prevents
+reusing the documented commands. Preview processes are stopped. Publication uses
+the guarded `gitpush.ps1` helper on main; private model outputs remain local.
+
 ## 2026-09-13 - Repository integrity, bounded model input, and retarget evidence
 
 - Extracted the pure `rustsmf.game-ready-job.v1` parser from the CLI execution owner. It rejects duplicate or input-overwriting paths, empty explicit clip selections, unknown attachment roles, and invalid timing/recovery values without requiring filesystem access.
@@ -604,3 +616,68 @@ integrity and context contracts, including its nine regression tests.
 The complete `pwsh -NoProfile -File run.ps1 -Task verify` gate then passed,
 including Git/process safety checks, frontend boundaries, Rust formatting,
 Clippy, all ten Rust tests and cargo check. All commands exited 0.
+
+## 2026-09-13 — actual fitted export receiving
+
+The first actual-model export exposed a shared-inverse-bind bug: Mario uses
+distinct per-mesh skin bindings. Replacing those with one fitted inverse set
+introduced up to 408.45 world units of vertex error despite matching bone
+frames. Export now preserves each source skin's mapped inverse matrices;
+the regression includes two skins sharing joints with different inverse binds.
+Leaf nodes also omit empty children arrays and joint buffer views declare their
+vertex-buffer target, satisfying GLB validation.
+
+Re-imported original/fitted Mario comparison covers 960 vertices, 18 meshes and
+all 37 clips at integer 60 Hz frames; maximum world-space vertex error is
+6.091180994014376e-7. The separate private artifact and report are retained in
+the receiving game's ignored authoring output, `fitted-motion-vmbV2y` under
+`absolute-rig-25e2c5df-132f-4cd4-8b7c-67a0ef4aac5b`. GLB validator reports zero
+errors, warnings and hints; unused preserved source accessors remain informational.
+This proves sampled export equivalence, not wolf visual acceptance or a public
+saved-job workflow. No input model was overwritten.
+
+## 2026-09-13 — repeatable fitted-rig CLI
+
+`npm.cmd run fit-rig -- --job <absolute job.json>` from source now owns the
+repeatable fit/bake/export/re-import/vertex-comparison path. It uses bounded
+embedded inputs, explicit clip and bone selection, fresh-only output, and writes
+a hash-bound report after comparison succeeds. The existing game-ready command
+shares its extracted Node Three.js runtime setup with this command.
+
+Actual private receiving produced output SHA-256
+`ca38ab66cbecce5f1fceab705b32120a1d335db53ec4d697244ecbf06082503f`:
+28 bones, 18 mapped frames, 960 vertices and 37 clips, maximum sampled vertex
+error 6.091180994014376e-7. The receiving game's diagnostic folder contains
+`fit-rig-job.json`, `fit-rig-cli.log` and `cli-fitted-20260913/report.json`.
+Repeating the exact command exits 1 with EEXIST and leaves the model hash unchanged.
+Seven focused tests and all 392 unit tests pass; the comparison regression also
+proves that a deliberate half-unit vertex displacement is detected and input
+poses are restored. This closes command reproducibility, not visual acceptance.
+The full local `pwsh -NoProfile -File run.ps1 -Task verify` gate passed, exit 0,
+including 392 frontend tests, ten Rust tests, build, lint, typechecks, context,
+Git/process safety, Clippy and formatting. The receiving game retains the log
+as `.artifacts/fighter-authoring/fit-rig-cli-verify.txt`.
+
+## 2026-09-13 — three-state comparison viewer
+
+Implemented `fit-rig-preview`, a fixed-resource, hash-checked loopback viewer of
+source, fitted source and template/target. It shares clip/frame, camera and bones
+controls and half-speed playback. Route tests verify executable module MIME,
+unknown-route/method rejection and stale-source refusal. Browser receiving in
+Chrome covered all 37 available clips in the selector, explicit idle/jab/walk/
+special/jump/damage frames from front/side views, frame 18 recovery, bones,
+play/pause and 600-pixel narrow layout with no horizontal overflow or app error.
+The first review fixed clipped models and float-rounded terminal-frame omission.
+
+Captures under `D:/GaimEngine-build/wolf-visual-receiving-20260913/compare-*`
+show identical original/fitted Mario poses. Wolf retains its longer limbs and
+narrow hands, so silhouette differs despite transferred direction. The operator
+was asked to accept that silhouette or request further stylization. No art
+approval or final gameplay acceptance is inferred from the diagnostic view.
+
+The full local verification run passed 393 frontend tests, ten Rust tests,
+lint, both typechecks, build and code boundaries; its only failure was context
+budget growth. Moving command detail into FITTED_RIG.md and separating the
+workflow__fitted_rig route restored the existing orientation/retarget budgets.
+The focused `run.ps1 -Task context` rerun passed. Chrome reported zero errors
+and warnings. The owned browser and preview process were stopped after capture.

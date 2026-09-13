@@ -11,8 +11,13 @@ The actual private Mario input remaps all 960 vertices across 18 meshes to
 the 28-bone Wolf topology, with 18 mapped frames and maximum matrix error
 4.44e-16. This is static bind-fit evidence only for the actual private models.
 Animation baking and GLB stream preservation now have focused utility tests;
-actual exported-model comparison and a public saved-job CLI path are still
-required by this item. Closing-session evidence is in HISTORY.md.
+actual exported Mario vertex equivalence now passes all 37 clips at sampled
+60 Hz frames. The public saved-job `fit-rig` CLI now reproduces that evidence and
+rejects overwriting existing output. `fit-rig-preview` now supplies the three-state
+visual comparison; actual Chrome captures cover idle, jab contact/recovery, walk,
+special, jump and damage from front/side views. Source and fitted Mario match;
+wolf silhouette and actual-game acceptance remain pending operator review.
+Exact evidence is in HISTORY.md and usage is in APP_STATE.md.
 
 - What: Build a local three-state comparison for the original Mario mesh/rig with untouched clips, Mario re-expressed on a Mixamo topology fitted and rebound to Mario proportions, and Wolf on that same topology. Compare unconditioned idle, walk, jab, special, jump, and damage sequences at identical source frames before any clip-specific recovery or direction conditioning.
 - Why: Actual gameplay review superseded the earlier sampled-pose acceptance. The preserved Wolf candidate has correct side mapping and timing but measured normalized segment mismatches, so target bone lengths, rest frames, skin weights, or runtime transforms can still amplify otherwise correct rotations and produce visibly wrong motion.

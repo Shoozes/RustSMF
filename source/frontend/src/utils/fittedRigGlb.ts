@@ -6,8 +6,9 @@ interface Node { name?: string; children?: number[]; mesh?: number; skin?: numbe
 interface Primitive { attributes: Record<string, number>; [key: string]: unknown }
 interface Mesh { primitives: Primitive[]; [key: string]: unknown }
 interface Accessor { bufferView: number; byteOffset?: number; componentType: number; count: number; type: string; normalized?: boolean; sparse?: unknown; [key: string]: unknown }
-interface BufferView { buffer: number; byteOffset?: number; byteLength: number; byteStride?: number }
-type Document = ParsedGlb['json'] & { nodes: Node[]; meshes: Mesh[]; skins: Array<{ joints: number[] }>;
+interface BufferView { buffer: number; byteOffset?: number; byteLength: number; byteStride?: number; target?: number }
+interface Skin { joints: number[]; inverseBindMatrices?: number }
+type Document = ParsedGlb['json'] & { nodes: Node[]; meshes: Mesh[]; skins: Skin[];
   scenes: Array<{ nodes: number[] }>; accessors: Accessor[]; bufferViews: BufferView[] };
 
 /** Preserves source vertex, UV, material and image bytes. Only joint indices,
@@ -32,7 +33,8 @@ export function exportFittedRigGlb(source: Uint8Array, fitted: FittedRig,
     if (length > 64 * 1024 * 1024) throw new Error('Fitted GLB exceeds 64 MiB');
     chunks.push({ offset, bytes });
     const bufferView = document.bufferViews.length;
-    document.bufferViews.push({ buffer: 0, byteOffset: offset, byteLength: bytes.length });
+    document.bufferViews.push({ buffer: 0, byteOffset: offset, byteLength: bytes.length,
+      ...(values instanceof Uint16Array ? { target: 34962 } : {}) });
     const index = document.accessors.length;
     document.accessors.push({ bufferView, componentType: values instanceof Uint16Array ? 5123 : 5126,
       count: values.length / width, type,
@@ -61,6 +63,35 @@ export function exportFittedRigGlb(source: Uint8Array, fitted: FittedRig,
   const mapped = new Map([...fitted.sourceToTarget].map(([old, bone]) => [old.name, targetByName.get(bone.name)!]));
   const nodeStart = document.nodes.length;
   const oldNodes = document.nodes.slice(), oldMeshes = document.meshes.slice(), oldSkins = document.skins;
+  const skins: Skin[] = [];
+  const reboundSkins = new Map<number, number>();
+  const rebindSkin = (skinIndex: number): number => {
+    const existing = reboundSkins.get(skinIndex); if (existing !== undefined) return existing;
+    const skin = oldSkins[skinIndex];
+    const matrices: number[][] = fitted.skeleton.boneInverses.map(matrix => matrix.toArray());
+    const accessor = skin.inverseBindMatrices === undefined ? undefined : document.accessors[skin.inverseBindMatrices];
+    const view = accessor && document.bufferViews[accessor.bufferView];
+    if (skin.inverseBindMatrices !== undefined && (!accessor || !view || accessor.type !== 'MAT4'
+      || accessor.componentType !== 5126 || accessor.count !== skin.joints.length || accessor.sparse
+      || view.buffer !== 0 || view.byteStride)) throw new Error('Unsupported source inverse bind accessor');
+    const offset = (view?.byteOffset ?? 0) + (accessor?.byteOffset ?? 0);
+    if (accessor && (!Number.isInteger(offset) || offset < 0
+      || (accessor.byteOffset ?? 0) + accessor.count * 64 > view!.byteLength
+      || offset + accessor.count * 64 > parsed.binary.length)) throw new Error('Inverse binds exceed their buffer view');
+    const data = new DataView(parsed.binary.buffer, parsed.binary.byteOffset, parsed.binary.byteLength);
+    skin.joints.forEach((node, index) => {
+      const name = oldNodes[node]?.name, target = name === undefined ? undefined : mapped.get(name);
+      if (target === undefined) return;
+      const matrix = accessor ? Array.from({ length: 16 }, (_, element) => data.getFloat32(offset + index * 64 + element * 4, true))
+        : new THREE.Matrix4().toArray();
+      if (matrix.some(value => !Number.isFinite(value))) throw new Error('Invalid source inverse bind matrix');
+      matrices[target] = matrix;
+    });
+    const index = skins.length;
+    skins.push({ joints: fitted.skeleton.bones.map((_, bone) => nodeStart + bone),
+      inverseBindMatrices: append(Float32Array.from(matrices.flat()), 'MAT4', 16) });
+    reboundSkins.set(skinIndex, index); return index;
+  };
   for (const node of oldNodes) {
     if (node.skin === undefined) continue;
     const skin = oldSkins[node.skin], mesh = node.mesh === undefined ? undefined : oldMeshes[node.mesh];
@@ -88,14 +119,13 @@ export function exportFittedRigGlb(source: Uint8Array, fitted: FittedRig,
       }
       primitive.attributes.JOINTS_0 = append(remapped, 'VEC4', 4);
     }
-    node.mesh = document.meshes.length; document.meshes.push(replacement); node.skin = 0;
+    node.mesh = document.meshes.length; document.meshes.push(replacement); node.skin = rebindSkin(node.skin);
   }
   for (const bone of fitted.skeleton.bones) document.nodes.push({ name: bone.name,
     translation: bone.position.toArray(), rotation: bone.quaternion.toArray(), scale: bone.scale.toArray(),
-    children: bone.children.map(child => fitted.skeleton.bones.indexOf(child as THREE.Bone) + nodeStart) });
+    ...(bone.children.length ? { children: bone.children.map(child => fitted.skeleton.bones.indexOf(child as THREE.Bone) + nodeStart) } : {}) });
   document.scenes[0].nodes.push(...fitted.skeleton.bones.flatMap((bone, index) => bone.parent === fitted.root ? [nodeStart + index] : []));
-  const inverseBindMatrices = append(Float32Array.from(fitted.skeleton.boneInverses.flatMap(matrix => matrix.toArray())), 'MAT4', 16);
-  document.skins = [{ joints: fitted.skeleton.bones.map((_, index) => nodeStart + index), inverseBindMatrices } as { joints: number[] }];
+  document.skins = skins;
   document.animations = clips.map(clip => {
     const channels: Array<{ sampler: number; target: { node: number; path: string } }> = [];
     const samplers = clip.tracks.map((track, index) => {
