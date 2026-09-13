@@ -80,4 +80,13 @@ describe('project integrity checks', () => {
     const result = validateProjectIntegrity(process.cwd())
     assert.deepEqual(result.errors, [])
   })
+
+  it('reports malformed durable-doc encoding rather than silently replacing bytes', () => {
+    const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-integrity-'))
+    temporaryRoots.push(root)
+    writeFileSync(join(root, 'README.md'), Buffer.from([0x23, 0x20, 0x92]))
+    assert.ok(validateProjectIntegrity(root).errors.includes('durable project doc must be readable UTF-8: README.md'))
+    writeFileSync(join(root, 'README.md'), '# Valid UTF-8 — café\n')
+    assert.ok(!validateProjectIntegrity(root).errors.some(error => error.includes('readable UTF-8')))
+  })
 })

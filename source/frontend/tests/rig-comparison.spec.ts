@@ -64,6 +64,22 @@ async function comparisonPreview(options: { duration?: number; fittedClip?: stri
   };
 }
 
+test('rig comparison resolves explicit source clip aliases while retaining duration checks', async ({ page }) => {
+  const preview = await comparisonPreview({ fittedClip: 'Wait1' });
+  try {
+    await page.route('**/models.json', async route => {
+      const response = await route.fetch();
+      const manifest = await response.json();
+      manifest.models[1].clipMap = { idle: 'Wait1' };
+      await route.fulfill({ response, json: manifest });
+    });
+    await page.goto(preview.url);
+    await expect(page.locator('#play')).toBeEnabled();
+    await expect(page.locator('#error')).toBeEmpty();
+    await expect(page.locator('#receipt')).toContainText('Wait1');
+  } finally { await preview.dispose(); }
+});
+
 test('rig comparison exposes strict synchronized coverage and a reproducible capture receipt', async ({ page }) => {
   await page.addInitScript(() => {
     let nextId = 1;

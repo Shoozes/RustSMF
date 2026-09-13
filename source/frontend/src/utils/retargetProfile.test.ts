@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { parseRetargetProfile, profileClipOptions, RETARGET_PROFILE_SCHEMA } from './retargetProfile';
+import { mergeRetargetClips, parseRetargetProfile, profileClipOptions, RETARGET_PROFILE_SCHEMA } from './retargetProfile';
 
 const document = () => ({ $schema: RETARGET_PROFILE_SCHEMA, targetClipNames: { Idle: 'wolf_source_idle' }, retarget: {
   manualMap: { 'joint-12': 'mixamorigHead' },
@@ -9,6 +9,7 @@ const document = () => ({ $schema: RETARGET_PROFILE_SCHEMA, targetClipNames: { I
   directionTransfer: 'relative', clipDirectionTransfer: { walk: 'absolute' },
   directionTransferBones: ['mixamorigHead'], clipPreserveTargetRotations: { walk: ['mixamorigLeftHand'] },
   sampleRateHz: 60, interpolation: 'step', nextDownRationalTimes: true,
+  extractRootMotionBone: 'TransN', clipVisualTiming: {walk:{durationFrames:40,cycles:2}},
 } });
 
 test('browser profile keeps explicit mapping, references and per-clip overrides through JSON roundtrip', () => {
@@ -22,6 +23,8 @@ test('browser profile keeps explicit mapping, references and per-clip overrides 
   assert.equal(options.directionTransferMode, 'absolute');
   assert.equal(options.interpolation, 'step');
   assert.equal(options.nextDownRationalTimes, true);
+  assert.equal(options.extractRootMotionBone,'TransN');
+  assert.deepEqual(options.visualTiming,{durationFrames:40,cycles:2});
   assert.deepEqual(options.preserveTargetRotations, ['mixamorigLeftHand']);
   assert.deepEqual(profile.retarget.manualMap, { 'joint-12': 'mixamorigHead' });
   assert.throws(() => profileClipOptions(profile, walk, [walk], [target]), /missing reference clip idle/);
@@ -46,4 +49,39 @@ test('complete CLI jobs import as portable profiles without opening their paths'
   };
   assert.deepEqual(parseRetargetProfile(JSON.stringify(job)), expected);
   assert.equal(JSON.stringify(expected).includes('C:/private/source.glb'), false);
+});
+
+test('explicit replacement preserves untouched clips, order and immutable reference inputs', () => {
+  const idle = new THREE.AnimationClip('idle', 1, []);
+  const jab = new THREE.AnimationClip('jab', 0.3, []);
+  const updated = new THREE.AnimationClip('idle', 2, []);
+  const walk = new THREE.AnimationClip('walk', 3, []);
+  const target = [idle, jab];
+  assert.deepEqual(mergeRetargetClips(target, [walk, updated], ['idle']), [updated, jab, walk]);
+  assert.equal(target[0], idle);
+  assert.equal(mergeRetargetClips(target, [updated], ['idle'])[1], jab);
+  assert.equal(jab.duration, 0.3);
+  assert.throws(() => mergeRetargetClips(target, [updated]), /explicit replacement/);
+  assert.throws(() => mergeRetargetClips(target, [walk], ['walk']), /target clip walk is missing/);
+  assert.throws(() => mergeRetargetClips(target, [walk], ['idle']), /was not generated/);
+  assert.throws(() => mergeRetargetClips(target, [updated, updated], ['idle']), /Duplicate/);
+  assert.throws(() => mergeRetargetClips(target, [updated], ['idle', 'idle']), /Duplicate/);
+});
+
+test('portable profiles retain explicit replacements and reject duplicate names', () => {
+  const input = document();
+  const profile = parseRetargetProfile(JSON.stringify({...input, retarget:{...input.retarget,replaceClips:['walk']}}));
+  assert.deepEqual(profile.retarget.replaceClips, ['walk']);
+  assert.deepEqual(parseRetargetProfile(JSON.stringify(profile)), profile);
+  assert.throws(() => parseRetargetProfile(JSON.stringify({...input, retarget:{...input.retarget,replaceClips:['walk','walk']}})), /duplicates/);
+});
+
+
+test('portable profile roundtrips exact output/source landmarks and rejects ignored fields',()=>{
+ const input=document();input.retarget.clipVisualTiming.walk={durationFrames:40,cycles:1,landmarks:[{outputFrame:0,sourcePhase:0},{outputFrame:12,sourcePhase:0.2},{outputFrame:40,sourcePhase:1}]} as typeof input.retarget.clipVisualTiming.walk;
+ const profile=parseRetargetProfile(JSON.stringify(input));
+ assert.deepEqual(parseRetargetProfile(JSON.stringify(profile)),profile);
+ assert.equal(profile.retarget.clipVisualTiming!.walk.landmarks![1].outputFrame,12);
+ const invalid=JSON.parse(JSON.stringify(input));invalid.retarget.clipVisualTiming.walk.landmarks[1].ignored=true;
+ assert.throws(()=>parseRetargetProfile(JSON.stringify(invalid)),/unknown/i);
 });

@@ -24,6 +24,8 @@ export interface NaturalLegProfile {
 
 export interface NaturalFootContact {
   foot: NaturalFootSide;
+  /** Plane follows horizontal motion; planted (the default) locks a world point. */
+  positionMode?: 'planted' | 'plane';
   /** Inclusive 60 Hz frame index. */
   startFrame: number;
   /** Inclusive 60 Hz frame index. */
@@ -43,7 +45,19 @@ export interface NaturalLegMotionLimits {
   minimumSwingBendDegrees: number;
 }
 
+export interface NaturalGrounding {
+  /** Scale model-forward ankle reach while retaining height and lateral stance. */
+  strideScale: number;
+  rootHeightOffset: number;
+  groundHeight: number;
+}
+
 export interface NaturalMotionProfile {
+  /** Animated retains transferred axial twist and uses the source knee plane. */
+  legOrientation?: 'calibrated' | 'animated';
+  grounding?: Record<string, NaturalGrounding>;
+  /** Explicit anatomical calibration; omission preserves legacy reach ratios. */
+  reachTransfer?: 'reference-ratio' | 'calibrated-bend';
   torso?: NaturalTorsoProfile;
   legs: Record<NaturalFootSide, NaturalLegProfile>;
   contacts?: Record<string, NaturalFootContact[]>;
@@ -51,6 +65,19 @@ export interface NaturalMotionProfile {
   rootTravelPerFrame?: Record<string, [number, number, number]>;
   /** Optional clip-specific limits for proportion-sensitive locomotion strides. */
   legMotionLimits?: Record<string, NaturalLegMotionLimits>;
+}
+
+/** Reference-anchored flexion mapping; avoids reach-ratio saturation on longer rigs. */
+export function calibratedNaturalBend(source: number, sourceReference: number, targetReference: number): number {
+  if (![source, sourceReference, targetReference].every(v => Number.isFinite(v) && v >= 0 && v <= Math.PI)) {
+    throw new Error('Natural bend calibration requires finite angles in [0, pi].');
+  }
+  if (sourceReference < EPSILON || Math.PI - sourceReference < EPSILON) {
+    throw new Error('Natural bend calibration requires a nondegenerate source reference.');
+  }
+  return source <= sourceReference
+    ? targetReference * source / sourceReference
+    : targetReference + (Math.PI - targetReference) * (source - sourceReference) / (Math.PI - sourceReference);
 }
 
 export interface NaturalLegDirectionLimitResult {
@@ -133,7 +160,7 @@ export function limitNaturalLegDirection(
     throw new Error('Natural leg direction limits must be finite angles from 0 up to, but not including, 90 degrees.');
   }
   const direction = pelvisLocalDirection.clone().normalize();
-  const down = Math.max(EPSILON, -direction.y);
+  const down = -direction.y;
   const requestedSagittalDegrees = THREE.MathUtils.radToDeg(Math.atan2(direction.z, down));
   const requestedLateralDegrees = THREE.MathUtils.radToDeg(Math.atan2(direction.x, down));
   const solvedSagittalDegrees = THREE.MathUtils.clamp(
@@ -163,8 +190,9 @@ export function limitNaturalLegDirection(
     -1,
     Math.tan(THREE.MathUtils.degToRad(solvedSagittalDegrees)),
   ).normalize();
-  direction.lerp(bounded, THREE.MathUtils.clamp(weight, 0, 1)).normalize();
-  const blendedDown = Math.max(EPSILON, -direction.y);
+  const arc = new THREE.Quaternion().setFromUnitVectors(direction, bounded);
+  direction.applyQuaternion(new THREE.Quaternion().slerp(arc, THREE.MathUtils.clamp(weight, 0, 1))).normalize();
+  const blendedDown = -direction.y;
   return {
     direction,
     constrained: true,
@@ -353,4 +381,30 @@ export function alignNaturalAnatomicalFrame(
     .multiply(referenceFrame.invert())
     .multiply(referenceBoneWorldQuaternion)
     .normalize();
+}
+
+
+/** Find one bounded pelvis displacement satisfying all active leg reaches. */
+export function solveNaturalPelvisCorrection(constraints: readonly {
+  leg: Parameters<typeof solveNaturalTwoBoneLeg>[0];
+  maximumCorrection: number;
+}[]): THREE.Vector3 {
+  const correction = new THREE.Vector3();
+  if (!constraints.length) return correction;
+  const maximum = Math.min(...constraints.map(c => c.maximumCorrection));
+  if (!Number.isFinite(maximum) || maximum < 0) throw new Error('Pelvis correction must be finite and non-negative.');
+  if (maximum === 0) return correction;
+  // Alternating projections resolve coupled feet; unreachable constraints remain
+  // bounded and are reported by the final leg solves, never by stretching bones.
+  for (let pass = 0; pass < 32; pass++) {
+    let worst = 0;
+    for (const {leg} of constraints) {
+      const solved = solveNaturalTwoBoneLeg({...leg,hip:leg.hip.clone().add(correction)});
+      worst = Math.max(worst,solved.residual);
+      correction.add(leg.desiredAnkle.clone().sub(solved.ankle));
+      if (correction.length() > maximum) correction.setLength(maximum);
+    }
+    if (worst < 1e-9) break;
+  }
+  return correction;
 }

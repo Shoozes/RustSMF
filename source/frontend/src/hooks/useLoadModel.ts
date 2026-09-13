@@ -131,6 +131,7 @@ import {
   applyAnimationEditsToClips,
   cloneAnimationEditState,
   deleteAnimationEditBones,
+  deleteAnimationEditClip,
   getAnimationClipLockedBoneNames,
   getClipKey,
   getCurrentClipKey,
@@ -151,7 +152,8 @@ import {
 import { createAnimationAuthoringController } from '../utils/animationAuthoringController';
 import { buildRigMap } from '../utils/rigMapping';
 import { retargetAnimationClip } from '../utils/animationRetarget';
-import { profileClipOptions, type RetargetProfile } from '../utils/retargetProfile';
+import {poseRangeSummary} from '../utils/poseRanges';
+import { mergeRetargetClips, profileClipOptions, type RetargetProfile } from '../utils/retargetProfile';
 import type { AnimationEditScope } from '../utils/animationScope';
 import {
   createChildBone,
@@ -2066,16 +2068,23 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       const selected = profile?.retarget.clips?.length
         ? loadedSource.clips.filter((clip) => profile.retarget.clips!.includes(clip.name)) : loadedSource.clips;
       if (!selected.length || (profile?.retarget.clips && selected.length !== profile.retarget.clips.length)) throw new Error('Profile selects missing source clips.');
-      const added = selected.map((clip) => {
+      const retargetResults = selected.map((clip) => {
         const options = profile ? profileClipOptions(profile, clip, loadedSource!.clips, targetClips) : { clipName: clip.name || 'retargeted_clip' };
-        const name = options.clipName!;
-        if (existingNames.has(name)) throw new Error(`Retargeted clip ${name} collides with an existing clip name.`);
-        existingNames.add(name);
-        return retargetAnimationClip(clip, loadedSource!.skeleton!, targetSkeleton, mapping, options).clip;
+        return retargetAnimationClip(clip, loadedSource!.skeleton!, targetSkeleton, mapping, options);
       });
+      const added=retargetResults.map(result=>result.clip);
+      const rangeWarnings=retargetResults.flatMap(result=>result.report.poseRanges?.issues.length ? [poseRangeSummary(result.report.poseRanges)] : []);
+      let replacementEdits = before.animationEditState;
+      for (const name of profile?.retarget.replaceClips ?? []) {
+        const originalName = before.baseClips.find(clip => (profile?.targetClipNames[clip.name] ?? clip.name) === name)?.name ?? name;
+        if (getAnimationClipLockedBoneNames(before.animationEditState, originalName, getSourceAnimationLockedBoneNames(originalName)).length) {
+          throw new Error(`Replacement clip ${name} contains locked bones; unlock it before replacing.`);
+        }
+        replacementEdits = deleteAnimationEditClip(replacementEdits, originalName);
+      }
       const after: AnimationWorkspaceHistorySnapshot = {
-        baseClips: [...targetClips, ...added],
-        animationEditState: before.animationEditState,
+        baseClips: mergeRetargetClips(targetClips, added, profile?.retarget.replaceClips),
+        animationEditState: replacementEdits,
         currentClipName: added[0].name,
         currentTime: 0,
       };
@@ -2083,7 +2092,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       pushAnimationWorkspaceHistory(`retarget ${added.length} animation clip${added.length === 1 ? '' : 's'}`, before, after);
       const fuzzyCount = mapping.decisions.filter((decision) => decision.method === 'fuzzy').length;
       ui.setStatus(
-        `Retargeted ${added.length} clip${added.length === 1 ? '' : 's'} across ${mapping.decisions.length} mapped bones${fuzzyCount > 0 ? `; review ${fuzzyCount} fuzzy match${fuzzyCount === 1 ? '' : 'es'}` : ''}${profile ? ' using the saved profile' : ''}.`,
+        `Retargeted ${added.length} clip${added.length === 1 ? '' : 's'} across ${mapping.decisions.length} mapped bones${fuzzyCount > 0 ? `; review ${fuzzyCount} fuzzy match${fuzzyCount === 1 ? '' : 'es'}` : ''}${profile ? ' using the saved profile' : ''}.${rangeWarnings.length ? ` Review ${rangeWarnings.length} flagged clips. ${rangeWarnings.slice(0,3).join('; ')}` : ''}`,
       );
     } catch (error: unknown) {
       if (!isCurrentOperation()) return;
@@ -2101,6 +2110,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     applyAnimationWorkspaceSnapshot,
     beginModelOperation,
     captureAnimationWorkspaceSnapshot,
+    getSourceAnimationLockedBoneNames,
     model.root,
     model.skeleton,
     pushAnimationWorkspaceHistory,

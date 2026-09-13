@@ -4,6 +4,8 @@ import type {
   TargetChainCurl,
 } from './animationRetarget';
 import { MAX_MODEL_RESOURCE_FILES } from './modelResourceBundle';
+import {validateRetargetVisualTiming,type RetargetVisualTiming} from './retargetTiming';
+import {parsePoseRangeProfile,type PoseRangeProfile} from './poseRanges';
 import type { LogicalAttachmentRole } from './rigMapping';
 import type {
   NaturalFootContact,
@@ -35,9 +37,13 @@ export interface RetargetJob {
   preserveTargetRotations?: string[];
   targetChainCurls?: TargetChainCurl[];
   naturalMotion?: NaturalMotionProfile;
+  poseRanges?: PoseRangeProfile;
   clipPreserveTargetRotations?: Record<string, string[]>;
   clipPoseRecovery?: Record<string, PoseRecoveryEnvelope>;
   scaleRootMotion?: boolean;
+  replaceClips?: string[];
+  extractRootMotionBone?: string;
+  clipVisualTiming?: Record<string,RetargetVisualTiming>;
   sampleRateHz?: number;
   interpolation?: 'linear' | 'step';
   nextDownRationalTimes?: boolean;
@@ -279,7 +285,10 @@ function naturalContactMap(value: unknown, label: string): Record<string, Natura
     }
     const contacts = entries.map((entry, index): NaturalFootContact => {
       const contact = objectValue(entry, `${label}.${clipName}[${index}]`);
-      rejectUnknownFields(contact, ['foot', 'startFrame', 'endFrame', 'blendFrames'], `${label}.${clipName}[${index}]`);
+      rejectUnknownFields(contact, ['foot', 'positionMode', 'startFrame', 'endFrame', 'blendFrames'], `${label}.${clipName}[${index}]`);
+      if (contact.positionMode !== undefined && contact.positionMode !== 'planted' && contact.positionMode !== 'plane') {
+        fail(`${label}.${clipName}[${index}].positionMode must be planted or plane.`);
+      }
       if (contact.foot !== 'left' && contact.foot !== 'right') {
         fail(`${label}.${clipName}[${index}].foot must be left or right.`);
       }
@@ -295,7 +304,8 @@ function naturalContactMap(value: unknown, label: string): Record<string, Natura
       if ((2 * blendFrames) > (endFrame - startFrame + 1)) {
         fail(`${label}.${clipName}[${index}].blendFrames leaves no full-weight contact frame.`);
       }
-      return { foot: contact.foot, startFrame, endFrame, blendFrames };
+      return { foot: contact.foot, startFrame, endFrame, blendFrames,
+        ...(contact.positionMode === undefined ? {} : {positionMode:contact.positionMode}) };
     });
     for (const foot of ['left', 'right'] as const) {
       const ordered = contacts.filter((contact) => contact.foot === foot).sort((a, b) => a.startFrame - b.startFrame);
@@ -354,7 +364,23 @@ function naturalLegMotionLimitMap(value: unknown, label: string): Record<string,
 function naturalMotionProfile(value: unknown, label: string): NaturalMotionProfile | undefined {
   if (value === undefined) return undefined;
   const source = objectValue(value, label);
-  rejectUnknownFields(source, ['torso', 'legs', 'contacts', 'rootTravelPerFrame', 'legMotionLimits'], label);
+  rejectUnknownFields(source, ['torso', 'legs', 'contacts', 'rootTravelPerFrame', 'legMotionLimits', 'reachTransfer', 'grounding', 'legOrientation'], label);
+  if (source.reachTransfer !== undefined && source.reachTransfer !== 'reference-ratio' && source.reachTransfer !== 'calibrated-bend') {
+    fail(`${label}.reachTransfer must be reference-ratio or calibrated-bend.`);
+  }
+  const reachTransfer = source.reachTransfer as NaturalMotionProfile['reachTransfer'];
+  if (source.legOrientation !== undefined && !['calibrated','animated'].includes(String(source.legOrientation))) fail(`${label}.legOrientation must be calibrated or animated.`);
+  const legOrientation = source.legOrientation as NaturalMotionProfile['legOrientation'];
+  const grounding: NonNullable<NaturalMotionProfile['grounding']> = {};
+  for (const [name, raw] of Object.entries(source.grounding === undefined ? {} : objectValue(source.grounding, `${label}.grounding`))) {
+    if (!name.trim()) fail(`${label}.grounding requires named clips.`);
+    const entry = objectValue(raw, `${label}.grounding.${name}`);
+    rejectUnknownFields(entry, ['strideScale','rootHeightOffset','groundHeight'], `${label}.grounding.${name}`);
+    const strideScale = finiteNumber(entry.strideScale, 'grounding.strideScale');
+    if (strideScale <= 0 || strideScale > 4) fail('grounding.strideScale must be positive and at most 4.');
+    grounding[name] = {strideScale, rootHeightOffset:finiteNumber(entry.rootHeightOffset,'grounding.rootHeightOffset'), groundHeight:finiteNumber(entry.groundHeight,'grounding.groundHeight')};
+  }
+
   const legs = objectValue(source.legs, `${label}.legs`);
   const unknownLegs = Object.keys(legs).filter((side) => side !== 'left' && side !== 'right');
   if (unknownLegs.length > 0) fail(`${label}.legs contains unknown sides: ${unknownLegs.join(', ')}.`);
@@ -400,7 +426,29 @@ function naturalMotionProfile(value: unknown, label: string): NaturalMotionProfi
   if (invalidSwingBends.length > 0) {
     fail(`${label}.legMotionLimits minimumSwingBendDegrees exceeds a configured leg maximum for: ${invalidSwingBends.join(', ')}.`);
   }
-  return { torso, legs: parsedLegs, contacts, rootTravelPerFrame, legMotionLimits };
+  return { torso, legs: parsedLegs, contacts, rootTravelPerFrame, legMotionLimits, reachTransfer, grounding, legOrientation };
+}
+
+function visualTimingMap(value: unknown): Record<string,RetargetVisualTiming> {
+  if (value === undefined) return {};
+  const source=objectValue(value,'clipVisualTiming'),result: Record<string,RetargetVisualTiming>={};
+  for (const [name,raw] of Object.entries(source)) {
+    if (!name.trim()) fail('Visual timing requires a clip name.');
+    const entry=objectValue(raw,`clipVisualTiming.${name}`);
+    rejectUnknownFields(entry,['durationFrames','cycles','landmarks'],`clipVisualTiming.${name}`);
+    if (typeof entry.durationFrames !== 'number' || typeof entry.cycles !== 'number') fail('Visual timing requires numeric durationFrames and cycles.');
+    const timing: RetargetVisualTiming={durationFrames:entry.durationFrames,cycles:entry.cycles};
+    if (entry.landmarks !== undefined) {
+      if (!Array.isArray(entry.landmarks)) fail('Visual landmarks must be an array.');
+      timing.landmarks=entry.landmarks.map((rawPoint,index)=>{
+        const point=objectValue(rawPoint,`clipVisualTiming.${name}.landmarks[${index}]`);
+        rejectUnknownFields(point,['outputFrame','sourcePhase'],'Visual landmark');
+        return {outputFrame:finiteNumber(point.outputFrame,'landmark.outputFrame'),sourcePhase:finiteNumber(point.sourcePhase,'landmark.sourcePhase')};
+      });
+    }
+    validateRetargetVisualTiming(timing);result[name]=timing;
+  }
+  return result;
 }
 
 function stringArray(value: unknown, label: string): string[] | undefined {
@@ -479,13 +527,14 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
       'alignMappedBoneDirections', 'directionTransfer', 'directionTransferBones',
       'clipDirectionTransfer', 'clipDirectionTransferBones', 'sourceReferencePose',
       'sourceReferenceClip', 'targetReferenceClip', 'preserveTargetLeafRotations',
-      'preserveTargetRotations', 'targetChainCurls', 'naturalMotion',
+      'preserveTargetRotations', 'targetChainCurls', 'naturalMotion', 'poseRanges',
       'clipPreserveTargetRotations', 'clipPoseRecovery', 'scaleRootMotion', 'sampleRateHz',
-      'interpolation', 'nextDownRationalTimes',
+      'interpolation', 'nextDownRationalTimes', 'extractRootMotionBone', 'clipVisualTiming', 'replaceClips',
     ], 'job.rig.retarget');
     retarget = {
       sourceModel: absolutePath(source.sourceModel, 'job.rig.retarget.sourceModel', paths),
       clips: stringArray(source.clips, 'job.rig.retarget.clips'),
+      replaceClips: stringArray(source.replaceClips, 'job.rig.retarget.replaceClips'),
       clipNames: stringMap(source.clipNames, 'job.rig.retarget.clipNames'),
       manualMap: stringMap(source.manualMap, 'job.rig.retarget.manualMap'),
       allowFuzzy: optionalBoolean(source.allowFuzzy, 'job.rig.retarget.allowFuzzy'),
@@ -522,9 +571,13 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
         'job.rig.retarget.targetChainCurls',
       ),
       naturalMotion: naturalMotionProfile(source.naturalMotion, 'job.rig.retarget.naturalMotion'),
+      poseRanges: source.poseRanges === undefined ? undefined : parsePoseRangeProfile(source.poseRanges),
       clipPreserveTargetRotations: stringArrayMap(source.clipPreserveTargetRotations, 'job.rig.retarget.clipPreserveTargetRotations'),
       clipPoseRecovery: poseRecoveryMap(source.clipPoseRecovery, 'job.rig.retarget.clipPoseRecovery'),
       scaleRootMotion: optionalBoolean(source.scaleRootMotion, 'job.rig.retarget.scaleRootMotion'),
+      extractRootMotionBone: source.extractRootMotionBone === undefined ? undefined
+        : stringValue(source.extractRootMotionBone, 'job.rig.retarget.extractRootMotionBone'),
+      clipVisualTiming: visualTimingMap(source.clipVisualTiming),
       sampleRateHz: source.sampleRateHz === undefined
         ? undefined
         : typeof source.sampleRateHz === 'number'
@@ -540,6 +593,9 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
     if (retarget.sampleRateHz !== undefined && (!Number.isFinite(retarget.sampleRateHz) || retarget.sampleRateHz <= 0 || retarget.sampleRateHz > 240)) {
       fail('job.rig.retarget.sampleRateHz must be from 1 through 240.');
     }
+    if (Object.keys(retarget.clipVisualTiming ?? {}).length && retarget.sampleRateHz !== 60) fail('Visual timing requires sampleRateHz 60.');
+    const selectedTimingClips=retarget.clips;
+    if (selectedTimingClips && Object.keys(retarget.clipVisualTiming ?? {}).some(name=>!selectedTimingClips.includes(name))) fail('Visual timing configures an unselected clip.');
     if (retarget.sourceReferencePose === 'clip' && !retarget.sourceReferenceClip) {
       fail('job.rig.retarget.sourceReferencePose clip requires sourceReferenceClip.');
     }
@@ -553,6 +609,7 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
       if (unselectedContacts.length > 0) {
         fail(`job.rig.retarget.naturalMotion.contacts configures unselected clips: ${unselectedContacts.join(', ')}.`);
       }
+      if (Object.keys(retarget.naturalMotion.grounding ?? {}).some(name => !selected.has(name))) fail('Natural grounding configures unselected clips.');
       const unselectedMotionLimits = Object.keys(retarget.naturalMotion.legMotionLimits ?? {})
         .filter((clipName) => !selected.has(clipName));
       if (unselectedMotionLimits.length > 0) {

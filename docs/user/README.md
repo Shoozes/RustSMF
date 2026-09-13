@@ -39,6 +39,15 @@ Both commands open the numbered launcher menu. Choose `2. Run if already install
 - Export any loaded runtime model to binary FBX 7500 with the explicit FBX action. RustSMF reparses and validates the generated mesh, transform, skin, bone, and animation structure before opening the save destination.
 - Export static or higher-fidelity assets through GLB when FBX compatibility is not required.
 
+## Mixamo source files
+
+Collada (`.dae`) and ZIP archives are not supported model inputs. Extracting a
+Collada ZIP does not make its DAE loadable. Use a supported FBX or GLB/GLTF export
+or conversion, then verify the source skeleton, bind pose, animation duration,
+and skin before retargeting. Keep animation-only and with-skin sources separate:
+an animation-only file cannot prove mesh deformation. Mixamo-style bone names
+do not by themselves guarantee compatible rest axes or natural target motion.
+
 ## Game-ready CLI
 
 For reproducible batch repair and explicit numeric-rig retargeting, use a versioned JSON job with absolute input/output paths:

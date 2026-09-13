@@ -9,6 +9,7 @@ Keep developer docs concise and evidence-based. This repo has one current-state 
 - `HISTORY.md`: completed work and durable verification evidence.
 - `review.md`: latest concise repo/app integrity snapshot, linking the dated command record in `HISTORY.md`.
 - `PITFALL_LEDGER.md`: repeated or high-risk failures, written as prevention records rather than progress history.
+- `HUMANOID_POSE_REVIEW.md`: calibrated angular-review schema, CLI and diagnostic limits; candidate progress stays in HISTORY/TODO.
 - `../../summary_bank.json`: context groups for features, subsystems, and issue clusters.
 - `../../source/frontend/tests/README.md`: frontend test policy and Playwright coverage map.
 

@@ -1,13 +1,17 @@
 import * as THREE from 'three';
 import type { RigMapDecision, RigMapResult } from './rigMapping';
+import {auditPoseRanges,poseRangeSummary,type PoseRangeProfile,type PoseRangeReport} from './poseRanges';
+import {retargetSourceTime,validateRetargetVisualTiming,type RetargetVisualTiming} from './retargetTiming';
 import {
   alignNaturalAnatomicalFrame,
+  calibratedNaturalBend,
   contactBlendWeight,
   lengthNormalizedWeights,
   limitNaturalLegDirection,
   naturalSolePoint,
   resolveNaturalContactPose,
   solveNaturalTwoBoneLeg,
+  solveNaturalPelvisCorrection,
   type NaturalContactDiagnostic,
   type NaturalFootContact,
   type NaturalFootSide,
@@ -37,6 +41,8 @@ export interface AnimationRetargetOptions {
   clipName?: string;
   applyUpCorrection?: boolean;
   scaleRootMotion?: boolean;
+  extractRootMotionBone?: string;
+  visualTiming?: RetargetVisualTiming;
   sampleRateHz?: number;
   interpolation?: 'linear' | 'step';
   nextDownRationalTimes?: boolean;
@@ -50,6 +56,7 @@ export interface AnimationRetargetOptions {
   preserveTargetRotations?: string[];
   targetChainCurls?: TargetChainCurl[];
   naturalMotion?: NaturalMotionProfile;
+  poseRanges?: PoseRangeProfile;
   poseRecovery?: PoseRecoveryEnvelope;
 }
 
@@ -64,6 +71,8 @@ export interface AnimationRetargetReport {
   hierarchyOnlyTracks: string[];
   mappedBones: RigMapDecision[];
   rootMotionScale: number;
+  rootMotionExtraction?: { bone: string; maximumDisplacement: number };
+  visualTiming?: RetargetVisualTiming & { sourceDuration: number };
   upCorrection: [number, number, number, number];
   orientationCorrection: [number, number, number, number];
   sampleRateHz: number | null;
@@ -79,6 +88,7 @@ export interface AnimationRetargetReport {
   preservedTargetRotations: string[];
   targetChainCurls: TargetChainCurl[];
   naturalMotion: NaturalMotionReport | null;
+  poseRanges?: PoseRangeReport;
   poseRecovery: PoseRecoveryEnvelope | null;
 }
 
@@ -126,6 +136,8 @@ interface PreparedNaturalLeg {
   firstLength: number;
   secondLength: number;
   sourceReferenceReach: number;
+  sourceReferenceBend: number;
+  targetReferenceBend: number;
   targetReferenceReach: THREE.Vector3;
   targetHipLocalDirection: THREE.Vector3;
   targetKneeLocalDirection: THREE.Vector3;
@@ -477,6 +489,10 @@ function prepareNaturalMotion(
   sourceReferenceWorldPositions: ReadonlyMap<string, THREE.Vector3>,
   occupiedTargetBones: ReadonlySet<string>,
 ): PreparedNaturalMotion {
+  const grounding = profile.grounding?.[clipName];
+  if (grounding && (![grounding.strideScale,grounding.rootHeightOffset,grounding.groundHeight].every(Number.isFinite)
+    || grounding.strideScale <= 0 || grounding.strideScale > 4)) throw new Error('Invalid natural grounding calibration.');
+  if (profile.legOrientation !== undefined && !['animated','calibrated'].includes(profile.legOrientation)) throw new Error('Invalid natural leg orientation mode.');
   const decisionByTarget = new Map(mapping.decisions.map((decision) => [decision.target, decision]));
   const pelvisDecision = mapping.decisions.find((decision) => decision.canonical === 'hips');
   if (!pelvisDecision) throw new Error('Natural motion requires one mapped canonical hips bone.');
@@ -535,6 +551,11 @@ function prepareNaturalMotion(
     const sourceAnkle = sourceRest.get(ankleDecision.source)!;
     const sourceReferenceReach = sourceReferenceWorldPositions.get(sourceHip.bone.name)!
       .distanceTo(sourceReferenceWorldPositions.get(sourceAnkle.bone.name)!);
+    const sourceFirst = sourceReferenceWorldPositions.get(sourceKnee.bone.name)!.clone()
+      .sub(sourceReferenceWorldPositions.get(sourceHip.bone.name)!);
+    const sourceSecond = sourceReferenceWorldPositions.get(sourceAnkle.bone.name)!.clone()
+      .sub(sourceReferenceWorldPositions.get(sourceKnee.bone.name)!);
+    const sourceReferenceBend = sourceFirst.angleTo(sourceSecond);
     if (sourceReferenceReach <= 1e-10) throw new Error(`Natural motion ${side} source reference leg has zero reach.`);
     const targetReferenceReach = targetAnkle.worldPosition.clone().sub(targetHip.worldPosition);
     const firstVector = targetKnee.worldPosition.clone().sub(targetHip.worldPosition);
@@ -564,6 +585,8 @@ function prepareNaturalMotion(
       firstLength: firstVector.length(),
       secondLength: secondVector.length(),
       sourceReferenceReach,
+      sourceReferenceBend,
+      targetReferenceBend: firstVector.angleTo(secondVector),
       targetReferenceReach,
       targetHipLocalDirection: firstVector.clone().applyQuaternion(targetHip.worldQuaternion.clone().invert()).normalize(),
       targetKneeLocalDirection: secondVector.clone().applyQuaternion(targetKnee.worldQuaternion.clone().invert()).normalize(),
@@ -571,10 +594,16 @@ function prepareNaturalMotion(
       referenceSolePoint: targetAnkle.worldPosition.clone()
         .add(new THREE.Vector3(...legProfile.soleOffset).applyQuaternion(targetAnkle.worldQuaternion)),
     };
+    if (profile.reachTransfer === 'calibrated-bend') {
+      calibratedNaturalBend(sourceReferenceBend, sourceReferenceBend, prepared.targetReferenceBend);
+    }
     return [side, prepared];
   })) as unknown as Record<NaturalFootSide, PreparedNaturalLeg>;
 
   const contacts = (profile.contacts?.[clipName] ?? []).map((contact, index) => {
+    if (contact.positionMode !== undefined && contact.positionMode !== 'planted' && contact.positionMode !== 'plane') {
+      throw new Error('Natural contact positionMode must be planted or plane.');
+    }
     if (contact.endFrame >= sampleCount) {
       throw new Error(`Natural motion ${clipName} ${contact.foot}-foot contact ends after frame ${sampleCount - 1}.`);
     }
@@ -689,13 +718,18 @@ export function retargetAnimationClip(
     throw new Error(`Source clip ${clip.name || '(unnamed)'} has no mapped bone transform tracks.`);
   }
   const interpolation = options.interpolation ?? 'linear';
+  if (options.visualTiming) {
+    validateRetargetVisualTiming(options.visualTiming);
+    if (options.sampleRateHz !== 60) throw new Error('Visual timing requires an explicit 60 Hz sample rate.');
+  }
+  const outputDuration = options.visualTiming ? options.visualTiming.durationFrames / 60 : clip.duration;
   const adjustRationalTimes = options.nextDownRationalTimes ?? false;
   if (adjustRationalTimes && options.sampleRateHz === undefined) {
     throw new Error('nextDownRationalTimes requires an explicit sampleRateHz.');
   }
   const { evaluationTimes, outputTimes } = sampleSchedule(
     sampled,
-    clip.duration,
+    outputDuration,
     options.sampleRateHz,
     adjustRationalTimes,
   );
@@ -777,6 +811,12 @@ export function retargetAnimationClip(
   const rootDecision = rootSourceDecision(activeDecisions, sourceRest);
   const rootHasPositionTrack = !!rootDecision
     && boneOrAncestorIsTracked(sourceRest.get(rootDecision.source)!.bone, positionSources);
+  const extractedRoot = options.extractRootMotionBone ? sourceRest.get(options.extractRootMotionBone) : undefined;
+  if (options.extractRootMotionBone && (!extractedRoot || !rootDecision
+    || !isBoneDescendantOf(sourceRest.get(rootDecision.source)!.bone, extractedRoot.bone))) {
+    throw new Error('Root-motion extraction requires an existing source ancestor of the mapped pelvis.');
+  }
+  let maximumExtractedDisplacement = 0;
   const quaternionValues = new Map<string, number[]>();
   const positionValues = new Map<string, number[]>();
   const directionConstraints = options.alignMappedBoneDirections === false
@@ -871,7 +911,9 @@ export function retargetAnimationClip(
 
   try {
     for (let frameIndex = 0; frameIndex < evaluationTimes.length; frameIndex += 1) {
-      const time = evaluationTimes[frameIndex];
+      const time = options.visualTiming
+        ? retargetSourceTime(evaluationTimes[frameIndex], clip.duration, options.visualTiming)
+        : evaluationTimes[frameIndex];
       restoreRestState(sourceRest);
       evaluateTracks(sampled, time);
       source.bones[0]?.updateWorldMatrix(true, true);
@@ -895,28 +937,51 @@ export function retargetAnimationClip(
         const sourceState = sourceRest.get(rootDecision.source)!;
         const targetState = targetReference.get(rootDecision.target)!;
         const sourceAnimated = sourceState.bone.getWorldPosition(new THREE.Vector3());
-        const delta = sourceAnimated
-          .sub(sourceReferenceWorldPositions.get(rootDecision.source)!)
-          .applyQuaternion(correction)
+        const delta = sourceAnimated.sub(sourceReferenceWorldPositions.get(rootDecision.source)!);
+        if (extractedRoot) {
+          const travel = extractedRoot.bone.getWorldPosition(new THREE.Vector3())
+            .sub(sourceReferenceWorldPositions.get(extractedRoot.bone.name)!);
+          maximumExtractedDisplacement = Math.max(maximumExtractedDisplacement, travel.length());
+          delta.sub(travel);
+        }
+        delta.applyQuaternion(correction)
           .multiplyScalar(rootMotionScale);
         desiredRootWorldPosition = targetState.worldPosition.clone().add(delta);
         desiredRootLocalPosition = desiredRootWorldPosition.clone()
           .applyMatrix4(targetState.parentWorldMatrix.clone().invert());
       }
 
+      const grounding = naturalMotion?.profile.grounding?.[clip.name];
+      if (grounding && rootDecision) {
+        desiredRootWorldPosition.y += grounding.rootHeightOffset;
+        desiredRootLocalPosition = desiredRootWorldPosition.clone()
+          .applyMatrix4(targetReference.get(rootDecision.target)!.parentWorldMatrix.clone().invert());
+      }
       const naturalTorsoWorld = new Map<string, THREE.Quaternion>();
       const naturalLegWorld = new Map<string, THREE.Quaternion>();
+      const naturalFootCorrections = new Map<string, THREE.Quaternion>();
       let pelvisCorrection = new THREE.Vector3();
       if (naturalMotion) {
         const pelvisWorldQuaternion = transferredWorldQuaternion(
           naturalMotion.pelvisDecision,
           naturalMotion.pelvis,
         );
+        // The leg solver and baked hierarchy must use the same pelvis frame.
+        // A later generic direction alignment otherwise moves the solved hips.
+        naturalTorsoWorld.set(naturalMotion.pelvis.bone.name, pelvisWorldQuaternion);
         if (naturalMotion.torso) {
           const terminalSource = sourceRest.get(naturalMotion.torso.terminalDecision.source)!;
           const sourceAnimatedWorld = terminalSource.bone.getWorldQuaternion(new THREE.Quaternion());
+          const sourcePelvis = sourceRest.get(naturalMotion.pelvisDecision.source)!;
+          const sourcePelvisReference = sourceReferenceWorldQuaternions.get(sourcePelvis.bone.name)!;
+          const sourcePelvisAnimated = sourcePelvis.bone.getWorldQuaternion(new THREE.Quaternion());
+          // Remove inherited parent motion before distributing torso articulation.
+          // Express articulation in source-reference world axes for correction.
+          const articulationWorld = sourcePelvisReference.clone()
+            .multiply(sourcePelvisAnimated.clone().invert())
+            .multiply(sourceAnimatedWorld);
           const totalDelta = correctedDelta(
-            sourceAnimatedWorld,
+            articulationWorld,
             sourceReferenceWorldQuaternions.get(terminalSource.bone.name)!,
             correction,
           );
@@ -927,7 +992,9 @@ export function retargetAnimationClip(
             const state = naturalMotion.torso.states[index];
             naturalTorsoWorld.set(
               state.bone.name,
-              partial.multiply(state.worldQuaternion).normalize(),
+              pelvisWorldQuaternion.clone()
+                .multiply(naturalMotion.pelvis.worldQuaternion.clone().invert())
+                .multiply(partial).multiply(state.worldQuaternion).normalize(),
             );
           }
         }
@@ -943,8 +1010,9 @@ export function retargetAnimationClip(
           desiredFootQuaternion: THREE.Quaternion;
           contact: PreparedNaturalMotion['contacts'][number] | null;
           contactWeight: number;
+          poleWorld: THREE.Vector3;
         }>();
-        const correctionSuggestions: THREE.Vector3[] = [];
+        const pelvisConstraints: Parameters<typeof solveNaturalPelvisCorrection>[0][number][] = [];
         for (const side of ['left', 'right'] as const) {
           const prepared = naturalMotion.legs[side];
           const hip = prepared.targetHip.worldPosition.clone()
@@ -976,6 +1044,19 @@ export function retargetAnimationClip(
               * sourceAnimatedReach.length()
               / prepared.sourceReferenceReach,
             );
+          if (naturalMotion.profile.reachTransfer === 'calibrated-bend') {
+            const sourceKnee = prepared.sourceKnee.bone.getWorldPosition(new THREE.Vector3());
+            const sourceFirst = sourceKnee.clone().sub(sourceHip);
+            const sourceSecond = prepared.sourceAnkle.bone.getWorldPosition(new THREE.Vector3()).sub(sourceKnee);
+            if (sourceFirst.lengthSq() <= 1e-10 || sourceSecond.lengthSq() <= 1e-10) {
+              throw new Error(`Natural motion ${side} source segment collapsed at frame ${frameIndex}.`);
+            }
+            const bend = calibratedNaturalBend(sourceFirst.angleTo(sourceSecond), prepared.sourceReferenceBend, prepared.targetReferenceBend);
+            const reach = Math.sqrt(Math.max(0, prepared.firstLength ** 2 + prepared.secondLength ** 2
+              + 2 * prepared.firstLength * prepared.secondLength * Math.cos(bend)));
+            desiredReach.setLength(reach);
+          }
+          if (grounding) desiredReach.z *= grounding.strideScale;
           const contact = naturalMotion.contacts.find(({ contact: candidate }) => (
             candidate.foot === side
             && frameIndex >= candidate.startFrame
@@ -1006,6 +1087,16 @@ export function retargetAnimationClip(
               .applyQuaternion(pelvisWorldQuaternion)
               .multiplyScalar(desiredReach.length());
           }
+          let poleWorld = new THREE.Vector3(...prepared.profile.pole).applyQuaternion(pelvisWorldQuaternion);
+          if (naturalMotion.profile.legOrientation === 'animated') {
+            const sourceKnee = prepared.sourceKnee.bone.getWorldPosition(new THREE.Vector3());
+            const normal = sourceKnee.clone().sub(sourceHip).cross(prepared.sourceAnkle.bone.getWorldPosition(new THREE.Vector3()).sub(sourceKnee));
+            if (normal.lengthSq() > 1e-10) {
+              normal.normalize().applyQuaternion(correction);
+              const animatedPole = desiredReach.clone().cross(normal);
+              if (animatedPole.lengthSq() > 1e-10) poleWorld = animatedPole.normalize();
+            }
+          }
           const naturalAnkle = hip.clone().add(desiredReach);
           const naturalFootQuaternion = transferredWorldQuaternion(
             targetDecisions.get(prepared.targetAnkle.bone.name)!,
@@ -1020,9 +1111,10 @@ export function retargetAnimationClip(
               prepared.profile.soleOffset,
             );
             let pin = contactPins.get(contact.key);
-            if (!pin) {
+            const planeContact = contact.contact.positionMode === 'plane';
+            if (!pin || planeContact) {
               pin = {
-                sole: naturalSole.clone().setComponent(1, prepared.referenceSolePoint.y),
+                sole: naturalSole.clone().setComponent(1, grounding?.groundHeight ?? prepared.referenceSolePoint.y),
                 quaternion: prepared.targetAnkle.worldQuaternion.clone(),
               };
               contactPins.set(contact.key, pin);
@@ -1034,16 +1126,16 @@ export function retargetAnimationClip(
               soleOffset: prepared.profile.soleOffset,
               pinnedSole: pin.sole,
               rootTravelPerFrame: contact.diagnostic.rootTravelPerFrame,
-              elapsedFrames: frameIndex - contact.contact.startFrame,
+              elapsedFrames: planeContact ? 0 : frameIndex - contact.contact.startFrame,
               weight,
             });
             desiredFootQuaternion = contactPose.footQuaternion;
             desiredAnkle = contactPose.ankle;
-            const preliminary = solveNaturalTwoBoneLeg({
+            const legConstraint: Parameters<typeof solveNaturalTwoBoneLeg>[0] = {
               hip,
               desiredAnkle,
               referenceKnee: prepared.targetKnee.worldPosition,
-              poleDirection: new THREE.Vector3(...prepared.profile.pole).applyQuaternion(pelvisWorldQuaternion),
+              poleDirection: poleWorld,
               previousPlaneNormal: previousNaturalLegPlane![side],
               firstLength: prepared.firstLength,
               secondLength: prepared.secondLength,
@@ -1053,12 +1145,8 @@ export function retargetAnimationClip(
                 1 - weight,
               ),
               maxBendDegrees: prepared.profile.maxBendDegrees,
-            });
-            const suggestion = desiredAnkle.clone().sub(preliminary.ankle);
-            const maximum = prepared.profile.maxPelvisCorrection * weight;
-            if (maximum <= 0) suggestion.set(0, 0, 0);
-            else if (suggestion.length() > maximum) suggestion.setLength(maximum);
-            correctionSuggestions.push(suggestion);
+            };
+            pelvisConstraints.push({leg:legConstraint,maximumCorrection:prepared.profile.maxPelvisCorrection * weight});
           }
           legFrames.set(side, {
             prepared,
@@ -1068,12 +1156,11 @@ export function retargetAnimationClip(
             desiredFootQuaternion,
             contact,
             contactWeight: weight,
+            poleWorld,
           });
         }
-        if (correctionSuggestions.length > 0) {
-          pelvisCorrection = correctionSuggestions.reduce((largest, value) => (
-            value.lengthSq() > largest.lengthSq() ? value : largest
-          ), new THREE.Vector3()).clone();
+        if (pelvisConstraints.length > 0) {
+          pelvisCorrection = solveNaturalPelvisCorrection(pelvisConstraints);
           desiredRootWorldPosition.add(pelvisCorrection);
           const targetState = targetReference.get(rootDecision!.target)!;
           desiredRootLocalPosition = desiredRootWorldPosition.clone()
@@ -1083,8 +1170,7 @@ export function retargetAnimationClip(
           const frame = legFrames.get(side)!;
           frame.hip.add(pelvisCorrection);
           if (!frame.contact) frame.desiredAnkle.add(pelvisCorrection);
-          const poleWorld = new THREE.Vector3(...frame.prepared.profile.pole)
-            .applyQuaternion(pelvisWorldQuaternion);
+          const poleWorld = frame.poleWorld;
           const solved = solveNaturalTwoBoneLeg({
             hip: frame.hip,
             desiredAnkle: frame.desiredAnkle,
@@ -1125,6 +1211,16 @@ export function retargetAnimationClip(
             solved.bendPlaneNormal,
             frame.prepared.targetKnee.worldQuaternion,
           ));
+          if (naturalMotion.profile.legOrientation === 'animated') {
+            for (const [state, localDirection, solvedDirection] of [
+              [frame.prepared.targetHip, frame.prepared.targetHipLocalDirection, thighDirection],
+              [frame.prepared.targetKnee, frame.prepared.targetKneeLocalDirection, shinDirection],
+            ] as const) {
+              const base = transferredWorldQuaternion(targetDecisions.get(state.bone.name)!, state);
+              const baseDirection = localDirection.clone().applyQuaternion(base).normalize();
+              naturalLegWorld.set(state.bone.name, new THREE.Quaternion().setFromUnitVectors(baseDirection, solvedDirection).multiply(base).normalize());
+            }
+          }
           const footQuaternion = frame.desiredFootQuaternion;
           if (frame.contact) {
             const diagnostic = frame.contact.diagnostic;
@@ -1140,6 +1236,8 @@ export function retargetAnimationClip(
             if (frame.contactWeight >= 1 && solved.residual > 1e-5) diagnostic.unreachable = true;
           }
           naturalLegWorld.set(frame.prepared.targetAnkle.bone.name, footQuaternion);
+          naturalFootCorrections.set(frame.prepared.targetAnkle.bone.name,
+            footQuaternion.clone().multiply(frame.naturalFootQuaternion.clone().invert()).normalize());
         }
       }
 
@@ -1195,6 +1293,12 @@ export function retargetAnimationClip(
               const swing = new THREE.Quaternion().setFromUnitVectors(currentDirection, desiredDirection);
               worldQuaternion = swing.multiply(worldQuaternion).normalize();
             }
+          }
+          // Mapped toes retain their local articulation when an ankle is solved.
+          // Transferring their old world orientation would undo the sole correction.
+          for(let ancestor=targetState.parentBone;ancestor;ancestor=targetReference.get(ancestor.name)!.parentBone){
+            const footCorrection=naturalFootCorrections.get(ancestor.name);
+            if(footCorrection){worldQuaternion.premultiply(footCorrection).normalize();break;}
           }
         } else if (targetState.parentBone) {
           const parentWorld = desiredTargetWorld.get(targetState.parentBone.name)
@@ -1309,13 +1413,21 @@ export function retargetAnimationClip(
     throw new Error(`Retargeting ${clip.name || '(unnamed)'} produced no target tracks.`);
   }
   const targetName = options.clipName?.trim() || clip.name || 'retargeted_clip';
-  const retargeted = new THREE.AnimationClip(targetName, clip.duration, tracks);
+  const retargeted = new THREE.AnimationClip(targetName, outputDuration, tracks);
+  const poseRanges = options.poseRanges ? auditPoseRanges(options.poseRanges,targetName,outputTimes.length,
+    new Set(targetOrder.map(bone=>bone.name)),(frame,bone)=>{
+      const values=quaternionValues.get(bone);
+      return values ? new THREE.Quaternion().fromArray(values,frame*4) : targetReference.get(bone)!.localQuaternion.clone();
+    }) : undefined;
+  if(poseRanges?.issues.length && options.poseRanges?.policy==='reject') throw new Error(poseRangeSummary(poseRanges));
   return {
     clip: retargeted,
     report: {
       sourceClip: clip.name || '(unnamed)',
+      poseRanges,
       targetClip: targetName,
-      duration: clip.duration,
+      duration: outputDuration,
+      visualTiming: options.visualTiming ? {...options.visualTiming,sourceDuration:clip.duration} : undefined,
       sampleCount: outputTimes.length,
       quaternionTrackCount: quaternionValues.size,
       positionTrackCount: positionValues.size,
@@ -1323,6 +1435,7 @@ export function retargetAnimationClip(
       hierarchyOnlyTracks: hierarchyOnly,
       mappedBones: activeDecisions,
       rootMotionScale,
+      rootMotionExtraction: extractedRoot ? { bone: extractedRoot.bone.name, maximumDisplacement: maximumExtractedDisplacement } : undefined,
       upCorrection: upCorrection.toArray(),
       orientationCorrection: correction.toArray(),
       sampleRateHz: options.sampleRateHz ?? null,

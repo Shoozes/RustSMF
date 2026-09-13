@@ -2,20 +2,26 @@
 
 Last reviewed: 2026-09-13
 
-## P1 — Compare alternate fighter rigs after rejecting the conditioned Wolf motion
+Completed solver, comparison, source-selection and verification work lives in
+HISTORY.md. Brawl rest-reference motion is selected; Melee remains a fallback,
+not an acceptance prerequisite. Latest Wolf candidates remain rejected.
 
-Current implementation: import/export, exact fitted-source comparison, immutable
-publication, target-length natural retargeting, contact/leg diagnostics, and the
-receiving-game timing/runtime lanes pass. The latest conditioned Wolf candidate
-removed the nearly horizontal left-leg pose and showed no obvious sampled
-self-intersection, but the operator rejected the full video because the left leg
-still reads stiff and the overall motion is not show-ready. This is a visual
-motion-quality blocker, not a broken import/export or texture path.
+## P1 — Accept the selected fighter's motion in the receiving game
 
-- What: Obtain legally usable Melee and/or Brawl reference exports and compare their skeleton topology, rest pose, proportions, locomotion curves, and deformation against the current source and Wolf target before choosing the next motion source/model track.
-- Why: More target-local clamping can make the current retarget numerically safe while also making it stiffer. The full video proved that passing contacts, angle limits, fixed-rate playback, and sampled Quad frames is insufficient for acceptable continuous character motion.
-- Where: `source/frontend/src/utils/animationRetarget.ts`, `naturalRetarget.ts`, `source/frontend/src/rig-comparison/*`, the immutable rejected generation recorded in `HISTORY.md`, and a private comparison workspace outside committed source routes.
-- When: P1, before any further hand-tuned Wolf gait changes or a claim that the fighter is show-ready.
-- How: Export each authorized reference to a format RustSMF can load, validate revision/tool compatibility, then compare identical locomotion frames in Quad with translucent mesh, mapped-bone colors, and hip/knee/ankle planes. Measure pelvis-local stride, knee bend, foot contact, root travel, and continuous loop cadence. Treat reconstructed gameplay as behavioral reference only, not an original-asset equivalence oracle. Choose the smallest source/model change that improves the full loop without losing game contracts.
-- Done when: Melee and Brawl are each explicitly accepted, rejected, or unavailable with source/revision evidence; at least one complete locomotion loop is compared against the current rejected candidate; the selected direction has an owned/legal asset and exact import/export path; continuous video shows natural left-leg motion without self-clipping; and the receiving game reruns structure, contacts, attachments, KO/reset/checkpoint, actual-browser, native/WASM, and 30/60/120/144 Hz presenter checks.
-- Verification: Retain generation/model hashes, a same-frame Quad receipt sequence, the full-loop video decision, and receiving-game command results. A green numeric report without operator acceptance is not completion.
+- What: Resolve remaining ankle/torso range flags and motion/contact defects in the selected Brawl-to-Wolf path, then obtain continuous-motion acceptance.
+- Why: Source identity, valid export and steady-speed checks do not cover changing speed, stopping, role transitions, skin intersection or natural appearance.
+- Where: `source/frontend/src/utils/animationRetarget.ts`, `source/frontend/src/utils/naturalRetarget.ts`, `source/frontend/src/utils/poseRanges.ts`, `source/frontend/src/rig-comparison/comparison.js`, and the game-owned private integration workspace.
+- When: P1, before replacing the accepted baseline or claiming show-ready fighter motion.
+- How: Preserve immutable rejected candidates and selected rest-reference calibration. Use per-stage full-loop trajectories and range reports to isolate source, retarget, contact and timing defects. Compare anatomical left/right from front and side at normal speed. Test scaled soles with full facing/root vectors across steady movement, deceleration, stop and role changes. Ground-plane following is not planted/no-slide contact. Coordinate receiving-game work with its owner.
+- Done when: Both legs and torso are accepted in full loops with no observed self-clipping; every range flag is corrected or explicitly reviewed against calibration; contact/transition coverage is complete or limitations explicitly accepted; structure, attachments, KO/reset/checkpoint, native/WASM, actual-browser and 30/60/120/144 Hz presenter checks pass for the selected hashes.
+- Verification: Hash-bound reports, stage trajectories, front/side continuous video decision, Quad receipts and receiving-game command records. External visual acceptance remains required; numerical success alone does not close this item.
+
+## P2 — Evaluate the supplied Mixamo pair as an independent source reference
+
+- What: Validate a supported-format derivative of the supplied animation-only and with-skin Collada pair before selecting it for retargeting.
+- Why: The pair separates source animation from deformation, but RustSMF has no DAE/ZIP import path. Bone names alone do not prove compatible calibration.
+- Where: `source/frontend/src/utils/modelFormat.ts`, `source/frontend/src/loaders/glb.ts`, `source/frontend/src/loaders/fbx.ts`, the user guide's Mixamo section, and original user-owned archives outside this repository.
+- When: P2, if source comparison proceeds; this optional alternative is not a Brawl acceptance dependency.
+- How: Preserve originals. Obtain a supported FBX or GLB/GLTF derivative, validate joint/channel/skin coverage and bind transforms against the DAE, and compare source idle playback before retargeting. Native Collada import would be a separate format feature.
+- Done when: The supported derivative's source playback, skin and timing are verified, its retarget is visually compared, and the source is explicitly accepted or rejected with evidence.
+- Verification: Original/derivative identity, structural comparison, complete idle loop and roundtrip checks. Animation-only input cannot establish mesh deformation quality.

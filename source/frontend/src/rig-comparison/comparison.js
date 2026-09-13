@@ -259,19 +259,28 @@ function validateManifest(value) {
     if (!model?.id || !model.label || !model.url || !/^[a-f0-9]{64}$/.test(model.sha256)) {
       throw new Error('Invalid comparison model identity');
     }
+    if (model.clipMap !== undefined && (!model.clipMap || typeof model.clipMap !== 'object' || Array.isArray(model.clipMap)
+      || Object.entries(model.clipMap).some(([role, name]) => !value.clips.includes(role) || typeof name !== 'string' || !name.trim())
+      || new Set(value.clips.map(role => model.clipMap[role] ?? role)).size !== value.clips.length)) {
+      throw new Error('Invalid comparison clip map');
+    }
   }
+}
+
+function resolvedClipName(view, role) {
+  return view.definition.clipMap?.[role] ?? role;
 }
 
 function validateClipCoverage() {
   const source = views[0];
   for (const clipName of manifest.clips) {
-    const sourceMatches = source.asset.animations.filter((clip) => clip.name === clipName);
+    const sourceMatches = source.asset.animations.filter((clip) => clip.name === resolvedClipName(source, clipName));
     if (sourceMatches.length !== 1) {
       throw new Error(`Coverage error: source ${sourceMatches.length ? 'duplicates' : 'is missing'} clip "${clipName}"`);
     }
     const sourceDuration = sourceMatches[0].duration;
     for (const view of views.slice(1)) {
-      const matches = view.asset.animations.filter((clip) => clip.name === clipName);
+      const matches = view.asset.animations.filter((clip) => clip.name === resolvedClipName(view, clipName));
       if (matches.length !== 1) {
         throw new Error(`Coverage error: ${view.definition.id} ${matches.length ? 'duplicates' : 'is missing'} clip "${clipName}"`);
       }
@@ -426,14 +435,14 @@ function selectClip() {
   const clipName = byId('clip').value;
   for (const view of views) {
     view.mixer.stopAllAction();
-    const clip = view.asset.animations.find((candidate) => candidate.name === clipName);
+    const clip = view.asset.animations.find((candidate) => candidate.name === resolvedClipName(view, clipName));
     view.action = view.mixer.clipAction(clip);
     view.action.reset();
     view.action.setLoop(THREE.LoopOnce, 1);
     view.action.clampWhenFinished = true;
     view.action.play();
   }
-  const sourceClip = views[0].asset.animations.find((clip) => clip.name === clipName);
+  const sourceClip = views[0].asset.animations.find((clip) => clip.name === resolvedClipName(views[0], clipName));
   schedule = comparisonSchedule(sourceClip.duration, manifest.sampleRateHz);
   byId('frame').max = String(schedule.length - 1);
   draw();
@@ -532,6 +541,7 @@ function transformReceipt(view, mode) {
   const game = view.definition.gameTransform;
   return {
     id: view.definition.id,
+    resolvedClip: resolvedClipName(view, byId('clip').value),
     sha256: view.definition.sha256,
     raw: view.raw,
     applied: {

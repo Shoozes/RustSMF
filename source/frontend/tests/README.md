@@ -2,6 +2,10 @@
 
 The test layout mirrors runtime ownership. Keep behavior in the narrowest suite that owns the risk; do not rebuild a single catch-all smoke file.
 
+Run `verify` and browser/preview gates sequentially in one checkout. Both build
+the same production output; a concurrent rebuild can replace assets while the
+browser requests them, causing startup 404s before any app assertions run.
+
 ## Verification Gates
 
 - `pwsh -File run.ps1 -Task verify`: context-bank validation/tests, fail-closed ESLint coverage, lint, app and test typechecks, production `any` guard, production build, chunk checks, frontend units, and Rust fmt/clippy/tests/check.

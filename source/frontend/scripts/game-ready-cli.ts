@@ -19,6 +19,7 @@ import {
 } from '../src/utils/gameReadyJob';
 import {
   profileClipOptions,
+  mergeRetargetClips,
   RETARGET_PROFILE_SCHEMA,
   type RetargetProfile,
 } from '../src/utils/retargetProfile';
@@ -270,7 +271,7 @@ async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
         const found = new Set(selected.map((clip) => clip.name));
         fail(`Retarget source is missing clips: ${job.rig.retarget.clips.filter((name) => !found.has(name)).join(', ')}.`);
       }
-      const occupiedClipNames = new Set(clips.map((clip) => clip.name));
+      const generated: THREE.AnimationClip[] = [];
       const retargetProfile: RetargetProfile = {
         $schema: RETARGET_PROFILE_SCHEMA,
         retarget: job.rig.retarget,
@@ -278,13 +279,12 @@ async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
       };
       for (const clip of selected) {
         const options = profileClipOptions(retargetProfile, clip, source.clips, clips);
-        const targetName = options.clipName!;
-        if (occupiedClipNames.has(targetName)) fail(`Retarget clip ${targetName} collides with an existing target clip.`);
         const result = retargetAnimationClip(clip, source.skeleton, target.skeleton, rigMapReport, options);
-        clips.push(result.clip);
+        generated.push(result.clip);
         retargetReports.push(result.report);
-        occupiedClipNames.add(result.clip.name);
       }
+      const merged = mergeRetargetClips(clips, generated, job.rig.retarget.replaceClips);
+      clips.splice(0, clips.length, ...merged);
     }
 
     const attachments = resolveLogicalAttachments(target.skeleton, job.rig.attachments);

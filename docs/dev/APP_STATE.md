@@ -8,11 +8,11 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 
 ### Launch and model lifecycle
 
-- `run.bat` and `run.ps1` are the canonical Windows launchers. No-argument launch opens the numbered menu; option 2 or `pwsh -File run.ps1 -Task run` starts the installed development app. Cleanup selects only exact normalized Node script paths owned by this checkout, and dev-exit cleanup is installed only for dev tasks. An unrelated server on port 5173 is preserved. Setup reports a failing Rust check as failure; the managed Vite wrapper resolves both workspace-hoisted and frontend-local packages.
-- Browser input, drag/drop, and the native picker accept `.smf`, `.glb`, `.gltf`, `.fbx`, and `.obj`. Multi-file selection/drop resolves authorized relative GLTF buffers/images, FBX-referenced textures, and OBJ MTL/textures through one bounded resource bundle; unsupported, missing, ambiguous, oversized, or malformed assets produce an error without replacing the current model. The external-GLTF browser contract uses committed `scene.gltf`, `mesh.bin`, and `texture.png` files; unit coverage pins the binary sidecar's exact bytes/hash and proves every relative fixture URI remains inside the fixture directory.
-- Browser metadata and native/test-injected byte payloads share a 256 MiB model-input limit. Browser picker and drop paths reject oversized `File` metadata before `File.arrayBuffer()`; the load boundary repeats the byte-length check for native reads and test fixtures. Native IPC payloads must be an `ArrayBuffer`, `Uint8Array`, or byte array whose entries are integers from 0 through 255; malformed responses fail instead of being silently coerced. Rust opens an authorized canonical file once, rejects non-regular paths, and enforces both the reported and observed byte limits while reading, so replacement/growth races cannot bypass the cap. A selected browser file that cannot be read is reported as an Open error rather than picker cancellation.
+- `run.bat` / `run.ps1` own the Windows menu and installed development launch (`-Task run`). Cleanup targets only this checkout's normalized Node script paths, preserving unrelated servers. Setup propagates Rust failure; Vite resolves hoisted or frontend-local packages.
+- File input, drop and native picking support SMF, GLB/GLTF, FBX and OBJ. A bounded bundle resolves selected relative buffers, images and MTL files. Missing, ambiguous, oversized or malformed resources fail before model replacement. Tracked external-GLTF fixtures prove exact sidecar hashes and contained relative URIs.
+- All model inputs have a 256 MiB limit, checked before browser reads and again before parsing. Native byte payloads accept ArrayBuffer, Uint8Array or validated byte arrays. Rust opens one authorized canonical regular file and bounds both reported and observed sizes against replacement/growth races. Unreadable selections report an Open error.
 - A replacement requested while pose, animation, skin, rig, editor, or Outliner history is dirty opens an accessible Cancel/Discard decision. File bytes are not materialized until the decision is made; Cancel preserves the current root, selection, dirty flags, and status, while Discard permits one replacement. Parse failure or stale completion keeps the previous model mounted.
-- All picker, file-read, desktop-read, parse, additive asset/animation import, material repair, export, and save paths use shared latest-intent ownership. A newer model operation invalidates older load/export/repair UI completions; stale append/retarget resources are disposed, and failed replacements preserve the mounted root, selection, dirty authoring state, and status.
+- Open, append, retarget, repair, export and save share latest-intent ownership. New operations invalidate stale UI completions and dispose stale resources; failures preserve the mounted model and dirty authoring state.
 - SMF import/export uses a typed Web Worker with owned transferable buffers, nested payload validation, monotonic progress, cancellation, a 120-second timeout, and explicit termination. The client rechecks an abort signal after worker handlers are installed and before `postMessage`, so setup-time cancellation cannot publish or leave a task running. The codec bounds encoded input/output to 256 MiB, decoded allocation estimates to 512 MiB, section reads to declared offsets, strings to 4,095 bytes, and allocation-driving texture/mesh/rig/animation counts; non-finite numeric values and invalid byte ranges fail closed. Synchronous fallback is limited to worker construction or initial `postMessage` failure; runtime worker errors surface instead of repeating work on the UI thread.
 - Foreground save operations are globally single-flight and freshness-checked. A foreground request reserves its turn and awaits an active autosave instead of requiring another click. Autosave keeps at most the newest trailing request while a write is active, so slow writes cannot overlap or lose the latest edit. A successful model replacement invalidates queued old-model work and waits for any issued autosave write before swapping roots; canceled or failed pickers leave recovery work intact. User cancellation is distinct from failure. Save Project writes a versioned `.rsproj` envelope containing a validated GLB snapshot plus bounded workspace state; all native writes share one async serialization owner, stage and sync complete bytes before replacement, preserve the prior destination on install failure, and rotate bounded project generations. Browser fallback uses local storage/download, and native recovery discovery/read accepts only the owned target plus `.bak1` and `.bak2` regular files.
 
@@ -42,6 +42,39 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 - App-level Undo/Redo selects the newest editor, Skin, or Outliner transaction by shared chronology rather than the currently visible workspace.
 - Editor history is capped at 100 entries and 64 MiB across undo/redo; skin history is capped at 50 entries and 32 MiB per direction. When an oldest entry is evicted, the status surface explains the bounded-history decision while the current edit remains applied.
 - Workspace, layout, and camera-mode changes preserve the mounted model, selection, paused time, dirty state, export status, and exclusive Select/Endpoint/IK ownership.
+
+### Calibrated motion diagnostics
+
+Natural torso distribution isolates articulation from inherited pelvis motion
+and preserves head counter-rotation. Direction limits handle upward and
+antipodal directions.
+
+Saved natural-motion profiles accept explicit `reachTransfer: "calibrated-bend"`.
+This maps flexion through both reference bends using target segment lengths,
+preventing distance-ratio saturation at full extension. Omission retains
+`reference-ratio` behavior. Degenerate source reference bends fail calibration.
+Frontend and CLI share this parser/solver. Profiles also support explicit
+`replaceClips`, `extractRootMotionBone` and per-source `clipVisualTiming`.
+Replacement retains reference inputs and untouched clips; the frontend clears
+replaced overlays in one undoable transaction and rejects locked channels.
+Natural profiles can retain animated leg twist/knee planes and declare per-clip
+`grounding` (strideScale, rootHeightOffset, groundHeight). Shared pelvis correction
+iterates across both contact constraints within the configured bound; residual
+unreachable contacts remain explicit. Contact, cadence and appearance still need review.
+
+The comparison manifest supports optional per-model `clipMap` role-to-source
+names; receipts include the resolved name and still enforce equal durations.
+Different idle poses are not automatically equivalent calibration references.
+The game-led source probes and all local generated jobs remain outside tracked
+application sources. Brawl rest-reference motion is selected; Wolf appearance and
+changing-speed contact acceptance remain open in TODO.md.
+
+Optional calibrated angular review reports or rejects final retarget output through
+the shared profile/core contract. Its standalone embedded-GLB scanner and limits
+are documented in [HUMANOID_POSE_REVIEW.md](HUMANOID_POSE_REVIEW.md). Passing ranges
+does not establish skin, contact or visual acceptance. Contact `positionMode: plane`
+follows the horizontal trajectory at ground height; omitted mode locks a planted
+point. Explicit visual-timing landmarks map output frames to source phases.
 
 ### Export and validation
 
@@ -129,11 +162,13 @@ Verification ownership (dated counts and outcomes live in `HISTORY.md`):
 
 - Frontend unit, browser, recorded-journey, fixture, helper, and visual ownership is centralized in `source/frontend/tests/README.md`. `source/frontend/scripts/run-unit-tests.mjs` remains deterministic and forwards focused Node test flags; `npm.cmd run test:e2e:list` is the browser discovery authority.
 - Rust unit tests own native file/dialog/read/write/recovery boundaries. Browser tests own web/Tauri-adapter integration without substituting mocks for the actual Windows acceptance recorded in `HISTORY.md`.
-- The 35 context groups include two archived routes and focused material-repair, rig-retargeting, game-ready CLI, fitted-rig, journey, integrity, and synchronization routes. The default orientation is 47.5 KiB under its 48 KiB group budget and the 256 KiB generation ceiling.
+- Context groups route focused feature, issue and workflow work; archived routes stay out of defaults. The default orientation has a 52 KiB budget under the 256 KiB generation ceiling. Measured sizes and gate outcomes belong in HISTORY.md rather than duplicated current-state counts.
 
 The latest review links the dated command results and any observed limitations in `HISTORY.md`. Browser, recorded-journey, and strict visual commands use the local browser process. If a managed launch reports `spawn EPERM`, record it as a harness failure rather than an app assertion result. Context generation honors configured skip directories for scans, globs, trees, and explicit routes, excludes generated `output/`, and rejects symlink ancestors and drive-relative paths.
 
 ## Current Limits
+
+- Collada (`.dae`) and ZIP archives are not model inputs. The supplied Mixamo pair requires a validated supported-format derivative; animation-only input cannot prove source skin deformation.
 
 - SMF has no scale channel in the current dual-quaternion path. Scale edits block SMF export rather than being dropped.
 - SMF scene-object names and hierarchy order are source-owned by the imported payload. Model-workspace rename and reorder are therefore limited to non-SMF sources until the SMF serializer has explicit rewrite contracts.
@@ -171,8 +206,7 @@ explicit 60 Hz grid time plus the terminal, and reports requested/completed/reje
 coverage with the worst mesh, vertex, frame and influences. Source tracks use their
 float32 frame representation; fitted next-down keys are evaluated at the requested
 rational time so an upward-rounded source terminal cannot alias an ordinary grid
-sample. The private six-sequence diagnostic completed 233/233 samples with maximum
-world-space vertex error `6.091180994014376e-7`.
+sample. Dated source/fitted equivalence measurements live in HISTORY.md.
 
 The hash-bound viewer refuses missing or duration-shortened clips, uses a
 remainder-preserving multi-frame animation clock, and records clip/frame/time,
@@ -185,7 +219,7 @@ unmapped/target-only bones, and render one selected joint's local axes plus
 parent-joint-child bend plane without changing model bytes. The final conditioned
 Wolf generation passed technical export and receiving-game checks but failed
 operator review of the continuous-motion video because the left leg remained
-visibly stiff. That alternate-source/model comparison stays in `TODO.md`;
+visibly stiff. Acceptance of the selected Brawl source stays in `TODO.md`;
 private assets, screenshots, videos, and game packages remain outside this repo.
 
 Command schema, outputs, limits and preview controls are in [FITTED_RIG.md](FITTED_RIG.md).

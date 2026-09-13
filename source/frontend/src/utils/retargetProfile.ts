@@ -84,10 +84,31 @@ export function profileClipOptions(profile: RetargetProfile, sourceClip: THREE.A
     preserveTargetRotations: resolvePreservedTargetRotations(job, sourceClip.name),
     targetChainCurls: job.targetChainCurls,
     naturalMotion: job.naturalMotion,
+    poseRanges: job.poseRanges,
     poseRecovery: job.clipPoseRecovery?.[sourceClip.name],
     scaleRootMotion: job.scaleRootMotion,
+    extractRootMotionBone: job.extractRootMotionBone,
+    visualTiming: job.clipVisualTiming?.[sourceClip.name],
     sampleRateHz: job.sampleRateHz,
     interpolation: job.interpolation,
     nextDownRationalTimes: job.nextDownRationalTimes,
   };
+}
+
+/** Explicit replacement preserves target ordering and never changes reference inputs. */
+export function mergeRetargetClips(target: readonly THREE.AnimationClip[], generated: readonly THREE.AnimationClip[], replaceNames: readonly string[] = []): THREE.AnimationClip[] {
+  const replacements = new Set(replaceNames);
+  if (replacements.size !== replaceNames.length) throw new Error('Duplicate replacement clip names.');
+  const existing = new Map(target.map(clip => [clip.name, clip]));
+  const incoming = new Map(generated.map(clip => [clip.name, clip]));
+  if (existing.size !== target.length || incoming.size !== generated.length) throw new Error('Duplicate animation clip names.');
+  for (const name of replacements) {
+    if (!existing.has(name)) throw new Error(`Replacement target clip ${name} is missing.`);
+    if (!incoming.has(name)) throw new Error(`Replacement clip ${name} was not generated.`);
+  }
+  for (const name of incoming.keys()) {
+    if (existing.has(name) && !replacements.has(name)) throw new Error(`Retarget clip ${name} collides with an existing target clip; explicit replacement is required.`);
+  }
+  return [...target.map(clip => replacements.has(clip.name) ? incoming.get(clip.name)! : clip),
+    ...generated.filter(clip => !existing.has(clip.name))];
 }

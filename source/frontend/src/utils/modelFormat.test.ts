@@ -35,6 +35,16 @@ describe('modelFormat', () => {
     assert.equal(getModelExtension('archive.tar.gz'), '.gz');
   });
 
+  it('does not advertise Collada or ZIP containers as directly loadable models', () => {
+    for (const name of ['Ready Idle.dae', 'Ready Idle.DAE', 'Ready Idle.zip', 'Ready Idle (1).zip']) {
+      assert.equal(detectModelFormat(name), '');
+      assert.equal(isSupportedModelFormat(name), false);
+    }
+    for (const extension of ['.dae', '.zip']) {
+      assert.equal(SUPPORTED_MODEL_ACCEPT.split(',').includes(extension), false);
+    }
+  });
+
   it('keeps accept and label strings aligned with supported formats', () => {
     for (const ext of ['.smf', '.glb', '.gltf', '.fbx', '.obj']) {
       assert.ok(SUPPORTED_MODEL_ACCEPT.includes(ext));

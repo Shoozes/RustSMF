@@ -530,7 +530,9 @@ test('natural retargeting is deterministic across helper ancestors, torso, legs,
   sourceSpine.position.y = 1;
   sourceHelper.add(sourceHips);
   sourceHips.add(sourceSpine);
-  const sourceBones = [sourceHelper, sourceHips, sourceSpine];
+  const sourceHead = new THREE.Bone(); sourceHead.name = 'joint-8'; sourceHead.position.y = 0.4;
+  sourceSpine.add(sourceHead);
+  const sourceBones = [sourceHelper, sourceHips, sourceSpine, sourceHead];
   for (const [hipName, kneeName, ankleName, x] of [
     ['joint-19', 'joint-20', 'joint-22', 0.3],
     ['joint-24', 'joint-25', 'joint-27', -0.3],
@@ -548,6 +550,7 @@ test('natural retargeting is deterministic across helper ancestors, torso, legs,
     hip.add(knee);
     knee.add(ankle);
     sourceBones.push(hip, knee, ankle);
+    const toe=new THREE.Bone();toe.name=`${ankleName}-toe`;toe.position.set(0,-0.03,0.15);ankle.add(toe);sourceBones.push(toe);
   }
   sourceHelper.updateWorldMatrix(true, true);
   const source = new THREE.Skeleton(sourceBones);
@@ -567,7 +570,9 @@ test('natural retargeting is deterministic across helper ancestors, torso, legs,
   targetHips.add(targetSpine);
   targetSpine.add(targetSpine1);
   targetSpine1.add(targetSpine2);
-  const targetBones = [targetHips, targetSpine, targetSpine1, targetSpine2];
+  const targetHead = new THREE.Bone(); targetHead.name = 'mixamorigHead'; targetHead.position.y = 0.4;
+  targetSpine2.add(targetHead);
+  const targetBones = [targetHips, targetSpine, targetSpine1, targetSpine2, targetHead];
   for (const [hipName, kneeName, ankleName, x] of [
     ['mixamorigLeftUpLeg', 'mixamorigLeftLeg', 'mixamorigLeftFoot', 0.25],
     ['mixamorigRightUpLeg', 'mixamorigRightLeg', 'mixamorigRightFoot', -0.25],
@@ -585,6 +590,7 @@ test('natural retargeting is deterministic across helper ancestors, torso, legs,
     hip.add(knee);
     knee.add(ankle);
     targetBones.push(hip, knee, ankle);
+    const toe=new THREE.Bone();toe.name=`${ankleName}Toe`;toe.position.set(0,-0.03,0.15);ankle.add(toe);targetBones.push(toe);
   }
   targetHips.updateWorldMatrix(true, true);
   const target = new THREE.Skeleton(targetBones);
@@ -592,17 +598,21 @@ test('natural retargeting is deterministic across helper ancestors, torso, legs,
     manualMap: {
       'joint-5': 'mixamorigHips',
       'joint-6': 'mixamorigSpine2',
+      'joint-8': 'mixamorigHead',
       'joint-19': 'mixamorigLeftUpLeg',
       'joint-20': 'mixamorigLeftLeg',
       'joint-22': 'mixamorigLeftFoot',
       'joint-24': 'mixamorigRightUpLeg',
       'joint-25': 'mixamorigRightLeg',
       'joint-27': 'mixamorigRightFoot',
+      'joint-22-toe':'mixamorigLeftFootToe',
+      'joint-27-toe':'mixamorigRightFootToe',
     },
   });
   assert.equal(mapping.ok, true);
   const helperTurn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 12);
   const action = new THREE.AnimationClip('natural_test', 2 / 60, [
+    new THREE.QuaternionKeyframeTrack('joint-22-toe.quaternion',[0,2/60],[0,0,0,1,...new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),0.2).toArray()]),
     new THREE.QuaternionKeyframeTrack('joint-4.quaternion', [0, 2 / 60], [
       0, 0, 0, 1, ...helperTurn.toArray(),
     ]),
@@ -650,6 +660,29 @@ test('natural retargeting is deterministic across helper ancestors, torso, legs,
     targetReferenceClip: targetReference,
     naturalMotion,
   });
+  const grounded = retargetAnimationClip(action, source, target, mapping, {
+    applyUpCorrection:false,sampleRateHz:60,sourceReferencePose:'clip',sourceReferenceClip:sourceReference,targetReferenceClip:targetReference,
+    naturalMotion:{...naturalMotion,legOrientation:'animated',grounding:{natural_test:{strideScale:0.5,rootHeightOffset:-0.05,groundHeight:0.35}}},
+  });
+  const contactMixer=new THREE.AnimationMixer(targetHips);
+  const savedPose=targetBones.map(b=>({bone:b,position:b.position.clone(),quaternion:b.quaternion.clone()}));
+  try {
+    const a=contactMixer.clipAction(grounded.clip);a.setLoop(THREE.LoopOnce,1);a.clampWhenFinished=true;a.play();
+    for (const time of [0,1/60,2/60]) {
+      contactMixer.setTime(time);targetHips.updateWorldMatrix(true,true);
+      for (const side of ['Left','Right']) {
+        const ankle=targetBones.find(b=>b.name===`mixamorig${side}Foot`)!;
+        const sole=new THREE.Vector3(0,-0.08,0.04).applyMatrix4(ankle.matrixWorld);
+        assert.ok(Math.abs(sole.y-0.35)<1e-5,`Explicit sole plane was not reached at ${time}/${side}: ${sole.y}; ${JSON.stringify(grounded.report.naturalMotion?.contacts)}`);
+      }
+      const toe=targetBones.find(b=>b.name==='mixamorigLeftFootToe')!;
+      const expectedToe=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),time*6);
+      assert.ok(toe.quaternion.angleTo(expectedToe)<1e-5,'Mapped toe must retain animated ankle-local rotation after foot correction');
+    }
+  }finally{
+    contactMixer.stopAllAction();contactMixer.uncacheRoot(targetHips);
+    savedPose.forEach(({bone,position,quaternion})=>{bone.position.copy(position);bone.quaternion.copy(quaternion);});targetHips.updateWorldMatrix(true,true);
+  }
   const first = run();
   const second = run();
   assert.deepEqual(
@@ -664,4 +697,130 @@ test('natural retargeting is deterministic across helper ancestors, torso, legs,
   assert.ok(first.clip.tracks.some((track) => track.name === 'mixamorigSpine.quaternion'));
   assert.ok(first.clip.tracks.some((track) => track.name === 'mixamorigLeftLeg.quaternion'));
   assert.ok(first.clip.tracks.every((track) => !track.name.endsWith('.scale')));
+  const bendTurn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -0.1);
+  const travelling = new THREE.AnimationClip('travelling', 1 / 60, [
+    new THREE.VectorKeyframeTrack('joint-4.position', [0, 1 / 60], [0, 0, 0, 0, 0, 1]),
+    new THREE.VectorKeyframeTrack('joint-5.position', [0, 1 / 60], [0, 2, 0, 0, 2.1, 0]),
+  ]);
+  const extracted = retargetAnimationClip(travelling, source, target, mapping, {
+    applyUpCorrection: false, scaleRootMotion: false, extractRootMotionBone: 'joint-4',
+  });
+  const planar = retargetAnimationClip(travelling, source, target, mapping, {
+    applyUpCorrection:false,scaleRootMotion:false,sampleRateHz:60,
+    sourceReferencePose:'clip',sourceReferenceClip:sourceReference,targetReferenceClip:targetReference,
+    naturalMotion:{...naturalMotion,grounding:{travelling:{strideScale:1,rootHeightOffset:0,groundHeight:0.35}},
+      contacts:{travelling:[
+        {foot:'left',positionMode:'plane',startFrame:0,endFrame:1,blendFrames:0},
+        {foot:'right',positionMode:'plane',startFrame:0,endFrame:1,blendFrames:0},
+      ]}},
+  });
+  const planeMixer=new THREE.AnimationMixer(targetHips),planePose=targetBones.map(b=>({bone:b,position:b.position.clone(),quaternion:b.quaternion.clone()}));
+  try {
+    const a=planeMixer.clipAction(planar.clip);a.setLoop(THREE.LoopOnce,1);a.clampWhenFinished=true;a.play();
+    const soles:THREE.Vector3[][]=[];
+    for(const time of [0,1/60]) {
+      planeMixer.setTime(time);targetHips.updateWorldMatrix(true,true);
+      soles.push(['Left','Right'].map(side=>{
+        const ankle=targetBones.find(b=>b.name===`mixamorig${side}Foot`)!;
+        const sole=new THREE.Vector3(0,-0.08,0.04).applyMatrix4(ankle.matrixWorld);
+        assert.ok(Math.abs(sole.y-0.35)<1e-5,'Plane contact preserves sole height');return sole;
+      }));
+    }
+    for(let side=0;side<2;side++)assert.ok(Math.abs(soles[1][side].z-soles[0][side].z-1)<1e-5,'Plane contact follows horizontal motion instead of silently planting');
+    assert.ok(planar.report.naturalMotion!.contacts.every(c=>c.positionMode==='plane'));
+  }finally {
+    planeMixer.stopAllAction();planeMixer.uncacheRoot(targetHips);
+    planePose.forEach(({bone,position,quaternion})=>{bone.position.copy(position);bone.quaternion.copy(quaternion);});targetHips.updateWorldMatrix(true,true);
+  }
+  const retained = retargetAnimationClip(travelling, source, target, mapping, {
+    applyUpCorrection: false, scaleRootMotion: false,
+  });
+  const endRoot = (result: typeof extracted) => Array.from(result.clip.tracks.find(t => t.name === 'mixamorigHips.position')!.values.slice(-3));
+  assert.ok(Math.abs(endRoot(extracted)[1] - 2.1) < 1e-6, 'Extraction must retain pelvis bob');
+  assert.equal(endRoot(extracted)[2], 0, 'Extraction removes only the named ancestor travel');
+  assert.ok(Math.abs(endRoot(retained)[2] - 1) < 1e-6, 'Existing jobs retain root motion');
+  assert.ok(Math.abs(extracted.report.rootMotionExtraction!.maximumDisplacement - 1) < 1e-6);
+  assert.throws(() => retargetAnimationClip(travelling, source, target, mapping, {extractRootMotionBone: 'joint-20'}), /ancestor/);
+  assert.throws(() => retargetAnimationClip(travelling, source, target, mapping, {extractRootMotionBone: 'missing'}), /ancestor/);
+  const timed = retargetAnimationClip(travelling, source, target, mapping, {
+    applyUpCorrection:false,scaleRootMotion:false,extractRootMotionBone:'joint-4',
+    visualTiming:{durationFrames:40,cycles:2},sampleRateHz:60,interpolation:'step',nextDownRationalTimes:true,
+  });
+  assert.equal(timed.clip.duration,40/60);
+  const timedRoot=timed.clip.tracks.find(t=>t.name==='mixamorigHips.position')!;
+  assert.equal(timedRoot.times.length,41);
+  for(const [frame,y] of [[0,2],[10,2.05],[20,2],[30,2.05],[40,2.1]]) {
+    assert.ok(Math.abs(timedRoot.values[frame*3+1]-y)<1e-6,`Baked frame ${frame} follows declared cadence`);
+    assert.equal(timedRoot.values[frame*3+2],0);
+  }
+  assert.deepEqual(timed.report.visualTiming,{durationFrames:40,cycles:2,sourceDuration:1/60});
+  const release = retargetAnimationClip(travelling,source,target,mapping,{
+    applyUpCorrection:false,scaleRootMotion:false,extractRootMotionBone:'joint-4',sampleRateHz:60,
+    visualTiming:{durationFrames:46,cycles:1,landmarks:[{outputFrame:0,sourcePhase:0},{outputFrame:16,sourcePhase:0.25},{outputFrame:46,sourcePhase:1}]},
+  });
+  const releaseRoot=release.clip.tracks.find(t=>t.name==='mixamorigHips.position')!;
+  assert.ok(Math.abs(releaseRoot.values[16*3+1]-2.025)<1e-6,'Release frame must sample the declared source landmark');
+  assert.equal(release.clip.duration,46/60);
+
+  const bendClip = new THREE.AnimationClip('bend_calibration', 1 / 60, ['joint-20', 'joint-25'].map(name => (
+    new THREE.QuaternionKeyframeTrack(`${name}.quaternion`, [0, 1 / 60], [0, 0, 0, 1, ...bendTurn])
+  )));
+  bendClip.tracks.push(new THREE.QuaternionKeyframeTrack('joint-4.quaternion', [0, 1 / 60], [0, 0, 0, 1, 0, 0, 0, 1]));
+  const calibrated = retargetAnimationClip(bendClip, source, target, mapping, {
+    applyUpCorrection: false, sourceReferencePose: 'clip', sourceReferenceClip: sourceReference,
+    targetReferenceClip: targetReference,
+    naturalMotion: { ...naturalMotion, reachTransfer: 'calibrated-bend', contacts: {}, legMotionLimits: {} },
+  });
+  const savedTarget = targetBones.map(b => ({ bone: b, position: b.position.clone(), rotation: b.quaternion.clone() }));
+  const bendMixer = new THREE.AnimationMixer(targetHips);
+  try {
+    const clipAction = bendMixer.clipAction(calibrated.clip);clipAction.setLoop(THREE.LoopOnce, 1);clipAction.clampWhenFinished = true;clipAction.play();
+    bendMixer.setTime(calibrated.clip.duration);targetHips.updateWorldMatrix(true, true);
+    for (const side of ['Left', 'Right']) {
+      const [hip, knee, ankle] = ['UpLeg', 'Leg', 'Foot'].map(suffix => targetBones.find(b => b.name === `mixamorig${side}${suffix}`)!.getWorldPosition(new THREE.Vector3()));
+      const actual = knee.clone().sub(hip).angleTo(ankle.clone().sub(knee));
+      const sourceBend = 2 * Math.atan(0.08 / 0.8), targetBend = 2 * Math.atan(0.06 / 0.75);
+      assert.ok(Math.abs(actual - targetBend * (sourceBend - 0.1) / sourceBend) < 1e-6, `${side} bend must remain articulated, not saturate at full extension`);
+    }
+  } finally {
+    bendMixer.stopAllAction();bendMixer.uncacheRoot(targetHips);
+    savedTarget.forEach(({bone, position, rotation}) => {bone.position.copy(position);bone.quaternion.copy(rotation);});targetHips.updateWorldMatrix(true, true);
+  }
+  for (const name of ['mixamorigSpine', 'mixamorigSpine1', 'mixamorigSpine2']) {
+    const track = first.clip.tracks.find((entry) => entry.name === `${name}.quaternion`)!;
+    const local = new THREE.Quaternion().fromArray(track.values, track.values.length - 4);
+    assert.ok(local.angleTo(new THREE.Quaternion()) < 1e-6, `Rigid parent turn bent ${name}`);
+  }
+  const turn = (axis: THREE.Vector3, angle: number) => new THREE.Quaternion().setFromAxisAngle(axis, angle);
+  const x = new THREE.Vector3(1, 0, 0), y = new THREE.Vector3(0, 1, 0), z = new THREE.Vector3(0, 0, 1);
+  const track = (name: string, a: THREE.Quaternion, b = a) => new THREE.QuaternionKeyframeTrack(`${name}.quaternion`, [0, 2 / 60], [...a.toArray(), ...b.toArray()]);
+  for (const rotated of [false, true]) for (const [parentAngle, chestAngle] of [[0.3, 0], [0, 0.4], [0.3, 0.4]]) {
+    const sourceRef = rotated ? turn(x, 0.27) : new THREE.Quaternion();
+    const targetRef = rotated ? turn(z, -0.31) : new THREE.Quaternion();
+    const parent = turn(y, parentAngle).multiply(sourceRef);
+    const chest = turn(z, chestAngle);
+    const input = new THREE.AnimationClip('articulation', 2 / 60, [
+      track('joint-4', sourceRef, parent), track('joint-6', new THREE.Quaternion(), chest),
+      track('joint-8', new THREE.Quaternion(), chest.clone().invert()),
+    ]);
+    const output = retargetAnimationClip(input, source, target, mapping, {
+      applyUpCorrection: false, sampleRateHz: 60, sourceReferencePose: 'clip',
+      sourceReferenceClip: new THREE.AnimationClip('reference', 2 / 60, [track('joint-4', sourceRef)]),
+      targetReferenceClip: new THREE.AnimationClip('reference', 2 / 60, [track('mixamorigHips', targetRef)]),
+      naturalMotion: { ...naturalMotion, contacts: {}, legMotionLimits: {} },
+    });
+    const local = (name: string) => {
+      const value = output.clip.tracks.find(entry => entry.name === `${name}.quaternion`)!;
+      return new THREE.Quaternion().fromArray(value.values, value.values.length - 4).normalize();
+    };
+    const spineLocals = ['mixamorigSpine', 'mixamorigSpine1', 'mixamorigSpine2'].map(local);
+    const chestWorld = local('mixamorigHips'); spineLocals.forEach(q => chestWorld.multiply(q));
+    const expectedChest = parent.clone().multiply(chest).multiply(sourceRef.clone().invert()).multiply(targetRef);
+    assert.ok(chestWorld.angleTo(expectedChest) < 1e-6, 'Chest world articulation must match source-relative motion');
+    const headWorld = chestWorld.clone().multiply(local('mixamorigHead'));
+    const expectedHead = parent.clone().multiply(sourceRef.clone().invert()).multiply(targetRef);
+    assert.ok(headWorld.angleTo(expectedHead) < 1e-6, 'Head counter-rotation must survive spine distribution');
+    if (chestAngle === 0) spineLocals.forEach(q => assert.ok(q.angleTo(new THREE.Quaternion()) < 1e-6));
+    if (!rotated) spineLocals.forEach((q, i) => assert.ok(q.angleTo(turn(z, chestAngle * [0.3, 0.3, 0.4][i])) < 1e-6));
+  }
 });

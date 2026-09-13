@@ -184,6 +184,8 @@
         "source/frontend/src/components/RetargetProfileControls.tsx",
         "source/frontend/src/utils/retargetProfile.ts",
         "source/frontend/src/utils/retargetProfile.test.ts",
+        "source/frontend/src/utils/retargetTiming.ts",
+        "source/frontend/src/utils/retargetTiming.test.ts",
         "source/frontend/tests/retarget-profile.spec.ts"
       ],
       "notes": [
@@ -678,8 +680,7 @@
         "source/frontend/tests/fixtures/external-gltf/scene.gltf",
         "source/frontend/tests/fixtures/external-gltf/mesh.bin",
         "source/frontend/tests/fixtures/external-gltf/texture.png",
-        "source/src-tauri/src/main.rs",
-        "docs/dev/APP_STATE.md"
+        "source/src-tauri/src/main.rs"
       ],
       "notes": [
         "Browser and native open paths normalize one primary plus selected relative sidecars into a bounded bundle; GLTFLoader, FBXLoader, and OBJLoader resolve only authorized local names.",
@@ -736,14 +737,30 @@
         "source/frontend/src/utils/replacementGuard.test.ts",
         "source/frontend/src/utils/seqGuard.ts",
         "source/frontend/src/store/index.ts",
-        "source/frontend/src/store/index.test.ts",
-        "source/frontend/src/store/README.md",
         "source/frontend/src/types/viewportEditorEvents.ts"
       ],
       "notes": [
         "useLoadModel keeps its public return contract while pure snapshots and export candidates own focused policy; the codec-task lifecycle is routed through subsystem__export_pipeline.",
         "Renderer and requestAnimationFrame ownership remain in ThreeViewport; mount listeners and TransformControls have explicit dispose owners.",
         "Replacement decisions are centralized before byte materialization, async static append verifies current-root ownership before scene mutation, and editor history is capped at 100 entries/64 MiB with eviction status."
+      ]
+    },
+    "feature__humanoid_pose_review": {
+      "description": "Calibrated angular envelopes, Mixamo reference frames, read-only GLB scanning and report/reject diagnostics.",
+      "max_kb": 64,
+      "paths": [
+        "docs/dev/HUMANOID_POSE_REVIEW.md",
+        "source/frontend/src/utils/poseRanges.ts",
+        "source/frontend/src/utils/poseRanges.test.ts",
+        "source/frontend/src/utils/poseReviewCli.test.ts",
+        "source/frontend/src/utils/humanoidPoseRanges.ts",
+        "source/frontend/scripts/pose-review-cli.ts",
+        "source/frontend/scripts/bounded-file-read.ts",
+        "source/frontend/src/utils/fittedRigTiming.ts"
+      ],
+      "notes": [
+        "Ranges are calibrated animation diagnostics, not medical constants or skin/contact/visual acceptance.",
+        "Profile application is routed separately through feature__retarget_profiles; private assets and generated reports stay excluded."
       ]
     },
     "subsystem__dev_process_lifecycle": {

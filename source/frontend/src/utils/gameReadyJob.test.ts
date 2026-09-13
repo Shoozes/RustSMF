@@ -85,6 +85,13 @@ function validJob(): Record<string, unknown> {
 
 test('game-ready job parsing applies safe defaults and retains explicit contracts', () => {
   const parsed = parseGameReadyJob(validJob(), paths);
+  assert.equal(parsed.rig.retarget?.naturalMotion?.reachTransfer, undefined);
+  const calibratedJob = validJob();
+  const calibratedMotion = (calibratedJob.rig as { retarget: { naturalMotion: { reachTransfer?: string } } }).retarget.naturalMotion;
+  calibratedMotion.reachTransfer = 'calibrated-bend';
+  assert.equal(parseGameReadyJob(calibratedJob, paths).rig.retarget?.naturalMotion?.reachTransfer, 'calibrated-bend');
+  calibratedMotion.reachTransfer = 'unrecognized';
+  assert.throws(() => parseGameReadyJob(calibratedJob, paths), /reachTransfer/);
   assert.equal(parsed.materialRepair.textureFlipY, true);
   assert.deepEqual(parsed.rig.retarget?.clips, ['Walk']);
   assert.equal(parsed.rig.retarget?.alignMappedBoneDirections, true);
@@ -204,4 +211,29 @@ test('game-ready job parsing rejects silent selection and path ambiguities', () 
       minimumSwingBendDegrees: 12,
     };
   assert.throws(() => parseGameReadyJob(unselectedMotionLimit, paths), /legMotionLimits configures unselected clips: Idle/);
+});
+
+
+test('grounding profiles reject invalid, ignored and unselected settings', () => {
+  const job = validJob();
+  const rig = job.rig as {retarget:{naturalMotion:Record<string,unknown>}};
+  rig.retarget.naturalMotion.legOrientation='animated';
+  rig.retarget.naturalMotion.grounding={Walk:{strideScale:0.3,rootHeightOffset:-0.04,groundHeight:0}};
+  assert.equal(parseGameReadyJob(job,paths).rig.retarget!.naturalMotion!.grounding!.Walk.strideScale,0.3);
+  for (const grounding of [{Other:{strideScale:1,rootHeightOffset:0,groundHeight:0}},
+    {Walk:{strideScale:0,rootHeightOffset:0,groundHeight:0}},
+    {Walk:{strideScale:1,rootHeightOffset:Infinity,groundHeight:0}},
+    {Walk:{strideScale:1,rootHeightOffset:0,groundHeight:0,ignored:true}}]) {
+    rig.retarget.naturalMotion.grounding=grounding;
+    assert.throws(()=>parseGameReadyJob(job,paths),/grounding|finite|unknown/i);
+  }
+});
+
+test('ground-plane intervals round trip explicitly and reject unknown contact modes', () => {
+  const job=validJob();
+  const natural=(job.rig as {retarget:{naturalMotion:Record<string,unknown>}}).retarget.naturalMotion;
+  natural.contacts={Walk:[{foot:'left',positionMode:'plane',startFrame:0,endFrame:10,blendFrames:1}]};
+  assert.equal(parseGameReadyJob(job,paths).rig.retarget!.naturalMotion!.contacts!.Walk[0].positionMode,'plane');
+  natural.contacts={Walk:[{foot:'left',positionMode:'floating',startFrame:0,endFrame:10,blendFrames:1}]};
+  assert.throws(()=>parseGameReadyJob(job,paths),/positionMode/);
 });

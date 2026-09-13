@@ -2,6 +2,81 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-13 - Integrity and source-format review
+
+Closing-session review authorized publication of this verified application snapshot
+on main using the guarded helper. Fighter visual/contact acceptance and Mixamo
+conversion validation remain explicitly open; publication does not accept private
+fighter assets. The unchanged code retains the 429-unit/98-browser evidence below.
+
+Consolidated completed review narratives here and replaced the obsolete source-choice
+backlog with selected-Brawl acceptance and optional Mixamo source validation. Brawl
+rest-reference selection does not accept later candidates: the game owner reports
+rejected leg appearance, unresolved ankle/torso angular flags and changing-speed
+contact coverage. Its standalone scan of 38 clips flagged 36 clips/167 issue groups;
+the source idle passed. These are game-owner diagnostics, not independently repeated
+visual acceptance in this audit. Explicit clip replacement, visual phase landmarks,
+shared-pelvis contacts, mapped toe correction and calibrated body-range review are
+local implementation work; their reusable contract is in HUMANOID_POSE_REVIEW.md.
+
+Inspected the supplied archives without extracting or changing them: Ready Idle.zip
+contains one 410,525-byte DAE with 33 joints, 28 channels and no geometry/controllers;
+Ready Idle (1).zip contains one 515,863-byte DAE with the same joint/channel counts,
+one geometry and one skin controller. Both declare Y_UP. This confirms the
+without/with-skin distinction, not playback or conversion fidelity. DAE and ZIP
+are absent from supported model extensions; added an explicit format regression
+and user guidance rather than claiming compatibility.
+
+Fixed an invalid CP1252 apostrophe byte in APP_STATE.md and added a fatal UTF-8
+durable-document check with malformed/valid Unicode regressions. Narrowed load/editor
+context routing by removing store-specific tests/prose and removed the broad app-state
+document from the external-resource issue pack; implementations and direct tests remain.
+Added a focused pose-review route without private artifacts or higher generation caps.
+
+Baseline verification at HEAD d99074a plus the existing dirty working tree:
+
+- `pwsh -NoProfile -File ./run.ps1 -Task verify`: application gates passed, including
+  427 frontend units, 10 Rust tests, lint, both typechecks, build and Rust checks;
+  overall nonzero because load/editor context expanded to 186.1 KiB over 186 KiB.
+  Log: `output/verification/integrity-20260913.log`.
+- Focused model-format regression passed. Follow-up context checks include the new
+  encoding regression; final results are recorded below after code-owner handoff.
+
+Final local gate after the code owner completed CLI identity/output hardening:
+
+- `pwsh -NoProfile -File ./run.ps1 -Task verify`: exit 0; 429 frontend units,
+  10 Rust tests, 10 project-integrity tests, 9 context tests and both synchronization
+  and process-ownership suites passed, along with lint/type/build/Rust checks.
+  Log: `output/verification/integrity-final-20260913.log`.
+- Context: 37 groups, 51.4 KiB default pack, zero warnings. New CLI tests exercise
+  exit 0/1/2, raw/loaded identity ambiguity, external-resource refusal, existing-output
+  preservation and deterministic terminal-inclusive reports.
+- Runtime: Node v26.5.0, PowerShell 7.6.6, rustc 1.98.1 on Windows. Source identity
+  remains d99074a plus local reviewed changes; no commit or push was requested.
+- `pwsh -NoProfile -File ./run.ps1 -Task test:e2e -NoGenEye`: final exit 0,
+  98/98 passed in 53.5 seconds. Log: `output/verification/integrity-browser-serial-20260913.log`.
+  The first run passed 94/98; four initial tests could not mount the app and reported
+  asset 404s while the two gates' production builds overlapped. Running browser tests
+  after verify completed passed every case without code/assertion changes. The test
+  contract now requires sequential gates sharing the same production output.
+- Final context and diff checks passed. This is local application/integrity proof,
+  not new native-dialog, private fighter visual or Collada conversion acceptance.
+
+## 2026-09-13 - Review5 solver and comparison corrections
+
+Corrected torso coordinate spaces and upward/antipodal direction limits. Actual
+retarget regressions cover rigid/combined motion, rotated references, head
+compensation and calibrated bend transfer. Existing jobs retain their defaults.
+Comparison aliases preserve source names and duration checks. See APP_STATE.md
+for the contracts.
+
+Local verification: `npm run test:unit` passed 415 tests; the focused
+`tests/rig-comparison.spec.ts` browser lane passed six tests. Production/test
+typechecks, touched-file ESLint and `git diff --check` passed. Logs are in ignored
+`output/verification/review5-*`. This records implementation proof, not Wolf
+visual acceptance; old contacts still introduce prolonged extension. Work is
+local and unpublished under the active game-led goal.
+
 ## 2026-09-13 - Portable retarget profiles and proportion-sensitive gait diagnosis
 
 - Added a collapsed Saved retarget profile workflow to Animate. It imports complete v2 game-ready jobs or strict `rustsmf.retarget-profile.v1` JSON, strips source-model paths, preserves editable state across panel unmounts, exports through the existing save boundary, and applies explicit numeric maps, references, clip selection/naming, direction, preservation, natural-motion, timing, and recovery settings as one undoable animation transaction. React and CLI callers share `profileClipOptions` instead of duplicating that translation.

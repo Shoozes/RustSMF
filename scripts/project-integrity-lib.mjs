@@ -190,7 +190,16 @@ export function validateProjectIntegrity(repoRoot) {
   const root = resolve(repoRoot)
   const errors = []
   for (const path of REQUIRED_DOCS) {
-    if (!existsSync(resolve(root, ...path.split('/')))) errors.push(`missing durable project doc: ${path}`)
+    const absolutePath = resolve(root, ...path.split('/'))
+    if (!existsSync(absolutePath)) {
+      errors.push(`missing durable project doc: ${path}`)
+    } else {
+      try {
+        new TextDecoder('utf-8', { fatal: true }).decode(readFileSync(absolutePath))
+      } catch {
+        errors.push(`durable project doc must be readable UTF-8: ${path}`)
+      }
+    }
   }
 
   const todoPath = resolve(root, 'docs/dev/TODO.md')
