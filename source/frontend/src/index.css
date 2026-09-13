@@ -311,6 +311,38 @@ html, body, #root {
   font-size: 10px;
 }
 
+.outliner-import-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.outliner-append-action {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  height: 24px;
+  padding: 0 5px;
+  border: 1px solid #3d4d64;
+  background: #0f172a;
+  color: #cbd5e1;
+  cursor: pointer;
+  font-size: 10px;
+  line-height: 1;
+  text-align: center;
+}
+
+.outliner-append-action:hover {
+  border-color: #64748b;
+  background: #172033;
+}
+
+.outliner-append-action:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .outliner-rename-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

@@ -16,6 +16,7 @@ export interface SkinnedGlbFixtureOptions {
   withMultiMaterial?: boolean;
   withSiblingMesh?: boolean;
   rootScale?: number;
+  clipName?: string;
 }
 
 const fixtureBufferPromises = new Map<string, Promise<Buffer>>();
@@ -190,7 +191,7 @@ function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THR
     root.add(sibling);
   }
 
-  const clip = new THREE.AnimationClip('FixtureBend', 0.5, [
+  const clip = new THREE.AnimationClip(options.clipName ?? 'FixtureBend', 0.5, [
     new THREE.QuaternionKeyframeTrack('FixtureTip.quaternion', [0, 0.5], [
       0, 0, 0, 1,
       0, 0, 0.258819, 0.965926,
@@ -211,6 +212,7 @@ function getFixtureKey(options: SkinnedGlbFixtureOptions): string {
     options.withMultiMaterial ? 'multi' : 'single',
     options.withSiblingMesh ? 'siblings' : 'solo',
     `scale-${options.rootScale ?? 1}`,
+    `clip-${options.clipName ?? 'FixtureBend'}`,
   ].join('-');
 }
 
@@ -223,6 +225,7 @@ function getFixtureName(options: SkinnedGlbFixtureOptions): string {
   if (options.rootScale !== undefined) {
     parts.push(`scale-${String(options.rootScale).split('.').join('_').split('+').join('')}`);
   }
+  if (options.clipName) parts.push(`clip-${options.clipName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
   return `${parts.join('-')}.glb`;
 }
 
@@ -268,5 +271,23 @@ export async function createSkinnedGlbFixtureInputWithOptions(
     name: getFixtureName(options),
     mimeType: 'model/gltf-binary',
     buffer: Buffer.from(buffer),
+  };
+}
+
+export async function createSkinnedGltfFixtureInputWithOptions(
+  options: SkinnedGlbFixtureOptions = {},
+): Promise<TestFilePayload> {
+  installFileReaderTestPolyfill();
+  if (options.withTexture) installNodeCanvasSupport();
+  const { root, clips } = createFixtureScene(options);
+  const exporter = new GLTFExporter();
+  const result = await exporter.parseAsync(root, { binary: false, animations: clips });
+  if (!result || typeof result !== 'object' || result instanceof ArrayBuffer) {
+    throw new Error('Expected generated skinned GLTF fixture to be a JSON object');
+  }
+  return {
+    name: getFixtureName(options).replace(/\.glb$/i, '.gltf'),
+    mimeType: 'model/gltf+json',
+    buffer: Buffer.from(JSON.stringify(result)),
   };
 }

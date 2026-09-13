@@ -1,6 +1,9 @@
 import { test, expect } from '@playwright/test';
 import { SAMPLE_SMF, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
-import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
+import {
+  createSkinnedGlbFixtureInput,
+  createSkinnedGltfFixtureInputWithOptions,
+} from './helpers/skinned-glb-fixture';
 import { escapeRegex } from './helpers/format-assertions';
 import { clickPickableBoneInViewport, setViewportLayout } from './helpers/viewport-interactions';
 import { setRangeValue, clickTimelineLaneAt, dragSelectedTimelineMarkerTo } from './helpers/timeline-interactions';
@@ -208,6 +211,26 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Redid create animation clip Rest Pose Start/i);
       await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Rest Pose Start');
       await expect(page.getByTestId('animate-summary').locator('div').first().locator('strong')).toHaveText('2');
+    });
+
+  test('retargets named-rig GLTF clips as one undoable animation workspace transaction', async ({ page }) => {
+      await page.goto('/');
+
+      await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await page.getByTestId('mode-tab-animate').click({ force: true });
+
+      const source = await createSkinnedGltfFixtureInputWithOptions({ clipName: 'Source Motion' });
+      await page.getByTestId('animation-retarget-clips').locator('input').setInputFiles(source);
+
+      await expect(page.getByTestId('status-text')).toContainText(/Retargeted 1 clip across 2 mapped bones/i, { timeout: 15000 });
+      await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Source Motion');
+      await expect(page.getByTestId('animate-summary').locator('div').first().locator('strong')).toHaveText('2');
+
+      await page.getByTestId('editor-undo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Undid retarget 1 animation clip/i);
+      await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
+      await expect(page.getByTestId('animate-summary').locator('div').first().locator('strong')).toHaveText('1');
     });
 
   test('animation trim and locked-bone policy are visible and undoable', async ({ page }) => {

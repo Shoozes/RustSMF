@@ -142,12 +142,16 @@ export interface GlbRoundtripSummary {
 }
 
 function summarizeGlbScene(root: THREE.Object3D, clips: THREE.AnimationClip[], byteLength: number): GlbRoundtripSummary {
-  let boneCount = 0;
+  const deformBones = new Set<string>();
+  let hierarchyBoneCount = 0;
   let skinnedMeshCount = 0;
 
   root.traverse((node) => {
-    if (isThreeBone(node)) boneCount += 1;
-    if (isThreeSkinnedMesh(node)) skinnedMeshCount += 1;
+    if (isThreeBone(node)) hierarchyBoneCount += 1;
+    if (isThreeSkinnedMesh(node)) {
+      skinnedMeshCount += 1;
+      node.skeleton.bones.forEach((bone) => deformBones.add(bone.uuid));
+    }
 
     const transformValues = [
       node.position.x, node.position.y, node.position.z,
@@ -184,7 +188,7 @@ function summarizeGlbScene(root: THREE.Object3D, clips: THREE.AnimationClip[], b
 
   return {
     byteLength,
-    boneCount,
+    boneCount: deformBones.size > 0 ? deformBones.size : hierarchyBoneCount,
     skinnedMeshCount,
     clipCount: clips.length,
     clipNames: clips.map((clip) => clip.name),

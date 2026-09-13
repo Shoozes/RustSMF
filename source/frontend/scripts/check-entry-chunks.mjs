@@ -6,8 +6,20 @@ import { join } from 'path';
 const dist = join(process.cwd(), 'dist');
 try {
   const html = readFileSync(join(dist, 'index.html'), 'utf8');
+  const manifest = JSON.parse(readFileSync(join(dist, '.vite', 'manifest.json'), 'utf8'));
+  const entry = manifest['index.html'];
+  const tauriEntry = manifest['src/backend-client/tauri.ts'];
   if (!html.includes('three-vendor')) {
     throw new Error('three vendor chunk split missing - check vite.config');
+  }
+  if (!entry?.isEntry || !entry.dynamicImports?.includes('src/backend-client/tauri.ts')) {
+    throw new Error('Tauri bridge must remain a dynamic import of the browser entry');
+  }
+  if (!tauriEntry?.isDynamicEntry || entry.imports?.includes('src/backend-client/tauri.ts')) {
+    throw new Error('Tauri bridge leaked into the static browser entry graph');
+  }
+  if (html.includes(tauriEntry.file)) {
+    throw new Error('Tauri bridge asset is eagerly loaded by the HTML entry');
   }
 
   const workerAssets = readdirSync(join(dist, 'assets'))
@@ -27,7 +39,7 @@ try {
   }
 
   console.log(
-    `Entry chunk check passed (three-vendor split; ${workerAssets[0]} is lazy, ${workerBytes} bytes).`,
+    `Entry chunk check passed (three-vendor split; Tauri bridge lazy; ${workerAssets[0]} lazy, ${workerBytes} bytes).`,
   );
 } catch (error) {
   console.error(`ERROR: entry chunk check failed: ${error instanceof Error ? error.message : String(error)}`);

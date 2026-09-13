@@ -2,6 +2,40 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-13 - Repository integrity, bounded model input, and retarget evidence
+
+- Extracted the pure `rustsmf.game-ready-job.v1` parser from the CLI execution owner. It rejects duplicate or input-overwriting paths, empty explicit clip selections, unknown attachment roles, and invalid timing/recovery values without requiring filesystem access.
+- Replaced parallel whole-file CLI reads with sequential, same-handle bounded reads. Regular-file identity, per-file limits, file growth, duplicate paths, and the remaining aggregate budget now fail before later inputs are materialized.
+- Closed failure and timing gaps: partial terminal retarget samples stay within clip duration; material repair disposes textures and materials acquired before a later texture failure; append, retarget, and repair operations share latest-intent leases so stale completion cannot overwrite newer UI state.
+- Added normalized mapped-rig segment diagnostics to reports and compact manifests. The reproducible `426ac3aaa30d85f8bd4f2b5957237b0e7597039dc4272d4c158fdc6636615f92` Wolf candidate reports 14 comparable segments and 8 warnings at the 35% threshold, confirming that correct mapping and timing do not establish proportion- or skinning-equivalent motion.
+- Restored the intended lazy native boundary by removing `App.tsx`'s static Tauri bridge import. The production-manifest check now proves that the bridge remains a dynamic entry and is absent from eager HTML imports.
+- Split the broad game-ready context route into focused material-repair, rig-retargeting, and CLI workflow groups; consolidated detailed test ownership into the test README; updated current state, review, user guidance, pitfalls, and the executable P1 backlog; and corrected the earlier sampled-pose acceptance claim without changing the private source asset.
+
+### Verification
+
+- `pwsh -NoProfile -File ./run.ps1 -Task verify`: exit 0; 9/9 project-integrity, 9/9 context-bank, 2/2 main-sync, 2/2 process-ownership, 385/385 frontend unit, and 10/10 Rust tests passed; lint, both typechecks, production-any, build, manifest/chunk, Rust fmt, clippy, and check passed.
+- `pwsh -NoProfile -File ./run.ps1 -Task test:e2e -NoGenEye`: exit 0; 89/89 browser cases passed, including material repair apply/undo/redo and named-rig JSON GLTF retarget import. `pwsh -NoProfile -File ./run.ps1 -Task test:visual-strict`: exit 0; 3/3 strict visual cases passed without baseline changes.
+- `pwsh -NoProfile -File ./run.ps1 -Task desktop-smoke`: exit 0; the unbundled Tauri release build, 10/10 Rust native-boundary tests, and 13/13 native IPC browser cases passed.
+- The private game-ready job completed and reproduced the exact hash above; GLB load-back, embedded-resource, STEP-timing, deformation, and rig-compatibility checks passed. The FBX loader continued to disclose source vertices with more than four weights.
+- `node scripts/verify-context-bank.mjs`: 34 groups, 45.1 KiB default orientation, zero warnings. `npm.cmd audit --omit=optional --audit-level=low`: zero vulnerabilities. `git diff --check` passed. Closing publication uses the repository's guarded direct-to-`main` helper; Git HEAD/origin identity is the synchronization record.
+- The closing exact-path process inventory found no repository-owned dev server or built Tauri PID and no stale dev-stack state; no unrelated process was stopped.
+
+## 2026-09-13 - Game-ready model repair and explicit animation retargeting
+
+- Added a reusable strict model-refactor path for OBJ/MTL material repair, embedded-texture GLB output, explicit source-to-target rig mapping, per-clip retarget controls, deterministic validation reports, and load-back verification. The existing Outliner Repair and Animate Retarget drawers expose the workflow without adding a separate application shell.
+- Diagnosed the supplied Mario attack collapse before retargeting: the untouched source GLB already folds into itself at its late attack frames when loaded directly, so that defect is in the private source animation rather than RustSMF GLB import or export. The private source was not modified.
+- Corrected the opaque Mario side-chain mapping that had assigned positive-X limbs to target Right and negative-X limbs to target Left. Positive-X arm and leg chains now map to target Left, negative-X chains map to target Right, and the inferred orientation correction is consequently near identity instead of an approximately 180-degree yaw. This also removed the Wolf walk knee hyperextension without a clip-specific knee workaround.
+- Made STEP source evaluation use the source file's float32 timestamps while preserving next-down output keys. This removes the one-frame-early pose transition. Added generic relative or absolute direction transfer with an optional bone scope; Wolf attack uses absolute direction only for the left upper arm and forearm so the strike travels forward from the target rig's arms-down idle. Its verified recovery schedule is peak frame 2, held through frame 3, and returned by frame 8.
+- Retained the accepted texture orientation (`flipY` enabled) and avoided introducing normal smoothing. The final `output/game-ready/wolf/wolf.private-moveset.glb` is 1,949,424 bytes with SHA-256 `426ac3aaa30d85f8bd4f2b5957237b0e7597039dc4272d4c158fdc6636615f92`: 28 bones, 38 clips total, 37 retargeted STEP clips, 190 deformation samples, three embedded textures, and zero external URIs.
+- Sampled all 37 retargeted roles at their midpoints in Quad orthographic view. Focused Quad and receiving-game Side/quarter checks initially showed no obvious self-clipping at attack frames 2, 3, 5, and 8, walk frame 8, `damageHi3` frame 15, and `rebound` frame 8. Subsequent actual gameplay review rejected the overall motion quality: normalized rig diagnostics showed material target/source segment-proportion differences, so the `426ac3...` output remains a preserved diagnostic candidate rather than an accepted asset. Same-topology fitted-rig comparison is tracked in `TODO.md`.
+
+### Verification
+
+- `pwsh -NoProfile -File ./run.ps1 -Task verify`: exit 0; project, context, process, and main-sync guards passed; 378/378 frontend unit tests and 10/10 Rust tests passed; lint, both typechecks, production build/chunk checks, Rust fmt, clippy, and check passed.
+- `pwsh -NoProfile -File ./run.ps1 -Task test:e2e -NoGenEye`: exit 0; 88/88 browser cases passed.
+- The game-ready CLI completed the private Wolf job, wrote the GLB plus report, manifest, and game-ready metadata, and load-back validation confirmed the counts and self-contained resources above. The expected FBXLoader warning reports truncation of source vertices with more than four skin weights.
+- Project-integrity, context-bank, context-bank tests, and `git diff --check` passed. No commit or push was made.
+
 ## 2026-09-07 - Session close review
 
 - Reviewed the complete pending integrity/native-dialog change set locally on `main`. No open app blocker or active backlog item remains. The instrumented-session shutdown observation and external compatibility limits remain disclosed below and in `APP_STATE.md`.

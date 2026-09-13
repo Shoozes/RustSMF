@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { getModelOutlinerItemKind } from './modelOutliner';
+import { getSourceMaterialAssignment } from './materialPreview';
 import { isThreeBone, isThreeSkinnedMesh } from './threeTypeGuards';
 
 export interface ModelMetadataState {
@@ -185,7 +186,9 @@ export function captureModelOutlinerSnapshot(
       if (!object || object === root) continue;
       knownIds.add(id);
       const geometry = Reflect.get(object, 'geometry');
-      const material = Reflect.get(object, 'material');
+      const material = object instanceof THREE.Mesh
+        ? getSourceMaterialAssignment(object)
+        : Reflect.get(object, 'material');
       objectById[id] = {
         name: object.name,
         visible: object.visible,

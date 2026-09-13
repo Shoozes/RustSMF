@@ -30,6 +30,9 @@ interface OutlinerProps {
   onFlipWinding: () => void;
   onPrepareGeometry: () => void;
   onAppendStaticModel: (file: File) => void;
+  materialRepairEnabled: boolean;
+  materialRepairDisabledReason?: string;
+  onRepairRiggedMaterials: (files: readonly File[]) => void;
 }
 
 const getKindLabel = (kind: ModelOutlinerItem['kind']): string => {
@@ -64,6 +67,9 @@ const Outliner: React.FC<OutlinerProps> = ({
   onFlipWinding,
   onPrepareGeometry,
   onAppendStaticModel,
+  materialRepairEnabled,
+  materialRepairDisabledReason,
+  onRepairRiggedMaterials,
 }) => {
   const meshCount = items.filter((item) => item.kind !== 'group').length;
   const selectedSet = new Set(selectedItemIds);
@@ -126,20 +132,41 @@ const Outliner: React.FC<OutlinerProps> = ({
           <span data-testid="outliner-selection-count">{selectedCount} selected</span>
         </div>
       )}
-      <label className="outliner-append-action" data-testid="outliner-append-static">
-        Append static
-        <input
-          type="file"
-          accept=".glb,.gltf,.obj,.fbx"
-          className="hidden"
-          disabled={!objectEditingEnabled}
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0];
-            if (file) onAppendStaticModel(file);
-            event.currentTarget.value = '';
-          }}
-        />
-      </label>
+      <div className="outliner-import-actions">
+        <label className="outliner-append-action" data-testid="outliner-append-static">
+          Append static
+          <input
+            type="file"
+            accept=".glb,.gltf,.obj,.fbx"
+            className="hidden"
+            disabled={!objectEditingEnabled}
+            onChange={(event) => {
+              const file = event.currentTarget.files?.[0];
+              if (file) onAppendStaticModel(file);
+              event.currentTarget.value = '';
+            }}
+          />
+        </label>
+        <label
+          className="outliner-append-action"
+          data-testid="outliner-repair-materials"
+          title={materialRepairEnabled ? 'Select one OBJ with its MTL and JPEG/PNG texture files' : materialRepairDisabledReason}
+        >
+          Repair materials
+          <input
+            type="file"
+            accept=".obj,.mtl,.jpg,.jpeg,.png"
+            className="hidden"
+            multiple
+            disabled={!materialRepairEnabled}
+            onChange={(event) => {
+              const files = Array.from(event.currentTarget.files ?? []);
+              if (files.length > 0) onRepairRiggedMaterials(files);
+              event.currentTarget.value = '';
+            }}
+          />
+        </label>
+      </div>
       {selectedItem && (
         <form
           className="outliner-rename-form"

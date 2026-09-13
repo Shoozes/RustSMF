@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-09-07 (native resource policy and save coordination, Skin pose-policy integration, process ownership, and context exclusions).
+Last reviewed: 2026-09-13 (game-ready bounded input, additive-operation freshness, material cleanup, retarget timing/proportion evidence, lazy native-bridge loading, and context routing).
 
 ### Q: What pitfall are we preventing?
 
@@ -187,26 +187,26 @@ Last reviewed: 2026-09-07 (native resource policy and save coordination, Skin po
 
 ### Q: What pitfall are we preventing?
 
-**What:** A replacement, native file operation, or long editing session can discard user work, read an unowned recovery path, overlap writes to one destination, grow history without a memory contract, or publish timeline state on every render frame.
+**What:** A replacement, additive model operation, native file operation, batch model job, or long editing session can discard user work, publish stale status, materialize inputs beyond its aggregate budget, leak partial resources, read an unowned recovery path, overlap writes to one destination, grow history without a memory contract, or publish timeline state on every render frame.
 
-**Context and constraints:** Model loading is latest-intent owned and may begin from browser input, drag/drop, or a native dialog. Tauri reads must remain dialog-authorized, returned IPC values are untrusted until validated, Rust owns dialog invocation, project recovery may expose only app-owned generations, foreground saves and autosaves must not race, authoring history must be bounded, and the viewport mixer must stay responsive while the timeline remains visibly current.
+**Context and constraints:** Model loading is latest-intent owned and may begin from browser input, drag/drop, or a native dialog. Additive append, animation-retarget, and material-repair reads share the same mounted model and global status. Tauri reads must remain dialog-authorized, returned IPC values are untrusted until validated, local CLI inputs must honor per-file and aggregate budgets before allocation, Rust owns dialog invocation, project recovery may expose only app-owned generations, foreground saves and autosaves must not race, authoring history must be bounded, and the viewport mixer must stay responsive while the timeline remains visibly current.
 
-**Why it happened:** The load path started reading before it knew whether authoring state was dirty, the frontend supplied native paths to the bridge, project save/autosave tasks could enter independent blocking writes, recovery reads trusted a frontend-provided file name, histories used count-only retention, and the parent timeline subscribed directly to the viewport's requestAnimationFrame cadence.
+**Why it happened:** The load path started reading before it knew whether authoring state was dirty, newer additive imports had no shared sequence lease, failed material preparation retained earlier textures, the batch CLI used parallel whole-file reads and checked its aggregate only afterward, the frontend supplied native paths to the bridge, project save/autosave tasks could enter independent blocking writes, recovery reads trusted a frontend-provided file name, histories used count-only retention, and the parent timeline subscribed directly to the viewport's requestAnimationFrame cadence.
 
-**Where:** `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/App.tsx`, `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/backend-client/binaryPayload.ts`, `source/frontend/package.json`, `source/package-lock.json`, `source/src-tauri/src/main.rs`, `source/src-tauri/Cargo.toml`, `source/frontend/src/utils/editorHistory.ts`, `source/frontend/src/utils/skinWeights.ts`, and `source/frontend/src/store/index.ts`.
+**Where:** `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/src/App.tsx`, `source/frontend/src/backend-client/tauri.ts`, `source/frontend/src/backend-client/binaryPayload.ts`, `source/frontend/scripts/bounded-file-read.ts`, `source/frontend/scripts/game-ready-cli.ts`, `source/frontend/src/utils/materialRepair.ts`, `source/frontend/package.json`, `source/package-lock.json`, `source/src-tauri/src/main.rs`, `source/src-tauri/Cargo.toml`, `source/frontend/src/utils/editorHistory.ts`, `source/frontend/src/utils/skinWeights.ts`, and `source/frontend/src/store/index.ts`.
 
-**Evidence:** The current flow queues dirty replacements before reading bytes and preserves the mounted root on Cancel or parse failure; static-root preparation preflights every mesh before mutation and records one reversible rig-history entry; Rust rejects unselected or non-regular paths and detects stream growth beyond the 256 MiB limit; native writes share one async mutex, use unique staged files, sync before replacement, and restore the prior destination on install failure; recovery discovery/read accepts only the exact autosave target plus `.bak1` and `.bak2` regular files; frontend autosave coalesces to the newest trailing request, and successful replacement waits for issued recovery I/O before swapping roots without canceling recovery on picker failure; malformed native byte arrays fail before parsing; editor and skin histories have count and byte limits; and parent playback publication is capped at a 50 ms display cadence. Rust, unit, and browser mock coverage exercise these boundaries.
+**Evidence:** The current flow queues dirty replacements before reading bytes and preserves the mounted root on Cancel or parse failure; additive append, retarget, and repair operations acquire the same latest-intent sequence and dispose stale results without clearing a newer operation's status; failed material preparation disposes already acquired resources; the CLI reads each regular file through one handle in chunks under the remaining aggregate budget; static-root preparation preflights every mesh before mutation and records one reversible rig-history entry; Rust rejects unselected or non-regular paths and detects stream growth beyond the 256 MiB limit; native writes share one async mutex, use unique staged files, sync before replacement, and restore the prior destination on install failure; recovery discovery/read accepts only the exact autosave target plus `.bak1` and `.bak2` regular files; frontend autosave coalesces to the newest trailing request, and successful replacement waits for issued recovery I/O before swapping roots without canceling recovery on picker failure; malformed native byte arrays fail before parsing; editor and skin histories have count and byte limits; and parent playback publication is capped at a 50 ms display cadence. Rust, unit, and browser coverage exercise these boundaries.
 
 **Developer story:** These were separate-looking reliability issues with the same root cause: integration code had no explicit ownership contract for destructive state, privileged destinations, retained snapshots, or high-frequency display updates. Shared guards and narrow owners make each boundary observable without hiding a real failure behind a fallback.
 
-**How to catch it:** Test Cancel before byte materialization, Discard after dirty authoring, stale load/export completion, unselected native reads, exact-limit and growth-over-limit reads, non-regular paths, arbitrary recovery names, concurrent project rotations, complete staged replacement, trailing autosave coalescing, save cancellation, exact history budget eviction, oversized current edits, and throttled versus immediate playback updates. Run focused Rust/browser slices plus the full verification gate.
+**How to catch it:** Test Cancel before byte materialization, Discard after dirty authoring, stale load/export/additive completion, partial material-load failure, duplicate and aggregate-overflow CLI inputs, unselected native reads, exact-limit and growth-over-limit reads, non-regular paths, arbitrary recovery names, concurrent project rotations, complete staged replacement, trailing autosave coalescing, save cancellation, exact history budget eviction, oversized current edits, and throttled versus immediate playback updates. Run focused Rust/unit/browser slices plus the full verification gate.
 
 **Solutions tried:**
 1. `34/100` Rely on a downstream parse guard and frontend-provided native destination, result: destructive replacement, arbitrary path reads, and excess retained memory remained possible.
 2. `95/100` Centralize replacement decisions, keep native path/destination authority in Rust, bound retained snapshots by count and bytes, and throttle only parent display publication, result: user state and privileged I/O fail closed while imperative rendering remains responsive.
 3. `98/100` Serialize all native writes, stage unique synchronized payloads, exact-match recovery generations, coalesce autosave at the integration owner, and remove duplicate unused native SMF parser surfaces, result: write timing and parser ownership are explicit without redundant bridge contracts.
 
-**Current solution:** `replacementGuard.ts`, `assertModelInputSize`, `normalizeBinaryPayload`, `staticMeshSkinPrep.ts`, `smfBinary.ts` decoded reservations, Rust `NativeFileAuthority`, same-handle bounded reads, `run_native_write`, `TemporaryFile`, exact recovery-name guards, bounded history helpers, and `playbackDisplayThrottle.ts` each own one narrow invariant; `useLoadModel` owns foreground-save exclusion and latest-trailing autosave coalescing, while the TypeScript worker remains the sole structural SMF authority.
+**Current solution:** `replacementGuard.ts`, shared sequence leases, `assertModelInputSize`, `normalizeBinaryPayload`, `bounded-file-read.ts`, failure-safe material preparation, `staticMeshSkinPrep.ts`, `smfBinary.ts` decoded reservations, Rust `NativeFileAuthority`, same-handle bounded reads, `run_native_write`, `TemporaryFile`, exact recovery-name guards, bounded history helpers, and `playbackDisplayThrottle.ts` each own one narrow invariant; `useLoadModel` owns foreground-save exclusion and latest-trailing autosave coalescing, while the TypeScript worker remains the sole structural SMF authority.
 
 **Decision rationale:** A single broad integration fallback would obscure which state was protected. Explicit guards preserve the current model on failure, keep OS dialogs authoritative, retain useful recent history, and reduce React work without altering mixer timing.
 
@@ -989,23 +989,23 @@ Last reviewed: 2026-09-07 (native resource policy and save coordination, Skin po
 
 ### Q: What pitfall are we preventing?
 
-**What:** Verification scripts can pass while an expected production chunk split is missing.
+**What:** Verification scripts can pass while an expected production chunk split is missing or a static import silently pulls a lazy native bridge back into the browser entry.
 
-**Why it happened:** `check-entry-chunks.mjs` printed a warning and exited 0 when `three-vendor` was absent, and also skipped with a success exit when `dist` could not be read.
+**Why it happened:** `check-entry-chunks.mjs` printed a warning and exited 0 when `three-vendor` was absent, skipped with a success exit when `dist` could not be read, and did not inspect the Vite manifest's static/dynamic import graph. A material-repair caller then imported the Tauri bridge directly from `App.tsx`, defeating the hook's lazy boundary while the build still succeeded.
 
 **Where:** `source/frontend/scripts/check-entry-chunks.mjs`, `run.ps1 -Task verify`, `source/package.json` verify script.
 
-**How to catch it:** Temporarily remove or rename the built `dist/index.html` or the Vite manual chunk config, then run `node scripts/check-entry-chunks.mjs` and verify the process exits nonzero.
+**How to catch it:** Temporarily remove or rename the built `dist/index.html`, manifest, Vite manual chunk config, or Tauri dynamic-entry declaration, then run `node scripts/check-entry-chunks.mjs` and verify the process exits nonzero.
 
 **Solutions tried:**
 1. `58/100` Warn but continue, result: humans could miss the warning and automated gates stayed green.
 2. `92/100` Emit errors and `process.exit(1)` on missing split or missing dist, result: `verify` now fails closed.
 
-**Current solution:** The chunk check exits 1 when the production build artifact cannot be inspected or the expected `three-vendor` split is absent.
+**Current solution:** The chunk check exits 1 when the production build/manifest cannot be inspected, the expected `three-vendor` split is absent, the Tauri bridge is not a dynamic entry, or the HTML/static entry graph eagerly includes it. Material repair reads through the load hook's lazy bridge adapter.
 
 **Effectiveness:** `92/100`, durable for this check. It intentionally treats a missing build as a verification failure.
 
-**Relevance check:** Current. Three.js bundle splitting is a performance and startup integrity concern.
+**Relevance check:** Current. Three.js splitting, worker isolation, and lazy desktop-only code are startup integrity concerns.
 
 **Next prevention step:** Keep guard scripts fail-closed unless a skipped state is explicitly part of the command contract.
 

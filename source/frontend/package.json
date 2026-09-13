@@ -19,6 +19,7 @@
     "test:journey:hand-wave": "playwright test --config=playwright.journey.config.ts",
     "test:visual-strict": "node scripts/run-strict-visuals.mjs",
     "test:visual-update": "node scripts/run-strict-visuals.mjs --update-snapshots",
+    "game-ready": "tsx scripts/game-ready-cli.ts",
     "tauri:dev": "cd ../src-tauri && tauri dev",
     "tauri:build": "cd ../src-tauri && tauri build",
     "tauri:build:smoke": "cd ../src-tauri && tauri build --no-bundle",
@@ -27,6 +28,8 @@
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
     "@tauri-apps/api": "^2.2.0",
+    "jpeg-js": "^0.4.4",
+    "pngjs": "^7.0.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "three": "^0.182.0"
@@ -36,6 +39,7 @@
     "@playwright/test": "^1.58.2",
     "@tauri-apps/cli": "^2.2.0",
     "@types/node": "^22.19.21",
+    "@types/pngjs": "^6.0.5",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/three": "^0.182.0",

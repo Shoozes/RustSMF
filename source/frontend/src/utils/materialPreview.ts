@@ -246,6 +246,30 @@ export function getSourceMaterials(mesh: THREE.Mesh): THREE.Material[] {
   return materialList(source?.material ?? mesh.material);
 }
 
+export function getSourceMaterialAssignment(mesh: THREE.Mesh): THREE.Material | THREE.Material[] {
+  return meshes.get(mesh)?.material ?? mesh.material;
+}
+
+export function withMaterialSourceMutation<T>(
+  root: THREE.Object3D,
+  operation: () => T,
+): T {
+  const entry = roots.get(root);
+  if (!entry) return operation();
+  const preview = { ...entry.preview };
+  unregisterMaterialPreviewRoot(root);
+  try {
+    const result = operation();
+    registerMaterialPreviewRoot(root);
+    updateMaterialPreview(root, preview);
+    return result;
+  } catch (error) {
+    registerMaterialPreviewRoot(root);
+    updateMaterialPreview(root, preview);
+    throw error;
+  }
+}
+
 export interface SourceMaterialView {
   material: THREE.Material;
   sourceMaps: ReadonlyMap<string, THREE.Texture | null | undefined>;

@@ -220,6 +220,7 @@ interface ThreeViewportProps {
   selectedBoneName?: string;
   selectedObjectIds?: string[];
   selectionOverlayRevision?: number;
+  materialSourceRevision?: number;
   weightPreviewEnabled?: boolean;
   transformMode?: 'translate' | 'rotate' | 'scale';
   onSetTransformMode?: (mode: 'translate' | 'rotate' | 'scale') => boolean | void;
@@ -283,6 +284,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   selectedBoneName,
   selectedObjectIds = [],
   selectionOverlayRevision = 0,
+  materialSourceRevision = 0,
   weightPreviewEnabled = false,
   transformMode = 'translate',
   onSetTransformMode,
@@ -2811,6 +2813,22 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => {
     viewportDisplayRef.current.setModelOpacity(modelOpacity);
   }, [modelOpacity, root]);
+
+  useEffect(() => {
+    if (!root || attachedModelRef.current !== root || materialSourceRevision === 0) return;
+    viewportDisplayRef.current.detachRoot(root);
+    viewportDisplayRef.current.captureRoot(root);
+    viewportDisplayRef.current.updatePreview({
+      textureEnabled,
+      modelOpacity,
+      repeatTextures: textureRepeatPreviewEnabled,
+      textureFilter: textureFilterPreview,
+    });
+    viewportDisplayRef.current.setShaderEnabled(shaderEnabled, textureEnabled, modelOpacity);
+    // Material-source commits are the only invalidation owner. Preview controls
+    // have their own focused effects and are read here at commit time.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [materialSourceRevision, root]);
 
   useEffect(() => {
     const helper = skeletonHelperRef.current;

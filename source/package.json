@@ -22,6 +22,7 @@
     "test:visual-strict": "npm --workspace frontend run test:visual-strict",
     "test:visual-update": "npm --workspace frontend run test:visual-update",
     "test:unit": "npm --workspace frontend run test:unit",
+    "game-ready": "npm --workspace frontend run game-ready --",
     "verify:rust": "cd src-tauri && cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test && cargo check",
     "verify": "npm run check:lint-coverage && npm run lint && npm run typecheck && npm run typecheck:test && npm run check:production-any && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && npm run verify:rust",
     "desktop:smoke": "pwsh -File ../run.ps1 -Task desktop-smoke"

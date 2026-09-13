@@ -57,6 +57,15 @@ import {
 } from './utils/editorHistory'
 import { disposeThreeObject } from './utils/threeDisposal'
 import type { SkinWeightEditMode } from './utils/skinWeights'
+import { createModelResourceBundle } from './utils/modelResourceBundle'
+import {
+  applyPreparedMaterialRepair,
+  assertMaterialRepairPreservedModel,
+  captureMaterialRepairFingerprint,
+  disposePreparedMaterialRepair,
+  prepareMaterialRepairFromBundle,
+} from './utils/materialRepair'
+import { withMaterialSourceMutation } from './utils/materialPreview'
 
 type WorkspaceProfile = {
   showTimeline: boolean;
@@ -126,6 +135,7 @@ export default function App() {
   const [outlinerUndoOrder, setOutlinerUndoOrder] = useState(0);
   const [outlinerRedoOrder, setOutlinerRedoOrder] = useState(0);
   const [outlinerRevision, setOutlinerRevision] = useState(0);
+  const [materialSourceRevision, setMaterialSourceRevision] = useState(0);
   const [selectedOutlinerIds, setSelectedOutlinerIds] = useState<string[]>([]);
   const [modernPanel, setModernPanel] = useState<ModernPanel>('scene');
   const [modernSkinTool, setModernSkinTool] = useState<ModernSkinTool>('pick');
@@ -157,6 +167,9 @@ export default function App() {
     handleSaveSmfDiagnosticReport,
     handleFileInputChange,
     handleDrop,
+    beginModelOperation,
+    readModelResourceFiles,
+    retargetAnimationsFromFiles,
     handleSelectBone,
     renameSelectedBone,
     reparentSelectedBone,
@@ -429,13 +442,16 @@ export default function App() {
     )
   ), [model.root, selectedOutlinerIds]);
   const applyOutlinerSnapshot = useCallback((snapshot: ModelOutlinerSnapshot): number => {
-    const result = applyModelOutlinerSnapshot(
-      model.root,
-      snapshot,
-      collectModelOutlinerItems(model.root).map((item) => item.id),
-    );
+    const result = model.root
+      ? withMaterialSourceMutation(model.root, () => applyModelOutlinerSnapshot(
+        model.root,
+        snapshot,
+        collectModelOutlinerItems(model.root).map((item) => item.id),
+      ))
+      : applyModelOutlinerSnapshot(null, snapshot, []);
     setSelectedOutlinerIds(result.selectedIds);
     setOutlinerRevision((value) => value + 1);
+    setMaterialSourceRevision((value) => value + 1);
     return result.changes;
   }, [model.root]);
   const pushOutlinerHistory = useCallback((
@@ -687,8 +703,79 @@ export default function App() {
     applySelectedSurfaceEdit('transform static submodel', (objectId) => transformStaticModelObject(model.root, objectId, patch, model.clips, sourceFormat));
   }, [applySelectedSurfaceEdit, model.clips, model.root, sourceFormat]);
   const handleAssignSelectedMaterial = useCallback((name: string) => {
-    applySelectedSurfaceEdit(`assign material ${name}`, (objectId) => assignStaticModelMaterial(model.root, objectId, name, model.clips, sourceFormat));
+    applySelectedSurfaceEdit(`assign material ${name}`, (objectId) => (
+      model.root
+        ? withMaterialSourceMutation(model.root, () => assignStaticModelMaterial(model.root, objectId, name, model.clips, sourceFormat))
+        : assignStaticModelMaterial(model.root, objectId, name, model.clips, sourceFormat)
+    ));
+    setMaterialSourceRevision((value) => value + 1);
   }, [applySelectedSurfaceEdit, model.clips, model.root, sourceFormat]);
+  const handleRepairRiggedMaterials = useCallback(async (files: readonly File[]) => {
+    const expectedRoot = modelRootRef.current;
+    if (!expectedRoot || !model.skeleton || model.skeleton.bones.length === 0) {
+      ui.setStatus('Load a skinned FBX or GLB before repairing its materials.');
+      return;
+    }
+    if (sourceFormat !== 'fbx' && sourceFormat !== 'glb') {
+      ui.setStatus('Material repair supports a currently loaded skinned FBX or GLB target.');
+      return;
+    }
+    const isCurrentOperation = beginModelOperation();
+    ui.setIsLoading(true);
+    ui.setErrorMsg('');
+    ui.setStatus('Matching OBJ/MTL materials to the rigged model...');
+    let prepared: Awaited<ReturnType<typeof prepareMaterialRepairFromBundle>> | null = null;
+    const beforeSnapshot = captureOutlinerSnapshot();
+    const protectedBefore = captureMaterialRepairFingerprint(expectedRoot, model.clips);
+    try {
+      const result = await readModelResourceFiles(files);
+      if (!isCurrentOperation()) return;
+      if (result.error) throw new Error(result.error);
+      if (!result.files || result.files.length === 0) throw new Error('Material repair selection contains no readable files.');
+      const bundleFiles = result.files.map((file) => {
+        if (!file.data) throw new Error(`Material repair file ${file.name} has no readable bytes.`);
+        return { name: file.name, data: file.data };
+      });
+      const bundle = createModelResourceBundle(bundleFiles[0], bundleFiles.slice(1));
+      prepared = await prepareMaterialRepairFromBundle(expectedRoot, bundle);
+      if (!isCurrentOperation() || modelRootRef.current !== expectedRoot) {
+        disposePreparedMaterialRepair(prepared);
+        prepared = null;
+        return;
+      }
+      withMaterialSourceMutation(expectedRoot, () => applyPreparedMaterialRepair(prepared!));
+      try {
+        assertMaterialRepairPreservedModel(protectedBefore, expectedRoot, model.clips);
+      } catch (error) {
+        withMaterialSourceMutation(expectedRoot, () => {
+          applyModelOutlinerSnapshot(
+            expectedRoot,
+            beforeSnapshot,
+            collectModelOutlinerItems(expectedRoot).map((item) => item.id),
+          );
+        });
+        disposePreparedMaterialRepair(prepared);
+        prepared = null;
+        throw error;
+      }
+      const afterSnapshot = captureOutlinerSnapshot();
+      const recorded = pushOutlinerHistory('repair rigged materials', beforeSnapshot, afterSnapshot);
+      setOutlinerRevision((value) => value + 1);
+      setMaterialSourceRevision((value) => value + 1);
+      const warningCount = prepared.plan.diagnostics.filter((item) => item.level === 'warning').length;
+      ui.setStatus(
+        `Repaired ${prepared.plan.assignments.length} rigged mesh material${prepared.plan.assignments.length === 1 ? '' : 's'} from OBJ/MTL; skin, rig, and ${model.clips.length} clip${model.clips.length === 1 ? '' : 's'} preserved${warningCount > 0 ? ` with ${warningCount} warning${warningCount === 1 ? '' : 's'}` : ''}${recorded ? '.' : ' (no change recorded).'}`,
+      );
+    } catch (error) {
+      if (prepared) disposePreparedMaterialRepair(prepared);
+      if (!isCurrentOperation()) return;
+      const message = error instanceof Error ? error.message : String(error);
+      ui.setErrorMsg(`Material repair error: ${message}`);
+      ui.setStatus(`Material repair error: ${message}`);
+    } finally {
+      if (isCurrentOperation()) ui.setIsLoading(false);
+    }
+  }, [beginModelOperation, captureOutlinerSnapshot, model.clips, model.skeleton, pushOutlinerHistory, readModelResourceFiles, sourceFormat, ui]);
   const handleFlipSelectedWinding = useCallback(() => {
     applySelectedSurfaceEdit('flip static submodel winding', (objectId) => flipStaticModelWinding(model.root, objectId, model.clips, sourceFormat));
   }, [applySelectedSurfaceEdit, model.clips, model.root, sourceFormat]);
@@ -947,6 +1034,7 @@ export default function App() {
           onMoveClipUp={moveCurrentAnimationClipUp}
           onMoveClipDown={moveCurrentAnimationClipDown}
           onCreateAnimation={createAnimationFromPose}
+          onRetargetAnimations={retargetAnimationsFromFiles}
           editorMode={editorMode}
         />
       );
@@ -1177,6 +1265,9 @@ export default function App() {
       onFlipWinding={handleFlipSelectedWinding}
       onPrepareGeometry={handlePrepareSelectedGeometry}
       onAppendStaticModel={handleAppendStaticModel}
+      materialRepairEnabled={hasSkinnedModel && (sourceFormat === 'fbx' || sourceFormat === 'glb')}
+      materialRepairDisabledReason="Load a skinned FBX or GLB target first."
+      onRepairRiggedMaterials={handleRepairRiggedMaterials}
     />
   );
 
@@ -1314,6 +1405,7 @@ export default function App() {
             selectedBoneName={ui.selected}
             selectedObjectIds={selectedOutlinerIds}
             selectionOverlayRevision={outlinerRevision}
+            materialSourceRevision={materialSourceRevision}
             weightPreviewEnabled={showWeightPreview}
             transformMode={transformMode}
             onSetTransformMode={setTransformMode}

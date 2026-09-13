@@ -60,6 +60,7 @@ interface AnimatePanelProps {
   onMoveClipUp: () => void;
   onMoveClipDown: () => void;
   onCreateAnimation: (request: AnimationCreationRequest) => void;
+  onRetargetAnimations: (files: readonly File[]) => void;
   editorMode?: string;
 }
 
@@ -101,6 +102,7 @@ export default function AnimatePanel({
   onMoveClipUp,
   onMoveClipDown,
   onCreateAnimation,
+  onRetargetAnimations,
   editorMode = 'animate',
 }: AnimatePanelProps) {
   const clipCount = clips.length;
@@ -214,6 +216,25 @@ export default function AnimatePanel({
           >
             Create animation
           </button>
+          <label
+            className="outliner-append-action"
+            data-testid="animation-retarget-clips"
+            title="Retarget named-bone FBX, GLB, or GLTF clips onto this rig. Opaque numeric rigs require the game-ready CLI's explicit map."
+          >
+            Retarget clips
+            <input
+              type="file"
+              accept=".fbx,.glb,.gltf,.bin,.png,.jpg,.jpeg,.webp,.ktx2"
+              className="hidden"
+              multiple
+              disabled={!hasSkeleton}
+              onChange={(event) => {
+                const files = Array.from(event.currentTarget.files ?? []);
+                if (files.length > 0) onRetargetAnimations(files);
+                event.currentTarget.value = '';
+              }}
+            />
+          </label>
         </div>
         {!hasSkeleton && <div className="text-slate-500 mt-1">Load a skinned model with bones first.</div>}
       </div>

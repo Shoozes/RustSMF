@@ -149,6 +149,8 @@ import {
   type AnimationPoseSnapshot,
 } from '../utils/animationCreation';
 import { createAnimationAuthoringController } from '../utils/animationAuthoringController';
+import { buildRigMap } from '../utils/rigMapping';
+import { retargetAnimationClip } from '../utils/animationRetarget';
 import type { AnimationEditScope } from '../utils/animationScope';
 import {
   createChildBone,
@@ -563,6 +565,16 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     cancelActiveSmfCodec();
     return loadSeq;
   }, [cancelActiveSmfCodec]);
+
+  const beginModelOperation = useCallback(() => {
+    const sequence = beginLoadRequest();
+    return () => loadSeqGuardRef.current.isCurrent(sequence);
+  }, [beginLoadRequest]);
+
+  const readModelResourceFiles = useCallback(
+    async (files: readonly File[]) => (await getTauriClient()).readBrowserModelFiles(files),
+    [],
+  );
 
   const refreshSkinHistoryAvailability = useCallback(() => {
     setSkinUndoAvailable(skinUndoStackRef.current.length > 0);
@@ -1967,6 +1979,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       ui.setStatus('Append supports only GLB/GLTF, OBJ, or FBX static assets.');
       return null;
     }
+    const isCurrentOperation = beginModelOperation();
     ui.setIsLoading(true);
     ui.setStatus(`Reading static append ${file.name}...`);
     try {
@@ -1979,19 +1992,108 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         : format === 'obj'
           ? await loadOBJ(bytesToArrayBuffer(bytes))
           : await loadGLB(bytesToArrayBuffer(bytes));
+      if (!isCurrentOperation()) {
+        disposeThreeObject(loaded.root);
+        return null;
+      }
       if (loaded.skeleton && loaded.skeleton.bones.length > 0) {
         disposeThreeObject(loaded.root);
         throw new Error('Static append rejected: animated/skinned assets must be opened as the primary model.');
       }
       return loaded.root;
     } catch (error: unknown) {
+      if (!isCurrentOperation()) return null;
       ui.setErrorMsg(`Static append error: ${errorMessage(error)}`);
       ui.setStatus(`Static append error: ${errorMessage(error)}`);
       return null;
     } finally {
-      ui.setIsLoading(false);
+      if (isCurrentOperation()) ui.setIsLoading(false);
     }
-  }, [model.root, ui]);
+  }, [beginModelOperation, model.root, ui]);
+
+  const retargetAnimationsFromFiles = useCallback(async (files: readonly File[]): Promise<void> => {
+    const targetRoot = model.root;
+    const targetSkeleton = model.skeleton;
+    if (!targetRoot || !targetSkeleton || targetSkeleton.bones.length === 0) {
+      ui.setStatus('Load a skinned target model before retargeting animation clips.');
+      return;
+    }
+    if (files.length === 0) return;
+    const isCurrentOperation = beginModelOperation();
+    ui.setIsLoading(true);
+    ui.setErrorMsg('');
+    ui.setStatus('Reading source animation rig...');
+    let loadedSource: Awaited<ReturnType<typeof loadFBX>> | Awaited<ReturnType<typeof loadGLB>> | null = null;
+    try {
+      const result = await (await getTauriClient()).readBrowserModelFiles(files);
+      if (!isCurrentOperation()) return;
+      if (result.error) throw new Error(result.error);
+      const format = detectModelFormat(result.name || '');
+      if (format !== 'fbx' && format !== 'glb') {
+        throw new Error('Animation retargeting accepts FBX, GLB, or GLTF source rigs.');
+      }
+      if (!result.files || result.files.length === 0) throw new Error('The selected animation source has no readable files.');
+      const bundleFiles = result.files.map((file) => {
+        if (!file.data) throw new Error(`Animation source file ${file.name} has no readable bytes.`);
+        return { name: file.name, data: file.data };
+      });
+      const bundle = createModelResourceBundle(bundleFiles[0], bundleFiles.slice(1));
+      loadedSource = format === 'fbx' ? await loadFBX(bundle) : await loadGLB(bundle);
+      if (!isCurrentOperation() || model.root !== targetRoot || model.skeleton !== targetSkeleton) {
+        throw new Error('The target model changed before animation retargeting completed.');
+      }
+      if (!loadedSource.skeleton || loadedSource.skeleton.bones.length === 0) {
+        throw new Error('The animation source has no skeleton.');
+      }
+      if (loadedSource.clips.length === 0) throw new Error('The animation source has no clips.');
+      const mapping = buildRigMap(loadedSource.skeleton, targetSkeleton, {
+        allowFuzzy: true,
+        requireManualForOpaqueNames: true,
+      });
+      if (!mapping.ok) {
+        throw new Error(mapping.diagnostics.filter((item) => item.level === 'error').map((item) => item.message).join(' '));
+      }
+      const before = captureAnimationWorkspaceSnapshot();
+      const existingNames = new Set(before.baseClips.map((clip, index) => getClipKey(clip, index)));
+      const added = loadedSource.clips.map((clip) => {
+        const name = clip.name || 'retargeted_clip';
+        if (existingNames.has(name)) throw new Error(`Retargeted clip ${name} collides with an existing clip name.`);
+        existingNames.add(name);
+        return retargetAnimationClip(clip, loadedSource!.skeleton!, targetSkeleton, mapping, { clipName: name }).clip;
+      });
+      const after: AnimationWorkspaceHistorySnapshot = {
+        baseClips: [...before.baseClips, ...added],
+        animationEditState: before.animationEditState,
+        currentClipName: added[0].name,
+        currentTime: 0,
+      };
+      if (!applyAnimationWorkspaceSnapshot(after)) throw new Error('Retargeted clips could not be mounted in the animation workspace.');
+      pushAnimationWorkspaceHistory(`retarget ${added.length} animation clip${added.length === 1 ? '' : 's'}`, before, after);
+      const fuzzyCount = mapping.decisions.filter((decision) => decision.method === 'fuzzy').length;
+      ui.setStatus(
+        `Retargeted ${added.length} clip${added.length === 1 ? '' : 's'} across ${mapping.decisions.length} mapped bones${fuzzyCount > 0 ? `; review ${fuzzyCount} fuzzy match${fuzzyCount === 1 ? '' : 'es'}` : ''}. Numeric/opaque rigs require the game-ready CLI's explicit manual map.`,
+      );
+    } catch (error: unknown) {
+      if (!isCurrentOperation()) return;
+      const message = errorMessage(error);
+      ui.setErrorMsg(`Animation retarget error: ${message}`);
+      ui.setStatus(`Animation retarget error: ${message}`);
+    } finally {
+      if (loadedSource) {
+        loadedSource.mixer.stopAllAction();
+        disposeThreeObject(loadedSource.root);
+      }
+      if (isCurrentOperation()) ui.setIsLoading(false);
+    }
+  }, [
+    applyAnimationWorkspaceSnapshot,
+    beginModelOperation,
+    captureAnimationWorkspaceSnapshot,
+    model.root,
+    model.skeleton,
+    pushAnimationWorkspaceHistory,
+    ui,
+  ]);
 
   // Extracted for modularity: bone selection updates UI state + status (used by Inspector + Viewport raycast)
   const handleSelectBone = useCallback((name: string) => {
@@ -3420,6 +3522,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     handleSaveSmfDiagnosticReport,
     handleFileInputChange,
     handleDrop,
+    beginModelOperation,
+    readModelResourceFiles,
+    retargetAnimationsFromFiles,
     handleSelectBone,
     renameSelectedBone,
     reparentSelectedBone,

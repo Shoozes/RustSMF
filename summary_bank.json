@@ -93,7 +93,7 @@
     },
     "feature__theme_system": {
       "description": "Persisted theme registry, canvas-first Modern shell, Original SMF presentation, responsive behavior, and visual evidence.",
-      "max_kb": 192,
+      "max_kb": 184,
       "paths": [
         "source/frontend/src/theme.ts",
         "source/frontend/src/theme.test.ts",
@@ -142,9 +142,59 @@
         "Raw SMF DataTexture pixels are downsampled into bounded previews; unsupported images fall back to material color."
       ]
     },
+    "feature__game_ready_material_repair": {
+      "description": "Strict OBJ/MTL reference matching, failure-safe material preparation, and portable GLB texture embedding.",
+      "max_kb": 96,
+      "paths": [
+        "source/frontend/src/utils/materialRepair.ts",
+        "source/frontend/src/utils/materialRepair.test.ts",
+        "source/frontend/src/utils/glbContainer.ts",
+        "source/frontend/src/utils/glbContainer.test.ts"
+      ],
+      "notes": [
+        "UI material repair is a reversible editor transaction; preparation failure disposes every material and texture acquired before the error.",
+        "JPEG/PNG inputs are embedded as PNG; metallic and roughness occupy glTF B/G channels, and source-row flipping is explicit so OBJ and glTF texture coordinates agree.",
+        "Generated assets, screenshots, job-specific reports, and private source paths remain under excluded output/runtime locations and must not enter context routes."
+      ]
+    },
+    "feature__rig_retargeting": {
+      "description": "Explicit humanoid rig mapping, sampled clip transfer, normalized rig-proportion diagnostics, and recovery controls.",
+      "max_kb": 128,
+      "paths": [
+        "source/frontend/src/utils/rigMapping.ts",
+        "source/frontend/src/utils/rigMapping.test.ts",
+        "source/frontend/src/utils/rigCompatibility.ts",
+        "source/frontend/src/utils/rigCompatibility.test.ts",
+        "source/frontend/src/utils/animationRetarget.ts",
+        "source/frontend/src/utils/animationRetarget.test.ts"
+      ],
+      "notes": [
+        "Opaque numeric rigs require an explicit reviewed map and never fuzzy-match; normalized segment ratios expose proportion mismatches that correct axes alone cannot solve.",
+        "Retargeting samples helper-ancestor world motion, transfers mapped swings relative to reference poses, can scope absolute source directions to action limbs, can preserve target terminal or explicitly listed rotations, and supports a bounded trusted-peak recovery envelope for damaged source clips.",
+        "Requested-rate resampling evaluates source tracks at float32 frame times so upward-rounded STEP keys are not read one frame early, keeps partial terminal samples inside clip duration, and treats output next-down timing as a separate frame-indexed-consumer contract."
+      ]
+    },
+    "workflow__game_ready_cli": {
+      "description": "Versioned local job parsing, same-handle bounded input, validation, staged output, and machine-readable evidence.",
+      "max_kb": 80,
+      "paths": [
+        "source/frontend/scripts/game-ready-cli.ts",
+        "source/frontend/scripts/bounded-file-read.ts",
+        "source/frontend/src/utils/boundedFileRead.test.ts",
+        "source/frontend/src/utils/gameReadyJob.ts",
+        "source/frontend/src/utils/gameReadyJob.test.ts",
+        "source/frontend/src/utils/gameReadyValidation.ts",
+        "source/frontend/package.json"
+      ],
+      "notes": [
+        "The CLI rejects duplicate or input-overwriting paths, ambiguous empty clip selections, unknown attachment roles, non-regular files, per-file overflow, and aggregate overflow before later files are materialized.",
+        "Inputs are read sequentially through one open handle per file under the remaining aggregate budget; final GLB, report, and manifest outputs are independently staged and fsynced before replacement.",
+        "Generated assets, reports, private job paths, and source models stay outside context routes."
+      ]
+    },
     "feature__model_outliner_authoring": {
       "description": "Guarded non-SMF Outliner metadata, static structural/surface authoring, and bounded global history.",
-      "max_kb": 136,
+      "max_kb": 142,
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/components/Outliner.tsx",
@@ -588,7 +638,7 @@
     },
     "issue__external_model_resources": {
       "description": "Bounded GLTF/FBX/OBJ sidecar resource resolution, native/browser authorization, missing-resource diagnostics, and cleanup.",
-      "max_kb": 328,
+      "max_kb": 334,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
@@ -631,7 +681,7 @@
       "description": "Archived compatibility route for the former combined browser authoring/format pack.",
       "archived": true,
       "archive_note": "Use feature__rig_ik_pose, feature__skin_authoring, feature__animation_authoring, feature__fbx_support, and feature__theme_system.",
-      "max_kb": 162,
+      "max_kb": 164,
       "paths": [
         "source/frontend/tests/animation.spec.ts",
         "source/frontend/tests/export-formats.spec.ts",

@@ -20,6 +20,27 @@ import { revealSecondaryCommands, showAnimateTimeline, showModernPanel, showSkin
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
 
+const MATERIAL_REPAIR_OBJ = [
+  'mtllib fixture.mtl',
+  'o FixtureSkinnedMesh',
+  'v -0.35 0 0',
+  'v 0.35 0 0',
+  'v 0.35 1 0',
+  'v -0.35 1 0',
+  'usemtl FixtureMaterial',
+  'f 1 2 3',
+  'f 1 3 4',
+].join('\n');
+const MATERIAL_REPAIR_MTL = [
+  'newmtl FixtureMaterial',
+  'Kd 0.2 0.4 0.8',
+  'map_Kd fixture.png',
+].join('\n');
+const MATERIAL_REPAIR_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAANSURBVBhXY2BgYPgPAAEEAQBwIGULAAAAAElFTkSuQmCC',
+  'base64',
+);
+
 test.describe('RustSMF shell model flow (Chromium)', () => {
   test.beforeEach(async ({ page }) => {
     setupBrowserDiagnostics(page);
@@ -980,6 +1001,27 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
         await page.getByTestId(`mode-tab-${mode}`).click();
         await assertContinuity();
       }
+    });
+
+  test('repairs rigged materials as one undoable model transaction', async ({ page }) => {
+      await page.goto('/');
+
+      await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+      await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await showModernPanel(page, 'scene');
+      const repair = page.getByTestId('outliner-repair-materials');
+      await expect(repair.locator('input')).toBeEnabled();
+      await repair.locator('input').setInputFiles([
+        { name: 'fixture.obj', mimeType: 'text/plain', buffer: Buffer.from(MATERIAL_REPAIR_OBJ) },
+        { name: 'fixture.mtl', mimeType: 'text/plain', buffer: Buffer.from(MATERIAL_REPAIR_MTL) },
+        { name: 'fixture.png', mimeType: 'image/png', buffer: MATERIAL_REPAIR_PNG },
+      ]);
+
+      await expect(page.getByTestId('status-text')).toContainText(/Repaired 1 rigged mesh material from OBJ\/MTL/i, { timeout: 15000 });
+      await page.getByTestId('editor-undo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Undid repair rigged materials/i);
+      await page.getByTestId('editor-redo-btn').click({ force: true });
+      await expect(page.getByTestId('status-text')).toContainText(/Redid repair rigged materials/i);
     });
 
   test('handles invalid file load with error banner and status (error path)', async ({ page }) => {
