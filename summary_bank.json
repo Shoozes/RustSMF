@@ -165,6 +165,10 @@
         "source/frontend/src/utils/rigMapping.test.ts",
         "source/frontend/src/utils/rigCompatibility.ts",
         "source/frontend/src/utils/rigCompatibility.test.ts",
+        "source/frontend/src/utils/fittedRig.ts",
+        "source/frontend/src/utils/fittedRig.test.ts",
+        "source/frontend/src/utils/fittedRigAnimation.ts",
+        "source/frontend/src/utils/fittedRigGlb.ts",
         "source/frontend/src/utils/animationRetarget.ts",
         "source/frontend/src/utils/animationRetarget.test.ts"
       ],

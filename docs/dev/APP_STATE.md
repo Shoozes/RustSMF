@@ -157,3 +157,12 @@ The latest review links the dated command results and any observed limitations i
 - `docs/dev/PITFALL_LEDGER.md`: durable regression-prevention stories.
 - `source/frontend/tests/README.md`: test ownership and fixture policy.
 - `summary_bank.json`: focused file routes; it is not a progress log or backlog.
+
+## Fitted-rig diagnostic boundary
+
+The reusable fitted-rig utilities fit explicit source bind frames onto a template
+hierarchy, reject lost weighted influences, bake mapped world motion, and append
+replacement skin/animation streams while retaining source GLB bytes. They are
+currently programmatic diagnostic utilities, not a frontend action or saved-job
+CLI. Actual animated export equivalence and three-state visual comparison remain
+open in TODO.md; fixture tests do not establish private-model acceptance.

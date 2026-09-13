@@ -585,3 +585,22 @@ The TODO now contains one gated real-native-dialog acceptance task with explicit
 - Canonical `desktop-smoke`: release build, Rust tests, and native IPC browser coverage passed.
 - Blender 5.0.0 validated both the committed independent fixture and the app-exported roundtrip: one mesh, two bones, weighted groups, animation curves, embedded material texture.
 - `git diff --check`: passed.
+
+## 2026-09-13 — fitted-rig utility closeout
+
+Added explicit-map bind fitting, influence remapping, bounded world-motion baking
+with pose restoration, and source-stream-preserving GLB export utilities. Five
+focused tests cover mapped frame equivalence, restoration, source byte retention,
+influence remapping and invalid maps. The complete private-model comparison and
+public saved-job path remain active in TODO.md.
+
+From source/frontend, all commands exited 0: `node --import tsx --test
+src/utils/fittedRig.test.ts` (5 tests), `npm run typecheck`, `npm run
+typecheck:test`, `npm run lint`, `npm run test:unit` (390 tests), and `npm run
+build`. No frontend behavior changed, so this closeout did not repeat the
+previously recorded browser/visual matrices.
+`pwsh -NoProfile -File run.ps1 -Task context` also passed the repository
+integrity and context contracts, including its nine regression tests.
+The complete `pwsh -NoProfile -File run.ps1 -Task verify` gate then passed,
+including Git/process safety checks, frontend boundaries, Rust formatting,
+Clippy, all ten Rust tests and cargo check. All commands exited 0.
