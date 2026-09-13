@@ -8,6 +8,7 @@ import {
   lengthNormalizedWeights,
   limitNaturalLegDirection,
   naturalSolePoint,
+  naturalFootHeading,
   resolveNaturalContactPose,
   solveNaturalTwoBoneLeg,
   solveNaturalPelvisCorrection,
@@ -84,6 +85,19 @@ test('natural contacts lock the calibrated sole and reference orientation', () =
   assert.ok(result.footQuaternion.angleTo(referenceRotation) < 1e-8);
   assert.ok(naturalSolePoint(result.ankle, result.footQuaternion, soleOffset)
     .distanceTo(pinnedSole.clone().add(new THREE.Vector3(0, 0, -0.1))) < 1e-8);
+});
+
+test('level sole retains animated heading for either side and a rotated reference',()=>{
+  for(const sign of [-1,1]){
+    const reference=new THREE.Quaternion().setFromEuler(new THREE.Euler(.4,sign*.3,1.8));
+    const yaw=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),sign*1.4);
+    const tilted=yaw.clone().multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),.7)).multiply(reference);
+    const expected=yaw.clone().multiply(reference),solved=naturalFootHeading(tilted,reference);
+    assert.ok(solved.angleTo(expected)<1e-7);
+    assert.ok(naturalFootHeading(new THREE.Quaternion(-tilted.x,-tilted.y,-tilted.z,-tilted.w),reference).angleTo(expected)<1e-7);
+    const singular=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.PI).multiply(reference);
+    assert.ok(naturalFootHeading(singular,reference,expected).angleTo(expected)<1e-7);
+  }
 });
 
 test('direction limits handle the upward hemisphere and preserve zero-weight input', () => {

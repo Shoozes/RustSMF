@@ -232,8 +232,11 @@ test('grounding profiles reject invalid, ignored and unselected settings', () =>
 test('ground-plane intervals round trip explicitly and reject unknown contact modes', () => {
   const job=validJob();
   const natural=(job.rig as {retarget:{naturalMotion:Record<string,unknown>}}).retarget.naturalMotion;
-  natural.contacts={Walk:[{foot:'left',positionMode:'plane',startFrame:0,endFrame:10,blendFrames:1}]};
+  natural.contacts={Walk:[{foot:'left',positionMode:'plane',orientationMode:'animated-heading',startFrame:0,endFrame:10,blendFrames:1}]};
   assert.equal(parseGameReadyJob(job,paths).rig.retarget!.naturalMotion!.contacts!.Walk[0].positionMode,'plane');
+  assert.equal(parseGameReadyJob(job,paths).rig.retarget!.naturalMotion!.contacts!.Walk[0].orientationMode,'animated-heading');
+  natural.contacts={Walk:[{foot:'left',orientationMode:'unbounded',startFrame:0,endFrame:10,blendFrames:1}]};
+  assert.throws(()=>parseGameReadyJob(job,paths),/orientationMode/);
   natural.contacts={Walk:[{foot:'left',positionMode:'floating',startFrame:0,endFrame:10,blendFrames:1}]};
   assert.throws(()=>parseGameReadyJob(job,paths),/positionMode/);
 });

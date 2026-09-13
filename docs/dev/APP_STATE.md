@@ -74,7 +74,11 @@ the shared profile/core contract. Its standalone embedded-GLB scanner and limits
 are documented in [HUMANOID_POSE_REVIEW.md](HUMANOID_POSE_REVIEW.md). Passing ranges
 does not establish skin, contact or visual acceptance. Contact `positionMode: plane`
 follows the horizontal trajectory at ground height; omitted mode locks a planted
-point. Explicit visual-timing landmarks map output frames to source phases.
+point. Optional contact `orientationMode: animated-heading` levels the sole while
+preserving foot yaw: a plant captures its entry heading and a plane follows it.
+The default reference orientation remains unchanged. Degenerate heading extraction
+retains the previous valid heading with reference fallback. Explicit visual-timing
+landmarks map output frames to source phases.
 
 ### Export and validation
 

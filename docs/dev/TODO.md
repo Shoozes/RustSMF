@@ -8,7 +8,7 @@ not an acceptance prerequisite. Latest Wolf candidates remain rejected.
 
 ## P1 — Accept the selected fighter's motion in the receiving game
 
-- What: Resolve remaining ankle/torso range flags and motion/contact defects in the selected Brawl-to-Wolf path, then obtain continuous-motion acceptance.
+- What: Resolve the slow-walk frame 22 support gap and remaining action/body-range flags in the selected Brawl-to-Wolf path, then obtain continuous-motion acceptance. The opt-in ankle-heading correction is implemented; it does not close these separate issues.
 - Why: Source identity, valid export and steady-speed checks do not cover changing speed, stopping, role transitions, skin intersection or natural appearance.
 - Where: `source/frontend/src/utils/animationRetarget.ts`, `source/frontend/src/utils/naturalRetarget.ts`, `source/frontend/src/utils/poseRanges.ts`, `source/frontend/src/rig-comparison/comparison.js`, and the game-owned private integration workspace.
 - When: P1, before replacing the accepted baseline or claiming show-ready fighter motion.

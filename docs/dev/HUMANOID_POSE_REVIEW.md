@@ -58,3 +58,9 @@ and counts. Within-profile means only the declared angular envelopes passed.
 Run the repo verification gate and focused pose/profile tests after changes.
 Game-specific source choices and candidate acceptance belong in HISTORY/TODO,
 not this reusable contract.
+
+Contact correction must respect articulation as well as ground height. Natural
+profiles can explicitly select `orientationMode: animated-heading`; this keeps
+sole tilt constrained while retaining yaw from the transferred foot. A planted
+contact captures yaw on entry, while a plane contact follows animated yaw. The
+range checker remains read-only: it neither adds this option nor widens limits.

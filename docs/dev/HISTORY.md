@@ -2,6 +2,34 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-13 — Ankle heading follow-up after d86718d
+
+The game user's explicit feet/ankles review found an orientation conflict:
+the jab pelvis turns about 86 degrees while the contact correction held both
+feet at their neutral world headings. This produced about 99-degree ankle
+twist/swing relative to calibration. Added opt-in contact animated-heading
+orientation through the shared job/profile/core; defaults remain unchanged.
+Mapped toes inherit the corrected foot, while planted contacts retain entry yaw.
+
+Jab generation 0d7ba7bb / model 63543c3c has no ankle flags in 19 samples with
+unchanged limits; the right wrist still flags. Four-locomotion generation
+f055c36b / model ef3befba has no ankle flags and passes 234 planted samples
+(maximum sole drift 1.024e-7 m). Front/side/bones-on game captures show the
+specific ankle correction. Slow-walk support gaps, remaining damage/tilt ranges,
+and full fight visual acceptance remain open; these are diagnostic candidates.
+
+`pwsh -NoProfile -File ./run.ps1 -Task verify` passes 430 frontend units,
+10 Rust tests and the repository gates. Three retarget-profile browser tests
+pass after the build, sequentially. Focused tests cover mirrored/rotated heading,
+quaternion antipodes, singular fallback, and plane-following versus planted
+entry heading. Logs: output/verification/review5-ankle-{verify,browser,types,lint}.log.
+Closing-session review authorizes this follow-up for guarded main publication.
+Fresh focused natural-retarget, retarget-core and job-parser tests pass; the
+unchanged code retains the full verification and three-browser proof above.
+Receipt: `output/verification/ankle-closeout-tests.log`. No RustSMF-owned app,
+preview or test processes remained at closeout; game process cleanup belongs to
+the concurrently closing game task.
+
 ## 2026-09-13 - Integrity and source-format review
 
 Closing-session review authorized publication of this verified application snapshot

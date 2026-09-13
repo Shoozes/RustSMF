@@ -735,6 +735,29 @@ test('natural retargeting is deterministic across helper ancestors, torso, legs,
   const retained = retargetAnimationClip(travelling, source, target, mapping, {
     applyUpCorrection: false, scaleRootMotion: false,
   });
+  const turning=new THREE.AnimationClip('turning',1/60,[
+    new THREE.QuaternionKeyframeTrack('joint-5.quaternion',[0,1/60],[0,0,0,1,0,Math.sin(.3),0,Math.cos(.3)]),
+  ]);
+  for(const positionMode of ['plane','planted'] as const){
+    const headingResult=retargetAnimationClip(turning,source,target,mapping,{
+      applyUpCorrection:false,scaleRootMotion:false,sampleRateHz:60,
+      sourceReferencePose:'clip',sourceReferenceClip:sourceReference,targetReferenceClip:targetReference,
+      naturalMotion:{...naturalMotion,contacts:{turning:[
+        {foot:'left',positionMode,orientationMode:'animated-heading',startFrame:0,endFrame:1,blendFrames:0},
+        {foot:'right',positionMode,orientationMode:'animated-heading',startFrame:0,endFrame:1,blendFrames:0},
+      ]}},
+    });
+    const headingMixer=new THREE.AnimationMixer(targetHips),saved=targetBones.map(b=>({bone:b,position:b.position.clone(),quaternion:b.quaternion.clone()}));
+    try{
+      const action=headingMixer.clipAction(headingResult.clip);action.setLoop(THREE.LoopOnce,1);action.clampWhenFinished=true;action.play();
+      const rotations:THREE.Quaternion[][]=[];
+      for(const time of [0,1/60]){
+        headingMixer.setTime(time);targetHips.updateWorldMatrix(true,true);
+        rotations.push(['Left','Right'].map(side=>targetBones.find(b=>b.name===`mixamorig${side}Foot`)!.getWorldQuaternion(new THREE.Quaternion())));
+      }
+      for(let side=0;side<2;side++)assert.ok(Math.abs(rotations[0][side].angleTo(rotations[1][side])-(positionMode==='plane'?.6:0))<1e-6,'Plane follows yaw; planted captures entry yaw');
+    }finally{headingMixer.stopAllAction();headingMixer.uncacheRoot(targetHips);saved.forEach(({bone,position,quaternion})=>{bone.position.copy(position);bone.quaternion.copy(quaternion);});targetHips.updateWorldMatrix(true,true);}
+  }
   const endRoot = (result: typeof extracted) => Array.from(result.clip.tracks.find(t => t.name === 'mixamorigHips.position')!.values.slice(-3));
   assert.ok(Math.abs(endRoot(extracted)[1] - 2.1) < 1e-6, 'Extraction must retain pelvis bob');
   assert.equal(endRoot(extracted)[2], 0, 'Extraction removes only the named ancestor travel');

@@ -26,6 +26,8 @@ export interface NaturalFootContact {
   foot: NaturalFootSide;
   /** Plane follows horizontal motion; planted (the default) locks a world point. */
   positionMode?: 'planted' | 'plane';
+  /** Preserve animated yaw while leveling the sole; a plant captures its entry heading. */
+  orientationMode?: 'reference' | 'animated-heading';
   /** Inclusive 60 Hz frame index. */
   startFrame: number;
   /** Inclusive 60 Hz frame index. */
@@ -209,6 +211,20 @@ export function naturalSolePoint(
   soleOffset: readonly [number, number, number],
 ): THREE.Vector3 {
   return ankle.clone().add(new THREE.Vector3(...soleOffset).applyQuaternion(footQuaternion));
+}
+
+/** Remove tilt around a calibrated level sole without erasing the foot's yaw. */
+export function naturalFootHeading(
+  animated: THREE.Quaternion,
+  reference: THREE.Quaternion,
+  previous: THREE.Quaternion = reference,
+): THREE.Quaternion {
+  const delta = animated.clone().multiply(reference.clone().invert()).normalize();
+  const heading = new THREE.Quaternion(0, delta.y, 0, delta.w);
+  // A half-turn about a horizontal axis has no unique yaw. Keep the last valid
+  // heading (reference at contact entry) rather than introducing a 180° flip.
+  if (heading.lengthSq() < EPSILON) return previous.clone();
+  return heading.normalize().multiply(reference).normalize();
 }
 
 export function resolveNaturalContactPose(input: {

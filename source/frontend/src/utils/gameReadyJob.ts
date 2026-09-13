@@ -285,9 +285,12 @@ function naturalContactMap(value: unknown, label: string): Record<string, Natura
     }
     const contacts = entries.map((entry, index): NaturalFootContact => {
       const contact = objectValue(entry, `${label}.${clipName}[${index}]`);
-      rejectUnknownFields(contact, ['foot', 'positionMode', 'startFrame', 'endFrame', 'blendFrames'], `${label}.${clipName}[${index}]`);
+      rejectUnknownFields(contact, ['foot', 'positionMode', 'orientationMode', 'startFrame', 'endFrame', 'blendFrames'], `${label}.${clipName}[${index}]`);
       if (contact.positionMode !== undefined && contact.positionMode !== 'planted' && contact.positionMode !== 'plane') {
         fail(`${label}.${clipName}[${index}].positionMode must be planted or plane.`);
+      }
+      if (contact.orientationMode !== undefined && contact.orientationMode !== 'reference' && contact.orientationMode !== 'animated-heading') {
+        fail(`${label}.${clipName}[${index}].orientationMode must be reference or animated-heading.`);
       }
       if (contact.foot !== 'left' && contact.foot !== 'right') {
         fail(`${label}.${clipName}[${index}].foot must be left or right.`);
@@ -305,7 +308,8 @@ function naturalContactMap(value: unknown, label: string): Record<string, Natura
         fail(`${label}.${clipName}[${index}].blendFrames leaves no full-weight contact frame.`);
       }
       return { foot: contact.foot, startFrame, endFrame, blendFrames,
-        ...(contact.positionMode === undefined ? {} : {positionMode:contact.positionMode}) };
+        ...(contact.positionMode === undefined ? {} : {positionMode:contact.positionMode}),
+        ...(contact.orientationMode === undefined ? {} : {orientationMode:contact.orientationMode}) };
     });
     for (const foot of ['left', 'right'] as const) {
       const ordered = contacts.filter((contact) => contact.foot === foot).sort((a, b) => a.startFrame - b.startFrame);

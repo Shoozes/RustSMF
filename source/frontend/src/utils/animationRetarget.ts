@@ -9,6 +9,7 @@ import {
   lengthNormalizedWeights,
   limitNaturalLegDirection,
   naturalSolePoint,
+  naturalFootHeading,
   resolveNaturalContactPose,
   solveNaturalTwoBoneLeg,
   solveNaturalPelvisCorrection,
@@ -604,6 +605,9 @@ function prepareNaturalMotion(
     if (contact.positionMode !== undefined && contact.positionMode !== 'planted' && contact.positionMode !== 'plane') {
       throw new Error('Natural contact positionMode must be planted or plane.');
     }
+    if (contact.orientationMode !== undefined && contact.orientationMode !== 'reference' && contact.orientationMode !== 'animated-heading') {
+      throw new Error('Natural contact orientationMode must be reference or animated-heading.');
+    }
     if (contact.endFrame >= sampleCount) {
       throw new Error(`Natural motion ${clipName} ${contact.foot}-foot contact ends after frame ${sampleCount - 1}.`);
     }
@@ -1115,7 +1119,9 @@ export function retargetAnimationClip(
             if (!pin || planeContact) {
               pin = {
                 sole: naturalSole.clone().setComponent(1, grounding?.groundHeight ?? prepared.referenceSolePoint.y),
-                quaternion: prepared.targetAnkle.worldQuaternion.clone(),
+                quaternion: contact.contact.orientationMode === 'animated-heading'
+                  ? naturalFootHeading(naturalFootQuaternion, prepared.targetAnkle.worldQuaternion, pin?.quaternion)
+                  : prepared.targetAnkle.worldQuaternion.clone(),
               };
               contactPins.set(contact.key, pin);
             }

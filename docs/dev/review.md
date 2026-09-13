@@ -15,7 +15,9 @@ acceptance conditions in [TODO.md](TODO.md), and dated proof in
 - Pose-review now rejects ambiguous bone/clip identities before loader renaming
   can hide them; real CLI tests cover failure, output preservation and repeatability.
 - Brawl rest-reference motion was selected, but subsequent fighter candidates
-  remain visually rejected. Range flags, changing-speed contacts, ankle orientation
+  remain visually unaccepted. Opt-in animated-heading contacts correct the reviewed
+  ankle yaw conflict while preserving the reference default. Remaining body flags,
+  the slow-walk frame 22 support gap, changing-speed contacts
   and continuous-motion acceptance remain open. Numeric passes do not prove no-clipping.
 - Both supplied Mixamo archives contain Collada. Only the with-skin archive has
   geometry and a skin controller. DAE/ZIP are unsupported inputs, not a demonstrated
