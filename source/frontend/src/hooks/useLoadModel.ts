@@ -151,6 +151,7 @@ import {
 import { createAnimationAuthoringController } from '../utils/animationAuthoringController';
 import { buildRigMap } from '../utils/rigMapping';
 import { retargetAnimationClip } from '../utils/animationRetarget';
+import { profileClipOptions, type RetargetProfile } from '../utils/retargetProfile';
 import type { AnimationEditScope } from '../utils/animationScope';
 import {
   createChildBone,
@@ -2011,7 +2012,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
   }, [beginModelOperation, model.root, ui]);
 
-  const retargetAnimationsFromFiles = useCallback(async (files: readonly File[]): Promise<void> => {
+  const retargetAnimationsFromFiles = useCallback(async (files: readonly File[], profile?: RetargetProfile): Promise<void> => {
     const targetRoot = model.root;
     const targetSkeleton = model.skeleton;
     if (!targetRoot || !targetSkeleton || targetSkeleton.bones.length === 0) {
@@ -2047,22 +2048,33 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       }
       if (loadedSource.clips.length === 0) throw new Error('The animation source has no clips.');
       const mapping = buildRigMap(loadedSource.skeleton, targetSkeleton, {
-        allowFuzzy: true,
+        allowFuzzy: profile ? profile.retarget.allowFuzzy : true,
+        manualMap: profile?.retarget.manualMap,
         requireManualForOpaqueNames: true,
       });
       if (!mapping.ok) {
         throw new Error(mapping.diagnostics.filter((item) => item.level === 'error').map((item) => item.message).join(' '));
       }
       const before = captureAnimationWorkspaceSnapshot();
-      const existingNames = new Set(before.baseClips.map((clip, index) => getClipKey(clip, index)));
-      const added = loadedSource.clips.map((clip) => {
-        const name = clip.name || 'retargeted_clip';
+      const targetClips = before.baseClips.map((clip) => {
+        const name = profile?.targetClipNames[clip.name];
+        if (!name || name === clip.name) return clip;
+        const renamed = clip.clone(); renamed.name = name; return renamed;
+      });
+      const existingNames = new Set(targetClips.map((clip, index) => getClipKey(clip, index)));
+      if (existingNames.size !== targetClips.length) throw new Error('Profile target clip names collide.');
+      const selected = profile?.retarget.clips?.length
+        ? loadedSource.clips.filter((clip) => profile.retarget.clips!.includes(clip.name)) : loadedSource.clips;
+      if (!selected.length || (profile?.retarget.clips && selected.length !== profile.retarget.clips.length)) throw new Error('Profile selects missing source clips.');
+      const added = selected.map((clip) => {
+        const options = profile ? profileClipOptions(profile, clip, loadedSource!.clips, targetClips) : { clipName: clip.name || 'retargeted_clip' };
+        const name = options.clipName!;
         if (existingNames.has(name)) throw new Error(`Retargeted clip ${name} collides with an existing clip name.`);
         existingNames.add(name);
-        return retargetAnimationClip(clip, loadedSource!.skeleton!, targetSkeleton, mapping, { clipName: name }).clip;
+        return retargetAnimationClip(clip, loadedSource!.skeleton!, targetSkeleton, mapping, options).clip;
       });
       const after: AnimationWorkspaceHistorySnapshot = {
-        baseClips: [...before.baseClips, ...added],
+        baseClips: [...targetClips, ...added],
         animationEditState: before.animationEditState,
         currentClipName: added[0].name,
         currentTime: 0,
@@ -2071,7 +2083,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       pushAnimationWorkspaceHistory(`retarget ${added.length} animation clip${added.length === 1 ? '' : 's'}`, before, after);
       const fuzzyCount = mapping.decisions.filter((decision) => decision.method === 'fuzzy').length;
       ui.setStatus(
-        `Retargeted ${added.length} clip${added.length === 1 ? '' : 's'} across ${mapping.decisions.length} mapped bones${fuzzyCount > 0 ? `; review ${fuzzyCount} fuzzy match${fuzzyCount === 1 ? '' : 'es'}` : ''}. Numeric/opaque rigs require the game-ready CLI's explicit manual map.`,
+        `Retargeted ${added.length} clip${added.length === 1 ? '' : 's'} across ${mapping.decisions.length} mapped bones${fuzzyCount > 0 ? `; review ${fuzzyCount} fuzzy match${fuzzyCount === 1 ? '' : 'es'}` : ''}${profile ? ' using the saved profile' : ''}.`,
       );
     } catch (error: unknown) {
       if (!isCurrentOperation()) return;

@@ -1,5 +1,19 @@
 import * as THREE from 'three';
 import type { RigMapDecision, RigMapResult } from './rigMapping';
+import {
+  alignNaturalAnatomicalFrame,
+  contactBlendWeight,
+  lengthNormalizedWeights,
+  limitNaturalLegDirection,
+  naturalSolePoint,
+  resolveNaturalContactPose,
+  solveNaturalTwoBoneLeg,
+  type NaturalContactDiagnostic,
+  type NaturalFootContact,
+  type NaturalFootSide,
+  type NaturalMotionProfile,
+  type NaturalMotionReport,
+} from './naturalRetarget';
 
 const MAX_RETARGET_SAMPLES = 20_000;
 const TIME_EPSILON = 1e-6;
@@ -11,6 +25,13 @@ export interface PoseRecoveryEnvelope {
 }
 
 export type DirectionTransferMode = 'relative' | 'absolute';
+
+export interface TargetChainCurl {
+  palmBone: string;
+  bones: string[];
+  palmNormal: [number, number, number];
+  degrees: number[];
+}
 
 export interface AnimationRetargetOptions {
   clipName?: string;
@@ -27,6 +48,8 @@ export interface AnimationRetargetOptions {
   targetReferenceClip?: THREE.AnimationClip;
   preserveTargetLeafRotations?: boolean;
   preserveTargetRotations?: string[];
+  targetChainCurls?: TargetChainCurl[];
+  naturalMotion?: NaturalMotionProfile;
   poseRecovery?: PoseRecoveryEnvelope;
 }
 
@@ -54,6 +77,8 @@ export interface AnimationRetargetReport {
   targetReferenceClip: string | null;
   preservedTargetLeafRotations: string[];
   preservedTargetRotations: string[];
+  targetChainCurls: TargetChainCurl[];
+  naturalMotion: NaturalMotionReport | null;
   poseRecovery: PoseRecoveryEnvelope | null;
 }
 
@@ -87,6 +112,43 @@ interface DirectionConstraint {
   targetBone: THREE.Bone;
   targetLocalDirection: THREE.Vector3;
   targetRestDirection: THREE.Vector3;
+}
+
+interface PreparedNaturalLeg {
+  side: NaturalFootSide;
+  profile: NaturalMotionProfile['legs'][NaturalFootSide];
+  sourceHip: BoneRestState;
+  sourceKnee: BoneRestState;
+  sourceAnkle: BoneRestState;
+  targetHip: BoneRestState;
+  targetKnee: BoneRestState;
+  targetAnkle: BoneRestState;
+  firstLength: number;
+  secondLength: number;
+  sourceReferenceReach: number;
+  targetReferenceReach: THREE.Vector3;
+  targetHipLocalDirection: THREE.Vector3;
+  targetKneeLocalDirection: THREE.Vector3;
+  referenceBendPlaneNormal: THREE.Vector3;
+  referenceSolePoint: THREE.Vector3;
+}
+
+interface PreparedNaturalMotion {
+  profile: NaturalMotionProfile;
+  pelvis: BoneRestState;
+  pelvisDecision: RigMapDecision;
+  torso: {
+    states: BoneRestState[];
+    effectiveWeights: number[];
+    terminalDecision: RigMapDecision;
+  } | null;
+  legs: Record<NaturalFootSide, PreparedNaturalLeg>;
+  contacts: Array<{
+    key: string;
+    contact: NaturalFootContact;
+    diagnostic: NaturalContactDiagnostic;
+  }>;
+  legMotionLimit: NaturalMotionReport['legMotionLimit'];
 }
 
 function boneDepth(bone: THREE.Bone): number {
@@ -350,6 +412,213 @@ function correctedDelta(
   return correction.clone().multiply(sourceDelta).multiply(correction.clone().invert()).normalize();
 }
 
+function targetChainCurlQuaternions(
+  curls: readonly TargetChainCurl[],
+  targetReference: ReadonlyMap<string, BoneRestState>,
+  mappedTargetNames: ReadonlySet<string>,
+): Map<string, THREE.Quaternion> {
+  const result = new Map<string, THREE.Quaternion>();
+  for (const curl of curls) {
+    if (!curl.palmBone.trim()) throw new Error('Target chain curl palmBone must be non-empty.');
+    if (curl.bones.length === 0) throw new Error(`Target chain curl from ${curl.palmBone} must contain at least one bone.`);
+    if (curl.degrees.length !== curl.bones.length) {
+      throw new Error(`Target chain curl from ${curl.palmBone} must provide one angle per bone.`);
+    }
+    if (curl.degrees.some((degrees) => !Number.isFinite(degrees) || Math.abs(degrees) > 180)) {
+      throw new Error(`Target chain curl from ${curl.palmBone} angles must be finite values from -180 through 180 degrees.`);
+    }
+    if (curl.palmNormal.some((component) => !Number.isFinite(component))) {
+      throw new Error(`Target palm normal for ${curl.palmBone} must contain finite components.`);
+    }
+    const palm = targetReference.get(curl.palmBone);
+    if (!palm) throw new Error(`Cannot curl from unknown target palm bone ${curl.palmBone}.`);
+    const palmNormal = new THREE.Vector3(...curl.palmNormal);
+    if (palmNormal.lengthSq() <= 1e-12) throw new Error(`Target palm normal for ${curl.palmBone} must be non-zero.`);
+    palmNormal.normalize().applyQuaternion(palm.worldQuaternion).normalize();
+    let expectedParent = palm.bone;
+    for (let index = 0; index < curl.bones.length; index += 1) {
+      const boneName = curl.bones[index];
+      if (!boneName.trim()) throw new Error(`Target chain curl from ${curl.palmBone} contains an empty bone name.`);
+      const state = targetReference.get(boneName);
+      if (!state) throw new Error(`Cannot curl unknown target bone ${boneName}.`);
+      if (mappedTargetNames.has(boneName)) {
+        throw new Error(`Cannot curl mapped target bone ${boneName}; curl only unmapped child chains.`);
+      }
+      if (result.has(boneName)) throw new Error(`Target curl bone ${boneName} is configured more than once.`);
+      if (state.parentBone !== expectedParent) {
+        throw new Error(`Target curl chain ${curl.palmBone} must list direct descendants in hierarchy order.`);
+      }
+      const nextState = index + 1 < curl.bones.length ? targetReference.get(curl.bones[index + 1]) : undefined;
+      const segmentDirection = nextState
+        ? nextState.worldPosition.clone().sub(state.worldPosition)
+        : new THREE.Vector3(0, 1, 0).applyQuaternion(state.worldQuaternion);
+      const hingeWorld = segmentDirection.normalize().cross(palmNormal).normalize();
+      if (hingeWorld.lengthSq() <= 1e-12) {
+        throw new Error(`Target curl bone ${boneName} is parallel to its palm normal.`);
+      }
+      const hingeLocal = hingeWorld.applyQuaternion(state.worldQuaternion.clone().invert()).normalize();
+      result.set(
+        boneName,
+        new THREE.Quaternion().setFromAxisAngle(hingeLocal, THREE.MathUtils.degToRad(curl.degrees[index])),
+      );
+      expectedParent = state.bone;
+    }
+  }
+  return result;
+}
+
+function prepareNaturalMotion(
+  profile: NaturalMotionProfile,
+  clipName: string,
+  sampleCount: number,
+  mapping: RigMapResult,
+  sourceRest: ReadonlyMap<string, BoneRestState>,
+  targetReference: ReadonlyMap<string, BoneRestState>,
+  sourceReferenceWorldPositions: ReadonlyMap<string, THREE.Vector3>,
+  occupiedTargetBones: ReadonlySet<string>,
+): PreparedNaturalMotion {
+  const decisionByTarget = new Map(mapping.decisions.map((decision) => [decision.target, decision]));
+  const pelvisDecision = mapping.decisions.find((decision) => decision.canonical === 'hips');
+  if (!pelvisDecision) throw new Error('Natural motion requires one mapped canonical hips bone.');
+  const pelvis = targetReference.get(pelvisDecision.target);
+  if (!pelvis) throw new Error(`Natural motion cannot resolve target pelvis ${pelvisDecision.target}.`);
+
+  const configured = new Set<string>();
+  const reserve = (name: string, owner: string) => {
+    if (configured.has(name) || occupiedTargetBones.has(name)) {
+      throw new Error(`Natural motion ${owner} conflicts on target bone ${name}.`);
+    }
+    configured.add(name);
+  };
+
+  let torso: PreparedNaturalMotion['torso'] = null;
+  if (profile.torso) {
+    const states = profile.torso.targetBones.map((name, index) => {
+      reserve(name, 'torso chain');
+      const state = targetReference.get(name);
+      if (!state) throw new Error(`Natural motion torso target bone ${name} does not exist.`);
+      if (index > 0 && state.parentBone !== targetReference.get(profile.torso!.targetBones[index - 1])?.bone) {
+        throw new Error('Natural motion torso targetBones must be a direct hierarchy chain.');
+      }
+      if (!state.parentBone) throw new Error(`Natural motion torso bone ${name} must have a parent.`);
+      return state;
+    });
+    const terminalDecision = decisionByTarget.get(states.at(-1)!.bone.name);
+    if (!terminalDecision) throw new Error('Natural motion torso terminal target must be mapped.');
+    const lengths = states.map((state) => state.worldPosition.distanceTo(targetReference.get(state.parentBone!.name)!.worldPosition));
+    torso = {
+      states,
+      effectiveWeights: lengthNormalizedWeights(lengths, profile.torso.weights),
+      terminalDecision,
+    };
+  }
+
+  const legs = Object.fromEntries((['left', 'right'] as const).map((side) => {
+    const legProfile = profile.legs[side];
+    const targetStates = [legProfile.hip, legProfile.knee, legProfile.ankle].map((name) => {
+      reserve(name, `${side} leg`);
+      const state = targetReference.get(name);
+      if (!state) throw new Error(`Natural motion ${side} leg target bone ${name} does not exist.`);
+      return state;
+    });
+    const [targetHip, targetKnee, targetAnkle] = targetStates;
+    if (targetKnee.parentBone !== targetHip.bone || targetAnkle.parentBone !== targetKnee.bone) {
+      throw new Error(`Natural motion ${side} target leg must be a direct hip-knee-ankle chain.`);
+    }
+    const decisions = targetStates.map((state) => decisionByTarget.get(state.bone.name));
+    if (decisions.some((decision) => !decision)) {
+      throw new Error(`Natural motion ${side} leg hip, knee, and ankle must all be mapped.`);
+    }
+    const [hipDecision, kneeDecision, ankleDecision] = decisions as RigMapDecision[];
+    const sourceHip = sourceRest.get(hipDecision.source)!;
+    const sourceKnee = sourceRest.get(kneeDecision.source)!;
+    const sourceAnkle = sourceRest.get(ankleDecision.source)!;
+    const sourceReferenceReach = sourceReferenceWorldPositions.get(sourceHip.bone.name)!
+      .distanceTo(sourceReferenceWorldPositions.get(sourceAnkle.bone.name)!);
+    if (sourceReferenceReach <= 1e-10) throw new Error(`Natural motion ${side} source reference leg has zero reach.`);
+    const targetReferenceReach = targetAnkle.worldPosition.clone().sub(targetHip.worldPosition);
+    const firstVector = targetKnee.worldPosition.clone().sub(targetHip.worldPosition);
+    const secondVector = targetAnkle.worldPosition.clone().sub(targetKnee.worldPosition);
+    if (firstVector.lengthSq() <= 1e-10 || secondVector.lengthSq() <= 1e-10) {
+      throw new Error(`Natural motion ${side} target reference leg has a zero-length segment.`);
+    }
+    const referenceBendPlaneNormal = firstVector.clone().cross(secondVector);
+    if (referenceBendPlaneNormal.lengthSq() <= 1e-10) {
+      const referencePole = new THREE.Vector3(...legProfile.pole)
+        .applyQuaternion(pelvis.worldQuaternion);
+      referenceBendPlaneNormal.copy(targetReferenceReach).normalize().cross(referencePole);
+    }
+    if (referenceBendPlaneNormal.lengthSq() <= 1e-10) {
+      throw new Error(`Natural motion ${side} reference leg and pelvis-local pole do not define a bend plane.`);
+    }
+    referenceBendPlaneNormal.normalize();
+    const prepared: PreparedNaturalLeg = {
+      side,
+      profile: legProfile,
+      sourceHip,
+      sourceKnee,
+      sourceAnkle,
+      targetHip,
+      targetKnee,
+      targetAnkle,
+      firstLength: firstVector.length(),
+      secondLength: secondVector.length(),
+      sourceReferenceReach,
+      targetReferenceReach,
+      targetHipLocalDirection: firstVector.clone().applyQuaternion(targetHip.worldQuaternion.clone().invert()).normalize(),
+      targetKneeLocalDirection: secondVector.clone().applyQuaternion(targetKnee.worldQuaternion.clone().invert()).normalize(),
+      referenceBendPlaneNormal,
+      referenceSolePoint: targetAnkle.worldPosition.clone()
+        .add(new THREE.Vector3(...legProfile.soleOffset).applyQuaternion(targetAnkle.worldQuaternion)),
+    };
+    return [side, prepared];
+  })) as unknown as Record<NaturalFootSide, PreparedNaturalLeg>;
+
+  const contacts = (profile.contacts?.[clipName] ?? []).map((contact, index) => {
+    if (contact.endFrame >= sampleCount) {
+      throw new Error(`Natural motion ${clipName} ${contact.foot}-foot contact ends after frame ${sampleCount - 1}.`);
+    }
+    return {
+      key: `${clipName}:${contact.foot}:${index}`,
+      contact,
+      diagnostic: {
+        ...contact,
+        clip: clipName,
+        fullWeightStartFrame: contact.startFrame + Math.max(0, contact.blendFrames - 1),
+        fullWeightEndFrame: contact.endFrame - Math.max(0, contact.blendFrames - 1),
+        maximumResidual: 0,
+        maximumResidualFrame: null,
+        maximumPelvisCorrection: 0,
+        maximumPelvisCorrectionFrame: null,
+        clampedSamples: 0,
+        unreachable: false,
+        rootTravelPerFrame: [
+          ...(profile.rootTravelPerFrame?.[clipName] ?? [0, 0, 0]),
+        ] as [number, number, number],
+      },
+    };
+  });
+  const configuredLimit = profile.legMotionLimits?.[clipName];
+  const legMotionLimit: NaturalMotionReport['legMotionLimit'] = configuredLimit ? {
+    ...configuredLimit,
+    sides: {
+      left: {
+        constrainedSamples: 0,
+        maximumRequestedForwardDegrees: 0,
+        maximumRequestedBackwardDegrees: 0,
+        maximumRequestedLateralDegrees: 0,
+      },
+      right: {
+        constrainedSamples: 0,
+        maximumRequestedForwardDegrees: 0,
+        maximumRequestedBackwardDegrees: 0,
+        maximumRequestedLateralDegrees: 0,
+      },
+    },
+  } : null;
+  return { profile, pelvis, pelvisDecision, torso, legs, contacts, legMotionLimit };
+}
+
 function rootSourceDecision(
   decisions: readonly RigMapDecision[],
   sourceRest: Map<string, BoneRestState>,
@@ -393,6 +662,8 @@ export function retargetAnimationClip(
   const sourceRest = captureRestState(source);
   const targetRest = captureRestState(target);
   let targetReference = targetRest;
+  const targetReferenceQuaternionBones = new Set<string>();
+  const targetReferencePositionBones = new Set<string>();
   if (options.targetReferenceClip) {
     const targetReferenceTracks = sampledTracksForClip(
       options.targetReferenceClip,
@@ -401,6 +672,10 @@ export function retargetAnimationClip(
     ).sampled;
     if (targetReferenceTracks.length === 0) {
       throw new Error(`Target reference clip ${options.targetReferenceClip.name || '(unnamed)'} has no bone transform tracks.`);
+    }
+    for (const track of targetReferenceTracks) {
+      if (track.property === 'quaternion') targetReferenceQuaternionBones.add(track.bone.name);
+      else targetReferencePositionBones.add(track.bone.name);
     }
     restoreRestState(targetRest);
     evaluateTracks(targetReferenceTracks, 0);
@@ -452,6 +727,11 @@ export function retargetAnimationClip(
     .map((decision) => decision.source));
   const targetDecisions = new Map(activeDecisions.map((decision) => [decision.target, decision]));
   const targetOrder = [...target.bones].sort((left, right) => boneDepth(left) - boneDepth(right));
+  const referenceIntermediateTargetBones = new Set(targetOrder
+    .filter((bone) => !targetDecisions.has(bone.name) && activeDecisions.some((decision) => (
+      isBoneDescendantOf(targetReference.get(decision.target)!.bone, bone)
+    )))
+    .map((bone) => bone.name));
   const preservedTargetLeafRotations = options.preserveTargetLeafRotations
     ? activeDecisions
       .filter((decision) => {
@@ -477,6 +757,13 @@ export function retargetAnimationClip(
     ...explicitPreservedTargetRotations,
   ])];
   const preservedTargetRotationSet = new Set(preservedTargetRotations);
+  const targetChainCurls = options.targetChainCurls ?? [];
+  const mappedTargetNames = new Set(mapping.decisions.map((decision) => decision.target));
+  const targetLocalRotationOffsetQuaternions = targetChainCurlQuaternions(
+    targetChainCurls,
+    targetReference,
+    mappedTargetNames,
+  );
   const upCorrection = options.applyUpCorrection === false || !mapping.upCorrection
     ? new THREE.Quaternion()
     : new THREE.Quaternion().fromArray(mapping.upCorrection).normalize();
@@ -550,18 +837,322 @@ export function retargetAnimationClip(
     restoreRestState(sourceRest);
   }
 
+  let naturalMotion: PreparedNaturalMotion | null = null;
+  if (options.naturalMotion) {
+    if (!sourceReferenceClip || !options.targetReferenceClip) {
+      throw new Error('Natural motion requires explicit source and target reference clips.');
+    }
+    if ((options.sampleRateHz ?? 60) !== 60) {
+      throw new Error('Natural motion contact frames require a 60 Hz retarget sample rate.');
+    }
+    naturalMotion = prepareNaturalMotion(
+      options.naturalMotion,
+      clip.name,
+      outputTimes.length,
+      mapping,
+      sourceRest,
+      targetReference,
+      sourceReferenceWorldPositions,
+      new Set(targetLocalRotationOffsetQuaternions.keys()),
+    );
+    if (!rootDecision || naturalMotion.pelvisDecision.target !== rootDecision.target) {
+      throw new Error('Natural motion requires the canonical target pelvis to be the retarget root.');
+    }
+  }
+  const naturalLegBends = {
+    left: { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY },
+    right: { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY },
+  };
+  const contactPins = new Map<string, { sole: THREE.Vector3; quaternion: THREE.Quaternion }>();
+  const previousNaturalLegPlane = naturalMotion ? {
+    left: naturalMotion.legs.left.referenceBendPlaneNormal.clone(),
+    right: naturalMotion.legs.right.referenceBendPlaneNormal.clone(),
+  } : null;
+
   try {
-    for (const time of evaluationTimes) {
+    for (let frameIndex = 0; frameIndex < evaluationTimes.length; frameIndex += 1) {
+      const time = evaluationTimes[frameIndex];
       restoreRestState(sourceRest);
       evaluateTracks(sampled, time);
       source.bones[0]?.updateWorldMatrix(true, true);
+
+      const transferredWorldQuaternion = (decision: RigMapDecision, targetState: BoneRestState) => {
+        if (!worldAnimatedSources.has(decision.source)) return targetState.worldQuaternion.clone();
+        const sourceAnimatedWorld = sourceRest.get(decision.source)!.bone
+          .getWorldQuaternion(new THREE.Quaternion());
+        return correctedDelta(
+          sourceAnimatedWorld,
+          sourceReferenceWorldQuaternions.get(decision.source)!,
+          correction,
+        ).multiply(targetState.worldQuaternion).normalize();
+      };
+
+      let desiredRootLocalPosition: THREE.Vector3 | null = null;
+      let desiredRootWorldPosition = rootDecision
+        ? targetReference.get(rootDecision.target)!.worldPosition.clone()
+        : new THREE.Vector3();
+      if (rootDecision && rootHasPositionTrack) {
+        const sourceState = sourceRest.get(rootDecision.source)!;
+        const targetState = targetReference.get(rootDecision.target)!;
+        const sourceAnimated = sourceState.bone.getWorldPosition(new THREE.Vector3());
+        const delta = sourceAnimated
+          .sub(sourceReferenceWorldPositions.get(rootDecision.source)!)
+          .applyQuaternion(correction)
+          .multiplyScalar(rootMotionScale);
+        desiredRootWorldPosition = targetState.worldPosition.clone().add(delta);
+        desiredRootLocalPosition = desiredRootWorldPosition.clone()
+          .applyMatrix4(targetState.parentWorldMatrix.clone().invert());
+      }
+
+      const naturalTorsoWorld = new Map<string, THREE.Quaternion>();
+      const naturalLegWorld = new Map<string, THREE.Quaternion>();
+      let pelvisCorrection = new THREE.Vector3();
+      if (naturalMotion) {
+        const pelvisWorldQuaternion = transferredWorldQuaternion(
+          naturalMotion.pelvisDecision,
+          naturalMotion.pelvis,
+        );
+        if (naturalMotion.torso) {
+          const terminalSource = sourceRest.get(naturalMotion.torso.terminalDecision.source)!;
+          const sourceAnimatedWorld = terminalSource.bone.getWorldQuaternion(new THREE.Quaternion());
+          const totalDelta = correctedDelta(
+            sourceAnimatedWorld,
+            sourceReferenceWorldQuaternions.get(terminalSource.bone.name)!,
+            correction,
+          );
+          let cumulativeWeight = 0;
+          for (let index = 0; index < naturalMotion.torso.states.length; index += 1) {
+            cumulativeWeight += naturalMotion.torso.effectiveWeights[index];
+            const partial = new THREE.Quaternion().slerp(totalDelta, cumulativeWeight);
+            const state = naturalMotion.torso.states[index];
+            naturalTorsoWorld.set(
+              state.bone.name,
+              partial.multiply(state.worldQuaternion).normalize(),
+            );
+          }
+        }
+
+        const pelvisReferenceDelta = pelvisWorldQuaternion.clone()
+          .multiply(naturalMotion.pelvis.worldQuaternion.clone().invert())
+          .normalize();
+        const legFrames = new Map<NaturalFootSide, {
+          prepared: PreparedNaturalLeg;
+          hip: THREE.Vector3;
+          desiredAnkle: THREE.Vector3;
+          naturalFootQuaternion: THREE.Quaternion;
+          desiredFootQuaternion: THREE.Quaternion;
+          contact: PreparedNaturalMotion['contacts'][number] | null;
+          contactWeight: number;
+        }>();
+        const correctionSuggestions: THREE.Vector3[] = [];
+        for (const side of ['left', 'right'] as const) {
+          const prepared = naturalMotion.legs[side];
+          const hip = prepared.targetHip.worldPosition.clone()
+            .sub(naturalMotion.pelvis.worldPosition)
+            .applyQuaternion(pelvisReferenceDelta)
+            .add(desiredRootWorldPosition);
+          const sourceHip = prepared.sourceHip.bone.getWorldPosition(new THREE.Vector3());
+          const sourceAnkle = prepared.sourceAnkle.bone.getWorldPosition(new THREE.Vector3());
+          const sourceAnimatedReach = sourceAnkle.sub(sourceHip);
+          if (sourceAnimatedReach.lengthSq() <= 1e-10) {
+            throw new Error(`Natural motion ${side} source leg collapsed at frame ${frameIndex}.`);
+          }
+          const sourceReferenceReach = sourceReferenceWorldPositions.get(prepared.sourceAnkle.bone.name)!
+            .clone()
+            .sub(sourceReferenceWorldPositions.get(prepared.sourceHip.bone.name)!);
+          const sourceDirectionDelta = new THREE.Quaternion().setFromUnitVectors(
+            sourceReferenceReach.clone().normalize(),
+            sourceAnimatedReach.clone().normalize(),
+          );
+          const correctedDirectionDelta = correction.clone()
+            .multiply(sourceDirectionDelta)
+            .multiply(correction.clone().invert())
+            .normalize();
+          let desiredReach = prepared.targetReferenceReach.clone()
+            .applyQuaternion(correctedDirectionDelta)
+            .normalize()
+            .multiplyScalar(
+              prepared.targetReferenceReach.length()
+              * sourceAnimatedReach.length()
+              / prepared.sourceReferenceReach,
+            );
+          const contact = naturalMotion.contacts.find(({ contact: candidate }) => (
+            candidate.foot === side
+            && frameIndex >= candidate.startFrame
+            && frameIndex <= candidate.endFrame
+          )) ?? null;
+          const weight = contact ? contactBlendWeight(frameIndex, contact.contact) : 0;
+          if (naturalMotion.legMotionLimit) {
+            const directionLimit = limitNaturalLegDirection(
+              desiredReach.clone().normalize().applyQuaternion(pelvisWorldQuaternion.clone().invert()),
+              naturalMotion.legMotionLimit,
+              1 - weight,
+            );
+            const diagnostic = naturalMotion.legMotionLimit.sides[side];
+            diagnostic.maximumRequestedForwardDegrees = Math.max(
+              diagnostic.maximumRequestedForwardDegrees,
+              directionLimit.requestedSagittalDegrees,
+            );
+            diagnostic.maximumRequestedBackwardDegrees = Math.max(
+              diagnostic.maximumRequestedBackwardDegrees,
+              -directionLimit.requestedSagittalDegrees,
+            );
+            diagnostic.maximumRequestedLateralDegrees = Math.max(
+              diagnostic.maximumRequestedLateralDegrees,
+              Math.abs(directionLimit.requestedLateralDegrees),
+            );
+            if (directionLimit.constrained) diagnostic.constrainedSamples += 1;
+            desiredReach = directionLimit.direction
+              .applyQuaternion(pelvisWorldQuaternion)
+              .multiplyScalar(desiredReach.length());
+          }
+          const naturalAnkle = hip.clone().add(desiredReach);
+          const naturalFootQuaternion = transferredWorldQuaternion(
+            targetDecisions.get(prepared.targetAnkle.bone.name)!,
+            prepared.targetAnkle,
+          );
+          let desiredAnkle = naturalAnkle;
+          let desiredFootQuaternion = naturalFootQuaternion;
+          if (contact) {
+            const naturalSole = naturalSolePoint(
+              naturalAnkle,
+              naturalFootQuaternion,
+              prepared.profile.soleOffset,
+            );
+            let pin = contactPins.get(contact.key);
+            if (!pin) {
+              pin = {
+                sole: naturalSole.clone().setComponent(1, prepared.referenceSolePoint.y),
+                quaternion: prepared.targetAnkle.worldQuaternion.clone(),
+              };
+              contactPins.set(contact.key, pin);
+            }
+            const contactPose = resolveNaturalContactPose({
+              naturalAnkle,
+              naturalFootQuaternion,
+              referenceFootQuaternion: pin.quaternion,
+              soleOffset: prepared.profile.soleOffset,
+              pinnedSole: pin.sole,
+              rootTravelPerFrame: contact.diagnostic.rootTravelPerFrame,
+              elapsedFrames: frameIndex - contact.contact.startFrame,
+              weight,
+            });
+            desiredFootQuaternion = contactPose.footQuaternion;
+            desiredAnkle = contactPose.ankle;
+            const preliminary = solveNaturalTwoBoneLeg({
+              hip,
+              desiredAnkle,
+              referenceKnee: prepared.targetKnee.worldPosition,
+              poleDirection: new THREE.Vector3(...prepared.profile.pole).applyQuaternion(pelvisWorldQuaternion),
+              previousPlaneNormal: previousNaturalLegPlane![side],
+              firstLength: prepared.firstLength,
+              secondLength: prepared.secondLength,
+              minBendDegrees: THREE.MathUtils.lerp(
+                prepared.profile.minBendDegrees,
+                naturalMotion.legMotionLimit?.minimumSwingBendDegrees ?? prepared.profile.minBendDegrees,
+                1 - weight,
+              ),
+              maxBendDegrees: prepared.profile.maxBendDegrees,
+            });
+            const suggestion = desiredAnkle.clone().sub(preliminary.ankle);
+            const maximum = prepared.profile.maxPelvisCorrection * weight;
+            if (maximum <= 0) suggestion.set(0, 0, 0);
+            else if (suggestion.length() > maximum) suggestion.setLength(maximum);
+            correctionSuggestions.push(suggestion);
+          }
+          legFrames.set(side, {
+            prepared,
+            hip,
+            desiredAnkle,
+            naturalFootQuaternion,
+            desiredFootQuaternion,
+            contact,
+            contactWeight: weight,
+          });
+        }
+        if (correctionSuggestions.length > 0) {
+          pelvisCorrection = correctionSuggestions.reduce((largest, value) => (
+            value.lengthSq() > largest.lengthSq() ? value : largest
+          ), new THREE.Vector3()).clone();
+          desiredRootWorldPosition.add(pelvisCorrection);
+          const targetState = targetReference.get(rootDecision!.target)!;
+          desiredRootLocalPosition = desiredRootWorldPosition.clone()
+            .applyMatrix4(targetState.parentWorldMatrix.clone().invert());
+        }
+        for (const side of ['left', 'right'] as const) {
+          const frame = legFrames.get(side)!;
+          frame.hip.add(pelvisCorrection);
+          if (!frame.contact) frame.desiredAnkle.add(pelvisCorrection);
+          const poleWorld = new THREE.Vector3(...frame.prepared.profile.pole)
+            .applyQuaternion(pelvisWorldQuaternion);
+          const solved = solveNaturalTwoBoneLeg({
+            hip: frame.hip,
+            desiredAnkle: frame.desiredAnkle,
+            referenceKnee: frame.prepared.targetKnee.worldPosition,
+            poleDirection: poleWorld,
+            previousPlaneNormal: previousNaturalLegPlane![side],
+            firstLength: frame.prepared.firstLength,
+            secondLength: frame.prepared.secondLength,
+            minBendDegrees: THREE.MathUtils.lerp(
+              frame.prepared.profile.minBendDegrees,
+              naturalMotion.legMotionLimit?.minimumSwingBendDegrees ?? frame.prepared.profile.minBendDegrees,
+              1 - frame.contactWeight,
+            ),
+            maxBendDegrees: frame.prepared.profile.maxBendDegrees,
+          });
+          naturalLegBends[side].minimum = Math.min(naturalLegBends[side].minimum, solved.bendDegrees);
+          naturalLegBends[side].maximum = Math.max(naturalLegBends[side].maximum, solved.bendDegrees);
+          previousNaturalLegPlane![side].copy(solved.bendPlaneNormal);
+          const thighDirection = solved.knee.clone().sub(frame.hip).normalize();
+          const shinDirection = solved.ankle.clone().sub(solved.knee).normalize();
+          const referenceThighDirection = frame.prepared.targetHipLocalDirection.clone()
+            .applyQuaternion(frame.prepared.targetHip.worldQuaternion)
+            .normalize();
+          const referenceShinDirection = frame.prepared.targetKneeLocalDirection.clone()
+            .applyQuaternion(frame.prepared.targetKnee.worldQuaternion)
+            .normalize();
+          naturalLegWorld.set(frame.prepared.targetHip.bone.name, alignNaturalAnatomicalFrame(
+            referenceThighDirection,
+            frame.prepared.referenceBendPlaneNormal,
+            thighDirection,
+            solved.bendPlaneNormal,
+            frame.prepared.targetHip.worldQuaternion,
+          ));
+          naturalLegWorld.set(frame.prepared.targetKnee.bone.name, alignNaturalAnatomicalFrame(
+            referenceShinDirection,
+            frame.prepared.referenceBendPlaneNormal,
+            shinDirection,
+            solved.bendPlaneNormal,
+            frame.prepared.targetKnee.worldQuaternion,
+          ));
+          const footQuaternion = frame.desiredFootQuaternion;
+          if (frame.contact) {
+            const diagnostic = frame.contact.diagnostic;
+            if (solved.residual > diagnostic.maximumResidual) {
+              diagnostic.maximumResidual = solved.residual;
+              diagnostic.maximumResidualFrame = frameIndex;
+            }
+            if (pelvisCorrection.length() > diagnostic.maximumPelvisCorrection) {
+              diagnostic.maximumPelvisCorrection = pelvisCorrection.length();
+              diagnostic.maximumPelvisCorrectionFrame = frameIndex;
+            }
+            if (solved.clamped) diagnostic.clampedSamples += 1;
+            if (frame.contactWeight >= 1 && solved.residual > 1e-5) diagnostic.unreachable = true;
+          }
+          naturalLegWorld.set(frame.prepared.targetAnkle.bone.name, footQuaternion);
+        }
+      }
 
       const desiredTargetWorld = new Map<string, THREE.Quaternion>();
       for (const targetBone of targetOrder) {
         const targetState = targetReference.get(targetBone.name)!;
         const decision = targetDecisions.get(targetBone.name);
         let worldQuaternion: THREE.Quaternion;
-        if (preservedTargetRotationSet.has(targetBone.name) && targetState.parentBone) {
+        const naturalWorldQuaternion = naturalLegWorld.get(targetBone.name)
+          ?? naturalTorsoWorld.get(targetBone.name);
+        if (naturalWorldQuaternion) {
+          worldQuaternion = naturalWorldQuaternion;
+        } else if (preservedTargetRotationSet.has(targetBone.name) && targetState.parentBone) {
           const parentWorld = desiredTargetWorld.get(targetState.parentBone.name)
             ?? targetReference.get(targetState.parentBone.name)!.worldQuaternion;
           worldQuaternion = parentWorld.clone().multiply(targetState.localQuaternion).normalize();
@@ -608,13 +1199,35 @@ export function retargetAnimationClip(
         } else if (targetState.parentBone) {
           const parentWorld = desiredTargetWorld.get(targetState.parentBone.name)
             ?? targetReference.get(targetState.parentBone.name)!.worldQuaternion;
-          worldQuaternion = parentWorld.clone().multiply(targetState.localQuaternion).normalize();
+          const localQuaternion = targetState.localQuaternion.clone();
+          const localOffset = targetLocalRotationOffsetQuaternions.get(targetBone.name);
+          if (localOffset) localQuaternion.multiply(localOffset).normalize();
+          worldQuaternion = parentWorld.clone().multiply(localQuaternion).normalize();
         } else {
           worldQuaternion = targetState.worldQuaternion.clone();
+          const localOffset = targetLocalRotationOffsetQuaternions.get(targetBone.name);
+          if (localOffset) worldQuaternion.multiply(localOffset).normalize();
         }
         desiredTargetWorld.set(targetBone.name, worldQuaternion);
 
-        if (!decision || !worldAnimatedSources.has(decision.source)) continue;
+        if (!naturalWorldQuaternion && (
+          targetLocalRotationOffsetQuaternions.has(targetBone.name)
+          || (referenceIntermediateTargetBones.has(targetBone.name) && targetReferenceQuaternionBones.has(targetBone.name))
+        )) {
+          const values = quaternionValues.get(targetBone.name) ?? [];
+          const localQuaternion = targetState.localQuaternion.clone();
+          const localOffset = targetLocalRotationOffsetQuaternions.get(targetBone.name);
+          if (localOffset) localQuaternion.multiply(localOffset).normalize();
+          localQuaternion.toArray(values, values.length);
+          quaternionValues.set(targetBone.name, values);
+        }
+        if (referenceIntermediateTargetBones.has(targetBone.name) && targetReferencePositionBones.has(targetBone.name)) {
+          const values = positionValues.get(targetBone.name) ?? [];
+          targetState.localPosition.toArray(values, values.length);
+          positionValues.set(targetBone.name, values);
+        }
+
+        if (!naturalWorldQuaternion && (!decision || !worldAnimatedSources.has(decision.source))) continue;
         const parentWorld = targetState.parentBone
           ? desiredTargetWorld.get(targetState.parentBone.name)!
           : new THREE.Quaternion().setFromRotationMatrix(targetState.parentWorldMatrix);
@@ -624,19 +1237,9 @@ export function retargetAnimationClip(
         quaternionValues.set(targetBone.name, values);
       }
 
-      if (rootDecision && rootHasPositionTrack) {
-        const sourceState = sourceRest.get(rootDecision.source)!;
-        const targetState = targetReference.get(rootDecision.target)!;
-        const sourceAnimated = new THREE.Vector3();
-        sourceState.bone.getWorldPosition(sourceAnimated);
-        const delta = sourceAnimated
-          .sub(sourceReferenceWorldPositions.get(rootDecision.source)!)
-          .applyQuaternion(correction)
-          .multiplyScalar(rootMotionScale);
-        const desiredWorld = targetState.worldPosition.clone().add(delta);
-        const desiredLocal = desiredWorld.applyMatrix4(targetState.parentWorldMatrix.clone().invert());
+      if (rootDecision && desiredRootLocalPosition) {
         const values = positionValues.get(rootDecision.target) ?? [];
-        values.push(desiredLocal.x, desiredLocal.y, desiredLocal.z);
+        values.push(desiredRootLocalPosition.x, desiredRootLocalPosition.y, desiredRootLocalPosition.z);
         positionValues.set(rootDecision.target, values);
       }
     }
@@ -733,6 +1336,44 @@ export function retargetAnimationClip(
       targetReferenceClip: options.targetReferenceClip?.name || null,
       preservedTargetLeafRotations,
       preservedTargetRotations,
+      targetChainCurls: structuredClone(targetChainCurls),
+      naturalMotion: naturalMotion ? {
+        contactSpace: 'model',
+        torso: naturalMotion.torso ? {
+          targetBones: naturalMotion.torso.states.map((state) => state.bone.name),
+          effectiveWeights: [...naturalMotion.torso.effectiveWeights],
+        } : null,
+        legs: {
+          left: {
+            hip: naturalMotion.legs.left.targetHip.bone.name,
+            knee: naturalMotion.legs.left.targetKnee.bone.name,
+            ankle: naturalMotion.legs.left.targetAnkle.bone.name,
+            soleOffsetAnkleLocal: [...naturalMotion.legs.left.profile.soleOffset],
+            referenceSolePoint: naturalMotion.legs.left.referenceSolePoint.toArray(),
+            referenceFootQuaternion: naturalMotion.legs.left.targetAnkle.worldQuaternion.toArray(),
+            polePelvisLocal: [...naturalMotion.legs.left.profile.pole],
+            referenceBendPlaneNormal: naturalMotion.legs.left.referenceBendPlaneNormal.toArray(),
+            minimumBendDegrees: naturalLegBends.left.minimum,
+            maximumBendDegrees: naturalLegBends.left.maximum,
+          },
+          right: {
+            hip: naturalMotion.legs.right.targetHip.bone.name,
+            knee: naturalMotion.legs.right.targetKnee.bone.name,
+            ankle: naturalMotion.legs.right.targetAnkle.bone.name,
+            soleOffsetAnkleLocal: [...naturalMotion.legs.right.profile.soleOffset],
+            referenceSolePoint: naturalMotion.legs.right.referenceSolePoint.toArray(),
+            referenceFootQuaternion: naturalMotion.legs.right.targetAnkle.worldQuaternion.toArray(),
+            polePelvisLocal: [...naturalMotion.legs.right.profile.pole],
+            referenceBendPlaneNormal: naturalMotion.legs.right.referenceBendPlaneNormal.toArray(),
+            minimumBendDegrees: naturalLegBends.right.minimum,
+            maximumBendDegrees: naturalLegBends.right.maximum,
+          },
+        },
+        contacts: naturalMotion.contacts.map(({ diagnostic }) => structuredClone(diagnostic)),
+        legMotionLimit: naturalMotion.legMotionLimit
+          ? structuredClone(naturalMotion.legMotionLimit)
+          : null,
+      } : null,
       poseRecovery: poseRecovery ? { ...poseRecovery } : null,
     },
   };

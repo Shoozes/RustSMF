@@ -125,6 +125,7 @@ const WORKSPACE_BY_MODE: Record<EditorMode, WorkspaceProfile> = {
 // Logic extracted to useLoadModel hook (load/export/handlers + tauri lazy) + store slices + focused components.
 // Drop and bone selection handlers now provided by hook for further modularity.
 export default function App() {
+  const [retargetProfileState, setRetargetProfileState] = useState({ draft: '', saved: '' });
   const historyOrderRef = useRef(0);
   const hadModelRef = useRef(false);
   const outlinerHistoryRef = useRef<EditorHistoryState<ModelOutlinerSnapshot>>(makeEditorHistory());
@@ -1035,6 +1036,8 @@ export default function App() {
           onMoveClipDown={moveCurrentAnimationClipDown}
           onCreateAnimation={createAnimationFromPose}
           onRetargetAnimations={retargetAnimationsFromFiles}
+          retargetProfileState={retargetProfileState}
+          onRetargetProfileChange={setRetargetProfileState}
           editorMode={editorMode}
         />
       );

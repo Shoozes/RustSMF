@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   GAME_READY_JOB_SCHEMA,
   parseGameReadyJob,
+  resolvePreservedTargetRotations,
   type GameReadyPathPolicy,
 } from './gameReadyJob';
 
@@ -29,14 +30,54 @@ function validJob(): Record<string, unknown> {
         sourceModel: '/input/source.glb',
         clips: ['Walk'],
         manualMap: { Hips: 'mixamorigHips' },
+        directionTransfer: 'absolute',
+        directionTransferBones: ['mixamorigLeftArm', 'mixamorigRightArm'],
+        preserveTargetRotations: ['mixamorigLeftHand', 'mixamorigRightHand'],
+        clipPreserveTargetRotations: {
+          Walk: ['mixamorigRightHand', 'mixamorigLeftFoot'],
+        },
+        targetChainCurls: [{
+          palmBone: 'mixamorigLeftHand',
+          bones: ['mixamorigLeftHandIndex1', 'mixamorigLeftHandIndex2', 'mixamorigLeftHandIndex3'],
+          palmNormal: [0, 0, 1],
+          degrees: [55, 75, 60],
+        }],
+        naturalMotion: {
+          torso: {
+            targetBones: ['mixamorigSpine', 'mixamorigSpine1', 'mixamorigSpine2'],
+          },
+          legs: {
+            left: {
+              hip: 'mixamorigLeftUpLeg', knee: 'mixamorigLeftLeg', ankle: 'mixamorigLeftFoot',
+              soleOffset: [0, 0.08, -0.05],
+              pole: [0, 0, 1], minBendDegrees: 5, maxBendDegrees: 150, maxPelvisCorrection: 0.05,
+            },
+            right: {
+              hip: 'mixamorigRightUpLeg', knee: 'mixamorigRightLeg', ankle: 'mixamorigRightFoot',
+              soleOffset: [0, 0.08, -0.05],
+              pole: [0, 0, 1], minBendDegrees: 5, maxBendDegrees: 150, maxPelvisCorrection: 0.05,
+            },
+          },
+          contacts: {
+            Walk: [{ foot: 'left', startFrame: 2, endFrame: 7, blendFrames: 2 }],
+          },
+          rootTravelPerFrame: { Walk: [0.01, 0, 0] },
+          legMotionLimits: {
+            Walk: {
+              maximumForwardDegrees: 50,
+              maximumBackwardDegrees: 40,
+              maximumLateralDegrees: 20,
+              minimumSwingBendDegrees: 12,
+            },
+          },
+        },
         sampleRateHz: 60,
         interpolation: 'step',
       },
     },
     output: {
-      glb: '/output/fighter.glb',
-      manifest: '/output/fighter.manifest.json',
-      report: '/output/fighter.report.json',
+      generationRoot: '/output/generations',
+      currentPointer: '/output/generations/current.json',
     },
     provenance: { ownership: 'local-test' },
   };
@@ -47,6 +88,39 @@ test('game-ready job parsing applies safe defaults and retains explicit contract
   assert.equal(parsed.materialRepair.textureFlipY, true);
   assert.deepEqual(parsed.rig.retarget?.clips, ['Walk']);
   assert.equal(parsed.rig.retarget?.alignMappedBoneDirections, true);
+  assert.equal(parsed.rig.retarget?.directionTransfer, 'absolute');
+  assert.deepEqual(parsed.rig.retarget?.directionTransferBones, ['mixamorigLeftArm', 'mixamorigRightArm']);
+  assert.deepEqual(parsed.rig.retarget?.preserveTargetRotations, ['mixamorigLeftHand', 'mixamorigRightHand']);
+  assert.deepEqual(resolvePreservedTargetRotations(parsed.rig.retarget!, 'Walk'), [
+    'mixamorigLeftHand',
+    'mixamorigRightHand',
+    'mixamorigLeftFoot',
+  ]);
+  assert.deepEqual(resolvePreservedTargetRotations(parsed.rig.retarget!, 'Idle'), [
+    'mixamorigLeftHand',
+    'mixamorigRightHand',
+  ]);
+  assert.deepEqual(parsed.rig.retarget?.targetChainCurls, [{
+    palmBone: 'mixamorigLeftHand',
+    bones: ['mixamorigLeftHandIndex1', 'mixamorigLeftHandIndex2', 'mixamorigLeftHandIndex3'],
+    palmNormal: [0, 0, 1],
+    degrees: [55, 75, 60],
+  }]);
+  assert.deepEqual(parsed.rig.retarget?.naturalMotion?.torso, {
+    targetBones: ['mixamorigSpine', 'mixamorigSpine1', 'mixamorigSpine2'],
+    weights: undefined,
+  });
+  assert.deepEqual(parsed.rig.retarget?.naturalMotion?.contacts?.Walk, [
+    { foot: 'left', startFrame: 2, endFrame: 7, blendFrames: 2 },
+  ]);
+  assert.deepEqual(parsed.rig.retarget?.naturalMotion?.rootTravelPerFrame?.Walk, [0.01, 0, 0]);
+  assert.deepEqual(parsed.rig.retarget?.naturalMotion?.legMotionLimits?.Walk, {
+    maximumForwardDegrees: 50,
+    maximumBackwardDegrees: 40,
+    maximumLateralDegrees: 20,
+    minimumSwingBendDegrees: 12,
+  });
+  assert.deepEqual(parsed.rig.retarget?.naturalMotion?.legs.left.soleOffset, [0, 0.08, -0.05]);
   assert.equal(parsed.rig.attachments?.root, 'mixamorigHips');
 });
 
@@ -64,6 +138,70 @@ test('game-ready job parsing rejects silent selection and path ambiguities', () 
   assert.throws(() => parseGameReadyJob(unknownAttachment, paths), /unknown roles: hand/);
 
   const overwrite = validJob();
-  (overwrite.output as { glb: string }).glb = '/INPUT/TARGET.GLB';
+  (overwrite.output as { generationRoot: string }).generationRoot = '/INPUT/TARGET.GLB';
+  delete (overwrite.output as { currentPointer?: string }).currentPointer;
   assert.throws(() => parseGameReadyJob(overwrite, paths), /must not overwrite input files/);
+
+  const outsidePointer = validJob();
+  (outsidePointer.output as { currentPointer: string }).currentPointer = '/output/current.json';
+  assert.throws(() => parseGameReadyJob(outsidePointer, paths), /direct child/);
+
+  const invalidDirection = validJob();
+  (invalidDirection.rig as { retarget: { directionTransfer: string } }).retarget.directionTransfer = 'automatic';
+  assert.throws(() => parseGameReadyJob(invalidDirection, paths), /directionTransfer must be relative or absolute/);
+
+  const duplicatePreservedRotations = validJob();
+  (duplicatePreservedRotations.rig as { retarget: { preserveTargetRotations: string[] } }).retarget.preserveTargetRotations = [
+    'mixamorigHead',
+    'mixamorigHead',
+  ];
+  assert.throws(() => parseGameReadyJob(duplicatePreservedRotations, paths), /preserveTargetRotations must not contain duplicates/);
+
+  const invalidChainCurl = validJob();
+  (invalidChainCurl.rig as { retarget: { targetChainCurls: unknown[] } }).retarget.targetChainCurls = [{
+    palmBone: 'mixamorigHand',
+    bones: ['mixamorigFinger1', 'mixamorigFinger2'],
+    palmNormal: [0, 0, 1],
+    degrees: [55],
+  }];
+  assert.throws(() => parseGameReadyJob(invalidChainCurl, paths), /degrees must match bones/);
+
+  const overlappingContacts = validJob();
+  (overlappingContacts.rig as { retarget: { naturalMotion: { contacts: Record<string, unknown[]> } } })
+    .retarget.naturalMotion.contacts.Walk.push({ foot: 'left', startFrame: 7, endFrame: 10, blendFrames: 1 });
+  assert.throws(() => parseGameReadyJob(overlappingContacts, paths), /overlapping left-foot contacts/);
+
+  const invalidPole = validJob();
+  (invalidPole.rig as { retarget: { naturalMotion: { legs: { left: { pole: number[] } } } } })
+    .retarget.naturalMotion.legs.left.pole = [0, 0, 0];
+  assert.throws(() => parseGameReadyJob(invalidPole, paths), /pole must be non-zero/);
+
+  const invalidSole = validJob();
+  (invalidSole.rig as { retarget: { naturalMotion: { legs: { left: { soleOffset: number[] } } } } })
+    .retarget.naturalMotion.legs.left.soleOffset = [0, Number.NaN, 0];
+  assert.throws(() => parseGameReadyJob(invalidSole, paths), /soleOffset must contain three finite/);
+
+  const unknownRetargetField = validJob();
+  (unknownRetargetField.rig as { retarget: Record<string, unknown> }).retarget.preserverTargetRotations = [];
+  assert.throws(() => parseGameReadyJob(unknownRetargetField, paths), /unknown fields: preserverTargetRotations/);
+
+  const unselectedContact = validJob();
+  (unselectedContact.rig as { retarget: { naturalMotion: { contacts: Record<string, unknown[]> } } })
+    .retarget.naturalMotion.contacts.Idle = [{ foot: 'left', startFrame: 0, endFrame: 2, blendFrames: 1 }];
+  assert.throws(() => parseGameReadyJob(unselectedContact, paths), /configures unselected clips: Idle/);
+
+  const invalidMotionLimit = validJob();
+  (invalidMotionLimit.rig as { retarget: { naturalMotion: { legMotionLimits: Record<string, { maximumBackwardDegrees: number }> } } })
+    .retarget.naturalMotion.legMotionLimits.Walk.maximumBackwardDegrees = 90;
+  assert.throws(() => parseGameReadyJob(invalidMotionLimit, paths), /direction limits must be from 0/);
+
+  const unselectedMotionLimit = validJob();
+  (unselectedMotionLimit.rig as { retarget: { naturalMotion: { legMotionLimits: Record<string, unknown> } } })
+    .retarget.naturalMotion.legMotionLimits.Idle = {
+      maximumForwardDegrees: 50,
+      maximumBackwardDegrees: 40,
+      maximumLateralDegrees: 20,
+      minimumSwingBendDegrees: 12,
+    };
+  assert.throws(() => parseGameReadyJob(unselectedMotionLimit, paths), /legMotionLimits configures unselected clips: Idle/);
 });

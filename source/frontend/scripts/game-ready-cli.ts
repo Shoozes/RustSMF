@@ -1,19 +1,13 @@
-import { createHash, randomBytes } from 'node:crypto';
-import {
-  mkdir,
-  open,
-  rename,
-  rm,
-} from 'node:fs/promises';
+import { createHash } from 'node:crypto';
 import path from 'node:path';
 import * as THREE from 'three';
 import {
-  bytesToArrayBuffer,
   exportGLB,
-  loadFBX,
   loadGLB,
   validateExportedGLB,
-} from '../src/loaders';
+} from '../src/loaders/glb';
+import { loadFBX } from '../src/loaders/fbx';
+import { bytesToArrayBuffer } from '../src/loaders/smfBinary';
 import { installNodeThreeRuntime } from './node-three-runtime';
 import {
   retargetAnimationClip,
@@ -23,6 +17,11 @@ import {
   GAME_READY_JOB_SCHEMA,
   parseGameReadyJob,
 } from '../src/utils/gameReadyJob';
+import {
+  profileClipOptions,
+  RETARGET_PROFILE_SCHEMA,
+  type RetargetProfile,
+} from '../src/utils/retargetProfile';
 import { validateGameReadyModel } from '../src/utils/gameReadyValidation';
 import {
   embedMaterialTextures,
@@ -50,8 +49,14 @@ import {
 import { MAX_MODEL_INPUT_BYTES } from '../src/utils/modelFormat';
 import { disposeThreeObject } from '../src/utils/threeDisposal';
 import { readFileBounded, readFilesBounded } from './bounded-file-read';
+import { readGameReadyProducer } from './game-ready-producer';
+import {
+  publishGameReadyGeneration,
+  type GameReadyGenerationInput,
+  type GameReadyPublishedGeneration,
+} from '../src/utils/gameReadyGeneration';
 
-const TOOL_VERSION = '1.0.0';
+const TOOL_VERSION = '2.0.0';
 const MAX_JOB_BYTES = 1024 * 1024;
 
 interface LoadedAsset {
@@ -79,7 +84,9 @@ function usage(): string {
     'The job repairs rigged FBX/GLB materials from an OBJ/MTL/image bundle,',
     'optionally retargets explicitly mapped animation clips, validates skin and',
     'sampled deformation, exports a self-contained GLB, and writes JSON evidence.',
-    'All input and output paths must be absolute. Exit 0 means final GLB re-import passed.',
+    'All input and output paths must be absolute. Each success publishes a fresh,',
+    'immutable generation directory; an optional current pointer changes last.',
+    'Exit 0 means final GLB re-import and complete generation publication passed.',
   ].join('\n');
 }
 
@@ -186,44 +193,21 @@ function resolveReferenceTextures(
   return result;
 }
 
-async function writeStaged(filePath: string, bytes: Uint8Array): Promise<void> {
-  const directory = path.dirname(filePath);
-  await mkdir(directory, { recursive: true });
-  const temporary = path.join(directory, `.${path.basename(filePath)}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`);
-  let handle: Awaited<ReturnType<typeof open>> | null = null;
-  try {
-    handle = await open(temporary, 'wx');
-    await handle.writeFile(bytes);
-    await handle.sync();
-    await handle.close();
-    handle = null;
-    await rename(temporary, filePath);
-  } catch (error) {
-    await handle?.close().catch(() => undefined);
-    await rm(temporary, { force: true }).catch(() => undefined);
-    throw error;
-  }
-}
-
-async function writeJson(filePath: string, value: unknown): Promise<void> {
-  await writeStaged(filePath, new TextEncoder().encode(`${JSON.stringify(value, null, 2)}\n`));
-}
-
-async function runJob(jobPath: string): Promise<{ glb: string; manifest: string; report: string; sha256: string }> {
+async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
   const rawJob = await readBounded(jobPath, MAX_JOB_BYTES);
   const job = parseGameReadyJob(
     JSON.parse(new TextDecoder().decode(rawJob.bytes)) as unknown,
     GAME_READY_PATH_POLICY,
   );
   const inputRequests = [
-    { path: job.input.riggedModel, limit: MAX_MODEL_INPUT_BYTES },
-    { path: job.input.referenceObj, limit: MAX_MODEL_INPUT_BYTES },
-    { path: job.input.referenceMtl, limit: MAX_MODEL_RESOURCE_FILE_BYTES },
-    ...job.input.textures.map((filePath) => ({ path: filePath, limit: MAX_MODEL_RESOURCE_FILE_BYTES })),
-    ...(job.rig.retarget ? [{ path: job.rig.retarget.sourceModel, limit: MAX_MODEL_INPUT_BYTES }] : []),
+    { role: 'target', path: job.input.riggedModel, limit: MAX_MODEL_INPUT_BYTES },
+    { role: 'reference-obj', path: job.input.referenceObj, limit: MAX_MODEL_INPUT_BYTES },
+    { role: 'reference-mtl', path: job.input.referenceMtl, limit: MAX_MODEL_RESOURCE_FILE_BYTES },
+    ...job.input.textures.map((filePath, index) => ({ role: `texture-${index}`, path: filePath, limit: MAX_MODEL_RESOURCE_FILE_BYTES })),
+    ...(job.rig.retarget ? [{ role: 'retarget-source', path: job.rig.retarget.sourceModel, limit: MAX_MODEL_INPUT_BYTES }] : []),
   ];
   const inputs = (await readFilesBounded(
-    inputRequests,
+    inputRequests.map(({ path: filePath, limit }) => ({ path: filePath, limit })),
     MAX_MODEL_RESOURCE_BUNDLE_BYTES,
     pathComparisonKey,
   )).map((input) => ({ ...input, sha256: sha256(input.bytes) }));
@@ -287,38 +271,16 @@ async function runJob(jobPath: string): Promise<{ glb: string; manifest: string;
         fail(`Retarget source is missing clips: ${job.rig.retarget.clips.filter((name) => !found.has(name)).join(', ')}.`);
       }
       const occupiedClipNames = new Set(clips.map((clip) => clip.name));
-      const sourceReferenceClip = job.rig.retarget.sourceReferenceClip
-        ? source.clips.find((clip) => clip.name === job.rig.retarget!.sourceReferenceClip)
-        : undefined;
-      if (job.rig.retarget.sourceReferenceClip && !sourceReferenceClip) {
-        fail(`Retarget source is missing reference clip ${job.rig.retarget.sourceReferenceClip}.`);
-      }
-      const targetReferenceClip = job.rig.retarget.targetReferenceClip
-        ? target.clips.find((clip) => clip.name === job.rig.retarget!.targetReferenceClip)
-        : undefined;
-      if (job.rig.retarget.targetReferenceClip && !targetReferenceClip) {
-        fail(`Target model is missing reference clip ${job.rig.retarget.targetReferenceClip}.`);
-      }
+      const retargetProfile: RetargetProfile = {
+        $schema: RETARGET_PROFILE_SCHEMA,
+        retarget: job.rig.retarget,
+        targetClipNames: job.rig.clipNames ?? {},
+      };
       for (const clip of selected) {
-        const targetName = job.rig.retarget.clipNames?.[clip.name] || clip.name;
+        const options = profileClipOptions(retargetProfile, clip, source.clips, clips);
+        const targetName = options.clipName!;
         if (occupiedClipNames.has(targetName)) fail(`Retarget clip ${targetName} collides with an existing target clip.`);
-        const result = retargetAnimationClip(clip, source.skeleton, target.skeleton, rigMapReport, {
-          clipName: targetName,
-          applyUpCorrection: job.rig.retarget.applyUpCorrection,
-          alignMappedBoneDirections: job.rig.retarget.alignMappedBoneDirections,
-          directionTransferMode: job.rig.retarget.clipDirectionTransfer?.[clip.name],
-          directionTransferBones: job.rig.retarget.clipDirectionTransferBones?.[clip.name],
-          sourceReferencePose: job.rig.retarget.sourceReferencePose,
-          sourceReferenceClip,
-          targetReferenceClip,
-          preserveTargetLeafRotations: job.rig.retarget.preserveTargetLeafRotations,
-          preserveTargetRotations: job.rig.retarget.clipPreserveTargetRotations?.[clip.name],
-          poseRecovery: job.rig.retarget.clipPoseRecovery?.[clip.name],
-          scaleRootMotion: job.rig.retarget.scaleRootMotion,
-          sampleRateHz: job.rig.retarget.sampleRateHz,
-          interpolation: job.rig.retarget.interpolation,
-          nextDownRationalTimes: job.rig.retarget.nextDownRationalTimes,
-        });
+        const result = retargetAnimationClip(clip, source.skeleton, target.skeleton, rigMapReport, options);
         clips.push(result.clip);
         retargetReports.push(result.report);
         occupiedClipNames.add(result.clip.name);
@@ -346,12 +308,26 @@ async function runJob(jobPath: string): Promise<{ glb: string; manifest: string;
     const roundtrip = await validateExportedGLB(embedded.bytes, target.root, clips);
     const outputHash = sha256(embedded.bytes);
     const protectedFingerprint = captureMaterialRepairFingerprint(target.root, clips);
-    const inputRecords = inputs.map((input) => ({ path: input.path, byteLength: input.bytes.byteLength, sha256: input.sha256 }));
+    const generationInputs: GameReadyGenerationInput[] = inputRequests.map(({ role, path: inputPath }) => {
+      const input = getInput(inputPath);
+      return { role, name: path.basename(input.path), byteLength: input.bytes.byteLength, sha256: input.sha256 };
+    });
+    const inputRecords = inputRequests.map(({ role, path: inputPath }) => {
+      const input = getInput(inputPath);
+      return { role, path: input.path, byteLength: input.bytes.byteLength, sha256: input.sha256 };
+    });
+    const producer = await readGameReadyProducer({ name: 'RustSMF game-ready CLI', version: TOOL_VERSION });
+    const mapping = {
+      $schema: 'rustsmf.game-ready-mapping.v1',
+      manual: job.rig.retarget?.manualMap ?? {},
+      resolved: rigMapReport,
+    };
     const report = {
       $schema: 'rustsmf.game-ready-report.v1',
       status: 'complete',
-      tool: { name: 'RustSMF game-ready CLI', version: TOOL_VERSION },
-      job: { path: jobPath, sha256: rawJob.sha256 },
+      tool: producer.tool,
+      producer,
+      job: { sourcePath: jobPath, sourceSha256: rawJob.sha256, artifact: 'job.json' },
       provenance: job.provenance,
       inputs: inputRecords,
       materialRepair: {
@@ -376,7 +352,7 @@ async function runJob(jobPath: string): Promise<{ glb: string; manifest: string;
         externalResourceUris: 0,
         stepTiming,
       },
-      output: { path: job.output.glb, byteLength: embedded.bytes.byteLength, sha256: outputHash },
+      output: { path: 'model.glb', byteLength: embedded.bytes.byteLength, sha256: outputHash },
       limitations: [
         'Forward is a declared authored convention; it is not inferred from mesh topology.',
         'Retargeting preserves target proportions and transfers sampled world-rotation deltas or explicitly scoped absolute directions; different limb structures are not claimed anatomically equivalent.',
@@ -386,7 +362,7 @@ async function runJob(jobPath: string): Promise<{ glb: string; manifest: string;
     const manifest = {
       $schema: 'rustsmf.game-ready-manifest.v1',
       asset: {
-        glb: job.output.glb,
+        glb: 'model.glb',
         sha256: outputHash,
         byteLength: embedded.bytes.byteLength,
         classification: job.provenance.classification ?? 'LOCAL',
@@ -412,12 +388,16 @@ async function runJob(jobPath: string): Promise<{ glb: string; manifest: string;
         animation: 'one AnimationMixer and action set per fighter instance',
       },
       provenance: job.provenance,
-      report: job.output.report,
     };
-    await writeStaged(job.output.glb, embedded.bytes);
-    await writeJson(job.output.report, report);
-    await writeJson(job.output.manifest, manifest);
-    return { ...job.output, sha256: outputHash };
+    return publishGameReadyGeneration({
+      model: embedded.bytes,
+      job,
+      mapping,
+      report,
+      manifest,
+      producer,
+      inputs: generationInputs,
+    }, job.output);
   } finally {
     source?.dispose();
     target.dispose();

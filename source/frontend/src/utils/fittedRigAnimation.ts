@@ -1,5 +1,10 @@
 import * as THREE from 'three';
 import type { FittedRig } from './fittedRig';
+import {
+  boundedFloat32SampleTime,
+  buildFittedComparisonSchedule,
+  MAX_FITTED_GRID_FRAMES,
+} from './fittedRigTiming';
 
 /** Samples original world motion onto the fitted topology. This preserves mapped
  * world frames, including motion from source helpers absent in the target rig.
@@ -8,7 +13,7 @@ import type { FittedRig } from './fittedRig';
 export function bakeFittedClip(sourceRoot: THREE.Object3D, clip: THREE.AnimationClip,
   fitted: FittedRig, sampleRateHz = 60): THREE.AnimationClip {
   if (!Number.isInteger(sampleRateHz) || sampleRateHz < 1 || sampleRateHz > 240
-    || !Number.isFinite(clip.duration) || clip.duration < 0 || clip.duration * sampleRateHz > 6000) {
+    || !Number.isFinite(clip.duration) || clip.duration < 0 || clip.duration * sampleRateHz > MAX_FITTED_GRID_FRAMES) {
     throw new Error('Fitted animation exceeds the bounded sample contract');
   }
   const saved: Array<{ object: THREE.Object3D; position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 }> = [];
@@ -18,13 +23,12 @@ export function bakeFittedClip(sourceRoot: THREE.Object3D, clip: THREE.Animation
   const ordered: THREE.Bone[] = [];
   fitted.root.traverse(object => { if ('isBone' in object && object.isBone === true) ordered.push(object as THREE.Bone); });
   const values = new Map(ordered.map(bone => [bone, { position: [] as number[], quaternion: [] as number[], scale: [] as number[] }]));
-  const times = Array.from({ length: Math.floor(clip.duration * sampleRateHz + 1e-5) + 1 }, (_, index) => index / sampleRateHz);
-  if (clip.duration - times[times.length - 1] > 1e-6) times.push(clip.duration);
+  const times = buildFittedComparisonSchedule(clip.duration, sampleRateHz);
   const mixer = new THREE.AnimationMixer(sourceRoot);
   try {
     const action = mixer.clipAction(clip); action.setLoop(THREE.LoopOnce, 1); action.clampWhenFinished = true; action.play();
     for (const time of times) {
-      mixer.setTime(Math.min(clip.duration, Math.fround(time))); sourceRoot.updateMatrixWorld(true);
+      mixer.setTime(boundedFloat32SampleTime(time, clip.duration)); sourceRoot.updateMatrixWorld(true);
       for (const bone of ordered) {
         const source = sources.get(bone);
         if (source) {
@@ -57,7 +61,7 @@ export function bakeFittedClip(sourceRoot: THREE.Object3D, clip: THREE.Animation
         new THREE.QuaternionKeyframeTrack(`${bone.name}.quaternion`, keys, row.quaternion, THREE.InterpolateDiscrete),
         new THREE.VectorKeyframeTrack(`${bone.name}.scale`, keys, row.scale, THREE.InterpolateDiscrete));
     }
-    return new THREE.AnimationClip(clip.name, keys[keys.length - 1], tracks);
+    return new THREE.AnimationClip(clip.name, clip.duration, tracks);
   } finally {
     mixer.stopAllAction(); mixer.uncacheRoot(sourceRoot);
     for (const { object, position, quaternion, scale } of saved) {

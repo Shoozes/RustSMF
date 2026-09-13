@@ -17,6 +17,7 @@ export interface SkinnedGlbFixtureOptions {
   withSiblingMesh?: boolean;
   rootScale?: number;
   clipName?: string;
+  clipDuration?: number;
 }
 
 const fixtureBufferPromises = new Map<string, Promise<Buffer>>();
@@ -191,12 +192,16 @@ function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THR
     root.add(sibling);
   }
 
-  const clip = new THREE.AnimationClip(options.clipName ?? 'FixtureBend', 0.5, [
-    new THREE.QuaternionKeyframeTrack('FixtureTip.quaternion', [0, 0.5], [
+  const clipDuration = options.clipDuration ?? 0.5;
+  if (!Number.isFinite(clipDuration) || clipDuration <= 0) {
+    throw new Error('Skinned GLB fixture clipDuration must be finite and greater than zero');
+  }
+  const clip = new THREE.AnimationClip(options.clipName ?? 'FixtureBend', clipDuration, [
+    new THREE.QuaternionKeyframeTrack('FixtureTip.quaternion', [0, clipDuration], [
       0, 0, 0, 1,
       0, 0, 0.258819, 0.965926,
     ]),
-    new THREE.VectorKeyframeTrack('FixtureRoot.position', [0, 0.5], [
+    new THREE.VectorKeyframeTrack('FixtureRoot.position', [0, clipDuration], [
       0, 0, 0,
       0.05, 0, 0,
     ]),
@@ -213,6 +218,7 @@ function getFixtureKey(options: SkinnedGlbFixtureOptions): string {
     options.withSiblingMesh ? 'siblings' : 'solo',
     `scale-${options.rootScale ?? 1}`,
     `clip-${options.clipName ?? 'FixtureBend'}`,
+    `duration-${options.clipDuration ?? 0.5}`,
   ].join('-');
 }
 
@@ -226,6 +232,7 @@ function getFixtureName(options: SkinnedGlbFixtureOptions): string {
     parts.push(`scale-${String(options.rootScale).split('.').join('_').split('+').join('')}`);
   }
   if (options.clipName) parts.push(`clip-${options.clipName.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`);
+  if (options.clipDuration !== undefined) parts.push(`duration-${String(options.clipDuration).replace('.', '_')}`);
   return `${parts.join('-')}.glb`;
 }
 

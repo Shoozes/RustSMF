@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { buildFittedRig, fittedSkinIndices } from './fittedRig';
 import { bakeFittedClip } from './fittedRigAnimation';
+import { buildFittedComparisonSchedule } from './fittedRigTiming';
 import { exportFittedRigGlb } from './fittedRigGlb';
 import { buildGlbContainer, parseGlbContainer } from './glbContainer';
 
@@ -38,7 +39,28 @@ test('baked motion preserves mapped world frames and restores input poses', () =
   originalMixer.stopAllAction(); fittedMixer.stopAllAction();
   originalMixer.uncacheRoot(root); fittedMixer.uncacheRoot(fitted.root);
   assert.throws(() => bakeFittedClip(root, clip, fitted, 0), /bounded/);
+  assert.throws(() => buildFittedComparisonSchedule(1_000_000, 60), /at most 6000 regular frames/);
   fitted.skeleton.dispose(); source.dispose(); template.dispose();
+});
+
+test('baked motion preserves a fractional declared duration and terminal key', () => {
+  const { source, template, map } = fixture();
+  const fitted = buildFittedRig(source, template, map);
+  const root = new THREE.Group();
+  root.add(source.bones[0]);
+  root.updateMatrixWorld(true);
+  const duration = Math.fround(0.025);
+  const clip = new THREE.AnimationClip('fractional', duration, [
+    new THREE.VectorKeyframeTrack('sourceRoot.position', [0, duration], [2, 1, 3, 5, 1, 3]),
+  ]);
+  const baked = bakeFittedClip(root, clip, fitted, 60);
+  assert.equal(baked.duration, duration);
+  assert.equal(baked.tracks[0].times.length, 3);
+  assert.ok(baked.tracks[0].times[baked.tracks[0].times.length - 1] <= duration);
+  assert.ok(duration - baked.tracks[0].times[baked.tracks[0].times.length - 1] < 1e-8);
+  fitted.skeleton.dispose();
+  source.dispose();
+  template.dispose();
 });
 
 test('fitted GLB export preserves source streams and rejects unmapped influences', () => {

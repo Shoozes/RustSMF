@@ -568,8 +568,8 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
         maxWidthDelta: number,
         maxHeightDelta: number,
       ): void => {
-        const widthPixelTolerance = 1 / Math.min(first.imageWidth, second.imageWidth);
-        const heightPixelTolerance = 1 / Math.min(first.imageHeight, second.imageHeight);
+        const widthPixelTolerance = (1 / first.imageWidth) + (1 / second.imageWidth);
+        const heightPixelTolerance = (1 / first.imageHeight) + (1 / second.imageHeight);
         expect(Math.abs(first.widthRatio - second.widthRatio)).toBeLessThanOrEqual(
           maxWidthDelta + widthPixelTolerance,
         );

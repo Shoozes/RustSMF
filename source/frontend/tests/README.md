@@ -38,6 +38,8 @@ npm.cmd run test:e2e -- --reporter=line
 | `native.spec.ts` | Deterministic Tauri IPC dialog-owned open/read/save/cancel, stale-completion, project recovery, and autosave-coalescing matrices |
 | `modern-shell.spec.ts` | Modern command/workspace reachability, one-drawer focus ownership, coarse-pointer targets, and DPR backing dimensions |
 | `visual.spec.ts` | Modern/Original geometry/defaults, source texture thumbnails, reference-derived shelves/top strip/keyframe lane, narrow layout, viewport/menu visual coherence |
+| `retarget-profile.spec.ts` | Collapsed saved-profile UI, strict error visibility, app-owned draft persistence, source selection, and undoable application |
+| `rig-comparison.spec.ts` | Real-GLB three-state strict clip/duration coverage, deterministic multi-frame clocking, exact nested game transforms, mapped/unmapped skeleton colors, mesh opacity, selected-joint axes/bend plane, draw receipts, and partial-load cleanup |
 
 The 37 tests formerly in `smoke.spec.ts` retain their titles across the current domain-owned browser suites. Use `npm.cmd run test:e2e:list` for the authoritative count after adding or moving cases. The dedicated script prevents npm from consuming Playwright's `--list` flag and accidentally starting the full suite.
 
@@ -64,10 +66,11 @@ The deterministic `src/**/*.test.ts` inventory is grouped by runtime boundary:
 
 - Input and persistence: model-size/resource-bundle guards, native payload validation, worker protocol/cancellation, SMF bounds/semantics, versioned projects, editor snapshots, and bounded history.
 - Format and export: SMF coordinate/DQ fidelity, indexed Three-to-SMF expansion, GLB/FBX/OBJ geometry preparation, source-material isolation, pre-save reparse checks, and external-GLTF fixture integrity.
-- Model and rig: Outliner/static authoring, root-skeleton preparation, rig edits/metadata/IK, explicit rig mapping, normalized proportion diagnostics, retarget timing/direction/recovery, strict material repair, and partial-load resource disposal.
+- Model and rig: Outliner/static authoring, root-skeleton preparation, rig edits/metadata/IK, explicit rig mapping, normalized proportion diagnostics, retarget timing/direction/recovery, target-length natural torso/leg/contact solving, clip-scoped leg limits, portable profile validation, strict material repair, and partial-load resource disposal.
 - Viewport and Skin: layout/focus/hit math, scale-aware fitting, listener/RAF/grid/overlay disposal, display telemetry, weight previews, indexed brush lookup, smoothing, diagnostics, and Rest/Frozen/Live sampling.
 - Animation and UI policy: clip creation/controller/scope/history, duration/retime/trim/lock rules, float32 and partial-terminal timing, playback cadence, themes, aliases, labels, and material thumbnails.
-- Game-ready workflow: pure job-schema ambiguity checks, same-handle per-file/aggregate read limits, embedded texture/STEP validation, and finite deformation sampling.
+- Game-ready workflow: pure strict v2 job-schema and natural-motion range/selection checks, shared profile option resolution, same-handle per-file/aggregate read limits, embedded texture/STEP validation, finite deformation sampling, executable-dependency generation identity, immutable publication, manifest hashes, competing attempts, and injected write failures.
+- Fitted-rig workflow: explicit grid-plus-terminal timing, strict all-clip/duration/sample coverage, worst-vertex diagnostics, float32 terminal aliasing, and hash-bound preview routing.
 
 `source/frontend/scripts/run-unit-tests.mjs` discovers all unit files and forwards extra Node test flags. A focused command such as `npm.cmd run test:unit -- --test-name-pattern "duration formatting"` still loads the complete discovered-file set so registration and type boundaries remain covered. Exact counts belong in the latest dated `HISTORY.md` verification record.
 

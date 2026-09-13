@@ -13,16 +13,46 @@ import { exportFittedRigGlb } from '../src/utils/fittedRigGlb';
 import { compareFittedMotion, skinnedMeshes } from '../src/utils/fittedRigVerification';
 import { disposeThreeObject } from '../src/utils/threeDisposal';
 
-interface FitRigJob {
+export interface FitRigGameTransform {
+  normalizationScale: number;
+  visualScale: number;
+  groundTranslationY: number;
+  facing: -1 | 1;
+  modelPitch: number | null;
+  pitchJoint?: string;
+}
+
+export interface FitRigJob {
   schema: 'rustsmf-fit-rig-v1'; source: string; template: string; outputDirectory: string;
   mapping: Record<string, string>; clips: string[];
+  comparison?: {
+    playbackRate: number;
+    displayHeight: number;
+    gameTransforms?: Record<'source' | 'fitted' | 'template', FitRigGameTransform>;
+  };
+}
+
+function parseGameTransform(value: unknown, label: string): FitRigGameTransform {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error(`${label} must be an object`);
+  const transform = value as Record<string, unknown>;
+  if (Object.keys(transform).some(key => !['normalizationScale', 'visualScale', 'groundTranslationY', 'facing', 'modelPitch', 'pitchJoint'].includes(key))
+    || typeof transform.normalizationScale !== 'number' || !Number.isFinite(transform.normalizationScale) || transform.normalizationScale <= 0
+    || typeof transform.visualScale !== 'number' || !Number.isFinite(transform.visualScale) || transform.visualScale <= 0
+    || typeof transform.groundTranslationY !== 'number' || !Number.isFinite(transform.groundTranslationY)
+    || (transform.facing !== -1 && transform.facing !== 1)
+    || (transform.modelPitch !== null && (typeof transform.modelPitch !== 'number' || !Number.isFinite(transform.modelPitch)))
+    || (transform.pitchJoint !== undefined && (typeof transform.pitchJoint !== 'string' || !transform.pitchJoint.trim()))
+    || (transform.modelPitch !== null && transform.pitchJoint === undefined)) {
+    throw new Error(`${label} contains an invalid game transform`);
+  }
+  return transform as unknown as FitRigGameTransform;
 }
 
 export function parseFitRigJob(value: unknown): FitRigJob {
   if (!value || typeof value !== 'object' || Array.isArray(value)) throw new Error('Expected a fit-rig job object');
   const job = value as Record<string, unknown>;
   if (job.schema !== 'rustsmf-fit-rig-v1'
-    || Object.keys(job).some(key => !['schema', 'source', 'template', 'outputDirectory', 'mapping', 'clips'].includes(key))) {
+    || Object.keys(job).some(key => !['schema', 'source', 'template', 'outputDirectory', 'mapping', 'clips', 'comparison'].includes(key))) {
     throw new Error('Unknown fit-rig schema or field');
   }
   for (const key of ['source', 'template', 'outputDirectory']) {
@@ -34,7 +64,40 @@ export function parseFitRigJob(value: unknown): FitRigJob {
   if (!Array.isArray(job.clips) || !job.clips.length || job.clips.length > 128
     || job.clips.some(clip => typeof clip !== 'string' || !clip)
     || new Set(job.clips).size !== job.clips.length) throw new Error('Explicit unique clip names required');
-  return job as unknown as FitRigJob;
+  const comparisonValue = job.comparison;
+  let comparison: FitRigJob['comparison'];
+  if (comparisonValue !== undefined) {
+    if (!comparisonValue || typeof comparisonValue !== 'object' || Array.isArray(comparisonValue)) {
+      throw new Error('comparison must be an object');
+    }
+    const source = comparisonValue as Record<string, unknown>;
+    if (Object.keys(source).some(key => !['playbackRate', 'displayHeight', 'gameTransforms'].includes(key))) {
+      throw new Error('Unknown comparison field');
+    }
+    const playbackRate = source.playbackRate === undefined ? 0.5 : source.playbackRate;
+    const displayHeight = source.displayHeight === undefined ? 2 : source.displayHeight;
+    if (typeof playbackRate !== 'number' || !Number.isFinite(playbackRate) || playbackRate <= 0 || playbackRate > 4
+      || typeof displayHeight !== 'number' || !Number.isFinite(displayHeight) || displayHeight <= 0 || displayHeight > 100) {
+      throw new Error('comparison playbackRate/displayHeight is outside the bounded contract');
+    }
+    let gameTransforms: NonNullable<FitRigJob['comparison']>['gameTransforms'];
+    if (source.gameTransforms !== undefined) {
+      if (!source.gameTransforms || typeof source.gameTransforms !== 'object' || Array.isArray(source.gameTransforms)) {
+        throw new Error('comparison.gameTransforms must be an object');
+      }
+      const transforms = source.gameTransforms as Record<string, unknown>;
+      if (Object.keys(transforms).length !== 3 || ['source', 'fitted', 'template'].some(role => !(role in transforms))) {
+        throw new Error('comparison.gameTransforms requires source, fitted, and template');
+      }
+      gameTransforms = {
+        source: parseGameTransform(transforms.source, 'comparison.gameTransforms.source'),
+        fitted: parseGameTransform(transforms.fitted, 'comparison.gameTransforms.fitted'),
+        template: parseGameTransform(transforms.template, 'comparison.gameTransforms.template'),
+      };
+    }
+    comparison = { playbackRate, displayHeight, gameTransforms };
+  }
+  return (comparison ? { ...job, comparison } : job) as unknown as FitRigJob;
 }
 
 async function loadEmbedded(bytes: Uint8Array): Promise<GLTF> {
@@ -76,7 +139,12 @@ export async function runFitRigJob(job: FitRigJob) {
     const output = exportFittedRigGlb(sourceBytes, fitted, baked);
     const received = await loadEmbedded(output); loaded.push(received);
     const comparison = compareFittedMotion(source.scene, received.scene, clips, received.animations);
-    if (comparison.maximumVertexError > 0.00001) throw new Error(`Fitted vertex equivalence failed: ${comparison.maximumVertexError}`);
+    if (comparison.maximumVertexError > 0.00001) {
+      const worst = comparison.clips.reduce((left, right) => (
+        right.maximumVertexError > left.maximumVertexError ? right : left
+      ));
+      throw new Error(`Fitted vertex equivalence failed: ${JSON.stringify({ worst, clips: comparison.clips })}`);
+    }
     const hash = (bytes: Uint8Array) => createHash('sha256').update(bytes).digest('hex');
     const report = { schema: 'rustsmf-fit-rig-report-v1', status: 'passed', sourceSha256: hash(sourceBytes),
       templateSha256: hash(templateBytes), outputSha256: hash(output), bones: fitted.skeleton.bones.length,

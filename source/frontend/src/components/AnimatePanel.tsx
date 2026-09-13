@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import * as THREE from 'three';
+import RetargetProfileControls, { type RetargetProfileEditorState } from './RetargetProfileControls';
+import type { RetargetProfile } from '../utils/retargetProfile';
 import type { AnimationTimelineSummary } from '../utils/animationTimeline';
 import {
   isAnimationInterpolation,
@@ -60,7 +62,9 @@ interface AnimatePanelProps {
   onMoveClipUp: () => void;
   onMoveClipDown: () => void;
   onCreateAnimation: (request: AnimationCreationRequest) => void;
-  onRetargetAnimations: (files: readonly File[]) => void;
+  onRetargetAnimations: (files: readonly File[], profile?: RetargetProfile) => void;
+  retargetProfileState: RetargetProfileEditorState;
+  onRetargetProfileChange: (value: RetargetProfileEditorState) => void;
   editorMode?: string;
 }
 
@@ -103,6 +107,8 @@ export default function AnimatePanel({
   onMoveClipDown,
   onCreateAnimation,
   onRetargetAnimations,
+  retargetProfileState,
+  onRetargetProfileChange,
   editorMode = 'animate',
 }: AnimatePanelProps) {
   const clipCount = clips.length;
@@ -219,7 +225,7 @@ export default function AnimatePanel({
           <label
             className="outliner-append-action"
             data-testid="animation-retarget-clips"
-            title="Retarget named-bone FBX, GLB, or GLTF clips onto this rig. Opaque numeric rigs require the game-ready CLI's explicit map."
+            title="Retarget named-bone FBX, GLB, or GLTF clips onto this rig. Use a saved profile for explicit numeric bone maps."
           >
             Retarget clips
             <input
@@ -236,6 +242,7 @@ export default function AnimatePanel({
             />
           </label>
         </div>
+        <RetargetProfileControls disabled={!hasSkeleton} onRetarget={onRetargetAnimations} value={retargetProfileState} onChange={onRetargetProfileChange} />
         {!hasSkeleton && <div className="text-slate-500 mt-1">Load a skinned model with bones first.</div>}
       </div>
       <div className="animate-clip-tools" data-testid="animate-clip-tools">

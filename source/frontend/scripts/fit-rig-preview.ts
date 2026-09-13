@@ -27,7 +27,24 @@ export async function startFitRigPreview(directory: string) {
   for (const file of ['build/three.module.js', 'build/three.core.js', 'examples/jsm/loaders/GLTFLoader.js', 'examples/jsm/utils/BufferGeometryUtils.js']) {
     assets.set('/three/' + file, { type: 'application/javascript; charset=utf-8', bytes: await readFile(path.join(vendor, file)) });
   }
-  assets.set('/models.json', { type: 'application/json; charset=utf-8', bytes: new TextEncoder().encode(JSON.stringify({ clips: job.clips })) });
+  const modelDefinitions = [
+    { id: 'source', label: 'Original source', url: '/source.glb', sha256: report.sourceSha256 },
+    { id: 'fitted', label: 'Source on fitted topology', url: '/fitted.glb', sha256: report.outputSha256 },
+    { id: 'template', label: 'Template / target', url: '/template.glb', sha256: report.templateSha256 },
+  ].map(model => ({ ...model, gameTransform: job.comparison?.gameTransforms?.[model.id as 'source' | 'fitted' | 'template'] }));
+  assets.set('/models.json', {
+    type: 'application/json; charset=utf-8',
+    bytes: new TextEncoder().encode(JSON.stringify({
+      schema: 'rustsmf-rig-comparison-v2',
+      clips: job.clips,
+      sampleRateHz: 60,
+      playbackRate: job.comparison?.playbackRate ?? 0.5,
+      displayHeight: job.comparison?.displayHeight ?? 2,
+      mapping: job.mapping,
+      models: modelDefinitions,
+      camera: { fovDegrees: 35, near: 0.01, far: 100, views: ['quad-ortho', 'quarter', 'front', 'side'] },
+    })),
+  });
   const server = createServer((request, response) => {
     const address = server.address(), host = typeof address === 'object' && address ? `127.0.0.1:${address.port}` : '';
     if (request.method === 'GET' && request.headers.host === host && request.url === '/favicon.ico') { response.writeHead(204); response.end(); return; }

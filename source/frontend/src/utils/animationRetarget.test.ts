@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { retargetAnimationClip } from './animationRetarget';
+import type { NaturalMotionProfile } from './naturalRetarget';
 import { buildRigMap } from './rigMapping';
 
 function sourceSkeleton(): THREE.Skeleton {
@@ -390,4 +391,277 @@ test('retargeting can preserve an explicitly configured mapped target rotation',
     assert.ok(rotation.angleTo(new THREE.Quaternion()) < 1e-6);
   }
   assert.deepEqual(result.report.preservedTargetRotations, ['mixamorigSpine2']);
+});
+
+test('retargeting compensates for target-reference motion on unmapped intermediate bones', () => {
+  const sourceHips = new THREE.Bone();
+  sourceHips.name = 'sourceHips';
+  const sourceHead = new THREE.Bone();
+  sourceHead.name = 'sourceHead';
+  sourceHead.position.y = 1;
+  sourceHips.add(sourceHead);
+  sourceHips.updateWorldMatrix(true, true);
+  const source = new THREE.Skeleton([sourceHips, sourceHead]);
+
+  const targetHips = new THREE.Bone();
+  targetHips.name = 'targetHips';
+  const targetSpine = new THREE.Bone();
+  targetSpine.name = 'targetSpine';
+  targetSpine.position.y = 0.5;
+  const targetHead = new THREE.Bone();
+  targetHead.name = 'targetHead';
+  targetHead.position.y = 0.5;
+  const targetAccessory = new THREE.Bone();
+  targetAccessory.name = 'targetAccessory';
+  targetAccessory.position.y = 0.25;
+  const targetFinger = new THREE.Bone();
+  targetFinger.name = 'targetFinger';
+  targetFinger.position.x = 0.25;
+  targetHips.add(targetSpine);
+  targetSpine.add(targetHead);
+  targetHead.add(targetAccessory);
+  targetHead.add(targetFinger);
+  targetHips.updateWorldMatrix(true, true);
+  const target = new THREE.Skeleton([targetHips, targetSpine, targetHead, targetAccessory, targetFinger]);
+  const mapping = buildRigMap(source, target, {
+    manualMap: {
+      sourceHips: 'targetHips',
+      sourceHead: 'targetHead',
+    },
+  });
+
+  const identityValues = [0, 0, 0, 1, 0, 0, 0, 1];
+  const sourceReference = new THREE.AnimationClip('source_idle', 1, [
+    new THREE.QuaternionKeyframeTrack('sourceHips.quaternion', [0, 1], identityValues),
+    new THREE.QuaternionKeyframeTrack('sourceHead.quaternion', [0, 1], identityValues),
+  ]);
+  const action = sourceReference.clone();
+  action.name = 'source_action';
+  const spineReferenceRotation = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 0, 1),
+    Math.PI / 6,
+  );
+  const headReferenceRotation = new THREE.Quaternion().setFromAxisAngle(
+    new THREE.Vector3(0, 0, 1),
+    Math.PI / 18,
+  );
+  const targetReference = new THREE.AnimationClip('target_idle', 1, [
+    new THREE.QuaternionKeyframeTrack('targetSpine.quaternion', [0, 1], [
+      ...spineReferenceRotation.toArray(), ...spineReferenceRotation.toArray(),
+    ]),
+    new THREE.QuaternionKeyframeTrack('targetHead.quaternion', [0, 1], [
+      ...headReferenceRotation.toArray(), ...headReferenceRotation.toArray(),
+    ]),
+    new THREE.QuaternionKeyframeTrack('targetAccessory.quaternion', [0, 1], [
+      ...spineReferenceRotation.toArray(), ...spineReferenceRotation.toArray(),
+    ]),
+  ]);
+
+  const result = retargetAnimationClip(action, source, target, mapping, {
+    applyUpCorrection: false,
+    alignMappedBoneDirections: false,
+    sourceReferencePose: 'clip',
+    sourceReferenceClip: sourceReference,
+    targetReferenceClip: targetReference,
+    targetChainCurls: [{
+      palmBone: 'targetHead',
+      bones: ['targetFinger'],
+      palmNormal: [0, 0, 1],
+      degrees: [60],
+    }],
+  });
+  const headTrack = result.clip.tracks.find((track) => track.name === 'targetHead.quaternion');
+  const spineTrack = result.clip.tracks.find((track) => track.name === 'targetSpine.quaternion');
+  const accessoryTrack = result.clip.tracks.find((track) => track.name === 'targetAccessory.quaternion');
+  const fingerTrack = result.clip.tracks.find((track) => track.name === 'targetFinger.quaternion');
+  assert.ok(headTrack);
+  assert.ok(spineTrack);
+  assert.equal(accessoryTrack, undefined);
+  assert.ok(fingerTrack);
+  const outputHeadLocal = new THREE.Quaternion().fromArray(headTrack!.values, 0).normalize();
+  const outputSpineLocal = new THREE.Quaternion().fromArray(spineTrack!.values, 0).normalize();
+  const expectedHeadWorld = spineReferenceRotation.clone().multiply(headReferenceRotation).normalize();
+  assert.ok(outputSpineLocal.clone().multiply(outputHeadLocal).angleTo(expectedHeadWorld) < 1e-6);
+  assert.ok(outputSpineLocal.angleTo(spineReferenceRotation) < 1e-6);
+  assert.ok(outputHeadLocal.angleTo(headReferenceRotation) < 1e-6);
+  const outputFingerLocal = new THREE.Quaternion().fromArray(fingerTrack!.values, 0).normalize();
+  const expectedFingerLocal = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 3);
+  assert.ok(outputFingerLocal.angleTo(expectedFingerLocal) < 1e-6);
+  assert.deepEqual(result.report.targetChainCurls, [{
+    palmBone: 'targetHead',
+    bones: ['targetFinger'],
+    palmNormal: [0, 0, 1],
+    degrees: [60],
+  }]);
+  assert.throws(() => retargetAnimationClip(action, source, target, mapping, {
+    targetChainCurls: [{
+      palmBone: 'targetSpine',
+      bones: ['targetHead'],
+      palmNormal: [0, 0, 1],
+      degrees: [30],
+    }],
+  }), /Cannot curl mapped target bone targetHead/);
+  assert.throws(() => retargetAnimationClip(action, source, target, mapping, {
+    targetChainCurls: [{
+      palmBone: 'targetHead',
+      bones: ['targetFinger'],
+      palmNormal: [0, 0, 1],
+      degrees: [],
+    }],
+  }), /must provide one angle per bone/);
+  assert.throws(() => retargetAnimationClip(action, source, target, mapping, {
+    targetChainCurls: [{
+      palmBone: 'targetHead',
+      bones: ['targetFinger'],
+      palmNormal: [Number.NaN, 0, 1],
+      degrees: [60],
+    }],
+  }), /must contain finite components/);
+});
+
+test('natural retargeting is deterministic across helper ancestors, torso, legs, and sole contacts', () => {
+  const sourceHelper = new THREE.Bone();
+  sourceHelper.name = 'joint-4';
+  const sourceHips = new THREE.Bone();
+  sourceHips.name = 'joint-5';
+  sourceHips.position.y = 2;
+  const sourceSpine = new THREE.Bone();
+  sourceSpine.name = 'joint-6';
+  sourceSpine.position.y = 1;
+  sourceHelper.add(sourceHips);
+  sourceHips.add(sourceSpine);
+  const sourceBones = [sourceHelper, sourceHips, sourceSpine];
+  for (const [hipName, kneeName, ankleName, x] of [
+    ['joint-19', 'joint-20', 'joint-22', 0.3],
+    ['joint-24', 'joint-25', 'joint-27', -0.3],
+  ] as const) {
+    const hip = new THREE.Bone();
+    hip.name = hipName;
+    hip.position.x = x;
+    const knee = new THREE.Bone();
+    knee.name = kneeName;
+    knee.position.set(0, -0.8, 0.08);
+    const ankle = new THREE.Bone();
+    ankle.name = ankleName;
+    ankle.position.set(0, -0.8, -0.08);
+    sourceHips.add(hip);
+    hip.add(knee);
+    knee.add(ankle);
+    sourceBones.push(hip, knee, ankle);
+  }
+  sourceHelper.updateWorldMatrix(true, true);
+  const source = new THREE.Skeleton(sourceBones);
+
+  const targetHips = new THREE.Bone();
+  targetHips.name = 'mixamorigHips';
+  targetHips.position.y = 2;
+  const targetSpine = new THREE.Bone();
+  targetSpine.name = 'mixamorigSpine';
+  targetSpine.position.y = 0.3;
+  const targetSpine1 = new THREE.Bone();
+  targetSpine1.name = 'mixamorigSpine1';
+  targetSpine1.position.y = 0.3;
+  const targetSpine2 = new THREE.Bone();
+  targetSpine2.name = 'mixamorigSpine2';
+  targetSpine2.position.y = 0.4;
+  targetHips.add(targetSpine);
+  targetSpine.add(targetSpine1);
+  targetSpine1.add(targetSpine2);
+  const targetBones = [targetHips, targetSpine, targetSpine1, targetSpine2];
+  for (const [hipName, kneeName, ankleName, x] of [
+    ['mixamorigLeftUpLeg', 'mixamorigLeftLeg', 'mixamorigLeftFoot', 0.25],
+    ['mixamorigRightUpLeg', 'mixamorigRightLeg', 'mixamorigRightFoot', -0.25],
+  ] as const) {
+    const hip = new THREE.Bone();
+    hip.name = hipName;
+    hip.position.x = x;
+    const knee = new THREE.Bone();
+    knee.name = kneeName;
+    knee.position.set(0, -0.75, 0.06);
+    const ankle = new THREE.Bone();
+    ankle.name = ankleName;
+    ankle.position.set(0, -0.75, -0.06);
+    targetHips.add(hip);
+    hip.add(knee);
+    knee.add(ankle);
+    targetBones.push(hip, knee, ankle);
+  }
+  targetHips.updateWorldMatrix(true, true);
+  const target = new THREE.Skeleton(targetBones);
+  const mapping = buildRigMap(source, target, {
+    manualMap: {
+      'joint-5': 'mixamorigHips',
+      'joint-6': 'mixamorigSpine2',
+      'joint-19': 'mixamorigLeftUpLeg',
+      'joint-20': 'mixamorigLeftLeg',
+      'joint-22': 'mixamorigLeftFoot',
+      'joint-24': 'mixamorigRightUpLeg',
+      'joint-25': 'mixamorigRightLeg',
+      'joint-27': 'mixamorigRightFoot',
+    },
+  });
+  assert.equal(mapping.ok, true);
+  const helperTurn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 12);
+  const action = new THREE.AnimationClip('natural_test', 2 / 60, [
+    new THREE.QuaternionKeyframeTrack('joint-4.quaternion', [0, 2 / 60], [
+      0, 0, 0, 1, ...helperTurn.toArray(),
+    ]),
+  ]);
+  const sourceReference = new THREE.AnimationClip('source_reference', 2 / 60, [
+    new THREE.QuaternionKeyframeTrack('joint-4.quaternion', [0, 2 / 60], [0, 0, 0, 1, 0, 0, 0, 1]),
+  ]);
+  const targetReference = new THREE.AnimationClip('target_reference', 2 / 60, [
+    new THREE.QuaternionKeyframeTrack('mixamorigHips.quaternion', [0, 2 / 60], [0, 0, 0, 1, 0, 0, 0, 1]),
+  ]);
+  const naturalMotion: NaturalMotionProfile = {
+    torso: { targetBones: ['mixamorigSpine', 'mixamorigSpine1', 'mixamorigSpine2'] },
+    legs: {
+      left: {
+        hip: 'mixamorigLeftUpLeg', knee: 'mixamorigLeftLeg', ankle: 'mixamorigLeftFoot',
+        soleOffset: [0, -0.08, 0.04], pole: [0, 0, 1], minBendDegrees: 0.01,
+        maxBendDegrees: 150, maxPelvisCorrection: 0.2,
+      },
+      right: {
+        hip: 'mixamorigRightUpLeg', knee: 'mixamorigRightLeg', ankle: 'mixamorigRightFoot',
+        soleOffset: [0, -0.08, 0.04], pole: [0, 0, 1], minBendDegrees: 0.01,
+        maxBendDegrees: 150, maxPelvisCorrection: 0.2,
+      },
+    },
+    contacts: {
+      natural_test: [
+        { foot: 'left', startFrame: 0, endFrame: 2, blendFrames: 1 },
+        { foot: 'right', startFrame: 0, endFrame: 2, blendFrames: 1 },
+      ],
+    },
+    legMotionLimits: {
+      natural_test: {
+        maximumForwardDegrees: 50,
+        maximumBackwardDegrees: 40,
+        maximumLateralDegrees: 20,
+        minimumSwingBendDegrees: 12,
+      },
+    },
+  };
+  const run = () => retargetAnimationClip(action, source, target, mapping, {
+    applyUpCorrection: false,
+    sampleRateHz: 60,
+    sourceReferencePose: 'clip',
+    sourceReferenceClip: sourceReference,
+    targetReferenceClip: targetReference,
+    naturalMotion,
+  });
+  const first = run();
+  const second = run();
+  assert.deepEqual(
+    first.clip.tracks.map((track) => [track.name, [...track.times], [...track.values]]),
+    second.clip.tracks.map((track) => [track.name, [...track.times], [...track.values]]),
+  );
+  assert.ok(first.report.naturalMotion?.torso?.effectiveWeights.every(
+    (weight, index) => Math.abs(weight - [0.3, 0.3, 0.4][index]) < 1e-12,
+  ));
+  assert.equal(first.report.naturalMotion?.contacts.length, 2);
+  assert.equal(first.report.naturalMotion?.legMotionLimit?.maximumBackwardDegrees, 40);
+  assert.ok(first.clip.tracks.some((track) => track.name === 'mixamorigSpine.quaternion'));
+  assert.ok(first.clip.tracks.some((track) => track.name === 'mixamorigLeftLeg.quaternion'));
+  assert.ok(first.clip.tracks.every((track) => !track.name.endsWith('.scale')));
 });

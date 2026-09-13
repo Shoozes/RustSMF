@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { isThreeSkinnedMesh } from './threeTypeGuards';
 import { getSkinnedVertexWorldPosition } from './skinnedVertexPosition';
+import { boundedFloat32SampleTime } from './fittedRigTiming';
 
 export interface SkinValidationSummary {
   mesh: string;
@@ -136,11 +137,13 @@ function sampleDeformation(
   for (const clip of clips) {
     const mixer = new THREE.AnimationMixer(root);
     const action = mixer.clipAction(clip);
+    action.setLoop(THREE.LoopOnce, 1);
+    action.clampWhenFinished = true;
     action.play();
     try {
       const times = [0, clip.duration * 0.25, clip.duration * 0.5, clip.duration * 0.75, clip.duration];
       for (const time of times) {
-        mixer.setTime(time);
+        mixer.setTime(boundedFloat32SampleTime(time, clip.duration));
         root.updateMatrixWorld(true);
         const bounds = new THREE.Box3();
         let sampledVertices = 0;

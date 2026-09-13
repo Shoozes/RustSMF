@@ -24,6 +24,13 @@ test('comparison serves only hash-bound inputs and executable viewer modules', a
       assert.equal(response.headers.get('x-content-type-options'), 'nosniff'); await response.arrayBuffer();
     }
     assert.equal((await fetch(preview.url + '/source.glb')).status, 200);
+    const manifest = await (await fetch(preview.url + '/models.json')).json();
+    assert.equal(manifest.schema, 'rustsmf-rig-comparison-v2');
+    assert.deepEqual(manifest.mapping, { a: 'b' });
+    assert.deepEqual(manifest.camera.views, ['quad-ortho', 'quarter', 'front', 'side']);
+    assert.deepEqual(manifest.models.map((model: { id: string; sha256: string }) => [model.id, model.sha256]), [
+      ['source', hash], ['fitted', hash], ['template', hash],
+    ]);
     assert.equal((await fetch(preview.url + '/job.json')).status, 404);
     assert.equal((await fetch(preview.url + '/source.glb', { method: 'POST' })).status, 404);
     assert.equal((await fetch(preview.url + '/three/not-allowed.js')).status, 404);

@@ -2,27 +2,20 @@
 
 Last reviewed: 2026-09-13
 
-## P1 — Prove same-topology retarget motion fidelity before fighter acceptance
+## P1 — Compare alternate fighter rigs after rejecting the conditioned Wolf motion
 
-Current implementation: `fittedRig.ts` fits explicit mapped bind-world frames to
-the template hierarchy and prepares loss-checked replacement skin indices without
-changing input geometry or weights. Focused tests and both typechecks pass.
-The actual private Mario input remaps all 960 vertices across 18 meshes to
-the 28-bone Wolf topology, with 18 mapped frames and maximum matrix error
-4.44e-16. This is static bind-fit evidence only for the actual private models.
-Animation baking and GLB stream preservation now have focused utility tests;
-actual exported Mario vertex equivalence now passes all 37 clips at sampled
-60 Hz frames. The public saved-job `fit-rig` CLI now reproduces that evidence and
-rejects overwriting existing output. `fit-rig-preview` now supplies the three-state
-visual comparison; actual Chrome captures cover idle, jab contact/recovery, walk,
-special, jump and damage from front/side views. Source and fitted Mario match;
-wolf silhouette and actual-game acceptance remain pending operator review.
-Exact evidence is in HISTORY.md and usage is in APP_STATE.md.
+Current implementation: import/export, exact fitted-source comparison, immutable
+publication, target-length natural retargeting, contact/leg diagnostics, and the
+receiving-game timing/runtime lanes pass. The latest conditioned Wolf candidate
+removed the nearly horizontal left-leg pose and showed no obvious sampled
+self-intersection, but the operator rejected the full video because the left leg
+still reads stiff and the overall motion is not show-ready. This is a visual
+motion-quality blocker, not a broken import/export or texture path.
 
-- What: Build a local three-state comparison for the original Mario mesh/rig with untouched clips, Mario re-expressed on a Mixamo topology fitted and rebound to Mario proportions, and Wolf on that same topology. Compare unconditioned idle, walk, jab, special, jump, and damage sequences at identical source frames before any clip-specific recovery or direction conditioning.
-- Why: Actual gameplay review superseded the earlier sampled-pose acceptance. The preserved Wolf candidate has correct side mapping and timing but measured normalized segment mismatches, so target bone lengths, rest frames, skin weights, or runtime transforms can still amplify otherwise correct rotations and produce visibly wrong motion.
-- Where: `source/frontend/src/utils/rigMapping.ts`, `source/frontend/src/utils/rigCompatibility.ts`, `source/frontend/src/utils/animationRetarget.ts`, `source/frontend/src/utils/gameReadyValidation.ts`, `source/frontend/scripts/game-ready-cli.ts`, their focused unit tests, and the receiving game's existing model wrapper.
-- When: P1, before further hand-tuned clip conditioning or any show-ready/final fighter acceptance claim.
-- How: Preserve the private Mario source and animation timing byte-for-byte; fit the shared topology to Mario without applying root changes that could hide a receiving-engine pitch defect; transfer/rebind weights explicitly; emit normalized bone-direction, joint-endpoint, segment-length, and skin-weight diagnostics; then compare the three states in Quad orthographic and receiving-game views using one frame schedule and camera convention.
-- Done when: The fitted Mario state matches the original Mario poses within explicit joint-endpoint and silhouette tolerances for every named sequence; Wolf discrepancies are classified to axes, proportions, weights, source damage, or runtime transforms; no sampled pose visibly self-clips; and the resulting artifact receives explicit gameplay acceptance rather than inferred acceptance from isolated screenshots.
-- Verification: Focused rig-fit/rebind units prove hierarchy, inverse binds, weights, source clip hashes, timestamps, and partial-frame bounds; the game-ready CLI completes load-back/deformation/embedded-resource checks; deterministic same-frame Quad contact sheets cover every named sequence; and receiving-game playback uses only its declared uniform scale and ground translation while logging any separate model-pitch correction.
+- What: Obtain legally usable Melee and/or Brawl reference exports and compare their skeleton topology, rest pose, proportions, locomotion curves, and deformation against the current source and Wolf target before choosing the next motion source/model track.
+- Why: More target-local clamping can make the current retarget numerically safe while also making it stiffer. The full video proved that passing contacts, angle limits, fixed-rate playback, and sampled Quad frames is insufficient for acceptable continuous character motion.
+- Where: `source/frontend/src/utils/animationRetarget.ts`, `naturalRetarget.ts`, `source/frontend/src/rig-comparison/*`, the immutable rejected generation recorded in `HISTORY.md`, and a private comparison workspace outside committed source routes.
+- When: P1, before any further hand-tuned Wolf gait changes or a claim that the fighter is show-ready.
+- How: Export each authorized reference to a format RustSMF can load, validate revision/tool compatibility, then compare identical locomotion frames in Quad with translucent mesh, mapped-bone colors, and hip/knee/ankle planes. Measure pelvis-local stride, knee bend, foot contact, root travel, and continuous loop cadence. Treat reconstructed gameplay as behavioral reference only, not an original-asset equivalence oracle. Choose the smallest source/model change that improves the full loop without losing game contracts.
+- Done when: Melee and Brawl are each explicitly accepted, rejected, or unavailable with source/revision evidence; at least one complete locomotion loop is compared against the current rejected candidate; the selected direction has an owned/legal asset and exact import/export path; continuous video shows natural left-leg motion without self-clipping; and the receiving game reruns structure, contacts, attachments, KO/reset/checkpoint, actual-browser, native/WASM, and 30/60/120/144 Hz presenter checks.
+- Verification: Retain generation/model hashes, a same-frame Quad receipt sequence, the full-loop video decision, and receiving-game command results. A green numeric report without operator acceptance is not completion.

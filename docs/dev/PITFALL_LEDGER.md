@@ -1,6 +1,92 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-09-13 (game-ready bounded input, additive-operation freshness, material cleanup, retarget timing/proportion evidence, lazy native-bridge loading, and context routing).
+Last reviewed: 2026-09-13 (proportion-sensitive leg transfer, portable profiles, and diagnostic viewer evidence).
+
+### Q: What pitfall are we preventing?
+
+**What:** Correct source/target side mapping and finite world-direction transfer can still produce a target leg that swings nearly horizontal or clips the body when the rigs have materially different proportions and rest frames.
+
+**Context and constraints:** The target keeps its authored bone lengths, skin weights, reference twist, calibrated sole points, and planted-foot contacts. Locomotion conditioning must be generic, clip-scoped, measurable, and inactive at full contact rather than replacing the target rig or hiding the issue with a model-wide pitch.
+
+**Why it happened:** The retargeter transferred a valid source hip-to-ankle world direction to a much longer/narrower target silhouette. Import, export, left/right identity, texture orientation, and contact locking all passed, but the unconstrained swing direction was anatomically implausible for the target. A single midpoint screenshot had not covered the bad late-walk frame.
+
+**Where:** `source/frontend/src/utils/naturalRetarget.ts`, `animationRetarget.ts`, `gameReadyJob.ts`, their focused tests, and `source/frontend/src/rig-comparison/*`.
+
+**Evidence:** The rejected walk frame measured about -70.45 degrees sagittal and 17.02 degrees lateral in target-pelvis space. The corrected frame 24 hip-to-foot vector is approximately `[-0.1106, -0.3052, -0.1577]`; the sampled Quad sequence and bone/opacity/joint-plane overlay show a downward bent leg with no visible self-intersection. The receiving game passed all 37 roles, 3,108 attachment samples, native/WebAssembly playback, actual Chrome, and fixed 30/60/120/144 Hz schedules with the byte-identical corrected model. The full-loop video still failed operator acceptance because the left leg reads stiff, proving those technical checks are necessary but not sufficient motion-quality evidence.
+
+**How to catch it:** Measure requested and solved pelvis-local sagittal/lateral angles for both legs across every locomotion frame, assert a minimum swing bend outside contact, and inspect the complete Quad sequence with mapped bones, translucent mesh, and the selected knee plane. Keep contact residual and unreachable diagnostics at zero; do not infer acceptance from side mapping or one sampled frame.
+
+**Current solution:** `legMotionLimits` provides validated per-clip forward, backward, lateral, and minimum-swing-bend bounds. Direction limits fade by inverse contact weight so a planted sole remains authoritative. Reports count constrained samples and maximum requested angles per side, while the strict viewer supplies the visual joint-plane evidence. This closes the horizontal/self-intersection failure mode but does not make the rejected gait show-ready.
+
+**Decision rationale:** Target-pelvis-local limits address the proportion mismatch at its semantic boundary and remain portable across receiving transforms. Switching source-model generations or adding a global pitch would restart acceptance without fixing the demonstrated algorithmic cause.
+
+**Effectiveness:** `78/100`, durable as a safety/diagnostic bound but insufficient as a motion-quality solution for the rejected Wolf gait. Other rigs require explicit calibrated profiles, full-loop video, and gameplay acceptance.
+
+**Next prevention step:** Any new natural-motion locomotion profile must include full-frame angle/bend/contact evidence, Quad review, and accepted continuous-loop video before it is selected by a receiving game. Compare the Melee/Brawl motion and skeleton candidates before adding more clamps to this track.
+
+### Q: What pitfall are we preventing?
+
+**What:** Individually staged and synchronized output files can still expose a mixed game-ready generation after a failure or concurrent producer run.
+
+**Context and constraints:** The local producer emits a GLB plus normalized job, resolved mapping, validation report, and manifest for a receiving game. Existing generations and private inputs must remain immutable; consumers need one identity that binds producer/source and every role-tagged input without relying on file timestamps or directory enumeration order.
+
+**Why it happened:** Atomic replacement of each sibling protected file bytes but not the collection. A consumer could observe a new model beside an old report, and retrying the same output names could overwrite evidence that had already been consumed.
+
+**Where:** `source/frontend/src/utils/gameReadyGeneration.ts`, `gameReadyGeneration.test.ts`, `gameReadyJob.ts`, `source/frontend/scripts/game-ready-producer.ts`, and `game-ready-cli.ts`.
+
+**Evidence:** Failure injection at model, job, mapping, report, and manifest publication steps leaves prior generation bytes and inputs unchanged. Two attempts with the same canonical binding produce the same generation ID; the second fails instead of replacing the directory. Successful tests verify every manifest hash and update the optional current pointer only after the complete generation exists. Producer identity now hashes the executable local dependency list and package manifests, preventing an imported-helper change from retaining an older identity. The receiving game independently reconstructed and verified both the selected package and the final producer-equivalent generation.
+
+**Developer story:** The original CLI already staged, synchronized, and replaced each file, so single-file corruption was not the issue. Reviewing the consumer boundary exposed that no operation committed the set together. Binding canonical producer/input identity, staging the complete directory with the manifest last, and renaming it once established a collection-level visibility boundary; rejecting an existing content ID preserved consumed evidence and made races fail closed.
+
+**How to catch it:** Inject a failure after each staged artifact, race two publishers with the same canonical binding, reverse input order and include canonically equivalent Unicode names, then assert prior generations and source inputs are byte-identical. Validate every manifest hash from the published directory, confirm the pointer names only an existing direct-child generation, and update the producer dependency list whenever a new local runtime import enters the CLI graph.
+
+**Solutions tried:**
+
+1. `54/100` Stage and atomically replace each output file, result: each file is valid but the set can be mixed and prior evidence can be overwritten.
+2. `72/100` Write a manifest after sibling replacements, result: the manifest detects drift but does not make the sibling set immutable or one-step visible.
+3. `98/100` Derive a canonical content identity, stage/fsync the full generation with manifest last, rename the directory once, reject existing IDs, and replace the pointer afterward, result: consumers see a complete immutable set and competing attempts fail safely.
+
+**Current solution:** `publishGameReadyGeneration` owns canonical binding, normalized artifact hashes, staged-file durability, the single directory visibility boundary, and post-publication current-pointer replacement. `game-ready-producer.ts` binds the executable local sources and package manifests. The v2 job constrains the pointer to the generation root.
+
+**Decision rationale:** A content-addressed directory is the smallest boundary that makes the whole export atomic to consumers. Overwriting versioned folders or treating a manifest checksum failure as normal recovery would retain ambiguous ownership.
+
+**Effectiveness:** `98/100`, durable. Focused failure/race/ordering/hash tests and an independent game consumer validate both sides; final filesystem durability still depends on the host filesystem honoring file and directory synchronization semantics.
+
+**Relevance check:** Current. Any multi-file export, cache, package, or game handoff can repeat the same collection-atomicity mistake.
+
+**Next prevention step:** Keep manifest and competing-publication tests in the default unit gate and require consumers to select by generation ID or the validated current pointer, never by newest timestamp.
+
+### Q: What pitfall are we preventing?
+
+**What:** A float32 animation timestamp that rounds onto the terminal can make an ordinary rational sample look like the terminal, causing either a false fidelity failure or a silently skipped final grid pose.
+
+**Context and constraints:** Fitted-rig export uses 60 Hz STEP keys and a float32 next-down output policy for frame-indexed consumers. Verification must compare every requested regular frame plus the exact clip terminal, require exact clip identity/duration, and restore both scenes after each probe.
+
+**Why it happened:** One generic sampling helper was applied to both sides. For a duration such as `0.6666666865`, rational `40/60` and its source float32 representation can round to the terminal, while the fitted next-down key is intentionally before it. Comparing both with the source policy selected different STEP poses and reported a false error of about 2.86 world units.
+
+**Where:** `source/frontend/src/utils/fittedRigTiming.ts`, `fittedRigAnimation.ts`, `fittedRigVerification.ts`, `fitRigJob.test.ts`, and `fittedRig.test.ts`.
+
+**Evidence:** The actual fit first failed only at the fractional terminal boundary. Separating source float32 sampling from fitted requested-rational sampling completed 233/233 samples with zero rejection and maximum error `6.091180994014376e-7`. Focused tests now fail for a terminal-only displacement, shortened duration, delayed final key, missing clip, and ordinary-grid displacement.
+
+**Developer story:** Bind fit, mesh identity, and most animation frames already matched, so a broad retarget rewrite was not supported by the evidence. The worst-sample report isolated one fractional terminal. Inspecting the source key, requested rational time, float32 conversion, and next-down output key showed two legitimate but asymmetric timing contracts. An explicit grid-plus-terminal schedule and side-specific samplers fixed the false comparison without loosening tolerance or dropping coverage.
+
+**How to catch it:** Use a fractional duration whose final regular frame is adjacent to the terminal. Assert the schedule includes each regular rational time and one exact terminal, duration is checked within the bounded float32 tolerance, requested equals completed, rejected is zero, and a terminal-only corruption is still detected with the correct worst time/vertex.
+
+**Solutions tried:**
+
+1. `31/100` Sample both source and fitted clips with source float32 times, result: an upward-rounded source time aliases the terminal while the fitted next-down key remains on the prior pose.
+2. `42/100` Increase the vertex tolerance or omit the terminal-adjacent grid sample, result: hides real endpoint corruption and weakens completeness.
+3. `98/100` Share one explicit grid-plus-terminal schedule but apply the declared source and fitted timing policies independently, result: exact coverage passes and deliberate grid/terminal failures remain visible.
+
+**Current solution:** `fittedRigTiming.ts` owns the duration tolerance, schedule, source float32 sample time, and fitted requested-rational sample time. Verification rejects clip drift and incomplete sampling and reports the complete worst-sample context.
+
+**Decision rationale:** The two representations serve different consumers and are both intentional. Making their policies explicit preserves production timing while keeping verification strict; a looser tolerance or minimum-duration intersection would only disguise the boundary.
+
+**Effectiveness:** `98/100`, durable. Actual-model evidence and focused positive/negative tests cover the observed failure and adjacent regressions with no runtime dependency.
+
+**Relevance check:** Current. Any fixed-rate STEP bake, terminal clamp, duration edit, or cross-format float timestamp comparison can reintroduce this aliasing.
+
+**Next prevention step:** Route all fitted export/verification schedules through `fittedRigTiming.ts` and require a fractional-terminal regression for any timing-policy change.
 
 ### Q: What pitfall are we preventing?
 
