@@ -2,6 +2,45 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-13 - Review6 timing, contact and reference closeout
+
+Fixed exact output-frame mapping before float32 source evaluation. Regressions
+exercise the real retargeter at the 62-frame/two-cycle boundary, nonuniform
+landmark holds and adjacent STEP keys while preserving next-down output times.
+Natural contacts now accept independent ramp overrides and explicit terminal
+plant continuity into the same-foot opening pin. Tests cover root-relative
+travel, loop position/orientation, malformed intervals and protected solved legs.
+Optional local reference calibration preserves animated quaternion deltas rather
+than freezing wrists or widening limits; strict profile import/export/reapply
+uses the shared parser. Sparse quaternion arrays now fail validation.
+
+Private slow-v1 failed its seam check (0.128 m). Slow-v2 generation d1cc48f6,
+model cdb08091, passed 91 exact-frame receiver samples with zero unsupported or
+penetrating samples; maximum endpoint displacement was 0.000125 m. The game
+owner's 1x front/side playback confirmed improved frame-22 support with retained
+swing, not full fighter acceptance. Jab-reference-v1 generation 5efc4a88, model
+50a47e2a, passed 19 samples/17 joints with unchanged angular limits after measured
+bind-to-idle wrist correction. These immutable outputs predate final producer
+validation edits and remain diagnostic comparisons, not a final receiving recipe.
+Middle/fast, other actions, coherent final metadata and moving-host acceptance
+remain in TODO. No private model, job, screenshot or video is published.
+
+Closeout proof on Windows/PowerShell 7, Node 26.5.0 and Rust 1.98.1, based on
+5b120ae plus this reviewed source diff: 41 focused tests passed. The first
+`run.ps1 -Task verify` passed 439 frontend tests, 10 Rust tests, lint, both
+typechecks, production build, Rust fmt/clippy/check and integrity checks; only
+the default context budget failed (52.4/52 KiB). Removed duplicated documentation
+routing instead of raising the budget. `run.ps1 -Task context` then passed:
+37 groups, 51.9 KiB default, zero warnings. Logs are under
+`output/verification/review6-closeout-{focused,verify,context,browser}.log`.
+The complete browser gate (`run.ps1 -Task test:e2e -NoGenEye`) passed all 98 tests
+in 54.8 seconds, exit 0, including calibrated profile export/reapply/undo.
+No RustSMF-owned app/test/preview PID remained afterward. Codex tool processes
+and the game owner's independent frozen-artifact comparison session were preserved.
+Final `run.ps1 -Task verify` passed, exit 0, after the context repair; receipt:
+`output/verification/review6-closeout-final-verify.log`. Closing-session review
+authorizes guarded main publication of application code, not fighter acceptance.
+
 ## 2026-09-13 — Ankle heading follow-up after d86718d
 
 The game user's explicit feet/ankles review found an orientation conflict:

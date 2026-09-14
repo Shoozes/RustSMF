@@ -26,19 +26,27 @@ export function validateRetargetVisualTiming(value: RetargetVisualTiming): void 
 
 /** Output frame grid is independent of source cadence; references remain unchanged. */
 export function retargetSourceTime(time: number, sourceDuration: number, timing: RetargetVisualTiming): number {
+  return sourceTimeAtFrame(time * 60, sourceDuration, timing);
+}
+
+/** Fixed-rate bakes map exact frame identities before float32 source evaluation. */
+export function retargetSourceFrameTime(frame: number, sourceDuration: number, timing: RetargetVisualTiming): number {
+  if (!Number.isInteger(frame)) throw new Error('Retarget output frame must be an integer.');
+  return sourceTimeAtFrame(frame, sourceDuration, timing);
+}
+
+function sourceTimeAtFrame(frame: number, sourceDuration: number, timing: RetargetVisualTiming): number {
   validateRetargetVisualTiming(timing);
-  const duration = timing.durationFrames / 60;
-  if (!Number.isFinite(time) || time < 0 || !Number.isFinite(sourceDuration) || sourceDuration <= 0) {
+  if (!Number.isFinite(frame) || frame < 0 || !Number.isFinite(sourceDuration) || sourceDuration <= 0) {
     throw new Error('Invalid retarget sampling time.');
   }
-  if (time >= duration) return sourceDuration;
+  if (frame >= timing.durationFrames) return sourceDuration;
   if (timing.landmarks) {
-    const frame=time*60;
     for (let i=1;i<timing.landmarks.length;i++) {
       const a=timing.landmarks[i-1],b=timing.landmarks[i];
       if (frame<=b.outputFrame) return (a.sourcePhase+(b.sourcePhase-a.sourcePhase)*(frame-a.outputFrame)/(b.outputFrame-a.outputFrame))*sourceDuration;
     }
   }
-  const phase = time / duration * timing.cycles;
-  return (phase - Math.floor(phase)) * sourceDuration;
+  const cycleFrames = timing.durationFrames / timing.cycles;
+  return (frame % cycleFrames) / cycleFrames * sourceDuration;
 }

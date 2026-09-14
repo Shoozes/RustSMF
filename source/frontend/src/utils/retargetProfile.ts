@@ -85,6 +85,7 @@ export function profileClipOptions(profile: RetargetProfile, sourceClip: THREE.A
     targetChainCurls: job.targetChainCurls,
     naturalMotion: job.naturalMotion,
     poseRanges: job.poseRanges,
+    localReferenceCorrections: job.localReferenceCorrections,
     poseRecovery: job.clipPoseRecovery?.[sourceClip.name],
     scaleRootMotion: job.scaleRootMotion,
     extractRootMotionBone: job.extractRootMotionBone,

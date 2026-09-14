@@ -32,6 +32,105 @@ function targetSkeleton(): THREE.Skeleton {
   return new THREE.Skeleton([hips, torso]);
 }
 
+test('visual timing maps integer cycle starts before float32 source sampling', () => {
+  const source = sourceSkeleton(), target = targetSkeleton();
+  const mapping = buildRigMap(source, target, { manualMap: { 'joint-5': 'mixamorigHips', 'joint-6': 'mixamorigSpine2' } });
+  const clip = new THREE.AnimationClip('cycle', 1, [
+    new THREE.VectorKeyframeTrack('joint-4.position', [0, .5, 1], [0, 0, 0, 2, 0, 0, 9, 0, 0], THREE.InterpolateDiscrete),
+  ]);
+  const result = retargetAnimationClip(clip, source, target, mapping, {
+    applyUpCorrection: false, scaleRootMotion: false, sampleRateHz: 60,
+    interpolation: 'step', nextDownRationalTimes: true,
+    visualTiming: { durationFrames: 62, cycles: 2 },
+  });
+  const track = result.clip.tracks.find(t => t.name === 'mixamorigHips.position')!;
+  assert.ok(Math.fround(31 / 60) < 31 / 60);
+  assert.equal(track.values[30 * 3], 2);
+  assert.equal(track.values[31 * 3], 0, 'Interior cycle begins at source zero');
+  assert.equal(track.values[62 * 3], 9, 'Final endpoint retains terminal-only motion');
+  assert.ok(Array.from(track.times).every((time, frame) => time <= frame / 60));
+});
+
+test('visual landmarks and holds select exact adjacent STEP poses and terminal motion', () => {
+  const source = sourceSkeleton(), target = targetSkeleton();
+  const mapping = buildRigMap(source, target, { manualMap: { 'joint-5': 'mixamorigHips', 'joint-6': 'mixamorigSpine2' } });
+  const clip = new THREE.AnimationClip('landmarks', 1, [
+    new THREE.VectorKeyframeTrack('joint-4.position', [0, .5 - 2 ** -25, .5, .5 + 2 ** -24, 1],
+      [0, 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 9, 0, 0], THREE.InterpolateDiscrete),
+  ]);
+  const result = retargetAnimationClip(clip, source, target, mapping, {
+    applyUpCorrection: false, scaleRootMotion: false, sampleRateHz: 60,
+    interpolation: 'step', nextDownRationalTimes: true,
+    visualTiming: { durationFrames: 31, cycles: 1, landmarks: [
+      { outputFrame: 0, sourcePhase: 0 }, { outputFrame: 7, sourcePhase: .5 },
+      { outputFrame: 11, sourcePhase: .5 }, { outputFrame: 31, sourcePhase: 1 },
+    ] },
+  });
+  const track = result.clip.tracks.find(t => t.name === 'mixamorigHips.position')!;
+  assert.equal(track.values[6 * 3], 0);
+  for (let frame = 7; frame <= 11; frame++) assert.equal(track.values[frame * 3], 2);
+  assert.equal(track.values[12 * 3], 3);
+  assert.equal(track.values[31 * 3], 9);
+  assert.ok(Array.from(track.times).every((time, frame) => time <= frame / 60));
+});
+
+test('visual mapping rounds source STEP precision only after a downward-rounded output landmark', () => {
+  const source = sourceSkeleton(), target = targetSkeleton();
+  const mapping = buildRigMap(source, target, { manualMap: { 'joint-5': 'mixamorigHips', 'joint-6': 'mixamorigSpine2' } });
+  const key = Math.fround(1 / 60), ulp = 2 ** -29;
+  const clip = new THREE.AnimationClip('source-precision', 1, [
+    new THREE.VectorKeyframeTrack('joint-4.position', [0, key - ulp, key, key + ulp, 1],
+      [0, 0, 0, 1, 0, 0, 2, 0, 0, 3, 0, 0, 9, 0, 0], THREE.InterpolateDiscrete),
+  ]);
+  const result = retargetAnimationClip(clip, source, target, mapping, {
+    applyUpCorrection: false, scaleRootMotion: false, sampleRateHz: 60,
+    interpolation: 'step', nextDownRationalTimes: true,
+    visualTiming: { durationFrames: 63, cycles: 1, landmarks: [
+      { outputFrame: 0, sourcePhase: 0 }, { outputFrame: 31, sourcePhase: 1 / 60 },
+      { outputFrame: 40, sourcePhase: 1 / 60 }, { outputFrame: 63, sourcePhase: 1 },
+    ] },
+  });
+  const track = result.clip.tracks.find(t => t.name === 'mixamorigHips.position')!;
+  assert.equal(track.values[30 * 3], 0);
+  for (let frame = 31; frame <= 40; frame++) assert.equal(track.values[frame * 3], 2);
+  assert.equal(track.values[41 * 3], 3);
+  assert.equal(track.values[63 * 3], 9);
+});
+
+test('local reference correction preserves animated deltas and unrelated tracks', () => {
+  const source = sourceSkeleton(), target = targetSkeleton();
+  const mapping = buildRigMap(source, target, { manualMap: { 'joint-5': 'mixamorigHips', 'joint-6': 'mixamorigSpine2' } });
+  const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), .8);
+  const clip = new THREE.AnimationClip('reference', 1, [
+    new THREE.QuaternionKeyframeTrack('joint-6.quaternion', [0, 1], [0, 0, 0, 1, ...q.toArray()]),
+    new THREE.VectorKeyframeTrack('joint-5.position', [0, 1], [0, 1, 0, 1, 1, 0]),
+  ]);
+  const options = { applyUpCorrection: false, alignMappedBoneDirections: false, sampleRateHz: 60 };
+  const original = retargetAnimationClip(clip, source, target, mapping, options);
+  const to = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), .3);
+  const corrected = retargetAnimationClip(clip, source, target, mapping, { ...options,
+    localReferenceCorrections: { mixamorigSpine2: { from: [0, 0, 0, 1], to: to.toArray() } },
+  });
+  for (let i = 0; i < original.clip.tracks.length; i++) {
+    const a = original.clip.tracks[i], b = corrected.clip.tracks[i];
+    assert.deepEqual(a.times, b.times);
+    if (a.name !== 'mixamorigSpine2.quaternion') { assert.deepEqual(a.values, b.values); continue; }
+    for (let offset = 0; offset < a.values.length; offset += 4) {
+      const qa = new THREE.Quaternion().fromArray(a.values, offset).normalize();
+      const qb = new THREE.Quaternion().fromArray(b.values, offset).normalize();
+      assert.ok(qb.angleTo(to.clone().multiply(qa)) < 1e-6);
+      if (offset >= 4) {
+        const da = new THREE.Quaternion().fromArray(a.values, offset - 4).normalize().invert().multiply(qa);
+        const db = new THREE.Quaternion().fromArray(b.values, offset - 4).normalize().invert().multiply(qb);
+        assert.ok(da.angleTo(db) < 1e-6, 'Every relative animation delta remains unchanged');
+      }
+    }
+  }
+  assert.throws(() => retargetAnimationClip(clip, source, target, mapping, { ...options,
+    localReferenceCorrections: { missing: { from: [0, 0, 0, 1], to: [0, 0, 0, 1] } },
+  }), /emitted rotation/);
+});
+
 test('retargeting samples unmapped helper ancestors into mapped target motion', () => {
   const source = sourceSkeleton();
   const target = targetSkeleton();
@@ -738,6 +837,53 @@ test('natural retargeting is deterministic across helper ancestors, torso, legs,
   const turning=new THREE.AnimationClip('turning',1/60,[
     new THREE.QuaternionKeyframeTrack('joint-5.quaternion',[0,1/60],[0,0,0,1,0,Math.sin(.3),0,Math.cos(.3)]),
   ]);
+  const wrappedNatural: NaturalMotionProfile = { ...naturalMotion,
+    rootTravelPerFrame: { natural_test: [0, 0, .01] },
+    contacts: { natural_test: [
+      { foot: 'left', startFrame: 0, endFrame: 1, blendFrames: 0 },
+      { foot: 'left', startFrame: 3, endFrame: 4, blendFrames: 0, wrapToStart: true },
+      { foot: 'right', startFrame: 0, endFrame: 4, blendFrames: 0 },
+    ] },
+  };
+  const wrappedOptions = { applyUpCorrection: false, sampleRateHz: 60, sourceReferencePose: 'clip' as const,
+    sourceReferenceClip: sourceReference, targetReferenceClip: targetReference, naturalMotion: wrappedNatural };
+  const wrappedAction = action.clone(); wrappedAction.duration = 4 / 60;
+  const wrapped = retargetAnimationClip(wrappedAction, source, target, mapping, wrappedOptions);
+  const loopMixer = new THREE.AnimationMixer(targetHips);
+  const loopSaved = targetBones.map(bone => ({ bone, position: bone.position.clone(), quaternion: bone.quaternion.clone() }));
+  try {
+    const loopAction = loopMixer.clipAction(wrapped.clip); loopAction.setLoop(THREE.LoopOnce, 1); loopAction.clampWhenFinished = true; loopAction.play();
+    const orientations: THREE.Quaternion[] = [];
+    const soles = [0, 1 / 60, 3 / 60, 4 / 60].map(time => {
+      loopMixer.setTime(time); targetHips.updateWorldMatrix(true, true);
+      const foot = targetBones.find(bone => bone.name === 'mixamorigLeftFoot')!;
+      orientations.push(foot.getWorldQuaternion(new THREE.Quaternion()));
+      return new THREE.Vector3(...wrappedNatural.legs.left.soleOffset).applyMatrix4(foot.matrixWorld);
+    });
+    assert.ok(soles[0].distanceTo(soles[3]) < 1e-6, 'Wrapped sole closes the local loop');
+    assert.ok(orientations[0].angleTo(orientations[3]) < 1e-6, 'Sole orientation closes the loop');
+    assert.ok(Math.abs(soles[2].z - soles[3].z - .01) < 1e-6, 'Terminal plant retains declared root-relative travel');
+    assert.ok(soles[1].clone().add(new THREE.Vector3(0, 0, .01)).distanceTo(soles[0]) < 1e-6, 'Next first step stays locked under declared root travel');
+  } finally {
+    loopMixer.stopAllAction(); loopMixer.uncacheRoot(targetHips);
+    loopSaved.forEach(({ bone, position, quaternion }) => { bone.position.copy(position); bone.quaternion.copy(quaternion); });
+    targetHips.updateWorldMatrix(true, true);
+  }
+  assert.throws(() => retargetAnimationClip(wrappedAction, source, target, mapping, { ...wrappedOptions,
+    localReferenceCorrections: { mixamorigLeftFoot: { from: [0, 0, 0, 1], to: [0, 0, 0, 1] } },
+  }), /invalidate solved leg/);
+  const wrapContacts = wrappedNatural.contacts!.natural_test;
+  for (const contacts of [wrapContacts.slice(1),
+    [...wrapContacts, { ...wrapContacts[0] }],
+    wrapContacts.map((contact, index) => index === 0 ? { ...contact, positionMode: 'plane' as const } : contact),
+    wrapContacts.map((contact, index) => index === 0 ? { ...contact, orientationMode: 'animated-heading' as const } : contact),
+  ]) {
+    assert.throws(() => retargetAnimationClip(wrappedAction, source, target, mapping, { ...wrappedOptions,
+      naturalMotion: { ...wrappedNatural, contacts: { natural_test: contacts } },
+    }), /Wrapped contact/);
+  }
+  wrappedNatural.contacts!.natural_test[1].endFrame = 3;
+  assert.throws(() => retargetAnimationClip(wrappedAction, source, target, mapping, wrappedOptions), /terminal\/planted/);
   for(const positionMode of ['plane','planted'] as const){
     const headingResult=retargetAnimationClip(turning,source,target,mapping,{
       applyUpCorrection:false,scaleRootMotion:false,sampleRateHz:60,

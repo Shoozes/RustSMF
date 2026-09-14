@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import type { RigMapDecision, RigMapResult } from './rigMapping';
+import { parseLocalReferenceCorrections, type LocalReferenceCorrection } from './retargetReference';
 import {auditPoseRanges,poseRangeSummary,type PoseRangeProfile,type PoseRangeReport} from './poseRanges';
-import {retargetSourceTime,validateRetargetVisualTiming,type RetargetVisualTiming} from './retargetTiming';
+import {retargetSourceFrameTime,validateRetargetVisualTiming,type RetargetVisualTiming} from './retargetTiming';
 import {
   alignNaturalAnatomicalFrame,
   calibratedNaturalBend,
@@ -10,6 +11,7 @@ import {
   limitNaturalLegDirection,
   naturalSolePoint,
   naturalFootHeading,
+  naturalContactRamp,
   resolveNaturalContactPose,
   solveNaturalTwoBoneLeg,
   solveNaturalPelvisCorrection,
@@ -58,6 +60,7 @@ export interface AnimationRetargetOptions {
   targetChainCurls?: TargetChainCurl[];
   naturalMotion?: NaturalMotionProfile;
   poseRanges?: PoseRangeProfile;
+  localReferenceCorrections?: Record<string, LocalReferenceCorrection>;
   poseRecovery?: PoseRecoveryEnvelope;
 }
 
@@ -90,6 +93,7 @@ export interface AnimationRetargetReport {
   targetChainCurls: TargetChainCurl[];
   naturalMotion: NaturalMotionReport | null;
   poseRanges?: PoseRangeReport;
+  localReferenceCorrections?: Record<string, LocalReferenceCorrection>;
   poseRecovery: PoseRecoveryEnvelope | null;
 }
 
@@ -158,6 +162,7 @@ interface PreparedNaturalMotion {
   legs: Record<NaturalFootSide, PreparedNaturalLeg>;
   contacts: Array<{
     key: string;
+    loopStartKey?: string;
     contact: NaturalFootContact;
     diagnostic: NaturalContactDiagnostic;
   }>;
@@ -611,14 +616,31 @@ function prepareNaturalMotion(
     if (contact.endFrame >= sampleCount) {
       throw new Error(`Natural motion ${clipName} ${contact.foot}-foot contact ends after frame ${sampleCount - 1}.`);
     }
+    const openingIndex = (profile.contacts?.[clipName] ?? []).findIndex(candidate => candidate.foot === contact.foot && candidate.startFrame === 0);
+    if (contact.wrapToStart !== undefined && typeof contact.wrapToStart !== 'boolean') throw new Error('Contact wrapToStart must be boolean.');
+    if (contact.wrapToStart && (contact.startFrame === 0 || contact.endFrame !== sampleCount - 1 || contact.positionMode === 'plane' || openingIndex < 0)) {
+      throw new Error('Wrapped contact must be terminal/planted and have a same-foot opening interval.');
+    }
+    if (contact.wrapToStart) {
+      const opening = profile.contacts![clipName][openingIndex];
+      if (profile.contacts![clipName].filter(candidate => candidate.foot === contact.foot && candidate.startFrame === 0).length !== 1
+        || (opening.orientationMode ?? 'reference') !== (contact.orientationMode ?? 'reference')) {
+        throw new Error('Wrapped contact requires one opening interval with matching orientation policy.');
+      }
+      if (opening.positionMode === 'plane' || contactBlendWeight(0, opening) !== 1 || contactBlendWeight(contact.endFrame, contact) !== 1) {
+        throw new Error('Wrapped contact requires full-weight planted support at both loop endpoints.');
+      }
+    }
+    const ramp = naturalContactRamp(contact);
     return {
       key: `${clipName}:${contact.foot}:${index}`,
+      loopStartKey: contact.wrapToStart ? `${clipName}:${contact.foot}:${openingIndex}` : undefined,
       contact,
       diagnostic: {
         ...contact,
         clip: clipName,
-        fullWeightStartFrame: contact.startFrame + Math.max(0, contact.blendFrames - 1),
-        fullWeightEndFrame: contact.endFrame - Math.max(0, contact.blendFrames - 1),
+        fullWeightStartFrame: ramp.fullWeightStartFrame,
+        fullWeightEndFrame: ramp.fullWeightEndFrame,
         maximumResidual: 0,
         maximumResidualFrame: null,
         maximumPelvisCorrection: 0,
@@ -916,7 +938,7 @@ export function retargetAnimationClip(
   try {
     for (let frameIndex = 0; frameIndex < evaluationTimes.length; frameIndex += 1) {
       const time = options.visualTiming
-        ? retargetSourceTime(evaluationTimes[frameIndex], clip.duration, options.visualTiming)
+        ? Math.min(clip.duration, Math.fround(retargetSourceFrameTime(frameIndex, clip.duration, options.visualTiming)))
         : evaluationTimes[frameIndex];
       restoreRestState(sourceRest);
       evaluateTracks(sampled, time);
@@ -1116,6 +1138,15 @@ export function retargetAnimationClip(
             );
             let pin = contactPins.get(contact.key);
             const planeContact = contact.contact.positionMode === 'plane';
+            if (!pin && contact.loopStartKey) {
+              const opening = contactPins.get(contact.loopStartKey);
+              if (!opening) throw new Error('Wrapped contact opening pin is missing.');
+              pin = {
+                sole: opening.sole.clone().addScaledVector(new THREE.Vector3(...contact.diagnostic.rootTravelPerFrame), contact.contact.endFrame - contact.contact.startFrame),
+                quaternion: opening.quaternion.clone(),
+              };
+              contactPins.set(contact.key, pin);
+            }
             if (!pin || planeContact) {
               pin = {
                 sole: naturalSole.clone().setComponent(1, grounding?.groundHeight ?? prepared.referenceSolePoint.y),
@@ -1396,6 +1427,20 @@ export function retargetAnimationClip(
     }
   }
 
+  const localReferenceCorrections = parseLocalReferenceCorrections(options.localReferenceCorrections);
+  for (const [bone, calibration] of Object.entries(localReferenceCorrections)) {
+    const values = quaternionValues.get(bone);
+    if (!values) throw new Error(`Local reference correction requires an emitted rotation track for ${bone}.`);
+    const correctedBone = targetReference.get(bone)!.bone;
+    if (naturalMotion && Object.values(naturalMotion.legs).some(leg => leg.targetAnkle.bone === correctedBone || isBoneDescendantOf(leg.targetAnkle.bone, correctedBone))) {
+      throw new Error(`Local reference correction for ${bone} would invalidate solved leg/contact diagnostics.`);
+    }
+    const offset = new THREE.Quaternion(...calibration.to).normalize()
+      .multiply(new THREE.Quaternion(...calibration.from).normalize().invert());
+    for (let frame = 0; frame < outputTimes.length; frame++) {
+      new THREE.Quaternion().fromArray(values, frame * 4).premultiply(offset).normalize().toArray(values, frame * 4);
+    }
+  }
   const tracks: THREE.KeyframeTrack[] = [];
   for (const [targetName, values] of quaternionValues) {
     const track = new THREE.QuaternionKeyframeTrack(
@@ -1431,6 +1476,7 @@ export function retargetAnimationClip(
     report: {
       sourceClip: clip.name || '(unnamed)',
       poseRanges,
+      localReferenceCorrections,
       targetClip: targetName,
       duration: outputDuration,
       visualTiming: options.visualTiming ? {...options.visualTiming,sourceDuration:clip.duration} : undefined,

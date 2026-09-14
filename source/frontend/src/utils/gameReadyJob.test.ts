@@ -240,3 +240,15 @@ test('ground-plane intervals round trip explicitly and reject unknown contact mo
   natural.contacts={Walk:[{foot:'left',positionMode:'floating',startFrame:0,endFrame:10,blendFrames:1}]};
   assert.throws(()=>parseGameReadyJob(job,paths),/positionMode/);
 });
+
+test('asymmetric contact overrides round trip and malformed ramps fail closed', () => {
+  const job = validJob();
+  const natural = (job.rig as { retarget: { naturalMotion: Record<string, unknown> } }).retarget.naturalMotion;
+  const contact = { foot: 'left', startFrame: 0, endFrame: 8, blendFrames: 3, blendInFrames: 0, blendOutFrames: 4 };
+  natural.contacts = { Walk: [contact] };
+  assert.deepEqual(parseGameReadyJob(job, paths).rig.retarget!.naturalMotion!.contacts!.Walk[0], contact);
+  for (const invalid of [-1, 1.5, NaN, '2', null, 100]) {
+    natural.contacts = { Walk: [{ ...contact, blendOutFrames: invalid }] };
+    assert.throws(() => parseGameReadyJob(job, paths), /integer|full-weight/);
+  }
+});

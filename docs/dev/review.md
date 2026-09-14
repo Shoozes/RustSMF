@@ -2,29 +2,23 @@
 
 Last reviewed: 2026-09-13
 
-Integrity repairs pass the full verification and browser gates. Current contracts
+Current contracts
 belong in [APP_STATE.md](APP_STATE.md), executable
 acceptance conditions in [TODO.md](TODO.md), and dated proof in
-[HISTORY.md](HISTORY.md#2026-09-13---integrity-and-source-format-review).
+[HISTORY.md](HISTORY.md).
 
 ## Current findings
 
-- Narrowed over-budget context routes without raising generation ceilings. The
-  final full gate passes. Fixed malformed UTF-8 in app-state documentation and
-  added a durable-doc encoding regression.
-- Pose-review now rejects ambiguous bone/clip identities before loader renaming
-  can hide them; real CLI tests cover failure, output preservation and repeatability.
-- Brawl rest-reference motion was selected, but subsequent fighter candidates
-  remain visually unaccepted. Opt-in animated-heading contacts correct the reviewed
-  ankle yaw conflict while preserving the reference default. Remaining body flags,
-  the slow-walk frame 22 support gap, changing-speed contacts
-  and continuous-motion acceptance remain open. Numeric passes do not prove no-clipping.
+- Integer-frame source mapping fixes cycle/landmark STEP boundaries. Optional
+  asymmetric ramps, cyclic planted pins and local reference calibration share
+  strict job/profile validation and regression tests.
+- Slow-v2 closes the measured whole-loop support gap; game front/side playback
+  confirms a narrow handoff improvement. Jab reference calibration passes unchanged
+  ranges while retaining wrist motion. Middle/fast, other action flags, coherent
+  final recipe metadata and moving-host visual acceptance remain open.
 - Both supplied Mixamo archives contain Collada. Only the with-skin archive has
   geometry and a skin controller. DAE/ZIP are unsupported inputs, not a demonstrated
   import regression; the user guide and format tests make this boundary explicit.
-- No production TODO/FIXME/unimplemented marker was found in the inspected frontend
-  or Rust source. Rust expect calls are test assertions. Relative import and Rust
-  module checks passed. This does not imply every runtime edge case is proven.
 
 Completed implementation narratives are retained in HISTORY rather than repeated
 here. [HUMANOID_POSE_REVIEW.md](HUMANOID_POSE_REVIEW.md) owns the angular-review

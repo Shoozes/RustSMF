@@ -6,6 +6,8 @@ import type {
 import { MAX_MODEL_RESOURCE_FILES } from './modelResourceBundle';
 import {validateRetargetVisualTiming,type RetargetVisualTiming} from './retargetTiming';
 import {parsePoseRangeProfile,type PoseRangeProfile} from './poseRanges';
+import { naturalContactRamp } from './naturalRetarget';
+import { parseLocalReferenceCorrections, type LocalReferenceCorrection } from './retargetReference';
 import type { LogicalAttachmentRole } from './rigMapping';
 import type {
   NaturalFootContact,
@@ -38,6 +40,7 @@ export interface RetargetJob {
   targetChainCurls?: TargetChainCurl[];
   naturalMotion?: NaturalMotionProfile;
   poseRanges?: PoseRangeProfile;
+  localReferenceCorrections?: Record<string, LocalReferenceCorrection>;
   clipPreserveTargetRotations?: Record<string, string[]>;
   clipPoseRecovery?: Record<string, PoseRecoveryEnvelope>;
   scaleRootMotion?: boolean;
@@ -285,7 +288,7 @@ function naturalContactMap(value: unknown, label: string): Record<string, Natura
     }
     const contacts = entries.map((entry, index): NaturalFootContact => {
       const contact = objectValue(entry, `${label}.${clipName}[${index}]`);
-      rejectUnknownFields(contact, ['foot', 'positionMode', 'orientationMode', 'startFrame', 'endFrame', 'blendFrames'], `${label}.${clipName}[${index}]`);
+      rejectUnknownFields(contact, ['foot', 'positionMode', 'orientationMode', 'startFrame', 'endFrame', 'blendFrames', 'blendInFrames', 'blendOutFrames', 'wrapToStart'], `${label}.${clipName}[${index}]`);
       if (contact.positionMode !== undefined && contact.positionMode !== 'planted' && contact.positionMode !== 'plane') {
         fail(`${label}.${clipName}[${index}].positionMode must be planted or plane.`);
       }
@@ -304,12 +307,18 @@ function naturalContactMap(value: unknown, label: string): Record<string, Natura
       const endFrame = contact.endFrame as number;
       const blendFrames = contact.blendFrames as number;
       if (endFrame < startFrame) fail(`${label}.${clipName}[${index}] requires startFrame <= endFrame.`);
-      if ((2 * blendFrames) > (endFrame - startFrame + 1)) {
+      if (contact.blendInFrames === undefined && contact.blendOutFrames === undefined && (2 * blendFrames) > (endFrame - startFrame + 1)) {
         fail(`${label}.${clipName}[${index}].blendFrames leaves no full-weight contact frame.`);
       }
-      return { foot: contact.foot, startFrame, endFrame, blendFrames,
+      const parsed: NaturalFootContact = { foot: contact.foot, startFrame, endFrame, blendFrames,
+        ...(contact.wrapToStart === undefined ? {} : { wrapToStart: optionalBoolean(contact.wrapToStart, 'contact.wrapToStart') }),
+        ...(contact.blendInFrames === undefined ? {} : { blendInFrames: contact.blendInFrames as number }),
+        ...(contact.blendOutFrames === undefined ? {} : { blendOutFrames: contact.blendOutFrames as number }),
         ...(contact.positionMode === undefined ? {} : {positionMode:contact.positionMode}),
         ...(contact.orientationMode === undefined ? {} : {orientationMode:contact.orientationMode}) };
+      naturalContactRamp(parsed);
+      if (parsed.wrapToStart && (parsed.startFrame === 0 || parsed.positionMode === 'plane')) fail('Wrapped contact requires a later planted interval.');
+      return parsed;
     });
     for (const foot of ['left', 'right'] as const) {
       const ordered = contacts.filter((contact) => contact.foot === foot).sort((a, b) => a.startFrame - b.startFrame);
@@ -531,7 +540,7 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
       'alignMappedBoneDirections', 'directionTransfer', 'directionTransferBones',
       'clipDirectionTransfer', 'clipDirectionTransferBones', 'sourceReferencePose',
       'sourceReferenceClip', 'targetReferenceClip', 'preserveTargetLeafRotations',
-      'preserveTargetRotations', 'targetChainCurls', 'naturalMotion', 'poseRanges',
+      'preserveTargetRotations', 'targetChainCurls', 'naturalMotion', 'poseRanges', 'localReferenceCorrections',
       'clipPreserveTargetRotations', 'clipPoseRecovery', 'scaleRootMotion', 'sampleRateHz',
       'interpolation', 'nextDownRationalTimes', 'extractRootMotionBone', 'clipVisualTiming', 'replaceClips',
     ], 'job.rig.retarget');
@@ -576,6 +585,7 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
       ),
       naturalMotion: naturalMotionProfile(source.naturalMotion, 'job.rig.retarget.naturalMotion'),
       poseRanges: source.poseRanges === undefined ? undefined : parsePoseRangeProfile(source.poseRanges),
+      localReferenceCorrections: parseLocalReferenceCorrections(source.localReferenceCorrections),
       clipPreserveTargetRotations: stringArrayMap(source.clipPreserveTargetRotations, 'job.rig.retarget.clipPreserveTargetRotations'),
       clipPoseRecovery: poseRecoveryMap(source.clipPoseRecovery, 'job.rig.retarget.clipPoseRecovery'),
       scaleRootMotion: optionalBoolean(source.scaleRootMotion, 'job.rig.retarget.scaleRootMotion'),

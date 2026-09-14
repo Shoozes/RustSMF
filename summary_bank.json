@@ -184,6 +184,8 @@
         "source/frontend/src/components/RetargetProfileControls.tsx",
         "source/frontend/src/utils/retargetProfile.ts",
         "source/frontend/src/utils/retargetProfile.test.ts",
+        "source/frontend/src/utils/retargetReference.ts",
+        "source/frontend/src/utils/retargetReference.test.ts",
         "source/frontend/src/utils/retargetTiming.ts",
         "source/frontend/src/utils/retargetTiming.test.ts",
         "source/frontend/tests/retarget-profile.spec.ts"

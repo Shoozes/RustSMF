@@ -64,3 +64,10 @@ profiles can explicitly select `orientationMode: animated-heading`; this keeps
 sole tilt constrained while retaining yaw from the transferred foot. A planted
 contact captures yaw on entry, while a plane contact follows animated yaw. The
 range checker remains read-only: it neither adds this option nor widens limits.
+
+Retarget profiles may explicitly apply `localReferenceCorrections` keyed by bone,
+each with unit-quaternion `from` and `to` arrays. The constant local offset is
+applied after recovery and before angular audit, preserving relative animated
+rotation deltas, not freezing the joint. Solved ankles and their ancestors are
+protected. Calibration requires source/reference evidence; passing the resulting
+ranges does not prove skin or visual acceptance.

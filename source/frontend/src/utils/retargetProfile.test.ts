@@ -31,6 +31,16 @@ test('browser profile keeps explicit mapping, references and per-clip overrides 
   assert.throws(() => profileClipOptions(profile, walk, [idle, walk], []), /missing reference clip wolf_source_idle/);
 });
 
+test('portable local reference corrections roundtrip into shared clip options', () => {
+  const input = document();
+  const corrections = { mixamorigHead: { from: [0, 0, 0, 1], to: [0, 1, 0, 0] } };
+  const profile = parseRetargetProfile(JSON.stringify({ ...input, retarget: { ...input.retarget, localReferenceCorrections: corrections } }));
+  assert.deepEqual(parseRetargetProfile(JSON.stringify(profile)), profile);
+  const idle = new THREE.AnimationClip('idle', 1, []), walk = new THREE.AnimationClip('walk', 1, []);
+  const target = new THREE.AnimationClip('wolf_source_idle', 1, []);
+  assert.deepEqual(profileClipOptions(profile, walk, [idle, walk], [target]).localReferenceCorrections, corrections);
+});
+
 test('browser profile reuses strict job validation and rejects ignored settings', () => {
   const valid = document();
   assert.throws(() => parseRetargetProfile(JSON.stringify({ ...valid, ignored: true })), /Unknown/);

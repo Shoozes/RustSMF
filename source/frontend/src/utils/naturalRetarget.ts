@@ -34,6 +34,11 @@ export interface NaturalFootContact {
   endFrame: number;
   /** Frames used for each linear lock/unlock ramp; zero means a hard lock. */
   blendFrames: number;
+  /** Optional asymmetric ramps; omission retains the symmetric blendFrames. */
+  blendInFrames?: number;
+  blendOutFrames?: number;
+  /** Terminal planted interval continues into the same foot's opening interval. */
+  wrapToStart?: boolean;
 }
 
 export interface NaturalLegMotionLimits {
@@ -280,10 +285,21 @@ export function lengthNormalizedWeights(
 
 export function contactBlendWeight(frame: number, contact: NaturalFootContact): number {
   if (frame < contact.startFrame || frame > contact.endFrame) return 0;
-  if (contact.blendFrames === 0) return 1;
-  const rampIn = (frame - contact.startFrame + 1) / contact.blendFrames;
-  const rampOut = (contact.endFrame - frame + 1) / contact.blendFrames;
+  const { blendInFrames, blendOutFrames } = naturalContactRamp(contact);
+  const rampIn = blendInFrames === 0 ? 1 : (frame - contact.startFrame + 1) / blendInFrames;
+  const rampOut = blendOutFrames === 0 ? 1 : (contact.endFrame - frame + 1) / blendOutFrames;
   return THREE.MathUtils.clamp(Math.min(rampIn, rampOut), 0, 1);
+}
+
+export function naturalContactRamp(contact: NaturalFootContact) {
+  const blendInFrames = contact.blendInFrames === undefined ? contact.blendFrames : contact.blendInFrames;
+  const blendOutFrames = contact.blendOutFrames === undefined ? contact.blendFrames : contact.blendOutFrames;
+  if (![contact.startFrame, contact.endFrame, contact.blendFrames, blendInFrames, blendOutFrames]
+    .every(value => Number.isSafeInteger(value) && value >= 0)) throw new Error('Contact ramps require non-negative integer frames.');
+  const fullWeightStartFrame = contact.startFrame + Math.max(0, blendInFrames - 1);
+  const fullWeightEndFrame = contact.endFrame - Math.max(0, blendOutFrames - 1);
+  if (fullWeightEndFrame < fullWeightStartFrame) throw new Error('Contact ramp leaves no full-weight contact frame.');
+  return { blendInFrames, blendOutFrames, fullWeightStartFrame, fullWeightEndFrame };
 }
 
 function reachForBend(firstLength: number, secondLength: number, bendRadians: number): number {

@@ -32,6 +32,7 @@ const SOURCE_FILES = [
   'source/frontend/src/utils/naturalRetarget.ts',
   'source/frontend/src/utils/poseRanges.ts',
   'source/frontend/src/utils/retargetProfile.ts',
+  'source/frontend/src/utils/retargetReference.ts',
   'source/frontend/src/utils/retargetTiming.ts',
   'source/frontend/src/utils/rigCompatibility.ts',
   'source/frontend/src/utils/rigMapping.ts',

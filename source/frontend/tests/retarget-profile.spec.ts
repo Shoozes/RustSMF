@@ -16,7 +16,8 @@ test('saved profile import, strict errors, export and retarget are visible and u
   const profile = { $schema: 'rustsmf.retarget-profile.v1', targetClipNames: { FixtureBend: 'Target Reference' },
     retarget: { manualMap: { FixtureRoot: 'FixtureRoot', FixtureTip: 'FixtureTip' },
       clips: ['Source Motion'], sourceReferencePose: 'clip', sourceReferenceClip: 'Source Motion', targetReferenceClip: 'FixtureBend',
-      interpolation: 'step', sampleRateHz: 60, applyUpCorrection: false } };
+      interpolation: 'step', sampleRateHz: 60, applyUpCorrection: false,
+      localReferenceCorrections: { FixtureTip: { from: [0, 0, 0, 1], to: [0, Math.sin(.1), 0, Math.cos(.1)] } } } };
   await page.getByTestId('retarget-profile-import').setInputFiles({ name: 'profile.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(profile)) });
   const editor = page.getByTestId('retarget-profile-json');
   await expect(editor).toContainText('Target Reference');

@@ -78,7 +78,14 @@ point. Optional contact `orientationMode: animated-heading` levels the sole whil
 preserving foot yaw: a plant captures its entry heading and a plane follows it.
 The default reference orientation remains unchanged. Degenerate heading extraction
 retains the previous valid heading with reference fallback. Explicit visual-timing
-landmarks map output frames to source phases.
+landmarks map integer output frames to source phases before float32 source sampling;
+direct-source and next-down output-key policies remain separate.
+Contacts accept `blendInFrames`/`blendOutFrames` overrides of `blendFrames`.
+Terminal planted `wrapToStart` reuses one same-foot opening pin with matching
+orientation and full-weight endpoints, including declared root travel.
+Opt-in `localReferenceCorrections` maps bone names to unit-quaternion `from`/`to`
+pairs. A constant local offset preserves animated deltas before range review;
+corrections to solved ankles or their ancestors fail closed. Defaults are unchanged.
 
 ### Export and validation
 
@@ -110,7 +117,7 @@ landmarks map output frames to source phases.
 | `src/utils/modelSurfaceAuthoring.ts` | Guarded static append surface operations: transforms, named material assignment, winding reversal, and geometry-attribute preparation. |
 | `src/utils/materialRepair.ts`, `glbContainer.ts` | Strict reference-material matching, failure-safe resource preparation, and portable embedded-GLB texture/timing checks. |
 | `src/utils/rigMapping.ts`, `rigCompatibility.ts`, `animationRetarget.ts`, `naturalRetarget.ts` | Explicit rig mapping, normalized rest-proportion comparison, rest/reference-relative clip transfer, and pure target-length/contact/leg-limit policy. |
-| `src/utils/retargetProfile.ts`, `src/components/RetargetProfileControls.tsx` | Strict portable profile normalization plus the collapsed import/edit/export/reapply surface; complete jobs are reduced to path-free profile settings before reuse. |
+| `src/utils/retargetProfile.ts`, `retargetReference.ts`, `src/components/RetargetProfileControls.tsx` | Strict path-free profiles, local rotation calibration, and import/edit/export/reapply. |
 | `src/utils/gameReadyJob.ts`, `gameReadyValidation.ts` | Pure v2 job-schema validation and sampled skin/rig/clip/deformation checks. |
 | `src/utils/gameReadyGeneration.ts`, `scripts/game-ready-producer.ts` | Canonical producer/input binding, executable-dependency source identity, immutable generation publication, manifest hashing, and current-pointer replacement. |
 | `scripts/game-ready-cli.ts`, `bounded-file-read.ts` | Same-handle bounded local input, end-to-end job composition, and normalized mapping/report generation. |
@@ -191,14 +198,8 @@ The latest review links the dated command results and any observed limitations i
 
 ## Documentation and Context Ownership
 
-- `README.md`: concise project entry and primary commands.
-- `docs/user/README.md`: user-facing workflows and format limits.
-- `docs/dev/APP_STATE.md`: current app and architecture contract.
-- `docs/dev/TODO.md`: prioritized executable work with What/Why/Where/When/How/Subtasks/Done when/Verification.
-- `docs/dev/review.md`: latest integrity-pass findings and a link to dated command evidence.
-- `docs/dev/PITFALL_LEDGER.md`: durable regression-prevention stories.
-- `source/frontend/tests/README.md`: test ownership and fixture policy.
-- `summary_bank.json`: focused file routes; it is not a progress log or backlog.
+[Developer Docs](README.md) owns durable-document routing and update rules.
+The context bank routes files, not progress or backlog entries.
 
 ## Fitted-rig diagnostic boundary
 

@@ -1,6 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {retargetSourceTime,validateRetargetVisualTiming} from './retargetTiming';
+import {retargetSourceTime,retargetSourceFrameTime,validateRetargetVisualTiming} from './retargetTiming';
+
+test('integer output frames preserve all admitted cycle boundaries without epsilon', () => {
+  for (const durationFrames of [14, 40, 62, 3600]) {
+    const timing = { durationFrames, cycles: 2 };
+    assert.equal(retargetSourceFrameTime(durationFrames / 2, 1, timing), 0);
+    assert.equal(retargetSourceFrameTime(durationFrames, 1, timing), 1);
+  }
+  assert.throws(() => retargetSourceFrameTime(.5, 1, { durationFrames: 62, cycles: 2 }), /integer/);
+  assert.throws(() => retargetSourceFrameTime(-1, 1, { durationFrames: 62, cycles: 2 }), /Invalid/);
+});
 
 test('explicit visual cadence repeats on the output grid and retains the terminal source sample', () => {
   const timing={durationFrames:40,cycles:2},sourceDuration=26/60;

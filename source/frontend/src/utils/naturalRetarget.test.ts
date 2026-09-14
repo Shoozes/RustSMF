@@ -9,6 +9,7 @@ import {
   limitNaturalLegDirection,
   naturalSolePoint,
   naturalFootHeading,
+  naturalContactRamp,
   resolveNaturalContactPose,
   solveNaturalTwoBoneLeg,
   solveNaturalPelvisCorrection,
@@ -98,6 +99,17 @@ test('level sole retains animated heading for either side and a rotated referenc
     const singular=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.PI).multiply(reference);
     assert.ok(naturalFootHeading(singular,reference,expected).angleTo(expected)<1e-7);
   }
+});
+
+test('asymmetric contact ramps retain boundary support and an outgoing fade', () => {
+  const outgoing = { foot: 'left' as const, startFrame: 0, endFrame: 6, blendFrames: 3, blendInFrames: 0 };
+  const incoming = { foot: 'right' as const, startFrame: 2, endFrame: 9, blendFrames: 3, blendOutFrames: 0 };
+  assert.deepEqual(Array.from({ length: 7 }, (_, f) => contactBlendWeight(f, outgoing)), [1, 1, 1, 1, 1, 2 / 3, 1 / 3]);
+  for (let frame = 0; frame <= 9; frame++) assert.equal(Math.max(contactBlendWeight(frame, outgoing), contactBlendWeight(frame, incoming)), 1);
+  assert.equal(naturalContactRamp(incoming).fullWeightEndFrame, 9);
+  assert.equal(naturalContactRamp(incoming).fullWeightStartFrame, 4);
+  assert.throws(() => naturalContactRamp({ ...incoming, blendInFrames: NaN }), /integer/);
+  assert.throws(() => naturalContactRamp({ ...incoming, blendOutFrames: 20 }), /full-weight/);
 });
 
 test('direction limits handle the upward hemisphere and preserve zero-weight input', () => {
