@@ -13,6 +13,11 @@ Receiving checks are hash- and transition-specific, not blanket motion acceptanc
 Remaining visual and transition conditions live in `TODO.md`; completed proof
 lives in `HISTORY.md`.
 
+Caller-owned jobs: fight-game-study stores wolf mappings, selected clips, cast
+endpoints and visual-acceptance decisions. RustSMF does not own those results.
+A mechanism request must name the input/output contract and a bounded proving
+fixture that does not require Fighter Lab metadata or a combat runtime.
+
 ## Product Contract
 
 ### Launch and model lifecycle

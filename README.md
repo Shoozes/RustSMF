@@ -2,6 +2,16 @@
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, and OBJ models.
 
+## Three-way ownership
+
+| Responsibility | Owner |
+| --- | --- |
+| Fighter definitions, moves, contact expectations, candidate selection and game visual acceptance | fight-game-study |
+| Import/export, rig inspection, skin editing, retargeting, generic pose constraints, animation sampling and reproducible asset processing | **this repository** |
+| Scheduling, hosts, packages, scene/prefab execution and target delivery | GaimEngine |
+
+Jobs are caller-owned. Wolf mappings, selected clips, cast endpoints and whether a jab looks correct belong to fight-game-study. Keep an upstream request only for a reproducible mechanism defect with a bounded noncombat fixture. Humanoid contact solving is not fighter-maker ownership.
+
 The editor provides worker-backed SMF codecs, validated conversion/export, reversible model/rig/animation/Skin authoring, bounded multi-file resource loading, project save/recovery, single/quad viewports, and persisted Modern/Original SMF themes. Unsupported format features produce diagnostics before export.
 
 ## Start here
