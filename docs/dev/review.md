@@ -17,7 +17,12 @@ acceptance conditions in [TODO.md](TODO.md), and dated proof in
   `placeholder` match is a real input hint. This is not exhaustive runtime proof.
 - Existing GLB roundtrip and comparison-seek fixes remain covered by the local
   gates. DAE is now a supported browser import/export path with pre-save
-  re-import validation; ZIP remains a container, not a model input.
+  re-import validation, and missing Collada vertex normals are synthesized on
+  import; ZIP remains a container, not a model input.
+- The supplied with-skin Mixamo DAE loads cleanly but its quad start/middle/end
+  review is still not a trustworthy shaded silhouette because the rig helper
+  dominates the view. Left-leg alignment and self-clipping are therefore an
+  external asset-visual blocker tracked in TODO, not an accepted source result.
 - Motion acceptance remains scoped. All 37 target quarter frame sheets were
   inspected; normal-speed/source-side and occluded-skin acceptance remain open.
   Two receiving-confirmed cast seams require exact incoming-pose handoffs, not

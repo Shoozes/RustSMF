@@ -25,12 +25,12 @@ Melee is a fallback. Full Wolf visual acceptance remains open.
 - Done when: Structure, attachments, KO/reset/checkpoint, native/WASM, actual-browser and 30/60/120/144 Hz presenter checks pass for selected hashes; transition/contact limits are resolved or explicitly accepted.
 - Verification: Hash-bound package and receiving-game command records plus continuous paired-fighter playback. External game evidence is required, not replaced by mocked app tests.
 
-## P2 — Evaluate the supplied Mixamo pair as an independent source reference
+## P2 — Complete supplied Mixamo pair visual acceptance
 
-- What: Validate the supplied animation-only and with-skin Collada pair through the new DAE path before selecting it for retargeting.
-- Why: The pair separates source animation from deformation; native Collada support now removes the format blocker, but bone names alone still do not prove compatible calibration.
-- Where: `source/frontend/src/loaders/dae.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/export-formats.spec.ts`, the user guide's Mixamo section, and original user-owned archives outside this repository.
+- What: Finish visual/source acceptance of the supplied animation-only and with-skin Collada pair after the DAE structural path was proven.
+- Why: Import, geometry classification, skeleton/clip discovery, and DAE round-trip behavior are complete; bone names and a successful load still do not prove compatible calibration, timing, or self-clipping safety.
+- Where: `source/frontend/src/loaders/dae.ts`, `source/frontend/tests/export-formats.spec.ts`, the user guide's Mixamo section, and the original user-owned archives outside this repository.
 - When: P2, if source comparison proceeds; this optional alternative is not a Brawl acceptance dependency.
-- How: Preserve originals. Extract each archive into a fresh folder, select its DAE (and only referenced sidecars), verify Y_UP/joint/channel/skin coverage and bind transforms, compare source idle playback, then exercise DAE export/re-import before retargeting. ZIP remains a container rather than an import format.
-- Done when: Both supplied DAE files load without browser errors, the animation-only file is correctly identified as geometry-free, the with-skin file renders and deforms through a complete idle loop, and the selected source is explicitly accepted or rejected with hash-bound evidence.
-- Verification: Original archive hashes, structural comparison, complete idle loop, visual self-clipping review, and DAE roundtrip checks. Animation-only input cannot establish mesh deformation quality.
+- How: Preserve the measured archive hashes. Inspect the with-skin DAE through a complete idle loop in perspective and quad orthographic views, compare rest axes and timing against the animation-only source, and record a source decision without modifying the originals. Keep ZIP as a container rather than an import format.
+- Done when: Both supplied DAE files remain load-clean, the animation-only file remains geometry-free, the with-skin file passes a complete idle loop with no observed mesh self-clipping or broken leg/torso deformation, and the source is explicitly accepted or rejected with hash-bound evidence.
+- Verification: Existing Chromium load/round-trip checks plus new visual receipts, clip duration/channel comparison, and a dated source decision in `HISTORY.md`.

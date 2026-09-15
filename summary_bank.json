@@ -297,7 +297,7 @@
         "source/frontend/tests/README.md"
       ],
       "notes": [
-        "ColladaLoader is the browser import authority; the local serializer writes 1.4.1 Y_UP visual scenes, materials, geometry, controllers, inverse bind matrices, and matrix animation channels.",
+        "ColladaLoader is the browser import authority; DAE imports synthesize missing vertex normals for shaded/skinned visibility, while the local serializer writes 1.4.1 Y_UP visual scenes, materials, geometry, controllers, inverse bind matrices, and matrix animation channels.",
         "Export validates by re-importing before save and rejects duplicate joint names or non-triangle geometry. External texture images are not embedded by the DAE writer; use GLB for texture-fidelity export.",
         "ZIP archives remain containers, not model inputs; users must extract and select the DAE plus authorized sidecars."
       ]

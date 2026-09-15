@@ -30,6 +30,17 @@ Verification completed on the local working tree:
 The supplied pair still needs full-loop visual/self-clipping acceptance before it
 can be selected as a production retarget source; that remains active in `TODO.md`.
 
+The supplied with-skin archive was also reviewed in the app with local storage
+cleared, at start/middle/end scrub points, in quad orthographic layout, and with
+wireframe/rig/mesh display controls exercised. The run passed the load gate
+(`Ready Idle.dae`, 33 bones, 1 clip, 3,726 reported vertices), but the source
+still renders as a dense helper-only view without a trustworthy shaded silhouette;
+the left-leg and self-clipping questions therefore remain unresolved. This is
+recorded as an external asset-visual blocker, not an import success claim.
+
+The DAE loader now computes missing vertex normals and reports that normalization
+in its load summary; the focused geometry-normal unit test passes.
+
 ## 2026-09-14 - Repository integrity and acceptance-doc reconciliation
 
 ### Follow-up integrity and bounded sequence review

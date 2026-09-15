@@ -45,6 +45,13 @@ function countTextureMaps(root: THREE.Object3D): number {
   return textures.size;
 }
 
+/** Collada files may omit normals; compute them so shaded/skinned meshes remain visible. */
+export function ensureDaeGeometryNormals(geometry: THREE.BufferGeometry): boolean {
+  if (!geometry.getAttribute('position') || geometry.getAttribute('normal')) return false;
+  geometry.computeVertexNormals();
+  return true;
+}
+
 export async function loadDAE(
   urlOrBuffer: string | ArrayBuffer | ModelResourceBundle,
 ): Promise<DaeLoadedModel> {
@@ -69,11 +76,14 @@ export async function loadDAE(
     let meshCount = 0;
     let vertexCount = 0;
     let boneCount = 0;
+    let computedNormalCount = 0;
     root.traverse((object) => {
       if (isThreeBone(object)) boneCount += 1;
       if (!isThreeMesh(object)) return;
       meshCount += 1;
-      vertexCount += object.geometry.getAttribute('position')?.count ?? 0;
+      const position = object.geometry.getAttribute('position');
+      vertexCount += position?.count ?? 0;
+      if (position && ensureDaeGeometryNormals(object.geometry)) computedNormalCount += 1;
       if (isThreeSkinnedMesh(object)) {
         ensureGeometryAttributes(object.geometry);
         skinnedMeshes.push(object);
@@ -83,6 +93,7 @@ export async function loadDAE(
     const skeleton = skinnedMeshes[0]?.skeleton;
     const notes: string[] = [];
     if (meshCount === 0) notes.push('No mesh geometry was found in the Collada file.');
+    if (computedNormalCount > 0) notes.push(`Computed vertex normals for ${computedNormalCount} Collada mesh${computedNormalCount === 1 ? '' : 'es'} that omitted them.`);
     if (meshCount > 0 && skinnedMeshes.length === 0) notes.push('Static mesh only; rig and weight-paint tools need a root skeleton first.');
     if (clips.length === 0 && skinnedMeshes.length > 0) notes.push('No animation clips were found in the Collada file.');
     return {
