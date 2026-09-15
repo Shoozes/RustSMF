@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { createHash } from 'node:crypto';
+import { PNG } from 'pngjs';
 import {
   mkdtemp,
   rm,
@@ -167,6 +168,32 @@ test('rig comparison exposes strict synchronized coverage and a reproducible cap
   } finally {
     await preview.dispose();
   }
+});
+
+test('rig comparison redraws actual mesh poses when seeking backward after the terminal frame', async ({ page }) => {
+  const preview = await comparisonPreview();
+  try {
+    await page.goto(preview.url);
+    await expect(page.locator('#status')).toContainText('Strict coverage passed');
+    const seek = async (frame: number) => {
+      await page.locator('#frame').evaluate((element, value) => {
+        const input = element as HTMLInputElement;
+        input.value = String(value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }, frame);
+      return PNG.sync.read(await page.locator('canvas').screenshot()).data;
+    };
+    for (const layout of ['front', 'side', 'quad-ortho']) {
+      await page.locator('#clip').selectOption('idle');
+      await page.locator('#view').selectOption(layout);
+      const early = await seek(7);
+      const later = await seek(8);
+      expect(early.equals(later), 'Animated mesh pixels must change, not just the slider').toBe(false);
+      await seek(30);
+      expect((await seek(7)).equals(early), 'Terminal clamping must not freeze backward seeks').toBe(true);
+      expect((await seek(8)).equals(later)).toBe(true);
+    }
+  } finally { await preview.dispose(); }
 });
 
 test('rig comparison cleans up after a partial model-load failure', async ({ page }) => {

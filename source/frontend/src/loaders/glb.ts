@@ -34,6 +34,9 @@ function collectSkeletonBones(root: THREE.Object3D): THREE.Bone[] {
   return bones;
 }
 
+// Loader scene envelopes are not authored nodes. Never infer ownership from names.
+const importedSceneRoots = new WeakSet<THREE.Object3D>();
+
 export async function loadGLB(urlOrBuffer: string | ArrayBuffer | ModelResourceBundle): Promise<LoadedModel> {
   const isBundle = typeof urlOrBuffer === 'object' && !(urlOrBuffer instanceof ArrayBuffer);
   const bundle = isBundle ? urlOrBuffer as ModelResourceBundle : null;
@@ -41,6 +44,43 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer | ModelResourceB
   const manager = new THREE.LoadingManager();
   if (registry) manager.setURLModifier((url) => registry.resolve(url));
   const loader = new GLTFLoader(manager);
+  // Three normalizes even valid float weights, causing drift on animation-only
+  // roundtrips. Snapshot source accessors before meshes mutate the shared cache.
+  loader.register(parser => {
+    const authored = new Map<number, THREE.BufferAttribute | THREE.InterleavedBufferAttribute>();
+    return {
+      name: 'RustSMF_authored_skin_weights',
+      async beforeRoot() {
+        const indices = new Set<number>();
+        for (const mesh of parser.json.meshes ?? []) {
+          for (const primitive of mesh.primitives ?? []) {
+            const index: unknown = primitive.attributes?.WEIGHTS_0;
+            if (typeof index === 'number') indices.add(index);
+          }
+        }
+        await Promise.all([...indices].map(async index => {
+          const attribute: THREE.BufferAttribute | THREE.InterleavedBufferAttribute = await parser.getDependency('accessor', index);
+          if (attribute.itemSize !== 4) return;
+          for (let i = 0; i < attribute.count; i++) {
+            const weights = [attribute.getX(i), attribute.getY(i), attribute.getZ(i), attribute.getW(i)];
+            if (weights.some(weight => !Number.isFinite(weight) || weight < 0 || weight > 1)
+              || Math.abs(weights.reduce((sum, weight) => sum + weight, 0) - 1) > 1e-6) return;
+          }
+          authored.set(index, attribute.clone());
+        }));
+      },
+      async afterRoot(gltf) {
+        for (const scene of gltf.scenes) scene.traverse(node => {
+          if (!isThreeSkinnedMesh(node)) return;
+          const association = parser.associations.get(node) as { meshes?: number; primitives?: number } | undefined;
+          if (association?.meshes === undefined || association.primitives === undefined) return;
+          const index = parser.json.meshes[association.meshes].primitives[association.primitives].attributes.WEIGHTS_0;
+          const attribute = authored.get(index);
+          if (attribute) node.geometry.setAttribute('skinWeight', attribute.clone());
+        });
+      },
+    };
+  });
 
   try {
     let gltf: GLTF;
@@ -56,6 +96,7 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer | ModelResourceB
 
     const scene = gltf.scene || gltf.scenes?.[0];
     if (!scene) throw new Error('No scene in GLB');
+    importedSceneRoots.add(scene);
 
     // Collect skinned meshes
     const skinnedMeshes: THREE.SkinnedMesh[] = [];
@@ -78,30 +119,12 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer | ModelResourceB
       }
     });
 
-    if (skinnedMeshes.length === 0) {
-      // Fallback: just use the whole scene as non-skinned for preview
-      const root = scene;
-      const mixer = new THREE.AnimationMixer(root);
-      return { root, skinnedMeshes: [], clips: allClips, mixer };
-    }
-
-    // Use the first skinned mesh's skeleton as the main one (common case)
-    const mainSkinned = skinnedMeshes[0];
-    const skeleton = mainSkinned.skeleton;
-
-    // Attach all skinned to a clean root (preserve hierarchy)
-    const root = new THREE.Group();
-    root.name = 'GLB_Root';
-    root.add(scene); // keep original hierarchy for now
-
-    const mixer = new THREE.AnimationMixer(root);
-
     return {
-      root,
-      skeleton,
+      root: scene,
+      skeleton: skinnedMeshes[0]?.skeleton,
       skinnedMeshes,
       clips: allClips,
-      mixer,
+      mixer: new THREE.AnimationMixer(scene),
     };
   } finally {
     registry?.dispose();
@@ -124,7 +147,26 @@ export async function exportGLB(root: THREE.Group, clips: THREE.AnimationClip[] 
   return withSourceMaterialState(root, async () => {
     const { GLTFExporter } = await import('three/examples/jsm/exporters/GLTFExporter.js');
     const exporter = new GLTFExporter();
-    const result = await exporter.parseAsync(root, { binary: true, animations: clips });
+    if (clips.length) root.traverse(node => {
+      if (!node.matrixAutoUpdate && !node.matrix.equals(new THREE.Matrix4().compose(node.position, node.quaternion, node.scale))) {
+        throw new Error(`GLB animated export cannot preserve the matrix-only transform of ${node.name || '(unnamed node)'}. Apply the matrix to position/rotation/scale before export.`);
+      }
+    });
+    const rootMatrix = root.matrixAutoUpdate
+      ? new THREE.Matrix4().compose(root.position, root.quaternion, root.scale) : root.matrix;
+    const rootAnimated = clips.some(clip => clip.tracks.some(track => (
+      THREE.PropertyBinding.findNode(root, THREE.PropertyBinding.parseTrackName(track.name).nodeName) === root
+    )));
+    let input: THREE.Object3D = root;
+    if (importedSceneRoots.has(root) && root.visible && rootMatrix.equals(new THREE.Matrix4()) && !rootAnimated) {
+      const scene = new THREE.Scene();
+      scene.name = root.name;
+      scene.userData = root.userData;
+      // Read-only export envelope: retain real node parents and original hierarchy.
+      scene.children = [...root.children];
+      input = scene;
+    }
+    const result = await exporter.parseAsync(input, { binary: true, animations: clips });
     if (!(result instanceof ArrayBuffer)) {
       throw new Error('GLB exporter returned JSON while binary output was requested.');
     }

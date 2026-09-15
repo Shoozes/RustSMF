@@ -225,12 +225,12 @@ export default function AnimatePanel({
           <label
             className="outliner-append-action"
             data-testid="animation-retarget-clips"
-            title="Retarget named-bone FBX, GLB, or GLTF clips onto this rig. Use a saved profile for explicit numeric bone maps."
+            title="Retarget named-bone FBX, DAE, GLB, or GLTF clips onto this rig. Use a saved profile for explicit numeric bone maps."
           >
             Retarget clips
             <input
               type="file"
-              accept=".fbx,.glb,.gltf,.bin,.png,.jpg,.jpeg,.webp,.ktx2"
+              accept=".fbx,.dae,.glb,.gltf,.bin,.png,.jpg,.jpeg,.webp,.ktx2"
               className="hidden"
               multiple
               disabled={!hasSkeleton}

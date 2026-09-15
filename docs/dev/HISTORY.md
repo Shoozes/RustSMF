@@ -2,6 +2,645 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-15 - Collada DAE import/export
+
+Added a first-class DAE/Collada path across browser/native file selection, format
+detection, the model loader barrel, toolbar export commands, and the generic
+source-aware export flow. Import uses Three.js `ColladaLoader` with the existing
+bounded sidecar bundle resolver. Export writes a 1.4.1 Y_UP visual scene with
+materials, triangle geometry, skin controllers, inverse bind matrices, hierarchy,
+and matrix animation channels. Before save, exported bytes are parsed again and
+mesh/clip counts are checked; duplicate joint names, non-triangle geometry, and
+zero-influence vertices fail safely. DAE image maps are intentionally not embedded;
+GLB remains the texture-fidelity export path, and ZIP archives remain containers.
+
+Verification completed on the local working tree:
+
+- `npm.cmd --prefix source/frontend run typecheck` passed.
+- `npm.cmd --prefix source/frontend run test:unit -- --test-name-pattern "modelFormat"` passed (89 tests discovered, 89 passed).
+- `npm.cmd --prefix source/frontend run build` passed.
+- Focused Chromium export test passed: generated skinned GLB -> DAE download ->
+  browser re-import, preserving 2 bones and 1 clip.
+- Read-only Chromium checks passed for the supplied archives: animation-only
+  `Ready Idle.zip` DAE loaded as geometry-free, and with-skin `Ready Idle (1).zip`
+  DAE loaded with a non-zero skeleton and animation clips. Measured archive hashes
+  remain `FBA1DDF25CBC61133FC44E675DD655263B96298BB77A06C2E0C35069277AE7B2` and
+  `DB2AEEDC0D41FEDB371FBE64C11082ACB35BB28D6D0B6B10002B854B0C60F071`.
+
+The supplied pair still needs full-loop visual/self-clipping acceptance before it
+can be selected as a production retarget source; that remains active in `TODO.md`.
+
+## 2026-09-14 - Repository integrity and acceptance-doc reconciliation
+
+### Follow-up integrity and bounded sequence review
+
+The import checker incorrectly accepted an explicit `./leaf.js` when only
+`leaf/index.ts` existed. Removed that directory fallback; a regression preserves
+valid extensionless indexes and explicit JavaScript-to-TypeScript substitution.
+The focused integrity suite passed 11 tests. PowerShell 7
+`run.ps1 -Task verify` passed on the local working tree: 475 frontend tests,
+10 Rust tests, lint, both typechecks, build, process/Git-helper safety and context
+checks. Log: `output/verification/review6/integrity-followup-verify.log`.
+The context bank passed 40 groups with a 51.9 KiB default route before doc edits;
+existing issue/solver/workflow groups cover all changed owners, so no route or
+budget expansion was needed. No production TODO/FIXME/unimplemented markers or
+broken relative imports were found; Rust expect calls in the scan were tests.
+
+All 37 admitted e76de8f3 target quarter frame sheets were inspected for coarse
+sequence/skin continuity. `output/verification/review6/role-visual-dispositions.md`
+records exact role ranges, media pattern and all 34 retained flag counts. No new
+within-clip defect was established at sheet resolution; attack4–7 wrist/helmet
+occlusion remains unresolved. This does not establish normal-speed perception,
+complete source/side review or all-mesh collision clearance. Prior sole-center
+cast failure remains historical; current corrected special owns that evidence.
+The receiving owner separately confirmed startWalk0 and walk4 cast-entry seams;
+exact mirrored packets are required before authoring their explicit handoffs.
+Start/stop acceptance tracking is consolidated into the receiving-transition
+task instead of repeating an outdated start-shortlist task.
+
+At session close the receiving owner supplied
+`C:/DevStuff/fight-game-study/.artifacts/fighter-authoring/wolf-natural/review6-v29-unbanked-cast-packet.json`.
+Four canonical controlled cases cover startIdleToWalk0 (sourceTarget entry7,
+sample0) and ordinary walk4 (no sourceTarget), each in both mirrored facings.
+Entry speed is 24.000000953674316, entry displacement is
+0.045584896291355245 and final cumulative travel is 0.31909428949660423 model
+units. Separate observed live paths contain collision-dependent travel and must
+not replace canonical cases for baking. The closing-session instruction arrived
+before any bake or new script/profile was created: e76de8f3 remains unchanged,
+and both cast banks remain open. The owned role-review browser and sheet server
+were closed; no RustSMF publication was requested by this coordination.
+
+### Ground-cast support and interruption evidence
+
+The action inventory independently bound 37 roles/1,073 tracks across the
+transferred baseline, recorded stop-bank asset and model160bf28. Existing target
+front/side loops remain reusable. The private action-sequence packet adds27
+full Brawl/target side-and-quarter comparisons,764 output frame identities and32
+retained flags; idle/aerialLanding account for the other two. Secondary jab/tilt
+timing uses actual STEP sample identities. Captures are not blanket visual or
+self-collision acceptance.
+
+Grounded special16 exposed a sole-center diagnostic error: the rear toe supported
+the pose despite its center marker being high. Actual foot geometry nevertheless
+showed front-foot lift and rear-toe penetration absent from native SpecialN support.
+Optional interval-local point/descendant and fixed authored patch contacts now
+preserve animated ankle orientation through the existing solver and shared saved
+job/profile path. Point residuals and actual mesh clearance are reported separately.
+
+The private cast-entry-v29 candidate changes only ordinary special and appends
+castFromStagedReverse0; 50 other clips/2,165 tracks, raw mesh, weights, binds,
+materials and timing are preserved. Model SHA-256:
+`e76de8f3aa0026aea986e8ced3b8cd13e69dd5a616d5c977b6c0e6d942c9a618`.
+Fullcast mesh minimum improves from -0.0304373 to -0.000376665 model units;
+release16 actual foot minima are within4.6e-8 of ground. The 16-sample startup
+matches staged-reverse0 and corrected special16, with mirrored exported endpoint,
+support and fixed-length proof. No release/event timing or specialAir changes.
+
+Seven left/two right authored patch points describe toe/heel/edge support, including
+one reviewed heel-rim deformation bound for vertex3398's shin blending. The patch
+is fixed across frames, not a per-frame mesh-minimum fit. The original1mm clearance
+threshold was not widened. Full before/after side/quarter sequences and11 boundary/
+release/recovery snapshots live under ignored output/playwright; the private bank
+and action-sequence-review manifests own exact paths. Receiving-game and exhaustive
+appearance acceptance remain separate from these producer results.
+
+Verification: `run.ps1 -Task verify` passed475 frontend tests,10 Rust tests,
+lint, production/test typechecks, build and context. The focused contact/profile/
+endpoint suite passed57 tests; the new browser profile import/export/invalid-patch
+test passed. Replaying the prior V26 job produced byte-identical160bf28. The
+private cast-entry-v29 selection manifest seals57 references. Capture servers
+and browsers were stopped; no publication or Git mutation was performed.
+
+The subsequent four-family V26 slice appended exact interrupted-stop and band
+change candidates to model71882f23. Final model SHA-256 is
+`160bf28e2a44933dbaaddccb05776f082cf1eb702e414487c1e7b18f6d651fa2`.
+Incoming interrupted poses are stopFromWalk7/frame9 and stopFromWalk9/frame10,
+both reversed into walk16; ordinary changes are walk12 to walkSlow45 and
+walkSlow4 to walk18. Saved jobs/profiles preserve the exact mirrored packet
+travel, 16-sample timing and explicit sourceTarget metadata without idle-pose
+substitution. No new production code was needed. The ignored
+`output/verification/review6/four-transitions-v26/selection.json` binds jobs,
+profiles, contacts, source packets, exported proof and48 visual receipts;
+`DECISION.md` owns replay and scoped visual observations.
+Two complete CLI builds replayed byte-identically at all four stages. All 1,858
+prior tracks and raw asset surfaces are preserved, bone-length delta is zero,
+both-facing entry/exit position errors are below2.88e-8/1.41e-8 model units,
+and per-plant drift below8.89e-8. Worst mesh minimum Y is -0.000704677. All16
+poses in each clip were inspected front/side in both facings without obvious
+wide splits, inversion or new self-intersection in those views. High-foot
+landing and the long slow-to-fast stride remain normal-speed judgment points.
+Eight normal-speed videos and32 boundary images are supplied, not receiving
+appearance selection. Four exported proofs and34 focused tests passed; earlier
+unchanged production verification is retained rather than relabeled as rerun.
+
+A subsequent bounded staged reverse design authored intermediate idle-based
+poses at frame 6/yaw90 and frame 10/yaw25, with alternating left/right/left/right
+plants and four swings inside the unchanged 16-sample V25 contract. Candidate
+`71882f23cec8e773f8d65b3905b45f7c6369f3c442f27fe68fcb4227670ce7f0`
+is a review candidate, not a receiving selection. Saved `intermediatePoses`
+and repeated non-overlapping descendant swing envelopes now run through shared
+profile/job/CLI/frontend behavior. The latter removes a reproduced 0.02243
+model-unit toe penetration from the incomplete extra-step envelope.
+The completed candidate preserves all 1,774 tracks and raw asset surfaces;
+bone-length delta is zero, both-facing entry/exit position errors are below
+2.59e-8/9.89e-9, and per-plant drift below 5.94e-8. Mesh minimum Y is -0.00023173.
+CLI replay is byte-identical. All 16 front/side poses were inspected: the earlier
+lateral split is absent, but the crouched mid-turn lunge and final two-frame
+foot lift remain normal-speed judgment points. Recording and boundaries are
+bound by `output/verification/review6/staged-reverse-v25/selection.json`;
+`DECISION.md` owns replay and limitations. Full verify passed 472 frontend and
+10 Rust tests; 34 focused tests and the browser intermediate/yaw apply/export/
+undo test passed. Accepted eight-entry assets remain unchanged. No duration
+alternative, engine change, publication or additional motion search was made.
+
+The V25 reverse-start investigation added optional bounded endpoint
+`rootYawDegrees` through the shared job/profile/CLI/frontend workflow. It
+preserves the prior-facing whole pose in the newly faced actor without changing
+child offsets. Twelve exact 16-sample two-stance recipes were probed; exported
+span12/landing6 and span9/landing4 trials were rejected for a conspicuous lateral
+split during the turn. Numerical support alone did not justify selection.
+`output/verification/review6/reverse-start-v25/DECISION.md` owns the specific
+constraint and replay; `selection.json` is explicitly a rejection receipt.
+Accepted model8f6e9eee and its sealed bank are unchanged. Diagnostic7092cf34
+preserves all1,774 tracks and raw asset surfaces; both facing entry/exit errors
+are below 3.00e-8/9.89e-9 model units, with zero bone-length drift. Repeated CLI
+export is byte-identical. Full verify passed470 frontend/10 Rust tests;
+32 focused tests and the browser endpoint-yaw apply/export/undo test passed.
+This does not prove every16-sample turn impossible; the tested two-stance
+recipe needs a different turn/footfall design before visual admission.
+
+The subsequent three-band start slice appended `startIdleToWalkSlow`,
+`startIdleToWalkMiddle` and `startIdleToWalk` to selected stop bank 4df8d3f7.
+Final GLB SHA-256 is
+`8f6e9eeec1f862b35bae597ef7f5bf520229c92a76235be91426b088acd30118`.
+`output/verification/review6/start-bank-v23/selection.json` binds saved jobs,
+path-free profiles, exact receiving trajectories, exported proof and 18 visual
+receipts. `DECISION.md` owns replay commands and the bounded shortlist decision.
+Only idle0/speed0 same-facing starts at sticks 8/26/80 are covered. All have
+16 STEP samples at 60 Hz; sample15/tick17 resumes walking16 at tick18.
+The receiving owner confirmed a further root step on exit, so saved envelopes
+use negative entry displacement and positive next-step exit displacement.
+
+Two three-stage CLI builds produced byte-identical models at each stage. All
+1,522 stop-bank tracks and raw geometry/weights/binds/materials/images/topology
+are preserved; bone-length delta is zero. Maximum entry/exit position error is
+below 2.57e-8/1.17e-7 model units, rotation below 6.40e-6 degrees; support height
+and planted drift are below 5.57e-8/1.03e-7. Minimum mesh Y by slow/middle/fast
+is -0.000225458/-0.000225453/-0.000285476. All 48 STEP poses were inspected
+front/side without obvious leg inversion or self-intersection in these views.
+Fast frames7–10 retain a long trailing stance and frames14–15 close into the
+deep walking16 swing bend. Normal-speed recordings are supplied, not treated
+as receiving acceptance. Focused endpoint/swing/natural/job tests passed 30,
+exit 0; final exported proof passed all three. No production solver changed.
+
+The receiving game owner subsequently reported bounded V23 stop-bank acceptance
+for model4df8d3f7/packagec34c724a: 347 native/WASM/JS ticks, 160 mirrored target
+samples, actual-Three planted drift below 5.46e-7m and 28-bone endpoint step
+below 4.42e-7m; 13,148 attachment samples at 30/60/120/144 Hz; and a 1,312-frame
+CPU fight ending in KO with exact Windows real-time replay. Original37 motion
+event tables and existing collision rows were preserved. The reported raw mesh
+ground diagnostic reaches -0.003404m; this is not universal collision clearance.
+Evidence is owned by the receiving game's private `review6-v23-*` reports.
+Broader starts, band changes, interruptions, paired contact and action-loop skin
+acceptance remain open rather than being implied by the bounded stop result.
+
+The subsequent V21 producer slice baked a five-entry stop bank for exact walk
+phases 0/2/7/9/29 at speed 24, using independently supplied mirrored 16-sample
+receiving trajectories including entry displacement. Final GLB SHA-256 is
+`4df8d3f7414a7f90fc050947f4d18646310c09e86e74fad47ba20966bb33836c`.
+`output/verification/review6/stop-bank-v21/bank.json` owns five saved reproducible
+jobs/path-free profiles and clip names `stopFromWalk0/2/7/9/29`; `DECISION.md`
+owns the bounded visual decision and replay commands. The existing natural-return
+controls remain unchanged: 16 STEP samples, walk-phase entry with displacement
+compensation, idle16 exit, 0.15 pelvis bound, +0.1 height and 8/6 endpoint spans.
+No production solver, baseline action, admitted timing, mesh or weight changed.
+
+Two five-stage CLI runs produced identical model bytes at every phase. Final-bank
+proof preserves all 1,102 baseline tracks and raw geometry/weights/binds/materials/
+images/topology, with zero bone-length drift. Worst entry error is below 8.10e-8
+position and 2.47e-5 degrees; exit below 1.50e-8 and 1.71e-6 degrees. Full-weight
+support height is below 5.98e-8 and planted drift below 1.07e-7. Minimum mesh Y by
+phase is -0.000689572/-0.000386312/-0.000205403/-0.000216694/-0.000227592;
+these are explicit nonzero ground residuals. Mid-stop knee bend remains 63.90–65.07
+degrees. All 16 poses per clip were inspected in front/side contact sheets with
+no obvious self-clipping observed; phases 0/2 have the largest early landing from
+their inherited raised rear foot. Full-sequence fixed framing replaced initially
+cropped captures. Normal-speed walk-entry/stop/idle videos and boundary images
+are hash-bound by `selection.json`. Receiving-game admission and final appearance
+acceptance remain separate. Focused endpoint/swing/natural/job tests passed 30
+tests; exported bank proof passed all five cases. Owned browser/server closed.
+
+The subsequent bounded action review completed all 34 worst-component
+dispositions against baseline 0c440 and unchanged profile c58f2a04. The replayable
+`output/verification/review6/action-final-dispositions.mjs` emits
+`output/verification/review6-action-final-dispositions.json`: each row records
+native fractional frame, calibrated axes/reference, source/target geometry,
+individual skin observation, and front/quarter full/joint capture hashes.
+Seven model identities and 18 captures are bound to the report. All 14
+elbow/knee component cases retain native segment bend within 1e-5 degrees.
+DamageN2 LeftHand12 retains source/target axial roll -138.14/-138.12 degrees;
+the visible cuff remains continuous and the optional half-share stays unselected.
+DownStandU10 and rebound1 source/target ankle-to-toe bend measurements are
+146.89/132.10 and 156.94/146.56 degrees respectively: the source already contains
+deep recovery flexion. No target-only over-bend correction was justified by these
+observations. No asset, track, limit, locomotion or transition bake changed.
+
+All flags remain visible. Static worst-frame observations do not prove complete
+loop or all-triangle collision freedom; full-loop skin acceptance stays in TODO.
+The last capture page has two labeled rows; unlabeled lower framebuffer remnants
+are excluded from evidence. Focused pose-range, CLI, forearm-twist and retarget
+timing tests passed 13 tests, exit 0, recorded in
+`output/verification/review6-action-final-focused.log`. The generator rechecked
+all model/profile/capture identities and inventory coverage, exit 0.
+
+Reviewed the local main working tree at base
+`9a5d017f6485e669b9cc0416a9859e5f07531ebc`, preserving existing changes.
+Two new regression tests first failed with missing expected exceptions:
+swing foot validation accepted arrays/objects through string coercion, and
+endpoint baking accepted shared irregular timestamps while resampling at 60 Hz.
+The shared parsers now reject these cases before output, and a third regression
+proves valid next-down float32 schedules remain unchanged. No new solver,
+dependency, calibration limit or asset change was introduced.
+
+Consolidated review.md into findings rather than another implementation history.
+App State now links the existing fitted-rig contract instead of repeating its
+command/receipt detail. Split the broad motion TODO into independently verifiable
+action/skin, braking and receiving-game acceptance tasks, each with what, why,
+where, when, how, done-when and verification fields. The optional Mixamo derivative
+remains separately gated. The current baseline inventory is 34 components across
+17 roles, not just the earlier 33 action-only components; idle RightForeArm is
+included. Hash-bound numerical evidence is
+`output/verification/review6-action-final-axis.json` for model
+`0c440cb5ca48f1546eaed133b2b066f5bfc6e70978050577db919950cde430a1`
+and profile `c58f2a04784e3e0e5eb35d5c6aaa1ddc16c101ca43321bcb2725c91bbadfea95`.
+This inventory does not close per-component skin acceptance.
+
+Verification used Node v26.5.0 and PowerShell 7.6.6:
+
+- Focused endpoint/swing/job/profile/retarget tests passed 38 tests after the two
+  fixes; the additional next-down case is included in the full gate below.
+- `pwsh -NoProfile -File ./run.ps1 -Task verify` exited 0: 468 frontend tests,
+  10 Rust tests, lint, typechecks, production build and repository guards passed.
+  Log: `output/verification/integrity-20260914-verify.log`.
+- After documentation edits, `pwsh -NoProfile -File ./run.ps1 -Task context`
+  exited 0: 40 groups, 51.9 KiB default, zero warnings, 10 project-integrity tests
+  and nine context tests. The initial expanded backlog exceeded 52 KiB; removing
+  duplicate App State prose restored the existing budget without widening it.
+  Log: `output/verification/integrity-20260914-context.log`.
+- `pwsh -NoProfile -File ./run.ps1 -Task test:e2e -NoGenEye` exited 0:
+  all 102 Chromium browser tests passed in 54.4 seconds, including format
+  roundtrip, replacement/async lifecycle and retarget/comparison coverage.
+  Log: `output/verification/integrity-20260914-browser.log`.
+- Final `git diff --check`, context route validation and project-integrity
+  validation passed after the documentation reconciliation.
+
+Production-marker scans found only an actual UI placeholder attribute, not an
+unfinished implementation. Rust expect calls occur in tests; relative frontend
+imports/re-exports and module guards pass. These checks are not exhaustive
+skin, third-party format or platform acceptance. No publication was performed.
+
+## 2026-09-14 - Endpoint and anchor integrity evidence
+
+Receiving-game proof subsequently verified both initial stop trials through 520
+native/WASM/JS ticks and exact GFP3 admission/fallback, but actual-game visual
+review rejected both 3593c6e0 and e15d260c for sharply folded knees and crowded
+legs. Passing pins did not close motion acceptance.
+
+An existing-controls-only follow-up produced generation 7a9c729c / model 2f063469
+(`output/verification/review6/runbrake-natural-return`). The job retains 16 travel
+samples and the same stance handoff, raises the raw hip target by 0.1 within the
+unchanged 0.15 correction bound, expands entry/exit envelopes to 8/6 samples,
+reduces swing lift to 0.015 and lateral arc to 0.04. No engine API, role, travel,
+fallback frame or production code changed in this follow-up. Maximum knee bend
+over samples 4–12 falls to 64.38 degrees. Front/side inspected frames are materially
+less compressed; actual-game visual acceptance remains pending.
+
+Fresh exported-asset proof retains 1,102 carried tracks and raw structure exactly,
+zero bone-length drift, endpoint position residual below 1.5e-8 and rotation below
+3e-6 degrees, support height below 5.1e-8 and planted drift below 9.8e-8. Minimum
+mesh Y is -0.000227592, explicitly retained rather than labeled zero penetration.
+All 16 frames' joint/sole proof is in
+`output/verification/review6-stop-natural-all-joints-feet.jsonl`; normal-speed
+recording is `output/playwright/stop-natural-entry-front-side-normal.webm`.
+Prior full code gates remain applicable; the follow-up changed only ignored jobs,
+diagnostics and this evidence record.
+
+Subsequent authorized stance-handoff work fixed partial-contact budget coupling:
+the raw shared pelvis bound is no longer reduced merely by an incoming half-weight
+foot while another foot is fully planted. Added shared, strictly parsed offline
+swing trajectories, finite lift/lateral arcs, bounded travel timing, optional toe
+descendant rotation envelopes and explicit swing reach diagnostics. Unit tests
+cover bounded/malformed input, endpoint preservation, signed travel, profile
+roundtrip, actual-core determinism and mixed contact weights. Final verify passed
+465 frontend and 10 Rust tests plus build/type/lint/context gates; log:
+`output/verification/review6-swing-final-verify.log`.
+The final browser gate passed all 102 tests in one minute, exit zero; log:
+`output/verification/review6-swing-final-browser.log`. Context validation passed
+40 groups with zero warnings; the default pack is 51.7 KiB.
+
+Left support 0–2 and right landing at 3 make the same 16-sample braking trajectory
+feasible within the original 0.15 pelvis bound. No gameplay velocity, role or
+event was changed. Contact shortlist 6a692f0b / model 3593c6e0 retains all 1,102
+carried tracks and raw asset structure, with zero bone-length drift, sole drift
+below 5.4e-8 and minimum mesh Y -0.000226788. Upright/lateral shortlist 9000e68e /
+model e15d260c retains the same preservation, sole drift below 6.2e-8 and minimum
+mesh Y -0.000229641. Both match walk29 entry and idle16 exit; swing reach residuals
+are below 1e-15. Mesh minima are explicit residuals, not zero-penetration claims.
+
+Normal-speed front/side entry-stop-idle recordings and exact-frame captures are
+under `output/playwright/stop-entry-front-side-normal.webm` and
+`output/playwright/stop-upright-entry-front-side-normal.webm`. All 16 frames' 28
+joint poses and both soles, including airborne feet, are recorded in
+`output/verification/review6-stop-contact-all-joints-feet.jsonl` and
+`output/verification/review6-stop-upright-all-joints-feet.jsonl`. Static visual
+review favors the upright variant's less crowded mid-stop knee silhouette, but
+its high-knee settling and receiving-game playback remain unaccepted. Switchable
+comparison controls preserve 6a as the visual baseline. The receiving-game owner
+is testing the exact walk29/speed24/same-facing admission only.
+
+Integrity closeout on local main at base `9a5d017f` passed
+`pwsh -NoProfile -File ./run.ps1 -Task verify` (463 frontend tests, 10 Rust
+tests, typechecks, lint, build and context gates) and
+`pwsh -NoProfile -File ./run.ps1 -Task test:e2e -NoGenEye` (102 tests, 56.7s).
+Final context validation checked 249 frontend source/test files and 11 durable
+docs; all nine context tests passed. Commands exited zero. Logs:
+`output/verification/review6-integrity-final.log`,
+`output/verification/review6-integrity-browser.log` and
+`output/verification/review6-integrity-context.log`. Added future-anchor signed
+travel and invalid-interval regressions; the owned source preview PID was stopped.
+Changes remain local and uncommitted; no publication was performed.
+
+Added offline endpoint envelopes and explicit pre-contact anchor frames through
+the shared job/profile/core path. The anchored stop diagnostic (generation
+a2147615, model 2419f652) preserves all 1,102 carried tracks, raw asset structure
+and bone lengths. Entry walk29 and exit idle16 positional residuals are below
+2.18e-8 model units; angular residuals are below 3.42e-6 degrees.
+
+The candidate is NOT accepted: its proof fails with maximum support height
+0.061273, planted drift 0.243986 and minimum mesh height -0.085144 model units.
+These are not baseline-scale shoe residuals and must not be hidden by widening
+tolerances. Evidence: `output/verification/review6-runbrake-anchor-proof.jsonl`
+(first line is the report; subsequent lines contain the failing assertion).
+Matching endpoints does not establish a valid path between them. The existing
+fighter acceptance item remains open; baseline 0c440 is unchanged.
+
+Follow-up in-memory feasibility checks isolated the failure: left full-weight
+support frames 3–11 exceed the 0.392777 model-unit maximum leg reach (segment
+lengths 0.185030 and 0.208120 at five-degree minimum bend). At frame 11 the
+corrected hip still requests 0.636762 reach. The incoming half-weight right
+contact also halves the shared pelvis budget to 0.075. Existing diagnostics
+correctly report nine clamped left samples and unreachable support. Penetrating
+vertices belong to the swinging right shoe early and left shoe at frame 13.
+Eight bounded parameter checks retain endpoints; increasing correction to 0.8
+fixes sole drift but leaves mesh minima between -0.109393 and -0.069806.
+No new asset was published. Evidence: `output/verification/review6-stop-feasibility.jsonl`.
+An earlier stance handoff or revised settling/root path requires receiving-game
+coordination; fixed sole points alone do not constrain swing-shoe geometry.
+
+## 2026-09-14 - Sampled root travel and separate stop diagnostic
+
+Implemented optional `naturalMotion.rootTravelSamples` through shared saved-job,
+portable-profile and CLI/frontend validation. Cumulative source-clip-keyed
+translations compensate displacement since contact entry, with zero-origin,
+finite/bounded tuple, exact 60 Hz STEP coverage, constant-travel exclusion and
+non-wrapping guards. Legacy omission preserves serialization; a matching constant
+trajectory produces exact legacy animation values. Nonlinear deceleration,
+invalid samples, interval offsets, profile roundtrip and actual core coverage
+regressions pass. Full `run.ps1 -Task verify` passed: 459 frontend tests, 10 Rust
+tests, context, lint/typechecks, production build and Rust gates; log:
+`output/verification/review6-travel-verify.log`.
+The independent browser gate passed all 101 tests in 54.9 seconds; log:
+`output/verification/review6-travel-browser.log`. Final context checks pass.
+
+Extracted native RunBrake through the existing pinned x86 Brawl path into fresh
+ignored output. The adapter verified 63 bones with maximum native matrix error
+1.47e-6. Source frames 1–23 were retimed to 16 output samples. The separate
+stopDiagnostic asset (generation 7d9790b0, model 6d477eb5) matches recorded
+intra-clip travel at ticks 481–496; the first 22.5000009537 game-unit movement
+into sample zero is separately recorded as 0.04558489629 target model units.
+Its 1,102 carried tracks and raw geometry/weights/binds/materials/images remain
+exact; pre-existing duplicate non-joint name normalization remains documented.
+
+This trial is NOT transition-ready. Planted sole-point height and drift are below
+4.4e-8 model units, yet full skinned mesh minimum height reaches -0.05006. Entry
+against walk pose 29, including first-tick translation, differs by up to 0.59644
+model units and 120.69 degrees; terminal against actual fallback idle pose 16
+differs by 0.17280 and 48.14 degrees. Idle pose 15 is also mismatched. Source
+entry phase, per-bone differences, exact travel, contact rows and raw proof are
+in `output/verification/review6-runbrake-proof.jsonl` and the saved ignored jobs.
+Contact support cannot replace offline endpoint/whole-shoe clearance authoring.
+The game owns the still-unselected transition contract; model 0c440, its roles,
+events and turn/start schedule are unchanged.
+
+## 2026-09-14 - Integrity reconciliation and opt-in wrist allocation
+
+Completed the shared `clipForearmTwist` saved-job/profile path and added five
+focused tests covering mirrored geometry, palm-world preservation, quaternion
+antipodes/winding, transactional invalid-input rejection, strict profile parsing
+and actual retarget integration. Invalid reference quaternions now fail closed.
+The browser test covers incompatible-policy errors, profile export, application
+and undo. No automatic clamping, range widening or collision correction is added.
+
+The damageN2 frame-12 anatomical wrist twist is about -138.14 degrees natively
+and -138.12 in Wolf; the saved-reference measurement is -146.90. Source fidelity
+does not settle deformation quality. DamageHi2 frame 0 also concentrates source
+wrist twist; specialAir frame 30 is primarily a swing concern and was not changed.
+The fresh damageN2-only half-share candidate (generation 4b945907, model e9d4b943)
+is private and not visually accepted. Its 25-frame proof preserves 1,073 unrelated
+tracks exactly; maximum bone-position error is 2.71e-8 model units and non-forearm
+world rotation error 8.88e-6 degrees. Raw geometry, weights, binds, textures,
+materials and topology match. Nine existing duplicate non-joint wrapper names
+are uniquified by import; exact metadata-name identity is not claimed. At frame
+12, 396 forearm-influenced vertices change, at most 0.05775 model units; vertices
+without that influence differ by at most 1.82e-8. This cannot separate fighters.
+Evidence: `output/verification/review6-wrist-preservation.log` and
+`output/verification/review6-wrist-basis-audit.jsonl`.
+
+Fixed front/side/quad captures show the expected cuff/forearm surface change at
+damageN2 frame 12 and adjacent frames, without a clear visual-quality preference.
+Keep the half-share asset separate; do not promote it into the game's independent
+contact candidate. The bounded inspection and limitations are recorded in
+`output/verification/review6/wrist-visual-decision.md`; still frames do not accept
+full-loop self-intersection or paired-fighter clearance.
+
+Reconciled APP_STATE, review and TODO with the corrected comparison-seek evidence
+and remaining skin/contact acceptance. Completed work remains here rather than
+duplicated task lists. Added the wrist module/tests to the profile context route;
+split natural-motion leaf solving from the over-budget retargeting route without
+raising budgets. Context now has 39 groups, a 50.5 KiB default and zero warnings.
+
+Verification on local main based on 9a5d017f (uncommitted working diff), Node
+26.5.0 / PowerShell 7: `run.ps1 -Task verify` passed 456 frontend tests, 10 Rust
+tests, lint, typechecks, build, Rust fmt/clippy/check and synchronization guards;
+its initial aggregate exit was nonzero solely for the context route budget.
+After the route split, `run.ps1 -Task context` passed, including document/TODO,
+relative-import and Rust-module checks. The initial browser run passed 100 tests
+and rejected the new fixture's missing rotation track; correcting that fixture
+made all five saved-profile browser tests pass. Final lint and test typechecking
+also pass. Logs: `output/verification/review6-integrity-latest-verify.log`,
+`output/verification/review6-integrity-latest-context.log`, and
+`output/verification/review6-wrist-browser-focused.log`. The final full
+`run.ps1 -Task test:e2e -NoGenEye` passed all 101 browser tests in 54.0 seconds,
+exit 0 (`output/verification/review6-integrity-final-browser.log`).
+No secrets, publication, gameplay events or frozen assets changed.
+
+## 2026-09-14 - Comparison terminal-frame seek repair
+
+The receiving game found identical mesh pixels in tilt side-view frame 7/8
+captures despite changed controls. Sampling the terminal frame had left Three's
+LoopOnce action paused; subsequent explicit seeks updated the receipt but not
+the pose. `applyPose` now resumes the action before setting mixer time. A decoded
+canvas-pixel regression failed before the fix and passes afterward, including
+terminal-to-earlier seeks in front, side and quad views. All seven comparison
+browser tests, lint and test typechecking pass. Log:
+`output/verification/review6-preview-seek-browser.log`.
+
+Earlier `tilt-landmark-facing*` capture batches are superseded as visual proof.
+The 52 corrected `tilt-seek-fixed-facing*` images retain the frozen 50364735
+generation/model 0c440cb5. Frame 7/8 differences below the first 100 image rows
+are verified in both views/facings, including 67,695 changed candidate-region
+pixels for facing +1 side. Evidence:
+`output/verification/review6-tilt-seek-fixed-pixels.jsonl`. Controls or requested
+frame receipts alone are not proof that the displayed mesh reached that pose.
+No retarget, gameplay event, frozen asset or publication changed in this repair;
+live gameplay visual acceptance remains separate.
+
+## 2026-09-13 - Repository integrity and GLB roundtrip identity
+
+### Action calibration and authored weight preservation follow-up
+
+Reviewed all 33 remaining action range groups against native Brawl, raw transfer
+and conditioned output. Private per-group dispositions are retained in
+`output/verification/review6-action-dispositions.json`; flags remain visible.
+Mapped native hinge geometry explains the apparent elbow/knee axis flags; this
+does not establish whole-mesh collision freedom. Native SpecialN/SpecialAirN
+cast with LHandN, not RHandN, at output frame 16. The receiving game owns that
+attachment correction and transition/facing acceptance.
+
+Added optional shared job/profile `rootMotionScale` and
+`directionAlignmentBones` calibration controls with strict validation. Mapping
+the rebound toes can now preserve the prior root scale and alignment constraints
+without adding ankle alignment. Rejected broader alignment experiments remain
+private diagnostics. The final toe-only derivative (generation a8c98147, model
+025a1e78) changes only two rebound toe quaternion tracks; all 1,100 other tracks,
+including 116 locomotion tracks, remain exact. Front/side, both-facing frame
+comparisons favor source forefoot articulation over the prior flattened toe;
+continuous receiving-game visual acceptance remains a separate requirement.
+
+Strict receiving caught 16 changed raw WEIGHTS_0 components (maximum 1.1642e-10)
+from Three's unconditional load-time normalization. The loader now snapshots
+authored weight accessors before mesh construction and restores valid unit-weight
+attributes (finite components in [0,1], sum within 1e-6); malformed weights retain
+Three's repair. Three-cycle regression coverage proves both paths. The regenerated
+candidate has exact raw and loaded weights, geometry, binds, materials and embedded
+textures. Saved normalized jobs replay to the same model SHA-256. Report-only
+runtime UUIDs still vary between runs, so immutable generation IDs are not a
+model determinism claim. Evidence lives in
+`output/verification/review6-toe-only-{raw-weight-proof,preserved-proof}.json`
+and `review6-preserved-replay{,-repeat}.log`.
+
+Browser verification exposed a scale-fixture measurement race: the test paused
+after hiding the playback controls. It now resets both animated fixtures to exact
+frame zero before comparison. A one-pixel lower coverage-bound allowance accounts
+for a fractional raster boundary; scale parity tolerances are unchanged. Three
+consecutive focused runs pass. After the loader fix, `run.ps1 -Task verify`
+passed 451 frontend tests, 10 Rust tests, lint, typechecks, build and Rust gates;
+its context gate alone failed because the orientation pack exceeded 52 KiB.
+Removed the redundant developer-doc index from default routing, without deleting
+the document or raising the budget. `run.ps1 -Task context` then passed, exit 0.
+`run.ps1 -Task test:e2e -NoGenEye` passed 99 browser tests in 59.9 seconds, exit 0.
+Logs: `output/verification/review6-preserved-{verify,browser}.log` and
+`output/verification/review6-final-context.log`. No commit or push was performed.
+The receiving game independently reports a8c981/025a1e78 passing 1,733 grid/end
+samples, 1,102 tracks and exact loaded geometry/skin/bind/material/image checks;
+maximum bone-length error is 4.22e-8 and replacement weight error is zero.
+Live fight acceptance remains with the game owner; no further pose changes are
+part of this frozen handoff.
+
+Confirmed repeated skinned GLB load/export growth: a four-node fixture became six
+nodes in one pass. Reused the loaded scene envelope and Three's scene-export path
+without reparenting source objects, removing the synthetic-root construction and
+duplicated static/skinned return paths. Four repeated skinned and three static
+cycles now retain topology, skin/inverse-bind data, animation and scene metadata.
+Authored AuxScene/GLB_Root names are not flattening heuristics; transformed and
+animated scene roots remain real nodes. Existing accumulated wrappers stay intact.
+
+A matrix-only transform with stale TRS components was silently dropped when
+exporting animation. The shared exporter now rejects that unsupported combination
+with an actionable message; non-animated matrix export and ordinary root motion
+remain covered. The initial regression and follow-up proof are retained in
+`output/verification/integrity-wrapper-{before,after}.log` and
+`integrity-root-matrix.log`. Eight focused GLB/project tests pass.
+
+No production TODO/FIXME/stub marker was found in frontend/Rust source; inspected
+Rust expect calls belong to tests. Autosave and FBX timing paths retain owned
+cleanup and bounded waits. Relative frontend import/re-export and Rust module
+checks pass. Current docs now describe the export boundary, history owns completed
+work, and existing TODOs keep explicit what/why/where/when/how/done/verification.
+Added a focused GLB identity context route, removing those files from the broad
+export pack rather than increasing its budget. No asset, dependency, credential,
+branch or remote changes are part of this local integrity pass.
+
+Verification on PowerShell 7.6.6 / Node 26.5.0 / Rust 1.98.1, source 9a5d017 plus
+the local reviewed diff: `run.ps1 -Task verify` passes 447 frontend tests, 10 Rust
+tests, lint, app/test typechecks, build, fmt/clippy/check and repository guards.
+`run.ps1 -Task test:e2e -NoGenEye` passes 99 browser tests in 53.7 seconds. Both
+exit 0; logs: `output/verification/integrity-final-{verify,browser}.log`.
+Context validation passes 38 groups, 51.9 KiB defaults, no warnings.
+
+A private 10f3645b-model geometry-only diagnostic retains 61 nodes, 28 bones and
+38 clips across three cycles. Geometry, inverse-bind and animation arrays remain
+identical; Three's existing load-time skin-weight normalization produces at most
+1.1642e-10 measured weight drift. Node has no canvas encoder, so this diagnostic
+excludes texture/material proof; the full browser gate owns textured exports.
+Receipt: `output/verification/integrity-actual-cycles.log`. No input model was
+rewritten and no generated asset is tracked. Full fighter visual acceptance and
+the optional supported-format Mixamo derivative remain the existing gated work.
+
+## 2026-09-13 - Normalized saved-job replay follow-up
+
+The receiving game reported that generated jobs could not replay: omitted
+targetChainCurls normalized to an empty array, which the same parser rejected.
+Explicit empty arrays now mean no curl corrections; malformed entries retain
+their validation. Removed the frontend-only workaround that dropped empty curls.
+The regression failed before the fix and 13 focused job/profile tests pass after.
+The private b07ff5ba job re-parses identically and imports/roundtrips as a path-free
+frontend profile. No input assets were modified. SHA-verified model 9d83294a
+independently reproduces the reported tilt, downBounceD and downStandU range flags
+at exact output frames. These require a separately reviewed synthesis design;
+this replay repair does not clamp rotations or change detection thresholds.
+Receipts: `output/verification/review6-replay-{before,after,candidate}.log`.
+The full replay verification gate passed, exit 0 (440 frontend units and 10 Rust
+tests), before the separately authorized neck/head synthesis slice below.
+This follow-up is local-only and has no commit/push authorization.
+
+The game owner then authorized per-clip neck/head redistribution under existing
+calibrated limits. Added a bounded two-joint solver, strict shared job/profile
+schema, pre-contact integration, correction/residual reports and mirrored,
+antipodal, seam, impossible-intent and unrelated-track tests. Initial generation
+8c88c0e / model 10d584d5 clears the re-imported tilt/downBounceD neck/head flags,
+leaves downStandU unchanged, and retains the reported elbow/ankle flags. It is a
+frozen comparison, not final acceptance. The game also reported repeated identity
+ancestor wrappers across GLB passes; total node count alone does not prove a rig
+change. Wrapper cleanup is outside this neck/head slice.
+
+Final candidate generation 10f3645b / model 3b25eac1 preserves 38 clip identities,
+all timestamps, 1,096 unrelated tracks exactly, and geometry/skin/inverse-bind
+arrays. Exact-frame re-import comparison limits head-world drift to 0.000007041
+degrees. Tilt retains only its two ankle-twist flags, downBounceD has none, and
+downStandU retains its elbow/knee/ankle flags. Normalized-job/profile replay passes.
+The 99-test browser gate passes (56.8 seconds, exit 0), including a generated
+three-bone source rejected before synthesis and accepted/undoable afterward.
+The first full gate passed 444 frontend and 10 Rust tests plus code checks;
+two context packs exceeded budget after fixture growth. Removed duplicated
+generic fixture loading from the archived combined browser and fitted-rig routes.
+No route budget was raised. Receipts: `output/verification/review6-neck-` logs
+for tests, verify, browser, preservation, final-reimport and final-candidate.
+Final `run.ps1 -Task verify` passed, exit 0, with 444 frontend tests, 10 Rust
+tests and all repository gates; receipt: `review6-neck-final-verify.log` in that
+directory. Context validation reports 37 groups, 51.9 KiB default, zero warnings.
+App/test/preview processes exited; Codex tooling and game-owned sessions remain.
+
 ## 2026-09-13 - Review6 timing, contact and reference closeout
 
 Fixed exact output-frame mapping before float32 source evaluation. Regressions

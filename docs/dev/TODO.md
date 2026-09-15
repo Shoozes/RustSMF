@@ -1,27 +1,36 @@
 # RustSMF TODO
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-09-15
 
-Completed solver, comparison, source-selection and verification work lives in
-HISTORY.md. Brawl rest-reference motion is selected; Melee remains a fallback,
-not an acceptance prerequisite. Latest Wolf candidates lack full visual acceptance.
+Completed work lives in HISTORY.md. Brawl rest-reference motion is selected;
+Melee is a fallback. Full Wolf visual acceptance remains open.
 
-## P1 — Accept the selected fighter's motion in the receiving game
+## P1 — Close baseline action-range and skin review
 
-- What: Extend the verified slow-walk handoff/loop contact method to middle/fast locomotion, resolve remaining action/body-range flags, and obtain continuous-motion acceptance. Slow-v2 closes the measured support gap; wrist calibration passes jab ranges but still needs visual review.
-- Why: Source identity, valid export and steady-speed checks do not cover changing speed, stopping, role transitions, skin intersection or natural appearance.
-- Where: `source/frontend/src/utils/animationRetarget.ts`, `source/frontend/src/utils/naturalRetarget.ts`, `source/frontend/src/utils/poseRanges.ts`, `source/frontend/src/rig-comparison/comparison.js`, and the game-owned private integration workspace.
-- When: P1, before replacing the accepted baseline or claiming show-ready fighter motion.
-- How: Preserve immutable candidates and selected rest-reference calibration. Review tilt, damage and recovery without clamping airborne phases. Produce a final coherent job containing accepted clips and their contact/grounding/root-travel metadata; an attack-only job does not describe carried walking tracks. Compare full loops front/side at normal speed, then scaled soles under facing/root travel, deceleration, stops and role changes with the game owner. Plane following is not planted/no-slide contact.
-- Done when: Both legs and torso are accepted in full loops with no observed self-clipping; every range flag is corrected or explicitly reviewed against calibration; contact/transition coverage is complete or limitations explicitly accepted; structure, attachments, KO/reset/checkpoint, native/WASM, actual-browser and 30/60/120/144 Hz presenter checks pass for the selected hashes.
-- Verification: Hash-bound reports, stage trajectories, front/side continuous video decision, Quad receipts and receiving-game command records. External visual acceptance remains required; numerical success alone does not close this item.
+- What: Finish full-loop skin acceptance across all 37 admitted roles, including the 17 roles with 34 retained angular flags. HISTORY indexes recorded comparisons and bounded target-frame inspection; neither establishes normal-speed or occluded-skin acceptance.
+- Why: Calibrated angles and source fidelity cannot establish healthy deformation or absence of self-clipping.
+- Where: `source/frontend/src/utils/poseRanges.ts`, `source/frontend/src/utils/forearmTwist.ts`, `source/frontend/src/rig-comparison/comparison.js`.
+- When: P1, before accepting a replacement asset.
+- How: Reuse hash-bound unchanged tracks and inspect side/quarter loops against source frames and anatomical axes. Resolve attack4–7 wrist/helmet occlusion with close side views before claiming penetration. Review corrected grounded cast separately. Preserve tracks, mesh, materials and weights; do not widen ranges to suppress flags.
+- Done when: Every component is corrected or explicitly accepted against source, calibration and skin evidence; both legs and torso pass full-loop visual review without observed self-clipping.
+- Verification: Hash-bound range report, per-component dispositions, corrected-seek Quad receipts and raw asset/track preservation checks. Earlier captures are not automatic acceptance.
+
+## P1 — Verify receiving-game transitions and paired contact
+
+- What: Complete integration acceptance independently of producer pose review.
+- Why: Steady locomotion does not cover changing speed, transition blending, paired-fighter overlap or reset behavior.
+- Where: `source/frontend/scripts/game-ready-producer.ts`, `source/frontend/src/utils/gameReadyJob.ts`, and the game-owned private integration workspace.
+- When: P1, after asset/stop selection and before show-ready claims.
+- How: Keep completed hash-bound start/stop proofs in HISTORY; verify remaining role changes and both facings with the game owner. Two confirmed cast-entry discontinuities need exact incoming startIdleToWalk0 and ordinary walk4 poses, explicit 16-sample saved-profile handoffs ending at corrected special16, and unchanged release timing. The receiving owner's canonical mirrored packet is ready; baking was deferred by session close. Use its controlled cases, not collision-dependent observed travel. Preserve current roles/banks and raw asset surfaces. Keep paired-contact fixes receiving-owned.
+- Done when: Structure, attachments, KO/reset/checkpoint, native/WASM, actual-browser and 30/60/120/144 Hz presenter checks pass for selected hashes; transition/contact limits are resolved or explicitly accepted.
+- Verification: Hash-bound package and receiving-game command records plus continuous paired-fighter playback. External game evidence is required, not replaced by mocked app tests.
 
 ## P2 — Evaluate the supplied Mixamo pair as an independent source reference
 
-- What: Validate a supported-format derivative of the supplied animation-only and with-skin Collada pair before selecting it for retargeting.
-- Why: The pair separates source animation from deformation, but RustSMF has no DAE/ZIP import path. Bone names alone do not prove compatible calibration.
-- Where: `source/frontend/src/utils/modelFormat.ts`, `source/frontend/src/loaders/glb.ts`, `source/frontend/src/loaders/fbx.ts`, the user guide's Mixamo section, and original user-owned archives outside this repository.
+- What: Validate the supplied animation-only and with-skin Collada pair through the new DAE path before selecting it for retargeting.
+- Why: The pair separates source animation from deformation; native Collada support now removes the format blocker, but bone names alone still do not prove compatible calibration.
+- Where: `source/frontend/src/loaders/dae.ts`, `source/frontend/src/hooks/useLoadModel.ts`, `source/frontend/tests/export-formats.spec.ts`, the user guide's Mixamo section, and original user-owned archives outside this repository.
 - When: P2, if source comparison proceeds; this optional alternative is not a Brawl acceptance dependency.
-- How: Preserve originals. Obtain a supported FBX or GLB/GLTF derivative, validate joint/channel/skin coverage and bind transforms against the DAE, and compare source idle playback before retargeting. Native Collada import would be a separate format feature.
-- Done when: The supported derivative's source playback, skin and timing are verified, its retarget is visually compared, and the source is explicitly accepted or rejected with evidence.
-- Verification: Original/derivative identity, structural comparison, complete idle loop and roundtrip checks. Animation-only input cannot establish mesh deformation quality.
+- How: Preserve originals. Extract each archive into a fresh folder, select its DAE (and only referenced sidecars), verify Y_UP/joint/channel/skin coverage and bind transforms, compare source idle playback, then exercise DAE export/re-import before retargeting. ZIP remains a container rather than an import format.
+- Done when: Both supplied DAE files load without browser errors, the animation-only file is correctly identified as geometry-free, the with-skin file renders and deforms through a complete idle loop, and the selected source is explicitly accepted or rejected with hash-bound evidence.
+- Verification: Original archive hashes, structural comparison, complete idle loop, visual self-clipping review, and DAE roundtrip checks. Animation-only input cannot establish mesh deformation quality.

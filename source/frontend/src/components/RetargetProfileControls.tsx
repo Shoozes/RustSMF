@@ -57,7 +57,7 @@ export default function RetargetProfileControls({ disabled, onRetarget, value, o
     {draft !== saved && <p>Profile edits are not exported.</p>}
     <button type="button" disabled={busy || !parsed.profile} onClick={() => void exportProfile()} data-testid="retarget-profile-export">Export profile</button>
     <label className="outliner-append-action">Retarget with profile
-      <input type="file" className="hidden" multiple accept=".fbx,.glb,.gltf,.bin,.png,.jpg,.jpeg,.webp,.ktx2"
+      <input type="file" className="hidden" multiple accept=".fbx,.dae,.glb,.gltf,.bin,.png,.jpg,.jpeg,.webp,.ktx2"
         disabled={disabled || busy || !parsed.profile} data-testid="retarget-profile-source"
         onChange={(event) => { const files = Array.from(event.currentTarget.files ?? []); event.currentTarget.value = ''; if (files.length && parsed.profile) onRetarget(files, parsed.profile); }} />
     </label>

@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import type * as THREE from 'three';
 import type { OpenResult, TauriClient } from '../backend-client/tauri';
-import { buildThreeScene as buildSmfScene, loadGLB, loadFBX, loadOBJ, exportGLB, validateExportedGLB, exportFBX, validateExportedFBX, bytesToArrayBuffer, SmfConversionError, collectSkinnedMeshes, compareSmfRoundtrip, inspectThreeToSmfSource, makeDiagnosticReport } from '../loaders';
+import { buildThreeScene as buildSmfScene, loadGLB, loadFBX, loadDAE, loadOBJ, exportGLB, validateExportedGLB, exportFBX, validateExportedFBX, exportDAE, validateExportedDAE, bytesToArrayBuffer, SmfConversionError, collectSkinnedMeshes, compareSmfRoundtrip, inspectThreeToSmfSource, makeDiagnosticReport } from '../loaders';
 import type { ImportedSmf, SmfDiagnosticReport, SmfRoundtripReport } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
 import {
@@ -195,6 +195,7 @@ type LoadedModelResult =
   | Awaited<ReturnType<typeof buildSmfScene>>
   | Awaited<ReturnType<typeof loadGLB>>
   | Awaited<ReturnType<typeof loadFBX>>
+  | Awaited<ReturnType<typeof loadDAE>>
   | Awaited<ReturnType<typeof loadOBJ>>;
 
 interface KeyboardEditorHistoryHandlers {
@@ -1104,6 +1105,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       } else if (detectedLoadFormat === 'fbx') {
         const urlOrBuf: string | ArrayBuffer | ModelResourceBundle = resourceBundle || (data ? bytesToArrayBuffer(data) : (res.path || ''));
         loaded = await loadFBX(urlOrBuf);
+      } else if (detectedLoadFormat === 'dae') {
+        const urlOrBuf: string | ArrayBuffer | ModelResourceBundle = resourceBundle || (data ? bytesToArrayBuffer(data) : (res.path || ''));
+        loaded = await loadDAE(urlOrBuf);
       } else if (detectedLoadFormat === 'obj') {
         const urlOrBuf: string | ArrayBuffer | ModelResourceBundle = resourceBundle || (data ? bytesToArrayBuffer(data) : (res.path || ''));
         loaded = await loadOBJ(urlOrBuf);
@@ -1295,7 +1299,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         currentTime: playbackRef.current.currentTime,
         playbackSpeed: playbackRef.current.playbackSpeed,
         isPlaying: playbackRef.current.isPlaying,
-        sourceFormat: sourceFormat as 'smf' | 'glb' | 'fbx' | 'obj' | '',
+        sourceFormat: sourceFormat as 'smf' | 'glb' | 'fbx' | 'dae' | 'obj' | '',
         rigMetadata: cloneRigMetadata(rigMetadata),
       },
     });
@@ -1540,6 +1544,24 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           }
         }
 
+        if (srcFmt === 'dae') {
+          ui.setStatus('Exporting DAE-loaded model to Collada .dae...');
+          try {
+            const bytes = await exportDAE(rootToExport, model.clips);
+            if (!isCurrentExport()) return;
+            const summary = await validateExportedDAE(bytes, rootToExport, model.clips);
+            if (!isCurrentExport()) return;
+            const ok = await (await getTauriClient()).saveFile(bytes, 'exported_model.dae');
+            if (!isCurrentExport()) return;
+            if (!ok) { ui.setStatus('Export canceled.'); return; }
+            ui.setStatus(`Exported .dae (verified ${summary.boneCount} bones, ${summary.clipCount} clips).`);
+            return;
+          } catch (error: unknown) {
+            if (!isCurrentExport()) return;
+            ui.setStatus(`DAE export error: ${errorMessage(error)}. Falling back to generic GLB...`);
+          }
+        }
+
         const built = await buildVerifiedGlb(rootToExport, model.clips, isCurrentExport);
         if (!built) return;
         const { bytes, summary } = built;
@@ -1619,6 +1641,37 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       }
     });
   }, [ui, model, withExportBusy, saveFbxExport]);
+
+  const handleExportDae = useCallback(async () => {
+    await withExportBusy('Export as DAE', async (isCurrentExport) => {
+      try {
+        if (!model.root) {
+          ui.setStatus('Nothing to export as DAE.');
+          return;
+        }
+        ui.setStatus('Exporting current model as Collada DAE...');
+        const rootToExport = model.root;
+        if (!rootToExport) { ui.setStatus('Nothing to export as DAE.'); return; }
+        const bytes = await exportDAE(rootToExport, model.clips);
+        if (!isCurrentExport()) return;
+        ui.setStatus('Validating exported DAE round-trip...');
+        const summary = await validateExportedDAE(bytes, rootToExport, model.clips);
+        if (!isCurrentExport()) return;
+        const ok = await (await getTauriClient()).saveFile(bytes, 'exported_model.dae');
+        if (!isCurrentExport()) return;
+        if (!ok) {
+          ui.setStatus('Export canceled.');
+          return;
+        }
+        ui.setStatus(`Exported .dae (verified ${summary.boneCount} bones, ${summary.clipCount} clips).`);
+      } catch (error: unknown) {
+        if (!isCurrentExport()) return;
+        const message = errorMessage(error);
+        ui.setErrorMsg(`DAE export error: ${message}`);
+        ui.setStatus(`DAE export error: ${message}`);
+      }
+    });
+  }, [model, ui, withExportBusy]);
 
   const handleRunSmfRoundtripCheck = useCallback(async () => {
     await withExportBusy('SMF roundtrip check', async (isCurrentExport) => {
@@ -1978,8 +2031,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       return null;
     }
     const format = detectModelFormat(file.name);
-    if (!['glb', 'gltf', 'obj', 'fbx'].includes(format)) {
-      ui.setStatus('Append supports only GLB/GLTF, OBJ, or FBX static assets.');
+    if (!['glb', 'gltf', 'obj', 'fbx', 'dae'].includes(format)) {
+      ui.setStatus('Append supports only GLB/GLTF, OBJ, FBX, or DAE static assets.');
       return null;
     }
     const isCurrentOperation = beginModelOperation();
@@ -1992,6 +2045,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       if (!bytes) throw new Error('The selected static append has no readable bytes.');
       const loaded = format === 'fbx'
         ? await loadFBX(bytesToArrayBuffer(bytes))
+        : format === 'dae'
+          ? await loadDAE(bytesToArrayBuffer(bytes))
         : format === 'obj'
           ? await loadOBJ(bytesToArrayBuffer(bytes))
           : await loadGLB(bytesToArrayBuffer(bytes));
@@ -2026,14 +2081,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     ui.setIsLoading(true);
     ui.setErrorMsg('');
     ui.setStatus('Reading source animation rig...');
-    let loadedSource: Awaited<ReturnType<typeof loadFBX>> | Awaited<ReturnType<typeof loadGLB>> | null = null;
+    let loadedSource: Awaited<ReturnType<typeof loadFBX>> | Awaited<ReturnType<typeof loadDAE>> | Awaited<ReturnType<typeof loadGLB>> | null = null;
     try {
       const result = await (await getTauriClient()).readBrowserModelFiles(files);
       if (!isCurrentOperation()) return;
       if (result.error) throw new Error(result.error);
       const format = detectModelFormat(result.name || '');
-      if (format !== 'fbx' && format !== 'glb') {
-        throw new Error('Animation retargeting accepts FBX, GLB, or GLTF source rigs.');
+      if (format !== 'fbx' && format !== 'dae' && format !== 'glb') {
+        throw new Error('Animation retargeting accepts FBX, DAE, GLB, or GLTF source rigs.');
       }
       if (!result.files || result.files.length === 0) throw new Error('The selected animation source has no readable files.');
       const bundleFiles = result.files.map((file) => {
@@ -2041,7 +2096,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         return { name: file.name, data: file.data };
       });
       const bundle = createModelResourceBundle(bundleFiles[0], bundleFiles.slice(1));
-      loadedSource = format === 'fbx' ? await loadFBX(bundle) : await loadGLB(bundle);
+      loadedSource = format === 'fbx' ? await loadFBX(bundle) : format === 'dae' ? await loadDAE(bundle) : await loadGLB(bundle);
       if (!isCurrentOperation() || model.root !== targetRoot || model.skeleton !== targetSkeleton) {
         throw new Error('The target model changed before animation retargeting completed.');
       }
@@ -3539,6 +3594,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     handleExport,
     handleExportGlb,
     handleExportFbx,
+    handleExportDae,
     handleExportSmf,
     handleRunSmfRoundtripCheck,
     handleSaveSmfDiagnosticReport,

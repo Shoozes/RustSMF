@@ -50,8 +50,6 @@ export function parseRetargetProfile(text: string): RetargetProfile {
   if (!job.rig.retarget) throw new Error('The document has no retarget settings.');
   const retarget = { ...job.rig.retarget } as Partial<RetargetJob>;
   delete retarget.sourceModel;
-  // The job parser represents omitted curls as [], but explicit [] is invalid.
-  if (!retarget.targetChainCurls?.length) delete retarget.targetChainCurls;
   return {
     $schema: RETARGET_PROFILE_SCHEMA,
     retarget: retarget as RetargetProfileSettings,
@@ -62,6 +60,9 @@ export function parseRetargetProfile(text: string): RetargetProfile {
 export function profileClipOptions(profile: RetargetProfile, sourceClip: THREE.AnimationClip,
   sourceClips: readonly THREE.AnimationClip[], targetClips: readonly THREE.AnimationClip[]): AnimationRetargetOptions {
   const job = profile.retarget;
+  const envelope = job.clipEndpointEnvelopes?.[sourceClip.name];
+  const renamePose = <T extends {targetClip: string}>(pose: T): T => ({...pose,
+    targetClip: profile.targetClipNames[pose.targetClip] ?? pose.targetClip});
   const reference = (name: string | undefined, clips: readonly THREE.AnimationClip[], owner: string) => {
     if (!name) return undefined;
     const clip = clips.find((candidate) => candidate.name === name);
@@ -75,6 +76,7 @@ export function profileClipOptions(profile: RetargetProfile, sourceClip: THREE.A
     clipName: job.clipNames?.[sourceClip.name] || sourceClip.name,
     applyUpCorrection: job.applyUpCorrection,
     alignMappedBoneDirections: job.alignMappedBoneDirections,
+    directionAlignmentBones: job.directionAlignmentBones,
     directionTransferMode: job.clipDirectionTransfer?.[sourceClip.name] ?? job.directionTransfer,
     directionTransferBones: job.clipDirectionTransferBones?.[sourceClip.name] ?? job.directionTransferBones,
     sourceReferencePose: job.sourceReferencePose,
@@ -86,8 +88,16 @@ export function profileClipOptions(profile: RetargetProfile, sourceClip: THREE.A
     naturalMotion: job.naturalMotion,
     poseRanges: job.poseRanges,
     localReferenceCorrections: job.localReferenceCorrections,
+    jointConstraints: job.clipJointConstraints?.[sourceClip.name],
+    forearmTwist: job.clipForearmTwist?.[sourceClip.name],
+    ...(envelope ? {
+      endpointEnvelope: { entry: renamePose(envelope.entry), exit: renamePose(envelope.exit),
+        ...(envelope.intermediatePoses ? {intermediatePoses: envelope.intermediatePoses.map(renamePose)} : {}) },
+      endpointTargetClips: targetClips,
+    } : {}),
     poseRecovery: job.clipPoseRecovery?.[sourceClip.name],
     scaleRootMotion: job.scaleRootMotion,
+    rootMotionScale: job.rootMotionScale,
     extractRootMotionBone: job.extractRootMotionBone,
     visualTiming: job.clipVisualTiming?.[sourceClip.name],
     sampleRateHz: job.sampleRateHz,

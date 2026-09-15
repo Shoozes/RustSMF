@@ -18,6 +18,7 @@ export interface SkinnedGlbFixtureOptions {
   rootScale?: number;
   clipName?: string;
   clipDuration?: number;
+  withHeadChain?: boolean;
 }
 
 const fixtureBufferPromises = new Map<string, Promise<Buffer>>();
@@ -128,6 +129,8 @@ function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THR
   tipBone.name = 'FixtureTip';
   tipBone.position.set(0, 1, 0);
   rootBone.add(tipBone);
+  const headBone = options.withHeadChain ? new THREE.Bone() : undefined;
+  if (headBone) { headBone.name = 'FixtureHead'; headBone.position.y = .5; tipBone.add(headBone); }
   root.add(rootBone);
 
   const geometry = new THREE.BufferGeometry();
@@ -168,7 +171,7 @@ function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THR
     : new THREE.MeshBasicMaterial({ color: 0x3fbf8f, side: THREE.DoubleSide });
   const mesh = new THREE.SkinnedMesh(geometry, material);
   mesh.name = 'FixtureSkinnedMesh';
-  mesh.bind(new THREE.Skeleton([rootBone, tipBone]));
+  mesh.bind(new THREE.Skeleton([rootBone, tipBone, ...(headBone ? [headBone] : [])]));
 
   if (options.withMultiMaterial) {
     if (geometry.getIndex()) {
@@ -207,6 +210,11 @@ function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THR
     ]),
   ]);
 
+  if (headBone) {
+    const rotation = (degrees: number) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), THREE.MathUtils.degToRad(degrees)).toArray();
+    clip.tracks[0] = new THREE.QuaternionKeyframeTrack('FixtureTip.quaternion', [0, clipDuration / 2, clipDuration], [...rotation(0), ...rotation(100), ...rotation(0)]);
+    clip.tracks.push(new THREE.QuaternionKeyframeTrack('FixtureHead.quaternion', [0, clipDuration / 2, clipDuration], [...rotation(0), ...rotation(-60), ...rotation(0)]));
+  }
   return { root, clips: [clip] };
 }
 
@@ -216,6 +224,7 @@ function getFixtureKey(options: SkinnedGlbFixtureOptions): string {
     options.nonPowerOfTwoTexture ? 'npot' : 'pot',
     options.withMultiMaterial ? 'multi' : 'single',
     options.withSiblingMesh ? 'siblings' : 'solo',
+    options.withHeadChain ? 'head-chain' : 'two-bone',
     `scale-${options.rootScale ?? 1}`,
     `clip-${options.clipName ?? 'FixtureBend'}`,
     `duration-${options.clipDuration ?? 0.5}`,

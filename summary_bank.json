@@ -25,7 +25,6 @@
       "max_kb": 52,
       "paths": [
         "README.md",
-        "docs/dev/README.md",
         "docs/dev/APP_STATE.md",
         "docs/dev/TODO.md"
       ],
@@ -158,7 +157,7 @@
       ]
     },
     "feature__rig_retargeting": {
-      "description": "Explicit humanoid rig mapping, sampled clip transfer, normalized rig-proportion diagnostics, and target-length natural-motion controls.",
+      "description": "Explicit humanoid rig mapping, sampled clip transfer, and normalized rig-proportion diagnostics. Natural-motion solving has its own focused route.",
       "max_kb": 196,
       "paths": [
         "source/frontend/src/utils/rigMapping.ts",
@@ -166,15 +165,31 @@
         "source/frontend/src/utils/rigCompatibility.ts",
         "source/frontend/src/utils/rigCompatibility.test.ts",
         "source/frontend/src/utils/animationRetarget.ts",
-        "source/frontend/src/utils/animationRetarget.test.ts",
-        "source/frontend/src/utils/naturalRetarget.ts",
-        "source/frontend/src/utils/naturalRetarget.test.ts"
+        "source/frontend/src/utils/animationRetarget.test.ts"
       ],
       "notes": [
         "Opaque numeric rigs require an explicit reviewed map and never fuzzy-match; normalized segment ratios expose proportion mismatches that correct axes alone cannot solve.",
         "Retargeting samples helper-ancestor world motion, transfers mapped swings relative to reference poses, can scope absolute source directions to action limbs, can preserve target terminal or explicitly listed rotations, and supports a bounded trusted-peak recovery envelope for damaged source clips.",
         "Natural motion distributes torso rotation by target segment length, solves target-length two-bone legs, locks calibrated sole contacts with declared root travel, and applies clip-scoped target-pelvis leg-angle and swing-bend limits that fade out at full contact.",
         "Requested-rate resampling evaluates source tracks at float32 frame times so upward-rounded STEP keys are not read one frame early, keeps partial terminal samples inside clip duration, and treats output next-down timing as a separate frame-indexed-consumer contract."
+      ]
+    },
+    "subsystem__natural_motion": {
+      "description": "Target-length torso/leg/contact solving, bounded swing validation, root-travel compensation and regressions; use rig-retargeting for orchestration.",
+      "max_kb": 96,
+      "paths": [
+        "source/frontend/src/utils/naturalRetarget.ts",
+        "source/frontend/src/utils/naturalRetarget.test.ts",
+        "source/frontend/src/utils/swingTrajectory.ts",
+        "source/frontend/src/utils/swingTrajectory.test.ts"
+      ]
+    },
+    "subsystem__endpoint_envelopes": {
+      "description": "Offline target-clip endpoint and pre-contact anchor sampling, fixed-length local pose envelopes, complete STEP TRS emission and post-contact endpoint rejection.",
+      "max_kb": 32,
+      "paths": [
+        "source/frontend/src/utils/endpointEnvelope.ts",
+        "source/frontend/src/utils/endpointEnvelope.test.ts"
       ]
     },
     "feature__retarget_profiles": {
@@ -186,6 +201,10 @@
         "source/frontend/src/utils/retargetProfile.test.ts",
         "source/frontend/src/utils/retargetReference.ts",
         "source/frontend/src/utils/retargetReference.test.ts",
+        "source/frontend/src/utils/retargetJointConstraints.ts",
+        "source/frontend/src/utils/retargetJointConstraints.test.ts",
+        "source/frontend/src/utils/forearmTwist.ts",
+        "source/frontend/src/utils/forearmTwist.test.ts",
         "source/frontend/src/utils/retargetTiming.ts",
         "source/frontend/src/utils/retargetTiming.test.ts",
         "source/frontend/tests/retarget-profile.spec.ts"
@@ -266,9 +285,26 @@
         "FBX texture parse waits on its isolated loader manager; authorized selected relative maps resolve through the shared resource bundle and unavailable maps fail safe before render."
       ]
     },
+    "feature__dae_support": {
+      "description": "Collada DAE import/export with visual-scene, static/skinned geometry, joint weights, matrix animation, and bounded round-trip validation.",
+      "max_kb": 128,
+      "paths": [
+        "source/frontend/src/loaders/dae.ts",
+        "source/frontend/src/loaders/index.ts",
+        "source/frontend/src/utils/modelFormat.ts",
+        "source/frontend/src/utils/modelFormat.test.ts",
+        "source/frontend/tests/export-formats.spec.ts",
+        "source/frontend/tests/README.md"
+      ],
+      "notes": [
+        "ColladaLoader is the browser import authority; the local serializer writes 1.4.1 Y_UP visual scenes, materials, geometry, controllers, inverse bind matrices, and matrix animation channels.",
+        "Export validates by re-importing before save and rejects duplicate joint names or non-triangle geometry. External texture images are not embedded by the DAE writer; use GLB for texture-fidelity export.",
+        "ZIP archives remain containers, not model inputs; users must extract and select the DAE plus authorized sidecars."
+      ]
+    },
     "subsystem__model_geometry_preparation": {
-      "description": "Shared GLB, FBX, and OBJ geometry-attribute preparation plus loader-safe tangent prerequisites.",
-      "max_kb": 64,
+      "description": "Shared GLB, FBX, DAE, and OBJ geometry-attribute preparation plus loader-safe tangent prerequisites.",
+      "max_kb": 80,
       "paths": [
         "source/frontend/src/loaders/geometryAttributes.ts",
         "source/frontend/src/loaders/geometryAttributes.test.ts",
@@ -276,7 +312,8 @@
         "source/frontend/src/loaders/glb.test.ts",
         "source/frontend/src/loaders/fbx.ts",
         "source/frontend/src/loaders/fbx.test.ts",
-        "source/frontend/src/loaders/obj.ts"
+        "source/frontend/src/loaders/obj.ts",
+        "source/frontend/src/loaders/dae.ts"
       ],
       "notes": [
         "Missing preview UVs and normals may be synthesized, but generated zero UVs are not evidence for tangent-space derivation.",
@@ -312,8 +349,6 @@
         "source/frontend/src/loaders/smfDiagnostics.test.ts",
         "source/frontend/src/loaders/threeToSmf.ts",
         "source/frontend/src/loaders/threeToSmf.test.ts",
-        "source/frontend/src/loaders/glb.ts",
-        "source/frontend/src/loaders/glb.test.ts",
         "source/frontend/src/utils/materialPreview.ts",
         "source/frontend/src/utils/materialPreview.test.ts",
         "source/frontend/src/utils/materialPolicy.ts",
@@ -323,6 +358,20 @@
         "One pure candidate builder must own pose, animation, and live-skin application.",
         "Indexed runtime geometry is expanded to SMF triangle soup before worker validation.",
         "All saves stay globally single-flight and freshness-checked."
+      ]
+    },
+    "issue__glb_roundtrip_identity": {
+      "description": "Stable GLB scene envelopes, authored-root preservation, matrix-only animation guards and repeated roundtrip proof.",
+      "max_kb": 80,
+      "paths": [
+        "source/frontend/src/loaders/glb.ts",
+        "source/frontend/src/loaders/glb.test.ts",
+        "source/frontend/src/loaders/geometryAttributes.ts",
+        "source/frontend/src/utils/glbContainer.ts"
+      ],
+      "notes": [
+        "Loader-owned identity scene envelopes are exported as scenes, not additional nodes; existing named wrappers are never flattened by guessing.",
+        "Authored root transforms and animation require real nodes. Animated export rejects matrix-only transforms that TRS serialization cannot retain."
       ]
     },
     "subsystem__viewport_editor": {
@@ -649,7 +698,7 @@
       "description": "Current working-tree verification evidence, authoritative local gates, browser result classification, and cleanup ownership.",
       "max_kb": 96,
       "paths": [
-        "docs/dev/APP_STATE.md",
+        "README.md",
         "docs/dev/review.md",
         "run.ps1",
         "source/package.json",
@@ -659,19 +708,20 @@
         "source/frontend/playwright.config.ts"
       ],
       "notes": [
-        "review.md is the only current command ledger; HISTORY.md owns older completed evidence and TODO.md owns forward work.",
+        "review.md owns the latest assessment; HISTORY.md owns dated command evidence and TODO.md owns forward work. APP_STATE.md supplies broader product contracts only when needed.",
         "Use the test:e2e:list package script for browser inventory so npm cannot consume Playwright's --list flag and accidentally run the suite.",
         "Classify browser failures by assertion, launch, and teardown phase; a historical managed-process caveat must never hide a current product assertion failure, and runner-owned ports must be clear after interrupted runs."
       ]
     },
     "issue__external_model_resources": {
-      "description": "Bounded GLTF/FBX/OBJ sidecar resource resolution, native/browser authorization, missing-resource diagnostics, and cleanup.",
+      "description": "Bounded GLTF/FBX/DAE/OBJ sidecar resource resolution, native/browser authorization, missing-resource diagnostics, and cleanup.",
       "max_kb": 338,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/loaders/glb.ts",
         "source/frontend/src/loaders/fbx.ts",
+        "source/frontend/src/loaders/dae.ts",
         "source/frontend/src/loaders/obj.ts",
         "source/frontend/src/utils/modelFormat.ts",
         "source/frontend/src/utils/modelResourceBundle.ts",
@@ -715,7 +765,6 @@
         "source/frontend/tests/rig.spec.ts",
         "source/frontend/tests/skin.spec.ts",
         "source/frontend/tests/visual.spec.ts",
-        "source/frontend/tests/helpers/skinned-glb-fixture.ts",
         "source/frontend/tests/helpers/timeline-interactions.ts",
         "source/frontend/tests/helpers/viewport-interactions.ts"
       ],
@@ -726,7 +775,7 @@
     },
     "subsystem__load_editor_orchestration": {
       "description": "Load/export intent ownership, editor snapshots, candidate construction, and stable cross-component event contracts.",
-      "max_kb": 186,
+      "max_kb": 192,
       "paths": [
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/hooks/smfExportCandidate.ts",
@@ -823,7 +872,6 @@
         "source/frontend/src/rig-comparison/comparison.js",
         "source/frontend/src/utils/fitRigPreview.test.ts",
         "source/frontend/tests/rig-comparison.spec.ts",
-        "source/frontend/tests/helpers/skinned-glb-fixture.ts",
         "source/frontend/scripts/bounded-file-read.ts"
       ],
       "notes": [

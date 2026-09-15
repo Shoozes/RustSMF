@@ -584,11 +584,15 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
         );
         await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
         await expect(canvas).toHaveAttribute('data-model-root-id', /.+/);
+        // Compare scale, not the autoplay phase reached while opening controls.
+        await showAnimateTimeline(page);
+        await pausePlaybackIfRunning(page);
+        await page.getByTestId('timeline-reset-btn').click();
+        await expect(canvas).toHaveAttribute('data-playback-time', '0.000000');
+        await page.getByTestId('mode-tab-view').click();
         if (await page.getByTestId('modern-panel-close').isVisible()) {
           await page.getByTestId('modern-panel-close').click();
         }
-        await pausePlaybackIfRunning(page);
-
         await openViewportDisplayMenu(page);
         for (const toggleId of ['viewport-grid-toggle', 'viewport-axes-toggle']) {
           const toggle = page.getByTestId(toggleId);
@@ -621,7 +625,8 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
         await expect(canvas).toHaveAttribute('data-viewport-camera-type', 'OrthographicCamera');
         const orthographic = await readGreenModelCoverage();
         expect(orthographic.pixelCount).toBeGreaterThan(500);
-        expect(orthographic.widthRatio).toBeGreaterThan(0.13);
+        // The 13% boundary can fall between pixels at this viewport width.
+        expect(orthographic.widthRatio + 1 / orthographic.imageWidth).toBeGreaterThan(0.13);
         expect(orthographic.widthRatio).toBeLessThan(0.9);
         expect(orthographic.heightRatio).toBeGreaterThan(0.5);
         expect(orthographic.heightRatio).toBeLessThan(0.9);

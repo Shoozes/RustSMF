@@ -41,6 +41,47 @@ test('portable local reference corrections roundtrip into shared clip options', 
   assert.deepEqual(profileClipOptions(profile, walk, [idle, walk], [target]).localReferenceCorrections, corrections);
 });
 
+test('calibration controls survive portable normalization and reach shared clip options', () => {
+  const input = document();
+  const settings = { ...input.retarget, rootMotionScale: 2.5, directionAlignmentBones: ['mixamorigHead'] };
+  const profile = parseRetargetProfile(JSON.stringify({ ...input, retarget: settings }));
+  assert.deepEqual(parseRetargetProfile(JSON.stringify(profile)), profile);
+  const idle = new THREE.AnimationClip('idle', 1, []), walk = new THREE.AnimationClip('walk', 1, []);
+  const target = new THREE.AnimationClip('wolf_source_idle', 1, []);
+  const options = profileClipOptions(profile, walk, [idle, walk], [target]);
+  assert.equal(options.rootMotionScale, 2.5);
+  assert.deepEqual(options.directionAlignmentBones, ['mixamorigHead']);
+  const omitted = parseRetargetProfile(JSON.stringify(input));
+  assert.equal(omitted.retarget.rootMotionScale, undefined);
+  assert.equal(omitted.retarget.directionAlignmentBones, undefined);
+  for (const change of [{ rootMotionScale: 0 }, { rootMotionScale: -1 }, { rootMotionScale: '2' }, { rootMotionScale: null },
+    { scaleRootMotion: false }, { directionAlignmentBones: [] }, { directionAlignmentBones: [''] },
+    { directionAlignmentBones: ['mixamorigHead', 'mixamorigHead'] }, { alignMappedBoneDirections: false },
+    { directionTransferBones: ['other'] }, { clipDirectionTransferBones: { walk: ['other'] } }]) {
+    assert.throws(() => parseRetargetProfile(JSON.stringify({ ...input, retarget: { ...settings, ...change } })), /rootMotionScale|directionAlignmentBones/);
+  }
+});
+
+test('per-clip neck/head constraints share profile validation and option routing', () => {
+  const input = document();
+  const joint = (bone: string) => ({ bone, referenceRotation: [0, 0, 0, 1], twistAxis: [0, 1, 0], bendAxis: [1, 0, 0],
+    flexionDegrees: [-70, 70], lateralDegrees: [-70, 70], twistDegrees: [-90, 90], maximumSwingDegrees: 70 });
+  const settings = { ...input.retarget, alignMappedBoneDirections: false,
+    poseRanges: { schema: 'rustsmf.pose-ranges.v1', id: 'pair', policy: 'report', joints: [joint('neck'), joint('head')] },
+    clipJointConstraints: { walk: { neck: 'neck', head: 'head', transitionDegrees: 5 } } };
+  const profile = parseRetargetProfile(JSON.stringify({ ...input, retarget: settings }));
+  assert.deepEqual(parseRetargetProfile(JSON.stringify(profile)), profile);
+  const idle = new THREE.AnimationClip('idle', 1, []), walk = new THREE.AnimationClip('walk', 1, []);
+  const target = new THREE.AnimationClip('wolf_source_idle', 1, []);
+  assert.deepEqual(profileClipOptions(profile, walk, [idle, walk], [target]).jointConstraints, settings.clipJointConstraints.walk);
+  assert.equal(profileClipOptions(profile, idle, [idle, walk], [target]).jointConstraints, undefined);
+  for (const overrides of [{ alignMappedBoneDirections: true }, { poseRanges: undefined },
+    { clipJointConstraints: { missing: settings.clipJointConstraints.walk } },
+    { clipPoseRecovery: { walk: { peakFrame: 1, holdThroughFrame: 2, returnByFrame: 3 } } }]) {
+    assert.throws(() => parseRetargetProfile(JSON.stringify({ ...input, retarget: { ...settings, ...overrides } })), /Joint constraints/);
+  }
+});
+
 test('browser profile reuses strict job validation and rejects ignored settings', () => {
   const valid = document();
   assert.throws(() => parseRetargetProfile(JSON.stringify({ ...valid, ignored: true })), /Unknown/);

@@ -450,6 +450,8 @@ function selectClip() {
 
 function applyPose(view, time, mode) {
   if (view.pitchJointRest) view.pitchJoint.quaternion.copy(view.pitchJointRest);
+  // LoopOnce terminal sampling pauses the action; explicit seeks must resume it.
+  view.action.paused = false;
   view.mixer.setTime(Math.min(view.action.getClip().duration, Math.max(0, Math.fround(time))));
   view.wrapper.position.set(0, 0, 0);
   view.wrapper.rotation.set(0, 0, 0);

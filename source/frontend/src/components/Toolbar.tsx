@@ -26,6 +26,7 @@ interface ToolbarProps extends Omit<ViewportControlsProps, 'variant'> {
   onExport: () => void;
   onExportGlb: () => void;
   onExportFbx: () => void;
+  onExportDae: () => void;
   onExportSmf: () => void;
   smfExportEnabled: boolean;
   onPing: () => void;
@@ -117,13 +118,14 @@ const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ theme, themeId, setThemeI
 );
 
 const SecondaryCommands: React.FC<Pick<ToolbarProps,
-  'onOpenProject' | 'onRecoverProject' | 'onExportGlb' | 'onExportFbx' | 'onExportSmf' | 'smfExportEnabled' | 'onPing' | 'isLoading'
->> = ({ onOpenProject, onRecoverProject, onExportGlb, onExportFbx, onExportSmf, smfExportEnabled, onPing, isLoading }) => (
+  'onOpenProject' | 'onRecoverProject' | 'onExportGlb' | 'onExportFbx' | 'onExportDae' | 'onExportSmf' | 'smfExportEnabled' | 'onPing' | 'isLoading'
+>> = ({ onOpenProject, onRecoverProject, onExportGlb, onExportFbx, onExportDae, onExportSmf, smfExportEnabled, onPing, isLoading }) => (
   <div className="modern-command-menu-grid">
     <button className="toolbar-action" data-testid="open-project-btn" onClick={onOpenProject} disabled={isLoading}>Open Project</button>
     <button className="toolbar-action" data-testid="recover-project-btn" onClick={onRecoverProject} disabled={isLoading}>Recover</button>
     <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading}>Export GLB</button>
     <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={isLoading}>Export FBX</button>
+    <button className="toolbar-action" data-testid="export-dae-btn" onClick={onExportDae} disabled={isLoading}>Export DAE</button>
     <button
       className="toolbar-action"
       data-testid="export-smf-btn"
@@ -204,6 +206,7 @@ const OriginalToolbar: React.FC<ToolbarProps> = (props) => {
     onExport,
     onExportGlb,
     onExportFbx,
+    onExportDae,
     onExportSmf,
     smfExportEnabled,
     onPing,
@@ -231,6 +234,7 @@ const OriginalToolbar: React.FC<ToolbarProps> = (props) => {
           <button className="toolbar-action" data-testid="export-btn" onClick={onExport} disabled={isLoading}>Export Asset</button>
           <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading}>GLB</button>
           <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={isLoading}>FBX</button>
+          <button className="toolbar-action" data-testid="export-dae-btn" onClick={onExportDae} disabled={isLoading}>DAE</button>
           <button className="toolbar-action" data-testid="export-smf-btn" onClick={onExportSmf} disabled={isLoading || !smfExportEnabled}>SMF</button>
           <button className="toolbar-action toolbar-action-muted" data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>Ping</button>
         </div>

@@ -64,7 +64,7 @@ export async function openFile(): Promise<OpenResult | null> {
       if (Array.isArray(selected)) {
         const modelIndex = selected.findIndex((path) => detectModelFormat(path) !== '')
         if (modelIndex < 0) {
-          return { error: 'No supported model file was selected. Select one .smf, .glb, .gltf, .fbx, or .obj file with optional sidecars.' }
+          return { error: 'No supported model file was selected. Select one .smf, .glb, .gltf, .fbx, .dae, or .obj file with optional sidecars.' }
         }
         const orderedPaths = [selected[modelIndex], ...selected.filter((_, index) => index !== modelIndex)]
         const primaryPath = orderedPaths[0]

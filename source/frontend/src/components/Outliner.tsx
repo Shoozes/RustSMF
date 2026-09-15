@@ -137,7 +137,7 @@ const Outliner: React.FC<OutlinerProps> = ({
           Append static
           <input
             type="file"
-            accept=".glb,.gltf,.obj,.fbx"
+            accept=".glb,.gltf,.obj,.fbx,.dae"
             className="hidden"
             disabled={!objectEditingEnabled}
             onChange={(event) => {

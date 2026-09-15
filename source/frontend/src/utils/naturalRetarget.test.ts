@@ -9,12 +9,85 @@ import {
   limitNaturalLegDirection,
   naturalSolePoint,
   naturalFootHeading,
+  naturalContactOrientation,
+  parseContactPoint,
+  parseContactPatch,
+  lowestContactPoint,
   naturalContactRamp,
+  parseRootTravelSamples,
+  sampledRootDisplacement,
   resolveNaturalContactPose,
   solveNaturalTwoBoneLeg,
   solveNaturalPelvisCorrection,
   type NaturalFootContact,
 } from './naturalRetarget';
+
+test('toe contacts retain full pitch and use bounded independent local points', () => {
+  const point: [number,number,number]=[.02,-.1,.15];
+  assert.deepEqual(parseContactPoint(point),point);
+  assert.notEqual(parseContactPoint(point),point);
+  for(const invalid of [null,[0,0],['0',0,0],[0,NaN,0],[0,10001,0],Array(3)])assert.throws(()=>parseContactPoint(invalid),/contactPoint/);
+  const animated=new THREE.Quaternion().setFromEuler(new THREE.Euler(.7,.2,-.1)),reference=new THREE.Quaternion();
+  assert.deepEqual(naturalContactOrientation('animated',animated,reference).toArray(),animated.toArray());
+  assert.notEqual(naturalContactOrientation('animated',animated,reference),animated);
+  assert.deepEqual(naturalContactOrientation(undefined,animated,reference).toArray(),reference.toArray());
+  assert.deepEqual(naturalContactOrientation('animated-heading',animated,reference).toArray(),naturalFootHeading(animated,reference).toArray());
+  const result=resolveNaturalContactPose({naturalAnkle:new THREE.Vector3(0,1,0),naturalFootQuaternion:animated,referenceFootQuaternion:animated,soleOffset:point,pinnedSole:new THREE.Vector3(.2,0,.3),rootTravelPerFrame:[0,0,0],elapsedFrames:0,weight:1});
+  assert.ok(naturalSolePoint(result.ankle,result.footQuaternion,point).distanceTo(new THREE.Vector3(.2,0,.3))<1e-12);
+  assert.ok(result.footQuaternion.angleTo(animated)<1e-7);
+});
+
+test('a fixed sole patch switches support under articulation without refitting points',()=>{
+  const points:[number,number,number][]=[[0,0,-1],[0,0,1]],before=structuredClone(points);
+  const forward=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),.5),backward=forward.clone().invert();
+  assert.equal(lowestContactPoint(points,forward),points[1]);
+  assert.equal(lowestContactPoint(points,backward),points[0]);
+  assert.deepEqual(points,before);
+  assert.deepEqual(parseContactPatch(points.map(point=>({point}))),points.map(point=>({point})));
+  for(const value of [[],[{point:[0,0,0]}],Array(17).fill({point:[0,0,0]}),[{point:[0,0,0]},{point:[0,NaN,0]}],[{point:[0,0,0]},{point:[0,0,0],ignored:true}]])assert.throws(()=>parseContactPatch(value),/contactPatch|contactPoint/);
+});
+
+test('sampled nonlinear root travel keeps planted soles fixed in receiving space', () => {
+  const samples = parseRootTravelSamples({ brake: [[0,0,0],[0,0,.03],[0,0,.05],[0,0,.06]] })!.brake;
+  for (const start of [0, 1]) for (let frame = start; frame < samples.length; frame++) {
+    const pin = new THREE.Vector3(1,0,2), displacement = sampledRootDisplacement(samples, frame, start);
+    const result = resolveNaturalContactPose({ naturalAnkle: new THREE.Vector3(2,1,3), naturalFootQuaternion: new THREE.Quaternion(),
+      referenceFootQuaternion: new THREE.Quaternion(), soleOffset: [0,-.1,0], pinnedSole: pin,
+      rootTravelPerFrame: [0,0,0], elapsedFrames: frame-start, rootDisplacement: displacement, weight: 1 });
+    assert.ok(result.targetSole.clone().add(displacement).distanceTo(pin) < 1e-12);
+  }
+  assert.throws(() => sampledRootDisplacement(samples, 4, 0), /outside/);
+  assert.deepEqual(sampledRootDisplacement(samples, 0, 1).toArray(), [0,0,-.03]);
+  assert.throws(() => sampledRootDisplacement(samples, .5, 0), /outside/);
+});
+
+test('future contact anchors remain fixed with signed nonlinear travel and reject invalid intervals', () => {
+  const contact: NaturalFootContact = { foot: 'right', startFrame: 1, endFrame: 3, blendFrames: 0, anchorFrame: 3 };
+  assert.equal(naturalContactRamp(contact).fullWeightStartFrame, 1);
+  for (const anchorFrame of [0, 4, 1.5, NaN, Infinity]) {
+    assert.throws(() => naturalContactRamp({ ...contact, anchorFrame }), /anchorFrame/);
+  }
+  assert.throws(() => naturalContactRamp({ ...contact, positionMode: 'plane' }), /anchorFrame/);
+  assert.throws(() => naturalContactRamp({ ...contact, wrapToStart: true }), /anchorFrame/);
+  const samples: [number, number, number][] = [[0,0,0], [0,0,.03], [0,0,.05], [0,0,.06]];
+  const pin = new THREE.Vector3(1,0,2);
+  for (let frame = 1; frame <= 3; frame++) {
+    const displacement = sampledRootDisplacement(samples, frame, 3);
+    const pose = resolveNaturalContactPose({ naturalAnkle: new THREE.Vector3(2,1,3), naturalFootQuaternion: new THREE.Quaternion(),
+      referenceFootQuaternion: new THREE.Quaternion(), soleOffset: [0,-.1,0], pinnedSole: pin,
+      rootTravelPerFrame: [0,0,0], elapsedFrames: frame-3, rootDisplacement: displacement, weight: 1 });
+    assert.ok(pose.targetSole.clone().add(new THREE.Vector3(...samples[frame]))
+      .distanceTo(pin.clone().add(new THREE.Vector3(...samples[3]))) < 1e-12);
+  }
+});
+
+test('sampled root travel rejects malformed, nonfinite, oversized and nonzero-origin input', () => {
+  assert.equal(parseRootTravelSamples(undefined), undefined);
+  for (const value of [null, [], { '': [[0,0,0],[0,0,1]] }, { brake: [] }, { brake: [[0,0,0]] },
+    { brake: [[0,0,1],[0,0,2]] }, { brake: [[0,0,0],[0,0,Infinity]] }, { brake: [[0,0,0],[0,0,NaN]] },
+    { brake: [[0,0,0],[0,0,10001]] }, { brake: [[0,0,0],[0,0,'1']] }, { brake: [[0,0,0],[0,0]] },
+    { brake: Array(20001).fill([0,0,0]) }, { brake: Array(2) }, { brake: [[0,0,0],Array(3)] }]) assert.throws(() => parseRootTravelSamples(value));
+});
 
 test('calibrated bend preserves reference and maps articulation without extension plateaus', () => {
   const sourceReference = THREE.MathUtils.degToRad(50), targetReference = THREE.MathUtils.degToRad(23);
@@ -192,4 +265,9 @@ test('shared pelvis correction satisfies both feet and bounds unreachable reques
   assert.ok(bounded.length()<=0.01000000001);
   assert.ok(impossible.some(c=>solveNaturalTwoBoneLeg({...c.leg,hip:c.leg.hip.clone().add(bounded)}).residual>0.01));
   assert.deepEqual(solveNaturalPelvisCorrection([]).toArray(),[0,0,0]);
+  const mixed=constraints.map((c,i)=>({...c,weight:i===0?1:.5}));
+  assert.ok(solveNaturalPelvisCorrection(mixed).distanceTo(correction)<1e-12);
+  const partial=constraints.map(c=>({...c,weight:.1}));
+  assert.ok(solveNaturalPelvisCorrection(partial).length()<=.0250000001);
+  assert.throws(()=>solveNaturalPelvisCorrection([{...constraints[0],weight:NaN}]),/weights/);
 });

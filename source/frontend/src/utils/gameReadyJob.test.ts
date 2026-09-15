@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import * as THREE from 'three';
+import { parseRetargetProfile, profileClipOptions } from './retargetProfile';
 import {
   GAME_READY_JOB_SCHEMA,
   parseGameReadyJob,
@@ -83,6 +85,36 @@ function validJob(): Record<string, unknown> {
   };
 }
 
+test('sampled root travel shares job/profile validation and preserves omitted serialization', () => {
+  const legacy = parseGameReadyJob(validJob(), paths);
+  assert.equal(Object.prototype.hasOwnProperty.call(legacy.rig.retarget!.naturalMotion!, 'rootTravelSamples'), false);
+  const input = structuredClone(legacy), retarget = input.rig.retarget!, natural = retarget.naturalMotion!;
+  delete natural.rootTravelPerFrame;
+  natural.rootTravelSamples = { Walk: Array.from({ length: 8 }, (_, frame) => [0, 0, frame * .01] as [number,number,number]) };
+  retarget.sampleRateHz = 60; retarget.interpolation = 'step';
+  natural.swingTrajectories={Walk:[{foot:'right',startFrame:0,endFrame:3,startAnchorFrame:0,endAnchorFrame:7,startGrounded:false,endGrounded:true,lift:.08,travelPower:2,descendantRotations:true}]};
+  const parsed = parseGameReadyJob(input, paths);
+  assert.deepEqual(parseGameReadyJob(JSON.parse(JSON.stringify(parsed)), paths), parsed);
+  const portable = parseRetargetProfile(JSON.stringify(parsed));
+  assert.deepEqual(parseRetargetProfile(JSON.stringify(portable)), portable);
+  const source = new THREE.AnimationClip('Walk', 7/60, []);
+  const sourceReference = new THREE.AnimationClip(retarget.sourceReferenceClip!, 1, []);
+  const targetReference = new THREE.AnimationClip(retarget.targetReferenceClip!, 1, []);
+  assert.deepEqual(profileClipOptions(portable, source, [source,sourceReference], [targetReference]).naturalMotion!.rootTravelSamples, natural.rootTravelSamples);
+  const invalid = [
+    (job: typeof input) => { job.rig.retarget!.naturalMotion!.swingTrajectories!.Walk[0].endAnchorFrame=8; },
+    (job: typeof input) => { job.rig.retarget!.naturalMotion!.rootTravelPerFrame = { Walk: [0,0,0] }; },
+    (job: typeof input) => { job.rig.retarget!.naturalMotion!.contacts = {}; },
+    (job: typeof input) => { job.rig.retarget!.naturalMotion!.contacts!.Walk[0].wrapToStart = true; },
+    (job: typeof input) => { job.rig.retarget!.sampleRateHz = 30; },
+    (job: typeof input) => { job.rig.retarget!.interpolation = 'linear'; },
+    (job: typeof input) => { job.rig.retarget!.clips = ['Other']; },
+    (job: typeof input) => { job.rig.retarget!.clipVisualTiming = { Walk: { durationFrames: 10, cycles: 1 } }; },
+  ];
+  for (const change of invalid) { const job = structuredClone(input); change(job); assert.throws(() => parseGameReadyJob(job, paths)); }
+  assert.deepEqual(parseGameReadyJob(validJob(), paths), legacy);
+});
+
 test('game-ready job parsing applies safe defaults and retains explicit contracts', () => {
   const parsed = parseGameReadyJob(validJob(), paths);
   assert.equal(parsed.rig.retarget?.naturalMotion?.reachTransfer, undefined);
@@ -129,6 +161,23 @@ test('game-ready job parsing applies safe defaults and retains explicit contract
   });
   assert.deepEqual(parsed.rig.retarget?.naturalMotion?.legs.left.soleOffset, [0, 0.08, -0.05]);
   assert.equal(parsed.rig.attachments?.root, 'mixamorigHips');
+});
+
+test('normalized game-ready jobs replay with omitted, empty and populated curls', () => {
+  for (const mode of ['omitted', 'empty', 'populated']) {
+    const job = validJob();
+    const retarget = (job.rig as { retarget: Record<string, unknown> }).retarget;
+    if (mode === 'omitted') delete retarget.targetChainCurls;
+    if (mode === 'empty') retarget.targetChainCurls = [];
+    const normalized = parseGameReadyJob(job, paths);
+    const replay = parseGameReadyJob(JSON.parse(JSON.stringify(normalized)), paths);
+    assert.deepEqual(replay, normalized);
+  }
+  for (const invalid of [null, {}, 'none', [null], [{}]]) {
+    const job = validJob();
+    (job.rig as { retarget: Record<string, unknown> }).retarget.targetChainCurls = invalid;
+    assert.throws(() => parseGameReadyJob(job, paths), /array|object|palmBone/);
+  }
 });
 
 test('game-ready job parsing rejects silent selection and path ambiguities', () => {
@@ -235,6 +284,26 @@ test('ground-plane intervals round trip explicitly and reject unknown contact mo
   natural.contacts={Walk:[{foot:'left',positionMode:'plane',orientationMode:'animated-heading',startFrame:0,endFrame:10,blendFrames:1}]};
   assert.equal(parseGameReadyJob(job,paths).rig.retarget!.naturalMotion!.contacts!.Walk[0].positionMode,'plane');
   assert.equal(parseGameReadyJob(job,paths).rig.retarget!.naturalMotion!.contacts!.Walk[0].orientationMode,'animated-heading');
+  natural.contacts={Walk:[{foot:'right',positionMode:'plane',orientationMode:'animated',contactPoint:[.02,-.1,.15],startFrame:0,endFrame:10,blendFrames:1}]};
+  const toe=parseGameReadyJob(job,paths).rig.retarget!.naturalMotion!.contacts!.Walk[0];
+  assert.equal(toe.orientationMode,'animated');
+  assert.deepEqual(toe.contactPoint,[.02,-.1,.15]);
+  natural.contacts={Walk:[{...toe,contactBone:'mixamorigRightToeBase'}]};
+  assert.equal(parseGameReadyJob(job,paths).rig.retarget!.naturalMotion!.contacts!.Walk[0].contactBone,'mixamorigRightToeBase');
+  const patch={foot:'right',positionMode:'plane',orientationMode:'animated',contactPatch:[{point:[0,0,0]},{bone:'mixamorigRightToeBase',point:[0,0,.1]}],startFrame:0,endFrame:10,blendFrames:0};
+  natural.contacts={Walk:[patch]};
+  assert.deepEqual(parseGameReadyJob(job,paths).rig.retarget!.naturalMotion!.contacts!.Walk[0].contactPatch,patch.contactPatch);
+  for(const override of [{positionMode:'planted'},{orientationMode:'reference'},{contactPoint:[0,0,0]},{anchorFrame:0}]){
+    natural.contacts={Walk:[{...patch,...override}]};assert.throws(()=>parseGameReadyJob(job,paths),/contactPatch/);
+  }
+  for(const contactBone of ['',42]){
+    natural.contacts={Walk:[{...toe,contactBone}]};
+    assert.throws(()=>parseGameReadyJob(job,paths),/contactBone/);
+  }
+  for(const contactPoint of [null,[0,0],['0',0,0],[0,Infinity,0]]){
+    natural.contacts={Walk:[{...toe,contactPoint}]};
+    assert.throws(()=>parseGameReadyJob(job,paths),/contactPoint/);
+  }
   natural.contacts={Walk:[{foot:'left',orientationMode:'unbounded',startFrame:0,endFrame:10,blendFrames:1}]};
   assert.throws(()=>parseGameReadyJob(job,paths),/orientationMode/);
   natural.contacts={Walk:[{foot:'left',positionMode:'floating',startFrame:0,endFrame:10,blendFrames:1}]};

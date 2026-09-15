@@ -226,6 +226,33 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
     });
 
+  test('explicit DAE export converts a generated skinned GLB and reimports it', async ({ page }) => {
+      await page.goto('/');
+
+      const input = page.getByTestId('model-file-input');
+      await input.setInputFiles(await createSkinnedGlbFixtureInput());
+      await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture\.glb|bones: 2|clips: 1/i, { timeout: 15000 });
+
+      const downloadPromise = page.waitForEvent('download');
+      await clickSecondaryCommand(page, 'export-dae-btn');
+      const download = await downloadPromise;
+      expect(download.suggestedFilename()).toBe('exported_model.dae');
+      await expect(page.getByTestId('status-text')).toContainText(/Exported \.dae \(verified 2 bones, 1 clips\)/i, { timeout: 10000 });
+
+      const downloadPath = await download.path();
+      expect(downloadPath).not.toBeNull();
+      const bytes = fs.readFileSync(downloadPath!);
+      expect(bytes.toString('utf8')).toContain('<COLLADA');
+      expect(bytes.toString('utf8')).toContain('<library_controllers>');
+
+      await input.setInputFiles({ name: 'generated-skinned-roundtrip.dae', mimeType: 'model/vnd.collada+xml', buffer: bytes });
+      await expect(page.getByTestId('status-text')).toContainText(/Loaded DAE: generated-skinned-roundtrip\.dae/i, { timeout: 15000 });
+      await expect(page.getByTestId('status-text')).toContainText(/bones: 2|clips: 1/i);
+      await showAnimateTimeline(page);
+      await expect(page.getByTestId('timeline')).toBeVisible();
+      expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
+    });
+
   test('generated skinned GLB load, GLB export, and SMF conversion', async ({ page }) => {
       await page.goto('/');
 

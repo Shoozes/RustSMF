@@ -1,6 +1,37 @@
 import * as THREE from 'three';
+import type { SwingTrajectories } from './swingTrajectory';
 
 const EPSILON = 1e-10;
+export type RootTravelSamples = Record<string, [number, number, number][]>;
+
+export function parseRootTravelSamples(value: unknown): RootTravelSamples | undefined {
+  if (value === undefined) return undefined;
+  if (!value || typeof value !== 'object' || Array.isArray(value) || Object.keys(value).length > 256) throw new Error('Invalid rootTravelSamples clip map.');
+  let total = 0;
+  return Object.fromEntries(Object.entries(value).map(([clip, samples]) => {
+    if (!clip.trim() || clip.length > 160 || !Array.isArray(samples) || samples.length < 2 || (total += samples.length) > 20000) throw new Error('rootTravelSamples requires named clips and 2–20000 samples, at most 20000 total.');
+    const parsed = Array.from(samples, sample => {
+      if (!Array.isArray(sample) || sample.length !== 3 || Array.from(sample).some(v => typeof v !== 'number' || !Number.isFinite(v) || Math.abs(v) > 10000)) throw new Error('rootTravelSamples requires finite XYZ tuples bounded to 10000 model units.');
+      return [...sample] as [number, number, number];
+    });
+    if (parsed[0].some(v => v !== 0)) throw new Error('rootTravelSamples must start at [0,0,0].');
+    return [clip, parsed];
+  }));
+}
+
+export function validateRootTravelBindings(profile: NaturalMotionProfile): void {
+  for (const clip of Object.keys(profile.rootTravelSamples ?? {})) {
+    if (profile.rootTravelPerFrame?.[clip] !== undefined) throw new Error('rootTravelSamples and rootTravelPerFrame are mutually exclusive per clip.');
+    const contacts = profile.contacts?.[clip];
+    if (!contacts?.length) throw new Error('rootTravelSamples requires contact intervals for each configured clip.');
+    if (contacts.some(c => c.wrapToStart)) throw new Error('rootTravelSamples does not support wrapped contacts.');
+  }
+}
+
+export function sampledRootDisplacement(samples: readonly [number, number, number][], frame: number, anchorFrame: number): THREE.Vector3 {
+  if (![frame, anchorFrame].every(n => Number.isInteger(n) && n >= 0 && n < samples.length)) throw new Error('Root travel frame is outside the sampled trajectory.');
+  return new THREE.Vector3(...samples[frame]).sub(new THREE.Vector3(...samples[anchorFrame]));
+}
 
 export type NaturalFootSide = 'left' | 'right';
 
@@ -27,11 +58,19 @@ export interface NaturalFootContact {
   /** Plane follows horizontal motion; planted (the default) locks a world point. */
   positionMode?: 'planted' | 'plane';
   /** Preserve animated yaw while leveling the sole; a plant captures its entry heading. */
-  orientationMode?: 'reference' | 'animated-heading';
+  orientationMode?: 'reference' | 'animated-heading' | 'animated';
+  /** Optional calibrated ankle-local toe/heel point for this interval. */
+  contactPoint?: [number, number, number];
+  /** Optional ankle descendant owning contactPoint, such as an articulated toe. */
+  contactBone?: string;
+  /** Fixed authored sole patch; currently plane/animated contacts only. */
+  contactPatch?: Array<{bone?: string;point:[number,number,number]}>;
   /** Inclusive 60 Hz frame index. */
   startFrame: number;
   /** Inclusive 60 Hz frame index. */
   endFrame: number;
+  /** Optional pre-contact pose anchor within this interval; omission retains entry anchoring. */
+  anchorFrame?: number;
   /** Frames used for each linear lock/unlock ramp; zero means a hard lock. */
   blendFrames: number;
   /** Optional asymmetric ramps; omission retains the symmetric blendFrames. */
@@ -70,6 +109,9 @@ export interface NaturalMotionProfile {
   contacts?: Record<string, NaturalFootContact[]>;
   /** Receiving-game root travel, in model-space meters per 60 Hz frame. */
   rootTravelPerFrame?: Record<string, [number, number, number]>;
+  /** Cumulative model-space translation at each 60 Hz output sample, keyed by source clip. */
+  rootTravelSamples?: RootTravelSamples;
+  swingTrajectories?: SwingTrajectories;
   /** Optional clip-specific limits for proportion-sensitive locomotion strides. */
   legMotionLimits?: Record<string, NaturalLegMotionLimits>;
 }
@@ -117,11 +159,15 @@ export interface NaturalContactDiagnostic extends NaturalFootContact {
   maximumPelvisCorrectionFrame: number | null;
   clampedSamples: number;
   unreachable: boolean;
-  rootTravelPerFrame: [number, number, number];
+  rootTravelPerFrame?: [number, number, number];
+  anchorSolePoint?: [number, number, number];
+  anchorFootQuaternion?: [number, number, number, number];
 }
 
 export interface NaturalMotionReport {
   contactSpace: 'model';
+  swingTrajectories?: { foot: NaturalFootSide; startFrame: number; endFrame: number; maximumResidual: number; maximumResidualFrame: number | null }[];
+  rootTravelSamples?: [number, number, number][];
   torso: {
     targetBones: string[];
     effectiveWeights: number[];
@@ -232,6 +278,37 @@ export function naturalFootHeading(
   return heading.normalize().multiply(reference).normalize();
 }
 
+export function parseContactPoint(value: unknown): [number, number, number] | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || value.length !== 3 || Array.from(value).some(v => typeof v !== 'number' || !Number.isFinite(v) || Math.abs(v) > 10000)) {
+    throw new Error('contactPoint requires a finite ankle-local XYZ tuple bounded to 10000 model units.');
+  }
+  return [...value] as [number, number, number];
+}
+
+export function parseContactPatch(value: unknown): NaturalFootContact['contactPatch'] {
+  if (value===undefined)return undefined;
+  if(!Array.isArray(value)||value.length<2||value.length>16)throw new Error('contactPatch requires 2-16 fixed authored points.');
+  return Array.from(value,item=>{
+    if(!item||typeof item!=='object'||Array.isArray(item)||Object.keys(item).some(k=>k!=='bone'&&k!=='point')||(item.bone!==undefined&&(typeof item.bone!=='string'||!item.bone.trim()||item.bone.length>160)))throw new Error('Invalid contactPatch point or bone.');
+    const point=parseContactPoint(item.point);if(!point)throw new Error('contactPatch requires explicit points.');
+    return {...(item.bone===undefined?{}:{bone:item.bone as string}),point};
+  });
+}
+
+export function lowestContactPoint(points: readonly [number,number,number][], orientation: THREE.Quaternion): [number,number,number] {
+  if(!points.length)throw new Error('Contact patch is empty.');
+  let selected=points[0],height=Infinity;
+  for(const point of points){const y=new THREE.Vector3(...point).applyQuaternion(orientation).y;if(y<height){height=y;selected=point;}}
+  return selected;
+}
+
+/** Plants capture orientation; plane contacts follow the current animation. */
+export function naturalContactOrientation(mode: NaturalFootContact['orientationMode'], animated: THREE.Quaternion, reference: THREE.Quaternion, previous?: THREE.Quaternion): THREE.Quaternion {
+  if (mode === 'animated') return animated.clone();
+  return mode === 'animated-heading' ? naturalFootHeading(animated, reference, previous) : reference.clone();
+}
+
 export function resolveNaturalContactPose(input: {
   naturalAnkle: THREE.Vector3;
   naturalFootQuaternion: THREE.Quaternion;
@@ -240,6 +317,8 @@ export function resolveNaturalContactPose(input: {
   pinnedSole: THREE.Vector3;
   rootTravelPerFrame: [number, number, number];
   elapsedFrames: number;
+  /** Optional already-resolved trajectory displacement since contact entry. */
+  rootDisplacement?: THREE.Vector3;
   weight: number;
 }): { ankle: THREE.Vector3; footQuaternion: THREE.Quaternion; targetSole: THREE.Vector3 } {
   const weight = THREE.MathUtils.clamp(input.weight, 0, 1);
@@ -251,9 +330,9 @@ export function resolveNaturalContactPose(input: {
     input.naturalFootQuaternion,
     input.soleOffset,
   );
-  const pinnedSole = input.pinnedSole.clone().add(
-    new THREE.Vector3(...input.rootTravelPerFrame).multiplyScalar(-input.elapsedFrames),
-  );
+  const pinnedSole = input.rootDisplacement
+    ? input.pinnedSole.clone().sub(input.rootDisplacement)
+    : input.pinnedSole.clone().add(new THREE.Vector3(...input.rootTravelPerFrame).multiplyScalar(-input.elapsedFrames));
   const targetSole = naturalSole.lerp(pinnedSole, weight);
   const ankle = targetSole.clone().sub(
     new THREE.Vector3(...input.soleOffset).applyQuaternion(footQuaternion),
@@ -292,6 +371,8 @@ export function contactBlendWeight(frame: number, contact: NaturalFootContact): 
 }
 
 export function naturalContactRamp(contact: NaturalFootContact) {
+  if (contact.anchorFrame !== undefined && (!Number.isInteger(contact.anchorFrame) || contact.anchorFrame < contact.startFrame
+    || contact.anchorFrame > contact.endFrame || contact.positionMode === 'plane' || contact.wrapToStart)) throw new Error('Contact anchorFrame must be within a non-wrapped planted interval.');
   const blendInFrames = contact.blendInFrames === undefined ? contact.blendFrames : contact.blendInFrames;
   const blendOutFrames = contact.blendOutFrames === undefined ? contact.blendFrames : contact.blendOutFrames;
   if (![contact.startFrame, contact.endFrame, contact.blendFrames, blendInFrames, blendOutFrames]
@@ -420,10 +501,14 @@ export function alignNaturalAnatomicalFrame(
 export function solveNaturalPelvisCorrection(constraints: readonly {
   leg: Parameters<typeof solveNaturalTwoBoneLeg>[0];
   maximumCorrection: number;
+  weight?: number;
 }[]): THREE.Vector3 {
   const correction = new THREE.Vector3();
   if (!constraints.length) return correction;
-  const maximum = Math.min(...constraints.map(c => c.maximumCorrection));
+  const weights = constraints.map(c => c.weight ?? 1);
+  if (weights.some(w => !Number.isFinite(w) || w < 0 || w > 1)) throw new Error('Pelvis contact weights must be within [0,1].');
+  if (constraints.some(c => !Number.isFinite(c.maximumCorrection) || c.maximumCorrection < 0)) throw new Error('Pelvis correction must be finite and non-negative.');
+  const maximum = Math.min(...constraints.map(c => c.maximumCorrection)) * Math.max(...weights);
   if (!Number.isFinite(maximum) || maximum < 0) throw new Error('Pelvis correction must be finite and non-negative.');
   if (maximum === 0) return correction;
   // Alternating projections resolve coupled feet; unreachable constraints remain

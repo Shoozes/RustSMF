@@ -38,7 +38,7 @@ npm.cmd run test:e2e -- --reporter=line
 | `rig.spec.ts` | Pose history, reversible static-root preparation/export, SMF Rig policy, Endpoint, IK, TransformControls ownership |
 | `animation.spec.ts` | Timeline gestures, clip management, scoped animation keys, and SMF checks |
 | `skin.spec.ts` | Paint/Smooth gating and shortcuts, cancel, undo/redo, Auto Skin, rest-pose ownership, SMF export |
-| `export-formats.spec.ts` | GLB/GLTF/FBX sidecar, SMF, FBX, and OBJ flows; indexed-mesh conversion; non-SMF rename/order/duplicate/delete/static surface authoring persistence; material policy; non-SMF-to-SMF fail-closed diagnostics; FBX re-import |
+| `export-formats.spec.ts` | GLB/GLTF/FBX/DAE format and sidecar flows, SMF, FBX, DAE, and OBJ flows; indexed-mesh conversion; non-SMF rename/order/duplicate/delete/static surface authoring persistence; material policy; non-SMF-to-SMF fail-closed diagnostics; FBX/DAE re-import |
 | `native.spec.ts` | Deterministic Tauri IPC dialog-owned open/read/save/cancel, stale-completion, project recovery, and autosave-coalescing matrices |
 | `modern-shell.spec.ts` | Modern command/workspace reachability, one-drawer focus ownership, coarse-pointer targets, and DPR backing dimensions |
 | `visual.spec.ts` | Modern/Original geometry/defaults, source texture thumbnails, reference-derived shelves/top strip/keyframe lane, narrow layout, viewport/menu visual coherence |

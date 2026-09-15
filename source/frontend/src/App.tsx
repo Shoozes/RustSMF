@@ -163,6 +163,7 @@ export default function App() {
     handleExport,
     handleExportGlb,
     handleExportFbx,
+    handleExportDae,
     handleExportSmf,
     handleRunSmfRoundtripCheck,
     handleSaveSmfDiagnosticReport,
@@ -1319,6 +1320,7 @@ export default function App() {
         onExport={handleExport}
         onExportGlb={handleExportGlb}
         onExportFbx={handleExportFbx}
+        onExportDae={handleExportDae}
         onExportSmf={handleExportSmf}
         smfExportEnabled={hasModel && smfDiagnosticReport.canExportSmf}
         onPing={pingRust}
@@ -1475,7 +1477,7 @@ export default function App() {
             <div className="modern-empty-state" data-testid="modern-empty-state">
               <div className="modern-empty-eyebrow">Model workspace</div>
               <h1>Start with a model</h1>
-              <p>Open or drop an SMF, GLB, GLTF, FBX, or OBJ asset to inspect it.</p>
+              <p>Open or drop an SMF, GLB, GLTF, FBX, DAE, or OBJ asset to inspect it.</p>
               <button type="button" className="modern-empty-open" data-testid="modern-empty-open" onClick={handleOpen}>
                 Open model
               </button>

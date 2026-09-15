@@ -4,10 +4,14 @@ import type {
   TargetChainCurl,
 } from './animationRetarget';
 import { MAX_MODEL_RESOURCE_FILES } from './modelResourceBundle';
+import { parseSwingTrajectories } from './swingTrajectory';
 import {validateRetargetVisualTiming,type RetargetVisualTiming} from './retargetTiming';
 import {parsePoseRangeProfile,type PoseRangeProfile} from './poseRanges';
-import { naturalContactRamp } from './naturalRetarget';
+import { naturalContactRamp, parseContactPoint, parseContactPatch, parseRootTravelSamples, validateRootTravelBindings } from './naturalRetarget';
 import { parseLocalReferenceCorrections, type LocalReferenceCorrection } from './retargetReference';
+import { parseClipJointConstraints, type HeadJointConstraint } from './retargetJointConstraints';
+import { parseClipForearmTwist, type ForearmTwistShare } from './forearmTwist';
+import { parseEndpointEnvelopes, validateEndpointWindows, type EndpointEnvelope } from './endpointEnvelope';
 import type { LogicalAttachmentRole } from './rigMapping';
 import type {
   NaturalFootContact,
@@ -28,6 +32,7 @@ export interface RetargetJob {
   allowFuzzy?: boolean;
   applyUpCorrection?: boolean;
   alignMappedBoneDirections?: boolean;
+  directionAlignmentBones?: string[];
   directionTransfer?: DirectionTransferMode;
   directionTransferBones?: string[];
   clipDirectionTransfer?: Record<string, DirectionTransferMode>;
@@ -41,9 +46,13 @@ export interface RetargetJob {
   naturalMotion?: NaturalMotionProfile;
   poseRanges?: PoseRangeProfile;
   localReferenceCorrections?: Record<string, LocalReferenceCorrection>;
+  clipJointConstraints?: Record<string, HeadJointConstraint>;
+  clipForearmTwist?: Record<string, ForearmTwistShare[]>;
+  clipEndpointEnvelopes?: Record<string, EndpointEnvelope>;
   clipPreserveTargetRotations?: Record<string, string[]>;
   clipPoseRecovery?: Record<string, PoseRecoveryEnvelope>;
   scaleRootMotion?: boolean;
+  rootMotionScale?: number;
   replaceClips?: string[];
   extractRootMotionBone?: string;
   clipVisualTiming?: Record<string,RetargetVisualTiming>;
@@ -210,7 +219,7 @@ function targetChainCurlArray(
   label: string,
 ): TargetChainCurl[] {
   if (value === undefined) return [];
-  if (!Array.isArray(value) || value.length === 0) fail(`${label} must be a non-empty array when supplied.`);
+  if (!Array.isArray(value)) fail(`${label} must be an array when supplied.`);
   const result: TargetChainCurl[] = [];
   const configuredBones = new Set<string>();
   for (const [index, entry] of value.entries()) {
@@ -288,12 +297,14 @@ function naturalContactMap(value: unknown, label: string): Record<string, Natura
     }
     const contacts = entries.map((entry, index): NaturalFootContact => {
       const contact = objectValue(entry, `${label}.${clipName}[${index}]`);
-      rejectUnknownFields(contact, ['foot', 'positionMode', 'orientationMode', 'startFrame', 'endFrame', 'blendFrames', 'blendInFrames', 'blendOutFrames', 'wrapToStart'], `${label}.${clipName}[${index}]`);
+      rejectUnknownFields(contact, ['foot', 'positionMode', 'orientationMode', 'contactPoint', 'contactBone', 'contactPatch', 'startFrame', 'endFrame', 'anchorFrame', 'blendFrames', 'blendInFrames', 'blendOutFrames', 'wrapToStart'], `${label}.${clipName}[${index}]`);
+      if(contact.contactPatch!==undefined&&(contact.positionMode!=='plane'||contact.orientationMode!=='animated'||contact.contactPoint!==undefined||contact.contactBone!==undefined||contact.anchorFrame!==undefined||contact.wrapToStart))fail('contactPatch requires plane/animated contact without point, bone, anchor or wrap overrides.');
+      if (contact.contactBone !== undefined && (typeof contact.contactBone !== 'string' || !contact.contactBone.trim() || contact.contactBone.length>160 || contact.contactPoint===undefined)) fail('contactBone requires a bounded bone name and contactPoint.');
       if (contact.positionMode !== undefined && contact.positionMode !== 'planted' && contact.positionMode !== 'plane') {
         fail(`${label}.${clipName}[${index}].positionMode must be planted or plane.`);
       }
-      if (contact.orientationMode !== undefined && contact.orientationMode !== 'reference' && contact.orientationMode !== 'animated-heading') {
-        fail(`${label}.${clipName}[${index}].orientationMode must be reference or animated-heading.`);
+      if (contact.orientationMode !== undefined && contact.orientationMode !== 'reference' && contact.orientationMode !== 'animated-heading' && contact.orientationMode !== 'animated') {
+        fail(`${label}.${clipName}[${index}].orientationMode must be reference, animated-heading or animated.`);
       }
       if (contact.foot !== 'left' && contact.foot !== 'right') {
         fail(`${label}.${clipName}[${index}].foot must be left or right.`);
@@ -311,6 +322,10 @@ function naturalContactMap(value: unknown, label: string): Record<string, Natura
         fail(`${label}.${clipName}[${index}].blendFrames leaves no full-weight contact frame.`);
       }
       const parsed: NaturalFootContact = { foot: contact.foot, startFrame, endFrame, blendFrames,
+        ...(contact.contactPoint === undefined ? {} : { contactPoint: parseContactPoint(contact.contactPoint) }),
+        ...(contact.contactBone === undefined ? {} : { contactBone: contact.contactBone as string }),
+        ...(contact.contactPatch === undefined ? {} : { contactPatch: parseContactPatch(contact.contactPatch) }),
+        ...(contact.anchorFrame === undefined ? {} : { anchorFrame: contact.anchorFrame as number }),
         ...(contact.wrapToStart === undefined ? {} : { wrapToStart: optionalBoolean(contact.wrapToStart, 'contact.wrapToStart') }),
         ...(contact.blendInFrames === undefined ? {} : { blendInFrames: contact.blendInFrames as number }),
         ...(contact.blendOutFrames === undefined ? {} : { blendOutFrames: contact.blendOutFrames as number }),
@@ -377,7 +392,7 @@ function naturalLegMotionLimitMap(value: unknown, label: string): Record<string,
 function naturalMotionProfile(value: unknown, label: string): NaturalMotionProfile | undefined {
   if (value === undefined) return undefined;
   const source = objectValue(value, label);
-  rejectUnknownFields(source, ['torso', 'legs', 'contacts', 'rootTravelPerFrame', 'legMotionLimits', 'reachTransfer', 'grounding', 'legOrientation'], label);
+  rejectUnknownFields(source, ['torso', 'legs', 'contacts', 'rootTravelPerFrame', 'rootTravelSamples', 'swingTrajectories', 'legMotionLimits', 'reachTransfer', 'grounding', 'legOrientation'], label);
   if (source.reachTransfer !== undefined && source.reachTransfer !== 'reference-ratio' && source.reachTransfer !== 'calibrated-bend') {
     fail(`${label}.reachTransfer must be reference-ratio or calibrated-bend.`);
   }
@@ -439,7 +454,17 @@ function naturalMotionProfile(value: unknown, label: string): NaturalMotionProfi
   if (invalidSwingBends.length > 0) {
     fail(`${label}.legMotionLimits minimumSwingBendDegrees exceeds a configured leg maximum for: ${invalidSwingBends.join(', ')}.`);
   }
-  return { torso, legs: parsedLegs, contacts, rootTravelPerFrame, legMotionLimits, reachTransfer, grounding, legOrientation };
+  const rootTravelSamples = parseRootTravelSamples(source.rootTravelSamples);
+  const swingTrajectories = parseSwingTrajectories(source.swingTrajectories);
+  for (const [name, entries] of Object.entries(swingTrajectories ?? {})) {
+    if (!rootTravelSamples?.[name]) fail('Swing trajectories require sampled receiving-root travel.');
+    if(entries.some(s=>[s.endFrame,s.startAnchorFrame,s.endAnchorFrame].some(f=>f>=rootTravelSamples![name].length))) fail('Swing frame exceeds sampled root travel.');
+  }
+  const profile = { torso, legs: parsedLegs, contacts, rootTravelPerFrame, legMotionLimits, reachTransfer, grounding, legOrientation,
+    ...(swingTrajectories === undefined ? {} : { swingTrajectories }),
+    ...(rootTravelSamples === undefined ? {} : { rootTravelSamples }) };
+  validateRootTravelBindings(profile);
+  return profile;
 }
 
 function visualTimingMap(value: unknown): Record<string,RetargetVisualTiming> {
@@ -537,11 +562,11 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
     const source = objectValue(rigValue.retarget, 'job.rig.retarget');
     rejectUnknownFields(source, [
       'sourceModel', 'clips', 'clipNames', 'manualMap', 'allowFuzzy', 'applyUpCorrection',
-      'alignMappedBoneDirections', 'directionTransfer', 'directionTransferBones',
+      'alignMappedBoneDirections', 'directionAlignmentBones', 'directionTransfer', 'directionTransferBones',
       'clipDirectionTransfer', 'clipDirectionTransferBones', 'sourceReferencePose',
       'sourceReferenceClip', 'targetReferenceClip', 'preserveTargetLeafRotations',
-      'preserveTargetRotations', 'targetChainCurls', 'naturalMotion', 'poseRanges', 'localReferenceCorrections',
-      'clipPreserveTargetRotations', 'clipPoseRecovery', 'scaleRootMotion', 'sampleRateHz',
+      'preserveTargetRotations', 'targetChainCurls', 'naturalMotion', 'poseRanges', 'localReferenceCorrections', 'clipJointConstraints', 'clipForearmTwist', 'clipEndpointEnvelopes',
+      'clipPreserveTargetRotations', 'clipPoseRecovery', 'scaleRootMotion', 'rootMotionScale', 'sampleRateHz',
       'interpolation', 'nextDownRationalTimes', 'extractRootMotionBone', 'clipVisualTiming', 'replaceClips',
     ], 'job.rig.retarget');
     retarget = {
@@ -561,6 +586,7 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
           ? source.directionTransfer
           : fail('job.rig.retarget.directionTransfer must be relative or absolute.'),
       clipDirectionTransfer: directionTransferMap(source.clipDirectionTransfer, 'job.rig.retarget.clipDirectionTransfer'),
+      directionAlignmentBones: stringArray(source.directionAlignmentBones, 'job.rig.retarget.directionAlignmentBones'),
       directionTransferBones: stringArray(
         source.directionTransferBones,
         'job.rig.retarget.directionTransferBones',
@@ -586,9 +612,14 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
       naturalMotion: naturalMotionProfile(source.naturalMotion, 'job.rig.retarget.naturalMotion'),
       poseRanges: source.poseRanges === undefined ? undefined : parsePoseRangeProfile(source.poseRanges),
       localReferenceCorrections: parseLocalReferenceCorrections(source.localReferenceCorrections),
+      clipJointConstraints: parseClipJointConstraints(source.clipJointConstraints),
+      clipForearmTwist: parseClipForearmTwist(source.clipForearmTwist),
+      ...(source.clipEndpointEnvelopes === undefined ? {} : { clipEndpointEnvelopes: parseEndpointEnvelopes(source.clipEndpointEnvelopes) }),
       clipPreserveTargetRotations: stringArrayMap(source.clipPreserveTargetRotations, 'job.rig.retarget.clipPreserveTargetRotations'),
       clipPoseRecovery: poseRecoveryMap(source.clipPoseRecovery, 'job.rig.retarget.clipPoseRecovery'),
       scaleRootMotion: optionalBoolean(source.scaleRootMotion, 'job.rig.retarget.scaleRootMotion'),
+      rootMotionScale: source.rootMotionScale === undefined ? undefined
+        : finiteNumber(source.rootMotionScale, 'job.rig.retarget.rootMotionScale'),
       extractRootMotionBone: source.extractRootMotionBone === undefined ? undefined
         : stringValue(source.extractRootMotionBone, 'job.rig.retarget.extractRootMotionBone'),
       clipVisualTiming: visualTimingMap(source.clipVisualTiming),
@@ -604,11 +635,49 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
           : fail('job.rig.retarget.interpolation must be linear or step.'),
       nextDownRationalTimes: optionalBoolean(source.nextDownRationalTimes, 'job.rig.retarget.nextDownRationalTimes'),
     };
+    if (retarget.rootMotionScale !== undefined && (retarget.rootMotionScale <= 0 || retarget.scaleRootMotion === false)) {
+      fail('job.rig.retarget.rootMotionScale must be positive with scaleRootMotion not false.');
+    }
+    if (retarget.directionAlignmentBones) {
+      if (retarget.alignMappedBoneDirections === false) fail('directionAlignmentBones requires direction alignment enabled.');
+      const aligned = new Set(retarget.directionAlignmentBones);
+      const directed = [...(retarget.directionTransferBones ?? []), ...Object.values(retarget.clipDirectionTransferBones ?? {}).flat()];
+      if (directed.some(name => !aligned.has(name))) fail('directionTransferBones must be included in directionAlignmentBones.');
+    }
     if (retarget.sampleRateHz !== undefined && (!Number.isFinite(retarget.sampleRateHz) || retarget.sampleRateHz <= 0 || retarget.sampleRateHz > 240)) {
       fail('job.rig.retarget.sampleRateHz must be from 1 through 240.');
     }
     if (Object.keys(retarget.clipVisualTiming ?? {}).length && retarget.sampleRateHz !== 60) fail('Visual timing requires sampleRateHz 60.');
     const selectedTimingClips=retarget.clips;
+    for (const [name, envelope] of Object.entries(retarget.clipEndpointEnvelopes ?? {})) {
+      if (retarget.clips && !retarget.clips.includes(name)) fail('Endpoint envelope configures an unselected source clip.');
+      if (retarget.sampleRateHz !== 60 || retarget.interpolation !== 'step' || retarget.clipPoseRecovery?.[name]
+        || retarget.clipJointConstraints?.[name] || retarget.clipForearmTwist?.[name]?.length
+        || Object.keys(retarget.localReferenceCorrections ?? {}).length) fail('Endpoint envelopes require 60 Hz STEP and no recovery/joint/wrist/reference post-corrections.');
+      const timing = retarget.clipVisualTiming?.[name];
+      if (timing) validateEndpointWindows(envelope, timing.durationFrames + 1);
+    }
+    for (const name of Object.keys(retarget.naturalMotion?.rootTravelSamples ?? {})) {
+      if (retarget.clips && !retarget.clips.includes(name)) fail('rootTravelSamples configures an unselected source clip.');
+      if (retarget.sampleRateHz !== 60 || retarget.interpolation !== 'step') fail('rootTravelSamples requires explicit 60 Hz STEP sampling.');
+      const timing = retarget.clipVisualTiming?.[name];
+      if (timing && retarget.naturalMotion!.rootTravelSamples![name].length !== timing.durationFrames + 1) fail('rootTravelSamples must cover every output frame including the terminal.');
+    }
+    for (const [name, pairs] of Object.entries(retarget.clipForearmTwist ?? {})) {
+      if (retarget.clips && !retarget.clips.includes(name)) fail('Forearm twist configures an unselected clip.');
+      if (pairs.length && (retarget.alignMappedBoneDirections !== false || retarget.interpolation !== 'step'
+        || retarget.naturalMotion || retarget.clipJointConstraints?.[name] || retarget.clipPoseRecovery?.[name]
+        || Object.keys(retarget.localReferenceCorrections ?? {}).length
+        || pairs.some(pair => [pair.forearm, pair.hand].some(bone => resolvePreservedTargetRotations(retarget!, name).includes(bone))))) {
+        fail('Forearm twist requires an isolated STEP post-pass with direction alignment disabled and no conflicting correction/preservation.');
+      }
+    }
+    const jointRanges = retarget.poseRanges?.joints;
+    for (const [name, constraint] of Object.entries(retarget.clipJointConstraints ?? {})) {
+      if (retarget.clips && !retarget.clips.includes(name)) fail('Joint constraints configure an unselected clip.');
+      if (!jointRanges || ![constraint.neck, constraint.head].every(bone => jointRanges.some(joint => joint.bone === bone))) fail('Joint constraints require calibrated neck/head pose ranges.');
+      if (retarget.alignMappedBoneDirections !== false || retarget.clipPoseRecovery?.[name]) fail('Joint constraints require direction alignment disabled and no pose recovery.');
+    }
     if (selectedTimingClips && Object.keys(retarget.clipVisualTiming ?? {}).some(name=>!selectedTimingClips.includes(name))) fail('Visual timing configures an unselected clip.');
     if (retarget.sourceReferencePose === 'clip' && !retarget.sourceReferenceClip) {
       fail('job.rig.retarget.sourceReferencePose clip requires sourceReferenceClip.');

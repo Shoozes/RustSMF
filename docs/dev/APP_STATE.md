@@ -1,15 +1,24 @@
 # RustSMF App State
 
-Last reviewed: 2026-09-13
+Last reviewed: 2026-09-15
 
-RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, and OBJ models. This document owns current behavior, architecture boundaries, format limits, and the verification contract. Forward work belongs in `TODO.md`; dated command evidence belongs in `HISTORY.md` and the latest assessment in `review.md`; recurring failure analysis belongs in `PITFALL_LEDGER.md`.
+RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, DAE/Collada, and OBJ models. This document owns current behavior, architecture boundaries, format limits, and the verification contract. Forward work belongs in `TODO.md`; dated command evidence belongs in `HISTORY.md` and the latest assessment in `review.md`; recurring failure analysis belongs in `PITFALL_LEDGER.md`.
+
+Offline retarget profiles also support bounded endpoint pose envelopes and
+explicit planted-contact anchor frames. Their shared contract is documented in
+`HUMANOID_POSE_REVIEW.md`. Endpoint matching does not guarantee mid-clip support
+or whole-mesh clearance. Bounded swing trajectories and descendant rotation
+envelopes support offline stance handoffs without changing receiving-root travel.
+Receiving checks are hash- and transition-specific, not blanket motion acceptance.
+Remaining visual and transition conditions live in `TODO.md`; completed proof
+lives in `HISTORY.md`.
 
 ## Product Contract
 
 ### Launch and model lifecycle
 
 - `run.bat` / `run.ps1` own the Windows menu and installed development launch (`-Task run`). Cleanup targets only this checkout's normalized Node script paths, preserving unrelated servers. Setup propagates Rust failure; Vite resolves hoisted or frontend-local packages.
-- File input, drop and native picking support SMF, GLB/GLTF, FBX and OBJ. A bounded bundle resolves selected relative buffers, images and MTL files. Missing, ambiguous, oversized or malformed resources fail before model replacement. Tracked external-GLTF fixtures prove exact sidecar hashes and contained relative URIs.
+- File input, drop and native picking support SMF, GLB/GLTF, FBX, DAE/Collada and OBJ. A bounded bundle resolves selected relative buffers, images and MTL files. Missing, ambiguous, oversized or malformed resources fail before model replacement. Tracked external-GLTF fixtures prove exact sidecar hashes and contained relative URIs.
 - All model inputs have a 256 MiB limit, checked before browser reads and again before parsing. Native byte payloads accept ArrayBuffer, Uint8Array or validated byte arrays. Rust opens one authorized canonical regular file and bounds both reported and observed sizes against replacement/growth races. Unreadable selections report an Open error.
 - A replacement requested while pose, animation, skin, rig, editor, or Outliner history is dirty opens an accessible Cancel/Discard decision. File bytes are not materialized until the decision is made; Cancel preserves the current root, selection, dirty flags, and status, while Discard permits one replacement. Parse failure or stale completion keeps the previous model mounted.
 - Open, append, retarget, repair, export and save share latest-intent ownership. New operations invalidate stale UI completions and dispose stale resources; failures preserve the mounted model and dirty authoring state.
@@ -38,7 +47,7 @@ RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting
 - Skin: the default Rest / Bind mode stops viewport animation evaluation and restores the underlying rest/base pose. Explicit Frozen Current evaluates the selected animation at the controlled time and pauses it; Live Animation honors playback. Modern enters a real Pick tool with Paint, Erase, and Smooth actions on a narrow canvas rail. Picking a viewport or Inspector bone immediately hands control to Paint; P/E/S/Q and bracket shortcuts keep the brush loop keyboard-reachable, and the contextual card owns friendly bone naming, brush size/strength, history, dirty state, and Advanced disclosure. Original SMF keeps the full legacy panel. The shared engine supports set/add/subtract/smooth/auto modes, vertex/triangle targets, bounded spatial candidate indexes, configurable Auto Skin algorithms, normalize, pointer cancel, undo/redo, and supported SMF export. Smooth averages current influences across the bounded brush region and blends each vertex toward that result using brush strength; unlike Auto, it does not recompute weights from bone distance and does not require a selected bone. Each stroke indexes the current skinned meshes once rather than traversing the scene for every candidate. Set mode separates Target weight (0–1) from brush flow and falloff; flow blends toward the target while Add/Subtract retain incremental behavior. Advanced reports raw four-slot influence diagnostics for the hovered vertex, including source-safe bone names, finite sums, unweighted vertices, invalid references, invalid weights, and stable issue codes. Paint sampling also offers Frozen Current and Live Animation: Frozen Current captures the evaluated bone matrices until the mode changes, while Live follows the mixer with a visible safety warning. Pose activation, frame updates, scrubbing, root attachment, and telemetry use the same workspace policy. The selected paint-pose mode and live-warning marker are mirrored in viewport telemetry and reapplied across Skin-mode transitions; imperative cleanup removes only transient brush state. Show Vertices exposes depth-tested, screen-space-stable mini nodes colored by the selected bone's current weight. In Skin mode, a visible mini node resolves through a validated point-to-source-vertex contract and becomes an exact paint target with a larger precision hit area; malformed or stale skin data is ignored instead of falling back to a world-origin brush. Normal surface brushing remains the fallback for broad strokes. The overlay follows posed skinned vertices, skips unchanged-pose resampling, and invalidates on pose, geometry, or skin-attribute changes.
 - Skin weight preview uses a non-destructive Three.js vertex-color heat map for the selected bone and restores the original color attribute plus each material's prior `vertexColors` mode when disabled. The legacy four-slot shader and paint-transport references remain documented in `docs/dev/old_editor_source_map.md`; exact legacy texture modulation is not required for the current export-safe display path.
 - Diagnostics and display: Export/Model diagnostics report finite per-mesh vertex, normal, tangent, UV, material, submodel, and world-handedness state plus WebGL shader capability notes. Rest-pose ghost, current-to-rest trails, and onion-skin overlays are viewport-owned disposable helpers; toggling them never changes source geometry, animation data, or export bytes.
-- Animate: clip creation, rename/duplicate/delete/reorder, bounded duration set/extension, retime, finite trim with sampled boundary keys, loop/sample metadata, playback, scrub, Bone/Branch/Full Rig key insert/update/delete/move/copy/paste, marker drag, snap, interpolation metadata, locked-bone state, and undo/redo update the runtime clips and supported SMF export candidate. Named-bone FBX/GLB/GLTF clips can be retargeted through canonical/alias mapping and appended in one undoable transaction. A collapsed saved-profile surface also imports a complete v2 game-ready job or portable `rustsmf.retarget-profile.v1` document, validates and edits its JSON, exports through the existing save boundary, and reapplies explicit maps and clip options through the same retarget core. Standalone profiles never retain or open a source-model path; source files are selected when applying them, and the app-owned draft survives Animate-panel unmounts. Opaque numeric rigs otherwise fail closed rather than guessing. The shared retargeter samples unmapped helper ancestors into mapped world motion, transfers rest-relative limb direction changes, can use scoped absolute source directions for action peaks whose source and target idle limbs differ, anchor source/target reference clips, preserve target terminal or explicitly listed rotations across incompatible local axes, and apply a bounded trusted-peak recovery envelope. Optional natural-motion conditioning distributes torso motion by target segment length, solves target-length two-bone legs, locks calibrated sole points during declared contact frames, applies receiving-root travel, and bounds proportion-sensitive swing directions and minimum knee bend per named clip; contact weight fades those limits out at planted feet. Fixed-rate output retains float32 source-frame evaluation while clamping a partial terminal sample to the clip duration. Rig compatibility reports normalized mapped-segment ratios because correct side/axis mapping does not make different bone lengths, rest frames, or skin weights motion-equivalent. Editable duration fields use stable up-to-three-decimal display formatting, so floating-point representation noise is not shown without changing stored duration precision or edit semantics. Scope operations resolve from the selected hierarchy, use one animation-edit history transaction, union their timeline markers, and reject clipboard fingerprints or target scopes that do not match without mutation. Trim retains source keys in the inclusive range and samples both boundaries; authored keys are shifted by the trim start. Locked channels are immutable: scoped key edits, viewport keying, retime, and trim fail closed when they would rewrite a locked track, while lock/unlock itself is one history transaction. New clips can be created from the canonical load-time rest pose or the current local bone pose, including models that load with zero source clips; creation is one animation-workspace history transaction and emits position/quaternion keys for every named skeleton bone. New animation creation fails closed when the skeleton is missing, unnamed, or has duplicate bone names rather than emitting ambiguous tracks. The mixer clock remains imperative in the viewport; the parent timeline publishes a bounded 50 ms display cadence and flushes immediately for scrub/clip/pause commands.
+- Animate: clip creation, rename/duplicate/delete/reorder, bounded duration set/extension, retime, finite trim with sampled boundary keys, loop/sample metadata, playback, scrub, Bone/Branch/Full Rig key insert/update/delete/move/copy/paste, marker drag, snap, interpolation metadata, locked-bone state, and undo/redo update the runtime clips and supported SMF export candidate. Named-bone FBX/DAE/GLB/GLTF clips can be retargeted through canonical/alias mapping and appended in one undoable transaction. A collapsed saved-profile surface also imports a complete v2 game-ready job or portable `rustsmf.retarget-profile.v1` document, validates and edits its JSON, exports through the existing save boundary, and reapplies explicit maps and clip options through the same retarget core. Standalone profiles never retain or open a source-model path; source files are selected when applying them, and the app-owned draft survives Animate-panel unmounts. Opaque numeric rigs otherwise fail closed rather than guessing. The shared retargeter samples unmapped helper ancestors into mapped world motion, transfers rest-relative limb direction changes, can use scoped absolute source directions for action peaks whose source and target idle limbs differ, anchor source/target reference clips, preserve target terminal or explicitly listed rotations across incompatible local axes, and apply a bounded trusted-peak recovery envelope. Optional natural-motion conditioning distributes torso motion by target segment length, solves target-length two-bone legs, locks calibrated sole points during declared contact frames, applies receiving-root travel, and bounds proportion-sensitive swing directions and minimum knee bend per named clip; contact weight fades those limits out at planted feet. Fixed-rate output retains float32 source-frame evaluation while clamping a partial terminal sample to the clip duration. Rig compatibility reports normalized mapped-segment ratios because correct side/axis mapping does not make different bone lengths, rest frames, or skin weights motion-equivalent. Editable duration fields use stable up-to-three-decimal display formatting, so floating-point representation noise is not shown without changing stored duration precision or edit semantics. Scope operations resolve from the selected hierarchy, use one animation-edit history transaction, union their timeline markers, and reject clipboard fingerprints or target scopes that do not match without mutation. Trim retains source keys in the inclusive range and samples both boundaries; authored keys are shifted by the trim start. Locked channels are immutable: scoped key edits, viewport keying, retime, and trim fail closed when they would rewrite a locked track, while lock/unlock itself is one history transaction. New clips can be created from the canonical load-time rest pose or the current local bone pose, including models that load with zero source clips; creation is one animation-workspace history transaction and emits position/quaternion keys for every named skeleton bone. New animation creation fails closed when the skeleton is missing, unnamed, or has duplicate bone names rather than emitting ambiguous tracks. The mixer clock remains imperative in the viewport; the parent timeline publishes a bounded 50 ms display cadence and flushes immediately for scrub/clip/pause commands.
 - App-level Undo/Redo selects the newest editor, Skin, or Outliner transaction by shared chronology rather than the currently visible workspace.
 - Editor history is capped at 100 entries and 64 MiB across undo/redo; skin history is capped at 50 entries and 32 MiB per direction. When an oldest entry is evicted, the status surface explains the bounded-history decision while the current edit remains applied.
 - Workspace, layout, and camera-mode changes preserve the mounted model, selection, paused time, dirty state, export status, and exclusive Select/Endpoint/IK ownership.
@@ -57,6 +66,13 @@ Frontend and CLI share this parser/solver. Profiles also support explicit
 `replaceClips`, `extractRootMotionBone` and per-source `clipVisualTiming`.
 Replacement retains reference inputs and untouched clips; the frontend clears
 replaced overlays in one undoable transaction and rejects locked channels.
+Optional positive finite `rootMotionScale` fixes the calibrated translation
+multiplier when mappings change; omission retains automatic mapped-height scaling.
+It conflicts with `scaleRootMotion: false`. Optional `directionAlignmentBones`
+restricts direction constraints to named eligible target bones without disabling
+rotation transfer on other mapped bones. Names must be unique and non-empty;
+unknown/unconstrained bones, disabled alignment and conflicting direction-transfer
+lists fail explicitly. The shared job/profile path owns both controls.
 Natural profiles can retain animated leg twist/knee planes and declare per-clip
 `grounding` (strideScale, rootHeightOffset, groundHeight). Shared pelvis correction
 iterates across both contact constraints within the configured bound; residual
@@ -86,13 +102,17 @@ orientation and full-weight endpoints, including declared root travel.
 Opt-in `localReferenceCorrections` maps bone names to unit-quaternion `from`/`to`
 pairs. A constant local offset preserves animated deltas before range review;
 corrections to solved ankles or their ancestors fail closed. Defaults are unchanged.
+Normalized jobs replay with `targetChainCurls: []` as an explicit no-op.
+Per-clip `clipJointConstraints` optionally redistributes a named neck/head pair
+within calibrated ranges before contact solving; residual head-orientation error
+remains explicit. See HUMANOID_POSE_REVIEW.md for the bounded schema.
 
 ### Export and validation
 
 - Source-aware Export preserves the high-fidelity SMF path for SMF sources and uses FBX for FBX sources. Explicit GLB, FBX, and SMF actions remain available where valid.
 - SMF export preserves imported node/head structure, deform-order skin indices, finite normalized dual quaternions, normalized tangent handedness, position/rotation pose edits, supported animation edits/metadata, and dirty skin weights. Attribute shape, counts, times, strings, ranges, output size, section arithmetic, relational rig/animation/skin references, and finite numeric payloads are checked by the shared semantic validator before serialization; malformed data is rejected rather than wrapped.
 - Non-SMF-to-SMF conversion uses one explicit boundary: mesh attributes are baked once into model-root Three space, the serializer owns the single Three-to-SMF vector conversion, bones are captured as root-relative world DQs, and clips are sampled through a Three mixer. The app-facing SMF action and roundtrip check remain enabled for compatible skinned GLB/FBX sources and prepared static FBX/OBJ roots; unprepared static roots, scale tracks, incomplete skin data, and malformed geometry remain blocked by diagnostics.
-- GLB export reparses generated bytes and checks finite transforms/tracks plus representative bone, skinned-mesh, clip, name, and track preservation before save.
+- GLB export reparses bytes and checks finite transforms/tracks and representative rig/clip preservation. Repeated cycles retain node topology and valid authored unit skin weights; malformed weights retain normalization. Matrix-only animated transforms fail closed.
 - The local `game-ready` JSON CLI composes strict OBJ/MTL material repair, explicit rig mapping, optional clip retargeting and natural-motion conditioning, normalized rig-proportion reporting, PNG texture embedding (including packed metallic/roughness channels), final GLB re-import, embedded-image checks, requested 60 Hz STEP timing checks, and five finite deformation samples per clip. Its strict v2 parser rejects unknown fields, duplicate/input-overwriting paths, empty explicit clip selections, invalid contact/leg-limit ranges, natural-motion settings for unselected clips, unknown attachment roles, and unsafe generation/current-pointer layouts. React and CLI callers share one profile-to-retarget-options mapper instead of duplicating clip policy. Each regular input file is read from one handle in bounded chunks under the remaining aggregate budget. The command publishes one immutable, content-addressed generation containing `model.glb`, normalized `job.json`, resolved `mapping.json`, `report.json`, and a last-written hash manifest; a directory rename is the visibility boundary and an optional direct-child current pointer is replaced only afterward. Producer identity hashes the executable local dependency list and package manifests in addition to the Git revision/working-tree state, so a changed helper cannot silently retain an old generation identity. Resampling evaluates source frames at their float32 representation while requested output keys use float32 next-down timing for frame-indexed consumers. A global relative/absolute direction-transfer default can replace repetitive per-clip declarations, with clip overrides retained for exceptions. No server, window automation, game-repository write, or remote publication is part of the command.
 - FBX import receives the selected resource bundle instead of discarding sidecars, resolves only source-referenced relative textures through the bounded URL registry, waits concurrently on loader-manager and image readiness under one bounded timeout, reports retained texture count, and revokes temporary URLs after readiness. Additional selected maps are not inferred into unreferenced material slots. GLB, FBX, and OBJ share one geometry-attribute preparation contract: missing preview UVs/normals are filled safely, while tangents are computed only for valid indexed triangles with compatible source UVs. Geometry still mounts for a lone FBX when embedded or external absolute textures cannot be resolved; unavailable maps are removed before render and reported as skipped. Export writes binary FBX 7500 through the vendored MIT `FBXExporter-threejs`, emits typed index/layer arrays, then reparses the bytes and checks representative mesh, skin, bone, clip, and animation endpoint structure before save.
 - Display-only material, opacity, sampler, legacy-lighting, and weight-color previews are restored for the entire asynchronous GLB/FBX exporter call and reapplied only if the same root remains mounted.
@@ -179,7 +199,12 @@ The latest review links the dated command results and any observed limitations i
 
 ## Current Limits
 
-- Collada (`.dae`) and ZIP archives are not model inputs. The supplied Mixamo pair requires a validated supported-format derivative; animation-only input cannot prove source skin deformation.
+- GLB import makes duplicate node names unique for Three.js bindings. Legacy
+  files with repeated non-joint wrapper names may therefore change those names
+  on roundtrip even when topology, joint names, transforms and skin stay intact.
+  Exact metadata-name identity is not guaranteed for ambiguous source names.
+
+- Collada (`.dae`) is a supported single-file model input and export through the Three.js ColladaLoader plus the RustSMF DAE serializer. ZIP archives remain unsupported containers and must be extracted before selection. DAE round-trip validation covers visual-scene mesh counts, skin-controller presence, hierarchy and matrix animation clips; external texture files are resolved only from a selected bundle on import and are not embedded on export, so GLB remains the texture-fidelity path. Animation-only input still cannot prove source skin deformation.
 
 - SMF has no scale channel in the current dual-quaternion path. Scale edits block SMF export rather than being dropped.
 - SMF scene-object names and hierarchy order are source-owned by the imported payload. Model-workspace rename and reorder are therefore limited to non-SMF sources until the SMF serializer has explicit rewrite contracts.
@@ -203,28 +228,20 @@ The context bank routes files, not progress or backlog entries.
 
 ## Fitted-rig diagnostic boundary
 
-The reusable fitted-rig utilities fit explicit source bind frames onto a template
-hierarchy, reject lost weighted influences, bake mapped world motion, and append
-replacement skin/animation streams while retaining source GLB bytes. The saved-job
-`fit-rig` CLI requires exact requested clip identity and duration, samples every
-explicit 60 Hz grid time plus the terminal, and reports requested/completed/rejected
-coverage with the worst mesh, vertex, frame and influences. Source tracks use their
-float32 frame representation; fitted next-down keys are evaluated at the requested
-rational time so an upward-rounded source terminal cannot alias an ordinary grid
-sample. Dated source/fitted equivalence measurements live in HISTORY.md.
+Saved retarget profiles also support opt-in per-clip forearm/wrist axial
+allocation through the shared CLI/frontend core. The isolated STEP post-pass
+preserves hand-world pose and rejects incompatible scales, offsets, correction
+policies and loop seams. It changes deformation allocation, not contact geometry.
+The schema and limits live in [HUMANOID_POSE_REVIEW.md](HUMANOID_POSE_REVIEW.md).
+Natural contact profiles can additionally use bounded cumulative 60 Hz root
+translation samples for offline nonlinear braking/acceleration compensation.
+They retain ordinary STEP animation output; no runtime IK, actor movement or
+automatic transition/whole-shoe clearance acceptance is implied.
 
-The hash-bound viewer refuses missing or duration-shortened clips, uses a
-remainder-preserving multi-frame animation clock, and records clip/frame/time,
-model hashes, camera, and raw/applied transforms on every draw. Equal-height mode
-is diagnostic; exact-game mode preserves separate normalization, ground,
-receiving-scale, facing, and optional pitch stages. Quad orthographic shows
-top/quarter/front/side for source, fitted source, and target together. Its named
-Diagnostics disclosure can fade mesh opacity, distinguish mapped bones from
-unmapped/target-only bones, and render one selected joint's local axes plus
-parent-joint-child bend plane without changing model bytes. The final conditioned
-Wolf generation passed technical export and receiving-game checks but failed
-operator review of the continuous-motion video because the left leg remained
-visibly stiff. Acceptance of the selected Brawl source stays in `TODO.md`;
-private assets, screenshots, videos, and game packages remain outside this repo.
-
-Command schema, outputs, limits and preview controls are in [FITTED_RIG.md](FITTED_RIG.md).
+The fitted-rig tools fit explicit bind mappings, preserve weighted influences and
+source GLB bytes, and verify every requested clip on a 60 Hz grid plus terminal.
+The hash-bound comparison viewer provides source/fitted/target Quad diagnostics
+and equal-height or exact-game transforms. Neither numerical equivalence nor
+diagnostic overlays establish fighter acceptance. [FITTED_RIG.md](FITTED_RIG.md)
+owns command schemas, timing precision, limits and receipt controls; HISTORY owns
+dated proof, and TODO owns acceptance. Private assets and game packages stay excluded.

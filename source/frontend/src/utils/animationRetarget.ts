@@ -1,7 +1,12 @@
 import * as THREE from 'three';
 import type { RigMapDecision, RigMapResult } from './rigMapping';
+import { buildRigMap } from './rigMapping';
+import { parseSwingTrajectories, sampleSwingTrajectory, sampleSwingDescendantRotation, type SwingAnchor, type SwingTrajectory, type SwingRotationEnvelope } from './swingTrajectory';
+import { bakeEndpointEnvelope, finishEndpointEnvelope, captureContactAnchor, captureContactPointOffsets, captureDescendantRotations, type EndpointEnvelope, type EndpointEnvelopeReport } from './endpointEnvelope';
 import { parseLocalReferenceCorrections, type LocalReferenceCorrection } from './retargetReference';
-import {auditPoseRanges,poseRangeSummary,type PoseRangeProfile,type PoseRangeReport} from './poseRanges';
+import { parseForearmTwistShares, redistributeForearmTwist, type ForearmTwistShare, type ForearmTwistReport } from './forearmTwist';
+import { constrainHeadChain, parseClipJointConstraints, type HeadJointConstraint } from './retargetJointConstraints';
+import {auditPoseRanges,parsePoseRangeProfile,poseRangeSummary,type PoseRangeProfile,type PoseRangeReport} from './poseRanges';
 import {retargetSourceFrameTime,validateRetargetVisualTiming,type RetargetVisualTiming} from './retargetTiming';
 import {
   alignNaturalAnatomicalFrame,
@@ -11,7 +16,14 @@ import {
   limitNaturalLegDirection,
   naturalSolePoint,
   naturalFootHeading,
+  naturalContactOrientation,
+  parseContactPoint,
+  parseContactPatch,
+  lowestContactPoint,
   naturalContactRamp,
+  parseRootTravelSamples,
+  validateRootTravelBindings,
+  sampledRootDisplacement,
   resolveNaturalContactPose,
   solveNaturalTwoBoneLeg,
   solveNaturalPelvisCorrection,
@@ -44,12 +56,16 @@ export interface AnimationRetargetOptions {
   clipName?: string;
   applyUpCorrection?: boolean;
   scaleRootMotion?: boolean;
+  /** Explicit calibrated multiplier; omission retains mapped-height scaling. */
+  rootMotionScale?: number;
   extractRootMotionBone?: string;
   visualTiming?: RetargetVisualTiming;
   sampleRateHz?: number;
   interpolation?: 'linear' | 'step';
   nextDownRationalTimes?: boolean;
   alignMappedBoneDirections?: boolean;
+  /** Only these target bones get direction constraints; others still rotate. */
+  directionAlignmentBones?: string[];
   directionTransferMode?: DirectionTransferMode;
   directionTransferBones?: string[];
   sourceReferencePose?: 'rest' | 'first-frame' | 'clip';
@@ -61,10 +77,17 @@ export interface AnimationRetargetOptions {
   naturalMotion?: NaturalMotionProfile;
   poseRanges?: PoseRangeProfile;
   localReferenceCorrections?: Record<string, LocalReferenceCorrection>;
+  jointConstraints?: HeadJointConstraint;
   poseRecovery?: PoseRecoveryEnvelope;
+  forearmTwist?: ForearmTwistShare[];
+  endpointEnvelope?: EndpointEnvelope;
+  endpointTargetClips?: readonly THREE.AnimationClip[];
 }
 
 export interface AnimationRetargetReport {
+  forearmTwist?: ForearmTwistReport[];
+  endpointEnvelope?: EndpointEnvelopeReport;
+  jointConstraints?: { neck: string; head: string; correctedSamples: number; maximumCorrectionDegrees: number; maximumResidualDegrees: number; maximumResidualFrame: number | null };
   sourceClip: string;
   targetClip: string;
   duration: number;
@@ -610,8 +633,19 @@ function prepareNaturalMotion(
     if (contact.positionMode !== undefined && contact.positionMode !== 'planted' && contact.positionMode !== 'plane') {
       throw new Error('Natural contact positionMode must be planted or plane.');
     }
-    if (contact.orientationMode !== undefined && contact.orientationMode !== 'reference' && contact.orientationMode !== 'animated-heading') {
-      throw new Error('Natural contact orientationMode must be reference or animated-heading.');
+    if (contact.orientationMode !== undefined && contact.orientationMode !== 'reference' && contact.orientationMode !== 'animated-heading' && contact.orientationMode !== 'animated') {
+      throw new Error('Natural contact orientationMode must be reference, animated-heading or animated.');
+    }
+    parseContactPoint(contact.contactPoint);
+    const patch=parseContactPatch(contact.contactPatch);
+    if(patch){
+      if(contact.positionMode!=='plane'||contact.orientationMode!=='animated'||contact.contactPoint!==undefined||contact.contactBone!==undefined||contact.anchorFrame!==undefined||contact.wrapToStart)throw new Error('contactPatch requires plane/animated contact without point, bone, anchor or wrap overrides.');
+      for(const point of patch)if(point.bone){const bone=targetReference.get(point.bone)?.bone;if(!bone||!isBoneDescendantOf(bone,legs[contact.foot].targetAnkle.bone))throw new Error('contactPatch bone must be an ankle descendant.');}
+    }
+    if (contact.contactBone !== undefined) {
+      const bone=targetReference.get(contact.contactBone)?.bone;
+      if (!bone || !contact.contactPoint || !isBoneDescendantOf(bone,legs[contact.foot].targetAnkle.bone)) throw new Error('contactBone requires an ankle descendant and contactPoint.');
+      if (contact.wrapToStart) throw new Error('Articulated contactBone does not support wrapped contacts.');
     }
     if (contact.endFrame >= sampleCount) {
       throw new Error(`Natural motion ${clipName} ${contact.foot}-foot contact ends after frame ${sampleCount - 1}.`);
@@ -624,7 +658,8 @@ function prepareNaturalMotion(
     if (contact.wrapToStart) {
       const opening = profile.contacts![clipName][openingIndex];
       if (profile.contacts![clipName].filter(candidate => candidate.foot === contact.foot && candidate.startFrame === 0).length !== 1
-        || (opening.orientationMode ?? 'reference') !== (contact.orientationMode ?? 'reference')) {
+        || (opening.orientationMode ?? 'reference') !== (contact.orientationMode ?? 'reference')
+        || JSON.stringify(opening.contactPoint ?? legs[contact.foot].profile.soleOffset) !== JSON.stringify(contact.contactPoint ?? legs[contact.foot].profile.soleOffset)) {
         throw new Error('Wrapped contact requires one opening interval with matching orientation policy.');
       }
       if (opening.positionMode === 'plane' || contactBlendWeight(0, opening) !== 1 || contactBlendWeight(contact.endFrame, contact) !== 1) {
@@ -647,9 +682,9 @@ function prepareNaturalMotion(
         maximumPelvisCorrectionFrame: null,
         clampedSamples: 0,
         unreachable: false,
-        rootTravelPerFrame: [
+        ...(profile.rootTravelSamples?.[clipName] ? {} : { rootTravelPerFrame: [
           ...(profile.rootTravelPerFrame?.[clipName] ?? [0, 0, 0]),
-        ] as [number, number, number],
+        ] as [number, number, number] }),
       },
     };
   });
@@ -706,6 +741,28 @@ export function retargetAnimationClip(
   mapping: RigMapResult,
   options: AnimationRetargetOptions = {},
 ): RetargetedAnimation {
+  if (options.endpointEnvelope) {
+    if (options.sampleRateHz !== 60 || options.interpolation !== 'step' || options.poseRecovery || options.jointConstraints
+      || options.forearmTwist?.length || Object.keys(options.localReferenceCorrections ?? {}).length) {
+      throw new Error('Endpoint envelopes require 60 Hz STEP and no recovery/joint/wrist/reference post-corrections.');
+    }
+    const core = retargetAnimationClip(clip, source, target, mapping, { ...options, endpointEnvelope: undefined, naturalMotion: undefined, poseRanges: undefined });
+    core.clip.name = clip.name;
+    const grounding = options.naturalMotion?.grounding?.[clip.name];
+    const blended = bakeEndpointEnvelope(core.clip, target, options.endpointTargetClips ?? [], options.endpointEnvelope, grounding?.rootHeightOffset ?? 0);
+    const natural = options.naturalMotion ? { ...options.naturalMotion, torso: undefined,
+      ...(grounding ? { grounding: { ...options.naturalMotion.grounding, [clip.name]: { ...grounding, rootHeightOffset: 0 } } } : {}) } : undefined;
+    const identity = buildRigMap(target, target, { manualMap: Object.fromEntries(target.bones.map(b => [b.name,b.name])) });
+    const constrained = retargetAnimationClip(blended.clip, target, target, identity, {
+      clipName: options.clipName, applyUpCorrection: false, alignMappedBoneDirections: false,
+      scaleRootMotion: false, sampleRateHz: 60, interpolation: 'step', nextDownRationalTimes: options.nextDownRationalTimes,
+      sourceReferencePose: options.targetReferenceClip ? 'clip' : 'rest', sourceReferenceClip: options.targetReferenceClip,
+      targetReferenceClip: options.targetReferenceClip, naturalMotion: natural, poseRanges: options.poseRanges,
+    });
+    const finished = finishEndpointEnvelope(constrained.clip, target, blended);
+    if (finished.report.status !== 'matched') throw new Error(`Endpoint constraints conflict with target poses: ${JSON.stringify(finished.report)}`);
+    return { ...constrained, clip: finished.clip, report: { ...constrained.report, endpointEnvelope: finished.report } };
+  }
   if (!mapping.ok) {
     const errors = mapping.diagnostics.filter((diagnostic) => diagnostic.level === 'error');
     throw new Error(`Cannot retarget with an invalid rig map: ${errors.map((item) => item.message).join(' ')}`);
@@ -831,9 +888,14 @@ export function retargetAnimationClip(
     ? new THREE.Quaternion()
     : new THREE.Quaternion().fromArray(mapping.orientationCorrection ?? mapping.upCorrection ?? [0, 0, 0, 1]).normalize();
   const height = findMappedExtremes(sourceRest, targetReference, mapping.map);
-  const rootMotionScale = options.scaleRootMotion === false || !height
+  const automaticRootMotionScale = options.scaleRootMotion === false || !height
     ? 1
     : height.target / height.source;
+  if (options.rootMotionScale !== undefined && (!Number.isFinite(options.rootMotionScale)
+    || options.rootMotionScale <= 0 || options.scaleRootMotion === false)) {
+    throw new Error('rootMotionScale requires a positive finite number and scaleRootMotion not false.');
+  }
+  const rootMotionScale = options.rootMotionScale ?? automaticRootMotionScale;
   const rootDecision = rootSourceDecision(activeDecisions, sourceRest);
   const rootHasPositionTrack = !!rootDecision
     && boneOrAncestorIsTracked(sourceRest.get(rootDecision.source)!.bone, positionSources);
@@ -845,9 +907,23 @@ export function retargetAnimationClip(
   let maximumExtractedDisplacement = 0;
   const quaternionValues = new Map<string, number[]>();
   const positionValues = new Map<string, number[]>();
-  const directionConstraints = options.alignMappedBoneDirections === false
+  let directionConstraints = options.alignMappedBoneDirections === false
     ? []
     : buildDirectionConstraints(activeDecisions, sourceRest, targetReference);
+  const alignmentNames = options.directionAlignmentBones;
+  if (alignmentNames !== undefined) {
+    if (options.alignMappedBoneDirections === false || !Array.isArray(alignmentNames) || alignmentNames.length === 0
+      || alignmentNames.some(name => typeof name !== 'string' || !name.trim())
+      || new Set(alignmentNames).size !== alignmentNames.length) {
+      throw new Error('directionAlignmentBones requires unique non-empty names and direction alignment enabled.');
+    }
+    const available = new Set(directionConstraints.map(constraint => constraint.targetBone.name));
+    for (const name of alignmentNames) {
+      if (!available.has(name)) throw new Error(`directionAlignmentBones contains unknown or unconstrained target bone ${name}.`);
+    }
+    const selected = new Set(alignmentNames);
+    directionConstraints = directionConstraints.filter(constraint => selected.has(constraint.targetBone.name));
+  }
   const directionTransferMode = options.directionTransferMode ?? 'relative';
   const directionTransferBones = options.directionTransferBones ?? null;
   const directionTransferBoneSet = directionTransferBones ? new Set(directionTransferBones) : null;
@@ -905,6 +981,12 @@ export function retargetAnimationClip(
 
   let naturalMotion: PreparedNaturalMotion | null = null;
   if (options.naturalMotion) {
+    const rootTravelSamples = parseRootTravelSamples(options.naturalMotion.rootTravelSamples);
+    validateRootTravelBindings({ ...options.naturalMotion, rootTravelSamples });
+    if (rootTravelSamples?.[clip.name] && (options.sampleRateHz !== 60 || interpolation !== 'step'
+      || rootTravelSamples[clip.name].length !== outputTimes.length)) {
+      throw new Error('rootTravelSamples requires 60 Hz STEP and exact output sample coverage.');
+    }
     if (!sourceReferenceClip || !options.targetReferenceClip) {
       throw new Error('Natural motion requires explicit source and target reference clips.');
     }
@@ -925,11 +1007,76 @@ export function retargetAnimationClip(
       throw new Error('Natural motion requires the canonical target pelvis to be the retarget root.');
     }
   }
+  const jointConstraint = options.jointConstraints
+    ? parseClipJointConstraints({ [clip.name]: options.jointConstraints })[clip.name] : undefined;
+  const jointProfile = jointConstraint && options.poseRanges ? parsePoseRangeProfile(options.poseRanges) : undefined;
+  if (jointConstraint) {
+    const neck = targetReference.get(jointConstraint.neck), head = targetReference.get(jointConstraint.head);
+    if (!neck || !head || head.parentBone !== neck.bone || !neck.parentBone
+      || neck.bone.children.some(child => child instanceof THREE.Bone && child !== head.bone)) throw new Error('Joint constraints require a direct unbranched neck/head pair.');
+    if (!jointProfile || ![neck, head].every(state => jointProfile.joints.some(joint => joint.bone === state.bone.name))) throw new Error('Joint constraints require calibrated neck/head pose ranges.');
+    if (options.alignMappedBoneDirections !== false || poseRecovery) throw new Error('Joint constraints require direction alignment disabled and no pose recovery.');
+    if (![neck, head].every(state => {
+      const decision = targetDecisions.get(state.bone.name);
+      return decision && worldAnimatedSources.has(decision.source);
+    })) throw new Error('Joint constraints require mapped animated neck/head rotations.');
+    for (const state of [neck, head]) {
+      if (naturalMotion && (naturalMotion.torso?.states.includes(state)
+        || Object.values(naturalMotion.legs).some(leg => leg.targetAnkle.bone === state.bone || isBoneDescendantOf(leg.targetAnkle.bone, state.bone)))) throw new Error('Joint constraints cannot overlap torso or leg/contact ownership.');
+    }
+    for (const joint of jointProfile.joints.filter(joint => joint.bone === jointConstraint.neck || joint.bone === jointConstraint.head)) {
+      if ([joint.flexionDegrees, joint.lateralDegrees, joint.twistDegrees].some(range => range[0] > 0 || range[1] < 0)) throw new Error('Joint constraints require envelopes containing the calibrated neutral pose.');
+    }
+    for (let ancestor: THREE.Bone | null = head.bone; ancestor; ancestor = targetReference.get(ancestor.name)!.parentBone) {
+      if (preservedTargetRotationSet.has(ancestor.name) || targetLocalRotationOffsetQuaternions.has(ancestor.name)
+        || options.localReferenceCorrections?.[ancestor.name]) throw new Error('Joint constraints conflict with preserved/curl/reference chain rotations.');
+    }
+  }
+  const jointConstraintReport = jointConstraint ? { neck: jointConstraint.neck, head: jointConstraint.head,
+    correctedSamples: 0, maximumCorrectionDegrees: 0, maximumResidualDegrees: 0, maximumResidualFrame: null as number | null } : undefined;
   const naturalLegBends = {
     left: { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY },
     right: { minimum: Number.POSITIVE_INFINITY, maximum: Number.NEGATIVE_INFINITY },
   };
   const contactPins = new Map<string, { sole: THREE.Vector3; quaternion: THREE.Quaternion }>();
+  const contactOffsets = new Map<string,[number,number,number][]>();
+  const patchOffsets = new Map<string,[number,number,number][][]>();
+  if (naturalMotion?.contacts.some(c=>c.contact.contactBone||c.contact.contactPatch) && options.sampleRateHz!==60) throw new Error('Articulated contact geometry requires 60 Hz sampling.');
+  const swingSpecs = parseSwingTrajectories(naturalMotion?.profile.swingTrajectories)?.[clip.name] ?? [];
+  const swings: { spec: SwingTrajectory; start: SwingAnchor; end: SwingAnchor }[] = [];
+  const swingDiagnostics=swingSpecs.map(spec=>({foot:spec.foot,startFrame:spec.startFrame,endFrame:spec.endFrame,maximumResidual:0,maximumResidualFrame:null as number|null}));
+  const swingRotations=new Map<string,SwingRotationEnvelope[]>();
+  if (swingSpecs.length && (options.sampleRateHz !== 60 || interpolation !== 'step' || !naturalMotion?.profile.rootTravelSamples?.[clip.name])) throw new Error('Swing trajectories require 60 Hz STEP and sampled root travel.');
+  if (naturalMotion && (naturalMotion.contacts.some(c=>c.contact.anchorFrame !== undefined || c.contact.contactBone !== undefined || c.contact.contactPatch !== undefined) || swingSpecs.length)) {
+    const preContact = retargetAnimationClip(clip,source,target,mapping,{...options,naturalMotion:undefined,poseRanges:undefined,jointConstraints:undefined}).clip;
+    for (const contact of naturalMotion.contacts) {
+      const leg=naturalMotion.legs[contact.contact.foot];
+      if(contact.contact.contactPatch)patchOffsets.set(contact.key,contact.contact.contactPatch.map(p=>p.bone?captureContactPointOffsets(preContact,target,outputTimes.length,leg.targetAnkle.bone.name,p.bone,p.point):Array.from({length:outputTimes.length},()=>p.point)));
+      if (contact.contact.contactBone) contactOffsets.set(contact.key,captureContactPointOffsets(preContact,target,outputTimes.length,leg.targetAnkle.bone.name,contact.contact.contactBone,contact.contact.contactPoint!));
+      if(contact.contact.anchorFrame === undefined) continue;
+      const anchor=captureContactAnchor(preContact,target,contact.contact.anchorFrame,leg.targetAnkle.bone.name,contactOffsets.get(contact.key)?.[contact.contact.anchorFrame] ?? contact.contact.contactPoint ?? leg.profile.soleOffset);
+      anchor.sole.y=naturalMotion.profile.grounding?.[clip.name]?.groundHeight ?? leg.referenceSolePoint.y;
+      anchor.quaternion=naturalContactOrientation(contact.contact.orientationMode,anchor.quaternion,leg.targetAnkle.worldQuaternion);
+      contactPins.set(contact.key,anchor);
+      contact.diagnostic.anchorSolePoint=anchor.sole.toArray();
+      contact.diagnostic.anchorFootQuaternion=anchor.quaternion.toArray();
+    }
+    for (const spec of swingSpecs) {
+      if ([spec.endFrame,spec.startAnchorFrame,spec.endAnchorFrame].some(f=>f>=outputTimes.length)) throw new Error('Swing frame exceeds output samples.');
+      const leg=naturalMotion.legs[spec.foot],travel=naturalMotion.profile.rootTravelSamples![clip.name];
+      const anchor=(frame:number,grounded:boolean):SwingAnchor=>{
+        const value=captureContactAnchor(preContact,target,frame,leg.targetAnkle.bone.name,leg.profile.soleOffset);
+        if(grounded){value.sole.y=naturalMotion.profile.grounding?.[clip.name]?.groundHeight ?? leg.referenceSolePoint.y;value.quaternion=naturalFootHeading(value.quaternion,leg.targetAnkle.worldQuaternion);}
+        value.sole.add(new THREE.Vector3(...travel[frame]));return value;
+      };
+      swings.push({spec,start:anchor(spec.startAnchorFrame,spec.startGrounded),end:anchor(spec.endAnchorFrame,spec.endGrounded)});
+      if(spec.descendantRotations){
+        const start=captureDescendantRotations(preContact,target,spec.startAnchorFrame,leg.targetAnkle.bone.name);
+        const end=captureDescendantRotations(preContact,target,spec.endAnchorFrame,leg.targetAnkle.bone.name);
+        for(const [name,q]of start){const intervals=swingRotations.get(name)??[];intervals.push({spec,start:q,end:end.get(name)!});intervals.sort((a,b)=>a.spec.startFrame-b.spec.startFrame);swingRotations.set(name,intervals);}
+      }
+    }
+  }
   const previousNaturalLegPlane = naturalMotion ? {
     left: naturalMotion.legs.left.referenceBendPlaneNormal.clone(),
     right: naturalMotion.legs.right.referenceBendPlaneNormal.clone(),
@@ -986,6 +1133,37 @@ export function retargetAnimationClip(
       const naturalTorsoWorld = new Map<string, THREE.Quaternion>();
       const naturalLegWorld = new Map<string, THREE.Quaternion>();
       const naturalFootCorrections = new Map<string, THREE.Quaternion>();
+      const constrainedJointWorld = new Map<string, THREE.Quaternion>();
+      let headWorldCorrection: THREE.Quaternion | undefined;
+      const conditionHead = () => {
+        if (!jointConstraint) return;
+        const intendedWorld = (name: string): THREE.Quaternion => {
+          const state = targetReference.get(name)!, decision = targetDecisions.get(name);
+          if (naturalTorsoWorld.has(name)) return naturalTorsoWorld.get(name)!.clone();
+          if (decision) return transferredWorldQuaternion(decision, state);
+          return state.parentBone ? intendedWorld(state.parentBone.name).multiply(state.localQuaternion).normalize() : state.worldQuaternion.clone();
+        };
+        const neckState = targetReference.get(jointConstraint.neck)!;
+        const parentWorld = intendedWorld(neckState.parentBone!.name);
+        const neckWorld = intendedWorld(jointConstraint.neck), headWorld = intendedWorld(jointConstraint.head);
+        const neck = parentWorld.clone().invert().multiply(neckWorld).normalize();
+        const head = neckWorld.clone().invert().multiply(headWorld).normalize();
+        const solved = constrainHeadChain(neck, head,
+          jointProfile!.joints.find(joint => joint.bone === jointConstraint.neck)!,
+          jointProfile!.joints.find(joint => joint.bone === jointConstraint.head)!, jointConstraint.transitionDegrees);
+        const correctedNeckWorld = parentWorld.multiply(solved.neck).normalize();
+        const correctedHeadWorld = correctedNeckWorld.clone().multiply(solved.head).normalize();
+        constrainedJointWorld.set(jointConstraint.neck, correctedNeckWorld);
+        constrainedJointWorld.set(jointConstraint.head, correctedHeadWorld);
+        headWorldCorrection = correctedHeadWorld.clone().multiply(headWorld.invert()).normalize();
+        if (solved.maximumCorrectionDegrees > 1e-4) jointConstraintReport!.correctedSamples++;
+        jointConstraintReport!.maximumCorrectionDegrees = Math.max(jointConstraintReport!.maximumCorrectionDegrees, solved.maximumCorrectionDegrees);
+        if (solved.residualDegrees > jointConstraintReport!.maximumResidualDegrees) {
+          jointConstraintReport!.maximumResidualDegrees = solved.residualDegrees;
+          jointConstraintReport!.maximumResidualFrame = frameIndex;
+        }
+      };
+      if (!naturalMotion) conditionHead();
       let pelvisCorrection = new THREE.Vector3();
       if (naturalMotion) {
         const pelvisWorldQuaternion = transferredWorldQuaternion(
@@ -1025,6 +1203,7 @@ export function retargetAnimationClip(
           }
         }
 
+        conditionHead();
         const pelvisReferenceDelta = pelvisWorldQuaternion.clone()
           .multiply(naturalMotion.pelvis.worldQuaternion.clone().invert())
           .normalize();
@@ -1036,6 +1215,7 @@ export function retargetAnimationClip(
           desiredFootQuaternion: THREE.Quaternion;
           contact: PreparedNaturalMotion['contacts'][number] | null;
           contactWeight: number;
+          swing: boolean;
           poleWorld: THREE.Vector3;
         }>();
         const pelvisConstraints: Parameters<typeof solveNaturalPelvisCorrection>[0][number][] = [];
@@ -1128,13 +1308,21 @@ export function retargetAnimationClip(
             targetDecisions.get(prepared.targetAnkle.bone.name)!,
             prepared.targetAnkle,
           );
+          const swing=swings.find(s=>s.spec.foot===side && frameIndex>=s.spec.startFrame && frameIndex<=s.spec.endFrame);
+          if(swing){
+            const pose=sampleSwingTrajectory(swing.spec,swing.start,swing.end,frameIndex,new THREE.Vector3(...naturalMotion.profile.rootTravelSamples![clip.name][frameIndex]));
+            naturalFootQuaternion.copy(pose.quaternion);
+            naturalAnkle.copy(pose.sole).sub(new THREE.Vector3(...prepared.profile.soleOffset).applyQuaternion(pose.quaternion));
+          }
           let desiredAnkle = naturalAnkle;
           let desiredFootQuaternion = naturalFootQuaternion;
           if (contact) {
+            const patch=patchOffsets.get(contact.key);
+            const contactPoint = patch ? lowestContactPoint(patch.map(p=>p[frameIndex]),naturalFootQuaternion) : contactOffsets.get(contact.key)?.[frameIndex] ?? contact.contact.contactPoint ?? prepared.profile.soleOffset;
             const naturalSole = naturalSolePoint(
               naturalAnkle,
               naturalFootQuaternion,
-              prepared.profile.soleOffset,
+              contactPoint,
             );
             let pin = contactPins.get(contact.key);
             const planeContact = contact.contact.positionMode === 'plane';
@@ -1142,7 +1330,7 @@ export function retargetAnimationClip(
               const opening = contactPins.get(contact.loopStartKey);
               if (!opening) throw new Error('Wrapped contact opening pin is missing.');
               pin = {
-                sole: opening.sole.clone().addScaledVector(new THREE.Vector3(...contact.diagnostic.rootTravelPerFrame), contact.contact.endFrame - contact.contact.startFrame),
+                sole: opening.sole.clone().addScaledVector(new THREE.Vector3(...contact.diagnostic.rootTravelPerFrame!), contact.contact.endFrame - contact.contact.startFrame),
                 quaternion: opening.quaternion.clone(),
               };
               contactPins.set(contact.key, pin);
@@ -1150,9 +1338,7 @@ export function retargetAnimationClip(
             if (!pin || planeContact) {
               pin = {
                 sole: naturalSole.clone().setComponent(1, grounding?.groundHeight ?? prepared.referenceSolePoint.y),
-                quaternion: contact.contact.orientationMode === 'animated-heading'
-                  ? naturalFootHeading(naturalFootQuaternion, prepared.targetAnkle.worldQuaternion, pin?.quaternion)
-                  : prepared.targetAnkle.worldQuaternion.clone(),
+                quaternion: naturalContactOrientation(contact.contact.orientationMode,naturalFootQuaternion,prepared.targetAnkle.worldQuaternion,pin?.quaternion),
               };
               contactPins.set(contact.key, pin);
             }
@@ -1160,10 +1346,13 @@ export function retargetAnimationClip(
               naturalAnkle,
               naturalFootQuaternion,
               referenceFootQuaternion: pin.quaternion,
-              soleOffset: prepared.profile.soleOffset,
+              soleOffset: contactPoint,
               pinnedSole: pin.sole,
-              rootTravelPerFrame: contact.diagnostic.rootTravelPerFrame,
-              elapsedFrames: planeContact ? 0 : frameIndex - contact.contact.startFrame,
+              rootTravelPerFrame: contact.diagnostic.rootTravelPerFrame ?? [0, 0, 0],
+              ...(naturalMotion.profile.rootTravelSamples?.[clip.name] ? { rootDisplacement: sampledRootDisplacement(
+                naturalMotion.profile.rootTravelSamples[clip.name], frameIndex, planeContact ? frameIndex : (contact.contact.anchorFrame ?? contact.contact.startFrame),
+              ) } : {}),
+              elapsedFrames: planeContact ? 0 : frameIndex - (contact.contact.anchorFrame ?? contact.contact.startFrame),
               weight,
             });
             desiredFootQuaternion = contactPose.footQuaternion;
@@ -1183,8 +1372,10 @@ export function retargetAnimationClip(
               ),
               maxBendDegrees: prepared.profile.maxBendDegrees,
             };
-            pelvisConstraints.push({leg:legConstraint,maximumCorrection:prepared.profile.maxPelvisCorrection * weight});
+            pelvisConstraints.push({leg:legConstraint,maximumCorrection:prepared.profile.maxPelvisCorrection,weight});
           }
+          if(swing && !contact)pelvisConstraints.push({leg:{hip,desiredAnkle,referenceKnee:prepared.targetKnee.worldPosition,poleDirection:poleWorld,
+            firstLength:prepared.firstLength,secondLength:prepared.secondLength,minBendDegrees:naturalMotion.legMotionLimit?.minimumSwingBendDegrees ?? prepared.profile.minBendDegrees,maxBendDegrees:prepared.profile.maxBendDegrees},maximumCorrection:prepared.profile.maxPelvisCorrection});
           legFrames.set(side, {
             prepared,
             hip,
@@ -1193,6 +1384,7 @@ export function retargetAnimationClip(
             desiredFootQuaternion,
             contact,
             contactWeight: weight,
+            swing: Boolean(swing),
             poleWorld,
           });
         }
@@ -1206,7 +1398,7 @@ export function retargetAnimationClip(
         for (const side of ['left', 'right'] as const) {
           const frame = legFrames.get(side)!;
           frame.hip.add(pelvisCorrection);
-          if (!frame.contact) frame.desiredAnkle.add(pelvisCorrection);
+          if (!frame.contact && !frame.swing) frame.desiredAnkle.add(pelvisCorrection);
           const poleWorld = frame.poleWorld;
           const solved = solveNaturalTwoBoneLeg({
             hip: frame.hip,
@@ -1224,6 +1416,7 @@ export function retargetAnimationClip(
             maxBendDegrees: frame.prepared.profile.maxBendDegrees,
           });
           naturalLegBends[side].minimum = Math.min(naturalLegBends[side].minimum, solved.bendDegrees);
+          if(frame.swing){const diagnostic=swingDiagnostics.find(s=>s.foot===side && frameIndex>=s.startFrame && frameIndex<=s.endFrame)!;if(solved.residual>diagnostic.maximumResidual){diagnostic.maximumResidual=solved.residual;diagnostic.maximumResidualFrame=frameIndex;}}
           naturalLegBends[side].maximum = Math.max(naturalLegBends[side].maximum, solved.bendDegrees);
           previousNaturalLegPlane![side].copy(solved.bendPlaneNormal);
           const thighDirection = solved.knee.clone().sub(frame.hip).normalize();
@@ -1283,9 +1476,13 @@ export function retargetAnimationClip(
         const targetState = targetReference.get(targetBone.name)!;
         const decision = targetDecisions.get(targetBone.name);
         let worldQuaternion: THREE.Quaternion;
-        const naturalWorldQuaternion = naturalLegWorld.get(targetBone.name)
+        const naturalWorldQuaternion = constrainedJointWorld.get(targetBone.name) ?? naturalLegWorld.get(targetBone.name)
           ?? naturalTorsoWorld.get(targetBone.name);
-        if (naturalWorldQuaternion) {
+        const swingRotation=sampleSwingDescendantRotation(swingRotations.get(targetBone.name)??[],frameIndex);
+        if (swingRotation && targetState.parentBone) {
+          const parent=desiredTargetWorld.get(targetState.parentBone.name) ?? targetReference.get(targetState.parentBone.name)!.worldQuaternion;
+          worldQuaternion=parent.clone().multiply(swingRotation).normalize();
+        } else if (naturalWorldQuaternion) {
           worldQuaternion = naturalWorldQuaternion;
         } else if (preservedTargetRotationSet.has(targetBone.name) && targetState.parentBone) {
           const parentWorld = desiredTargetWorld.get(targetState.parentBone.name)
@@ -1332,6 +1529,9 @@ export function retargetAnimationClip(
             }
           }
           // Mapped toes retain their local articulation when an ankle is solved.
+          if (headWorldCorrection && isBoneDescendantOf(targetBone, targetReference.get(jointConstraint!.head)!.bone)) {
+            worldQuaternion.premultiply(headWorldCorrection).normalize();
+          }
           // Transferring their old world orientation would undo the sole correction.
           for(let ancestor=targetState.parentBone;ancestor;ancestor=targetReference.get(ancestor.name)!.parentBone){
             const footCorrection=naturalFootCorrections.get(ancestor.name);
@@ -1428,6 +1628,12 @@ export function retargetAnimationClip(
   }
 
   const localReferenceCorrections = parseLocalReferenceCorrections(options.localReferenceCorrections);
+  const forearmTwist = parseForearmTwistShares(options.forearmTwist);
+  if (forearmTwist.length && (options.alignMappedBoneDirections !== false || interpolation !== 'step'
+    || options.naturalMotion || options.jointConstraints || options.poseRecovery || Object.keys(localReferenceCorrections).length
+    || forearmTwist.some(pair => [pair.forearm, pair.hand].some(bone => preservedTargetRotationSet.has(bone))))) {
+    throw new Error('Forearm twist requires an isolated STEP post-pass with direction alignment disabled and no conflicting correction/preservation.');
+  }
   for (const [bone, calibration] of Object.entries(localReferenceCorrections)) {
     const values = quaternionValues.get(bone);
     if (!values) throw new Error(`Local reference correction requires an emitted rotation track for ${bone}.`);
@@ -1441,6 +1647,8 @@ export function retargetAnimationClip(
       new THREE.Quaternion().fromArray(values, frame * 4).premultiply(offset).normalize().toArray(values, frame * 4);
     }
   }
+  const forearmTwistReport = forearmTwist.length
+    ? redistributeForearmTwist(forearmTwist, targetReference, quaternionValues, positionValues, outputTimes.length) : undefined;
   const tracks: THREE.KeyframeTrack[] = [];
   for (const [targetName, values] of quaternionValues) {
     const track = new THREE.QuaternionKeyframeTrack(
@@ -1475,6 +1683,8 @@ export function retargetAnimationClip(
     clip: retargeted,
     report: {
       sourceClip: clip.name || '(unnamed)',
+      forearmTwist: forearmTwistReport,
+      jointConstraints: jointConstraintReport,
       poseRanges,
       localReferenceCorrections,
       targetClip: targetName,
@@ -1535,6 +1745,8 @@ export function retargetAnimationClip(
           },
         },
         contacts: naturalMotion.contacts.map(({ diagnostic }) => structuredClone(diagnostic)),
+        ...(swingDiagnostics.length ? { swingTrajectories: swingDiagnostics } : {}),
+        ...(naturalMotion.profile.rootTravelSamples?.[clip.name] ? { rootTravelSamples: structuredClone(naturalMotion.profile.rootTravelSamples[clip.name]) } : {}),
         legMotionLimit: naturalMotion.legMotionLimit
           ? structuredClone(naturalMotion.legMotionLimit)
           : null,

@@ -66,7 +66,6 @@ function moduleCandidates(absolutePath) {
     const withoutExtension = absolutePath.slice(0, -extension.length)
     for (const suffix of ['.ts', '.tsx', '.js', '.jsx', '.mjs']) {
       candidates.push(`${withoutExtension}${suffix}`)
-      candidates.push(resolve(withoutExtension, `index${suffix}`))
     }
   }
   return candidates

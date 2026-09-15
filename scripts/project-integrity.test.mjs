@@ -49,6 +49,21 @@ describe('project integrity checks', () => {
     assert.match(findBrokenRelativeImports(root).join('\n'), /unresolved relative import: \.\/empty/)
   })
 
+  it('does not resolve an explicit JavaScript filename to a directory index', () => {
+    const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-integrity-'))
+    temporaryRoots.push(root)
+    mkdirSync(join(root, 'source/frontend/src/leaf'), { recursive: true })
+    const entry = join(root, 'source/frontend/src/main.ts')
+    writeFileSync(entry, "export { value } from './leaf.js';\n")
+    writeFileSync(join(root, 'source/frontend/src/leaf/index.ts'), 'export const value = 1;\n')
+    assert.match(findBrokenRelativeImports(root).join('\n'), /unresolved relative import: \.\/leaf\.js/)
+    writeFileSync(entry, "export { value } from './leaf';\n")
+    assert.deepEqual(findBrokenRelativeImports(root), [])
+    writeFileSync(entry, "export { value } from './leaf.js';\n")
+    writeFileSync(join(root, 'source/frontend/src/leaf.ts'), 'export const value = 1;\n')
+    assert.deepEqual(findBrokenRelativeImports(root), [])
+  })
+
   it('requires all executable TODO fields', () => {
     const errors = validateTodoDocument('## P2 — Example\n\n- What: work\n- Why: reason\n')
     assert.ok(errors.some((error) => error.includes('missing - Where:')))

@@ -5,6 +5,64 @@ import { retargetAnimationClip } from './animationRetarget';
 import type { NaturalMotionProfile } from './naturalRetarget';
 import { buildRigMap } from './rigMapping';
 
+test('explicit root calibration preserves travel when the mapped height changes', () => {
+  const source = sourceSkeleton(), target = targetSkeleton();
+  const manualMap = { 'joint-5': 'mixamorigHips', 'joint-6': 'mixamorigSpine2' };
+  const clip = new THREE.AnimationClip('travel', 1, [new THREE.VectorKeyframeTrack('joint-5.position', [0, 1], [0, 1, 0, 1, 1, 0])]);
+  const options = { applyUpCorrection: false, alignMappedBoneDirections: false };
+  const base = retargetAnimationClip(clip, source, target, buildRigMap(source, target, { manualMap }), options);
+  assert.equal(base.report.rootMotionScale, 2);
+  const sourceToe = new THREE.Bone(); sourceToe.name = 'joint-20'; sourceToe.position.y = -1;
+  const targetToe = new THREE.Bone(); targetToe.name = 'mixamorigLeftToeBase'; targetToe.position.y = -0.5;
+  source.bones[1].add(sourceToe); target.bones[0].add(targetToe);
+  source.bones.push(sourceToe); target.bones.push(targetToe);
+  const mapping = buildRigMap(source, target, { manualMap: { ...manualMap, 'joint-20': targetToe.name } });
+  const automatic = retargetAnimationClip(clip, source, target, mapping, options);
+  const calibrated = retargetAnimationClip(clip, source, target, mapping, { ...options, rootMotionScale: base.report.rootMotionScale });
+  assert.notEqual(automatic.report.rootMotionScale, base.report.rootMotionScale);
+  const positions = (result: typeof base) => result.clip.tracks.find(track => track.name === 'mixamorigHips.position')!.values;
+  assert.deepEqual(positions(calibrated), positions(base));
+  assert.equal(calibrated.report.rootMotionScale, 2);
+  for (const value of [NaN, Infinity, 0, -1]) assert.throws(() => retargetAnimationClip(clip, source, target, mapping, { ...options, rootMotionScale: value }), /rootMotionScale/);
+  assert.throws(() => retargetAnimationClip(clip, source, target, mapping, { ...options, rootMotionScale: 2, scaleRootMotion: false }), /rootMotionScale/);
+});
+
+test('alignment allowlist keeps a newly mapped leaf animated without realigning its parent', () => {
+  const make = (target: boolean) => {
+    const names = target ? ['hips', 'arm', 'forearm', 'hand'] : ['joint-1', 'joint-2', 'joint-3', 'joint-4'];
+    const bones = names.map(name => { const bone = new THREE.Bone(); bone.name = name; return bone; });
+    bones[1].position.y = 1;
+    bones[2].position.set(target ? 0 : 1, target ? -1 : 0, 0);
+    bones[3].position.set(target ? 0 : 1, 0, target ? 1 : 0);
+    for (let i = 1; i < bones.length; i++) bones[i - 1].add(bones[i]);
+    bones[0].updateWorldMatrix(true, true);
+    return new THREE.Skeleton(bones);
+  };
+  const source = make(false), target = make(true);
+  const manualMap = { 'joint-1': 'hips', 'joint-2': 'arm', 'joint-3': 'forearm' };
+  const rotation = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), .4).toArray();
+  const clip = new THREE.AnimationClip('curl', 1, ['joint-2', 'joint-3', 'joint-4'].map(name =>
+    new THREE.QuaternionKeyframeTrack(name + '.quaternion', [0, 1], [0, 0, 0, 1, ...rotation])));
+  const options = { applyUpCorrection: false, scaleRootMotion: false, directionTransferMode: 'absolute' as const };
+  const base = retargetAnimationClip(clip, source, target, buildRigMap(source, target, { manualMap, allowFuzzy: false }), options);
+  const mapping = buildRigMap(source, target, { manualMap: { ...manualMap, 'joint-4': 'hand' }, allowFuzzy: false });
+  const automatic = retargetAnimationClip(clip, source, target, mapping, options);
+  const selected = base.report.directionAlignedBones;
+  const calibrated = retargetAnimationClip(clip, source, target, mapping, { ...options, directionAlignmentBones: selected });
+  const track = (result: typeof base, name: string) => result.clip.tracks.find(item => item.name === name + '.quaternion')!.values;
+  assert.deepEqual(track(calibrated, 'forearm'), track(base, 'forearm'));
+  assert.notDeepEqual(track(automatic, 'forearm'), track(base, 'forearm'));
+  const hand = track(calibrated, 'hand');
+  assert.notDeepEqual(hand.slice(0, 4), hand.slice(-4));
+  assert.equal(base.clip.tracks.some(item => item.name === 'hand.quaternion'), false);
+  assert.deepEqual(calibrated.report.directionAlignedBones, selected);
+  for (const names of [[], ['arm', 'arm'], [''], ['missing'], ['hand']]) {
+    assert.throws(() => retargetAnimationClip(clip, source, target, mapping, { ...options, directionAlignmentBones: names }), /directionAlignmentBones/);
+  }
+  assert.throws(() => retargetAnimationClip(clip, source, target, mapping, { ...options, directionAlignmentBones: selected, alignMappedBoneDirections: false }), /directionAlignmentBones/);
+  assert.throws(() => retargetAnimationClip(clip, source, target, mapping, { ...options, directionAlignmentBones: selected, directionTransferBones: ['forearm'] }), /unconstrained/);
+});
+
 function sourceSkeleton(): THREE.Skeleton {
   const helper = new THREE.Bone();
   helper.name = 'joint-4';
@@ -784,6 +842,31 @@ test('natural retargeting is deterministic across helper ancestors, torso, legs,
   }
   const first = run();
   const second = run();
+  const trajectory: [number, number, number][] = [[0,0,0],[0,0,.02],[0,0,.03]];
+  const sampledOptions = { applyUpCorrection: false, sampleRateHz: 60, interpolation: 'step' as const,
+    sourceReferencePose: 'clip' as const, sourceReferenceClip: sourceReference, targetReferenceClip: targetReference,
+    naturalMotion: { ...naturalMotion, rootTravelSamples: { natural_test: trajectory } } };
+  const sampled = retargetAnimationClip(action, source, target, mapping, sampledOptions);
+  assert.deepEqual(sampled.report.naturalMotion!.rootTravelSamples, trajectory);
+  const swingingOptions={...sampledOptions,naturalMotion:{...sampledOptions.naturalMotion,swingTrajectories:{natural_test:[{
+    foot:'left' as const,startFrame:0,endFrame:2,startAnchorFrame:0,endAnchorFrame:2,startGrounded:true,endGrounded:true,lift:.05,travelPower:2,descendantRotations:true,
+  }]}}};
+  const swinging=retargetAnimationClip(action,source,target,mapping,swingingOptions);
+  const replaySwing=retargetAnimationClip(action,source,target,mapping,swingingOptions);
+  assert.equal(swinging.report.naturalMotion!.swingTrajectories!.length,1);
+  for(const [index,track]of swinging.clip.tracks.entries())assert.deepEqual(replaySwing.clip.tracks[index].values,track.values);
+  assert.throws(()=>retargetAnimationClip(action,source,target,mapping,{...swingingOptions,naturalMotion:{...swingingOptions.naturalMotion,swingTrajectories:{natural_test:[{...swingingOptions.naturalMotion.swingTrajectories.natural_test[0],endFrame:3}]}}}),/Swing frame/);
+  assert.ok(sampled.report.naturalMotion!.contacts.every(contact => contact.maximumResidual < 1e-6 && !Object.prototype.hasOwnProperty.call(contact, 'rootTravelPerFrame')));
+  assert.equal(Object.prototype.hasOwnProperty.call(first.report.naturalMotion!, 'rootTravelSamples'), false);
+  for (const samples of [trajectory.slice(0,2), [...trajectory,[0,0,.035] as [number,number,number]]]) {
+    assert.throws(() => retargetAnimationClip(action, source, target, mapping, { ...sampledOptions,
+      naturalMotion: { ...naturalMotion, rootTravelSamples: { natural_test: samples } } }), /exact output sample/);
+  }
+  const sameConstant = retargetAnimationClip(action, source, target, mapping, { ...sampledOptions,
+    naturalMotion: { ...naturalMotion, rootTravelPerFrame: { natural_test: [0,0,.01] } } });
+  const sameSamples = retargetAnimationClip(action, source, target, mapping, { ...sampledOptions,
+    naturalMotion: { ...naturalMotion, rootTravelSamples: { natural_test: [[0,0,0],[0,0,.01],[0,0,.02]] } } });
+  for (const [index, track] of sameConstant.clip.tracks.entries()) assert.deepEqual(sameSamples.clip.tracks[index].values, track.values);
   assert.deepEqual(
     first.clip.tracks.map((track) => [track.name, [...track.times], [...track.values]]),
     second.clip.tracks.map((track) => [track.name, [...track.times], [...track.values]]),

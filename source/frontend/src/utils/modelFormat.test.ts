@@ -35,18 +35,21 @@ describe('modelFormat', () => {
     assert.equal(getModelExtension('archive.tar.gz'), '.gz');
   });
 
-  it('does not advertise Collada or ZIP containers as directly loadable models', () => {
-    for (const name of ['Ready Idle.dae', 'Ready Idle.DAE', 'Ready Idle.zip', 'Ready Idle (1).zip']) {
+  it('advertises Collada while keeping ZIP containers out of the model path', () => {
+    for (const name of ['Ready Idle.dae', 'Ready Idle.DAE']) {
+      assert.equal(detectModelFormat(name), 'dae');
+      assert.equal(isSupportedModelFormat(name), true);
+    }
+    for (const name of ['Ready Idle.zip', 'Ready Idle (1).zip']) {
       assert.equal(detectModelFormat(name), '');
       assert.equal(isSupportedModelFormat(name), false);
     }
-    for (const extension of ['.dae', '.zip']) {
-      assert.equal(SUPPORTED_MODEL_ACCEPT.split(',').includes(extension), false);
-    }
+    assert.equal(SUPPORTED_MODEL_ACCEPT.split(',').includes('.dae'), true);
+    assert.equal(SUPPORTED_MODEL_ACCEPT.split(',').includes('.zip'), false);
   });
 
   it('keeps accept and label strings aligned with supported formats', () => {
-    for (const ext of ['.smf', '.glb', '.gltf', '.fbx', '.obj']) {
+    for (const ext of ['.smf', '.glb', '.gltf', '.fbx', '.dae', '.obj']) {
       assert.ok(SUPPORTED_MODEL_ACCEPT.includes(ext));
       assert.ok(supportedModelFormatsLabel().includes(ext));
     }

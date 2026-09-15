@@ -1,10 +1,11 @@
-export type ModelSourceFormat = 'smf' | 'glb' | 'fbx' | 'obj';
-export const MODEL_SOURCE_FORMATS = ['smf', 'glb', 'fbx', 'obj'] as const;
+export type ModelSourceFormat = 'smf' | 'glb' | 'fbx' | 'dae' | 'obj';
+export const MODEL_SOURCE_FORMATS = ['smf', 'glb', 'fbx', 'dae', 'obj'] as const;
 
 export const MODEL_FORMAT_EXTENSIONS: Record<ModelSourceFormat, readonly string[]> = {
   smf: ['.smf'],
   glb: ['.glb', '.gltf'],
   fbx: ['.fbx'],
+  dae: ['.dae'],
   obj: ['.obj'],
 };
 
