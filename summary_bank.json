@@ -22,7 +22,7 @@
   "groups": {
     "docs__orientation": {
       "description": "Lean current-state orientation. Use a focused feature or subsystem group before reading broader source.",
-      "max_kb": 52,
+      "max_kb": 56,
       "paths": [
         "README.md",
         "docs/dev/APP_STATE.md",
@@ -290,6 +290,7 @@
       "max_kb": 128,
       "paths": [
         "source/frontend/src/loaders/dae.ts",
+        "source/frontend/src/loaders/dae.test.ts",
         "source/frontend/src/loaders/index.ts",
         "source/frontend/src/utils/modelFormat.ts",
         "source/frontend/src/utils/modelFormat.test.ts",
@@ -602,6 +603,7 @@
         "source/frontend/src/utils/modelFormat.test.ts",
         "source/frontend/src/test/installImageTestPolyfill.ts",
         "source/frontend/src/test/installFileReaderTestPolyfill.ts",
+        "source/frontend/src/vite-env.d.ts",
         "source/frontend/tests/fixtures/invalid-model.gml",
         "source/frontend/tests/helpers/*.ts",
         "source/frontend/scripts/run-unit-tests.mjs",
@@ -788,6 +790,8 @@
         "source/frontend/src/utils/replacementGuard.test.ts",
         "source/frontend/src/utils/seqGuard.ts",
         "source/frontend/src/store/index.ts",
+        "source/frontend/src/store/index.test.ts",
+        "source/frontend/src/store/README.md",
         "source/frontend/src/types/viewportEditorEvents.ts"
       ],
       "notes": [

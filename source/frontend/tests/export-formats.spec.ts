@@ -246,7 +246,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       expect(bytes.toString('utf8')).toContain('<library_controllers>');
 
       await input.setInputFiles({ name: 'generated-skinned-roundtrip.dae', mimeType: 'model/vnd.collada+xml', buffer: bytes });
-      await expect(page.getByTestId('status-text')).toContainText(/Loaded DAE: generated-skinned-roundtrip\.dae/i, { timeout: 15000 });
+      await expect(page.getByTestId('status-text')).toContainText(/Loaded: generated-skinned-roundtrip\.dae/i, { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/bones: 2|clips: 1/i);
       await showAnimateTimeline(page);
       await expect(page.getByTestId('timeline')).toBeVisible();

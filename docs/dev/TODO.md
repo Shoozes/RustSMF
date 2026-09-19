@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-09-15
+Last reviewed: 2026-09-19
 
 Completed work lives in HISTORY.md. Consumer-specific wolf, KO, paired-fighter
 and visual-acceptance conditions belong to fight-game-study. Keep them as

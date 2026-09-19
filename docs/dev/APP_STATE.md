@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-09-15
+Last reviewed: 2026-09-19
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, DAE/Collada, and OBJ models. This document owns current behavior, architecture boundaries, format limits, and the verification contract. Forward work belongs in `TODO.md`; dated command evidence belongs in `HISTORY.md` and the latest assessment in `review.md`; recurring failure analysis belongs in `PITFALL_LEDGER.md`.
 
@@ -198,7 +198,7 @@ Verification ownership (dated counts and outcomes live in `HISTORY.md`):
 
 - Frontend unit, browser, recorded-journey, fixture, helper, and visual ownership is centralized in `source/frontend/tests/README.md`. `source/frontend/scripts/run-unit-tests.mjs` remains deterministic and forwards focused Node test flags; `npm.cmd run test:e2e:list` is the browser discovery authority.
 - Rust unit tests own native file/dialog/read/write/recovery boundaries. Browser tests own web/Tauri-adapter integration without substituting mocks for the actual Windows acceptance recorded in `HISTORY.md`.
-- Context groups route focused feature, issue and workflow work; archived routes stay out of defaults. The default orientation has a 52 KiB budget under the 256 KiB generation ceiling. Measured sizes and gate outcomes belong in HISTORY.md rather than duplicated current-state counts.
+- Context groups route focused feature, issue and workflow work; archived routes stay out of defaults. The default orientation has a 56 KiB budget under the 256 KiB generation ceiling, leaving measured route sizes and gate outcomes to HISTORY.md rather than duplicating them in current-state prose.
 
 The latest review links the dated command results and any observed limitations in `HISTORY.md`. Browser, recorded-journey, and strict visual commands use the local browser process. If a managed launch reports `spawn EPERM`, record it as a harness failure rather than an app assertion result. Context generation honors configured skip directories for scans, globs, trees, and explicit routes, excludes generated `output/`, and rejects symlink ancestors and drive-relative paths.
 

@@ -2,6 +2,38 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-19 - Repository integrity, context routing, and browser contract reconciliation
+
+Reconciled the current documentation and context routes with the shipped DAE
+path and the load/orchestration test ownership. The focused orientation route
+was measured at 52.6 KiB, so its cap moved from 52 KiB to 56 KiB while staying
+well below the 256 KiB generation ceiling. Added the DAE unit test, store test
+and README, and Vite ambient type declaration to their owning context groups.
+The user guide now lists `.dae` in the primary supported-open flow.
+
+The full browser run exposed one stale assertion that expected an FBX-style
+`Loaded DAE:` prefix even though DAE intentionally uses the shared generic
+`Loaded: <name> | bones | clips | verts` status contract. The assertion now
+checks the shared contract; no product status behavior changed.
+
+Verification completed on the local working tree:
+
+- `node scripts/verify-context-bank.mjs` passed (41 groups, 52.6 KiB default).
+- `node --test scripts/context-bank.test.mjs` passed (9 tests).
+- `node scripts/verify-project-integrity.mjs` passed (253 frontend source/test files and 11 durable docs checked).
+- `node --test scripts/project-integrity.test.mjs`, `node --test scripts/dev-process-ownership.test.mjs`, and `node --test scripts/git-main-safety.test.mjs` passed (11, 2, and 2 tests).
+- Frontend lint coverage, ESLint, both typechecks, production-`any`, build,
+  entry-chunk check, and unit tests passed; the unit runner discovered 85 files
+  and passed 476 tests.
+- `npm.cmd run test:e2e -- --reporter=line` passed all 104 Chromium tests.
+- `npm.cmd run verify:rust` passed formatting, Clippy, 10 Rust tests, and cargo
+  check.
+
+No broken relative imports/re-exports, unresolved Rust modules, production
+stubs, or source TODO comments were found. The three existing backlog items stay
+active because they require external asset, neutral-fixture, or caller-owned
+evidence.
+
 ## 2026-09-15 - Collada DAE import/export
 
 Added a first-class DAE/Collada path across browser/native file selection, format

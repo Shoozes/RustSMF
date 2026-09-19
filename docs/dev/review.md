@@ -1,6 +1,6 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-09-15
+Last reviewed: 2026-09-19
 
 Current contracts
 belong in [APP_STATE.md](APP_STATE.md), executable
@@ -9,27 +9,25 @@ acceptance conditions in [TODO.md](TODO.md), and dated proof in
 
 ## Current findings
 
-- The import guard now rejects explicit JavaScript filenames backed only by a
-  directory index; extensionless indexes and TypeScript substitution remain
-  supported. Earlier swing-foot and endpoint-timeline regressions stay covered.
-- Relative frontend imports/re-exports and Rust module checks pass. The source
-  marker scan found no production TODO/FIXME/unimplemented stubs; the remaining
-  `placeholder` match is a real input hint. This is not exhaustive runtime proof.
-- Existing GLB roundtrip and comparison-seek fixes remain covered by the local
-  gates. DAE is now a supported browser import/export path with pre-save
-  re-import validation, and missing Collada vertex normals are synthesized on
-  import; ZIP remains a container, not a model input.
-- The supplied with-skin Mixamo DAE loads cleanly but its quad start/middle/end
-  review is still not a trustworthy shaded silhouette because the rig helper
-  dominates the view. Left-leg alignment and self-clipping are therefore an
-  external asset-visual blocker tracked in TODO, not an accepted source result.
-- Motion acceptance remains scoped. All 37 target quarter frame sheets were
-  inspected; normal-speed/source-side and occluded-skin acceptance remain open.
-  Two receiving-confirmed cast seams require exact incoming-pose handoffs, not
-  changes to unchanged role clips. TODO owns the remaining conditions.
-- Focused context routes already cover the new solver leaves and GLB identity
-  issue. Defaults remain narrow; no physical folder move or budget increase was
-  justified. Dated measurements and commands belong in HISTORY.
+- The context bank now validates 41 groups. The default orientation expands to
+  52.6 KiB under its 56 KiB focused cap and the 256 KiB generation ceiling;
+  DAE, store, and build-contract paths are routed through their owning groups.
+- Relative frontend imports/re-exports, Rust module checks, lint, both
+  typechecks, production-`any`, and the source marker scan pass. No production
+  TODO/FIXME/unimplemented stub was found; the remaining `placeholder` match is
+  a real input hint. This is not exhaustive runtime proof.
+- The browser contract is green at 104/104 tests after correcting a stale DAE
+  status assertion to match the generic `Loaded: <name>` load path. Existing
+  GLB/FBX/DAE/OBJ round-trip, sidecar, replacement, and async-ownership checks
+  remain covered.
+- DAE is a supported browser import/export path with pre-save re-import
+  validation and synthesized missing Collada normals; ZIP remains a container,
+  not a model input. The user-supplied with-skin Mixamo DAE still lacks a
+  trustworthy shaded silhouette because the rig helper dominates the view.
+- The supplied DAE visual review and reusable humanoid action-range/skin review
+  remain active evidence items. Caller-ownership remains an active policy guard
+  until neutral-fixture and consumer-independence evidence is documented; game
+  appearance and transition checks stay outside RustSMF completion criteria.
 
 Completed implementation narratives are retained in HISTORY rather than repeated
 here. [HUMANOID_POSE_REVIEW.md](HUMANOID_POSE_REVIEW.md) owns the angular-review
