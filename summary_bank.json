@@ -236,7 +236,25 @@
         "Inputs are read sequentially through one open handle per file under the remaining aggregate budget; one global direction-transfer mode replaces repetitive clip declarations while explicit per-clip overrides remain supported.",
         "Canonical producer and sorted role-tagged input identity select an immutable generation; producer identity hashes the executable local dependency list and package manifests so helper changes cannot retain an older source identity.",
         "Model, normalized job, resolved mapping, and report are staged and fsynced before a last-written hash manifest and one directory rename, then the optional current pointer is replaced.",
+        "A neutral two-motion caller-owned job runs through the actual CLI, checks sampled motion/raw skin/decoded material content after re-import, and preserves the prior generation and caller inputs on malformed mapping, missing clip, or injected publication failure; a clean copied tool workspace proves no consumer checkout is required and the production guard rejects game/engine references.",
         "Generated assets, reports, private job paths, and source models stay outside context routes."
+      ]
+    },
+    "workflow__game_ready_neutral_proof": {
+      "description": "Neutral caller-owned saved-job proof, re-import checks, publication rollback, and production dependency boundaries.",
+      "max_kb": 104,
+      "paths": [
+        "source/frontend/src/utils/gameReadyCli.test.ts",
+        "source/frontend/scripts/check-game-ready-dependencies.mjs",
+        "source/frontend/scripts/game-ready-cli.ts",
+        "source/frontend/src/utils/gameReadyGeneration.ts",
+        "source/frontend/src/utils/gameReadyJob.ts",
+        "source/frontend/package.json"
+      ],
+      "notes": [
+        "The fixture is a small noncombat two-motion rig with caller-supplied mapping and constraints; it invokes the actual saved-job CLI, reimports the published GLB, and checks transforms, timing, skin, material, and provenance.",
+        "Malformed mapping, missing source clip, and injected publication failure preserve the prior valid generation and caller-owned inputs. The dependency guard rejects fight-game-study/GaimEngine checkout references without making game acceptance a RustSMF concern.",
+        "The runtime receipt is generated under excluded test-results output and is evidence only; it is not a context-bank route or source input."
       ]
     },
     "feature__model_outliner_authoring": {

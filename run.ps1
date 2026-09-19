@@ -592,6 +592,7 @@ switch -Exact ($NormalizedTask) {
             if (-not (Invoke-FrontendNpm @("run", "typecheck"))) { $ok = $false; Write-Warn "typecheck failed" }
             if (-not (Invoke-FrontendNpm @("run", "typecheck:test"))) { $ok = $false; Write-Warn "test typecheck failed" }
             if (-not (Invoke-FrontendNpm @("run", "check:production-any"))) { $ok = $false; Write-Warn "production any boundary check failed" }
+            if (-not (Invoke-FrontendNpm @("run", "check:game-ready-dependencies"))) { $ok = $false; Write-Warn "game-ready dependency guard failed" }
             if (-not (Invoke-FrontendNpm @("run", "build"))) { $ok = $false; Write-Warn "build failed" }
             if (-not (Invoke-FrontendNpm @("run", "check:entry-chunks"))) { $ok = $false; Write-Warn "chunk check failed" }
             if (-not (Invoke-FrontendNpm @("run", "test:unit"))) { $ok = $false; Write-Warn "unit tests failed" }

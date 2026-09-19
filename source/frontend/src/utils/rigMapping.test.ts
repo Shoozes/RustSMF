@@ -58,6 +58,19 @@ test('logical attachments resolve exact target bone names and rest transforms', 
   assert.deepEqual(result.leftFoot.localScale, [1, 1, 1]);
 });
 
+test('logical attachments can preserve a partial caller map for non-humanoid rigs', () => {
+  const result = resolveLogicalAttachments(skeleton(['TargetRoot', 'TargetTip']), { root: 'TargetRoot' }, { allowMissing: true });
+  assert.deepEqual(Object.keys(result), ['root']);
+  assert.equal(result.root?.bone, 'TargetRoot');
+});
+
+test('logical attachments reject missing explicit overrides even when roles may be omitted', () => {
+  assert.throws(
+    () => resolveLogicalAttachments(skeleton(['TargetRoot', 'TargetTip']), { root: 'MissingRoot' }, { allowMissing: true }),
+    /Attachment role root override references missing target bone MissingRoot/,
+  );
+});
+
 test('orientation correction aligns anatomical sides as well as up', () => {
   const make = (source: boolean): THREE.Skeleton => {
     const hips = new THREE.Bone();

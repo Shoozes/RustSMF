@@ -83,6 +83,7 @@ export interface AttachmentTransform {
 }
 
 export type LogicalAttachmentMap = Record<LogicalAttachmentRole, AttachmentTransform>;
+export type PartialLogicalAttachmentMap = Partial<LogicalAttachmentMap>;
 
 const CANONICAL_ALIASES: Record<CanonicalHumanoidBone, readonly string[]> = {
   hips: ['hips', 'hip', 'pelvis', 'root'],
@@ -503,21 +504,37 @@ export function buildRigMap(
 
 export function resolveLogicalAttachments(
   skeleton: THREE.Skeleton,
+  overrides?: Partial<Record<LogicalAttachmentRole, string>>,
+  options?: { allowMissing?: false },
+): LogicalAttachmentMap;
+export function resolveLogicalAttachments(
+  skeleton: THREE.Skeleton,
+  overrides: Partial<Record<LogicalAttachmentRole, string>> | undefined,
+  options: { allowMissing: true },
+): PartialLogicalAttachmentMap;
+export function resolveLogicalAttachments(
+  skeleton: THREE.Skeleton,
   overrides: Partial<Record<LogicalAttachmentRole, string>> = {},
-): LogicalAttachmentMap {
-  const result = {} as LogicalAttachmentMap;
+  options: { allowMissing?: boolean } = {},
+): LogicalAttachmentMap | PartialLogicalAttachmentMap {
+  const result: PartialLogicalAttachmentMap = {};
   const roles = Object.keys(ATTACHMENT_CANONICAL_PRIORITY) as LogicalAttachmentRole[];
   const bonesByName = new Map(skeleton.bones.map((bone) => [bone.name, bone]));
   skeleton.bones[0]?.updateWorldMatrix(true, true);
 
   for (const role of roles) {
+    const hasOverride = Object.prototype.hasOwnProperty.call(overrides, role);
     const override = overrides[role];
-    const bone = override
-      ? bonesByName.get(override)
+    const bone = hasOverride
+      ? bonesByName.get(override ?? '')
       : ATTACHMENT_CANONICAL_PRIORITY[role]
         .map((canonical) => findCanonicalBone(skeleton, canonical))
         .find((candidate): candidate is THREE.Bone => !!candidate);
     if (!bone) {
+      if (hasOverride) {
+        throw new Error(`Attachment role ${role} override references missing target bone ${override || '<empty>'}.`);
+      }
+      if (options.allowMissing) continue;
       throw new Error(`Attachment role ${role} could not be resolved; provide an explicit target bone name.`);
     }
     bone.updateWorldMatrix(true, false);

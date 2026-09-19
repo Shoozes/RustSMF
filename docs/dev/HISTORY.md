@@ -2,6 +2,50 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-19 - Neutral game-ready CLI proof and caller-ownership boundary
+
+Completed SMF-01 with a small caller-owned noncombat fixture. The new
+`source/frontend/src/utils/gameReadyCli.test.ts` creates source/target GLBs with
+two named motions (`Idle`, `Reach`), a caller-supplied manual map and explicit
+retarget settings including a scoped direction-transfer constraint, then invokes
+the actual `scripts/game-ready-cli.ts` through the repository's hoisted `tsx`
+runtime. It verifies the saved generation's resolved mapping, sampled motion,
+material repair and decoded embedded texture, clip names/durations, exact skin
+indices/weights, re-imported target bones/tracks, provenance and immutable
+manifest. It also runs the copied tool from a clean temporary Git workspace
+whose root contains no fight-game-study or GaimEngine checkout. The CLI now
+permits partial logical attachment maps for non-humanoid rigs while the mapping
+utility remains strict by default for complete humanoid resolution and rejects
+missing explicitly supplied overrides.
+
+The same proof exercises malformed mapping, missing source clip and an
+interrupted publication. Each failure leaves the prior current pointer,
+published generation and caller input hashes unchanged. The ignored receipt
+contains the concrete generation/model hashes and is written to
+`source/frontend/test-results/game-ready-neutral/receipt.json`.
+The targeted `source/frontend/scripts/check-game-ready-dependencies.mjs` guard
+rejects undeclared fight-game-study/GaimEngine checkout references from the
+game-ready production route and package manifests; `run.ps1 -Task verify` owns
+that guard.
+
+Verification for this implementation:
+
+- `npm.cmd run check:game-ready-dependencies` passed.
+- `npm.cmd run typecheck:test` and `npm.cmd run typecheck` passed.
+- `npm.cmd run test:unit -- --test-name-pattern "neutral saved job runs through the CLI|logical attachments"` passed from `source/frontend`: 86 files discovered, 88 tests passed.
+- Existing publication, job-schema and validation tests remained green in the
+  focused run. `pwsh -NoProfile -File .\run.ps1 -Task context` passed with 42
+  groups, 52.3 KiB default orientation, zero warnings, and 11/11 project plus
+  9/9 context-bank tests. `pwsh -NoProfile -File .\run.ps1 -Task verify` passed
+  with 479/479 frontend unit tests, 10/10 Rust tests, lint, both typechecks,
+  production build/chunk checks, project/context integrity, main-sync and
+  process-ownership guards, and the game-ready dependency guard.
+
+The caller-ownership TODO is complete and removed from `TODO.md`. The remaining
+active items are the reusable humanoid action-range/skin review and optional
+supplied DAE visual/source acceptance; neither is a RustSMF consumer-ownership
+condition.
+
 ## 2026-09-19 - Repository integrity, context routing, and browser contract reconciliation
 
 Reconciled the current documentation and context routes with the shipped DAE

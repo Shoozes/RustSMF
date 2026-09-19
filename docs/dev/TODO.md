@@ -16,16 +16,6 @@ integration evidence links, not this product's completion requirements.
 - Done when: Every reviewed component is corrected or explicitly accepted against source, calibration and skin evidence without observed self-clipping.
 - Verification: Hash-bound range report, per-component dispositions, and raw asset/track preservation checks.
 
-## P1 — Keep jobs caller-owned; request only mechanism defects
-
-- What: Stop listing fight-game-study KO/reset, native/WASM presenter, and paired-fighter playback as RustSMF product-completion conditions.
-- Why: Those are game receiving/appearance outcomes. This tool consumes mappings/clips and returns versioned assets/reports.
-- Where: `source/frontend/src/utils/gameReadyJob.ts`, retarget/endpoint contracts, CLI entrypoints, and this TODO.
-- When: immediate ownership correction.
-- How: Retain generic endpoint baking, humanoid contact solving, forearm-twist distribution and skin tools. Require a small tool-level reproduction for defects (for example an endpoint rotation is wrong under a supplied mapping). "Make this wolf's jab look right" remains a game task.
-- Done when: RustSMF can prepare and inspect an asset without knowing its game role, and fight-game-study can change its moveset without changing RustSMF source or defaults.
-- Verification: Existing unit/export tests plus a neutral noncombat rig fixture. Game package/KO evidence is consumer integration, recorded in fight-game-study.
-
 ## P2 — Complete supplied Mixamo pair visual acceptance
 
 - What: Finish visual/source acceptance of the supplied animation-only and with-skin Collada pair after the DAE structural path was proven.

@@ -287,7 +287,7 @@ async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
       clips.splice(0, clips.length, ...merged);
     }
 
-    const attachments = resolveLogicalAttachments(target.skeleton, job.rig.attachments);
+    const attachments = resolveLogicalAttachments(target.skeleton, job.rig.attachments, { allowMissing: true });
     const validation = validateGameReadyModel(target.root, target.skeleton, clips);
     const draftGlb = await exportGLB(target.root, clips);
     const textureFiles = job.input.textures.map(getInput);
