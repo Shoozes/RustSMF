@@ -114,6 +114,7 @@
         "Original preserves the old editor's simplicity and compact hierarchy, including quad view before model load.",
         "Theme definitions own shell variants, labels, panel copy, camera scale, and grid behavior; shared behavior should not branch on theme IDs.",
         "Modern keeps one supporting panel, closes drawers by default on compact screens, and mounts the full timeline only in Animate.",
+        "ViewportControls exposes separate Rig fade and reversible Hide rig/Show rig controls so helper geometry can be removed for shaded-skin inspection without mutating source or export state.",
         "docs/references/theme-qa/README.md owns the preserved-source comparison and final fidelity evidence paths."
       ]
     },
@@ -318,7 +319,8 @@
       "notes": [
         "ColladaLoader is the browser import authority; DAE imports synthesize missing vertex normals for shaded/skinned visibility, while the local serializer writes 1.4.1 Y_UP visual scenes, materials, geometry, controllers, inverse bind matrices, and matrix animation channels.",
         "Export validates by re-importing before save and rejects duplicate joint names or non-triangle geometry. External texture images are not embedded by the DAE writer; use GLB for texture-fidelity export.",
-        "ZIP archives remain containers, not model inputs; users must extract and select the DAE plus authorized sidecars."
+        "ZIP archives remain containers, not model inputs; users must extract and select the DAE plus authorized sidecars.",
+        "The 2026-09-20 supplied pair matched on Y_UP/0.01m units, 28 animation channels and 76 timing samples; the with-skin source passed RustSMF start/mid/end single and quad visual inspection with no observed leg/torso failure or self-clipping. This is source-inspection evidence, not game or retarget acceptance."
       ]
     },
     "subsystem__model_geometry_preparation": {

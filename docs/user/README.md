@@ -34,7 +34,7 @@ Both commands open the numbered launcher menu. Choose `2. Run if already install
 - In Model, select one non-SMF submodel to rename it, duplicate/delete it, move it up/down among eligible siblings, transform it, assign a loaded material, flip winding, or prepare normals/tangents. A self-contained static asset can be appended as one undoable asset transaction. If the primary model changes while that asset is loading, the append is cancelled instead of mutating the stale scene. Names are trimmed, binding-safe, unique across the root, and blocked when animation tracks depend on them; static surface actions reject skinned, animated, source-owned, or unsupported targets with a reason. Geometry/UV/material diagnostics and rest-pose ghost/trail/onion overlays are display-only and excluded from export. SMF source names and hierarchy order remain guarded rather than being changed without a persistence contract.
 - When a rigged FBX is missing its intended materials, choose Repair materials in Scene and select the matching OBJ, MTL, and local JPEG/PNG maps together. RustSMF requires a unique name-and-geometry or geometry-only match, builds PBR base-color/normal/metallic-roughness assignments, and verifies that geometry, skin, rig, clips, and animation data did not change. The repair is one undoable edit; ambiguous bundles fail without mutating the model.
 - Switch the single viewport between 3D and Ortho camera modes.
-- Use the Display menu for model-safe wireframe, grid, axes, texture, shader, node-index, rig-opacity, model-opacity, and rig-thickness viewport inspection controls without changing source export data.
+- Use the Display menu for model-safe wireframe, grid, axes, texture, shader, node-index, rig-opacity, hide/show-rig, model-opacity, and rig-thickness viewport inspection controls without changing source export data. Hide rig is useful when helper lines obscure a shaded-skin review; it is reversible and display-only.
 - Export loaded SMF sources through the high-fidelity SMF path with supported live position/rotation pose edits.
 - Compatible skinned GLB/FBX sources and prepared static FBX/OBJ roots can export to SMF through validated mesh, rig, and animation space boundaries. Unprepared static roots, unsupported scale tracks, incomplete skin data, or malformed geometry remain blocked with an actionable diagnostic. Use GLB/FBX when the source needs richer materials, morphs, object tracks, multiple skeletons, or scale animation.
 - Export any loaded runtime model to binary FBX 7500 with the explicit FBX action. RustSMF reparses and validates the generated mesh, transform, skin, bone, and animation structure before opening the save destination.
@@ -51,6 +51,14 @@ not embedded, so GLB remains the preferred texture-fidelity format. Keep
 animation-only and with-skin sources separate: an animation-only file cannot
 prove mesh deformation. Mixamo-style bone names do not by themselves guarantee
 compatible rest axes or natural target motion.
+
+The supplied 2026-09-20 pair was reviewed without modifying the original ZIPs:
+the animation-only DAE remained geometry-free, and the with-skin DAE loaded as
+33 bones, one 2.50-second clip, and 3,726 vertices. Its rig helpers can be
+hidden from Display for shaded inspection. Start, midpoint, endpoint, and quad
+views showed no observed leg/torso deformation failure or self-clipping. The
+pair matched on Y-up/0.01m units, 28 animation channels, and 76 timing samples;
+this is RustSMF source inspection evidence, not a game or retarget approval.
 
 ## Game-ready CLI
 

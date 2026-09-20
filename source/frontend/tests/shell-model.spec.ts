@@ -257,6 +257,7 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       const perspectiveBtn = page.getByTestId('viewport-perspective-toggle');
       const boneIndexBtn = page.getByTestId('viewport-bone-index-toggle');
       const rigOpacityBtn = page.getByTestId('viewport-rig-opacity-toggle');
+      const rigVisibilityBtn = page.getByTestId('viewport-rig-visibility-toggle');
       const rigThicknessBtn = page.getByTestId('viewport-rig-thickness-toggle');
       const skinPointsBtn = page.getByTestId('viewport-skin-points-toggle');
       const modelOpacityBtn = page.getByTestId('viewport-model-opacity-toggle');
@@ -295,6 +296,9 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await expect(boneIndexBtn).toHaveAttribute('aria-pressed', 'false');
       await expect(rigOpacityBtn).toBeEnabled();
       await expect(rigOpacityBtn).toHaveAttribute('aria-pressed', 'false');
+      await expect(rigVisibilityBtn).toBeEnabled();
+      await expect(rigVisibilityBtn).toHaveAttribute('aria-pressed', 'false');
+      await expect(rigVisibilityBtn).toContainText('Hide rig');
       await expect(rigThicknessBtn).toBeEnabled();
       await expect(rigThicknessBtn).toHaveAttribute('aria-pressed', 'false');
       await expect(skinPointsBtn).toBeEnabled();
@@ -374,6 +378,15 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await expect(canvas).toHaveAttribute('data-bone-index-labels-enabled', 'false');
       await rigOpacityBtn.click();
       await expect(rigOpacityBtn).toHaveAttribute('aria-pressed', 'false');
+      await expect(canvas).toHaveAttribute('data-rig-opacity', '1');
+      await rigVisibilityBtn.click();
+      await expect(rigVisibilityBtn).toHaveAttribute('aria-pressed', 'true');
+      await expect(rigVisibilityBtn).toContainText('Show rig');
+      await expect(rigOpacityBtn).toHaveAttribute('aria-pressed', 'false');
+      await expect(canvas).toHaveAttribute('data-rig-opacity', '0');
+      await rigVisibilityBtn.click();
+      await expect(rigVisibilityBtn).toHaveAttribute('aria-pressed', 'false');
+      await expect(rigVisibilityBtn).toContainText('Hide rig');
       await expect(canvas).toHaveAttribute('data-rig-opacity', '1');
       await rigThicknessBtn.click();
       await expect(rigThicknessBtn).toHaveAttribute('aria-pressed', 'false');

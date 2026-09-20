@@ -40,11 +40,15 @@ acceptance conditions in [TODO.md](TODO.md), and dated proof in
   regression round-trips every supported source format.
 - DAE is a supported browser import/export path with pre-save re-import
   validation and synthesized missing Collada normals; ZIP remains a container,
-  not a model input. The user-supplied with-skin Mixamo DAE still lacks a
-  trustworthy shaded silhouette because the rig helper dominates the view.
-- The supplied DAE visual review and reusable humanoid action-range/skin review
-  remain active evidence items. Game appearance and transition checks stay
-  outside RustSMF completion criteria.
+  not a model input. The Display menu now includes a tested Hide rig control,
+  allowing shaded-silhouette inspection without changing export state.
+- The supplied pair is accepted for RustSMF source inspection: both DAE files
+  loaded cleanly, the animation-only source remained geometry-free, the
+  with-skin source showed 33 bones/one 2.50s clip/3,726 vertices, and single
+  plus quad start/mid/end review showed no observed leg/torso deformation
+  failure or self-clipping. The reusable humanoid action-range/skin review
+  remains active because caller-owned all-frame/receiving proof is separate.
+  Game appearance and transition checks stay outside RustSMF completion criteria.
 
 Completed implementation narratives are retained in HISTORY rather than repeated
 here. [HUMANOID_POSE_REVIEW.md](HUMANOID_POSE_REVIEW.md) owns the angular-review

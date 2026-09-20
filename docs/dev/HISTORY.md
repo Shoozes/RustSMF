@@ -2,6 +2,45 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-20 - Supplied Mixamo pair source-inspection closeout
+
+Completed the optional RustSMF-side visual/source acceptance for the two
+user-supplied Mixamo Collada archives without modifying either original. The
+animation-only archive `Ready Idle.zip` has SHA-256
+`FBA1DDF25CBC61133FC44E675DD655263B96298BB77A06C2E0C35069277AE7B2` and
+remains geometry-free. The with-skin archive `Ready Idle (1).zip` has SHA-256
+`DB2AEEDC0D41FEDB371FBE64C11082ACB35BB28D6D0B6B10002B854B0C60F071` and
+loaded as 33 bones, one 2.50-second clip, and 3,726 vertices.
+
+Both extracted DAEs matched on Y-up, 0.010000 meter units, 28 animation
+channels, 76 timing samples per channel, and the same joint IDs. Their matrix
+output samples had equal cardinality and stayed within 4.9e-5 maximum absolute
+numeric difference. The browser review covered the with-skin idle at start,
+midpoint, and endpoint in single perspective and quad Top/3D/Front/Side views;
+with the new reversible Display > Hide rig control, the shaded silhouette was
+readable and no leg/torso deformation failure or self-clipping was observed.
+The animation-only DAE loaded cleanly with one clip, zero bones, and zero
+meshes. Browser console errors were zero; the two remaining warnings were
+Three.js GLTFExporter type/material advisories from the existing internal
+snapshot path, not load failures.
+
+The viewport now exposes `Hide rig`/`Show rig` separately from `Rig fade`, and
+`shell-model.spec.ts` covers both state transitions and canvas opacity telemetry.
+This closes the supplied-pair RustSMF inspection condition only; it does not
+approve a caller-owned game, retarget, contact, or reusable humanoid skin job.
+
+Verification:
+
+- `npm.cmd run build`, `npm.cmd run typecheck`, and `npm.cmd run lint` passed
+  from `source/frontend`.
+- `npm.cmd run test:e2e -- tests/shell-model.spec.ts --reporter=line` passed
+  12/12 Chromium tests.
+- Manual Chromium review loaded both extracted DAEs, inspected the complete
+  2.50-second loop at start/mid/end in single and quad layouts, and reported
+  zero browser errors.
+- XML parity check passed for axes, units, joint IDs, channel count, and timing
+  arrays; source archive hashes were re-read before this entry.
+
 ## 2026-09-20 - Project source-format registry parity
 
 The repository-wide integrity pass found that `.rsproj` decoding used a stale
