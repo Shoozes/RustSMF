@@ -1,5 +1,6 @@
 import {
   MAX_MODEL_INPUT_BYTES,
+  MODEL_SOURCE_FORMATS,
   type ModelSourceFormat,
 } from './modelFormat';
 import { normalizeRigMetadata, type RigMetadata } from './rigMetadata';
@@ -74,7 +75,7 @@ function validateState(value: unknown): ProjectState {
   if (!value || typeof value !== 'object') invalidProject('state is missing.');
   const state = value as Record<string, unknown>;
   const sourceFormat = state.sourceFormat;
-  if (sourceFormat !== '' && sourceFormat !== 'smf' && sourceFormat !== 'glb' && sourceFormat !== 'fbx' && sourceFormat !== 'obj') {
+  if (sourceFormat !== '' && !MODEL_SOURCE_FORMATS.includes(sourceFormat as ModelSourceFormat)) {
     invalidProject('state.sourceFormat is unsupported.');
   }
   if (typeof state.isPlaying !== 'boolean') invalidProject('state.isPlaying must be boolean.');

@@ -689,6 +689,7 @@
       ],
       "notes": [
         "The project envelope embeds a validated GLB snapshot and bounded workspace state, including rig metadata, without replacing asset export formats.",
+        "Project state validation reuses the supported model-format registry, so every supported source format, including DAE, survives project round-trip while the embedded asset remains GLB.",
         "Native writes are serialized and use unique staged files; project save rotates bounded generations with restoration on failure, while recovery discovery/read accepts only the exact owned regular-file generations.",
         "Foreground saves remain single-flight. Autosave coalesces work to the newest trailing request while a write is active; successful model replacement invalidates queued old-model work and waits for an issued write before swapping roots, while canceled/failed pickers leave recovery work intact."
       ]

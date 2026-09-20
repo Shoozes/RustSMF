@@ -1,6 +1,26 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-09-13 (proportion-sensitive leg transfer, portable profiles, and diagnostic viewer evidence).
+Last reviewed: 2026-09-20 (project format-registry parity, proportion-sensitive leg transfer, portable profiles, and diagnostic viewer evidence).
+
+### Q: What pitfall are we preventing?
+
+**What:** A newly supported model format can be accepted by the loader but rejected when a saved project is reopened.
+
+**Context and constraints:** `.rsproj` stores a validated GLB snapshot plus workspace state, including the original source format used by source-aware editing and export policy. The accepted format set has one shared registry in `modelFormat.ts`.
+
+**Why it happened:** Project decoding kept a hand-maintained allowlist from before DAE support was added, so a valid DAE project failed closed during restore even though DAE import/export was supported.
+
+**Where:** `source/frontend/src/utils/modelFormat.ts`, `projectCodec.ts`, `projectCodec.test.ts`, and the project-recovery context route.
+
+**Evidence:** The integrity pass reproduced the mismatch by constructing a valid DAE project state and decoding its encoded envelope. Reusing `MODEL_SOURCE_FORMATS` fixed the rejection; the regression now round-trips every supported source format and rejects an unknown `usd` value.
+
+**How to catch it:** Never duplicate format allowlists at persistence or UI boundaries. When adding a model format, round-trip every `MODEL_SOURCE_FORMATS` value through project encode/decode and retain one explicit unsupported-format negative case.
+
+**Current solution:** `projectCodec.ts` validates against `MODEL_SOURCE_FORMATS`; the focused project codec suite owns positive coverage for every supported format and a negative unknown-format case.
+
+**Relevance check:** Current. Any new loader or source-aware export policy must update the shared registry first and preserve this round-trip contract.
+
+**Next prevention step:** Keep the all-format project round-trip in the default unit gate and treat a new format-registry entry without persistence coverage as incomplete.
 
 ### Q: What pitfall are we preventing?
 

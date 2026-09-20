@@ -2,6 +2,33 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-20 - Project source-format registry parity
+
+The repository-wide integrity pass found that `.rsproj` decoding used a stale
+hand-maintained source-format allowlist. DAE is a supported model format, but a
+project saved from a DAE model failed closed when reopened. Project validation
+now reuses `MODEL_SOURCE_FORMATS`, and the focused codec regression round-trips
+every supported source format. The user guide and current-state contract now
+document that source-aware editing/export state survives project reopen; the
+existing project-recovery context route already owned all affected files, so no
+new summary-bank group was needed.
+
+Focused verification:
+
+- `npm.cmd run test:unit -- --test-name-pattern "project codec"` passed: 88
+  tests across 86 discovered frontend unit-test files, including the new
+  all-format round-trip regression.
+- `npm.cmd run typecheck:test` passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task context` passed with 42 groups, 52.4
+  KiB default orientation, zero warnings, and 11/11 project plus 9/9
+  context-bank tests.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify` passed with 480/480 frontend
+  unit tests, 10/10 Rust tests, lint, both typechecks, production-`any`, build
+  and entry-chunk checks, project/context integrity, main-sync and
+  process-ownership guards, and the game-ready dependency guard.
+- `npm.cmd run test:e2e -- tests/export-formats.spec.ts --reporter=line` passed
+  all 17 Chromium format/project-flow tests.
+
 ## 2026-09-19 - Neutral game-ready CLI proof and caller-ownership boundary
 
 Completed SMF-01 with a small caller-owned noncombat fixture. The new
