@@ -11,6 +11,7 @@ import {
   deleteModelObject,
   duplicateModelObject,
   getModelObjectReorderAvailability,
+  getModelObjectAuthoringDisabledReason,
   renameModelObject,
   reorderModelObject,
   sameModelOutlinerSnapshot,
@@ -257,6 +258,12 @@ describe('renameModelObject', () => {
     assert.equal(duplicate.ok, false);
     if (!duplicate.ok) assert.equal(duplicate.reason, 'duplicate-name');
     assert.equal(mesh.name, 'Armor');
+  });
+
+  it('explains the permanent SMF scene-object authoring boundary', () => {
+    assert.match(getModelObjectAuthoringDisabledReason('smf') ?? '', /source-owned/i);
+    assert.match(getModelObjectAuthoringDisabledReason('smf') ?? '', /GLB, FBX, or OBJ/i);
+    assert.equal(getModelObjectAuthoringDisabledReason('glb'), undefined);
   });
 
   it('blocks names that own animation tracks instead of breaking bindings', () => {

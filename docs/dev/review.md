@@ -1,6 +1,6 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-09-20
+Last reviewed: 2026-09-21
 
 Current contracts
 belong in [APP_STATE.md](APP_STATE.md), executable
@@ -10,13 +10,19 @@ acceptance conditions in [TODO.md](TODO.md), and dated proof in
 ## Current findings
 
 - The context bank now validates 42 groups. The default orientation expands to
-  52.4 KiB under its 56 KiB focused cap and the 256 KiB generation ceiling;
-  DAE, store, and build-contract paths are routed through their owning groups.
+  53.5 KiB under its measured 64 KiB focused cap and the 256 KiB generation ceiling;
+  DAE, store, build-contract, and workspace-verification paths are routed
+  through their owning groups. Large integration owners remain intentionally
+  focused routes rather than default context.
 - Relative frontend imports/re-exports, Rust module checks, lint, both
   typechecks, production-`any`, and the source marker scan pass. No production
   TODO/FIXME/unimplemented stub was found; the remaining `placeholder` match is
   a real input hint. This is not exhaustive runtime proof.
-- The browser contract is green at 104/104 tests after correcting a stale DAE
+- The four repo-owned backlog contracts are complete and moved to HISTORY. The
+  only remaining active work is the caller-owned P1 acceptance gate, which
+  still requires an attended source/receiving receipt that is not produced by
+  this repository.
+- The browser contract is green at 105/105 tests after correcting a stale DAE
   status assertion to match the generic `Loaded: <name>` load path. Existing
   GLB/FBX/DAE/OBJ round-trip, sidecar, replacement, and async-ownership checks
   remain covered.
@@ -49,6 +55,14 @@ acceptance conditions in [TODO.md](TODO.md), and dated proof in
   failure or self-clipping. The reusable humanoid action-range/skin review
   remains active because caller-owned all-frame/receiving proof is separate.
   Game appearance and transition checks stay outside RustSMF completion criteria.
+- The source workspace `npm run verify` now includes the same game-ready
+  dependency guard as `run.ps1`; a project-integrity regression protects that
+  entry-point parity. Lazy Tauri-client initialization shares one in-flight
+  import and resets after an import failure, so overlapping app actions do not
+  construct duplicate bridge wrappers or poison later retries.
+- The Animate quadratic option is visibly metadata-only, the SMF Outliner
+  source-owned boundary is disabled and explained, and retired same-texture
+  merging is explicitly diagnostic-only with no UV/material mutation path.
 
 Completed implementation narratives are retained in HISTORY rather than repeated
 here. [HUMANOID_POSE_REVIEW.md](HUMANOID_POSE_REVIEW.md) owns the angular-review

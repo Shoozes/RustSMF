@@ -195,7 +195,7 @@ const Outliner: React.FC<OutlinerProps> = ({
             Rename
           </button>
           {objectEditingDisabledReason && (
-            <span id="outliner-editing-disabled-reason" className="outliner-rename-note">
+            <span id="outliner-editing-disabled-reason" className="outliner-rename-note" data-testid="outliner-editing-disabled-reason">
               {objectEditingDisabledReason}
             </span>
           )}

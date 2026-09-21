@@ -134,7 +134,10 @@ export default function ExportPanel({
         </ul>
       </div>
       <div className="smf-material-textures" data-testid="legacy-material-policy-panel">
-        <div className="smf-diagnostics-title">Legacy shelf decisions</div>
+        <div className="smf-diagnostics-title">Retired shelf policy</div>
+        <div className="smf-diagnostics-summary" data-testid="material-reuse-policy-note">
+          Shared-texture reuse is diagnostic only; no UV or material-ownership mutation is performed.
+        </div>
         <ul className="smf-diagnostics-list">
           {LEGACY_SHELF_DECISIONS.map((item) => (
             <li key={item.action} className="smf-diagnostic smf-diagnostic-info" data-testid="legacy-material-policy-row">

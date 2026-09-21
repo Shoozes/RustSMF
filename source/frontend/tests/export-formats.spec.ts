@@ -73,6 +73,28 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       expect(exportCritical.length).toBe(0);
     });
 
+  test('SMF scene-object authoring stays source-owned with an explicit disabled contract', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
+    await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+    await showModernPanel(page, 'scene');
+
+    const row = page.getByTestId('outliner-submodel-0');
+    await expect(row).toBeVisible();
+    await row.locator('.outliner-name-btn').click();
+
+    await expect(page.getByTestId('outliner-rename-input')).toBeDisabled();
+    await expect(page.getByTestId('outliner-rename-btn')).toBeDisabled();
+    await expect(page.getByTestId('outliner-editing-disabled-reason')).toContainText(/SMF.*source-owned/i);
+    await expect(page.getByTestId('outliner-editing-disabled-reason')).toContainText(/GLB, FBX, or OBJ/i);
+    await expect(page.getByTestId('outliner-duplicate-btn')).toBeDisabled();
+    await expect(page.getByTestId('outliner-delete-btn')).toBeDisabled();
+    await expect(page.getByTestId('outliner-move-earlier-btn')).toBeDisabled();
+    await expect(page.getByTestId('outliner-move-later-btn')).toBeDisabled();
+    await expect(page.getByTestId('outliner-append-static').locator('input[type="file"]')).toBeDisabled();
+    expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
+  });
+
   test('project save is separate from asset export and reloads the snapshot', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
@@ -504,7 +526,8 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(policyPanel.locator('[data-export-action="fbx"]')).toHaveAttribute('data-texture-policy', 'embedded');
       await expect(policyPanel.locator('[data-export-action="smf"]')).toHaveAttribute('data-texture-policy', 'omitted');
       await expect(page.getByTestId('legacy-material-policy-row')).toHaveCount(3);
-      await expect(page.getByTestId('legacy-material-policy-panel')).toContainText(/workspace snap|Preflight only|Resolved by format/i);
+      await expect(page.getByTestId('legacy-material-policy-panel')).toContainText(/workspace snap|Diagnostic only|Resolved by format/i);
+      await expect(page.getByTestId('material-reuse-policy-note')).toContainText(/diagnostic only.*no UV or material-ownership mutation/i);
       const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
       await expect(diagnosticsPanel).toBeVisible();
       await expect(diagnosticsPanel).toHaveAttribute('data-smf-can-export', 'true');

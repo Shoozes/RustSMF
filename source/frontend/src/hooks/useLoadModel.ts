@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
 import type * as THREE from 'three';
 import type { OpenResult, TauriClient } from '../backend-client/tauri';
+import { createLazyClientLoader } from '../backend-client/lazyClient';
 import { buildThreeScene as buildSmfScene, loadGLB, loadFBX, loadDAE, loadOBJ, exportGLB, validateExportedGLB, exportFBX, validateExportedFBX, exportDAE, validateExportedDAE, bytesToArrayBuffer, SmfConversionError, collectSkinnedMeshes, compareSmfRoundtrip, inspectThreeToSmfSource, makeDiagnosticReport } from '../loaders';
 import type { ImportedSmf, SmfDiagnosticReport, SmfRoundtripReport } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
@@ -208,11 +209,7 @@ interface UseLoadModelOptions {
   externalDirtyRef?: { current: boolean };
 }
 
-let cachedTauriClient: TauriClient | null = null;
-const getTauriClient = async (): Promise<TauriClient> => {
-  if (cachedTauriClient) return cachedTauriClient;
-  const clientMod = await import('../backend-client/tauri');
-  const client: TauriClient = {
+const getTauriClient = createLazyClientLoader<TauriClient>(() => import('../backend-client/tauri').then((clientMod) => ({
     openFile: clientMod.openFile,
     readBrowserModelFiles: clientMod.readBrowserModelFiles,
     saveFile: clientMod.saveFile,
@@ -224,10 +221,7 @@ const getTauriClient = async (): Promise<TauriClient> => {
     readBinaryFile: clientMod.readBinaryFile,
     readBinaryBundle: clientMod.readBinaryBundle,
     invokeCommand: clientMod.invokeCommand,
-  };
-  cachedTauriClient = client;
-  return client;
-};
+  })));
 
 const isSkinnedMesh = (obj: THREE.Object3D): obj is THREE.SkinnedMesh => {
   return obj.type === 'SkinnedMesh';

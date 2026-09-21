@@ -474,6 +474,7 @@ export default function AnimatePanel({
             data-testid="animation-interpolation-select"
             value={interpolation}
             disabled={!hasEditableSelection}
+            aria-describedby={interpolation === 'quadratic' ? 'animation-interpolation-note' : undefined}
             onChange={(event) => {
               if (isAnimationInterpolation(event.target.value)) {
                 onInterpolationChange(event.target.value);
@@ -484,6 +485,11 @@ export default function AnimatePanel({
             <option value="step">Step</option>
             <option value="quadratic">Quadratic</option>
           </select>
+          {interpolation === 'quadratic' && (
+            <span id="animation-interpolation-note" className="animate-interpolation-note" data-testid="animation-interpolation-note">
+              Quadratic is preserved in SMF metadata; the live preview uses linear interpolation.
+            </span>
+          )}
         </label>
         <label>
           <span>Snap</span>

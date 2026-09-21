@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, it } from 'node:test'
 import {
@@ -94,6 +94,20 @@ describe('project integrity checks', () => {
   it('passes the current repository contract', () => {
     const result = validateProjectIntegrity(process.cwd())
     assert.deepEqual(result.errors, [])
+  })
+
+  it('keeps the workspace verify command aligned with the launcher safeguards', () => {
+    const sourcePackage = JSON.parse(readFileSync(join(process.cwd(), 'source/package.json'), 'utf8'))
+    const frontendPackage = JSON.parse(readFileSync(join(process.cwd(), 'source/frontend/package.json'), 'utf8'))
+    assert.equal(
+      frontendPackage.scripts?.['check:game-ready-dependencies'],
+      'node scripts/check-game-ready-dependencies.mjs',
+    )
+    assert.equal(
+      sourcePackage.scripts?.['check:game-ready-dependencies'],
+      'npm --workspace frontend run check:game-ready-dependencies',
+    )
+    assert.match(sourcePackage.scripts?.verify ?? '', /(?:^| && )npm run check:game-ready-dependencies(?: && |$)/)
   })
 
   it('reports malformed durable-doc encoding rather than silently replacing bytes', () => {

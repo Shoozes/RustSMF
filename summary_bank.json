@@ -22,7 +22,7 @@
   "groups": {
     "docs__orientation": {
       "description": "Lean current-state orientation. Use a focused feature or subsystem group before reading broader source.",
-      "max_kb": 56,
+      "max_kb": 64,
       "paths": [
         "README.md",
         "docs/dev/APP_STATE.md",
@@ -30,7 +30,8 @@
       ],
       "notes": [
         "TODO owns executable work and completion conditions.",
-        "APP_STATE owns shipped behavior; review.md is opened only for integrity-pass evidence."
+        "APP_STATE owns shipped behavior; review.md is opened only for integrity-pass evidence.",
+        "The 64 KiB orientation cap is measured headroom for the current active backlog; the route currently expands to 53.5 KiB and remains far below the 256 KiB generation ceiling."
       ]
     },
     "workflow__context_bank": {
@@ -63,11 +64,14 @@
         "scripts/project-integrity.test.mjs",
         "scripts/README.md",
         "run.ps1",
+        "source/package.json",
+        "source/frontend/package.json",
         "docs/dev/TODO.md",
         "docs/research-inbox/README.md"
       ],
       "notes": [
         "The guard is local and read-only: it reports missing durable docs, malformed or silently empty backlogs, machine-local paths in current-facing docs, unreviewed inbox notes, unresolved relative frontend imports, and unresolved Rust mod declarations before the application verification lane runs.",
+        "The workspace verify script must retain the same game-ready dependency guard used by run.ps1; the project-integrity regression catches drift between the public npm and launcher entry points.",
         "Relative-import candidates must be files; a bare directory without an index module fails even when the directory itself exists.",
         "Active TODO fields must contain completion criteria and cannot coexist with the empty-backlog marker."
       ]
@@ -276,6 +280,7 @@
       "notes": [
         "Name, visibility, selection, and scoped parent order use one ID-only snapshot owner; history never stores cyclic Three.js scene graphs.",
         "Rename is limited to binding-safe, unique, unanimated GLB/FBX/OBJ objects; SMF source names remain source-owned.",
+        "SMF rename, reorder, duplicate, delete, append, and surface-edit controls stay disabled with source-owned guidance; GLB, FBX, and OBJ remain the supported editable source formats.",
         "Reorder swaps only eligible siblings under one parent, preserves non-Outliner children, and is covered by exact undo/redo plus GLB re-import.",
         "Duplicate/delete use explicit parent/index structural operations, independently clone static disposable resources, and reject bones, skinned subtrees, unsupported sources, and animation targets before mutation.",
         "Static append, transforms, named material assignment, winding reversal, and geometry preparation use guarded non-SMF/static targets and the same undoable Outliner snapshot contract; async append commits only when the initiating model root is still current."
@@ -474,7 +479,7 @@
     },
     "feature__model_diagnostics": {
       "description": "Read-only geometry, UV, material, shader-capability, handedness, and viewport pose-overlay diagnostics.",
-      "max_kb": 196,
+      "max_kb": 204,
       "paths": [
         "source/frontend/src/components/ExportPanel.tsx",
         "source/frontend/src/components/ThreeViewport.tsx",
@@ -486,12 +491,13 @@
       ],
       "notes": [
         "Reports are finite and named per-mesh values with explicit shader support notes; they do not mutate source geometry or export bytes.",
-        "Rest ghost, current-to-rest trails, and onion-skin lines are viewport-owned disposable helpers and are rebuilt only from current display state."
+        "Rest ghost, current-to-rest trails, and onion-skin lines are viewport-owned disposable helpers and are rebuilt only from current display state.",
+        "Retired same-texture merging is diagnostic-only: shared references are reported, but no UV or material-ownership mutation is performed."
       ]
     },
     "feature__animation_authoring": {
       "description": "Timeline interaction, workspace-aware playback, pose-based clip creation, Bone/Branch/Full Rig key authoring, clip management, metadata, history, and browser ownership.",
-      "max_kb": 208,
+      "max_kb": 216,
       "paths": [
         "source/frontend/src/components/AnimatePanel.tsx",
         "source/frontend/src/components/Timeline.tsx",
@@ -585,6 +591,8 @@
       "max_kb": 96,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
+        "source/frontend/src/backend-client/lazyClient.ts",
+        "source/frontend/src/backend-client/lazyClient.test.ts",
         "source/frontend/src/backend-client/binaryPayload.ts",
         "source/frontend/src/backend-client/binaryPayload.test.ts",
         "source/frontend/src/utils/modelFormat.ts",
@@ -603,7 +611,8 @@
         "Native read responses are untrusted: binaryPayload.ts accepts only ArrayBuffer, Uint8Array, or arrays of integer bytes from 0 through 255 so coercion cannot wrap malformed values.",
         "Rust owns dialog invocation through its pinned tauri-plugin-dialog dependency; the frontend has no unused dialog-plugin package.",
         "The native CSP permits local blob fetches and the WebView2 IPC hostname. Foreground saves await active autosave before opening their destination dialog. All native writes share one async serialization owner, stage and sync complete payloads before replacement, and restore the previous destination when installation fails.",
-        "Project recovery discovery and reads accept only the owned target plus .bak1 and .bak2 regular files; arbitrary app-data siblings fail before filesystem access."
+        "Project recovery discovery and reads accept only the owned target plus .bak1 and .bak2 regular files; arbitrary app-data siblings fail before filesystem access.",
+        "The lazy native-client loader shares one in-flight adapter construction and clears rejected imports for retry; direct unit tests cover overlap identity and recovery after failure."
       ]
     },
     "tests__quality": {

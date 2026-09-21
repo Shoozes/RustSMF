@@ -313,6 +313,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Animation interpolation set to step/i);
       await page.getByTestId('animation-interpolation-select').selectOption('quadratic');
       await expect(page.getByTestId('status-text')).toContainText(/Animation interpolation set to quadratic/i);
+      await expect(page.getByTestId('animation-interpolation-note')).toContainText(/SMF metadata.*live preview uses linear/i);
       await page.getByTestId('animation-insert-key-btn').click();
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
       await expect(page.getByTestId('animation-selected-key')).not.toContainText('none');

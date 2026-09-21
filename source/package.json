@@ -16,6 +16,7 @@
     "typecheck": "npm --workspace frontend run typecheck",
     "typecheck:test": "npm --workspace frontend run typecheck:test",
     "check:production-any": "npm --workspace frontend run check:production-any",
+    "check:game-ready-dependencies": "npm --workspace frontend run check:game-ready-dependencies",
     "test": "npm run test:unit",
     "test:e2e": "npm --workspace frontend run test:e2e",
     "test:e2e:list": "npm --workspace frontend run test:e2e:list",
@@ -26,7 +27,7 @@
     "fit-rig": "npm --workspace frontend run fit-rig --",
     "fit-rig-preview": "npm --workspace frontend run fit-rig-preview --",
     "verify:rust": "cd src-tauri && cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test && cargo check",
-    "verify": "npm run check:lint-coverage && npm run lint && npm run typecheck && npm run typecheck:test && npm run check:production-any && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && npm run verify:rust",
+    "verify": "npm run check:lint-coverage && npm run lint && npm run typecheck && npm run typecheck:test && npm run check:production-any && npm run check:game-ready-dependencies && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && npm run verify:rust",
     "desktop:smoke": "pwsh -File ../run.ps1 -Task desktop-smoke"
   },
   "engines": {

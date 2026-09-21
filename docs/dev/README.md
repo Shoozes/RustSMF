@@ -22,6 +22,7 @@ Keep developer docs concise and evidence-based. This repo has one current-state 
 - Update `summary_bank.json` when paths move, groups become stale, or a new feature/issue needs focused context.
 - Keep repo-local Codex skills project-specific; use the global skill when it already owns the workflow instead of maintaining a duplicate copy.
 - Run `pwsh -File run.ps1 -Task context` after editing project docs or the context bank; it checks durable-doc/TODO/portable-path/import/module contracts plus context routing. `pwsh -File run.ps1 -Task verify` includes the same validators, the main-synchronization safety regression, and application checks.
+- The `source` workspace `npm.cmd run verify` owns the application/Rust gate, including the game-ready dependency guard; the root launcher adds repository documentation, context, process-ownership, and main-synchronization checks.
 
 Avoid copying the same completed-work narrative into multiple docs. Link to the durable owner instead. Canonical verification commands and launch instructions are centralized in APP_STATE.md "Primary commands" / "Verification" (other surfaces link or summarize to reduce duplication of lists).
 

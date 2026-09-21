@@ -50,8 +50,8 @@ export const LEGACY_SHELF_DECISIONS: LegacyShelfDecision[] = [
   },
   {
     action: 'Merge same textures',
-    decision: 'Preflight only',
-    reason: 'The legacy action merged geometry/material ownership. RustSMF reports reuse candidates but does not mutate them without an undoable validated atlas workflow.',
+    decision: 'Diagnostic only',
+    reason: 'Shared texture references are reported; the app does not rewrite UVs or material ownership without an undoable validated atlas workflow.',
   },
   {
     action: 'Include textures',

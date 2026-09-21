@@ -155,7 +155,7 @@ export function supportsModelObjectAuthoring(sourceFormat: string): boolean {
 export function getModelObjectAuthoringDisabledReason(sourceFormat: string): string | undefined {
   if (supportsModelObjectAuthoring(sourceFormat)) return undefined;
   return sourceFormat === 'smf'
-    ? 'SMF submodel names and hierarchy order are source-owned in the current exporter.'
+    ? 'SMF scene-object names and hierarchy order are source-owned by the current exporter; use GLB, FBX, or OBJ for editable submodel authoring.'
     : 'The current source format cannot persist submodel authoring changes.';
 }
 

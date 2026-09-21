@@ -31,5 +31,8 @@ describe('material export policy', () => {
       assert.ok(item.decision.length > 0);
       assert.ok(item.reason.length > 0);
     });
+    const textureReuse = LEGACY_SHELF_DECISIONS.find((item) => item.action === 'Merge same textures');
+    assert.equal(textureReuse?.decision, 'Diagnostic only');
+    assert.match(textureReuse?.reason ?? '', /does not rewrite UVs or material ownership/i);
   });
 });
