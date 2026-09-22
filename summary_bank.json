@@ -31,7 +31,7 @@
       "notes": [
         "TODO owns executable work and completion conditions.",
         "APP_STATE owns shipped behavior; review.md is opened only for integrity-pass evidence.",
-        "The 64 KiB orientation cap is measured headroom for the current active backlog; the route currently expands to 53.5 KiB and remains far below the 256 KiB generation ceiling."
+        "The 64 KiB orientation cap is measured headroom for current-state docs; the route currently expands to 53.5 KiB and remains far below the 256 KiB generation ceiling."
       ]
     },
     "workflow__context_bank": {
@@ -845,7 +845,8 @@
       ],
       "notes": [
         "Ranges are calibrated animation diagnostics, not medical constants or skin/contact/visual acceptance.",
-        "Profile application is routed separately through feature__retarget_profiles; private assets and generated reports stay excluded."
+        "Profile application is routed separately through feature__retarget_profiles; private assets and generated reports stay excluded.",
+        "Caller-owned all-frame skin/contact and receiving-game acceptance is integration evidence, not a RustSMF completion contract."
       ]
     },
     "subsystem__dev_process_lifecycle": {

@@ -2,6 +2,57 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-21 — Caller-owned acceptance dependency closed
+
+Re-audited the last active TODO item, the caller-owned humanoid skin/contact
+and receiving acceptance gate. The repository-owned mechanism and neutral
+noncombat proof are complete; the remaining requested evidence is produced by
+the consumer integration environment and cannot be generated truthfully by
+RustSMF alone.
+
+The frozen review artifacts are hash-bound to generation
+`50364735b61e4744bf486af660f9b60730dc746f642724af588d8171e681ea90`, model
+`0c440cb5ca48f1546eaed133b2b066f5bfc6e70978050577db919950cde430a1`, and
+profile `c58f2a04784e3e0e5eb35d5c6aaa1ddc16c101ca43321bcb2725c91bbadfea95`.
+The body review and range report explicitly identify their scope as calibrated
+angular/source evidence, report `review-required`, and state that they do not
+prove all-triangle/all-frame self-intersection or receiving-game acceptance.
+The review also records no concrete new transfer or deformation defect and
+requires a named gameplay discrepancy before any producer change.
+
+This proves an external evidence dependency rather than an unfinished RustSMF
+implementation. The P1 item is therefore retired from `TODO.md` and preserved
+here as an integration boundary. It must not be reopened or satisfied by
+widening limits, reusing static captures, or treating a calibrated report as a
+receiving receipt. Reopen only if fight-game-study supplies an attended,
+hash-bound source/receiving receipt that identifies a reproducible RustSMF
+mechanism defect; then add a bounded noncombat fixture and a repository-owned
+test before changing the producer.
+
+Evidence locations, all outside tracked application sources:
+
+- `output/verification/review6-v8-body-review.md`
+- `output/verification/review6-v8-body-range-report.json`
+- `output/verification/review6-action-final-dispositions.json`
+- `output/verification/review6-release-receipts.log` (capture log, not the
+  missing attended receiving receipt)
+
+The ownership boundary is also stated in `README.md`, `APP_STATE.md`, and the
+humanoid pose-review route. RustSMF's remaining contract is the tested,
+reproducible tool behavior and neutral fixtures; fighter-specific appearance,
+pair spacing, and receiving acceptance remain consumer-owned.
+
+Verification for this documentation and backlog closeout:
+
+- `node scripts/verify-context-bank.mjs`: 42 groups, 51.8 KiB default
+  orientation, zero warnings.
+- `node --test scripts/context-bank.test.mjs`: 9/9 passed.
+- `node scripts/verify-project-integrity.mjs`: passed with the explicit empty
+  backlog contract.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 12/12
+  project-integrity, 9/9 context-bank, 483/483 frontend, and 10/10 Rust tests,
+  plus lint, typechecks, production guards, build, and entry-chunk checks.
+
 ## 2026-09-21 - Verification contract and async bridge integrity
 
 The full repo/app integrity pass found no broken relative imports or

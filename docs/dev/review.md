@@ -18,10 +18,11 @@ acceptance conditions in [TODO.md](TODO.md), and dated proof in
   typechecks, production-`any`, and the source marker scan pass. No production
   TODO/FIXME/unimplemented stub was found; the remaining `placeholder` match is
   a real input hint. This is not exhaustive runtime proof.
-- The four repo-owned backlog contracts are complete and moved to HISTORY. The
-  only remaining active work is the caller-owned P1 acceptance gate, which
-  still requires an attended source/receiving receipt that is not produced by
-  this repository.
+- The RustSMF backlog is empty. The formerly listed caller-owned P1 acceptance
+  gate was re-audited and retired as an external dependency: its attended
+  source/receiving receipt is produced by fight-game-study, not this repository.
+  The available hash-bound report remains preserved as evidence of the boundary,
+  not as a substitute for that receipt.
 - The browser contract is green at 105/105 tests after correcting a stale DAE
   status assertion to match the generic `Loaded: <name>` load path. Existing
   GLB/FBX/DAE/OBJ round-trip, sidecar, replacement, and async-ownership checks
@@ -38,7 +39,7 @@ acceptance conditions in [TODO.md](TODO.md), and dated proof in
   package manifests for fight-game-study/GaimEngine checkout references; it
   passes with no undeclared consumer dependency. Partial caller attachment maps
   are supported for non-humanoid rigs while strict all-role resolution remains
-  the default utility contract. The current full verify gate passes with 480
+  the default utility contract. The current full verify gate passes with 483
   frontend unit tests and 10 Rust tests.
 - The project codec now validates `sourceFormat` against the shared model-format
   registry instead of a stale hand-maintained allowlist. DAE project snapshots
@@ -52,9 +53,9 @@ acceptance conditions in [TODO.md](TODO.md), and dated proof in
   loaded cleanly, the animation-only source remained geometry-free, the
   with-skin source showed 33 bones/one 2.50s clip/3,726 vertices, and single
   plus quad start/mid/end review showed no observed leg/torso deformation
-  failure or self-clipping. The reusable humanoid action-range/skin review
-  remains active because caller-owned all-frame/receiving proof is separate.
-  Game appearance and transition checks stay outside RustSMF completion criteria.
+  failure or self-clipping. Caller-owned all-frame/receiving proof remains
+  external integration evidence, and game appearance and transition checks stay
+  outside RustSMF completion criteria.
 - The source workspace `npm run verify` now includes the same game-ready
   dependency guard as `run.ps1`; a project-integrity regression protects that
   entry-point parity. Lazy Tauri-client initialization shares one in-flight

@@ -10,8 +10,9 @@ explicit planted-contact anchor frames. Their shared contract is documented in
 or whole-mesh clearance. Bounded swing trajectories and descendant rotation
 envelopes support offline stance handoffs without changing receiving-root travel.
 Receiving checks are hash- and transition-specific, not blanket motion acceptance.
-Remaining visual and transition conditions live in `TODO.md`; completed proof
-lives in `HISTORY.md`.
+Caller-owned visual and transition conditions are tracked by fight-game-study
+integration evidence, not RustSMF completion requirements; completed RustSMF
+proof lives in `HISTORY.md`.
 
 Caller-owned jobs: fight-game-study stores wolf mappings, selected clips, cast
 endpoints and visual-acceptance decisions. RustSMF does not own those results.
@@ -87,8 +88,9 @@ The comparison manifest supports optional per-model `clipMap` role-to-source
 names; receipts include the resolved name and still enforce equal durations.
 Different idle poses are not automatically equivalent calibration references.
 The game-led source probes and all local generated jobs remain outside tracked
-application sources. Brawl rest-reference motion is selected; Wolf appearance and
-changing-speed contact acceptance remain open in TODO.md.
+application sources. Brawl rest-reference motion is selected; caller-owned Wolf
+appearance and changing-speed contact acceptance remain outside RustSMF ownership
+and are tracked only by the consumer's integration evidence.
 
 Optional calibrated angular review reports or rejects final retarget output through
 the shared profile/core contract. Its standalone embedded-GLB scanner and limits
