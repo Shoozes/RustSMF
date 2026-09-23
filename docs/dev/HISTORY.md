@@ -2,6 +2,37 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-23 — Rig-helper scale and DAE texture readiness
+
+A real `Warrior Idle.dae` repro showed helper geometry covering most of the
+viewport. Its root scale was 0.01 and average world-space bone spacing was
+about 0.0011; the helper's fixed 0.1 world-unit minimum made transverse
+geometry and joint markers much larger than the model. `ModernSkeletonHelper`
+now sizes from measured world-space links and falls back to model bounds for
+degenerate links. Its clickable metadata, scale-invariance, and bounds-fallback
+tests now live beside the helper instead of inflating the SMF coordinate-loader
+route.
+
+The same DAE showed a project-autosave error because `ColladaLoader` starts
+sidecar image loads asynchronously while `loadDAE` immediately released its
+temporary resource URLs. Shared `textureImageReadiness.ts` now waits up to two
+seconds for FBX/DAE image readiness and removes/reports unavailable maps before
+mount or export. With the selected sidecar loaded, the repro mounted with 25
+bones, one clip, and 3,330 vertices; its first autosave completed without the
+GLTFExporter error. The browser had zero console errors and two warnings.
+
+The current-state/user docs, external-resource pitfall, summary-bank routes,
+and review snapshot were reconciled. The active backlog remains empty because
+both repo-owned findings were implemented and verified; no new deferred work
+was introduced.
+
+Verification:
+
+- `npx.cmd tsx --test src/utils/modernSkeletonHelper.test.ts src/utils/textureImageReadiness.test.ts src/loaders/dae.test.ts src/loaders/fbx.test.ts` from `source/frontend`: 13/13 passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task context`: project integrity 12/12, context-bank 9/9, 42 groups, 52.1 KiB default orientation, zero warnings.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 488/488 frontend unit tests, 10/10 Rust tests, lint, both typechecks, production/dependency guards, build/chunk checks, and repository safety gates.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: 105/105 Chromium tests passed.
+
 ## 2026-09-21 — Caller-owned acceptance dependency closed
 
 Re-audited the last active TODO item, the caller-owned humanoid skin/contact

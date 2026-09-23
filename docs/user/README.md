@@ -45,7 +45,9 @@ Both commands open the numbered launcher menu. Choose `2. Run if already install
 Collada (`.dae`) is supported as a single-file model input and export. ZIP archives
 are not model inputs; extract them first and select the DAE plus any referenced
 sidecars as one bundle. The loader validates the visual scene, skin data and
-animation channels before mounting. DAE export writes a self-contained geometry,
+animation channels, then waits for selected texture images before mounting. If
+a sidecar cannot load, it reports the missing map and keeps the geometry
+available with its material color. DAE export writes a self-contained geometry,
 skin, material-color and matrix-animation document; external texture files are
 not embedded, so GLB remains the preferred texture-fidelity format. Keep
 animation-only and with-skin sources separate: an animation-only file cannot

@@ -5,6 +5,14 @@ import { disposeThreeObject } from '../utils/threeDisposal';
 import { isThreeBone, isThreeMesh, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
 import { createResourceUrlRegistry, type ModelResourceBundle } from '../utils/modelResourceBundle';
 import { withSourceMaterialState } from '../utils/materialPreview';
+import {
+  collectMaterialTextures,
+  MODEL_TEXTURE_IMAGE_WAIT_MS,
+  removeUnavailableMaterialTextures,
+  waitForTextureImages,
+} from '../utils/textureImageReadiness';
+
+const DAE_TEXTURE_SLOTS = ['map'] as const;
 
 export interface DaeLoadSummary {
   meshCount: number;
@@ -30,19 +38,6 @@ export interface DaeLoadedModel {
 function resourceBasePath(name: string): string {
   const slash = name.lastIndexOf('/');
   return slash >= 0 ? name.slice(0, slash + 1) : '';
-}
-
-function countTextureMaps(root: THREE.Object3D): number {
-  const textures = new Set<THREE.Texture>();
-  root.traverse((object) => {
-    if (!isThreeMesh(object)) return;
-    const materials = Array.isArray(object.material) ? object.material : [object.material];
-    materials.forEach((material) => {
-      const map = (material as THREE.Material & { map?: THREE.Texture | null }).map;
-      if (map) textures.add(map);
-    });
-  });
-  return textures.size;
 }
 
 /** Collada files may omit normals; compute them so shaded/skinned meshes remain visible. */
@@ -72,6 +67,10 @@ export async function loadDAE(
     if (!collada?.scene) throw new Error('Collada file did not contain a visual scene.');
     root = collada.scene as unknown as THREE.Group;
     root.name = 'DAE_Root';
+    const textures = collectMaterialTextures(root, DAE_TEXTURE_SLOTS);
+    await waitForTextureImages(textures, MODEL_TEXTURE_IMAGE_WAIT_MS);
+    const { removed: removedTextureMaps } = removeUnavailableMaterialTextures(root, DAE_TEXTURE_SLOTS);
+    const textureMapCount = collectMaterialTextures(root, DAE_TEXTURE_SLOTS).length;
     const skinnedMeshes: THREE.SkinnedMesh[] = [];
     let meshCount = 0;
     let vertexCount = 0;
@@ -96,13 +95,16 @@ export async function loadDAE(
     if (computedNormalCount > 0) notes.push(`Computed vertex normals for ${computedNormalCount} Collada mesh${computedNormalCount === 1 ? '' : 'es'} that omitted them.`);
     if (meshCount > 0 && skinnedMeshes.length === 0) notes.push('Static mesh only; rig and weight-paint tools need a root skeleton first.');
     if (clips.length === 0 && skinnedMeshes.length > 0) notes.push('No animation clips were found in the Collada file.');
+    if (removedTextureMaps > 0) {
+      notes.push(`${removedTextureMaps} Collada texture map${removedTextureMaps === 1 ? '' : 's'} could not be loaded; geometry remains available with solid materials.`);
+    }
     return {
       root,
       skeleton,
       skinnedMeshes,
       clips,
       mixer: new THREE.AnimationMixer(root),
-      summary: { meshCount, skinnedMeshCount: skinnedMeshes.length, boneCount, vertexCount, clipCount: clips.length, textureMapCount: countTextureMaps(root), removedTextureMaps: 0, primaryMeshName: root.getObjectByProperty('isMesh', true)?.name || null, notes },
+      summary: { meshCount, skinnedMeshCount: skinnedMeshes.length, boneCount, vertexCount, clipCount: clips.length, textureMapCount, removedTextureMaps, primaryMeshName: root.getObjectByProperty('isMesh', true)?.name || null, notes },
     };
   } catch (error) {
     if (root) disposeThreeObject(root);

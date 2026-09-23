@@ -306,7 +306,7 @@
         "The bundled exporter is the implementation authority.",
         "Exported bytes must re-import and preserve representative mesh, skin, bone, and clip structure before save.",
         "The independent Blender-authored fixture is test-only; Blender 5.0.0 validates both the source asset and app-exported output, but this does not claim universal FBX compatibility.",
-        "FBX texture parse waits on its isolated loader manager; authorized selected relative maps resolve through the shared resource bundle and unavailable maps fail safe before render."
+        "FBX texture parsing waits on its isolated loader manager; shared image-readiness implementation and tests live in issue__external_model_resources. Authorized selected relative maps resolve through the shared resource bundle, and unavailable maps fail safe before render."
       ]
     },
     "feature__dae_support": {
@@ -315,16 +315,19 @@
       "paths": [
         "source/frontend/src/loaders/dae.ts",
         "source/frontend/src/loaders/dae.test.ts",
+        "source/frontend/src/utils/textureImageReadiness.ts",
+        "source/frontend/src/utils/textureImageReadiness.test.ts",
         "source/frontend/src/loaders/index.ts",
         "source/frontend/src/utils/modelFormat.ts",
         "source/frontend/src/utils/modelFormat.test.ts",
         "source/frontend/tests/export-formats.spec.ts",
-        "source/frontend/tests/README.md"
+        "source/frontend/tests/README.md",
+        "docs/user/README.md"
       ],
       "notes": [
-        "ColladaLoader is the browser import authority; DAE imports synthesize missing vertex normals for shaded/skinned visibility, while the local serializer writes 1.4.1 Y_UP visual scenes, materials, geometry, controllers, inverse bind matrices, and matrix animation channels.",
+        "ColladaLoader is the browser import authority; DAE imports synthesize missing vertex normals and await sidecar image readiness before releasing temporary URLs, while the local serializer writes 1.4.1 Y_UP visual scenes, materials, geometry, controllers, inverse bind matrices, and matrix animation channels.",
         "Export validates by re-importing before save and rejects duplicate joint names or non-triangle geometry. External texture images are not embedded by the DAE writer; use GLB for texture-fidelity export.",
-        "ZIP archives remain containers, not model inputs; users must extract and select the DAE plus authorized sidecars.",
+        "Imports keep selected sidecar image URLs alive until bounded readiness settles, then remove and report unavailable maps; user-facing import guidance lives in docs/user/README.md. ZIP archives remain containers, not model inputs; users must extract and select the DAE plus authorized sidecars.",
         "The 2026-09-20 supplied pair matched on Y_UP/0.01m units, 28 animation channels and 76 timing samples; the with-skin source passed RustSMF start/mid/end single and quad visual inspection with no observed leg/torso failure or self-clipping. This is source-inspection evidence, not game or retarget acceptance."
       ]
     },
@@ -439,6 +442,7 @@
         "source/frontend/src/utils/boneLabels.ts",
         "source/frontend/src/utils/boneHighlight.ts",
         "source/frontend/src/utils/modernSkeletonHelper.ts",
+        "source/frontend/src/utils/modernSkeletonHelper.test.ts",
         "source/frontend/src/utils/useBoneLabels.ts",
         "source/frontend/src/utils/legacySmfLighting.ts",
         "source/frontend/src/utils/legacySmfLighting.test.ts",
@@ -446,7 +450,7 @@
         "source/frontend/src/utils/threeTypeGuards.test.ts"
       ],
       "notes": [
-        "ThreeViewport owns lifecycle and event timing; these directly imported helpers own the leaf rendering, picking, label, and type-guard contracts consumed by it and by loader/rig paths."
+        "ThreeViewport owns lifecycle and event timing; these directly imported helpers own the leaf rendering, picking, label, and type-guard contracts consumed by it and by loader/rig paths. Rig-helper geometry derives scale from world-space bone spacing and model bounds rather than a fixed world-unit floor."
       ]
     },
     "feature__rig_ik_pose": {
@@ -758,6 +762,8 @@
         "source/frontend/src/utils/modelFormat.ts",
         "source/frontend/src/utils/modelResourceBundle.ts",
         "source/frontend/src/utils/modelResourceBundle.test.ts",
+        "source/frontend/src/utils/textureImageReadiness.ts",
+        "source/frontend/src/utils/textureImageReadiness.test.ts",
         "source/frontend/src/test/externalGltfFixture.test.ts",
         "source/frontend/tests/export-formats.spec.ts",
         "source/frontend/tests/helpers/external-fbx-fixture.ts",
@@ -768,7 +774,7 @@
       ],
       "notes": [
         "Browser and native open paths normalize one primary plus selected relative sidecars into a bounded bundle; GLTFLoader, FBXLoader, and OBJLoader resolve only authorized local names.",
-        "Traversal, remote/data, duplicate/case-ambiguous, per-file/aggregate size, missing-resource, stale-load, and object-URL cleanup guards are implemented and tested.",
+        "Traversal, remote/data, duplicate/case-ambiguous, per-file/aggregate size, missing-resource, stale-load, and object-URL cleanup guards are implemented and tested. Texture loaders retain bundle URLs until image loads settle, remove failed maps before renderer/export work, and cap waits at two seconds.",
         "FBX resolves only texture paths referenced by the file; unrelated selected maps are not guessed into material slots. OBJ supports one MTL bundle with relative textures; multiple material libraries and unsafe or unresolved resources fail closed while geometry-only OBJ remains supported."
       ]
     },

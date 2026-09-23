@@ -90,7 +90,13 @@ function estimateAverageBoneLength(root: THREE.Object3D, bones: THREE.Bone[]): n
     }
   }
 
-  return count > 0 ? total / count : 1;
+  const average = count > 0 ? total / count : 0;
+  if (Number.isFinite(average) && average > 0) return average;
+
+  const bounds = new THREE.Box3().setFromObject(root);
+  const modelSize = bounds.getSize(new THREE.Vector3()).length();
+  const fallback = modelSize / Math.max(1, bones.length);
+  return Number.isFinite(fallback) && fallback > 0 ? fallback : 0;
 }
 
 export class ModernSkeletonHelper extends THREE.Group {
@@ -170,7 +176,7 @@ export class ModernSkeletonHelper extends THREE.Group {
     });
 
     const bones = getBones(root);
-    this.averageBoneLength = Math.max(0.1, estimateAverageBoneLength(root, bones));
+    this.averageBoneLength = estimateAverageBoneLength(root, bones);
     this.build(bones);
   }
 

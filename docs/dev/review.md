@@ -1,6 +1,6 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-09-21
+Last reviewed: 2026-09-23
 
 Current contracts
 belong in [APP_STATE.md](APP_STATE.md), executable
@@ -9,11 +9,10 @@ acceptance conditions in [TODO.md](TODO.md), and dated proof in
 
 ## Current findings
 
-- The context bank now validates 42 groups. The default orientation expands to
-  53.5 KiB under its measured 64 KiB focused cap and the 256 KiB generation ceiling;
-  DAE, store, build-contract, and workspace-verification paths are routed
-  through their owning groups. Large integration owners remain intentionally
-  focused routes rather than default context.
+- The context bank validates 42 groups with a 52.1 KiB default orientation under
+  its 64 KiB focused cap and the 256 KiB generation ceiling. DAE/FBX image
+  readiness and rig-helper tests route through focused feature/issue groups;
+  large integration owners remain outside default context.
 - Relative frontend imports/re-exports, Rust module checks, lint, both
   typechecks, production-`any`, and the source marker scan pass. No production
   TODO/FIXME/unimplemented stub was found; the remaining `placeholder` match is
@@ -27,6 +26,12 @@ acceptance conditions in [TODO.md](TODO.md), and dated proof in
   status assertion to match the generic `Loaded: <name>` load path. Existing
   GLB/FBX/DAE/OBJ round-trip, sidecar, replacement, and async-ownership checks
   remain covered.
+- A real DAE sidecar repro exposed premature object-URL revocation before
+  Collada image loading completed, which caused the first project autosave to
+  fail in GLTFExporter. DAE and FBX now share bounded image-readiness and
+  unavailable-map cleanup; the same repro autosaved without an error. Rig-helper
+  overlay scale now follows measured world-space bone spacing with model-bounds
+  fallback for degenerate links.
 - The neutral caller-owned game-ready workflow is now proven through the actual
   CLI: two named motions are mapped, material-repaired, published, re-imported,
   and checked for sampled timing/transforms, raw skin values, decoded material
@@ -39,7 +44,7 @@ acceptance conditions in [TODO.md](TODO.md), and dated proof in
   package manifests for fight-game-study/GaimEngine checkout references; it
   passes with no undeclared consumer dependency. Partial caller attachment maps
   are supported for non-humanoid rigs while strict all-role resolution remains
-  the default utility contract. The current full verify gate passes with 483
+  the default utility contract. The current full verify gate passes with 488
   frontend unit tests and 10 Rust tests.
 - The project codec now validates `sourceFormat` against the shared model-format
   registry instead of a stale hand-maintained allowlist. DAE project snapshots

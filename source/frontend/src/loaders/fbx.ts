@@ -9,6 +9,12 @@ import {
   createResourceUrlRegistry,
   type ModelResourceBundle,
 } from '../utils/modelResourceBundle';
+import {
+  collectMaterialTextures,
+  MODEL_TEXTURE_IMAGE_WAIT_MS,
+  removeUnavailableMaterialTextures,
+  waitForTextureImages,
+} from '../utils/textureImageReadiness';
 import { bytesToArrayBuffer } from './smfBinary';
 
 // Basic FBX loader, mirroring glb.ts structure for consistency.
@@ -36,7 +42,7 @@ export interface FbxLoadedModel {
   summary: FbxLoadSummary;
 }
 
-const FBX_TEXTURE_WAIT_MS = 2000;
+const FBX_TEXTURE_WAIT_MS = MODEL_TEXTURE_IMAGE_WAIT_MS;
 const FBX_TEXTURE_SLOTS = [
   'map',
   'alphaMap',
@@ -48,63 +54,6 @@ const FBX_TEXTURE_SLOTS = [
   'normalMap',
   'roughnessMap',
 ] as const;
-
-type LoadableTextureImage = {
-  complete?: boolean;
-  naturalWidth?: number;
-  width?: number;
-  addEventListener?: (type: string, listener: () => void, options?: { once?: boolean }) => void;
-  removeEventListener?: (type: string, listener: () => void) => void;
-};
-
-function collectTextures(root: THREE.Object3D): THREE.Texture[] {
-  const textures = new Set<THREE.Texture>();
-  root.traverse((object) => {
-    if (!isThreeMesh(object)) return;
-    const materials = Array.isArray(object.material) ? object.material : [object.material];
-    for (const material of materials) {
-      const record = material as THREE.Material & Record<string, unknown>;
-      for (const slot of FBX_TEXTURE_SLOTS) {
-        const texture = record[slot];
-        if (texture instanceof THREE.Texture) textures.add(texture);
-      }
-    }
-  });
-  return [...textures];
-}
-
-function hasUsableTextureImage(texture: THREE.Texture): boolean {
-  const image = texture.image as LoadableTextureImage | undefined;
-  if (!image) return false;
-  if (typeof image.naturalWidth === 'number') return image.naturalWidth > 0;
-  if (typeof image.width === 'number') return image.width > 0;
-  return true;
-}
-
-async function waitForTextureImage(texture: THREE.Texture): Promise<void> {
-  const image = texture.image as LoadableTextureImage | undefined;
-  if (!image || hasUsableTextureImage(texture) || (image.complete && image.naturalWidth === 0)) return;
-  if (typeof image.addEventListener !== 'function') return;
-
-  await new Promise<void>((resolve) => {
-    let settled = false;
-    const settle = (): void => {
-      if (settled) return;
-      settled = true;
-      clearTimeout(timeoutId);
-      image.removeEventListener?.('load', settle);
-      image.removeEventListener?.('error', settle);
-      resolve();
-    };
-    const timeoutId = setTimeout(settle, FBX_TEXTURE_WAIT_MS);
-    image.addEventListener?.('load', settle, { once: true });
-    image.addEventListener?.('error', settle, { once: true });
-  });
-}
-
-async function waitForFbxTextures(root: THREE.Object3D): Promise<void> {
-  await Promise.all(collectTextures(root).map(waitForTextureImage));
-}
 
 async function waitForPromiseOrTimeout(promise: Promise<void>, timeoutMs: number): Promise<void> {
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -121,37 +70,20 @@ async function waitForPromiseOrTimeout(promise: Promise<void>, timeoutMs: number
 }
 
 function removeUnavailableFbxTextureMaps(root: THREE.Object3D): number {
-  let removed = 0;
-  root.traverse((object) => {
-    if (!isThreeMesh(object)) return;
-    const materials = Array.isArray(object.material) ? object.material : [object.material];
-    for (const material of materials) {
-      const record = material as THREE.Material & Record<string, unknown>;
-      let changed = false;
-      for (const slot of FBX_TEXTURE_SLOTS) {
-        const texture = record[slot];
-        if (!(texture instanceof THREE.Texture) || hasUsableTextureImage(texture)) continue;
-        texture.dispose();
-        record[slot] = null;
-        removed += 1;
-        changed = true;
-      }
-      if (changed) {
-        // Blender FBX often marks materials transparent for alpha maps. After a
-        // failed external map load, keep the mesh opaque when opacity is full.
-        if (
-          'opacity' in material
-          && typeof material.opacity === 'number'
-          && material.opacity >= 1
-          && 'transparent' in material
-        ) {
-          material.transparent = false;
-        }
-        material.needsUpdate = true;
-      }
+  const result = removeUnavailableMaterialTextures(root, FBX_TEXTURE_SLOTS);
+  for (const material of result.changedMaterials) {
+    // Blender FBX often marks materials transparent for alpha maps. After a
+    // failed external map load, keep the mesh opaque when opacity is full.
+    if (
+      'opacity' in material
+      && typeof material.opacity === 'number'
+      && material.opacity >= 1
+      && 'transparent' in material
+    ) {
+      material.transparent = false;
     }
-  });
-  return removed;
+  }
+  return result.removed;
 }
 
 function buildFbxLoadSummary(
@@ -247,10 +179,10 @@ export async function loadFBX(
       textureLoadStarted
         ? waitForPromiseOrTimeout(textureLoads, FBX_TEXTURE_WAIT_MS)
         : Promise.resolve(),
-      waitForFbxTextures(root),
+      waitForTextureImages(collectMaterialTextures(root, FBX_TEXTURE_SLOTS), FBX_TEXTURE_WAIT_MS),
     ]);
     const removedTextureMaps = removeUnavailableFbxTextureMaps(root);
-    const textureMapCount = collectTextures(root).length;
+    const textureMapCount = collectMaterialTextures(root, FBX_TEXTURE_SLOTS).length;
     root.name = 'FBX_Root';
 
     const skinnedMeshes: THREE.SkinnedMesh[] = [];
