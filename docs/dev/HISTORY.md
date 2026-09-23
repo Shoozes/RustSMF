@@ -59,6 +59,14 @@ Rust `expect()` calls are confined to the test module. Existing model-authoring
 guards and user guidance already cover animated-target rename/duplicate/delete,
 so no speculative feature or backlog item was added.
 
+The animated-target rename restriction is a deliberate safety contract, not an
+implementation stub: object track names cannot be retargeted safely without
+keeping base clips, edited clips, playback, and undo/redo in sync. The rejection
+now explains the binding risk, and the Outliner test covers both direct and
+hierarchy-qualified targets such as `Body/Armor.position` in
+`source/frontend/src/utils/modelAuthoring.ts` and
+`source/frontend/src/utils/modelAuthoring.test.ts`.
+
 Verification:
 
 - `pwsh -NoProfile -File .\run.ps1 -Task context`: 13/13 project-integrity,

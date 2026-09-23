@@ -19,6 +19,11 @@ dated proof in [HISTORY.md](HISTORY.md).
 - The integrity scan found no production TODO/stub, broken relative import or
   re-export, or unresolved Rust module. The `placeholder` match is a real
   Outliner input hint; Rust `expect()` matches are test assertions.
+- Animated-target Outliner rename in `source/frontend/src/utils/modelAuthoring.ts`
+  remains fail-closed because name-based clip bindings could break; support
+  would require one atomic update across base clips, edited clips, playback, and
+  undo/redo. The status explains the risk, and tests cover direct and
+  hierarchy-qualified names without mutation.
 - The DAE sidecar/autosave and small-unit rig-overlay issues are fixed. Existing
   format, async lifecycle, and helper tests cover their contracts; detailed
   implementation and command evidence stays in HISTORY.

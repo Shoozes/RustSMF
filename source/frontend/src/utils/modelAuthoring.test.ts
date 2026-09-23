@@ -266,14 +266,19 @@ describe('renameModelObject', () => {
     assert.equal(getModelObjectAuthoringDisabledReason('glb'), undefined);
   });
 
-  it('blocks names that own animation tracks instead of breaking bindings', () => {
-    const { root, mesh } = makeModelRoot();
-    const clip = new THREE.AnimationClip('Move', 1, [
-      new THREE.VectorKeyframeTrack('Armor.position', [0, 1], [0, 0, 0, 1, 0, 0]),
-    ]);
-    const result = renameModelObject(root, mesh.uuid, 'Armor_New', [clip], 'glb');
-    assert.equal(result.ok, false);
-    if (!result.ok) assert.equal(result.reason, 'animated-target');
-    assert.equal(mesh.name, 'Armor');
+  it('blocks direct and hierarchy-qualified animation targets with an actionable reason', () => {
+    for (const trackName of ['Armor.position', 'Body/Armor.position']) {
+      const { root, mesh } = makeModelRoot();
+      const clip = new THREE.AnimationClip('Move', 1, [
+        new THREE.VectorKeyframeTrack(trackName, [0, 1], [0, 0, 0, 1, 0, 0]),
+      ]);
+      const result = renameModelObject(root, mesh.uuid, 'Armor_New', [clip], 'glb');
+
+      assert.ok(!result.ok, `track ${trackName} must keep its target name stable`);
+      assert.equal(result.reason, 'animated-target');
+      assert.match(result.message, /cannot be renamed without breaking its track binding/i);
+      assert.equal(mesh.name, 'Armor');
+      disposeThreeObject(root);
+    }
   });
 });

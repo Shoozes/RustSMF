@@ -389,7 +389,7 @@ export function renameModelObject(
     return {
       ok: false,
       reason: 'animated-target',
-      message: `Submodel ${object.name} is an animation target. Retargeting object tracks is not yet a safe rename contract.`,
+      message: `Submodel ${object.name} is targeted by an animation clip and cannot be renamed without breaking its track binding. Rename is available only when no clip targets this object.`,
     };
   }
 
