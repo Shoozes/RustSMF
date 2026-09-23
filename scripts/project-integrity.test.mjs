@@ -96,6 +96,31 @@ describe('project integrity checks', () => {
     assert.deepEqual(result.errors, [])
   })
 
+  it('documents every registered model format in the root README', () => {
+    const root = process.cwd()
+    const formatSource = readFileSync(join(root, 'source/frontend/src/utils/modelFormat.ts'), 'utf8')
+    const formatDeclaration = formatSource.match(/MODEL_SOURCE_FORMATS\s*=\s*\[([^\]]+)\]\s+as const/)
+    assert.ok(formatDeclaration, 'modelFormat.ts declares its source-format registry')
+    const formats = [...formatDeclaration[1].matchAll(/'([a-z]+)'/g)].map((match) => match[1])
+    const labels = new Map([
+      ['smf', 'SMF'],
+      ['glb', 'GLB/GLTF'],
+      ['fbx', 'FBX'],
+      ['dae', 'DAE/Collada'],
+      ['obj', 'OBJ'],
+    ])
+    const overview = readFileSync(join(root, 'README.md'), 'utf8')
+      .split(/\r?\n/)
+      .find((line) => line.startsWith('RustSMF is '))
+
+    assert.ok(overview, 'README.md has a one-line product overview')
+    for (const format of formats) {
+      const label = labels.get(format)
+      assert.ok(label, `add a README label for registered model format "${format}"`)
+      assert.ok(overview.includes(label), `README.md must mention registered model format ${label}`)
+    }
+  })
+
   it('keeps the workspace verify command aligned with the launcher safeguards', () => {
     const sourcePackage = JSON.parse(readFileSync(join(process.cwd(), 'source/package.json'), 'utf8'))
     const frontendPackage = JSON.parse(readFileSync(join(process.cwd(), 'source/frontend/package.json'), 'utf8'))

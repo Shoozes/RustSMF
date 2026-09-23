@@ -167,7 +167,7 @@ remains explicit. See HUMANOID_POSE_REVIEW.md for the bounded schema.
 | `src/utils/skinPointOverlay.ts` | Viewport-only sampled skin-point construction, validated point-to-source-vertex resolution, cached posed-vertex refresh/invalidation, and disposal; runtime source links stay outside serializable `userData`. |
 | `src/utils/staticMeshSkinPrep.ts` | Reversible promotion of static meshes to one root-bound skeleton, including original skin-attribute restoration for undo/redo. |
 | `src/loaders/geometryAttributes.ts` | Shared preview-safe UV/normal preparation and guarded indexed-tangent generation for GLB, FBX, and OBJ loaders. |
-| `src/loaders/*` | SMF/GLB/FBX/OBJ parsing, conversion, diagnostics, coordinate/DQ math, and validated export. |
+| `src/loaders/*` | SMF/GLB/FBX/DAE/OBJ parsing, conversion, diagnostics, coordinate/DQ math, and validated export. |
 | `src/loaders/smfSemantics.ts` | Shared relational and finite-value validation for parsed, worker-fallback, and serialized `ImportedSmf` payloads. |
 | `src/workers/*` | Runtime-validated SMF worker protocol, client, and worker entry. |
 | `src/backend-client/tauri.ts`, `binaryPayload.ts` | Guarded native dialog/read/write adapters, strict native byte normalization, browser fallbacks, and one shared lazy-client initialization promise for concurrent callers. |

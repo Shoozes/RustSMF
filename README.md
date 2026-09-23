@@ -1,6 +1,6 @@
 # RustSMF
 
-RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, and OBJ models.
+RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, DAE/Collada, and OBJ models.
 
 ## Three-way ownership
 

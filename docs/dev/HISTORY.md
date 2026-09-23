@@ -33,32 +33,71 @@ Verification:
 - `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 488/488 frontend unit tests, 10/10 Rust tests, lint, both typechecks, production/dependency guards, build/chunk checks, and repository safety gates.
 - `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: 105/105 Chromium tests passed.
 
-## 2026-09-21 — Caller-owned acceptance dependency closed
+## 2026-09-23 — App-state documentation and progress-log consolidation
 
-Re-audited the last active TODO item, the caller-owned humanoid skin/contact
-and receiving acceptance gate. The repository-owned mechanism and neutral
-noncombat proof are complete; the remaining requested evidence is produced by
-the consumer integration environment and cannot be generated truthfully by
-RustSMF alone.
+The root README and architecture ownership map now list the supported DAE/
+Collada loader alongside the other model formats. The pitfall ledger review date
+now reflects the DAE/FBX image-readiness update. The review snapshot was reduced
+to current findings and durable limits; detailed completed narratives remain in
+this history. Four closely related 2026-09-21 interim progress sections were
+consolidated into one final record, preserving their completed contracts,
+external-evidence boundary, and final verification without repeating stage-by-
+stage backlog and test snapshots.
 
-The frozen review artifacts are hash-bound to generation
-`50364735b61e4744bf486af660f9b60730dc746f642724af588d8171e681ea90`, model
-`0c440cb5ca48f1546eaed133b2b066f5bfc6e70978050577db919950cde430a1`, and
+The root README's supported-format overview is now covered by a project-
+integrity regression that reads the source-format registry, so new formats
+cannot be added without updating the user-facing list. The repository remains
+free of production stubs, unresolved relative imports/re-exports, and unresolved
+Rust modules. The measured context bank has 42 valid groups and a 52.2 KiB
+default route; no route changes or additional physical module split were
+warranted.
+
+The follow-up backlog and inbox sweep found no active tasks or architect/
+research drop-ins; `docs/research-inbox/` contains only its policy indexes. The
+source scan found no production TODO/FIXME/unimplemented stubs or skipped tests;
+Rust `expect()` calls are confined to the test module. Existing model-authoring
+guards and user guidance already cover animated-target rename/duplicate/delete,
+so no speculative feature or backlog item was added.
+
+Verification:
+
+- `pwsh -NoProfile -File .\run.ps1 -Task context`: 13/13 project-integrity,
+  9/9 context-bank tests, 42 groups, 52.2 KiB default, zero warnings.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: 13/13 project-integrity,
+  9/9 context-bank, 2/2 main-sync, 2/2 process-ownership, 488/488 frontend,
+  and 10/10 Rust tests; lint, both typechecks, production/dependency guards,
+  build, entry-chunk, and Rust checks passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: 105/105
+  Chromium tests passed in 56.5 seconds. Negative-path console diagnostics were
+  asserted; Node also emitted non-blocking `DEP0205` and `NO_COLOR`/`FORCE_COLOR`
+  runner warnings. After cleanup, ports 5173 and 1420 were clear and no process
+  command line referenced this checkout.
+
+## 2026-09-21 — Repository, deferred-contract, and acceptance closeout
+
+The four repo-owned gaps identified during the same-day integrity and backlog
+review are now closed. The source-workspace `verify` script includes the
+game-ready dependency guard already enforced by `run.ps1`, with project-
+integrity coverage locking the frontend script, workspace wrapper, and verify
+composition. Lazy Tauri-client initialization shares one in-flight import and
+clears rejected initialization so later calls can retry; direct tests cover
+concurrent callers and retry.
+
+The Animate quadratic option is explicitly metadata-only: SMF preserves the
+setting while Three.js previews linearly, and the control explains the boundary.
+SMF scene-object authoring controls are disabled with the source-owned reason;
+the same-texture action is diagnostic-only and performs no UV or material
+ownership mutation. Unit and browser coverage lock each contract.
+
+Caller-owned humanoid skin/contact and receiving acceptance remains outside
+RustSMF's completion boundary. The frozen review artifacts are hash-bound to
+generation `50364735b61e4744bf486af660f9b60730dc746f642724af588d8171e681ea90`,
+model `0c440cb5ca48f1546eaed133b2b066f5bfc6e70978050577db919950cde430a1`, and
 profile `c58f2a04784e3e0e5eb35d5c6aaa1ddc16c101ca43321bcb2725c91bbadfea95`.
-The body review and range report explicitly identify their scope as calibrated
-angular/source evidence, report `review-required`, and state that they do not
-prove all-triangle/all-frame self-intersection or receiving-game acceptance.
-The review also records no concrete new transfer or deformation defect and
-requires a named gameplay discrepancy before any producer change.
-
-This proves an external evidence dependency rather than an unfinished RustSMF
-implementation. The P1 item is therefore retired from `TODO.md` and preserved
-here as an integration boundary. It must not be reopened or satisfied by
-widening limits, reusing static captures, or treating a calibrated report as a
-receiving receipt. Reopen only if fight-game-study supplies an attended,
-hash-bound source/receiving receipt that identifies a reproducible RustSMF
-mechanism defect; then add a bounded noncombat fixture and a repository-owned
-test before changing the producer.
+Their angular/source scope explicitly does not prove all-triangle/all-frame
+self-intersection or receiving-game acceptance. Reopen only when fight-game-
+study supplies an attended, hash-bound receipt identifying a reproducible
+RustSMF defect, then add a bounded noncombat fixture and repository-owned test.
 
 Evidence locations, all outside tracked application sources:
 
@@ -68,124 +107,22 @@ Evidence locations, all outside tracked application sources:
 - `output/verification/review6-release-receipts.log` (capture log, not the
   missing attended receiving receipt)
 
-The ownership boundary is also stated in `README.md`, `APP_STATE.md`, and the
-humanoid pose-review route. RustSMF's remaining contract is the tested,
-reproducible tool behavior and neutral fixtures; fighter-specific appearance,
-pair spacing, and receiving acceptance remain consumer-owned.
+RustSMF retains responsibility for the tested and reproducible tool behavior
+and neutral fixtures. Fighter-specific appearance, pair spacing, and receiving
+acceptance remain consumer-owned. The current TODO stays empty.
 
-Verification for this documentation and backlog closeout:
+Verification for this final same-day state:
 
-- `node scripts/verify-context-bank.mjs`: 42 groups, 51.8 KiB default
-  orientation, zero warnings.
-- `node --test scripts/context-bank.test.mjs`: 9/9 passed.
-- `node scripts/verify-project-integrity.mjs`: passed with the explicit empty
-  backlog contract.
-- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 12/12
-  project-integrity, 9/9 context-bank, 483/483 frontend, and 10/10 Rust tests,
-  plus lint, typechecks, production guards, build, and entry-chunk checks.
-
-## 2026-09-21 - Verification contract and async bridge integrity
-
-The full repo/app integrity pass found no broken relative imports or
-re-exports, production stubs/TODO markers, unresolved Rust modules, or stale
-active backlog fields. It did find one public-entry-point gap: `run.ps1`
-already ran the game-ready dependency guard, while `source/package.json`'s
-`verify` script did not. The workspace now exposes and runs the same guard, and
-the project-integrity test locks the frontend script, workspace wrapper, and
-verify composition together.
-
-The lazy Tauri bridge wrapper now caches its in-flight dynamic import instead
-of allowing concurrent callers to construct duplicate wrappers. Rejected
-imports clear the cache so later actions can retry. No physical split was made
-to `useLoadModel.ts` or `ThreeViewport.tsx`: the pressure inventory confirmed
-they are large integration owners, but their existing leaf contracts and
-focused routes are stable and a split would add change risk without a proven
-boundary.
-
-At the time of this verification, the caller-owned humanoid skin/contact item
-was the only backlog task; no repo-owned TODO or planned stub was promoted in
-that pass. The project-integrity workflow route now includes both package
-manifests because they define the verification entry-point contract. A later
-backlog-hygiene review is recorded below.
-
-Verification:
-
-- `node --test scripts/project-integrity.test.mjs`: 12/12 passed.
-- `node scripts/verify-project-integrity.mjs`: passed with 255 frontend
-  source/test files and 11 durable docs.
-- `node scripts/verify-context-bank.mjs`: passed with 42 groups, 52.7 KiB
-  default orientation, and zero warnings.
-- `node --test scripts/context-bank.test.mjs`: 9/9 passed.
-- `npm.cmd run typecheck`, `npm.cmd run lint`, and
-  `npm.cmd run check:game-ready-dependencies` passed from `source/frontend`.
-- `npm.cmd run verify` from `source` passed with 480/480 frontend units across
-  86 files, 10/10 Rust tests, lint, both typechecks, production-boundary,
-  dependency, build/chunk, and Rust checks.
-- `pwsh -NoProfile -File .\run.ps1 -Task verify` passed with 12/12
-  project-integrity, 9/9 context-bank, 2/2 main-sync, 2/2 process-ownership,
-  480/480 frontend, and 10/10 Rust tests plus the full launcher gate.
-- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: 104/104
-  Chromium tests passed. Expected negative-path browser errors and warnings
-  were asserted by their owning tests; ports 5173 and 1420 were clear after
-  cleanup.
-- `npm.cmd ls --workspaces --all --depth=0` and
-  `npm.cmd audit --omit=optional --audit-level=low` passed; audit reported zero
-  vulnerabilities.
-
-## 2026-09-21 - Backlog hygiene and deferred contracts
-
-Rechecked the active backlog against the current implementation and moved no
-completed item because none remained in `TODO.md`; completed verification and
-bridge-integrity work stays in the dated history above. The source scan found
-no production TODO/FIXME/unimplemented marker, skipped test, broken relative
-import/re-export, or unresolved Rust module.
-
-Four evidence-backed gaps are now explicit executable tasks: reconcile the
-quadratic animation control with its linear runtime preview, decide and safely
-implement or close SMF scene-object authoring, resolve the diagnostic-only
-material-reuse/atlas boundary, and directly test lazy Tauri bridge concurrency
-and retry behavior. These are kept separate from the caller-owned visual and
-receiving acceptance gate because they have different owners and proof.
-
-The default orientation route now measures 58.6 KiB, so its focused cap is 64
-KiB. This is a measured route adjustment that keeps the active backlog in the
-normal orientation context without loading history or broad source groups.
-
-## 2026-09-21 - Deferred contract closeout
-
-Closed the four repo-owned items from the active backlog. The Animate
-quadratic option is now an explicit metadata-only contract: SMF preserves the
-setting, Three.js previews linearly, and the control explains that boundary
-inline with an accessible description and browser coverage. No second runtime
-animation mutation path was added.
-
-SMF scene-object authoring is now a reviewed permanent limitation. The
-Outliner disables rename, reorder, duplicate, delete, static append, and
-surface-edit controls for SMF, gives the source-owned reason, and points users
-to editable GLB, FBX, or OBJ sources. Unit and browser tests cover the policy.
-
-The retired same-texture shelf action is explicitly diagnostic-only. Export
-guidance states that shared references are reported without UV or
-material-ownership mutation; no atlas workflow is implied. Policy and browser
-assertions lock the boundary.
-
-The lazy native-client promise owner now lives in a small reusable loader
-utility. Direct tests prove overlapping callers receive the same in-flight
-promise and a rejected initialization clears state for a later retry.
-
-Verification for this closeout includes the focused animation and SMF
-authoring browser cases, 483/483 frontend unit tests, frontend typechecks,
-lint, and the final workspace gates:
-
-- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed with 12/12
-  project-integrity, 9/9 context-bank, 2/2 main-sync, 2/2 process-ownership,
-  483/483 frontend, and 10/10 Rust tests plus lint, typechecks, production
-  guards, build, and entry-chunk checks.
-- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: 105/105
-  Chromium tests passed; the focused animation and SMF authoring cases are
-  included, and runner-owned ports were clear after cleanup.
 - `node scripts/verify-context-bank.mjs`: 42 groups, 53.5 KiB default
-  orientation, zero warnings.
+  orientation, zero warnings; `node --test scripts/context-bank.test.mjs`: 9/9.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: 12/12 project-integrity,
+  9/9 context-bank, 2/2 main-sync, 2/2 process-ownership, 483/483 frontend,
+  and 10/10 Rust tests; lint, typechecks, production guards, build/chunk, and
+  Rust checks passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: 105/105
+  Chromium tests passed; runner-owned ports were clear after cleanup.
+- `npm.cmd ls --workspaces --all --depth=0` and
+  `npm.cmd audit --omit=optional --audit-level=low`: passed; zero vulnerabilities.
 
 ## 2026-09-20 - Supplied Mixamo pair source-inspection closeout
 

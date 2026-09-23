@@ -1,6 +1,6 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-09-20 (project format-registry parity, proportion-sensitive leg transfer, portable profiles, and diagnostic viewer evidence).
+Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, proportion-sensitive leg transfer, portable profiles, and diagnostic viewer evidence).
 
 ### Q: What pitfall are we preventing?
 
