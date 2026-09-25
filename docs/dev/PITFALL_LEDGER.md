@@ -1,8 +1,12 @@
 # Pitfall Ledger
 
-Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, proportion-sensitive leg transfer, portable profiles, and diagnostic viewer evidence).
+Last reviewed: 2026-09-25 (stable PL IDs and Guard references plus v0.2 palette, version-sync, and journey regression guards; prior DAE/FBX and retargeting records remain covered).
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-001
+**Guard:** `source/frontend/src/utils/modelFormat.test.ts`, `source/frontend/src/utils/projectCodec.test.ts`
+
 
 **What:** A newly supported model format can be accepted by the loader but rejected when a saved project is reopened.
 
@@ -23,6 +27,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep the all-format project round-trip in the default unit gate and treat a new format-registry entry without persistence coverage as incomplete.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-002
+**Guard:** `source/frontend/src/utils/naturalRetarget.test.ts`, `source/frontend/src/utils/animationRetarget.test.ts`
+
 
 **What:** Correct source/target side mapping and finite world-direction transfer can still produce a target leg that swings nearly horizontal or clips the body when the rigs have materially different proportions and rest frames.
 
@@ -45,6 +53,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Any new natural-motion locomotion profile must include full-frame angle/bend/contact evidence, Quad review, and accepted continuous-loop video before it is selected by a receiving game. Compare the Melee/Brawl motion and skeleton candidates before adding more clamps to this track.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-003
+**Guard:** `source/frontend/src/utils/gameReadyGeneration.test.ts`
+
 
 **What:** Individually staged and synchronized output files can still expose a mixed game-ready generation after a failure or concurrent producer run.
 
@@ -78,6 +90,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-004
+**Guard:** `source/frontend/src/utils/fittedRig.test.ts`
+
+
 **What:** A float32 animation timestamp that rounds onto the terminal can make an ordinary rational sample look like the terminal, causing either a false fidelity failure or a silently skipped final grid pose.
 
 **Context and constraints:** Fitted-rig export uses 60 Hz STEP keys and a float32 next-down output policy for frame-indexed consumers. Verification must compare every requested regular frame plus the exact clip terminal, require exact clip identity/duration, and restore both scenes after each probe.
@@ -110,6 +126,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-005
+**Guard:** `source/frontend/tests/native.spec.ts`
+**Manual evidence:** Use the packaged Windows app for actual Open/Save/cancel OS dialogs; keep that evidence separate from native IPC mocks.
+
+
 **What:** Passing native IPC mocks can hide failures in the shipped WebView content policy and background-save timing.
 
 **Why it happened:** Preview did not apply Tauri's CSP, so selected GLTF sidecars passed mock tests while native blob fetches failed. Foreground save also rejected a click during autosave instead of waiting for the background write.
@@ -121,6 +142,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Current solution:** Permit the local blob resource scheme and actual WebView2 IPC hostname. Reserve foreground save ownership before awaiting active autosave, then recheck freshness. This preserves existing serialization and stale-result handling without creating another queue. Exact Windows results and build identity belong in `HISTORY.md`.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-006
+**Guard:** `source/frontend/src/utils/workspacePlayback.test.ts`
+
 
 **What:** A workspace default can silently disable explicit authoring modes while selectors and telemetry still appear correct.
 
@@ -134,6 +159,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-007
+**Guard:** `scripts/context-bank.test.mjs`
+
+
 **What:** A context bank can declare exclusions that its generator does not enforce.
 
 **Why it happened:** `defaults.skip_dirs` was checked for shape but unused during scanning. Explicit paths also bypassed scan exclusions and could cross a symlink ancestor.
@@ -146,6 +175,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-008
+**Guard:** `source/frontend/tests/modern-shell.spec.ts`, `source/frontend/tests/visual.spec.ts`
+**Manual evidence:** Review Modern screenshots at all six required viewport sizes; confirm the Original strict baseline is unchanged.
+
+
 **What:** A shell can pass document-level overflow checks while a toolbar or overlay silently clips controls, and shared legacy media rules can make a new Modern overlay expand or collide at narrow widths.
 
 **Why it happened:** The original layout intentionally used horizontally scrollable shelves and a full-width wrapped toolbar below 800 px. Reusing the same class names for Modern preserved behavior but also inherited `width: 100%`, wrapping, and cross-axis alignment that were wrong for an absolute viewport overlay and full-width command bar.
@@ -157,6 +191,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Current solution:** Modern overrides inherited width, wrapping, overflow, and alignment at its shell boundary; compact drawers start closed; status reserves both drawer triggers; six responsive lanes plus focus, target-size, and DPI checks own the regression. Effectiveness: `97/100`, durable.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-009
+**Guard:** `source/frontend/src/utils/skinPointOverlay.test.ts`
+
 
 **What:** A helper that returns `FailureCode | null` can be treated like a success boolean and invert a user interaction while remaining type-correct.
 
@@ -190,6 +228,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-010
+**Guard:** `source/frontend/src/utils/viewportLayout.test.ts`
+
+
 **What:** Fixed world-unit camera padding can make tiny assets disappear and huge assets clip, while a correct auto-fit can expose hidden render-overdraw and test-coordinate assumptions.
 
 **Why it happened:** Perspective distance used `maxDim * 0.85 + 2`, orthographic extent used a one-unit floor, wheel zoom used a fixed world-unit delta, and near/far/orbit ranges were unrelated to the loaded model. The 300,000-vertex worker fixture also stacked 100,000 triangles in the same pixels; once a tiny model was correctly framed, that unrelated codec test saturated rendering. TransformControls and journey helpers encoded screen paths learned from the old composition.
@@ -207,6 +249,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Treat camera, model-scale, renderer-density, and screen-coordinate changes as one visual-integration surface; run the tiny/huge browser case, worker case, journey, and strict snapshots together.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-011
+**Guard:** `source/frontend/tests/journeys/hand-wave.journey.spec.ts`
+
 
 **What:** Valid animation keys and plausible joint motion can still produce a visibly broken emote when nearby mesh vertices are weighted to the wrong downstream bone.
 
@@ -241,6 +287,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-012
+**Guard:** `scripts/git-main-safety.test.mjs`
+
+
 **What:** A convenience Git sync command can silently discard, overwrite, or choose between local and remote work while claiming to keep `main` aligned.
 
 **Why it happened:** The prior local push/pull controls could initialize or repoint a remote, remove ignored/tracked files, reset/clean/stash a worktree, fall back to `ours`/`theirs` conflict selection, and force-push after a failed rebase. Those actions make a review decision outside the workspace and can erase work that has not been inspected.
@@ -257,6 +307,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-013
+**Guard:** `source/frontend/src/loaders/geometryAttributes.test.ts`, `source/frontend/tests/export-formats.spec.ts`
+
+
 **What:** Re-importing exported triangle-soup geometry can emit a Three.js tangent error even though the original source loaded cleanly.
 
 **Why it happened:** The GLB loader called `computeTangents()` before checking for compatible UV/normal attributes and a valid indexed triangle layout. Static preparation followed by GLB export can legitimately produce non-indexed skinned geometry, so the error surfaced only on the exported-file validation path.
@@ -272,6 +326,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep the focused geometry units and the static OBJ prepare/export browser case together when changing loader attribute preparation or export topology.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-014
+**Guard:** `source/frontend/scripts/run-unit-tests.mjs`, `source/frontend/package.json`
+
 
 **What:** A focused unit command can appear filtered while silently running every case if the discovery wrapper drops forwarded Node test flags.
 
@@ -292,6 +350,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep the forwarding contract in the app-state and test-runner docs and rerun both focused and full unit commands after runner or package-script changes.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-015
+**Guard:** `source/frontend/tests/lifecycle.spec.ts`
+
 
 **What:** A replacement, additive model operation, native file operation, batch model job, or long editing session can discard user work, publish stale status, materialize inputs beyond its aggregate budget, leak partial resources, read an unowned recovery path, overlap writes to one destination, grow history without a memory contract, or publish timeline state on every render frame.
 
@@ -324,6 +386,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-016
+**Guard:** `source/frontend/src/loaders/threeToSmf.test.ts`, `source/frontend/tests/export-formats.spec.ts`
+
+
 **What:** A plausible-looking GLB/FBX-to-SMF conversion can apply coordinate ownership twice and serialize bone/animation data in a different space than the SMF importer consumes.
 
 **Context and constraints:** The review covered `main` at `e77d6bc4da703e64ba389d879a44235dde3a3717`. Non-SMF conversion is supported only for compatible single-root skinned sources whose mesh, nested-rig, and animation boundaries are covered by numeric checks; static FBX/OBJ roots must first pass the reversible root-skeleton preparation, and unsupported channels remain blocked.
@@ -355,6 +421,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-017
+**Guard:** `source/frontend/src/utils/boundedFileRead.test.ts`, `source/frontend/src/utils/modelFormat.test.ts`
+
+
 **What:** Calling `File.arrayBuffer()` before checking `File.size` can materialize an oversized browser model and bypass the native/SMF allocation boundary.
 
 **Context and constraints:** Browser picker, persistent file input, and drag/drop all feed the same latest-intent load path. The current native and SMF binary limits are 256 MiB and must remain consistent without misleading the user or replacing the mounted model.
@@ -384,6 +454,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep decoded estimates aligned with parser allocation sites and update focused limits tests before raising either the encoded input or decoded-memory budgets.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-018
+**Guard:** `source/frontend/package.json`, `source/frontend/scripts/run-unit-tests.mjs`
+
 
 **What:** A command intended only to inventory Playwright cases can accidentally execute the full suite, and historical environment caveats can distract from real current assertion failures.
 
@@ -416,6 +490,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-019
+**Guard:** `source/frontend/src/workers/smfCodecClient.test.ts`
+
+
 **What:** A cancellation signal can arrive while a worker adapter is being initialized and be missed if the listener is registered only after handler setup, allowing stale work to reach `postMessage` or wait for the timeout.
 
 **Context and constraints:** SMF import/export is latest-intent owned and must terminate stale worker tasks without falling back or publishing progress after a newer load/export. Worker creation and message-handler installation are adapter boundaries that may be synchronous in tests or alternate runtimes.
@@ -445,6 +523,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep setup-time cancellation cases in async-worker client tests whenever handler registration, task ownership, or timeout ordering changes.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-020
+**Guard:** `source/frontend/src/utils/materialPreview.test.ts`, `source/frontend/tests/export-formats.spec.ts`
+
 
 **What:** Viewport-only material and weight-preview state can leak into GLB/FBX exports when the exporter consumes the same live Three.js root mounted by the renderer.
 
@@ -477,6 +559,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-021
+**Guard:** `source/frontend/src/utils/smfRigPolicy.test.ts`, `source/frontend/src/loaders/smfSemantics.test.ts`
+
+
 **What:** SMF skin influences can be silently rebound to different bones when deform-order indices are mistaken for full rig-node IDs.
 
 **Context and constraints:** SMF rig arrays include `isBone=0` head/dummy nodes, while mesh skin payloads index only deform bones. RustSMF's runtime skeleton also contains deform bones only. Export/reimport must preserve exact influence identity without structural heuristics.
@@ -507,6 +593,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep skin payload checks in every structured SMF roundtrip and require a head-node fixture before changing node-list or skin-index code.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-022
+**Guard:** `source/frontend/src/hooks/poseEdits.test.ts`, `source/frontend/src/utils/rigEdits.test.ts`
+
 
 **What:** A child SMF pose can export in the wrong space, and a reset button can destroy its bind offset by treating local zero as bind pose.
 
@@ -539,6 +629,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-023
+**Guard:** `source/frontend/tests/rig.spec.ts`
+
+
 **What:** A Three.js TransformControls controller can appear attached in app state while its visible/pickable gizmo is absent, and a decorative endpoint line can steal pointer ownership from a real gizmo handle.
 
 **Context and constraints:** RustSMF uses Three.js r182, one shared canvas, explicit Rig/Animate history ownership, quad/ortho pane cameras, and a separate old-editor-style endpoint interaction. A drag must mutate exactly one history domain without orbit, endpoint, or selection side effects.
@@ -570,6 +664,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-024
+**Guard:** `source/frontend/src/utils/rigIk.test.ts`
+
+
 **What:** Odd head motion can be misdiagnosed as broken IK, and endpoint dragging or TransformControls can be mislabeled as IK even though those paths directly edit one bone. The old demos showed the head behavior before SMF-to-GLB recovery, and RustSMF did not have an IK solver before this slice.
 
 **Why it happened:** A head is downstream of neck/spine rotations, so moving an ancestor correctly moves the head. Separately, the historical SMF bug treated serialized rig/world poses as local deltas and could resolve skipped non-deform head nodes against the wrong parent. Playback ownership can also reapply an animation pose after a manual edit. These are different failure classes and need different evidence.
@@ -593,6 +691,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-025
+**Guard:** `source/frontend/tests/shell-model.spec.ts`, `source/frontend/src/utils/viewportLayout.test.ts`
+
+
 **What:** Quad-mode UI can display `data-viewport-layout="quad"` while pointer hit-testing still uses stale single-view viewport specs, so immediate ortho-pane clicks no-op or route as perspective.
 
 **Why it happened:** The canvas layout prop updated during React render, but `viewportRef` was refreshed in a normal effect. Under parallel Playwright load, the Rig Add child smoke clicked after the DOM attribute changed but before the effect updated hit specs.
@@ -614,6 +716,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep layout/pane smoke in the related slice whenever `ThreeViewport` layout timing or `viewportLayout.ts` contracts change.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-026
+**Guard:** `source/frontend/src/loaders/smfDiagnostics.test.ts`
+
 
 **What:** SMF-source export and diagnostics can falsely fail or corrupt strict roundtrip checks when prebuilt non-bone/head nodes are treated as synthetic identities or when sign-equivalent DQs are compared component-for-component.
 
@@ -637,6 +743,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-027
+**Guard:** `scripts/project-integrity.test.mjs`
+
+
 **What:** Context docs can move while README, run scripts, agent instructions, and `summary_bank.json` keep pointing at deleted or nonexistent planning paths.
 
 **Why it happened:** The backlog moved from `docs/TODO.md` to `docs/dev/TODO.md`, and old local agent/tool instructions still referenced `plan.md`, but there was no automated summary-bank path guard to catch stale explicit paths.
@@ -658,6 +768,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep active docs under `docs/dev/`; if a doc moves, update `summary_bank.json` in the same change and run the verifier.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-028
+**Guard:** `source/frontend/geneye-playwright.json`, `source/frontend/scripts/run-playwright-geneye.mjs`
+
+
 
 **What:** A GenEye health check or successful browser fallback can make an e2e run look GenEye-assisted without producing RustSMF Playwright evidence.
 
@@ -682,6 +797,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-029
+**Guard:** `source/frontend/tests/README.md`, `source/frontend/playwright.config.ts`
+
+
 **What:** Running separate Playwright commands in parallel can create a false failure because each command tries to start its own strict preview server on port 5173.
 
 **Why it happened:** The repo's Playwright config intentionally uses `npm run build && npm run preview -- --host 127.0.0.1 --port 5173 --strictPort`. Launching two independent `npx playwright test ...` processes at once makes the second preview process fail with `Port 5173 is already in use`, even when the app and tests are healthy.
@@ -704,6 +823,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-030
+**Guard:** `source/frontend/tests/shell-model.spec.ts`
+
+
 **What:** React hooks called at module scope can make the built app boot to a blank page while lint, typecheck, unit tests, and Vite build still pass.
 
 **Why it happened:** A Tauri client cache used `useRef` outside `useLoadModel()`. React hook dispatchers are only valid during component or custom-hook render, so the production app failed at import time with `TypeError: Cannot read properties of null (reading 'useRef')`.
@@ -725,6 +848,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Add a small static grep/check if this recurs, or include module-scope hook search in integrity passes that touch hook files.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-031
+**Guard:** `source/frontend/tests/shell-model.spec.ts`, `source/frontend/tests/visual.spec.ts`
+
 
 **What:** SMF models can parse successfully with no console errors while the visible mesh is torn apart, and a GLB export can be saved without proving that its rig and animation structure reload intact.
 
@@ -758,6 +885,12 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-032
+**Guard:** `source/frontend/tests/visual.spec.ts`
+**Manual evidence:** Review any changed strict screenshot baselines against the product state before accepting them.
+
+
+
 **What:** Optional strict visual snapshots can preserve a stale broken render after the actual loader has been fixed, and generated Playwright reports can dirty the repo after every run if tracked.
 
 **Why it happened:** Default e2e uses tolerant screenshot byte-size checks for WebGL stability, so stale committed strict baselines were not exercised by normal `verify`. Separately, `playwright-report/index.html` and `test-results/.last-run.json` were tracked despite ignore rules.
@@ -779,6 +912,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Add tighter semantic visual heuristics once quad/ortho view or large bone handles are implemented, so default e2e can catch obvious coherence failures without exact pixel matching.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-033
+**Guard:** `scripts/git-main-safety.test.mjs`
+
+
 
 **What:** Work can remain stranded on temp/review branches or auto-stashes, then docs can make the wrong source of truth look authoritative.
 
@@ -803,6 +941,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-034
+**Guard:** `source/frontend/tests/animation.spec.ts`
+
+
+
 **What:** JSX text nodes do not interpolate `${}` template syntax — wrapping in `{}` is required.
 
 **Why it happened:** The clip duration in the Inspector was written as `(${(c.duration || 0).toFixed(2)}s)` inside a JSX text node. In JSX, `${}` outside of a JS expression block `{}` is rendered as literal characters, not as a template expression.
@@ -823,6 +966,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** When writing JSX with dynamic text mixed with static text, always wrap computed parts in `{}`. Consider a Playwright assertion for at least one clip item label format to catch future regressions.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-035
+**Guard:** `source/frontend/tests/modern-shell.spec.ts`
+
+
 
 **What:** Narrow toolbar layouts can make mode tabs partially unreachable or visually inert while broader viewport continuity checks still pass.
 
@@ -846,6 +994,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-036
+**Guard:** `scripts/project-integrity.test.mjs`
+
+
+
 **What:** PowerShell test wrappers can report success even when npm/Playwright fails.
 
 **Why it happened:** PowerShell functions return everything written to the success stream. `Invoke-FrontendNpm` emitted npm output plus a boolean, so `if (-not (Invoke-FrontendNpm ...))` evaluated the non-empty output array as truthy even when `$LASTEXITCODE` was nonzero.
@@ -867,6 +1020,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** When adding wrapper helpers around native commands, test at least one failing path and inspect the shell exit code.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-037
+**Guard:** `scripts/project-integrity.test.mjs`
+
+
 
 **What:** Progress docs can claim a gate, fixture, or coverage path exists after planned work, while the repo does not actually contain the file or script.
 
@@ -890,6 +1048,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Before marking coverage complete, require file existence checks or generated-fixture source checks plus a fresh command result in TODO or APP_STATE.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-038
+**Guard:** `source/frontend/scripts/check-eslint-coverage.mjs`, `source/frontend/package.json`
+
+
 
 **What:** TypeScript/TSX app code can drift while `npm run lint` and Vite build both report success.
 
@@ -923,6 +1086,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-039
+**Guard:** `source/frontend/tests/native.spec.ts`
+
+
+
 **What:** Native save dialog cancellation can be reported as a successful export.
 
 **Why it happened:** `saveFile` returned `void`, so callers could not distinguish a completed write/download from a Tauri save dialog cancel.
@@ -944,6 +1112,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep native dialog tests in `source/frontend/tests/native.spec.ts` whenever save/open behavior changes.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-040
+**Guard:** `source/frontend/src/loaders/smfBinary.test.ts`, `source/frontend/src/loaders/coord.test.ts`
+
+
 
 **What:** Invalid SMF edge cases can produce opaque parser failures, NaN dual-quaternion transforms, or invalid animation timing during export.
 
@@ -968,6 +1141,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-041
+**Guard:** `source/frontend/src/loaders/threeToSmf.test.ts`, `source/frontend/tests/export-formats.spec.ts`
+
+
+
 **What:** Non-SMF save-as-SMF can silently lose fidelity if static meshes, mismatched skeletons, duplicate bone names, object-level tracks, morph tracks, material data, or scale animation are accepted as if they were fully representable in the current SMF DQ path.
 
 **Why it happened:** The earlier removed GLB-to-SMF helper attempted rough DQ construction without fixture-backed animation proof, and SMF stores rig/animation as DQs without a scale channel.
@@ -990,6 +1168,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Add real-file skinned GLB/FBX fixtures if converter support expands to materials, morphs, multiple skeletons, or scale-aware formats.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-042
+**Guard:** `source/frontend/src/loaders/smfBinary.test.ts`
+
+
 **What:** Module moves/refactors (e.g. extracting BinaryReader/Writer + bytes util to smfBinary.ts) can leave duplicate code behind in the original files + consumers, plus the new file stays untracked, while docs claim "deduped".
 
 **Why it happened:** The integrity pass added smfBinary.ts and updated some notes, but smf.ts retained its local copies of the classes + bytes fn; useLoadModel and tauri kept their buffer copies; barrel was not updated to expose the util; no follow-up grep or consumer audit + `git add` for the moved file.
@@ -1012,6 +1195,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-043
+**Guard:** `source/frontend/src/loaders/smfSemantics.test.ts`, `source/frontend/tests/shell-model.spec.ts`
+
+
+
 **What:** SMF flat node lists + explicit `isBone=0` head dummies can either produce crossed editor bones or hang the loader when a skipped head node self-parents.
 **Why it happened:** The original hierarchy path created `THREE.Bone` for every node and attached by direct parent index. The first head-skip fix added effective-parent walking, but root head dummies in real SMF files can parent to themselves; without a visited set, the walk never terminated. Once that was fixed, inverse bind matrices still needed fresh world matrices before `Skeleton.calculateInverses()`, and animation tracks for skipped head nodes emitted missing-target warnings because those dummies are not scene objects.
 **Where:** `source/frontend/src/loaders/smf.ts` (old bone loop + threeBones + attach + skel ctor + remap + name gen), `source/frontend/src/loaders/smfRig.ts` (export only), poseEdits regex, ThreeViewport (helper on root + findBoneByName on skel), Inspector (getRoot + recursive children filter), coord.test golden fixture (heads present but only export/roundtrip tested), mixamo sample (14 heads, 24 deform, skins 0-22 seq).
@@ -1026,6 +1214,12 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep root-head/self-parent and real-sample load tests near any SMF hierarchy change; before changing bone parent logic, rerun targeted units plus `npm --workspace frontend run test:e2e -- tests/shell-model.spec.ts -g "can load a real SMF sample"`.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-044
+**Guard:** `source/frontend/tests/native.spec.ts`, `source/frontend/package.json`
+**Manual evidence:** Install and launch the produced NSIS package on Windows; record package identity and launch result.
+
+
 
 **What:** Project launchers can look healthy while not actually starting the app for the default user path.
 
@@ -1050,6 +1244,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-045
+**Guard:** `source/frontend/playwright.config.ts`, `scripts/dev-process-ownership.test.mjs`
+
+
+
 **What:** Vite dev-server HMR websocket failures can masquerade as Playwright app regressions.
 
 **Why it happened:** After the Vite 8 upgrade, the dev server could emit `ws error: RangeError: Max payload size exceeded` during parallel WebGL/file-flow tests. Affected pages reloaded to initial state, so assertions failed even though the built app behavior was valid.
@@ -1073,6 +1272,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-046
+**Guard:** `source/frontend/src/loaders/coord.test.ts`
+
+
+
 **What:** Node/DOM polyfills for canvas 2d (used by SMF texture decode in import + extracted canvas-sprite label makers) can be partial or mutually clobbering after modularity extracts, causing silent test failures or typecheck breaks only on full gate runs.
 
 **Why it happened:** makeBoneLabel (and future 2d viz) + importSMF both execute document.createElement('canvas').getContext('2d') + assign/use fill*/scale/textBaseline/createImageData; tests mutated global document in install + per-it overrides without full coverage of props/methods or restore, and no types on mock fns.
@@ -1095,6 +1299,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-047
+**Guard:** `source/frontend/scripts/check-entry-chunks.mjs`, `source/frontend/package.json`
+
+
+
 **What:** Verification scripts can pass while an expected production chunk split is missing or a static import silently pulls a lazy native bridge back into the browser entry.
 
 **Why it happened:** `check-entry-chunks.mjs` printed a warning and exited 0 when `three-vendor` was absent, skipped with a success exit when `dist` could not be read, and did not inspect the Vite manifest's static/dynamic import graph. A material-repair caller then imported the Tauri bridge directly from `App.tsx`, defeating the hook's lazy boundary while the build still succeeded.
@@ -1116,6 +1325,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep guard scripts fail-closed unless a skipped state is explicitly part of the command contract.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-048
+**Guard:** `source/frontend/tests/lifecycle.spec.ts`
+
+
 
 **What:** Independently guarded picker, file/drop, loader, and export awaits can each be locally fresh while still being globally stale, allowing an older result to replace or report over a newer user intent.
 
@@ -1148,6 +1362,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-049
+**Guard:** `scripts/dev-process-ownership.test.mjs`
+
+
+
 **What:** Rogue Node.js / Vite dev servers (and intermediate tauri-cli parent processes) left listening on 5173 (or holding resources) after the cmd/pwsh launcher window is closed via its title-bar X button, or after the Tauri desktop app window is closed, or on hard Ctrl+C / parent kill. Subsequent launcher runs then hit "address in use" or leave stray node processes.
 
 **Why it happened:** `tauri dev` (via beforeDevCommand in tauri.conf.json) spawns a long-lived child (`npm run dev` → Vite) that outlives the Tauri Rust process and the outer CLI in many Windows console-close scenarios; no process-group ownership, recursive tree kill, port/cmdline reaper on entry, or explicit child lifetime tie in the launcher (run.ps1 direct & npm or run.bat delegation). Tauri CLI child mgmt alone was insufficient for X-close of the visible pwsh or direct manual `tauri dev`.
@@ -1171,6 +1390,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-050
+**Guard:** `source/frontend/tests/shell-model.spec.ts`
+
+
 **What:** A workspace continuity test can mistake an intentionally unmounted panel for lost shared state, or fail to observe a real reset while only checking the currently visible panel.
 
 **Why it happened:** The Timeline owns the visible scrub label and is not rendered in Export, even though playback time remains in shared state and continues to drive the viewport. A transition assertion that waits for `time-display` in every mode tests panel presence rather than playback continuity.
@@ -1192,6 +1415,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** When adding a workspace or moving state between components, assert continuity through the narrowest persistent owner and separately assert the new panel's mount contract.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-051
+**Guard:** `source/frontend/src/backend-client/binaryPayload.test.ts`, `source/frontend/tests/native.spec.ts`
+
 
 **What:** Broad TypeScript assertions at external boundaries can make malformed Tauri/DOM/exporter values and Three.js API drift look valid, while recursive cleanup can dispose shared GPU resources repeatedly or omit skeleton-owned textures.
 
@@ -1215,6 +1442,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep new external message/resource types behind named validators and the identity-deduplicating disposal adapter.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-052
+**Guard:** `source/frontend/src/loaders/smfDiagnostics.test.ts`
+
 
 **What:** SMF export can make roundtrip diagnostics pass by mutating the source animation DQs that serve as the expected result.
 
@@ -1247,6 +1478,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-053
+**Guard:** `source/frontend/src/loaders/threeToSmf.test.ts`
+
+
 **What:** Indexed Three.js geometry can appear valid in the viewport but produce an invalid or incomplete SMF when conversion writes unique vertices while the SMF serializer emits only sequential triangle records.
 
 **Context and constraints:** Runtime GLB and FBX meshes commonly reuse vertices through an index buffer. The SMF writer stores a flat triangle-soup vertex stream and does not serialize Three.js index metadata, so conversion must make the topology explicit before worker validation or save.
@@ -1278,6 +1513,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-054
+**Guard:** `source/frontend/playwright.config.ts`, `source/frontend/package.json`
+
+
 **What:** A valid repo-local npm installation can be shadowed by an inaccessible user-profile npm shim, causing launcher, Playwright web-server, or verification commands to fail before project code runs.
 
 **Why it happened:** The managed Windows environment resolved the global `npm.cmd`, whose prefix helper attempted to read `C:\Users\jc816\AppData\Roaming\npm`. Node itself and its adjacent bundled `npm-cli.js` were available, but callers delegated resolution back to `PATH`.
@@ -1302,6 +1541,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep package-manager discovery in one launcher helper and exercise at least one canonical runner task instead of validating only direct package-manager commands.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-055
+**Guard:** `source/frontend/tests/lifecycle.spec.ts`
+
 
 **What:** During an atomic model replacement, a new animation clip array can briefly bind to the previous root's `AnimationMixer`, producing missing-track warnings and applying playback intent to the wrong scene.
 
@@ -1331,6 +1574,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** When a Three.js controller is recreated from React state, guard secondary effects by controller-owner identity and initialize the new controller from one complete current intent.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-056
+**Guard:** `source/frontend/tests/export-formats.spec.ts`, `source/frontend/tests/native.spec.ts`
+
 
 **What:** Required browser and Rust compatibility tests can report success while silently skipping their real model fixtures.
 
@@ -1363,6 +1610,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-057
+**Guard:** `run.ps1`, `scripts/project-integrity.test.mjs`
+**Manual evidence:** When shell behavior differs, compare the exact command in an operator PowerShell session and the managed Codex shell.
+
+
 **What:** A Python installation visible and executable in the operator's Windows shell can still be unavailable to the managed Codex sandbox, causing a diagnostic or skill-validation command to report that Python is missing.
 
 **Context and constraints:** The repository's required verification lane is PowerShell, Node, npm, and Rust; Python is tooling-only for the installed skill validator. Sandbox diagnosis must remain read-only and must not hard-code a personal interpreter path, weaken permissions, persist PATH changes, or create a virtual environment as an access workaround.
@@ -1394,6 +1646,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-058
+**Guard:** `source/frontend/src/utils/skinBrushIndex.test.ts`, `source/frontend/src/utils/skinPointOverlay.test.ts`
+
+
 **What:** A skinned brush index can silently fall back to bind-position math when the mesh is not actually bound or its skin tuple is malformed.
 
 **Why it happened:** The old path used an optional structural `boneTransform` cast and tests supplied a fake method, so a production mesh without that method could appear valid while painting the wrong vertices.
@@ -1405,6 +1661,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Current solution:** Posed world sampling fails closed; cached indexes include pose and attribute versions in their invalidation signature. Effectiveness: `97/100`, durable.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-059
+**Guard:** `source/frontend/src/loaders/smfBinary.test.ts`, `source/frontend/src/loaders/smfSemantics.test.ts`
+
 
 **What:** A malformed SMF can drive huge allocations, unbounded string scans, section overreads, or silent numeric wrapping before the user receives an error.
 
@@ -1418,6 +1678,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 
 ### Q: What pitfall are we preventing?
 
+**ID:** PL-060
+**Guard:** `source/frontend/tests/native.spec.ts`
+
+
 **What:** A desktop SMF load can perform duplicate filesystem reads and present native header acceptance as if it were full codec validation.
 
 **Why it happened:** The load hook requested a native metadata summary, then requested the same path again for the actual worker payload; the native command was named validation even though it only parsed the header envelope.
@@ -1429,6 +1693,11 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Current solution:** The load path reads once and delegates structural truth to the typed codec; native I/O is size-bounded and moved to blocking tasks. Effectiveness: `95/100`, durable.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-061
+**Guard:** `source/frontend/tests/export-formats.spec.ts`
+**Manual evidence:** Import the exported FBX in an independent FBX application and inspect the skinned mesh and clip playback before claiming target compatibility.
+
 
 **What:** A binary FBX can pass the app's Three.js re-import check while failing a real target application; selected texture sidecars can be silently discarded at the format branch; and FBX/DAE texture images must finish loading before their temporary resource URLs are released or the mounted model/autosave snapshot can contain invalid maps.
 
@@ -1460,6 +1729,10 @@ Last reviewed: 2026-09-23 (DAE/FBX sidecar readiness, project-format registry, p
 **Next prevention step:** Keep at least one external target validator for each new FBX contract change and do not treat a browser-only roundtrip as broad format compatibility.
 
 ### Q: What pitfall are we preventing?
+
+**ID:** PL-062
+**Guard:** `source/frontend/tests/modern-shell.spec.ts`
+
 
 **What:** A browser interaction helper can treat a temporarily removed screen-coordinate telemetry attribute as `(0, 0)`, then report a failed IK drag during a workspace transition even though the target is visible and the app is healthy.
 

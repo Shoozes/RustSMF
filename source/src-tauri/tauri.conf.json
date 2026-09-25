@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "RustSMF",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "com.shoozes.rustsmf",
   "build": {
     "beforeDevCommand": "node frontend/scripts/start-vite-dev.mjs",
@@ -27,7 +27,7 @@
     ]
   },
   "bundle": {
-    "active": false,
+    "active": true,
     "targets": ["nsis"],
     "icon": ["icons/icon.png"],
     "resources": {}

@@ -7,6 +7,7 @@ const SECONDARY_COMMANDS = [
   'recover-project-btn',
   'export-glb-btn',
   'export-fbx-btn',
+  'export-dae-btn',
   'export-smf-btn',
   'ping-rust-btn',
 ] as const;
@@ -26,9 +27,36 @@ test.describe('Calm Modern shell', () => {
     await page.goto('/');
 
     await expect(page.getByTestId('app-shell')).toHaveAttribute('data-shell-variant', 'modern');
+    await expect(page.getByTestId('app-shell')).toHaveAttribute('data-ui-theme', 'lumen-alloy');
     await expect(page.getByTestId('modern-empty-state')).toBeVisible();
     await expect(page.getByTestId('modern-support-panel')).toHaveCount(0);
     await expect(page.getByTestId('timeline')).toHaveCount(0);
+
+    const appbar = page.locator('.modern-appbar');
+    const modeTabs = page.getByRole('tablist', { name: 'Editor workspace mode' });
+    const appbarRect = await appbar.boundingBox();
+    const modeTabsRect = await modeTabs.boundingBox();
+    expect(appbarRect).not.toBeNull();
+    expect(modeTabsRect).not.toBeNull();
+    expect(modeTabsRect!.y).toBeGreaterThanOrEqual(appbarRect!.y + appbarRect!.height - 1);
+    for (const testId of ['open-model-btn', 'save-project-btn', 'editor-undo-btn', 'editor-redo-btn', 'export-btn']) {
+      const command = page.getByTestId(testId);
+      await expect(command, testId).toBeVisible();
+      const rect = await command.boundingBox();
+      expect(rect, testId).not.toBeNull();
+      expect(rect!.x).toBeGreaterThanOrEqual(appbarRect!.x - 1);
+      expect(rect!.x + rect!.width).toBeLessThanOrEqual(appbarRect!.x + appbarRect!.width + 1);
+    }
+    const viewportControls = page.getByTestId('viewport-controls-overlay');
+    await expect(viewportControls).toBeVisible();
+    expect(await viewportControls.evaluate((element) => element.closest('.viewport-container') !== null)).toBe(true);
+    for (const testId of ['viewport-layout-single', 'viewport-layout-quad', 'viewport-perspective-toggle', 'viewport-display-menu-button']) {
+      await expect(page.getByTestId(testId), testId).toBeVisible();
+    }
+    const statusRect = await page.getByTestId('status-text').boundingBox();
+    expect(statusRect).not.toBeNull();
+    expect(statusRect!.height).toBeLessThanOrEqual(28);
+    await expect(page.getByTestId('status-text')).toHaveCSS('white-space', 'nowrap');
 
     await page.getByTestId('modern-more-menu-button').click();
     for (const testId of SECONDARY_COMMANDS) {
@@ -84,9 +112,12 @@ test.describe('Calm Modern shell', () => {
   for (const dpr of [1, 1.25, 2]) {
     test(`keeps canvas backing dimensions aligned at DPR ${dpr}`, async ({ browser }, testInfo) => {
       const baseURL = String(testInfo.project.use.baseURL ?? 'http://localhost:5173');
+      const viewport = dpr === 1.25
+        ? { width: 1440, height: 900 }
+        : { width: 1024, height: 768 };
       const context = await browser.newContext({
         baseURL,
-        viewport: { width: 1024, height: 768 },
+        viewport,
         deviceScaleFactor: dpr,
       });
       const page = await context.newPage();
@@ -106,6 +137,12 @@ test.describe('Calm Modern shell', () => {
         expect(dimensions.rendererPixelRatio).toBe(String(dpr));
         expect(Math.abs(dimensions.backingWidth - dimensions.cssWidth * dpr)).toBeLessThanOrEqual(1);
         expect(Math.abs(dimensions.backingHeight - dimensions.cssHeight * dpr)).toBeLessThanOrEqual(1);
+        if (dpr === 1.25) {
+          await page.screenshot({
+            path: testInfo.outputPath('modern-shell-scaled-desktop-dpr-1.25.png'),
+            fullPage: true,
+          });
+        }
       } finally {
         await context.close();
       }

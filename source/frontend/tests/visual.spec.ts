@@ -8,6 +8,8 @@ import {
 } from './helpers/smoke-helpers';
 import { dragRigIkTarget } from './helpers/viewport-interactions';
 
+const MODERN_MODES = ['view', 'rig', 'skin', 'animate', 'export'] as const;
+
 type ViewportCase = {
   name: string;
   width: number;
@@ -126,14 +128,36 @@ test.describe('RustSMF visual confirmations', () => {
   });
 
   for (const viewport of VIEWPORTS) {
-    test(`app shell renders primary surfaces without overflow (${viewport.name})`, async ({ page }) => {
+    test(`app shell renders primary surfaces without overflow (${viewport.name})`, async ({ page }, testInfo) => {
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await page.goto('/');
 
       await expect(page).toHaveTitle(/RustSMF/i);
       await expect(page.getByTestId('status-text')).toContainText('Three.js viewport ready');
+      await expect(page.getByTestId('app-shell')).toHaveAttribute('data-ui-theme', 'lumen-alloy');
       await expect(page.getByTestId('open-model-btn')).toBeVisible();
       await expect(page.getByTestId('export-btn')).toBeVisible();
+      const appbar = page.locator('.modern-appbar');
+      const appbarRect = await getRequiredRect(appbar);
+      const modeTabs = page.getByRole('tablist', { name: 'Editor workspace mode' });
+      const modeTabsRect = await getRequiredRect(modeTabs);
+      expect(modeTabsRect.top).toBeGreaterThanOrEqual(appbarRect.bottom - 1);
+      for (const mode of MODERN_MODES) {
+        await expect(page.getByTestId(`mode-tab-${mode}`)).toBeVisible();
+      }
+      for (const commandId of ['open-model-btn', 'save-project-btn', 'editor-undo-btn', 'editor-redo-btn', 'export-btn']) {
+        const command = page.getByTestId(commandId);
+        await expect(command, commandId).toBeVisible();
+        const rect = await getRequiredRect(command);
+        expect(rect.left).toBeGreaterThanOrEqual(appbarRect.left - 1);
+        expect(rect.right).toBeLessThanOrEqual(appbarRect.right + 1);
+      }
+      const viewportControls = page.getByTestId('viewport-controls-overlay');
+      await expect(viewportControls).toBeVisible();
+      expect(await viewportControls.evaluate((element) => element.closest('.viewport-container') !== null)).toBe(true);
+      for (const controlId of ['viewport-layout-single', 'viewport-layout-quad', 'viewport-perspective-toggle', 'viewport-display-menu-button']) {
+        await expect(page.getByTestId(controlId), controlId).toBeVisible();
+      }
       await expect(page.getByTestId('viewport-container')).toBeVisible();
       await expect(page.getByTestId('three-canvas')).toBeVisible();
       await expect(page.getByTestId('modern-empty-state')).toBeVisible();
@@ -145,10 +169,24 @@ test.describe('RustSMF visual confirmations', () => {
       await expect(page.getByTestId('export-smf-btn')).toBeVisible();
       await expect(page.getByTestId('open-project-btn')).toBeVisible();
       await expect(page.getByTestId('recover-project-btn')).toBeVisible();
+      await expect(page.getByTestId('export-dae-btn')).toBeVisible();
       await expect(page.getByTestId('ping-rust-btn')).toBeVisible();
       await page.getByTestId('modern-more-menu-button').click();
 
+      await page.getByTestId('viewport-display-menu-button').click();
+      await expect(page.getByTestId('viewport-display-menu-panel')).toBeVisible();
+      await expect(page.getByTestId('viewport-wireframe-toggle')).toBeVisible();
+      await page.getByTestId('viewport-display-menu-button').click();
+
+      const status = await getRequiredRect(page.getByTestId('status-text'));
+      expect(status.height).toBeLessThanOrEqual(28);
+      await expect(page.getByTestId('status-text')).toHaveCSS('white-space', 'nowrap');
+
       await expectNoHorizontalOverflow(page);
+      await page.screenshot({
+        path: testInfo.outputPath(`modern-shell-${viewport.name}.png`),
+        fullPage: true,
+      });
       await expectRenderedScreenshot(page.getByTestId('viewport-container'), viewport.screenshotMinBytes);
       await expectNoCriticalBrowserErrors(page);
     });

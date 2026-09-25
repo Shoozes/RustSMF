@@ -8,7 +8,7 @@ export default defineConfig({
   fullyParallel: false,
   retries: 0,
   workers: 1,
-  outputDir: 'test-results/hand-wave-journey',
+  outputDir: 'test-results/product-journeys',
   reporter: [['list']],
   use: {
     ...baseConfig.use,

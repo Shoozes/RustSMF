@@ -6,6 +6,9 @@ import {
   collectRelativeModuleSpecifiers,
   findBrokenRelativeImports,
   findNonPortableCurrentDocReferences,
+  findPitfallGuardErrors,
+  findThemeIntegrityErrors,
+  findVersionSyncErrors,
   validateTodoDocument,
   validateProjectIntegrity,
 } from './project-integrity-lib.mjs'
@@ -135,6 +138,18 @@ describe('project integrity checks', () => {
     assert.match(sourcePackage.scripts?.verify ?? '', /(?:^| && )npm run check:game-ready-dependencies(?: && |$)/)
   })
 
+  it('preserves the launcher npm exit code and repo-local npm preference', () => {
+    const launcher = readFileSync(join(process.cwd(), 'run.ps1'), 'utf8')
+    for (const newline of ['\n', '\r\n']) {
+      const source = launcher.replace(/\r?\n/g, newline)
+      const frontendNpm = /function Invoke-FrontendNpm\([\s\S]*?\r?\n}\r?\n/.exec(source)?.[0] ?? ''
+      const npmCommand = /function Invoke-NpmCommand\([\s\S]*?\r?\n}\r?\n/.exec(source)?.[0] ?? ''
+      assert.match(frontendNpm, /\$exitCode\s*=\s*\$LASTEXITCODE/)
+      assert.match(frontendNpm, /return\s+\$exitCode\s+-eq\s+0/)
+      assert.match(npmCommand, /&\s+\$NodeExecutable\s+\$NpmCliPath\s+@NpmArgs/)
+    }
+  })
+
   it('reports malformed durable-doc encoding rather than silently replacing bytes', () => {
     const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-integrity-'))
     temporaryRoots.push(root)
@@ -142,5 +157,72 @@ describe('project integrity checks', () => {
     assert.ok(validateProjectIntegrity(root).errors.includes('durable project doc must be readable UTF-8: README.md'))
     writeFileSync(join(root, 'README.md'), '# Valid UTF-8 — café\n')
     assert.ok(!validateProjectIntegrity(root).errors.some(error => error.includes('readable UTF-8')))
+  })
+
+  it('requires stable pitfall IDs and verifies each exact Guard file reference', () => {
+    const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-integrity-'))
+    temporaryRoots.push(root)
+    mkdirSync(join(root, 'docs/dev'), { recursive: true })
+    mkdirSync(join(root, 'scripts'), { recursive: true })
+    writeFileSync(join(root, 'scripts/check.test.mjs'), 'export {}\n')
+    const ledger = [
+      '### Q: What pitfall are we preventing?',
+      '**ID:** PL-001',
+      '**Guard:** `scripts/check.test.mjs`',
+    ].join('\n')
+    writeFileSync(join(root, 'docs/dev/PITFALL_LEDGER.md'), ledger)
+    assert.deepEqual(findPitfallGuardErrors(root), [])
+
+    writeFileSync(join(root, 'docs/dev/PITFALL_LEDGER.md'), ledger.replace('PL-001', 'PL-002').replace('scripts/check.test.mjs', 'scripts/missing.test.mjs'))
+    assert.match(findPitfallGuardErrors(root).join('\n'), /expected PL-001, found PL-002/)
+    assert.match(findPitfallGuardErrors(root).join('\n'), /Guard file does not exist: scripts\/missing\.test\.mjs/)
+  })
+
+  it('keeps Modern palette ownership separate and requires scoped flat theme rules', () => {
+    const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-integrity-'))
+    temporaryRoots.push(root)
+    const themes = join(root, 'source/frontend/src/styles/themes')
+    mkdirSync(themes, { recursive: true })
+    writeFileSync(join(root, 'source/frontend/src/index.css'), '.app-shell { color: var(--ui-text); border-color: var(--ui-palette-hex-334455); }\n')
+    writeFileSync(join(themes, 'modern.css'), [
+      '.app-shell[data-shell-variant="modern"][data-ui-theme="lumen-alloy"] {',
+      '  --ui-app-background: #101111;',
+      '  --ui-surface: #191a1a;',
+      '  --ui-surface-raised: #222323;',
+      '  --ui-text: #cdcecb;',
+      '  --ui-text-strong: #efefec;',
+      '  --ui-text-muted: #b2b4b0;',
+      '  --ui-accent: #e4d2a8;',
+      '  --ui-palette-hex-334455: #3b3c38;',
+      '}',
+    ].join('\n'))
+    writeFileSync(join(themes, 'original.css'), '.app-shell[data-theme="original"] { --ui-palette-hex-334455: #334455; }\n.app-shell[data-theme="original"] .button { color: white; }\n')
+    assert.deepEqual(findThemeIntegrityErrors(root), [])
+
+    writeFileSync(join(root, 'source/frontend/src/index.css'), '.app-shell { color: #fff; border-color: var(--ui-palette-hex-missing); }\n')
+    const paletteErrors = findThemeIntegrityErrors(root).join('\n')
+    assert.match(paletteErrors, /literal palette colors belong in a theme stylesheet/)
+    assert.match(paletteErrors, /missing shared palette alias --ui-palette-hex-missing/)
+
+    writeFileSync(join(themes, 'original.css'), '.app-shell .button { color: white; }\n')
+    writeFileSync(join(themes, 'modern.css'), 'body { background: linear-gradient(black, white); }\n')
+    const errors = findThemeIntegrityErrors(root).join('\n')
+    assert.match(errors, /Lumen Alloy tokens lack the Modern theme scope/)
+    assert.match(errors, /must remain flat/)
+    assert.match(errors, /Original selector is not explicitly scoped/)
+  })
+
+  it('requires matching frontend, Cargo, and Tauri versions', () => {
+    const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-integrity-'))
+    temporaryRoots.push(root)
+    mkdirSync(join(root, 'source/frontend'), { recursive: true })
+    mkdirSync(join(root, 'source/src-tauri'), { recursive: true })
+    writeFileSync(join(root, 'source/frontend/package.json'), '{"version":"0.2.0"}\n')
+    writeFileSync(join(root, 'source/src-tauri/Cargo.toml'), '[package]\nversion = "0.2.0"\n')
+    writeFileSync(join(root, 'source/src-tauri/tauri.conf.json'), '{"version":"0.2.0"}\n')
+    assert.deepEqual(findVersionSyncErrors(root), [])
+
+    writeFileSync(join(root, 'source/src-tauri/Cargo.toml'), '[package]\nversion = "0.1.0"\n')
+    assert.match(findVersionSyncErrors(root).join('\n'), /version mismatch: frontend=0\.2\.0, Cargo=0\.1\.0, Tauri=0\.2\.0/)
   })
 })

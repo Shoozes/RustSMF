@@ -20,6 +20,8 @@
     "test": "npm run test:unit",
     "test:e2e": "npm --workspace frontend run test:e2e",
     "test:e2e:list": "npm --workspace frontend run test:e2e:list",
+    "test:journey": "npm --workspace frontend run test:journey",
+    "test:journey:hand-wave": "npm --workspace frontend run test:journey:hand-wave",
     "test:visual-strict": "npm --workspace frontend run test:visual-strict",
     "test:visual-update": "npm --workspace frontend run test:visual-update",
     "test:unit": "npm --workspace frontend run test:unit",

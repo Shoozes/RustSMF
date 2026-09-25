@@ -1,19 +1,30 @@
 param(
     [string]$Remote = '',
     [string]$Message,
-    [switch]$Yes
+    [switch]$Yes,
+    [switch]$StagedOnly,
+    [string[]]$AllowedPaths,
+    [string]$ExpectedBase,
+    [string]$ExpectedTree
 )
 
 $ErrorActionPreference = 'Stop'
 $env:GIT_TERMINAL_PROMPT = '0'
 
 . (Join-Path $PSScriptRoot 'git-main-common.ps1')
+. (Join-Path $PSScriptRoot 'git-staged-publish.ps1')
 
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 Set-Location -LiteralPath $repoRoot
 
 $config = Get-GitMainConfiguration -RepoRoot $repoRoot -Remote $Remote
 $branch = Assert-GitMainContext -RepoRoot $repoRoot -ExpectedRemote $config.ExpectedRemote -DefaultBranch $config.DefaultBranch
+
+if ($StagedOnly) {
+    Assert-StagedPublishCandidate -ExpectedBase $ExpectedBase -ExpectedTree $ExpectedTree -AllowedPaths $AllowedPaths
+} elseif ($AllowedPaths -or $ExpectedBase -or $ExpectedTree) {
+    throw 'Candidate constraints require -StagedOnly.'
+}
 
 Confirm-OrExit -Prompt "Commit reviewed changes and push '$branch' to origin?" -Approved:$Yes
 
@@ -23,6 +34,10 @@ $authState = Set-GitHubTokenAuthentication $token
 $token = $null
 
 try {
+    if ($StagedOnly) {
+        Invoke-StagedMainPublish -RepoRoot $repoRoot -ExpectedRemote $config.ExpectedRemote -Branch $branch -ExpectedBase $ExpectedBase -ExpectedTree $ExpectedTree -AllowedPaths $AllowedPaths -Message $Message
+        return
+    }
     $remoteProbeResult = Invoke-GitCapture @('ls-remote', '--exit-code', '--heads', 'origin', "refs/heads/$branch")
     $remoteProbe = $remoteProbeResult.Output | Out-String
     $remoteProbeExit = $remoteProbeResult.ExitCode

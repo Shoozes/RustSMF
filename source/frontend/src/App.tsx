@@ -1310,6 +1310,7 @@ export default function App() {
       data-testid="app-shell"
       data-theme={themeId}
       data-shell-variant={theme.shellVariant}
+      data-ui-theme={theme.shellVariant === 'modern' ? 'lumen-alloy' : undefined}
       data-editor-mode={editorMode}
     >
       <Toolbar
@@ -1523,7 +1524,7 @@ export default function App() {
               )}
             </div>
           )}
-          <div data-testid="status-text" className={`status-overlay absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${ui.isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
+          <div data-testid="status-text" aria-live="polite" title={ui.status} className={`status-overlay absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${ui.isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
             {ui.status}
             {ui.isLoading && ' …'}
           </div>

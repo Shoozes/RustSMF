@@ -23,6 +23,6 @@
   "timeout_ms": 600000,
   "expected_reports": [],
   "artifact_roots": [
-    "test-results/hand-wave-journey"
+    "test-results/product-journeys"
   ]
 }

@@ -1,6 +1,123 @@
 # RustSMF History
 
-This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; active work belongs in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
+This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
+
+## 2026-09-25 — RustSMF v0.2 productization closeout
+
+Completed the four v0.2 outcomes: Modern visual refresh, UI hierarchy, five
+product journeys with regression guards, and Windows release/LTS evidence. The
+Modern Lumen Alloy theme owns its neutral graphite, off-white, and restrained
+brass palette; the shared stylesheet owns layout and behavior. The Modern
+toolbar keeps file/product commands on row one and Model/Rig/Skin/Animate/Export
+on row two, with camera/display controls in the viewport, one contextual drawer,
+and a slim status region. Required CSS viewports were visually reviewed. The
+intended Modern `loaded-smf-bone-flow` strict snapshot was updated; the Original
+strict snapshot remains unchanged at SHA-256
+`e5ee611a6b1b3fced0c152eacf42d4797fa084ab4f621476075297581a111846`.
+
+The sequential journey command passed the retained hand-wave story and the four
+new stories for SMF-to-GLB roundtrip, project edit/save/reopen continuity,
+external-texture readiness with skinned/animated FBX roundtrip, and preservation
+of dirty work through failed or canceled replacement. All 62 Pitfall Ledger
+entries have stable `PL-001`–`PL-062` IDs and exact existing Guard files;
+project integrity also checks palette ownership, Original selector scope, and
+frontend/Cargo/Tauri version sync. Semantic Three.js rig, selection, and
+diagnostic colors remain documented rendering exceptions.
+
+The version was advanced to `0.2.0` across frontend, Cargo, and Tauri only after
+the acceptance gate passed. The configured NSIS package is
+`source/src-tauri/target/release/bundle/nsis/RustSMF_0.2.0_x64-setup.exe`,
+SHA-256 `1512226323e76aa60e1591c1bdc0e968c5306e3699971168c2ceb27c811fb34f`.
+This pass built and hashed the installer; it did not install or launch that
+artifact. The desktop smoke used native IPC mocks, not real Windows OS dialogs.
+Earlier attended Windows dialog acceptance remains recorded in the 2026-09-07
+entry below; this pass did not repeat that manual journey.
+
+Immediately before retirement, fresh `origin` heads matched the reviewed tips:
+`main` `6be43c41d21b3677e1d00119d03ce04c6e7c4e8d`; Copilot integrity
+`a4dac7631336e018c087d9bdfeb0b57bbdaa6cbf` (main ahead 112, branch unique 0);
+Copilot review `ac2d06307b1f15efe6982b3b2af71265c0b30fdf` (105, 0); execute-plan
+PR1 `fc17d7ffdc0f8f601611bc3b5d1a78ffe6faf55e` (109, 1); execute-plan PR2
+`3c98f851c42c707e27d23a32f2cc369fcbc7b489` (109, 3). Pull refs #1 and #2
+matched the Copilot branches and were confirmed merged; no pull refs or retention
+dependency matched either execute-plan branch. Current `main` contains the
+non-SMF-to-SMF conversion and application wiring, with broader exporter,
+roundtrip, native, and browser coverage. The execute-plan tips' unique commits
+were limited to test precision or already-integrated behavior. All four refs
+were deleted with `--force-with-lease` pinned to those exact tips; a follow-up
+`git ls-remote --heads` confirmed they are absent. No code was pushed.
+
+Verification:
+
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: passed after the final
+  screenshot-test changes; 17/17 project-integrity, 9/9 context-bank, 2/2
+  synchronization, 2/2 process-ownership, 495/495 frontend unit, and 10/10 Rust
+  tests; lint, both typechecks, production/dependency guards, build/chunk, and
+  Rust checks passed. Context bank: 43 groups, 58.7 KiB default orientation,
+  zero warnings.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: 105/105 passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:journey -NoGenEye`: 5/5 passed
+  sequentially.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:visual-strict -NoGenEye`: 3/3
+  passed; Original snapshot hash remained unchanged.
+- `pwsh -NoProfile -File .\run.ps1 -Task desktop-smoke`: release executable,
+  10/10 Rust tests, and 13/13 native IPC mock browser tests passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task package:windows`: built the 0.2.0 NSIS
+  artifact at the path and SHA-256 above. No installer install/launch result is
+  claimed.
+- Closeout Summary Bank route check: `pwsh -NoProfile -File .\run.ps1 -Task context`
+  passed 17/17 project-integrity and 9/9 context-bank tests. The
+  default remains 43 groups and 58.7 KiB; the five-journey route now includes
+  the four product specs and shared sidecar/interaction helpers, measures 97.2
+  KiB under its 104 KiB cap, and has no skipped paths. The integrity route
+  measures 71.4/80 KiB, the Pitfall Ledger route 179.7/192 KiB, and the theme
+  route 195.0/200 KiB; all selected routes have no skipped paths.
+- The six responsive viewport screenshots and the 1440x900 DPR 1.25 shell
+  capture were reviewed; targeted checks passed 6/6 matrix cases and 1/1 DPR
+  case. The Modern loaded-state snapshot SHA-256 is
+  `8298475f4f0f1ac664cb4598b92cd847719d04c9f6145d7ca479c096b725170`.
+
+### Selective publication proof
+
+The Git blocker was whole-worktree staging in the publish helper, not branch
+divergence. Added the explicit staged-only path/tree/base contract, preserving
+partial-file owner edits and all existing default-mode safeguards. Failed pushes
+retain one exact candidate commit for an idempotent retry; remote advancement
+stops without a rebase. The selected batch excludes the unfinished bone-scale
+retargeting implementation, its user documentation, and its mixed-file hunks.
+
+An isolated Windows checkout verified candidate tree
+`e07693f49e25b769c87cbe11dafcf61d4ac63b2c` on base `6be43c4`.
+The app source subtree is `db2fe5179af7df9fd23e31f49488ee1402aeb9ab`.
+Node 26.5.0, PowerShell 7.6.6, and Cargo 1.98.1 ran the following commands
+sequentially through `pwsh -NoProfile -File ./run.ps1 -Task <task> -NoGenEye`:
+
+- `verify`: exit 0; 17 integrity, 10 context, 9 Git safety, 2 process ownership,
+  488 frontend unit, and 10 Rust tests passed, plus lint, typechecks, build,
+  chunk/dependency guards, fmt, Clippy, and cargo check.
+- `test:e2e`: exit 0, 105/105 passed.
+- `test:journey`: exit 0, 5/5 sequential journeys passed.
+- `test:visual-strict`: exit 0, 3/3 passed; no baselines changed.
+- `desktop-smoke`: exit 0; unbundled release build, 10 Rust tests, and
+  13 native IPC mock browser tests passed.
+- `package:windows`: exit 0; the selected candidate installer is retained at
+  `source/src-tauri/target/release/bundle/nsis/verified-main/RustSMF_0.2.0_x64-setup.exe`,
+  SHA-256 `0574369d11dd3f6fe1f6c4edc63c5b29a4fb3c571c952b62514aaae115eed38b`.
+
+The initial isolated check exposed CRLF-sensitive test matching and context
+budget accounting. The launcher assertion now exercises LF and CRLF, and context
+rendering normalizes line endings without rewriting sources or raising budgets.
+The complete gate above passed after those fixes with ordinary Windows checkout
+line endings. The selected bank validates 43 groups, 58.4 KiB default, no warnings.
+All six responsive screenshots and the DPR 1.25 capture were reviewed again.
+
+The earlier 495-test result and installer hash above describe the combined dirty
+workspace; this 488-test candidate excludes owner retargeting work. Only this
+evidence record and review prose changed after the release gate; final context
+validation covers that documentation delta. Logs, the allowlist, preservation
+receipt, and saved screenshots are retained under ignored
+`runtime-data/selective-publish/`; the isolated proof checkout location is
+recorded there. Installation and live OS-dialog acceptance were not repeated.
 
 ## 2026-09-23 — Rig-helper scale and DAE texture readiness
 

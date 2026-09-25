@@ -10,8 +10,10 @@ browser requests them, causing startup 404s before any app assertions run.
 
 - `pwsh -File run.ps1 -Task verify`: context-bank validation/tests, fail-closed ESLint coverage, lint, app and test typechecks, production `any` guard, production build, chunk checks, frontend units, and Rust fmt/clippy/tests/check.
 - `pwsh -File run.ps1 -Task test:e2e`: Playwright through the checked `geneye-playwright.json` argv manifest with deterministic GenEye artifact review; add `-NoGenEye` for the independent browser-only lane.
-- `pwsh -File run.ps1 -Task test:journey`: opt-in recorded hand-wave workflow through `geneye-journey.json` at 1440x900 and 125% device scale; writes the current Calm Modern UI WebM and 12 checkpoints under ignored `output/playwright/hand-wave-journey/` and retains GenEye keyframe/temporal evidence under ignored runtime data.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:journey`: runs five product journeys sequentially through `playwright.journey.config.ts`: the retained hand-wave workflow, SMF open/inspect/GLB export/re-import, project edit/save/reopen/continue, external-FBX sidecar readiness plus skinned-animation FBX roundtrip, and dirty-work preservation through canceled and failed missing-resource replacements. The hand-wave capture remains under ignored `output/playwright/hand-wave-journey/`; raw results use ignored `test-results/product-journeys/`.
+- `npm.cmd run test:journey:hand-wave`: targeted hand-wave run for focused repair work.
 - `pwsh -File run.ps1 -Task desktop-smoke`: unbundled Tauri build, Rust native tests, and the native IPC browser suite.
+- `pwsh -NoProfile -File .\run.ps1 -Task package:windows`: NSIS installer build; prints the artifact path and SHA-256.
 - Rust owns dialog invocation through its pinned `tauri-plugin-dialog` dependency; the frontend has no unused dialog-plugin package. Native resource-bundle reads, staged writes, and project recovery remain deterministic IPC contracts; true OS-dialog interaction is evidence-gated.
 - `pwsh -File run.ps1 -Task test:visual-strict`: opt-in committed WebGL snapshots.
 - `pwsh -File run.ps1 -Task test:visual-update`: intentional strict-baseline refresh only.
@@ -47,11 +49,11 @@ npm.cmd run test:e2e -- --reporter=line
 
 The 37 tests formerly in `smoke.spec.ts` retain their titles across the current domain-owned browser suites. Use `npm.cmd run test:e2e:list` for the authoritative count after adding or moving cases. The dedicated script prevents npm from consuming Playwright's `--list` flag and accidentally starting the full suite.
 
-`tests/journeys/hand-wave.journey.spec.ts` is intentionally excluded from the default browser gate. Its dedicated config records one deterministic real-SMF path through clip creation, viewport selection and hover aliases, Branch-keyed animation, precision Skin repair, and corrected playback.
+All `tests/journeys/*.journey.spec.ts` files are intentionally excluded from the default browser gate. The dedicated config uses one worker and disables parallel execution. The hand-wave story records a deterministic real-SMF path through clip creation, viewport selection and hover aliases, Branch-keyed animation, precision Skin repair, and corrected playback. The four product stories cover file conversion, project continuity, external resource readiness with animated roundtrip, and failed replacement safety.
 
-The GenEye manifests execute the pinned Playwright CLI through `scripts/run-playwright-geneye.mjs` with `shell=false`. The journey keeps Playwright's raw artifact inside `test-results/hand-wave-journey` for deterministic ingestion, saves the review copy under repo-level ignored output, and deletes the redundant raw video after the attachment copy is secure so GenEye reviews one source video rather than duplicate bytes.
+The GenEye manifests execute the pinned Playwright CLI through `scripts/run-playwright-geneye.mjs` with `shell=false`. The hand-wave journey keeps Playwright's raw artifact inside `test-results/product-journeys` for deterministic ingestion, saves the review copy under repo-level ignored output, and deletes the redundant raw video after the attachment copy is secure so GenEye reviews one source video rather than duplicate bytes.
 
-The journey fails on document overflow, blocked or disabled primary controls, missing pointer/alias telemetry, unchanged poses, missing scoped keys, unreachable Skin targets, critical browser errors, or missing evidence. Precision targets use deterministic camera fallbacks when occluded.
+The hand-wave journey fails on document overflow, blocked or disabled primary controls, missing pointer/alias telemetry, unchanged poses, missing scoped keys, unreachable Skin targets, critical browser errors, or missing evidence. Product journeys assert mounted-root continuity, export/re-import, sidecar readiness, project persistence, and dirty-work preservation through failures. Precision targets use deterministic camera fallbacks when occluded.
 
 ## Shared Browser Helpers
 
@@ -86,11 +88,11 @@ The generated indexed GLB is a required compatibility shape for GLB/FBX export a
 
 The Rust native tests are fixture-independent and exercise path authority, bounded reads, staged writes, rotating project generations, recovery allowlisting, and write serialization. SMF structure and real-fixture parsing remain owned by the TypeScript worker/unit/browser lanes.
 
-The native sidecar browser case applies `tauri.conf.json`'s connection policy before loading its bundle. The foreground-save case starts an active autosave and proves one click completes without overlapping writes. Actual Windows dialog acceptance is recorded in `docs/dev/HISTORY.md`; mocks do not replace that proof. Run browser suites and `desktop-smoke` sequentially because both own the same preview port.
+The native sidecar browser case applies `tauri.conf.json`'s connection policy before loading its bundle. The foreground-save case starts an active autosave and proves one click completes without overlapping writes. Actual Windows OS-dialog acceptance is recorded separately in `docs/dev/HISTORY.md`; IPC mocks do not replace that proof. Run browser suites, journeys, and `desktop-smoke` sequentially because they own the same preview port.
 
 ## Visual Policy
 
-Default e2e uses `expectRenderedScreenshot()` byte-size assertions to prove meaningful rendering without machine-specific WebGL baselines. Strict snapshots cover the real-SMF loaded bone state, export state, and Original-theme shell and live beside `shell-model.spec.ts`, `export-formats.spec.ts`, and `visual.spec.ts`.
+Default e2e uses `expectRenderedScreenshot()` byte-size assertions to prove meaningful rendering without machine-specific WebGL baselines. Strict snapshots cover the real-SMF loaded bone state, export state, and Original-theme shell and live beside `shell-model.spec.ts`, `export-formats.spec.ts`, and `visual.spec.ts`. A palette refresh may update affected Modern baselines only; the Original strict baseline must remain unchanged.
 
 Do not commit `playwright-report/`, `test-results/`, or repo-level `output/`; all generated captures and journey media are reproducible review artifacts. Keep the Playwright server on build + preview, keep one server owner per command, and preserve test titles when moving ownership so filters and pitfall references remain stable.
 

@@ -11,13 +11,13 @@ export const APP_THEMES = [
     chromeLabel: 'RustSMF',
     preferredViewportLayout: 'single',
     viewportCameraZoom: 1,
-    viewportBackground: 0x0b1120,
+    viewportBackground: 0x101111,
     viewportGrid: {
       mode: 'floor',
       size: 14,
       divisions: 14,
-      centerLine: 0x475569,
-      line: 0x334155,
+      centerLine: 0x70664f,
+      line: 0x3b3c38,
     },
     workspaceLabels: {
       view: 'Model',

@@ -14,6 +14,51 @@
   --ui-accent: #417c3d;
   --ui-accent-border: #d7d443;
   --ui-viewport-background: #1b1b1b;
+  --ui-palette-hex-0f172a: #0f172a;
+  --ui-palette-hex-e2e8f0: #e2e8f0;
+  --ui-palette-hex-1e293b: #1e293b;
+  --ui-palette-hex-172033: #172033;
+  --ui-palette-hex-475569: #475569;
+  --ui-palette-hex-334155: #334155;
+  --ui-palette-hex-94a3b8: #94a3b8;
+  --ui-palette-hex-2dd4bf: #2dd4bf;
+  --ui-palette-hex-b7c4d4: #b7c4d4;
+  --ui-palette-hex-1f3f45: #1f3f45;
+  --ui-palette-rgba-2-6-23-0-42: rgba(2, 6, 23, 0.42);
+  --ui-palette-hex-34d399: #34d399;
+  --ui-palette-hex-3d4d64: #3d4d64;
+  --ui-palette-hex-cbd5e1: #cbd5e1;
+  --ui-palette-hex-64748b: #64748b;
+  --ui-palette-hex-1b3440: #1b3440;
+  --ui-palette-rgba-226-232-240-0-45: rgba(226, 232, 240, 0.45);
+  --ui-palette-hex-7dd3fc: #7dd3fc;
+  --ui-palette-hex-d1fae5: #d1fae5;
+  --ui-palette-hex-047857: #047857;
+  --ui-palette-hex-064e3b: #064e3b;
+  --ui-palette-rgba-15-23-42-0-92: rgba(15, 23, 42, 0.92);
+  --ui-palette-rgba-0-0-0-0-35: rgba(0, 0, 0, 0.35);
+  --ui-palette-hex-14b8a6: #14b8a6;
+  --ui-palette-hex-fcd34d: #fcd34d;
+  --ui-palette-rgba-148-163-184-0-65: rgba(148, 163, 184, 0.65);
+  --ui-palette-rgba-15-23-42-0-65: rgba(15, 23, 42, 0.65);
+  --ui-palette-rgba-148-163-184-0-5: rgba(148, 163, 184, 0.5);
+  --ui-palette-rgba-2-6-23-0-72: rgba(2, 6, 23, 0.72);
+  --ui-palette-rgba-20-184-166-0-22: rgba(20, 184, 166, 0.22);
+  --ui-palette-hex-facc15: #facc15;
+  --ui-palette-hex-854d0e: #854d0e;
+  --ui-palette-hex-a16207: #a16207;
+  --ui-palette-hex-67e8f9: #67e8f9;
+  --ui-palette-hex-0e7490: #0e7490;
+  --ui-palette-hex-38bdf8: #38bdf8;
+  --ui-palette-rgb-14-116-144-12: rgb(14 116 144 / 12%);
+  --ui-palette-hex-bae6fd: #bae6fd;
+  --ui-palette-hex-fbbf24: #fbbf24;
+  --ui-palette-hex-0f766e: #0f766e;
+  --ui-palette-hex-d97706: #d97706;
+  --ui-palette-hex-b91c1c: #b91c1c;
+  --ui-palette-hex-10b981: #10b981;
+  --ui-palette-hex-f59e0b: #f59e0b;
+  --ui-palette-hex-ef4444: #ef4444;
   position: relative;
   font-family: Arial, Tahoma, "Segoe UI", sans-serif;
 }
@@ -755,4 +800,9 @@
   .app-shell[data-theme="original"] .timeline-controls {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
+}
+
+.app-shell[data-theme="original"] .toolbar-viewport > .control-group > svg,
+.app-shell[data-theme="original"] .toolbar-viewport .toolbar-menu-summary > svg {
+  display: none;
 }

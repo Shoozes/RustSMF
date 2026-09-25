@@ -156,6 +156,139 @@ export function validateTodoDocument(content) {
   return errors
 }
 
+export function findPitfallGuardErrors(repoRoot) {
+  const ledgerPath = resolve(repoRoot, 'docs/dev/PITFALL_LEDGER.md')
+  if (!existsSync(ledgerPath)) return ['missing pitfall ledger: docs/dev/PITFALL_LEDGER.md']
+  const content = readFileSync(ledgerPath, 'utf8')
+  const records = content.split(/(?=^### Q: What pitfall are we preventing\?\r?$)/m)
+    .filter((record) => /^### Q: What pitfall are we preventing\?\r?$/m.test(record))
+  const errors = []
+
+  records.forEach((record, index) => {
+    const expectedId = `PL-${String(index + 1).padStart(3, '0')}`
+    const id = /^\*\*ID:\*\*\s*(PL-\d{3})\s*$/m.exec(record)?.[1]
+    if (id !== expectedId) errors.push(`docs/dev/PITFALL_LEDGER.md: expected ${expectedId}, found ${id ?? 'no ID'}`)
+
+    const guard = /^\*\*Guard:\*\*\s*(.+)$/m.exec(record)?.[1]
+    if (!guard) {
+      errors.push(`docs/dev/PITFALL_LEDGER.md: ${expectedId} is missing a Guard reference`)
+      return
+    }
+
+    const references = [...guard.matchAll(/`([^`]+)`/g)].map((match) => match[1].replaceAll('\\', '/'))
+    const fileReferences = references.filter((reference) => /^(?:(?:source|scripts|\.tools|docs)\/.+|[A-Za-z0-9_.-]+)\.[A-Za-z0-9]+$/.test(reference))
+    if (fileReferences.length === 0) {
+      errors.push(`docs/dev/PITFALL_LEDGER.md: ${expectedId} Guard must name an exact repository file`)
+      return
+    }
+    for (const reference of fileReferences) {
+      if (!existsSync(resolve(repoRoot, ...reference.split('/')))) {
+        errors.push(`docs/dev/PITFALL_LEDGER.md: ${expectedId} Guard file does not exist: ${reference}`)
+      }
+    }
+  })
+
+  return errors
+}
+
+export function findThemeIntegrityErrors(repoRoot) {
+  const root = resolve(repoRoot)
+  const indexPath = resolve(root, 'source/frontend/src/index.css')
+  const modernPath = resolve(root, 'source/frontend/src/styles/themes/modern.css')
+  const originalPath = resolve(root, 'source/frontend/src/styles/themes/original.css')
+  const errors = []
+  if (![indexPath, modernPath, originalPath].every(existsSync)) {
+    for (const [path, label] of [[indexPath, 'shared index.css'], [modernPath, 'Modern theme stylesheet'], [originalPath, 'Original theme stylesheet']]) {
+      if (!existsSync(path)) errors.push(`missing ${label}: ${toPosix(relative(root, path))}`)
+    }
+    return errors
+  }
+
+  const index = readFileSync(indexPath, 'utf8')
+  const modern = readFileSync(modernPath, 'utf8')
+  const original = readFileSync(originalPath, 'utf8')
+  if (/(?:#[\da-f]{3,8}\b|rgba?\s*\()/i.test(index)) {
+    errors.push('source/frontend/src/index.css: literal palette colors belong in a theme stylesheet')
+  }
+  if (/--ui-(?:app-background|surface(?:-raised|-inset)?|control(?:-muted|-hover)?|border(?:-strong)?|text(?:-strong|-muted)?|accent(?:-border|-text)?|viewport-background)\s*:/.test(index)) {
+    errors.push('source/frontend/src/index.css: theme palette values belong in a theme stylesheet')
+  }
+  const paletteReferences = new Set([...index.matchAll(/var\((--ui-palette-[a-z0-9-]+)/g)].map((match) => match[1]))
+  for (const token of paletteReferences) {
+    if (!new RegExp(`(?:^|\\s)${token}\\s*:`, 'm').test(modern)) {
+      errors.push(`source/frontend/src/styles/themes/modern.css: missing shared palette alias ${token}`)
+    }
+    if (!new RegExp(`(?:^|\\s)${token}\\s*:`, 'm').test(original)) {
+      errors.push(`source/frontend/src/styles/themes/original.css: missing shared palette alias ${token}`)
+    }
+  }
+  if (!/\.app-shell\[data-shell-variant="modern"\]\[data-ui-theme="lumen-alloy"\]\s*\{/.test(modern)) {
+    errors.push('source/frontend/src/styles/themes/modern.css: Lumen Alloy tokens lack the Modern theme scope')
+  }
+  const requiredModernTokens = [
+    '--ui-app-background: #101111',
+    '--ui-surface: #191a1a',
+    '--ui-surface-raised: #222323',
+    '--ui-text: #cdcecb',
+    '--ui-text-strong: #efefec',
+    '--ui-text-muted: #b2b4b0',
+    '--ui-accent: #e4d2a8',
+  ]
+  for (const token of requiredModernTokens) {
+    if (!modern.includes(token)) errors.push(`source/frontend/src/styles/themes/modern.css: missing Lumen Alloy token ${token}`)
+  }
+  const hasVisibleShadow = [...modern.matchAll(/box-shadow\s*:\s*([^;}]+);/gi)]
+    .some((match) => match[1].trim().toLowerCase() !== 'none')
+  if (/(?:linear|radial)-gradient|text-shadow/i.test(modern) || hasVisibleShadow) {
+    errors.push('source/frontend/src/styles/themes/modern.css: Modern surfaces must remain flat without gradients, glows, or shadows')
+  }
+  if (/data-theme="original"|data-shell-variant="original"/.test(modern)) {
+    errors.push('source/frontend/src/styles/themes/modern.css: Modern stylesheet must not target Original')
+  }
+
+  for (const match of original.matchAll(/([^{}]+)\{/g)) {
+    const selector = match[1].trim()
+    if (selector.startsWith('@') || !selector.includes('.app-shell')) continue
+    for (const part of selector.split(',')) {
+      if (part.includes('.app-shell') && !part.includes('.app-shell[data-theme="original"]')) {
+        errors.push(`source/frontend/src/styles/themes/original.css: Original selector is not explicitly scoped: ${part.trim()}`)
+      }
+    }
+  }
+
+  return errors
+}
+
+export function findVersionSyncErrors(repoRoot) {
+  const root = resolve(repoRoot)
+  const frontendPath = resolve(root, 'source/frontend/package.json')
+  const cargoPath = resolve(root, 'source/src-tauri/Cargo.toml')
+  const tauriPath = resolve(root, 'source/src-tauri/tauri.conf.json')
+  const errors = []
+  for (const path of [frontendPath, cargoPath, tauriPath]) {
+    if (!existsSync(path)) errors.push(`missing version source: ${toPosix(relative(root, path))}`)
+  }
+  if (errors.length > 0) return errors
+
+  let frontendVersion
+  let tauriVersion
+  try {
+    frontendVersion = JSON.parse(readFileSync(frontendPath, 'utf8')).version
+    tauriVersion = JSON.parse(readFileSync(tauriPath, 'utf8')).version
+  } catch {
+    return ['frontend package and Tauri config must contain valid JSON version metadata']
+  }
+  const cargoSource = readFileSync(cargoPath, 'utf8')
+  const cargoVersion = /^version\s*=\s*"([^"]+)"/m.exec(cargoSource)?.[1]
+  const versions = [frontendVersion, cargoVersion, tauriVersion]
+  if (versions.some((version) => typeof version !== 'string' || version.length === 0)) {
+    errors.push('frontend package, Cargo manifest, and Tauri config must each declare a version')
+  } else if (new Set(versions).size !== 1) {
+    errors.push(`version mismatch: frontend=${frontendVersion}, Cargo=${cargoVersion}, Tauri=${tauriVersion}`)
+  }
+  return errors
+}
+
 export function findNonPortableCurrentDocReferences(repoRoot) {
   const root = resolve(repoRoot)
   const errors = []
@@ -207,6 +340,9 @@ export function validateProjectIntegrity(repoRoot) {
   errors.push(...findNonPortableCurrentDocReferences(root))
   errors.push(...findBrokenRelativeImports(root))
   errors.push(...findBrokenRustModules(root))
+  errors.push(...findPitfallGuardErrors(root))
+  errors.push(...findThemeIntegrityErrors(root))
+  errors.push(...findVersionSyncErrors(root))
 
   return {
     errors,

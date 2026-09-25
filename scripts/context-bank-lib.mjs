@@ -186,7 +186,7 @@ function regionForFile(root, relativePath) {
   return {
     ...decoded,
     relativePath,
-    text: `#region ${relativePath}\n${decoded.content.replace(/\n+$/, '')}\n#endregion\n`,
+    text: `#region ${relativePath}\n${decoded.content.replace(/\r\n/g, '\n').replace(/\n+$/, '')}\n#endregion\n`,
   }
 }
 

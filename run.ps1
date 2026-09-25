@@ -630,15 +630,15 @@ switch -Exact ($NormalizedTask) {
         if (-not (Invoke-FrontendNpm @("run", "test:unit"))) { exit 1 }
     }
     "test:journey" {
-        Write-Info "[JOURNEY] Recording the headless hand-wave authoring journey..."
+        Write-Info "[JOURNEY] Running the five sequential product journeys..."
         $genEyeRanJourney = Invoke-GenEyePlaywright `
             -ManifestPath (Join-Path $FrontendDir "geneye-journey.json") `
-            -RunName "rustsmf-hand-wave-journey" `
+            -RunName "rustsmf-product-journeys" `
             -VideoFrameLimit 12
         if (-not $genEyeRanJourney) {
-            if (-not (Invoke-FrontendNpm @("run", "test:journey:hand-wave"))) { exit 1 }
+            if (-not (Invoke-FrontendNpm @("run", "test:journey"))) { exit 1 }
         }
-        Write-Ok "[JOURNEY] WebM and screenshots are available under output/playwright/hand-wave-journey/."
+        Write-Ok "[JOURNEY] Product journeys completed; the hand-wave capture is under output/playwright/hand-wave-journey/."
     }
     "test:visual-strict" {
         Write-Info "[VISUAL] Running strict SMF visual snapshot checks..."
@@ -672,6 +672,21 @@ switch -Exact ($NormalizedTask) {
             exit 1
         }
     }
+    "package:windows" {
+        Write-Info "[PACKAGE] Building the Windows NSIS installer..."
+        if (-not (Test-Path -LiteralPath $SrcTauriDir)) { throw "src-tauri is missing." }
+        $packageStartedAt = Get-Date
+        if (-not (Invoke-SourceNpm @("run", "tauri:build"))) { throw "Tauri Windows bundle build failed." }
+        $nsisDir = Join-Path $SrcTauriDir "target/release/bundle/nsis"
+        $installer = Get-ChildItem -LiteralPath $nsisDir -Filter "*.exe" -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.LastWriteTime -ge $packageStartedAt.AddSeconds(-2) } |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+        if (-not $installer) { throw "The NSIS build completed without a new installer in $nsisDir." }
+        $hash = (Get-FileHash -LiteralPath $installer.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        Write-Ok "[PACKAGE] Installer: $($installer.FullName)"
+        Write-Ok "[PACKAGE] SHA-256: $hash"
+    }
     default {
         Write-Host @"
 RustSMF run.ps1 (minimal harness launcher)
@@ -703,6 +718,7 @@ Tasks:
   test:visual-strict - opt-in strict SMF visual snapshot checks
   test:visual-update - refresh opt-in strict SMF visual snapshots
   desktop-smoke - release build + Rust tests + native IPC browser checks
+  package:windows - build the NSIS installer and report its path and SHA-256
 
 Launcher safety: run.ps1 (and run.bat) provide full orphan protection for dev servers (Job object for cmd X-close, tree kills, port/cmdline sweeps on entry, finally/traps). Direct 'tauri dev' (or npm run tauri:dev from source) has only the mjs wrapper (signals + poll + tree kill on its child). Prefer the launcher for clean close/re-launch on Windows.
 

@@ -59,6 +59,18 @@ test('readContextBank reports invalid JSON', () => {
   assert.throws(() => readContextBank(resolve(root, 'summary_bank.json')), /Could not parse/)
 })
 
+test('context text and budgets are identical for LF and CRLF checkouts', () => {
+  const bank = validBank()
+  const root = fixture(bank, { 'README.md': 'first\nsecond\n' })
+  const lf = buildContext({ root, bank })
+  const lfValidation = validateContextBank({ root, bank })
+  writeFileSync(resolve(root, 'README.md'), 'first\r\nsecond\r\n')
+  const crlf = buildContext({ root, bank })
+  assert.deepEqual(crlf, lf)
+  assert.deepEqual(validateContextBank({ root, bank }), lfValidation)
+  assert.equal(readFileSync(resolve(root, 'README.md'), 'utf8'), 'first\r\nsecond\r\n')
+})
+
 test('validator rejects missing defaults groups and malformed defaults', () => {
   const root = fixture({
     defaults: { groups: ['missing'], tree: 'yes', max_kb: 0, skip_dirs: [] },
