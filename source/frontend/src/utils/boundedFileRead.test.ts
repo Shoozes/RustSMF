@@ -37,3 +37,12 @@ test('bounded file reads enforce regular-file, per-file, aggregate, and duplicat
     await rm(directory, { recursive: true, force: true });
   }
 });
+
+test('bounded file reads honor cancellation before opening an input', async () => {
+  const controller = new AbortController();
+  controller.abort(new Error('cancelled before read'));
+  await assert.rejects(
+    readFileBounded(path.join(tmpdir(), 'missing-cancelled-input.bin'), 10, controller.signal),
+    (error: Error) => error.name === 'AbortError' && /cancelled before read/.test(error.message),
+  );
+});

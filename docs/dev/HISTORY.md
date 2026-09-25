@@ -1932,3 +1932,21 @@ budget growth. Moving command detail into FITTED_RIG.md and separating the
 workflow__fitted_rig route restored the existing orientation/retarget budgets.
 The focused `run.ps1 -Task context` rerun passed. Chrome reported zero errors
 and warnings. The owned browser and preview process were stopped after capture.
+
+## 2026-09-25 — Game-ready preserve-existing materials
+
+Added the opt-in `rustsmf.game-ready-job.v3` saved-job contract for preserving
+materials already present in skinned FBX or GLB targets. GLB inputs must be
+self-contained; FBX sidecars are explicit, bounded, local, and resolved only
+when referenced. Unsupported or unavailable texture resources and dropped
+material assignments fail closed. Existing v2 strict-auto repair behavior and
+report format remain available. SIGINT/SIGTERM cancellation is honored before
+the atomic generation commit, which completes once started.
+
+The exact staged candidate passed `npm.cmd --prefix source run verify`: lint,
+both typechecks, production build and guards, 493 frontend unit tests, ten
+Tauri tests, ten pose-contact tests, and the native/wasm checks. The focused
+saved-job/generation/read tests passed 18/18 after test typecheck. The candidate
+also passed `node scripts/verify-context-bank.mjs` (44 groups) and
+`node scripts/verify-project-integrity.mjs`. No installer or Windows OS-dialog
+evidence was part of this CLI-only change.

@@ -36,7 +36,7 @@
     },
     "workflow__context_bank": {
       "description": "Portable context routing, validation, generation, and controller entry points.",
-      "max_kb": 96,
+      "max_kb": 100,
       "paths": [
         "summary_bank.json",
         "scripts/context-bank-lib.mjs",
@@ -245,10 +245,11 @@
     },
     "workflow__game_ready_cli": {
       "description": "Versioned local job parsing, bounded input, validation, immutable generation publication, and machine-readable evidence.",
-      "max_kb": 128,
+      "max_kb": 200,
       "paths": [
         "source/frontend/scripts/game-ready-cli.ts",
         "source/frontend/scripts/game-ready-producer.ts",
+        "source/frontend/scripts/node-three-runtime.ts",
         "source/frontend/scripts/bounded-file-read.ts",
         "source/frontend/src/utils/boundedFileRead.test.ts",
         "source/frontend/src/utils/gameReadyJob.ts",
@@ -257,11 +258,17 @@
         "source/frontend/src/utils/gameReadyGeneration.test.ts",
         "source/frontend/src/utils/gameReadyValidation.ts",
         "source/frontend/src/utils/gameReadyValidation.test.ts",
+        "source/frontend/src/utils/modelResourceBundle.ts",
+        "source/frontend/src/utils/textureImageReadiness.ts",
+        "source/frontend/src/loaders/fbx.ts",
+        "source/frontend/src/utils/glbContainer.ts",
         "source/frontend/package.json"
       ],
       "notes": [
         "The CLI rejects duplicate or input-overwriting paths, ambiguous empty clip selections, unknown attachment roles, non-regular files, per-file overflow, and aggregate overflow before later files are materialized.",
         "Inputs are read sequentially through one open handle per file under the remaining aggregate budget; one global direction-transfer mode replaces repetitive clip declarations while explicit per-clip overrides remain supported.",
+        "V2 retains strict OBJ/MTL material repair. V3 preserve-existing accepts self-contained GLB or explicitly selected FBX sidecars, fails closed on missing/unready resources or dropped material assignments, and observes cancellation before the atomic generation commit.",
+        "The CLI's Node Three.js image runtime decodes PNG/JPEG pixels and supplies canvas/image behavior for texture readiness and GLB export; it is part of producer identity.",
         "Canonical producer and sorted role-tagged input identity select an immutable generation; producer identity hashes the executable local dependency list and package manifests so helper changes cannot retain an older source identity.",
         "Model, normalized job, resolved mapping, and report are staged and fsynced before a last-written hash manifest and one directory rename, then the optional current pointer is replaced.",
         "A neutral two-motion caller-owned job runs through the actual CLI, checks sampled motion/raw skin/decoded material content after re-import, and preserves the prior generation and caller inputs on malformed mapping, missing clip, or injected publication failure; a clean copied tool workspace proves no consumer checkout is required and the production guard rejects game/engine references.",
@@ -270,9 +277,11 @@
     },
     "workflow__game_ready_neutral_proof": {
       "description": "Neutral caller-owned saved-job proof, re-import checks, publication rollback, and production dependency boundaries.",
-      "max_kb": 104,
+      "max_kb": 136,
       "paths": [
         "source/frontend/src/utils/gameReadyCli.test.ts",
+        "source/frontend/src/utils/boundedFileRead.test.ts",
+        "source/frontend/scripts/node-three-runtime.ts",
         "source/frontend/scripts/check-game-ready-dependencies.mjs",
         "source/frontend/scripts/game-ready-cli.ts",
         "source/frontend/src/utils/gameReadyGeneration.ts",
@@ -281,6 +290,7 @@
       ],
       "notes": [
         "The fixture is a small noncombat two-motion rig with caller-supplied mapping and constraints; it invokes the actual saved-job CLI, reimports the published GLB, and checks transforms, timing, skin, material, and provenance.",
+        "V3 preserve-existing coverage uses a caller-owned textured skinned GLB and the independent skinned animated FBX. It checks embedded texture pixels, explicit sidecar resolution, animation/skin round-trip, and cancellation before publication; v2 repair coverage remains separate.",
         "Malformed mapping, missing source clip, and injected publication failure preserve the prior valid generation and caller-owned inputs. The dependency guard rejects fight-game-study/GaimEngine checkout references without making game acceptance a RustSMF concern.",
         "The runtime receipt is generated under excluded test-results output and is evidence only; it is not a context-bank route or source input."
       ]
@@ -329,7 +339,8 @@
         "The bundled exporter is the implementation authority.",
         "Exported bytes must re-import and preserve representative mesh, skin, bone, and clip structure before save.",
         "The independent Blender-authored fixture is test-only; Blender 5.0.0 validates both the source asset and app-exported output, but this does not claim universal FBX compatibility.",
-        "FBX texture parsing waits on its isolated loader manager; shared image-readiness implementation and tests live in issue__external_model_resources. Authorized selected relative maps resolve through the shared resource bundle, and unavailable maps fail safe before render."
+        "FBX texture parsing waits on its isolated loader manager; shared image-readiness implementation and tests live in issue__external_model_resources. Authorized selected relative maps resolve through the shared resource bundle, and unavailable maps fail safe before render.",
+        "Game-ready preserve-existing opts into strict resource resolution even for a one-file bundle; ordinary UI import behavior for unresolved absolute or embedded resources is unchanged."
       ]
     },
     "feature__dae_support": {

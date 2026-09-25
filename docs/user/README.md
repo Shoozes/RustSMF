@@ -73,6 +73,18 @@ npm.cmd --prefix source run game-ready -- --job $jobPath
 
 The `rustsmf.game-ready-job.v2` job can repair a rigged FBX/GLB from an OBJ/MTL/image reference, rename clips, retarget explicitly mapped source clips, embed every texture as PNG, and publish a portable immutable generation below `output.generationRoot`. The generation contains `model.glb`, normalized `job.json`, resolved `mapping.json`, `report.json`, and a hash manifest; its ID binds the executable producer dependencies and sorted role-tagged inputs. An optional direct-child `output.currentPointer` is replaced only after the complete generation directory is visible. Existing generations are never overwritten.
 
+Use `rustsmf.game-ready-job.v3` when the target already has the materials to keep. Set `materials.mode` to `preserve-existing`, provide `input.riggedModel` plus a `sidecars` array, and omit repair references. GLB must be self-contained and use an empty sidecars array. FBX texture files must be declared explicitly, live under the model directory, and match references used by the FBX. Missing resources, unsupported material texture slots, textures that do not become ready, or material/texture loss on GLB export fail closed. This mode validates and republishes existing material assignments; it does not infer or repair them. For example, the mode-specific fields are:
+
+```json
+{
+  "$schema": "rustsmf.game-ready-job.v3",
+  "input": { "riggedModel": "C:\\models\\target.fbx", "sidecars": ["C:\\models\\albedo.png"] },
+  "materials": { "mode": "preserve-existing" }
+}
+```
+
+The v3 job uses the same `coordinates`, `rig`, `output`, and `provenance` contracts as v2. Inputs are bounded and read from local files only. SIGINT/SIGTERM cancellation is cooperative at bounded-read, load, validation, and pre-publication boundaries; after atomic generation commit begins, it completes publication. A cancelled pre-commit run leaves the current pointer and prior generations unchanged.
+
 For calibrated mappings, optional `rootMotionScale` supplies a positive finite
 translation multiplier instead of automatic mapped-height scaling; it cannot
 combine with `scaleRootMotion: false`. Optional `directionAlignmentBones` is a
@@ -82,6 +94,7 @@ list. Omit both settings to retain existing automatic behavior. Saved jobs and
 portable profiles use the same validation and application path.
 
 Retarget jobs can select source/target reference clips, preserve target terminal or explicitly listed bone rotations when local axes differ, set one global relative/absolute direction-transfer policy with per-clip exceptions, and apply a per-clip pose-recovery envelope (`peakFrame`, `holdThroughFrame`, `returnByFrame`) when only a trusted action peak should survive from a damaged source clip. Optional natural-motion settings distribute torso motion by target segment length, solve each target leg at its authored lengths, hold calibrated sole points during named contact frames, apply declared root travel, and bound proportion-sensitive leg swing and minimum knee bend per selected clip. At a requested sample rate, source STEP tracks are evaluated at float32 frame times, output STEP keys can use float32 next-down timing, and partial terminal samples stay within clip duration. The report records contact reach/correction and requested/constrained leg-angle diagnostics, and also compares normalized mapped-rig segment lengths. A successful exit means the GLB was re-imported, embedded textures and requested STEP timing were checked, representative skin deformation samples remained finite, and the immutable manifest hashes match. It is not by itself visual or gameplay acceptance.
+
 
 ## Format Limits
 

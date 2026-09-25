@@ -15,7 +15,9 @@ import {
 } from '../src/utils/animationRetarget';
 import {
   GAME_READY_JOB_SCHEMA,
-  parseGameReadyJob,
+  GAME_READY_PRESERVE_JOB_SCHEMA,
+  parseGameReadyJobDocument,
+  type GameReadyJobDocument,
 } from '../src/utils/gameReadyJob';
 import {
   profileClipOptions,
@@ -26,6 +28,7 @@ import {
 import { validateGameReadyModel } from '../src/utils/gameReadyValidation';
 import {
   embedMaterialTextures,
+  parseGlbContainer,
   validateEmbeddedGlbTextures,
   validateStepClipTiming,
   type EmbeddedMaterialReport,
@@ -47,6 +50,10 @@ import {
   MAX_MODEL_RESOURCE_BUNDLE_BYTES,
   MAX_MODEL_RESOURCE_FILE_BYTES,
 } from '../src/utils/modelResourceBundle';
+import {
+  hasUsableTextureImage,
+  waitForTextureImages,
+} from '../src/utils/textureImageReadiness';
 import { MAX_MODEL_INPUT_BYTES } from '../src/utils/modelFormat';
 import { disposeThreeObject } from '../src/utils/threeDisposal';
 import { readFileBounded, readFilesBounded } from './bounded-file-read';
@@ -64,6 +71,7 @@ interface LoadedAsset {
   root: THREE.Group;
   skeleton?: THREE.Skeleton;
   clips: THREE.AnimationClip[];
+  removedTextureMaps: number;
   dispose(): void;
 }
 
@@ -81,10 +89,14 @@ function usage(): string {
     '  npm.cmd run game-ready -- --help',
     '  npm.cmd run game-ready -- --job C:\\absolute\\path\\fighter.game-ready.json',
     '',
-    `Job schema: ${GAME_READY_JOB_SCHEMA}`,
-    'The job repairs rigged FBX/GLB materials from an OBJ/MTL/image bundle,',
-    'optionally retargets explicitly mapped animation clips, validates skin and',
-    'sampled deformation, exports a self-contained GLB, and writes JSON evidence.',
+    `Repair schema: ${GAME_READY_JOB_SCHEMA}`,
+    `Preserve schema: ${GAME_READY_PRESERVE_JOB_SCHEMA}`,
+    'V2 jobs repair rigged FBX/GLB materials from an OBJ/MTL/image bundle. V3 jobs',
+    'preserve supported existing materials from embedded GLB or sidecar-backed FBX.',
+    'Both modes optionally retarget explicitly mapped clips, validate skin and',
+    'sampled deformation, export a self-contained GLB, and write JSON evidence.',
+    'SIGINT/SIGTERM cancellation is checked at bounded read/load and pre-publication',
+    'boundaries; once the atomic generation commit starts, publication completes.',
     'All input and output paths must be absolute. Each success publishes a fresh,',
     'immutable generation directory; an optional current pointer changes last.',
     'Exit 0 means final GLB re-import and complete generation publication passed.',
@@ -110,20 +122,137 @@ function sha256(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
-async function readBounded(filePath: string, limit = MAX_MODEL_INPUT_BYTES): Promise<InputFileRecord> {
-  const bytes = await readFileBounded(filePath, limit);
+async function readBounded(filePath: string, limit = MAX_MODEL_INPUT_BYTES, signal?: AbortSignal): Promise<InputFileRecord> {
+  const bytes = await readFileBounded(filePath, limit, signal);
   return { path: filePath, bytes, sha256: sha256(bytes) };
 }
 
-async function loadAsset(file: InputFileRecord): Promise<LoadedAsset> {
+function throwIfAborted(signal?: AbortSignal): void {
+  if (!signal?.aborted) return;
+  const error = signal.reason instanceof Error ? signal.reason : new Error('Game-ready job cancelled.');
+  error.name = 'AbortError';
+  throw error;
+}
+
+const PRESERVE_TEXTURE_SLOTS = [
+  'map',
+  'normalMap',
+  'roughnessMap',
+  'metalnessMap',
+  'aoMap',
+  'emissiveMap',
+] as const;
+
+interface PreservedMaterialSummary {
+  materialNames: string[];
+  texturedMaterialNames: string[];
+  textureCount: number;
+}
+
+function isMaterialTextured(material: Record<string, unknown>): boolean {
+  const pbr = Reflect.get(material, 'pbrMetallicRoughness');
+  return [
+    Reflect.get(pbr ?? {}, 'baseColorTexture'),
+    Reflect.get(pbr ?? {}, 'metallicRoughnessTexture'),
+    Reflect.get(material, 'normalTexture'),
+    Reflect.get(material, 'occlusionTexture'),
+    Reflect.get(material, 'emissiveTexture'),
+  ].some((texture) => texture !== undefined);
+}
+
+async function inspectPreservedMaterials(root: THREE.Object3D): Promise<PreservedMaterialSummary> {
+  const supportedSlots = new Set<string>(PRESERVE_TEXTURE_SLOTS);
+  const materials = new Set<THREE.Material>();
+  const textures = new Set<THREE.Texture>();
+  const texturedMaterials = new Set<THREE.Material>();
+  root.traverse((object) => {
+    if (!('isMesh' in object && object.isMesh)) return;
+    const value = Reflect.get(object, 'material') as THREE.Material | THREE.Material[] | null | undefined;
+    const slots = Array.isArray(value) ? value : value ? [value] : [];
+    if (slots.length === 0 || slots.some((material) => !material || !material.isMaterial)) {
+      fail(`Mesh ${object.name || '(unnamed)'} has no complete material assignment.`);
+    }
+    for (const material of slots) {
+      materials.add(material);
+      const textureProperties = Object.keys(material)
+        .filter((key) => Reflect.get(material, key) instanceof THREE.Texture);
+      const unsupported = textureProperties.filter((key) => !supportedSlots.has(key));
+      if (unsupported.length > 0) {
+        fail(`Material ${material.name || '(unnamed)'} uses texture slots that GLB preservation does not support: ${unsupported.join(', ')}.`);
+      }
+      let hasTexture = false;
+      for (const slot of PRESERVE_TEXTURE_SLOTS) {
+        const texture = Reflect.get(material, slot);
+        if (!(texture instanceof THREE.Texture)) continue;
+        textures.add(texture);
+        hasTexture = true;
+      }
+      if (hasTexture) texturedMaterials.add(material);
+    }
+  });
+  if (materials.size === 0) fail('Preserve-existing requires at least one mesh material.');
+  const materialTextures = [...textures];
+  await waitForTextureImages(materialTextures);
+  if (materialTextures.some((texture) => !hasUsableTextureImage(texture))) {
+    fail('Preserve-existing found a material texture whose image did not become ready.');
+  }
+  return {
+    materialNames: [...materials].map((material) => material.name || '(unnamed)').sort(),
+    texturedMaterialNames: [...texturedMaterials].map((material) => material.name || '(unnamed)').sort(),
+    textureCount: materialTextures.length,
+  };
+}
+
+function assertPreservedMaterialsExported(
+  source: PreservedMaterialSummary,
+  bytes: Uint8Array,
+): { materialCount: number; textureCount: number; imageCount: number } {
+  validateEmbeddedGlbTextures(bytes);
+  const { json } = parseGlbContainer(bytes);
+  const materials = (json.materials ?? []) as Array<Record<string, unknown>>;
+  if (materials.length < source.materialNames.length) {
+    fail(`GLB export dropped materials: expected at least ${source.materialNames.length}, found ${materials.length}.`);
+  }
+  const outputByName = new Map<string, Record<string, unknown>[]>();
+  for (const material of materials) {
+    const name = typeof material.name === 'string' && material.name ? material.name : '(unnamed)';
+    outputByName.set(name, [...(outputByName.get(name) ?? []), material]);
+  }
+  for (const name of source.materialNames) {
+    if (!outputByName.has(name)) fail(`GLB export dropped existing material ${name}.`);
+  }
+  for (const name of source.texturedMaterialNames) {
+    if (!(outputByName.get(name) ?? []).some(isMaterialTextured)) {
+      fail(`GLB export dropped texture assignments from existing material ${name}.`);
+    }
+  }
+  const textureCount = json.textures?.length ?? 0;
+  const imageCount = json.images?.length ?? 0;
+  if (source.textureCount > 0 && (textureCount === 0 || imageCount === 0)) {
+    fail('GLB export dropped all textures from the existing materials.');
+  }
+  return { materialCount: materials.length, textureCount, imageCount };
+}
+
+async function loadAsset(file: InputFileRecord, sidecars?: readonly InputFileRecord[]): Promise<LoadedAsset> {
   const extension = path.extname(file.path).toLocaleLowerCase('en-US');
   const buffer = bytesToArrayBuffer(file.bytes);
   if (extension === '.fbx') {
-    const loaded = await loadFBX(buffer);
+    const input = sidecars === undefined
+      ? buffer
+      : createModelResourceBundle(
+        { name: path.basename(file.path), data: file.bytes },
+        sidecars.map((sidecar) => ({
+          name: normalizeBundleName(path.dirname(file.path), sidecar.path),
+          data: sidecar.bytes,
+        })),
+      );
+    const loaded = await loadFBX(input, { strictResources: sidecars !== undefined });
     return {
       root: loaded.root,
       skeleton: loaded.skeleton,
       clips: loaded.clips,
+      removedTextureMaps: loaded.summary.removedTextureMaps,
       dispose: () => {
         loaded.mixer.stopAllAction();
         disposeThreeObject(loaded.root);
@@ -136,6 +265,7 @@ async function loadAsset(file: InputFileRecord): Promise<LoadedAsset> {
       root: loaded.root,
       skeleton: loaded.skeleton,
       clips: loaded.clips,
+      removedTextureMaps: 0,
       dispose: () => {
         loaded.mixer.stopAllAction();
         disposeThreeObject(loaded.root);
@@ -194,24 +324,41 @@ function resolveReferenceTextures(
   return result;
 }
 
-async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
-  const rawJob = await readBounded(jobPath, MAX_JOB_BYTES);
-  const job = parseGameReadyJob(
+async function runJob(jobPath: string, signal?: AbortSignal): Promise<GameReadyPublishedGeneration> {
+  const rawJob = await readBounded(jobPath, MAX_JOB_BYTES, signal);
+  throwIfAborted(signal);
+  const job: GameReadyJobDocument = parseGameReadyJobDocument(
     JSON.parse(new TextDecoder().decode(rawJob.bytes)) as unknown,
     GAME_READY_PATH_POLICY,
   );
-  const inputRequests = [
+  const inputRequests: Array<{ role: string; path: string; limit: number }> = [
     { role: 'target', path: job.input.riggedModel, limit: MAX_MODEL_INPUT_BYTES },
-    { role: 'reference-obj', path: job.input.referenceObj, limit: MAX_MODEL_INPUT_BYTES },
-    { role: 'reference-mtl', path: job.input.referenceMtl, limit: MAX_MODEL_RESOURCE_FILE_BYTES },
-    ...job.input.textures.map((filePath, index) => ({ role: `texture-${index}`, path: filePath, limit: MAX_MODEL_RESOURCE_FILE_BYTES })),
-    ...(job.rig.retarget ? [{ role: 'retarget-source', path: job.rig.retarget.sourceModel, limit: MAX_MODEL_INPUT_BYTES }] : []),
   ];
+  if (job.$schema === GAME_READY_JOB_SCHEMA) {
+    inputRequests.push(
+      { role: 'reference-obj', path: job.input.referenceObj, limit: MAX_MODEL_INPUT_BYTES },
+      { role: 'reference-mtl', path: job.input.referenceMtl, limit: MAX_MODEL_RESOURCE_FILE_BYTES },
+      ...job.input.textures.map((filePath, index) => ({ role: `texture-${index}`, path: filePath, limit: MAX_MODEL_RESOURCE_FILE_BYTES })),
+    );
+  } else {
+    inputRequests.push(...job.input.sidecars.map((filePath, index) => ({
+      role: `sidecar-${index}`,
+      path: filePath,
+      limit: MAX_MODEL_RESOURCE_FILE_BYTES,
+    })));
+  }
+  if (job.rig.retarget) inputRequests.push({
+    role: 'retarget-source',
+    path: job.rig.retarget.sourceModel,
+    limit: MAX_MODEL_INPUT_BYTES,
+  });
   const inputs = (await readFilesBounded(
     inputRequests.map(({ path: filePath, limit }) => ({ path: filePath, limit })),
     MAX_MODEL_RESOURCE_BUNDLE_BYTES,
     pathComparisonKey,
+    signal,
   )).map((input) => ({ ...input, sha256: sha256(input.bytes) }));
+  throwIfAborted(signal);
   const inputByPath = new Map(inputs.map((item) => [pathComparisonKey(item.path), item]));
   const getInput = (filePath: string): InputFileRecord => {
     const input = inputByPath.get(pathComparisonKey(filePath));
@@ -219,33 +366,54 @@ async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
     return input;
   };
 
-  const target = await loadAsset(getInput(job.input.riggedModel));
+  const targetSidecars = job.$schema === GAME_READY_PRESERVE_JOB_SCHEMA
+    && /\.fbx$/i.test(job.input.riggedModel)
+    ? job.input.sidecars.map(getInput)
+    : undefined;
+  const targetInput = getInput(job.input.riggedModel);
+  if (job.$schema === GAME_READY_PRESERVE_JOB_SCHEMA && /\.glb$/i.test(job.input.riggedModel)) {
+    validateEmbeddedGlbTextures(targetInput.bytes);
+  }
+  throwIfAborted(signal);
+  const target = await loadAsset(targetInput, targetSidecars);
   let source: LoadedAsset | null = null;
   try {
+    throwIfAborted(signal);
     if (!target.skeleton) fail('Rigged target contains no skeleton.');
-    const objFile = getInput(job.input.referenceObj);
-    const mtlFile = getInput(job.input.referenceMtl);
-    const objText = new TextDecoder().decode(objFile.bytes);
-    const mtlText = new TextDecoder().decode(mtlFile.bytes);
-    const parsedObj = parseObjReference(objText);
-    const expectedMtl = path.resolve(path.dirname(objFile.path), parsedObj.materialLibrary);
-    if (expectedMtl.toLocaleLowerCase('en-US') !== path.resolve(mtlFile.path).toLocaleLowerCase('en-US')) {
-      fail(`OBJ references ${expectedMtl}, but job.input.referenceMtl is ${mtlFile.path}.`);
+    let reference: ObjMaterialReference | null = null;
+    let prepared: Awaited<ReturnType<typeof prepareMaterialRepair>> | null = null;
+    let preserveSummary: PreservedMaterialSummary | null = null;
+    if (job.$schema === GAME_READY_JOB_SCHEMA) {
+      const objFile = getInput(job.input.referenceObj);
+      const mtlFile = getInput(job.input.referenceMtl);
+      const objText = new TextDecoder().decode(objFile.bytes);
+      const mtlText = new TextDecoder().decode(mtlFile.bytes);
+      const parsedObj = parseObjReference(objText);
+      const expectedMtl = path.resolve(path.dirname(objFile.path), parsedObj.materialLibrary);
+      if (expectedMtl.toLocaleLowerCase('en-US') !== path.resolve(mtlFile.path).toLocaleLowerCase('en-US')) {
+        fail(`OBJ references ${expectedMtl}, but job.input.referenceMtl is ${mtlFile.path}.`);
+      }
+      const objDirectory = path.dirname(objFile.path);
+      const bundleEntries = [mtlFile, ...job.input.textures.map(getInput)].map((file) => ({
+        name: normalizeBundleName(objDirectory, file.path),
+        data: file.bytes,
+      }));
+      createModelResourceBundle(
+        { name: path.basename(objFile.path), data: objFile.bytes },
+        bundleEntries,
+      );
+      reference = parseObjMaterialReference(objText, mtlText, bundleEntries.map((entry) => entry.name));
+      const materialFingerprint = captureMaterialRepairFingerprint(target.root, target.clips);
+      prepared = await prepareMaterialRepair(target.root, reference);
+      applyPreparedMaterialRepair(prepared);
+      assertMaterialRepairPreservedModel(materialFingerprint, target.root, target.clips);
+    } else {
+      if (target.removedTextureMaps > 0) {
+        fail(`Preserve-existing cannot continue: FBX loading removed ${target.removedTextureMaps} unavailable texture map(s).`);
+      }
+      preserveSummary = await inspectPreservedMaterials(target.root);
     }
-    const objDirectory = path.dirname(objFile.path);
-    const bundleEntries = [mtlFile, ...job.input.textures.map(getInput)].map((file) => ({
-      name: normalizeBundleName(objDirectory, file.path),
-      data: file.bytes,
-    }));
-    createModelResourceBundle(
-      { name: path.basename(objFile.path), data: objFile.bytes },
-      bundleEntries,
-    );
-    const reference = parseObjMaterialReference(objText, mtlText, bundleEntries.map((entry) => entry.name));
-    const materialFingerprint = captureMaterialRepairFingerprint(target.root, target.clips);
-    const prepared = await prepareMaterialRepair(target.root, reference);
-    applyPreparedMaterialRepair(prepared);
-    assertMaterialRepairPreservedModel(materialFingerprint, target.root, target.clips);
+    throwIfAborted(signal);
 
     const clips = renameClips(target.clips, job.rig.clipNames ?? {});
     const retargetReports: AnimationRetargetReport[] = [];
@@ -253,6 +421,7 @@ async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
     let rigCompatibility: RigCompatibilityReport | null = null;
     if (job.rig.retarget) {
       source = await loadAsset(getInput(job.rig.retarget.sourceModel));
+      throwIfAborted(signal);
       if (!source.skeleton) fail('Retarget source contains no skeleton.');
       rigMapReport = buildRigMap(source.skeleton, target.skeleton, {
         manualMap: job.rig.retarget.manualMap,
@@ -288,25 +457,42 @@ async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
     }
 
     const attachments = resolveLogicalAttachments(target.skeleton, job.rig.attachments, { allowMissing: true });
+    throwIfAborted(signal);
     const validation = validateGameReadyModel(target.root, target.skeleton, clips);
+    throwIfAborted(signal);
     const draftGlb = await exportGLB(target.root, clips);
-    const textureFiles = job.input.textures.map(getInput);
-    const textureInputs = resolveReferenceTextures(reference, path.dirname(mtlFile.path), textureFiles);
-    const embedded = embedMaterialTextures(draftGlb, reference.materials, textureInputs, {
-      sourceTextureFlipY: job.materialRepair.textureFlipY,
-    });
-    validateEmbeddedGlbTextures(embedded.bytes);
+    throwIfAborted(signal);
+    let outputGlb = draftGlb;
+    let embeddedMaterialReports: EmbeddedMaterialReport[] = [];
+    let preservedOutputSummary: { materialCount: number; textureCount: number; imageCount: number } | null = null;
+    if (job.$schema === GAME_READY_JOB_SCHEMA) {
+      if (!reference || !prepared) fail('Repair job did not produce a material repair plan.');
+      const mtlFile = getInput(job.input.referenceMtl);
+      const textureFiles = job.input.textures.map(getInput);
+      const textureInputs = resolveReferenceTextures(reference, path.dirname(mtlFile.path), textureFiles);
+      const embedded = embedMaterialTextures(draftGlb, reference.materials, textureInputs, {
+        sourceTextureFlipY: job.materialRepair.textureFlipY,
+      });
+      outputGlb = embedded.bytes;
+      embeddedMaterialReports = embedded.report;
+      validateEmbeddedGlbTextures(outputGlb);
+    } else {
+      if (!preserveSummary) fail('Preserve-existing job did not produce a material readiness report.');
+      preservedOutputSummary = assertPreservedMaterialsExported(preserveSummary, outputGlb);
+    }
+    throwIfAborted(signal);
     const stepTiming = job.rig.retarget?.interpolation === 'step'
       && job.rig.retarget.sampleRateHz !== undefined
       && job.rig.retarget.nextDownRationalTimes
       ? validateStepClipTiming(
-        embedded.bytes,
+        outputGlb,
         retargetReports.map((item) => item.targetClip),
         job.rig.retarget.sampleRateHz,
       )
       : [];
-    const roundtrip = await validateExportedGLB(embedded.bytes, target.root, clips);
-    const outputHash = sha256(embedded.bytes);
+    const roundtrip = await validateExportedGLB(outputGlb, target.root, clips);
+    throwIfAborted(signal);
+    const outputHash = sha256(outputGlb);
     const protectedFingerprint = captureMaterialRepairFingerprint(target.root, clips);
     const generationInputs: GameReadyGenerationInput[] = inputRequests.map(({ role, path: inputPath }) => {
       const input = getInput(inputPath);
@@ -317,6 +503,7 @@ async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
       return { role, path: input.path, byteLength: input.bytes.byteLength, sha256: input.sha256 };
     });
     const producer = await readGameReadyProducer({ name: 'RustSMF game-ready CLI', version: TOOL_VERSION });
+    throwIfAborted(signal);
     const mapping = {
       $schema: 'rustsmf.game-ready-mapping.v1',
       manual: job.rig.retarget?.manualMap ?? {},
@@ -330,13 +517,25 @@ async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
       job: { sourcePath: jobPath, sourceSha256: rawJob.sha256, artifact: 'job.json' },
       provenance: job.provenance,
       inputs: inputRecords,
-      materialRepair: {
-        mode: job.materialRepair.mode,
-        textureFlipY: job.materialRepair.textureFlipY,
-        plan: prepared.plan,
-        referenceWarnings: reference.warnings,
-        embeddedMaterials: embedded.report satisfies EmbeddedMaterialReport[],
-      },
+      ...(job.$schema === GAME_READY_JOB_SCHEMA
+        ? {
+          materialRepair: {
+            mode: job.materialRepair.mode,
+            textureFlipY: job.materialRepair.textureFlipY,
+            plan: prepared!.plan,
+            referenceWarnings: reference!.warnings,
+            embeddedMaterials: embeddedMaterialReports satisfies EmbeddedMaterialReport[],
+          },
+        }
+        : {
+          materials: {
+            mode: job.materials.mode,
+            preservation: {
+              source: preserveSummary,
+              exported: preservedOutputSummary,
+            },
+          },
+        }),
       rig: {
         attachments,
         retargetMap: rigMapReport,
@@ -348,11 +547,12 @@ async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
       validation: {
         source: validation,
         exportedRoundtrip: roundtrip,
-        embeddedTextureCount: embedded.report.reduce((sum, item) => sum + item.textures.length, 0),
+        embeddedTextureCount: preservedOutputSummary?.textureCount
+          ?? embeddedMaterialReports.reduce((sum, item) => sum + item.textures.length, 0),
         externalResourceUris: 0,
         stepTiming,
       },
-      output: { path: 'model.glb', byteLength: embedded.bytes.byteLength, sha256: outputHash },
+      output: { path: 'model.glb', byteLength: outputGlb.byteLength, sha256: outputHash },
       limitations: [
         'Forward is a declared authored convention; it is not inferred from mesh topology.',
         'Retargeting preserves target proportions and transfers sampled world-rotation deltas or explicitly scoped absolute directions; different limb structures are not claimed anatomically equivalent.',
@@ -364,7 +564,7 @@ async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
       asset: {
         glb: 'model.glb',
         sha256: outputHash,
-        byteLength: embedded.bytes.byteLength,
+        byteLength: outputGlb.byteLength,
         classification: job.provenance.classification ?? 'LOCAL',
       },
       coordinates: job.coordinates,
@@ -390,14 +590,14 @@ async function runJob(jobPath: string): Promise<GameReadyPublishedGeneration> {
       provenance: job.provenance,
     };
     return publishGameReadyGeneration({
-      model: embedded.bytes,
+      model: outputGlb,
       job,
       mapping,
       report,
       manifest,
       producer,
       inputs: generationInputs,
-    }, job.output);
+    }, { ...job.output, signal });
   } finally {
     source?.dispose();
     target.dispose();
@@ -416,8 +616,31 @@ async function main(): Promise<void> {
   const jobPathValue = args[jobIndex + 1];
   if (!path.isAbsolute(jobPathValue)) fail('--job must be an absolute path.');
   const jobPath = path.resolve(jobPathValue);
-  const result = await runJob(jobPath);
-  process.stdout.write(`${JSON.stringify({ status: 'complete', ...result })}\n`);
+  const controller = new AbortController();
+  let requestedSignal: 'SIGINT' | 'SIGTERM' | null = null;
+  const onSigint = (): void => {
+    requestedSignal ??= 'SIGINT';
+    controller.abort(new Error('Received SIGINT; cancellation requested.'));
+  };
+  const onSigterm = (): void => {
+    requestedSignal ??= 'SIGTERM';
+    controller.abort(new Error('Received SIGTERM; cancellation requested.'));
+  };
+  process.on('SIGINT', onSigint);
+  process.on('SIGTERM', onSigterm);
+  try {
+    const result = await runJob(jobPath, controller.signal);
+    process.stdout.write(`${JSON.stringify({ status: 'complete', ...result })}\n`);
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const cancelled = controller.signal.aborted || (error instanceof Error && error.name === 'AbortError');
+    process.stderr.write(`${JSON.stringify({ status: cancelled ? 'cancelled' : 'failed', error: message })}\n`);
+    if (cancelled) process.exitCode = requestedSignal === 'SIGTERM' ? 143 : 130;
+    else process.exitCode = 1;
+  } finally {
+    process.off('SIGINT', onSigint);
+    process.off('SIGTERM', onSigterm);
+  }
 }
 
 main().catch((error: unknown) => {

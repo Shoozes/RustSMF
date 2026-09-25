@@ -22,7 +22,9 @@ import type {
 } from './naturalRetarget';
 
 export const GAME_READY_JOB_SCHEMA = 'rustsmf.game-ready-job.v2';
+export const GAME_READY_PRESERVE_JOB_SCHEMA = 'rustsmf.game-ready-job.v3';
 export const MAX_GAME_READY_TEXTURE_FILES = MAX_MODEL_RESOURCE_FILES - 2;
+export const MAX_GAME_READY_SIDECAR_FILES = MAX_MODEL_RESOURCE_FILES - 1;
 
 export interface RetargetJob {
   sourceModel: string;
@@ -61,15 +63,7 @@ export interface RetargetJob {
   nextDownRationalTimes?: boolean;
 }
 
-export interface GameReadyJob {
-  $schema: typeof GAME_READY_JOB_SCHEMA;
-  input: {
-    riggedModel: string;
-    referenceObj: string;
-    referenceMtl: string;
-    textures: string[];
-  };
-  materialRepair: { mode: 'strict-auto'; textureFlipY: boolean };
+interface GameReadyJobCommon {
   coordinates: {
     unitMeters: number;
     up: '+Y';
@@ -92,6 +86,28 @@ export interface GameReadyJob {
     notes?: string[];
   };
 }
+
+export interface GameReadyJob extends GameReadyJobCommon {
+  $schema: typeof GAME_READY_JOB_SCHEMA;
+  input: {
+    riggedModel: string;
+    referenceObj: string;
+    referenceMtl: string;
+    textures: string[];
+  };
+  materialRepair: { mode: 'strict-auto'; textureFlipY: boolean };
+}
+
+export interface PreserveExistingGameReadyJob extends GameReadyJobCommon {
+  $schema: typeof GAME_READY_PRESERVE_JOB_SCHEMA;
+  input: {
+    riggedModel: string;
+    sidecars: string[];
+  };
+  materials: { mode: 'preserve-existing' };
+}
+
+export type GameReadyJobDocument = GameReadyJob | PreserveExistingGameReadyJob;
 
 export interface GameReadyPathPolicy {
   isAbsolute(value: string): boolean;
@@ -515,24 +531,69 @@ function assertUniquePaths(paths: readonly string[], label: string, policy: Game
 }
 
 export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): GameReadyJob {
-  const job = objectValue(value, 'job');
-  rejectUnknownFields(job, ['$schema', 'input', 'materialRepair', 'coordinates', 'rig', 'output', 'provenance'], 'job');
-  if (job.$schema !== GAME_READY_JOB_SCHEMA) fail(`job.$schema must equal ${GAME_READY_JOB_SCHEMA}.`);
-  const input = objectValue(job.input, 'job.input');
-  rejectUnknownFields(input, ['riggedModel', 'referenceObj', 'referenceMtl', 'textures'], 'job.input');
-  const textureValues = input.textures;
-  if (!Array.isArray(textureValues) || textureValues.length === 0 || textureValues.length > MAX_GAME_READY_TEXTURE_FILES) {
-    fail(`job.input.textures must contain 1-${MAX_GAME_READY_TEXTURE_FILES} absolute JPEG/PNG paths.`);
+  const parsed = parseGameReadyJobDocument(value, paths);
+  if (parsed.$schema !== GAME_READY_JOB_SCHEMA) {
+    fail(`This caller requires ${GAME_READY_JOB_SCHEMA}; use parseGameReadyJobDocument for versioned CLI jobs.`);
   }
-  const textures = textureValues.map((item, index) => absolutePath(item, `job.input.textures[${index}]`, paths));
-  assertUniquePaths(textures, 'job.input.textures', paths);
+  return parsed;
+}
 
-  const materialRepair = objectValue(job.materialRepair, 'job.materialRepair');
-  rejectUnknownFields(materialRepair, ['mode', 'textureFlipY'], 'job.materialRepair');
-  if (materialRepair.mode !== 'strict-auto') fail('job.materialRepair.mode must equal strict-auto.');
-  const textureFlipY = materialRepair.textureFlipY === undefined
-    ? true
-    : optionalBoolean(materialRepair.textureFlipY, 'job.materialRepair.textureFlipY')!;
+export function parseGameReadyJobDocument(value: unknown, paths: GameReadyPathPolicy): GameReadyJobDocument {
+  const job = objectValue(value, 'job');
+  const schema = job.$schema;
+  if (schema !== GAME_READY_JOB_SCHEMA && schema !== GAME_READY_PRESERVE_JOB_SCHEMA) {
+    fail(`job.$schema must equal ${GAME_READY_JOB_SCHEMA} or ${GAME_READY_PRESERVE_JOB_SCHEMA}.`);
+  }
+  rejectUnknownFields(job, schema === GAME_READY_JOB_SCHEMA
+    ? ['$schema', 'input', 'materialRepair', 'coordinates', 'rig', 'output', 'provenance']
+    : ['$schema', 'input', 'materials', 'coordinates', 'rig', 'output', 'provenance'], 'job');
+  const input = objectValue(job.input, 'job.input');
+  let legacyInput: GameReadyJob['input'] | undefined;
+  let preserveInput: PreserveExistingGameReadyJob['input'] | undefined;
+  let textureFlipY = true;
+  if (schema === GAME_READY_JOB_SCHEMA) {
+    rejectUnknownFields(input, ['riggedModel', 'referenceObj', 'referenceMtl', 'textures'], 'job.input');
+    const textureValues = input.textures;
+    if (!Array.isArray(textureValues) || textureValues.length === 0 || textureValues.length > MAX_GAME_READY_TEXTURE_FILES) {
+      fail(`job.input.textures must contain 1-${MAX_GAME_READY_TEXTURE_FILES} absolute JPEG/PNG paths.`);
+    }
+    const textures = textureValues.map((item, index) => absolutePath(item, `job.input.textures[${index}]`, paths));
+    assertUniquePaths(textures, 'job.input.textures', paths);
+    legacyInput = {
+      riggedModel: absolutePath(input.riggedModel, 'job.input.riggedModel', paths),
+      referenceObj: absolutePath(input.referenceObj, 'job.input.referenceObj', paths),
+      referenceMtl: absolutePath(input.referenceMtl, 'job.input.referenceMtl', paths),
+      textures,
+    };
+
+    const materialRepair = objectValue(job.materialRepair, 'job.materialRepair');
+    rejectUnknownFields(materialRepair, ['mode', 'textureFlipY'], 'job.materialRepair');
+    if (materialRepair.mode !== 'strict-auto') fail('job.materialRepair.mode must equal strict-auto.');
+    textureFlipY = materialRepair.textureFlipY === undefined
+      ? true
+      : optionalBoolean(materialRepair.textureFlipY, 'job.materialRepair.textureFlipY')!;
+  } else {
+    rejectUnknownFields(input, ['riggedModel', 'sidecars'], 'job.input');
+    const riggedModel = absolutePath(input.riggedModel, 'job.input.riggedModel', paths);
+    const sidecarValues = input.sidecars;
+    if (!Array.isArray(sidecarValues) || sidecarValues.length > MAX_GAME_READY_SIDECAR_FILES) {
+      fail(`job.input.sidecars must be an array of 0-${MAX_GAME_READY_SIDECAR_FILES} absolute paths.`);
+    }
+    const sidecars = sidecarValues.map((item, index) => absolutePath(item, `job.input.sidecars[${index}]`, paths));
+    assertUniquePaths([riggedModel, ...sidecars], 'job.input.riggedModel and sidecars', paths);
+    if (/\.glb$/i.test(riggedModel) && sidecars.length > 0) {
+      fail('Embedded GLB preserve-existing jobs must not declare sidecars.');
+    }
+    if (!/\.(?:fbx|glb)$/i.test(riggedModel)) {
+      fail('Preserve-existing jobs support only embedded .glb or sidecar-backed .fbx targets.');
+    }
+    const materials = objectValue(job.materials, 'job.materials');
+    rejectUnknownFields(materials, ['mode'], 'job.materials');
+    if (materials.mode !== 'preserve-existing') {
+      fail('job.materials.mode must equal preserve-existing.');
+    }
+    preserveInput = { riggedModel, sidecars };
+  }
 
   const coordinates = objectValue(job.coordinates, 'job.coordinates');
   rejectUnknownFields(coordinates, ['unitMeters', 'up', 'forward', 'grounded'], 'job.coordinates');
@@ -652,7 +713,7 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
     for (const [name, envelope] of Object.entries(retarget.clipEndpointEnvelopes ?? {})) {
       if (retarget.clips && !retarget.clips.includes(name)) fail('Endpoint envelope configures an unselected source clip.');
       if (retarget.sampleRateHz !== 60 || retarget.interpolation !== 'step' || retarget.clipPoseRecovery?.[name]
-        || retarget.clipJointConstraints?.[name] || retarget.clipForearmTwist?.[name]?.length
+        || retarget.clipJointConstraints?.[name]
         || Object.keys(retarget.localReferenceCorrections ?? {}).length) fail('Endpoint envelopes require 60 Hz STEP and no recovery/joint/wrist/reference post-corrections.');
       const timing = retarget.clipVisualTiming?.[name];
       if (timing) validateEndpointWindows(envelope, timing.durationFrames + 1);
@@ -708,15 +769,7 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
   if (provenance.notes !== undefined && (!Array.isArray(provenance.notes) || provenance.notes.some((item) => typeof item !== 'string'))) {
     fail('job.provenance.notes must be an array of strings.');
   }
-  const parsed: GameReadyJob = {
-    $schema: GAME_READY_JOB_SCHEMA,
-    input: {
-      riggedModel: absolutePath(input.riggedModel, 'job.input.riggedModel', paths),
-      referenceObj: absolutePath(input.referenceObj, 'job.input.referenceObj', paths),
-      referenceMtl: absolutePath(input.referenceMtl, 'job.input.referenceMtl', paths),
-      textures,
-    },
-    materialRepair: { mode: 'strict-auto', textureFlipY },
+  const common: GameReadyJobCommon = {
     coordinates: {
       unitMeters: coordinates.unitMeters,
       up: '+Y',
@@ -741,19 +794,41 @@ export function parseGameReadyJob(value: unknown, paths: GameReadyPathPolicy): G
       notes: provenance.notes as string[] | undefined,
     },
   };
+  const parsed: GameReadyJobDocument = schema === GAME_READY_JOB_SCHEMA
+    ? {
+      ...common,
+      $schema: GAME_READY_JOB_SCHEMA,
+      input: legacyInput!,
+      materialRepair: { mode: 'strict-auto', textureFlipY },
+    }
+    : {
+      ...common,
+      $schema: GAME_READY_PRESERVE_JOB_SCHEMA,
+      input: preserveInput!,
+      materials: { mode: 'preserve-existing' },
+    };
   const outputPaths = Object.values(parsed.output).filter((item): item is string => item !== undefined);
   assertUniquePaths(outputPaths, 'job.output paths', paths);
   if (parsed.output.currentPointer
     && paths.comparisonKey(pathDirectory(parsed.output.currentPointer)) !== paths.comparisonKey(parsed.output.generationRoot)) {
     fail('job.output.currentPointer must be a direct child of job.output.generationRoot.');
   }
-  const inputPaths = [
-    parsed.input.riggedModel,
-    parsed.input.referenceObj,
-    parsed.input.referenceMtl,
-    ...parsed.input.textures,
-    ...(parsed.rig.retarget ? [parsed.rig.retarget.sourceModel] : []),
-  ];
+  const inputPaths = parsed.$schema === GAME_READY_JOB_SCHEMA
+    ? [
+      parsed.input.riggedModel,
+      parsed.input.referenceObj,
+      parsed.input.referenceMtl,
+      ...parsed.input.textures,
+      ...(parsed.rig.retarget ? [parsed.rig.retarget.sourceModel] : []),
+    ]
+    : [
+      parsed.input.riggedModel,
+      ...parsed.input.sidecars,
+      ...(parsed.rig.retarget ? [parsed.rig.retarget.sourceModel] : []),
+    ];
+  if (parsed.$schema === GAME_READY_PRESERVE_JOB_SCHEMA) {
+    assertUniquePaths(inputPaths, 'job.input and retarget paths', paths);
+  }
   const inputKeys = new Set(inputPaths.map((item) => paths.comparisonKey(item)));
   if (outputPaths.some((item) => inputKeys.has(paths.comparisonKey(item)))) {
     fail('Output paths must not overwrite input files.');

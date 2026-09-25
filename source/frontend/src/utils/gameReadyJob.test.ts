@@ -4,7 +4,9 @@ import * as THREE from 'three';
 import { parseRetargetProfile, profileClipOptions } from './retargetProfile';
 import {
   GAME_READY_JOB_SCHEMA,
+  GAME_READY_PRESERVE_JOB_SCHEMA,
   parseGameReadyJob,
+  parseGameReadyJobDocument,
   resolvePreservedTargetRotations,
   type GameReadyPathPolicy,
 } from './gameReadyJob';
@@ -178,6 +180,46 @@ test('normalized game-ready jobs replay with omitted, empty and populated curls'
     (job.rig as { retarget: Record<string, unknown> }).retarget.targetChainCurls = invalid;
     assert.throws(() => parseGameReadyJob(job, paths), /array|object|palmBone/);
   }
+});
+
+test('versioned preserve-existing jobs accept embedded GLB or declared FBX sidecars without repair inputs', () => {
+  const preserveJob = (model = '/input/target.glb', sidecars: string[] = []): Record<string, unknown> => ({
+    $schema: GAME_READY_PRESERVE_JOB_SCHEMA,
+    input: { riggedModel: model, sidecars },
+    materials: { mode: 'preserve-existing' },
+    coordinates: { unitMeters: 1, up: '+Y', forward: '+Z', grounded: true },
+    rig: { attachments: { root: 'TargetRoot' } },
+    output: { generationRoot: '/output/generations', currentPointer: '/output/generations/current.json' },
+    provenance: { ownership: 'caller-owned neutral fixture' },
+  });
+
+  const embeddedGlb = parseGameReadyJobDocument(preserveJob(), paths);
+  assert.equal(embeddedGlb.$schema, GAME_READY_PRESERVE_JOB_SCHEMA);
+  assert.deepEqual(embeddedGlb.input, { riggedModel: '/input/target.glb', sidecars: [] });
+  assert.deepEqual(embeddedGlb.materials, { mode: 'preserve-existing' });
+  assert.deepEqual(parseGameReadyJobDocument(JSON.parse(JSON.stringify(embeddedGlb)), paths), embeddedGlb);
+  assert.throws(() => parseGameReadyJob(preserveJob(), paths), /requires rustsmf\.game-ready-job\.v2/);
+
+  const sidecarFbx = parseGameReadyJobDocument(
+    preserveJob('/input/target.fbx', ['/input/albedo.png']),
+    paths,
+  );
+  assert.deepEqual(sidecarFbx.input, { riggedModel: '/input/target.fbx', sidecars: ['/input/albedo.png'] });
+
+  const invalid = [
+    (job: Record<string, unknown>) => { (job.input as Record<string, unknown>).sidecars = ['/input/side.png']; },
+    (job: Record<string, unknown>) => { (job.materials as Record<string, unknown>).mode = 'strict-auto'; },
+    (job: Record<string, unknown>) => { (job.input as Record<string, unknown>).riggedModel = '/input/target.dae'; },
+    (job: Record<string, unknown>) => { (job.input as Record<string, unknown>).sidecars = ['/input/target.glb']; },
+    (job: Record<string, unknown>) => { (job.output as Record<string, unknown>).generationRoot = '/input/target.glb'; },
+  ];
+  for (const change of invalid) {
+    const job = preserveJob();
+    change(job);
+    assert.throws(() => parseGameReadyJobDocument(job, paths));
+  }
+  const duplicate = preserveJob('/input/target.fbx', ['/input/albedo.png', '/input/ALBEDO.PNG']);
+  assert.throws(() => parseGameReadyJobDocument(duplicate, paths), /duplicate paths/);
 });
 
 test('game-ready job parsing rejects silent selection and path ambiguities', () => {

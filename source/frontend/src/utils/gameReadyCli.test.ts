@@ -11,8 +11,11 @@ import { PNG } from 'pngjs';
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
 import { loadGLB } from '../loaders/glb';
+import { loadFBX } from '../loaders/fbx';
 import { installFileReaderTestPolyfill } from '../test/installFileReaderTestPolyfill';
 import { installNodeThreeRuntime } from '../../scripts/node-three-runtime';
+import { createSkinnedGlbFixtureInputWithOptions } from '../../tests/helpers/skinned-glb-fixture';
+import { createExternalFbxFixtureInputs } from '../../tests/helpers/external-fbx-fixture';
 import {
   parseGlbContainer,
   type EmbeddedMaterialReport,
@@ -22,7 +25,8 @@ import {
   type GameReadyGenerationFiles,
   type GameReadyPublicationStep,
 } from './gameReadyGeneration';
-import { GAME_READY_JOB_SCHEMA } from './gameReadyJob';
+import { GAME_READY_JOB_SCHEMA, GAME_READY_PRESERVE_JOB_SCHEMA } from './gameReadyJob';
+import { createModelResourceBundle } from './modelResourceBundle';
 import { disposeThreeObject } from './threeDisposal';
 
 const execFileAsync = promisify(execFile);
@@ -88,6 +92,21 @@ interface CliManifest {
   clips: Array<{ name: string; duration: number; trackCount: number }>;
 }
 
+interface PreserveCliReport {
+  materials: {
+    mode: 'preserve-existing';
+    preservation: {
+      source: { materialNames: string[]; texturedMaterialNames: string[]; textureCount: number };
+      exported: { materialCount: number; textureCount: number; imageCount: number };
+    };
+  };
+  validation: {
+    source: { boneCount: number; clipCount: number };
+    exportedRoundtrip: { boneCount: number; clipNames: string[] };
+    embeddedTextureCount: number;
+  };
+}
+
 interface IsolatedWorkspace {
   root: string;
   cliPath: string;
@@ -115,6 +134,26 @@ interface ReimportEvidence {
 
 function hash(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
+}
+
+function firstEmbeddedPngPixels(bytes: Uint8Array): Uint8Array {
+  const { json, binary } = parseGlbContainer(bytes);
+  const image = json.images?.[0];
+  assert.equal(image?.mimeType, 'image/png');
+  assert.equal(image?.uri, undefined);
+  assert.ok(image?.bufferView !== undefined);
+  const view = json.bufferViews?.[image!.bufferView!];
+  assert.ok(view);
+  const start = view.byteOffset ?? 0;
+  const encoded = Buffer.from(binary.subarray(start, start + view.byteLength));
+  let offset = 8;
+  while (offset + 12 <= encoded.byteLength) {
+    const chunkLength = encoded.readUInt32BE(offset);
+    const chunkType = encoded.toString('ascii', offset + 4, offset + 8);
+    offset += chunkLength + 12;
+    if (chunkType === 'IEND') break;
+  }
+  return PNG.sync.read(encoded.subarray(0, offset)).data;
 }
 
 function clip(name: string, rootName: string, tipName: string, tipDegrees: number, rootTravel: number): THREE.AnimationClip {
@@ -268,6 +307,30 @@ function jobFor(
       ownership: 'caller-owned neutral fixture',
       classification: 'NEUTRAL_TEST',
       notes: ['No fight-game-study or GaimEngine metadata or code is required.'],
+    },
+  };
+}
+
+function preserveJobFor(
+  root: string,
+  target: string,
+  sidecars: string[] = [],
+  generationRoot = path.join(root, 'preserved-generations'),
+): Record<string, unknown> {
+  return {
+    $schema: GAME_READY_PRESERVE_JOB_SCHEMA,
+    input: { riggedModel: target, sidecars },
+    materials: { mode: 'preserve-existing' },
+    coordinates: { unitMeters: 1, up: '+Y', forward: '+Z', grounded: true },
+    rig: {},
+    output: {
+      generationRoot,
+      currentPointer: path.join(generationRoot, 'current.json'),
+    },
+    provenance: {
+      generator: 'preserve-existing-neutral-test',
+      ownership: 'caller-owned neutral fixture',
+      classification: 'NEUTRAL_TEST',
     },
   };
 }
@@ -572,6 +635,129 @@ test('neutral saved job runs through the CLI, reimports, and preserves failed-at
         'interrupted publication leaves prior generation and caller inputs unchanged',
       ],
     }, null, 2)}\n`);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('v3 preserve-existing exports an embedded textured skinned GLB without repair inputs', async () => {
+  installNodeThreeRuntime();
+  const root = await mkdtemp(path.join(os.tmpdir(), 'rustsmf-preserve-glb-'));
+  try {
+    const fixture = await createSkinnedGlbFixtureInputWithOptions({ withTexture: true });
+    const targetPath = path.join(root, fixture.name);
+    const jobPath = path.join(root, 'preserve.job.json');
+    const targetBytes = Buffer.from(fixture.buffer);
+    await writeFile(targetPath, targetBytes);
+    await writeJob(jobPath, preserveJobFor(root, targetPath));
+    const originalInputHashes = await inputHashes([targetPath, jobPath]);
+
+    const run = await invokeCli(jobPath);
+    assert.equal(run.code, 0, run.stderr);
+    const published = parsePublishedResult(run.stdout);
+    const report = await readJson<PreserveCliReport>(published.report);
+    const normalizedJob = await readJson<Record<string, unknown>>(published.job);
+    assert.equal(normalizedJob.$schema, GAME_READY_PRESERVE_JOB_SCHEMA);
+    assert.deepEqual(normalizedJob.input, { riggedModel: targetPath, sidecars: [] });
+    assert.equal('referenceObj' in (normalizedJob.input as Record<string, unknown>), false);
+    assert.equal(report.materials.mode, 'preserve-existing');
+    assert.equal(report.materials.preservation.source.textureCount, 1);
+    assert.ok(report.materials.preservation.exported.imageCount > 0);
+    assert.equal(report.validation.source.boneCount, 2);
+    assert.deepEqual(report.validation.exportedRoundtrip.clipNames, ['FixtureBend']);
+    assert.equal(report.validation.embeddedTextureCount, report.materials.preservation.exported.textureCount);
+    assert.deepEqual([...firstEmbeddedPngPixels(new Uint8Array(await readFile(published.model)))],
+      [...firstEmbeddedPngPixels(targetBytes)]);
+
+    const outputBytes = new Uint8Array(await readFile(published.model));
+    const loaded = await loadGLB(outputBytes.buffer.slice(outputBytes.byteOffset, outputBytes.byteOffset + outputBytes.byteLength));
+    try {
+      assert.deepEqual(loaded.skeleton?.bones.map((bone) => bone.name), ['FixtureRoot', 'FixtureTip']);
+      assert.deepEqual(loaded.clips.map((clipInfo) => clipInfo.name), ['FixtureBend']);
+      const mesh = loaded.root.getObjectByName('FixtureSkinnedMesh');
+      assert.ok(mesh instanceof THREE.SkinnedMesh);
+      const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
+      assert.ok(material.map?.image);
+      assert.ok((material.map.image as { width?: number }).width! > 0);
+    } finally {
+      loaded.mixer.stopAllAction();
+      disposeThreeObject(loaded.root);
+    }
+    assert.deepEqual(await inputHashes([targetPath, jobPath]), originalInputHashes);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('v3 preserve-existing resolves FBX texture sidecars and roundtrips a skinned animated FBX', async () => {
+  installNodeThreeRuntime();
+  const root = await mkdtemp(path.join(os.tmpdir(), 'rustsmf-preserve-fbx-'));
+  try {
+    const externalFiles = createExternalFbxFixtureInputs();
+    const externalModelPath = path.join(root, externalFiles[0].name);
+    const externalTexturePath = path.join(root, externalFiles[1].name);
+    const externalJobPath = path.join(root, 'sidecar.job.json');
+    await writeFile(externalModelPath, externalFiles[0].buffer);
+    await writeFile(externalTexturePath, externalFiles[1].buffer);
+    const externalBundle = createModelResourceBundle(
+      { name: externalFiles[0].name, data: externalFiles[0].buffer },
+      [{ name: externalFiles[1].name, data: externalFiles[1].buffer }],
+    );
+    const externalLoaded = await loadFBX(externalBundle, { strictResources: true });
+    try {
+      assert.equal(externalLoaded.summary.textureMapCount, 1);
+      assert.equal(externalLoaded.summary.removedTextureMaps, 0);
+      let mesh: THREE.Object3D | undefined;
+      externalLoaded.root.traverse((object) => { if ('isMesh' in object && object.isMesh) mesh = object; });
+      assert.ok(mesh);
+      const material = Array.isArray(Reflect.get(mesh, 'material'))
+        ? Reflect.get(mesh, 'material')[0] as THREE.Material
+        : Reflect.get(mesh, 'material') as THREE.Material;
+      assert.ok(Reflect.get(material, 'map'));
+      assert.ok(Reflect.get(Reflect.get(material, 'map'), 'image'));
+    } finally {
+      externalLoaded.mixer.stopAllAction();
+      disposeThreeObject(externalLoaded.root);
+    }
+    await writeJob(externalJobPath, preserveJobFor(root, externalModelPath, [externalTexturePath]));
+    const staticFbxRun = await invokeCli(externalJobPath);
+    assert.notEqual(staticFbxRun.code, 0);
+    assert.match(staticFbxRun.stderr, /Rigged target contains no skeleton/);
+    await assert.rejects(access(path.join(root, 'preserved-generations')));
+
+    const riggedTargetPath = path.join(root, 'independent_skinned.fbx');
+    const riggedJobPath = path.join(root, 'rigged-preserve.job.json');
+    const fixturePath = path.join(frontendRoot, 'tests', 'fixtures', 'independent-fbx', 'independent_skinned.fbx');
+    const fixtureBytes = await readFile(fixturePath);
+    await writeFile(riggedTargetPath, fixtureBytes);
+    await writeJob(riggedJobPath, preserveJobFor(root, riggedTargetPath, [], path.join(root, 'rigged-generations')));
+    const run = await invokeCli(riggedJobPath);
+    assert.equal(run.code, 0, run.stderr);
+    const published = parsePublishedResult(run.stdout);
+    const report = await readJson<PreserveCliReport>(published.report);
+    assert.equal(report.materials.mode, 'preserve-existing');
+    assert.equal(report.materials.preservation.source.textureCount, 1);
+    assert.ok(report.materials.preservation.exported.imageCount > 0);
+    assert.equal(report.validation.source.boneCount, 2);
+    assert.equal(report.validation.source.clipCount, 1);
+    assert.equal(report.validation.exportedRoundtrip.boneCount, 2);
+    assert.deepEqual(report.validation.exportedRoundtrip.clipNames, ['Scene']);
+
+    const outputBytes = new Uint8Array(await readFile(published.model));
+    const loaded = await loadGLB(outputBytes.buffer.slice(outputBytes.byteOffset, outputBytes.byteOffset + outputBytes.byteLength));
+    try {
+      assert.equal(loaded.skeleton?.bones.length, 2);
+      assert.deepEqual(loaded.clips.map((clipInfo) => clipInfo.name), ['Scene']);
+      const meshes: THREE.Mesh[] = [];
+      loaded.root.traverse((object) => { if (object instanceof THREE.Mesh) meshes.push(object); });
+      assert.ok(meshes.some((mesh) => {
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+        return materials.some((material) => !!Reflect.get(material, 'map') && !!Reflect.get(Reflect.get(material, 'map'), 'image'));
+      }));
+    } finally {
+      loaded.mixer.stopAllAction();
+      disposeThreeObject(loaded.root);
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }

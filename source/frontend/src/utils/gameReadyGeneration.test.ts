@@ -170,3 +170,32 @@ test('post-publication failures report the durable generation and pointer state 
     await rm(pointerRoot, { recursive: true, force: true });
   }
 });
+
+test('cancellation before the generation rename removes staging and preserves the current pointer', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'game-ready-cancel-'));
+  const currentPointer = path.join(root, 'current.json');
+  try {
+    const baseline = await publishGameReadyGeneration(fixture(), { generationRoot: root, currentPointer });
+    const pointerBefore = await readFile(currentPointer);
+    const files = fixture();
+    files.report = { $schema: 'test-report', status: 'complete', attempt: 'cancelled' };
+    const controller = new AbortController();
+    await assert.rejects(
+      publishGameReadyGeneration(files, {
+        generationRoot: root,
+        currentPointer,
+        signal: controller.signal,
+        afterStep(step) { if (step === 'report') controller.abort(new Error('test cancellation')); },
+      }),
+      /cancelled before publication; staging was removed/,
+    );
+    assert.deepEqual(await readFile(currentPointer), pointerBefore);
+    const entries = await readdir(root);
+    assert.deepEqual(entries.filter((name) => /^[a-f0-9]{64}$/.test(name)), [baseline.id]);
+    assert.deepEqual(entries.filter((name) => name === 'current.json'), ['current.json']);
+    assert.equal(entries.some((name) => name.startsWith('.rustsmf-staging-')), false);
+    assert.deepEqual((await readdir(baseline.directory)).sort(), ['job.json', 'manifest.json', 'mapping.json', 'model.glb', 'report.json']);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});

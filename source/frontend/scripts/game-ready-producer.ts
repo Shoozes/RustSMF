@@ -43,6 +43,7 @@ const SOURCE_FILES = [
   'source/frontend/src/utils/skinnedVertexPosition.ts',
   'source/frontend/src/utils/threeDisposal.ts',
   'source/frontend/src/utils/threeTypeGuards.ts',
+  'source/frontend/src/utils/textureImageReadiness.ts',
   'source/frontend/src/vendor/FBXExporter.js',
   'source/package-lock.json',
   'source/package.json',

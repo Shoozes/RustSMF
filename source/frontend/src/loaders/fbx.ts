@@ -147,10 +147,13 @@ function resourceBasePath(name: string): string {
 
 export async function loadFBX(
   urlOrBuffer: string | ArrayBuffer | ModelResourceBundle,
+  options: { strictResources?: boolean } = {},
 ): Promise<FbxLoadedModel> {
   const isBundle = typeof urlOrBuffer === 'object' && !(urlOrBuffer instanceof ArrayBuffer);
   const bundle = isBundle ? urlOrBuffer as ModelResourceBundle : null;
-  const registry = bundle && bundle.files.length > 1 ? createResourceUrlRegistry(bundle) : null;
+  const registry = bundle && (bundle.files.length > 1 || options.strictResources === true)
+    ? createResourceUrlRegistry(bundle)
+    : null;
   const textureManager = new THREE.LoadingManager();
   let textureLoadStarted = false;
   let resolveTextureLoads: () => void = () => {};

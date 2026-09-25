@@ -48,6 +48,7 @@ export type GameReadyPublicationStep =
 export interface GameReadyPublicationOptions {
   generationRoot: string;
   currentPointer?: string;
+  signal?: AbortSignal;
   afterStep?: (step: GameReadyPublicationStep) => void | Promise<void>;
 }
 
@@ -65,6 +66,13 @@ export interface GameReadyPublishedGeneration {
 
 function sha256(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (!signal?.aborted) return;
+  const error = signal.reason instanceof Error ? signal.reason : new Error('Game-ready publication cancelled.');
+  error.name = 'AbortError';
+  throw error;
 }
 
 export function normalizedJsonBytes(value: unknown): Uint8Array {
@@ -128,8 +136,10 @@ export async function publishGameReadyGeneration(
   files: GameReadyGenerationFiles,
   options: GameReadyPublicationOptions,
 ): Promise<GameReadyPublishedGeneration> {
+  throwIfAborted(options.signal);
   const generationRoot = path.resolve(options.generationRoot);
   await ensureRealDirectory(generationRoot);
+  throwIfAborted(options.signal);
   const currentPointer = options.currentPointer ? path.resolve(options.currentPointer) : undefined;
   if (currentPointer && path.dirname(currentPointer) !== generationRoot) {
     throw new Error('Current pointer must be a direct child of the generation root.');
@@ -191,11 +201,18 @@ export async function publishGameReadyGeneration(
       ['report', 'report.json', reportBytes],
       ['manifest', 'manifest.json', normalizedJsonBytes(manifest)],
     ] as const) {
+      throwIfAborted(options.signal);
       await writeFresh(path.join(staging, name), bytes);
       await options.afterStep?.(step);
+      throwIfAborted(options.signal);
     }
+    throwIfAborted(options.signal);
     await rename(staging, directory);
   } catch (error) {
+    if (options.signal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+      await rm(staging, { recursive: true, force: true }).catch(() => undefined);
+      throw new Error(`Game-ready generation ${id} was cancelled before publication; staging was removed.`);
+    }
     const detail = error instanceof Error ? ` ${error.message}` : '';
     throw new Error(`Game-ready generation ${id} was not published; staging remains at ${staging}.${detail}`);
   }
