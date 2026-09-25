@@ -1,0 +1,8 @@
+[package]
+name = "rustsmf-pose-contact"
+version = "0.1.0"
+edition = "2021"
+description = "Portable calibrated two-bone support pose correction"
+
+[dependencies]
+libm = "=0.2.16"

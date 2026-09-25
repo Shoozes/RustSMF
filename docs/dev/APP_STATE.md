@@ -260,3 +260,28 @@ and equal-height or exact-game transforms. Neither numerical equivalence nor
 diagnostic overlays establish fighter acceptance. [FITTED_RIG.md](FITTED_RIG.md)
 owns command schemas, timing precision, limits and receipt controls; HISTORY owns
 dated proof, and TODO owns acceptance. Private assets and game packages stay excluded.
+
+## Portable Pose Contact Solver
+
+`source/pose-contact` exposes the versioned, pure-Rust `rustsmf-pose-contact`
+v0.1.0 crate and a verbatim-vendored v1 module. It corrects one evaluated
+parent-first local-TRS humanoid pose for zero, one, or two caller-resolved sole
+targets. The output is a complete local TRS pose plus calibrated hip/knee/ankle
+world orientations, solved positions, and reach, clamp, residual, and ground
+diagnostics. Two supplied limb subtrees must be independent. Re-evaluating from
+each incoming pose makes interrupted blends ordinary inputs; no phase, anchor,
+filesystem, or clock state is owned here.
+
+The adapter resolves named chains to indices, supplies measured local segment
+axes, hip bend pole, knee plane normal, ankle-local sole offsets, desired contact
+weights/targets/orientations, ground plane, and a pelvis-translation bound. The
+axis calibrations must agree with each evaluated direct hip/knee/ankle hierarchy.
+Use the `pole × upper-axis` hip-plane sign and a knee-local plane normal aligned
+with `(hip-to-knee) × (knee-to-ankle)`; these preserve bend direction and rest
+roll. The solver intentionally rejects non-uniform local scales, invalid axes,
+unsupported chains, and non-finite inputs. It does not author contact intervals,
+root travel, action eligibility, persistence, or arbitrary anatomy.
+
+`cargo test` and native/WASM `cargo check` for this crate run inside
+`npm run verify:rust`. See [POSE_CONTACT.md](POSE_CONTACT.md) for the v1 call,
+vendoring receipt, calibration details, and compatibility boundary.

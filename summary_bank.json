@@ -951,6 +951,25 @@
         "Mapped/unmapped skeleton colors, reversible mesh opacity, and one selected joint's axes and bend plane are read-only diagnostics validated against the manifest mapping and recorded in the receipt.",
         "Generated fitted assets, private jobs, screenshots, and receiving-game artifacts remain outside context routes."
       ]
+    },
+    "feature__runtime_pose_contact": {
+      "description": "Versioned Rust support-pose correction, source-vendoring contract, calibrated leg-axis math, and native/WASM regression proof.",
+      "max_kb": 96,
+      "paths": [
+        "source/pose-contact/Cargo.toml",
+        "source/pose-contact/Cargo.lock",
+        "source/pose-contact/src/lib.rs",
+        "source/pose-contact/src/v1.rs",
+        "source/pose-contact/tests/v1.rs",
+        "docs/dev/POSE_CONTACT.md",
+        "source/package.json"
+      ],
+      "notes": [
+        "Canonical v1.rs is vendored verbatim where consumers cannot snapshot the RustSMF path crate; it uses existing libm 0.2.16.",
+        "Input is parent-first uniform-scale local TRS and one/two calibrated direct chains with independent limb subtrees; output is corrected full TRS, aligned joint orientations, and bounded diagnostics.",
+        "Calibrate the hip bend plane as pole × upper-axis and knee plane normal with the positive (hip-to-knee) × (knee-to-ankle) sign. No contact schedule or root travel is owned here.",
+        "Native/WASM parity covered four fixtures and 548 exact numeric outputs; the Rust gate is source npm run verify:rust."
+      ]
     }
   },
   "exclusions": {}

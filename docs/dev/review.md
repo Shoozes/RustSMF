@@ -8,6 +8,12 @@ proof in [HISTORY.md](HISTORY.md).
 
 ## Current findings
 
+- The standalone generic pose-contact crate now returns corrected local TRS and
+  calibrated world orientations from current parent-first poses. All ten native
+  tests pass; four fixtures produced 548 identical numeric outputs across
+  native and wasm32. The previous-plane fallback retains its signed bend side
+  when target and pole align. The API boundary and source hash are recorded in
+  [POSE_CONTACT.md](POSE_CONTACT.md) and [HISTORY.md](HISTORY.md).
 - Selective publication is verified on an isolated candidate excluding unfinished
   retargeting work. The guarded staged-only helper binds paths and exact base/tree
   IDs, preserves owner edits, and retries failed pushes without duplicate commits.

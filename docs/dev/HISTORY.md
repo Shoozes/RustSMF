@@ -2,6 +2,43 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-09-25 — Portable pose-contact v1
+
+Added `source/pose-contact`, a generic Rust library that corrects an evaluated
+parent-first local-TRS pose for zero, one, or two calibrated support targets.
+It returns the complete corrected pose and world joint orientations, bounds
+shared pelvis correction, preserves segment lengths and bend-plane sign, and
+reports reach, clamp, sole residual, and ground-height diagnostics. It owns no
+contact schedule, anchor, root travel, clock, or persistence policy. V1 accepts
+direct hip/knee/ankle chains with positive uniform local scale; two indexed
+limb subtrees must be independent. Invalid topology, calibration, or numeric
+input returns an explicit error.
+
+Fixed the degenerate-pole fallback: when the target direction aligns with the
+calibrated bend pole, the solver now reconstructs the pole from the target
+direction and previous plane using the signed `pole × direction` convention.
+A regression verifies the knee does not flip. A deterministic-output assertion
+and a final diagnostics finite check also cover successful results.
+
+The canonical `source/pose-contact/src/v1.rs` module was copied verbatim into an
+ignored standalone consumer-shaped crate. Its copied SHA-256 matches the
+canonical source: `9398bf533e50eb6a5fcaadc50a6e6b2594ab4ecfb1def4a2e96e67f275b8540c`.
+Native and wasm32 builds executed the same four fixtures for root-pelvis
+correction, zero-weight identity, partial rotated sole support, and an already
+satisfied bent pose. All 548 numeric outputs matched exactly (maximum absolute
+delta 0). The isolated crate passed formatting, Clippy, all ten integration
+tests, and wasm32 compilation. The integrated `npm.cmd run verify:rust` from
+`source` passed, including all ten Tauri tests, all ten pose-contact tests,
+Clippy, formatting, native checks, and the wasm32 check. The standalone module
+remains consumer-vendored; no receiving-game checkout or runtime policy was
+changed.
+
+`pwsh -NoProfile -File .\run.ps1 -Task context` passed with 17 project
+integrity checks, ten context-bank tests, and 44 validated groups. No root
+license/notice file or Cargo license declaration exists in this checkout;
+`POSE_CONTACT.md` records source attribution while explicitly requiring license
+confirmation before redistribution.
+
 ## 2026-09-25 — RustSMF v0.2 productization closeout
 
 Completed the four v0.2 outcomes: Modern visual refresh, UI hierarchy, five
