@@ -1950,3 +1950,22 @@ saved-job/generation/read tests passed 18/18 after test typecheck. The candidate
 also passed `node scripts/verify-context-bank.mjs` (44 groups) and
 `node scripts/verify-project-integrity.mjs`. No installer or Windows OS-dialog
 evidence was part of this CLI-only change.
+
+## 2026-09-26 — per-clip scale transfer and portable transition bake
+
+Closed out opt-in, neutral-relative per-clip bone-scale transfer through the
+retarget core, profiles, and saved-job validation, plus the portable Rust
+transition-bake v1 API and its native/WASM fixtures, receipt, and browser probe.
+The transition API keeps support scheduling, consumer adaptation, and asset
+acceptance with callers.
+
+`pwsh -NoProfile -File .\run.ps1 -Task verify` passed on the workspace: frontend
+build, 500 frontend unit tests, 10 Tauri tests, project integrity (17 checks),
+context validation (44 groups and 10 regressions), selected-publish Git safety
+(9 regressions), and process ownership checks (2). The exact staged candidate
+also passed `npm.cmd --prefix .\source run verify` in an isolated Git-backed
+snapshot, including all 16 pose-contact tests, Clippy, native and WASM checks.
+Snapshot context and project-integrity validation passed (10 and 17 tests).
+The transition browser probe passed there with 9 corrected frames and exact
+native/WASM local-TRS bit parity, fingerprint `61931913f4cced0d`, on Chromium
+148. `git diff --check` passed.

@@ -8,6 +8,7 @@ import { parseForearmTwistShares, redistributeForearmTwist, type ForearmTwistSha
 import { constrainHeadChain, parseClipJointConstraints, type HeadJointConstraint } from './retargetJointConstraints';
 import {auditPoseRanges,parsePoseRangeProfile,poseRangeSummary,type PoseRangeProfile,type PoseRangeReport} from './poseRanges';
 import {retargetSourceFrameTime,validateRetargetVisualTiming,type RetargetVisualTiming} from './retargetTiming';
+import { applyTargetReferenceScales, prepareScaleTransfer, type BoneScaleTransfer } from './retargetScale';
 import {
   alignNaturalAnatomicalFrame,
   calibratedNaturalBend,
@@ -82,6 +83,7 @@ export interface AnimationRetargetOptions {
   forearmTwist?: ForearmTwistShare[];
   endpointEnvelope?: EndpointEnvelope;
   endpointTargetClips?: readonly THREE.AnimationClip[];
+  scaleTransfer?: BoneScaleTransfer[];
 }
 
 export interface AnimationRetargetReport {
@@ -94,6 +96,7 @@ export interface AnimationRetargetReport {
   sampleCount: number;
   quaternionTrackCount: number;
   positionTrackCount: number;
+  scaleTrackCount: number;
   discardedTracks: string[];
   hierarchyOnlyTracks: string[];
   mappedBones: RigMapDecision[];
@@ -341,7 +344,7 @@ function sampledTracksForClip(
   return { sampled, discarded, hierarchyOnly };
 }
 
-function uniqueSampleTimes(tracks: readonly SampledTrack[], duration: number): number[] {
+function uniqueSampleTimes(tracks: readonly Pick<SampledTrack, 'track'>[], duration: number): number[] {
   const values = tracks.flatMap(({ track }) => Array.from(track.times));
   values.push(0, duration);
   values.sort((left, right) => left - right);
@@ -371,7 +374,7 @@ function nextDownFloat32(value: number): number {
 }
 
 function sampleSchedule(
-  tracks: readonly SampledTrack[],
+  tracks: readonly Pick<SampledTrack, 'track'>[],
   duration: number,
   sampleRateHz: number | undefined,
   adjustRationalTimes: boolean,
@@ -743,8 +746,8 @@ export function retargetAnimationClip(
 ): RetargetedAnimation {
   if (options.endpointEnvelope) {
     if (options.sampleRateHz !== 60 || options.interpolation !== 'step' || options.poseRecovery || options.jointConstraints
-      || options.forearmTwist?.length || Object.keys(options.localReferenceCorrections ?? {}).length) {
-      throw new Error('Endpoint envelopes require 60 Hz STEP and no recovery/joint/wrist/reference post-corrections.');
+      || options.forearmTwist?.length || options.scaleTransfer?.length || Object.keys(options.localReferenceCorrections ?? {}).length) {
+      throw new Error('Endpoint envelopes require 60 Hz STEP and no recovery/joint/wrist/scale/reference post-corrections.');
     }
     const core = retargetAnimationClip(clip, source, target, mapping, { ...options, endpointEnvelope: undefined, naturalMotion: undefined, poseRanges: undefined });
     core.clip.name = clip.name;
@@ -791,14 +794,22 @@ export function retargetAnimationClip(
     }
     restoreRestState(targetRest);
     evaluateTracks(targetReferenceTracks, 0);
+    // Only opt-in scale bones inherit the target reference clip's neutral.
+    applyTargetReferenceScales(options.targetReferenceClip, target,
+      new Set((options.scaleTransfer ?? []).map(spec => spec.targetBone)));
     target.bones[0]?.updateWorldMatrix(true, true);
     targetReference = captureRestState(target);
     restoreRestState(targetRest);
   }
   const mappedSources = new Set(mapping.decisions.map((decision) => decision.source));
   const { sampled, discarded, hierarchyOnly } = sampledTracksForClip(clip, source, mappedSources);
-  if (sampled.length === 0) {
+  const scaleSourceTracks = (options.scaleTransfer ?? []).flatMap(spec =>
+    clip.tracks.filter(track => track.name === `${spec.sourceBone}.scale`).map(track => ({ track })));
+  if (sampled.length === 0 && scaleSourceTracks.length === 0) {
     throw new Error(`Source clip ${clip.name || '(unnamed)'} has no mapped bone transform tracks.`);
+  }
+  if (options.scaleTransfer?.length && options.poseRecovery) {
+    throw new Error('Scale transfer cannot be combined with pose recovery.');
   }
   const interpolation = options.interpolation ?? 'linear';
   if (options.visualTiming) {
@@ -811,7 +822,7 @@ export function retargetAnimationClip(
     throw new Error('nextDownRationalTimes requires an explicit sampleRateHz.');
   }
   const { evaluationTimes, outputTimes } = sampleSchedule(
-    sampled,
+    [...sampled, ...scaleSourceTracks],
     outputDuration,
     options.sampleRateHz,
     adjustRationalTimes,
@@ -979,6 +990,11 @@ export function retargetAnimationClip(
     restoreRestState(sourceRest);
   }
 
+  const scaleTransfer = prepareScaleTransfer(
+    clip, source, target, mappedSources, options.scaleTransfer ?? [], sourceReferenceClip,
+    new Map([...targetReference].map(([name, state]) => [name, state.localScale])),
+  );
+
   let naturalMotion: PreparedNaturalMotion | null = null;
   if (options.naturalMotion) {
     const rootTravelSamples = parseRootTravelSamples(options.naturalMotion.rootTravelSamples);
@@ -1082,11 +1098,14 @@ export function retargetAnimationClip(
     right: naturalMotion.legs.right.referenceBendPlaneNormal.clone(),
   } : null;
 
+  let scaleTracks: THREE.VectorKeyframeTrack[] = [];
   try {
+    const sourceTimes: number[] = [];
     for (let frameIndex = 0; frameIndex < evaluationTimes.length; frameIndex += 1) {
       const time = options.visualTiming
         ? Math.min(clip.duration, Math.fround(retargetSourceFrameTime(frameIndex, clip.duration, options.visualTiming)))
         : evaluationTimes[frameIndex];
+      sourceTimes.push(time);
       restoreRestState(sourceRest);
       evaluateTracks(sampled, time);
       source.bones[0]?.updateWorldMatrix(true, true);
@@ -1584,6 +1603,7 @@ export function retargetAnimationClip(
         positionValues.set(rootDecision.target, values);
       }
     }
+    scaleTracks = scaleTransfer.sample(sourceTimes, outputTimes);
   } finally {
     restoreRestState(sourceRest);
   }
@@ -1668,6 +1688,10 @@ export function retargetAnimationClip(
     if (interpolation === 'step') track.setInterpolation(THREE.InterpolateDiscrete);
     tracks.push(track);
   }
+  for (const track of scaleTracks) {
+    if (interpolation === 'step') track.setInterpolation(THREE.InterpolateDiscrete);
+    tracks.push(track);
+  }
   if (tracks.length === 0) {
     throw new Error(`Retargeting ${clip.name || '(unnamed)'} produced no target tracks.`);
   }
@@ -1693,7 +1717,8 @@ export function retargetAnimationClip(
       sampleCount: outputTimes.length,
       quaternionTrackCount: quaternionValues.size,
       positionTrackCount: positionValues.size,
-      discardedTracks: discarded,
+      scaleTrackCount: scaleTracks.length,
+      discardedTracks: discarded.filter(name => !scaleTransfer.tracks.some(track => track.name === name)),
       hierarchyOnlyTracks: hierarchyOnly,
       mappedBones: activeDecisions,
       rootMotionScale,

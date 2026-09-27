@@ -11,6 +11,7 @@ import { naturalContactRamp, parseContactPoint, parseContactPatch, parseRootTrav
 import { parseLocalReferenceCorrections, type LocalReferenceCorrection } from './retargetReference';
 import { parseClipJointConstraints, type HeadJointConstraint } from './retargetJointConstraints';
 import { parseClipForearmTwist, type ForearmTwistShare } from './forearmTwist';
+import { parseClipScaleTransfer, type BoneScaleTransfer } from './retargetScale';
 import { parseEndpointEnvelopes, validateEndpointWindows, type EndpointEnvelope } from './endpointEnvelope';
 import type { LogicalAttachmentRole } from './rigMapping';
 import type {
@@ -50,6 +51,7 @@ export interface RetargetJob {
   localReferenceCorrections?: Record<string, LocalReferenceCorrection>;
   clipJointConstraints?: Record<string, HeadJointConstraint>;
   clipForearmTwist?: Record<string, ForearmTwistShare[]>;
+  clipScaleTransfer?: Record<string, BoneScaleTransfer[]>;
   clipEndpointEnvelopes?: Record<string, EndpointEnvelope>;
   clipPreserveTargetRotations?: Record<string, string[]>;
   clipPoseRecovery?: Record<string, PoseRecoveryEnvelope>;
@@ -626,7 +628,7 @@ export function parseGameReadyJobDocument(value: unknown, paths: GameReadyPathPo
       'alignMappedBoneDirections', 'directionAlignmentBones', 'directionTransfer', 'directionTransferBones',
       'clipDirectionTransfer', 'clipDirectionTransferBones', 'sourceReferencePose',
       'sourceReferenceClip', 'targetReferenceClip', 'preserveTargetLeafRotations',
-      'preserveTargetRotations', 'targetChainCurls', 'naturalMotion', 'poseRanges', 'localReferenceCorrections', 'clipJointConstraints', 'clipForearmTwist', 'clipEndpointEnvelopes',
+      'preserveTargetRotations', 'targetChainCurls', 'naturalMotion', 'poseRanges', 'localReferenceCorrections', 'clipJointConstraints', 'clipForearmTwist', 'clipScaleTransfer', 'clipEndpointEnvelopes',
       'clipPreserveTargetRotations', 'clipPoseRecovery', 'scaleRootMotion', 'rootMotionScale', 'sampleRateHz',
       'interpolation', 'nextDownRationalTimes', 'extractRootMotionBone', 'clipVisualTiming', 'replaceClips',
     ], 'job.rig.retarget');
@@ -675,6 +677,7 @@ export function parseGameReadyJobDocument(value: unknown, paths: GameReadyPathPo
       localReferenceCorrections: parseLocalReferenceCorrections(source.localReferenceCorrections),
       clipJointConstraints: parseClipJointConstraints(source.clipJointConstraints),
       clipForearmTwist: parseClipForearmTwist(source.clipForearmTwist),
+      clipScaleTransfer: parseClipScaleTransfer(source.clipScaleTransfer),
       ...(source.clipEndpointEnvelopes === undefined ? {} : { clipEndpointEnvelopes: parseEndpointEnvelopes(source.clipEndpointEnvelopes) }),
       clipPreserveTargetRotations: stringArrayMap(source.clipPreserveTargetRotations, 'job.rig.retarget.clipPreserveTargetRotations'),
       clipPoseRecovery: poseRecoveryMap(source.clipPoseRecovery, 'job.rig.retarget.clipPoseRecovery'),
@@ -713,7 +716,7 @@ export function parseGameReadyJobDocument(value: unknown, paths: GameReadyPathPo
     for (const [name, envelope] of Object.entries(retarget.clipEndpointEnvelopes ?? {})) {
       if (retarget.clips && !retarget.clips.includes(name)) fail('Endpoint envelope configures an unselected source clip.');
       if (retarget.sampleRateHz !== 60 || retarget.interpolation !== 'step' || retarget.clipPoseRecovery?.[name]
-        || retarget.clipJointConstraints?.[name]
+        || retarget.clipJointConstraints?.[name] || retarget.clipForearmTwist?.[name]?.length || retarget.clipScaleTransfer?.[name]?.length
         || Object.keys(retarget.localReferenceCorrections ?? {}).length) fail('Endpoint envelopes require 60 Hz STEP and no recovery/joint/wrist/reference post-corrections.');
       const timing = retarget.clipVisualTiming?.[name];
       if (timing) validateEndpointWindows(envelope, timing.durationFrames + 1);
@@ -732,6 +735,10 @@ export function parseGameReadyJobDocument(value: unknown, paths: GameReadyPathPo
         || pairs.some(pair => [pair.forearm, pair.hand].some(bone => resolvePreservedTargetRotations(retarget!, name).includes(bone))))) {
         fail('Forearm twist requires an isolated STEP post-pass with direction alignment disabled and no conflicting correction/preservation.');
       }
+    }
+    for (const name of Object.keys(retarget.clipScaleTransfer ?? {})) {
+      if (retarget.clips && !retarget.clips.includes(name)) fail('Scale transfer configures an unselected clip.');
+      if (retarget.clipPoseRecovery?.[name]) fail('Scale transfer cannot be combined with pose recovery.');
     }
     const jointRanges = retarget.poseRanges?.joints;
     for (const [name, constraint] of Object.entries(retarget.clipJointConstraints ?? {})) {

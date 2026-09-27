@@ -6,3 +6,7 @@ description = "Portable calibrated two-bone support pose correction"
 
 [dependencies]
 libm = "=0.2.16"
+
+[[example]]
+name = "transition_probe"
+crate-type = ["cdylib"]

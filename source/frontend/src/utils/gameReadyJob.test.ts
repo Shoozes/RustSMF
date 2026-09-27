@@ -363,3 +363,16 @@ test('asymmetric contact overrides round trip and malformed ramps fail closed', 
     assert.throws(() => parseGameReadyJob(job, paths), /integer|full-weight/);
   }
 });
+
+test('selected scale transfer survives job parsing and rejects conflicting clips', () => {
+  const job = validJob();
+  const retarget = (job.rig as {retarget: Record<string, unknown>}).retarget;
+  const transfer = {sourceBone: 'Hips', targetBone: 'mixamorigHips', axes: ['x', 'y', 'z'], strength: [0.5, 1, 0]};
+  retarget.clipScaleTransfer = {Walk: [transfer]};
+  assert.deepEqual(parseGameReadyJob(job, paths).rig.retarget!.clipScaleTransfer!.Walk[0], transfer);
+  retarget.clipScaleTransfer = {Idle: [transfer]};
+  assert.throws(() => parseGameReadyJob(job, paths), /unselected clip/);
+  retarget.clipScaleTransfer = {Walk: [transfer]};
+  retarget.clipPoseRecovery = {Walk: {peakFrame: 1, holdThroughFrame: 2, returnByFrame: 3}};
+  assert.throws(() => parseGameReadyJob(job, paths), /pose recovery/);
+});

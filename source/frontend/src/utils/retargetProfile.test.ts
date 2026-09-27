@@ -3,6 +3,16 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { mergeRetargetClips, parseRetargetProfile, profileClipOptions, RETARGET_PROFILE_SCHEMA } from './retargetProfile';
 
+test('clip scale transfer is selected by source clip and not applied to other moves', () => {
+  const input = document();
+  const transfer = {sourceBone: 'hips', targetBone: 'targetHips', axes: ['x', 'y', 'z'], strength: [0.5, 1, 0]};
+  const profile = parseRetargetProfile(JSON.stringify({...input, retarget: {...input.retarget, clipScaleTransfer: {walk: [transfer]}}}));
+  const walk = new THREE.AnimationClip('walk', 1, []), idle = new THREE.AnimationClip('idle', 1, []);
+  const target = new THREE.AnimationClip('wolf_source_idle', 1, []);
+  assert.deepEqual(profileClipOptions(profile, walk, [walk, idle], [target]).scaleTransfer, [transfer]);
+  assert.equal(profileClipOptions(profile, idle, [walk, idle], [target]).scaleTransfer, undefined);
+});
+
 const document = () => ({ $schema: RETARGET_PROFILE_SCHEMA, targetClipNames: { Idle: 'wolf_source_idle' }, retarget: {
   manualMap: { 'joint-12': 'mixamorigHead' },
   clips: ['walk'], sourceReferencePose: 'clip', sourceReferenceClip: 'idle', targetReferenceClip: 'Idle',

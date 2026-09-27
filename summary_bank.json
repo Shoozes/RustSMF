@@ -186,20 +186,23 @@
     },
     "feature__rig_retargeting": {
       "description": "Explicit humanoid rig mapping, sampled clip transfer, and normalized rig-proportion diagnostics. Natural-motion solving has its own focused route.",
-      "max_kb": 196,
+      "max_kb": 200,
       "paths": [
         "source/frontend/src/utils/rigMapping.ts",
         "source/frontend/src/utils/rigMapping.test.ts",
         "source/frontend/src/utils/rigCompatibility.ts",
         "source/frontend/src/utils/rigCompatibility.test.ts",
         "source/frontend/src/utils/animationRetarget.ts",
-        "source/frontend/src/utils/animationRetarget.test.ts"
+        "source/frontend/src/utils/animationRetarget.test.ts",
+        "source/frontend/src/utils/retargetScale.ts",
+        "source/frontend/src/utils/retargetScale.test.ts"
       ],
       "notes": [
         "Opaque numeric rigs require an explicit reviewed map and never fuzzy-match; normalized segment ratios expose proportion mismatches that correct axes alone cannot solve.",
         "Retargeting samples helper-ancestor world motion, transfers mapped swings relative to reference poses, can scope absolute source directions to action limbs, can preserve target terminal or explicitly listed rotations, and supports a bounded trusted-peak recovery envelope for damaged source clips.",
         "Natural motion distributes torso rotation by target segment length, solves target-length two-bone legs, locks calibrated sole contacts with declared root travel, and applies clip-scoped target-pelvis leg-angle and swing-bend limits that fade out at full contact.",
-        "Requested-rate resampling evaluates source tracks at float32 frame times so upward-rounded STEP keys are not read one frame early, keeps partial terminal samples inside clip duration, and treats output next-down timing as a separate frame-indexed-consumer contract."
+        "Requested-rate resampling evaluates source tracks at float32 frame times so upward-rounded STEP keys are not read one frame early, keeps partial terminal samples inside clip duration, and treats output next-down timing as a separate frame-indexed-consumer contract.",
+        "Per-clip local scale transfer is opt-in, neutral-relative, axis-mapped, bounded, and validated against source/target bones; unselected scale tracks remain discarded."
       ]
     },
     "subsystem__natural_motion": {
@@ -240,7 +243,7 @@
       "notes": [
         "The collapsed Animate surface accepts a complete v2 game-ready job or rustsmf.retarget-profile.v1 JSON, reports strict validation errors, and keeps the draft in app-owned state across panel unmounts.",
         "Standalone profiles reject sourceModel and complete-job imports strip it; users select source files at apply time, so saved profiles do not reopen owner-local paths.",
-        "React and CLI callers share profileClipOptions for clip naming, reference resolution, preservation, direction, natural-motion, timing, and recovery settings; application is one animation-history transaction."
+        "React and CLI callers share profileClipOptions for clip naming, reference resolution, preservation, direction, natural-motion, timing, recovery, and scale-transfer settings; application is one animation-history transaction."
       ]
     },
     "workflow__game_ready_cli": {
@@ -272,6 +275,7 @@
         "Canonical producer and sorted role-tagged input identity select an immutable generation; producer identity hashes the executable local dependency list and package manifests so helper changes cannot retain an older source identity.",
         "Model, normalized job, resolved mapping, and report are staged and fsynced before a last-written hash manifest and one directory rename, then the optional current pointer is replaced.",
         "A neutral two-motion caller-owned job runs through the actual CLI, checks sampled motion/raw skin/decoded material content after re-import, and preserves the prior generation and caller inputs on malformed mapping, missing clip, or injected publication failure; a clean copied tool workspace proves no consumer checkout is required and the production guard rejects game/engine references.",
+        "Per-clip scale transfer is opt-in, validated against loaded source/target bones during retargeting, and cannot combine with that clip's pose recovery.",
         "Generated assets, reports, private job paths, and source models stay outside context routes."
       ]
     },
@@ -964,15 +968,22 @@
       ]
     },
     "feature__runtime_pose_contact": {
-      "description": "Versioned Rust support-pose correction, source-vendoring contract, calibrated leg-axis math, and native/WASM regression proof.",
-      "max_kb": 96,
+      "description": "Versioned Rust support-pose correction and conditioned-cycle transition baking, calibrated chains, vendoring contracts, and native/browser WASM proof.",
+      "max_kb": 100,
       "paths": [
         "source/pose-contact/Cargo.toml",
         "source/pose-contact/Cargo.lock",
         "source/pose-contact/src/lib.rs",
         "source/pose-contact/src/v1.rs",
         "source/pose-contact/tests/v1.rs",
+        "source/pose-contact/src/transition_v1.rs",
+        "source/pose-contact/tests/transition_v1.rs",
+        "source/pose-contact/tests/support/transition_fixture.rs",
+        "source/pose-contact/tests/browser-transition.mjs",
+        "source/pose-contact/examples/transition_probe.rs",
+        "source/pose-contact/examples/transition_receipt.rs",
         "docs/dev/POSE_CONTACT.md",
+        "docs/dev/TRANSITION_BAKE.md",
         "source/package.json"
       ],
       "notes": [

@@ -90,6 +90,7 @@ export function profileClipOptions(profile: RetargetProfile, sourceClip: THREE.A
     localReferenceCorrections: job.localReferenceCorrections,
     jointConstraints: job.clipJointConstraints?.[sourceClip.name],
     forearmTwist: job.clipForearmTwist?.[sourceClip.name],
+    scaleTransfer: job.clipScaleTransfer?.[sourceClip.name],
     ...(envelope ? {
       endpointEnvelope: { entry: renamePose(envelope.entry), exit: renamePose(envelope.exit),
         ...(envelope.intermediatePoses ? {intermediatePoses: envelope.intermediatePoses.map(renamePose)} : {}) },

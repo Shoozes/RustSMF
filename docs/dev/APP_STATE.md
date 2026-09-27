@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-09-25
+Last reviewed: 2026-09-26
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, DAE/Collada, and OBJ models. This document owns current behavior, architecture boundaries, format limits, and the verification contract. Forward work belongs in `TODO.md`; dated command evidence belongs in `HISTORY.md` and the latest assessment in `review.md`; recurring failure analysis belongs in `PITFALL_LEDGER.md`.
 
@@ -225,6 +225,7 @@ The latest review links the dated command results and any observed limitations i
 - SMF scene-object names and hierarchy order are source-owned by the imported payload. Model-workspace rename and reorder controls remain disabled for SMF and direct users to GLB, FBX, or OBJ for editable submodel authoring.
 - Mixamo-minimal names are editing-only aliases for the exact recognized SMF humanoid layout. They do not rename source bones, retarget arbitrary rigs, or claim universal Mixamo compatibility.
 - Retargeting preserves target proportions and skinning. Correct bone identity, axis correction, and clip timing therefore do not guarantee source-equivalent endpoints or silhouettes when source and target bone lengths, rest frames, or weights differ; the normalized compatibility report identifies that risk, while show-ready 1:1 claims require a fitted/rebound same-topology reference and same-frame visual/game proof.
+- Opt-in per-clip bone-scale transfer preserves selected GLB deformation curves relative to source and target neutral scale. Its explicit axis/strength profile is required because a source forearm stretch can distort a different target's weighted arm. Unselected scale tracks remain discarded; configured tracks fail closed on missing bones/tracks or unsafe ratios. The report counts emitted scale tracks. Endpoint-envelope and pose-recovery combinations are not yet supported; SMF remains a scale-animation exclusion.
 - Static model authoring is limited to non-SMF, unskinned, unanimated targets. Append accepts self-contained static assets and records one asset-level transaction; transforms, material assignment, winding, and geometry preparation are guarded and undoable. Skinned, animated, SMF source-owned, multi-MTL, and externally dependent append targets fail closed with status diagnostics.
 - Legacy same-texture merging is a diagnostic-only policy. The current app has no separate undoable atlas/material-reuse mutation path, so the retired shelf action reports candidates without implying UV or material ownership changes.
 - Non-SMF-to-SMF conversion does not preserve unprepared static roots, materials/textures in the SMF binary policy, morphs, object-level tracks, multiple skeletons, or scale animation. Prepared static FBX/OBJ roots become a supported single-root skinned contract; mesh transforms and nested deform-bone world poses are baked into that same boundary.
@@ -286,3 +287,12 @@ root travel, action eligibility, persistence, or arbitrary anatomy.
 `cargo test` and native/WASM `cargo check` for this crate run inside
 `npm run verify:rust`. See [POSE_CONTACT.md](POSE_CONTACT.md) for the v1 call,
 vendoring receipt, calibration details, and compatibility boundary.
+
+The sibling `transition_v1::bake_transition_v1` API bakes caller-conditioned
+fixed-rig cycles into sampled local TRS transitions using that same solver.
+Callers select fractional source frames, signed phase progression, sample timing,
+and per-frame movement/support targets. It returns a complete input/provenance
+receipt and solver diagnostics, conditioning airborne interpolation knees with
+the existing solver and rejecting invalid source knees or exceeded correction
+limits without partial output. [TRANSITION_BAKE.md](TRANSITION_BAKE.md) owns the
+input contract, bounds, vendoring requirements, and native/browser WASM proof.
