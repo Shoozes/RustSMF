@@ -1969,3 +1969,13 @@ Snapshot context and project-integrity validation passed (10 and 17 tests).
 The transition browser probe passed there with 9 corrected frames and exact
 native/WASM local-TRS bit parity, fingerprint `61931913f4cced0d`, on Chromium
 148. `git diff --check` passed.
+
+## 2026-09-27 — Pose-contact redistribution permission
+
+The repository operator/rights holder explicitly authorized committing and
+pushing the exact pinned pose-contact v1 and transition-bake v1 source modules,
+plus compiled native/WebAssembly runtimes, into `Shoozes/fight-game-study`.
+Recorded the recipient-limited permission and both SHA-256 pins in
+`POSE_CONTACT.md`. This does not grant a general crate license. Preserve the
+`Shoozes/RustSMF` source attribution and carry the selected `libm 0.2.16`
+license/notice. No receiving checkout was changed and nothing was published.

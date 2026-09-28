@@ -10,7 +10,11 @@ The canonical module is `source/pose-contact/src/transition_v1.rs`; it imports
 the unchanged sibling `v1` contact solver. A snapshot consumer can vendor both
 modules byte-for-byte under the same parent module and retain `libm = 0.2.16`.
 The library path dependency exports `transition_v1` directly. Preserve the source
-attribution and license handling described in [POSE_CONTACT.md](POSE_CONTACT.md).
+attribution and the project-specific rights-holder authorization described in
+[POSE_CONTACT.md](POSE_CONTACT.md). The authorization covers both pinned source
+modules and compiled native/WebAssembly runtimes in `Shoozes/fight-game-study`;
+it does not create a general license for unrelated recipients or uses. Carry the
+required `libm 0.2.16` license and notice with that distribution.
 
 ## Input contract
 

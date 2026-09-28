@@ -90,12 +90,24 @@ Get-FileHash source/pose-contact/src/v1.rs -Algorithm SHA256
 
 This checkout has no root `LICENSE`, `COPYING`, or `NOTICE` file, and the crate
 manifest does not declare a license. Do not infer a reuse or redistribution
-grant from the source hash or attribution. Before distributing a vendored copy,
-confirm the applicable license with the repository maintainer and include any
-required license and notice text. For permitted internal evaluation, retain
-this source attribution with the copy: `Shoozes/RustSMF`,
+grant from the source hash or attribution. On 2026-09-27, the repository
+operator/rights holder explicitly authorized project-specific redistribution of
+the exact API v1 solver and transition v1 companion listed below, including
+their source and compiled native/WebAssembly runtimes, into
+`Shoozes/fight-game-study`. This authorization covers committing and pushing
+those pinned artifacts to that receiving repository. It does not add a general
+license to this crate or authorize unrelated recipients or uses. Retain this
+source attribution with distributed copies: `Shoozes/RustSMF`,
 `source/pose-contact/src/v1.rs`, API v1, SHA-256
 `9398bf533e50eb6a5fcaadc50a6e6b2594ab4ecfb1def4a2e96e67f275b8540c`.
+
+The authorized transition companion is `Shoozes/RustSMF`,
+`source/pose-contact/src/transition_v1.rs`, API v1, SHA-256
+`fc8555bec627aa11327a8635705d9b26938b581eeabf0a56f7b1df23dff0bdc1`.
+Compiled and vendored artifacts include `libm 0.2.16`; carry its selected
+third-party license and required notice with the receiving distribution. The
+locally available dependency license offers MIT terms (and also Apache-2.0); this
+project-specific permission does not select or change the dependency license.
 
 Do not copy, port, or reimplement the solver equations. The exact generic source
 module and hash receipt are included with the RustSMF delivery. The local proof
