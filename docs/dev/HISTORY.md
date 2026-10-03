@@ -2,6 +2,29 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-03 — Bounded game-ready PNG/JPEG handling
+
+The Node Three runtime now encodes the requested PNG or JPEG format with a
+matching MIME type and payload signature, and rejects unsupported formats.
+Shared image preflight checks MIME signatures and dimensions before decoding or
+allocating canvas pixels: images are limited to 8192 pixels per edge and
+16,777,216 pixels (64 MiB decoded RGBA) each, with a 256 MiB aggregate budget
+for decoded images and another for canvas allocations. JPEG decoder memory is
+capped at 128 MiB. Embedded GLB validation decodes image payloads, checks image
+buffer views and texture/material indices, and allows only up to three zero
+bytes of PNG alignment padding after IEND.
+
+The preserve-existing CLI proof now roundtrips asymmetric PNG and JPEG textures
+through export and reimport, checks MIME/signature agreement and representative
+orientation pixels, and verifies distinct texture assignments on two materials
+with the same name. Producer identity and the game-ready dependency guard now
+cover the shared image policy.
+
+Local proof: app and test typechecks, ESLint, production-`any` guard, game-ready
+dependency guard, frontend production build, entry-chunk check, context route
+validation, and all 509 frontend unit tests across 92 files passed. The full
+suite includes the PNG/JPEG CLI export/reimport proof.
+
 ## 2026-09-25 — Portable pose-contact v1
 
 Added `source/pose-contact`, a generic Rust library that corrects an evaluated

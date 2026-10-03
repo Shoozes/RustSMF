@@ -14,6 +14,9 @@ export interface SkinnedGlbFixtureOptions {
   withTexture?: boolean;
   nonPowerOfTwoTexture?: boolean;
   withMultiMaterial?: boolean;
+  duplicateTextureMaterials?: boolean;
+  asymmetricTexture?: boolean;
+  textureMimeType?: 'image/jpeg' | 'image/png';
   withSiblingMesh?: boolean;
   rootScale?: number;
   clipName?: string;
@@ -101,15 +104,39 @@ function installNodeCanvasSupport(): void {
   g.OffscreenCanvas = MockOffscreenCanvas as unknown;
 }
 
-function makeTextureMaterial(width: number, height: number): THREE.MeshStandardMaterial {
+function makeTextureMaterial(
+  width: number,
+  height: number,
+  options: { mimeType: 'image/jpeg' | 'image/png'; asymmetric: boolean; variant: number },
+): THREE.MeshStandardMaterial {
   const pixelCount = width * height * 4;
   const data = new Uint8Array(pixelCount);
-  for (let i = 0; i < pixelCount; i += 1) {
-    data[i] = (i * 13) % 256;
+  const palettes = [
+    [[240, 20, 20], [20, 240, 20], [20, 20, 240], [240, 220, 20]],
+    [[20, 220, 220], [220, 20, 220], [220, 220, 220], [30, 30, 30]],
+  ];
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const index = (y * width + x) * 4;
+      if (options.asymmetric) {
+        const quadrant = (y < height / 2 ? 0 : 2) + (x < width / 2 ? 0 : 1);
+        data.set([...palettes[options.variant % palettes.length][quadrant], 255], index);
+      } else {
+        data.set([
+          (index * 13) % 256,
+          ((index + 1) * 13) % 256,
+          ((index + 2) * 13) % 256,
+          255,
+        ], index);
+      }
+    }
   }
   const texture = new THREE.DataTexture(data, width, height);
+  texture.userData.mimeType = options.mimeType;
   texture.needsUpdate = true;
-  return new THREE.MeshStandardMaterial({ map: texture, side: THREE.DoubleSide });
+  const material = new THREE.MeshStandardMaterial({ map: texture, side: THREE.DoubleSide });
+  if (options.asymmetric && options.variant > 0) material.color.set(0xffffff);
+  return material;
 }
 
 function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THREE.Group; clips: THREE.AnimationClip[] } {
@@ -166,14 +193,34 @@ function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THR
   ], 4));
   geometry.setIndex([0, 1, 2, 0, 2, 3]);
 
-  const material = options.withTexture
-    ? makeTextureMaterial(options.nonPowerOfTwoTexture ? 3 : 4, options.nonPowerOfTwoTexture ? 2 : 4)
+  const textureWidth = options.asymmetricTexture ? 32 : options.nonPowerOfTwoTexture ? 3 : 4;
+  const textureHeight = options.asymmetricTexture ? 32 : options.nonPowerOfTwoTexture ? 2 : 4;
+  const material = options.withTexture || options.duplicateTextureMaterials
+    ? makeTextureMaterial(textureWidth, textureHeight, {
+      mimeType: options.textureMimeType ?? 'image/png',
+      asymmetric: options.asymmetricTexture ?? false,
+      variant: 0,
+    })
     : new THREE.MeshBasicMaterial({ color: 0x3fbf8f, side: THREE.DoubleSide });
+  if (options.duplicateTextureMaterials) material.name = 'FixtureSharedTextureMaterial';
   const mesh = new THREE.SkinnedMesh(geometry, material);
   mesh.name = 'FixtureSkinnedMesh';
   mesh.bind(new THREE.Skeleton([rootBone, tipBone, ...(headBone ? [headBone] : [])]));
 
-  if (options.withMultiMaterial) {
+  if (options.duplicateTextureMaterials) {
+    if (geometry.getIndex()) {
+      geometry.clearGroups();
+      geometry.addGroup(0, 3, 0);
+      geometry.addGroup(3, 3, 1);
+    }
+    const second = makeTextureMaterial(textureWidth, textureHeight, {
+      mimeType: options.textureMimeType ?? 'image/png',
+      asymmetric: options.asymmetricTexture ?? false,
+      variant: 1,
+    });
+    second.name = 'FixtureSharedTextureMaterial';
+    mesh.material = [material, second] as unknown as typeof mesh.material;
+  } else if (options.withMultiMaterial) {
     if (geometry.getIndex()) {
       geometry.clearGroups();
       geometry.addGroup(0, 3, 0);
@@ -223,6 +270,9 @@ function getFixtureKey(options: SkinnedGlbFixtureOptions): string {
     options.withTexture ? 'textured' : 'solid',
     options.nonPowerOfTwoTexture ? 'npot' : 'pot',
     options.withMultiMaterial ? 'multi' : 'single',
+    options.duplicateTextureMaterials ? 'duplicate-texture-materials' : 'unique-materials',
+    options.asymmetricTexture ? 'asymmetric' : 'patterned',
+    `mime-${options.textureMimeType ?? 'image/png'}`,
     options.withSiblingMesh ? 'siblings' : 'solo',
     options.withHeadChain ? 'head-chain' : 'two-bone',
     `scale-${options.rootScale ?? 1}`,
@@ -235,6 +285,9 @@ function getFixtureName(options: SkinnedGlbFixtureOptions): string {
   const parts = ['generated-skinned-fixture'];
   if (options.withTexture) parts.push('texture');
   if (options.withMultiMaterial) parts.push('multi-material');
+  if (options.duplicateTextureMaterials) parts.push('duplicate-texture-materials');
+  if (options.asymmetricTexture) parts.push('asymmetric');
+  if (options.textureMimeType === 'image/jpeg') parts.push('jpeg');
   if (options.nonPowerOfTwoTexture) parts.push('npot');
   if (options.withSiblingMesh) parts.push('siblings');
   if (options.rootScale !== undefined) {
@@ -247,7 +300,7 @@ function getFixtureName(options: SkinnedGlbFixtureOptions): string {
 
 async function createSkinnedGlbFixtureBuffer(options: SkinnedGlbFixtureOptions = {}): Promise<Buffer> {
   installFileReaderTestPolyfill();
-  if (options.withTexture) installNodeCanvasSupport();
+  if (options.withTexture || options.duplicateTextureMaterials) installNodeCanvasSupport();
   const { root, clips } = createFixtureScene(options);
   const exporter = new GLTFExporter();
   const result = await exporter.parseAsync(root, { binary: true, animations: clips });
@@ -294,7 +347,7 @@ export async function createSkinnedGltfFixtureInputWithOptions(
   options: SkinnedGlbFixtureOptions = {},
 ): Promise<TestFilePayload> {
   installFileReaderTestPolyfill();
-  if (options.withTexture) installNodeCanvasSupport();
+  if (options.withTexture || options.duplicateTextureMaterials) installNodeCanvasSupport();
   const { root, clips } = createFixtureScene(options);
   const exporter = new GLTFExporter();
   const result = await exporter.parseAsync(root, { binary: false, animations: clips });

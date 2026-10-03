@@ -5,11 +5,13 @@ const frontendRoot = path.resolve(import.meta.dirname, '..');
 const sourceFiles = [
   'scripts/game-ready-cli.ts',
   'scripts/game-ready-producer.ts',
+  'scripts/node-three-runtime.ts',
   'scripts/bounded-file-read.ts',
   'src/utils/gameReadyGeneration.ts',
   'src/utils/gameReadyJob.ts',
   'src/utils/gameReadyValidation.ts',
   'src/utils/glbContainer.ts',
+  'src/utils/imagePayload.ts',
   'src/utils/materialRepair.ts',
   'src/utils/modelResourceBundle.ts',
   'src/utils/rigCompatibility.ts',

@@ -25,6 +25,7 @@ const SOURCE_FILES = [
   'source/frontend/src/utils/gameReadyJob.ts',
   'source/frontend/src/utils/gameReadyValidation.ts',
   'source/frontend/src/utils/glbContainer.ts',
+  'source/frontend/src/utils/imagePayload.ts',
   'source/frontend/src/utils/materialRepair.ts',
   'source/frontend/src/utils/materialPreview.ts',
   'source/frontend/src/utils/modelFormat.ts',

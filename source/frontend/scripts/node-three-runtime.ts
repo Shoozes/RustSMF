@@ -1,6 +1,15 @@
 import jpeg from 'jpeg-js';
 import { PNG } from 'pngjs';
 import { installFileReaderTestPolyfill } from '../src/test/installFileReaderTestPolyfill';
+import {
+  assertImageDimensions,
+  ImageByteBudget,
+  inspectImagePayload,
+  MAX_IMAGE_PIXELS,
+  MAX_JPEG_DECODER_MEMORY_MB,
+  resolveImageMimeType,
+  type SupportedImageMimeType,
+} from '../src/utils/imagePayload';
 
 interface DecodedNodeImage {
   width: number;
@@ -8,22 +17,45 @@ interface DecodedNodeImage {
   data: Uint8Array;
 }
 
+let decodedImageBudget = new ImageByteBudget('Node Three decoded-image');
+let canvasAllocationBudget = new ImageByteBudget('Node Three canvas');
+
 function decodeNodeImage(bytes: Uint8Array, contentType = ''): DecodedNodeImage {
-  const buffer = Buffer.from(bytes);
-  if (contentType.includes('png') || (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47)) {
+  const mimeType = resolveImageMimeType(bytes, contentType);
+  const dimensions = inspectImagePayload(bytes, mimeType, 'Node Three image');
+  decodedImageBudget.reserve(dimensions, 'Node Three image');
+  const buffer = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  if (mimeType === 'image/png') {
     let offset = 8;
     while (offset + 12 <= buffer.byteLength) {
       const chunkLength = buffer.readUInt32BE(offset);
       const chunkType = buffer.toString('ascii', offset + 4, offset + 8);
+      if (chunkLength > buffer.byteLength - offset - 12) {
+        throw new Error('Node Three image has a truncated PNG chunk.');
+      }
       offset += chunkLength + 12;
       if (chunkType === 'IEND') break;
     }
     const decoded = PNG.sync.read(buffer.subarray(0, offset));
-    return { width: decoded.width, height: decoded.height, data: new Uint8Array(decoded.data) };
+    if (decoded.width !== dimensions.width || decoded.height !== dimensions.height
+      || decoded.data.byteLength !== dimensions.decodedByteLength) {
+      throw new Error('Node Three PNG decoder returned dimensions outside the inspected image header.');
+    }
+    return { width: decoded.width, height: decoded.height, data: decoded.data };
   }
-  if (contentType.includes('jpeg') || (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff)) {
-    const decoded = jpeg.decode(buffer, { useTArray: true, formatAsRGBA: true });
-    return { width: decoded.width, height: decoded.height, data: new Uint8Array(decoded.data) };
+  if (mimeType === 'image/jpeg') {
+    const decoded = jpeg.decode(buffer, {
+      useTArray: true,
+      formatAsRGBA: true,
+      tolerantDecoding: false,
+      maxResolutionInMP: MAX_IMAGE_PIXELS / 1_000_000,
+      maxMemoryUsageInMB: MAX_JPEG_DECODER_MEMORY_MB,
+    });
+    if (decoded.width !== dimensions.width || decoded.height !== dimensions.height
+      || decoded.data.byteLength !== dimensions.decodedByteLength) {
+      throw new Error('Node Three JPEG decoder returned dimensions outside the inspected image header.');
+    }
+    return { width: decoded.width, height: decoded.height, data: decoded.data };
   }
   throw new Error(`Node Three runtime cannot decode image type ${contentType || '(unknown)'}.`);
 }
@@ -33,8 +65,25 @@ class NodeImageData {
   readonly width: number;
   readonly height: number;
 
-  constructor(data: ArrayLike<number> | ArrayBufferView, width: number, height: number) {
-    this.data = data instanceof Uint8ClampedArray ? data : new Uint8ClampedArray(data as ArrayLike<number>);
+  constructor(
+    data: ArrayLike<number> | ArrayBufferView,
+    width: number,
+    height: number,
+    accountAllocation = true,
+  ) {
+    const dimensions = assertImageDimensions(width, height, 'Canvas ImageData');
+    const values = data as ArrayLike<number>;
+    if (values.length !== dimensions.decodedByteLength) {
+      throw new Error('Canvas ImageData byte length does not match its dimensions.');
+    }
+    if (data instanceof Uint8ClampedArray) {
+      this.data = data;
+    } else if (data instanceof Uint8Array) {
+      this.data = new Uint8ClampedArray(data.buffer, data.byteOffset, data.byteLength);
+    } else {
+      if (accountAllocation) canvasAllocationBudget.reserve(dimensions, 'Canvas ImageData');
+      this.data = new Uint8ClampedArray(values);
+    }
     this.width = width;
     this.height = height;
   }
@@ -125,6 +174,8 @@ class NodeImageBitmap {
 
 class NodeCanvasContext {
   private pixels = new Uint8ClampedArray();
+  private allocatedWidth = 0;
+  private allocatedHeight = 0;
   private flipped = false;
 
   constructor(private readonly canvas: NodeCanvas) {}
@@ -132,8 +183,23 @@ class NodeCanvasContext {
   translate(_x: number, _y: number): void {}
   scale(_x: number, y: number): void { if (y < 0) this.flipped = true; }
 
+  private ensurePixels(): void {
+    const dimensions = assertImageDimensions(this.canvas.width, this.canvas.height, 'Node Three canvas');
+    if (this.allocatedWidth === dimensions.width
+      && this.allocatedHeight === dimensions.height
+      && this.pixels.byteLength === dimensions.decodedByteLength) return;
+    canvasAllocationBudget.reserve(dimensions, 'Node Three canvas backing pixels');
+    this.pixels = new Uint8ClampedArray(dimensions.decodedByteLength);
+    this.allocatedWidth = dimensions.width;
+    this.allocatedHeight = dimensions.height;
+  }
+
   putImageData(image: NodeImageData, x: number, y: number): void {
-    this.pixels = new Uint8ClampedArray(this.canvas.width * this.canvas.height * 4);
+    const source = assertImageDimensions(image.width, image.height, 'Node Three source image');
+    if (image.data.byteLength !== source.decodedByteLength) {
+      throw new Error('Node Three source image byte length does not match its dimensions.');
+    }
+    this.ensurePixels();
     for (let row = 0; row < this.canvas.height; row += 1) {
       for (let column = 0; column < this.canvas.width; column += 1) {
         const sourceX = Math.min(image.width - 1, Math.floor(column * image.width / this.canvas.width));
@@ -148,25 +214,60 @@ class NodeCanvasContext {
 
   drawImage(image: NodeImage, ..._args: number[]): void {
     if (!image.data || image.width <= 0 || image.height <= 0) throw new Error('Image pixels are not ready.');
-    this.putImageData(new NodeImageData(image.data, image.width, image.height), 0, 0);
+    this.putImageData(new NodeImageData(image.data, image.width, image.height, false), 0, 0);
   }
 
   getImageData(_x = 0, _y = 0, width = this.canvas.width, height = this.canvas.height): NodeImageData {
-    return new NodeImageData(this.pixels.slice(0, width * height * 4), width, height);
+    const dimensions = assertImageDimensions(width, height, 'Node Three canvas read');
+    this.ensurePixels();
+    if (width > this.canvas.width || height > this.canvas.height) {
+      throw new Error('Node Three canvas read exceeds the canvas dimensions.');
+    }
+    return new NodeImageData(this.pixels.subarray(0, dimensions.decodedByteLength), width, height, false);
   }
 }
 
-function encodePng(width: number, height: number, pixels: ArrayLike<number>): Uint8Array {
-  const image = new PNG({ width, height });
-  image.data.set(pixels);
-  return PNG.sync.write(image);
+function canvasMimeType(requested = 'image/png'): SupportedImageMimeType {
+  const normalized = requested.split(';', 1)[0].trim().toLowerCase() || 'image/png';
+  if (normalized !== 'image/png' && normalized !== 'image/jpeg') {
+    throw new Error('Node Three canvas cannot encode unsupported MIME type ' + normalized + '.');
+  }
+  return normalized;
 }
 
-function pngBlobPart(width: number, height: number, pixels: ArrayLike<number>): ArrayBuffer {
-  const encoded = encodePng(width, height, pixels);
-  const owned = new Uint8Array(encoded.byteLength);
-  owned.set(encoded);
-  return owned.buffer as ArrayBuffer;
+function jpegQuality(quality?: number): number {
+  const normalized = quality === undefined || !Number.isFinite(quality)
+    ? 0.92
+    : Math.max(0, Math.min(1, quality));
+  return Math.round(normalized * 100);
+}
+
+function encodeImage(
+  width: number,
+  height: number,
+  pixels: ArrayLike<number>,
+  mimeType: SupportedImageMimeType,
+  quality?: number,
+): Uint8Array {
+  const dimensions = assertImageDimensions(width, height, 'Node Three canvas output');
+  if (pixels.length !== dimensions.decodedByteLength) {
+    throw new Error('Node Three canvas pixel byte length does not match its dimensions.');
+  }
+  if (mimeType === 'image/png') {
+    canvasAllocationBudget.reserve(dimensions, 'Node Three PNG encoder pixels');
+    const image = new PNG({ width, height });
+    image.data.set(pixels);
+    return PNG.sync.write(image);
+  }
+  let data: Buffer;
+  if (pixels instanceof Uint8Array || pixels instanceof Uint8ClampedArray) {
+    data = Buffer.from(pixels.buffer, pixels.byteOffset, pixels.byteLength);
+  } else {
+    canvasAllocationBudget.reserve(dimensions, 'Node Three JPEG encoder pixels');
+    const normalized = Uint8Array.from(pixels);
+    data = Buffer.from(normalized.buffer, normalized.byteOffset, normalized.byteLength);
+  }
+  return jpeg.encode({ data, width, height }, jpegQuality(quality)).data;
 }
 
 class NodeCanvas {
@@ -181,26 +282,35 @@ class NodeCanvas {
     return this.context;
   }
 
-  toBlob(callback: (blob: Blob | null) => void, type = 'image/png'): void {
+  toBlob(callback: (blob: Blob | null) => void, type = 'image/png', quality?: number): void {
+    const mimeType = canvasMimeType(type);
     try {
       const context = this.getContext('2d');
       const pixels = context?.getImageData(0, 0, this.width, this.height).data;
       if (!pixels) throw new Error('Canvas image data is unavailable.');
-      callback(new Blob([pngBlobPart(this.width, this.height, pixels)], { type }));
+      const encoded = encodeImage(this.width, this.height, pixels, mimeType, quality);
+      const blobPart = encoded.buffer.slice(encoded.byteOffset, encoded.byteOffset + encoded.byteLength) as ArrayBuffer;
+      callback(new Blob([blobPart], { type: mimeType }));
     } catch {
       callback(null);
     }
   }
 
-  async convertToBlob(options: BlobPropertyBag = {}): Promise<Blob> {
-    return new Promise((resolve, reject) => this.toBlob((blob) => blob ? resolve(blob) : reject(new Error('Canvas encoding failed.')), options.type));
+  async convertToBlob(options: BlobPropertyBag & { quality?: number } = {}): Promise<Blob> {
+    return new Promise((resolve, reject) => this.toBlob(
+      (blob) => blob ? resolve(blob) : reject(new Error('Canvas encoding failed.')),
+      options.type,
+      options.quality,
+    ));
   }
 
-  toDataURL(type = 'image/png'): string {
+  toDataURL(type = 'image/png', quality?: number): string {
+    const mimeType = canvasMimeType(type);
     const context = this.getContext('2d');
     const pixels = context?.getImageData(0, 0, this.width, this.height).data;
-    if (!pixels) return `data:${type};base64,`;
-    return `data:${type};base64,${Buffer.from(encodePng(this.width, this.height, pixels)).toString('base64')}`;
+    if (!pixels) throw new Error('Canvas image data is unavailable.');
+    const encoded = encodeImage(this.width, this.height, pixels, mimeType, quality);
+    return 'data:' + mimeType + ';base64,' + Buffer.from(encoded).toString('base64');
   }
 }
 
@@ -224,6 +334,8 @@ function installNodeImageDom(): void {
 }
 
 export function installNodeThreeRuntime(): void {
+  decodedImageBudget = new ImageByteBudget('Node Three decoded-image');
+  canvasAllocationBudget = new ImageByteBudget('Node Three canvas');
   installFileReaderTestPolyfill();
   installNodeImageDom();
   if (typeof globalThis.ProgressEvent === 'undefined') {

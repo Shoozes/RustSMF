@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
+import jpeg from 'jpeg-js';
 import { PNG } from 'pngjs';
 import * as THREE from 'three';
 import { GLTFExporter } from 'three/examples/jsm/exporters/GLTFExporter.js';
@@ -19,6 +20,7 @@ import { createExternalFbxFixtureInputs } from '../../tests/helpers/external-fbx
 import {
   parseGlbContainer,
   type EmbeddedMaterialReport,
+  validateEmbeddedGlbTextures,
 } from './glbContainer';
 import {
   publishGameReadyGeneration,
@@ -154,6 +156,79 @@ function firstEmbeddedPngPixels(bytes: Uint8Array): Uint8Array {
     if (chunkType === 'IEND') break;
   }
   return PNG.sync.read(encoded.subarray(0, offset)).data;
+}
+
+interface DecodedEmbeddedImage {
+  mimeType: 'image/png' | 'image/jpeg';
+  width: number;
+  height: number;
+  data: Uint8Array;
+}
+
+function imagePixelsForMaterial(bytes: Uint8Array, materialIndex: number): DecodedEmbeddedImage {
+  const { json, binary } = parseGlbContainer(bytes);
+  const material = json.materials?.[materialIndex];
+  const textureIndex = material?.pbrMetallicRoughness?.baseColorTexture?.index;
+  assert.ok(Number.isInteger(textureIndex), `material ${materialIndex} has no base-color texture`);
+  const texture = json.textures?.[textureIndex!];
+  assert.ok(texture);
+  const image = json.images?.[texture.source];
+  assert.ok(image);
+  assert.ok(image.mimeType === 'image/png' || image.mimeType === 'image/jpeg');
+  assert.equal(image.uri, undefined);
+  assert.ok(image.bufferView !== undefined);
+  const bufferView = json.bufferViews?.[image.bufferView];
+  assert.ok(bufferView);
+  assert.equal(bufferView.buffer, 0);
+  const offset = bufferView.byteOffset ?? 0;
+  const encoded = binary.subarray(offset, offset + bufferView.byteLength);
+  if (image.mimeType === 'image/png') {
+    let contentLength = 8;
+    while (contentLength + 12 <= encoded.byteLength) {
+      const chunkLength = encoded[contentLength] * 0x1000000
+        + encoded[contentLength + 1] * 0x10000
+        + encoded[contentLength + 2] * 0x100
+        + encoded[contentLength + 3];
+      const isEnd = encoded[contentLength + 4] === 0x49
+        && encoded[contentLength + 5] === 0x45
+        && encoded[contentLength + 6] === 0x4e
+        && encoded[contentLength + 7] === 0x44;
+      contentLength += chunkLength + 12;
+      if (isEnd) break;
+    }
+    const decoded = PNG.sync.read(Buffer.from(encoded.subarray(0, contentLength)));
+    return { mimeType: 'image/png', width: decoded.width, height: decoded.height, data: decoded.data };
+  }
+  const decoded = jpeg.decode(Buffer.from(encoded), { useTArray: true, formatAsRGBA: true, tolerantDecoding: false });
+  return { mimeType: 'image/jpeg', width: decoded.width, height: decoded.height, data: decoded.data };
+}
+
+function asymmetricSamples(image: DecodedEmbeddedImage): number[][] {
+  const samplePoints = [
+    [Math.floor(image.width / 4), Math.floor(image.height / 4)],
+    [Math.floor(image.width * 3 / 4), Math.floor(image.height / 4)],
+    [Math.floor(image.width / 4), Math.floor(image.height * 3 / 4)],
+    [Math.floor(image.width * 3 / 4), Math.floor(image.height * 3 / 4)],
+  ];
+  return samplePoints.map(([x, y]) => {
+    const offset = (y * image.width + x) * 4;
+    return [...image.data.subarray(offset, offset + 4)];
+  });
+}
+
+function assertSamplesMatch(actual: DecodedEmbeddedImage, expected: DecodedEmbeddedImage, tolerance: number): void {
+  assert.equal(actual.width, expected.width);
+  assert.equal(actual.height, expected.height);
+  const actualSamples = asymmetricSamples(actual);
+  const expectedSamples = asymmetricSamples(expected);
+  for (let sample = 0; sample < actualSamples.length; sample += 1) {
+    for (let channel = 0; channel < 4; channel += 1) {
+      assert.ok(
+        Math.abs(actualSamples[sample][channel] - expectedSamples[sample][channel]) <= tolerance,
+        `image sample ${sample} channel ${channel} changed from ${expectedSamples[sample][channel]} to ${actualSamples[sample][channel]}`,
+      );
+    }
+  }
 }
 
 function clip(name: string, rootName: string, tipName: string, tipDegrees: number, rootTravel: number): THREE.AnimationClip {
@@ -684,6 +759,112 @@ test('v3 preserve-existing exports an embedded textured skinned GLB without repa
       disposeThreeObject(loaded.root);
     }
     assert.deepEqual(await inputHashes([targetPath, jobPath]), originalInputHashes);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test('v3 preserve-existing preserves PNG/JPEG MIME, asymmetric pixels, and duplicate-name texture slots', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'rustsmf-preserve-image-roundtrip-'));
+  try {
+    for (const mimeType of ['image/png', 'image/jpeg'] as const) {
+      installNodeThreeRuntime();
+      const fixture = await createSkinnedGlbFixtureInputWithOptions({
+        withTexture: true,
+        duplicateTextureMaterials: true,
+        asymmetricTexture: true,
+        textureMimeType: mimeType,
+      });
+      const targetPath = path.join(root, fixture.name);
+      const jobPath = path.join(root, `${mimeType === 'image/png' ? 'png' : 'jpeg'}.job.json`);
+      const generationRoot = path.join(root, `${mimeType === 'image/png' ? 'png' : 'jpeg'}-generations`);
+      const targetBytes = new Uint8Array(fixture.buffer);
+      await writeFile(targetPath, targetBytes);
+      await writeJob(jobPath, preserveJobFor(root, targetPath, [], generationRoot));
+      const originalInputHashes = await inputHashes([targetPath, jobPath]);
+
+      validateEmbeddedGlbTextures(targetBytes);
+      const sourceParsed = parseGlbContainer(targetBytes);
+      assert.equal(sourceParsed.json.images?.length, 2);
+      assert.equal(sourceParsed.json.materials?.filter((material) => material.name === 'FixtureSharedTextureMaterial').length, 2);
+      const sourceImages = [0, 1].map((index) => imagePixelsForMaterial(targetBytes, index));
+      for (const image of sourceImages) {
+        assert.equal(image.mimeType, mimeType);
+        assert.equal(image.width, 32);
+        assert.equal(image.height, 32);
+      }
+      assert.notDeepEqual(asymmetricSamples(sourceImages[0]), asymmetricSamples(sourceImages[1]));
+
+      const run = await invokeCli(jobPath);
+      assert.equal(run.code, 0, run.stderr);
+      const published = parsePublishedResult(run.stdout);
+      const report = await readJson<PreserveCliReport>(published.report);
+      assert.equal(report.materials.mode, 'preserve-existing');
+      assert.equal(report.materials.preservation.source.textureCount, 2);
+      assert.equal(report.materials.preservation.exported.imageCount, 2);
+      const outputBytes = new Uint8Array(await readFile(published.model));
+      validateEmbeddedGlbTextures(outputBytes);
+      const outputParsed = parseGlbContainer(outputBytes);
+      assert.equal(outputParsed.json.images?.length, 2);
+      assert.equal(outputParsed.json.materials?.filter((material) => material.name === 'FixtureSharedTextureMaterial').length, 2);
+      const outputImages = [0, 1].map((index) => imagePixelsForMaterial(outputBytes, index));
+      for (let index = 0; index < outputImages.length; index += 1) {
+        assert.equal(outputImages[index].mimeType, mimeType);
+        assertSamplesMatch(outputImages[index], sourceImages[index], mimeType === 'image/png' ? 0 : 48);
+      }
+
+      const meshes = Reflect.get(outputParsed.json, 'meshes') as Array<{
+        primitives?: Array<{ material?: number }>;
+      }> | undefined;
+      const primitiveMaterials = [...new Set((meshes ?? []).flatMap((mesh) =>
+        (mesh.primitives ?? []).map((primitive) => primitive.material).filter(
+          (index): index is number => Number.isInteger(index),
+        ),
+      ))].sort((left, right) => left - right);
+      assert.deepEqual(primitiveMaterials, [0, 1]);
+
+      const loaded = await loadGLB(outputBytes.buffer.slice(
+        outputBytes.byteOffset,
+        outputBytes.byteOffset + outputBytes.byteLength,
+      ));
+      try {
+        assert.equal(loaded.skeleton?.bones.length, 2);
+        const loadedMeshes: THREE.SkinnedMesh[] = [];
+        loaded.root.traverse((object) => {
+          if (object instanceof THREE.SkinnedMesh) loadedMeshes.push(object);
+        });
+        assert.equal(loadedMeshes.length, 2);
+        const matchedTextureSlots: number[] = [];
+        for (const mesh of loadedMeshes) {
+          const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+          assert.equal(materials.length, 1);
+          const material: THREE.Material = materials[0];
+          assert.equal(material.name, 'FixtureSharedTextureMaterial');
+          const texturedMaterial = material as THREE.MeshStandardMaterial;
+          assert.ok(texturedMaterial.map?.image);
+          const image = texturedMaterial.map.image as { width?: number; height?: number; data?: Uint8Array };
+          assert.equal(image.width, 32);
+          assert.equal(image.height, 32);
+          assert.ok(image.data, 'Node reimported texture image must expose decoded pixels.');
+          const loadedImage = { ...outputImages[0], data: image.data };
+          const matches = outputImages.flatMap((expected, index) => {
+            try {
+              assertSamplesMatch(loadedImage, expected, mimeType === 'image/png' ? 0 : 48);
+              return [index];
+            } catch {
+              return [];
+            }
+          });
+          assert.equal(matches.length, 1, 'each reimported material must retain one distinct source texture');
+          matchedTextureSlots.push(matches[0]);
+        }
+        assert.deepEqual(matchedTextureSlots.sort((left, right) => left - right), [0, 1]);
+      } finally {
+        loaded.mixer.stopAllAction();
+        disposeThreeObject(loaded.root);
+      }
+      assert.deepEqual(await inputHashes([targetPath, jobPath]), originalInputHashes);
+    }
   } finally {
     await rm(root, { recursive: true, force: true });
   }

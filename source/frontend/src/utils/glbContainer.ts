@@ -1,6 +1,12 @@
 import jpeg from 'jpeg-js';
 import { PNG } from 'pngjs';
 import type { MaterialTextureSemantic, ReferenceMaterialDefinition } from './materialRepair';
+import {
+  ImageByteBudget,
+  inspectImagePayload,
+  MAX_IMAGE_PIXELS,
+  MAX_JPEG_DECODER_MEMORY_MB,
+} from './imagePayload';
 
 const GLB_MAGIC = 0x46546c67;
 const GLB_VERSION = 2;
@@ -37,6 +43,8 @@ interface GlbJson {
       [key: string]: unknown;
     };
     normalTexture?: { index: number };
+    occlusionTexture?: { index: number };
+    emissiveTexture?: { index: number };
     [key: string]: unknown;
   }>;
   [key: string]: unknown;
@@ -66,6 +74,33 @@ export interface EmbeddedMaterialReport {
 
 function align4(value: number): number {
   return (value + 3) & ~3;
+}
+
+function pngContentLength(bytes: Uint8Array, label: string): number {
+  let offset = 8;
+  while (offset + 12 <= bytes.byteLength) {
+    const chunkLength = bytes[offset] * 0x1000000
+      + bytes[offset + 1] * 0x10000
+      + bytes[offset + 2] * 0x100
+      + bytes[offset + 3];
+    if (chunkLength > bytes.byteLength - offset - 12) {
+      throw new Error(label + ' has a truncated PNG chunk.');
+    }
+    const isEnd = bytes[offset + 4] === 0x49
+      && bytes[offset + 5] === 0x45
+      && bytes[offset + 6] === 0x4e
+      && bytes[offset + 7] === 0x44;
+    offset += chunkLength + 12;
+    if (isEnd) {
+      if (chunkLength !== 0) throw new Error(label + ' has an invalid PNG IEND chunk.');
+      const padding = bytes.subarray(offset);
+      if (padding.byteLength > 3 || padding.some((value) => value !== 0)) {
+        throw new Error(label + ' has invalid trailing PNG data.');
+      }
+      return offset;
+    }
+  }
+  throw new Error(label + ' is missing a complete PNG IEND chunk.');
 }
 
 function view(bytes: Uint8Array): DataView {
@@ -126,22 +161,35 @@ export function buildGlbContainer(json: GlbJson, binary: Uint8Array): Uint8Array
   return output;
 }
 
-function imageDimensions(bytes: Uint8Array, mimeType: EmbeddedTextureInput['mimeType']): { width: number; height: number } {
+function decodeImage(
+  bytes: Uint8Array,
+  mimeType: EmbeddedTextureInput['mimeType'],
+  budget: ImageByteBudget,
+  label: string,
+): { width: number; height: number; data: Uint8Array } {
+  const dimensions = inspectImagePayload(bytes, mimeType, label);
+  budget.reserve(dimensions, label);
+  const encoded = Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   if (mimeType === 'image/png') {
-    const png = PNG.sync.read(Buffer.from(bytes));
-    return { width: png.width, height: png.height };
+    const png = PNG.sync.read(encoded.subarray(0, pngContentLength(bytes, label)));
+    if (png.width !== dimensions.width || png.height !== dimensions.height
+      || png.data.byteLength !== dimensions.decodedByteLength) {
+      throw new Error(label + ' PNG decoder returned dimensions outside the inspected image header.');
+    }
+    return { width: png.width, height: png.height, data: png.data };
   }
-  const decoded = jpeg.decode(Buffer.from(bytes), { useTArray: true, formatAsRGBA: true });
-  return { width: decoded.width, height: decoded.height };
-}
-
-function decodeImage(bytes: Uint8Array, mimeType: EmbeddedTextureInput['mimeType']): { width: number; height: number; data: Uint8Array } {
-  if (mimeType === 'image/png') {
-    const png = PNG.sync.read(Buffer.from(bytes));
-    return { width: png.width, height: png.height, data: new Uint8Array(png.data) };
+  const decoded = jpeg.decode(encoded, {
+    useTArray: true,
+    formatAsRGBA: true,
+    tolerantDecoding: false,
+    maxResolutionInMP: MAX_IMAGE_PIXELS / 1_000_000,
+    maxMemoryUsageInMB: MAX_JPEG_DECODER_MEMORY_MB,
+  });
+  if (decoded.width !== dimensions.width || decoded.height !== dimensions.height
+    || decoded.data.byteLength !== dimensions.decodedByteLength) {
+    throw new Error(label + ' JPEG decoder returned dimensions outside the inspected image header.');
   }
-  const decoded = jpeg.decode(Buffer.from(bytes), { useTArray: true, formatAsRGBA: true });
-  return { width: decoded.width, height: decoded.height, data: new Uint8Array(decoded.data) };
+  return { width: decoded.width, height: decoded.height, data: decoded.data };
 }
 
 function flipPixelRows(image: { width: number; height: number; data: Uint8Array }): void {
@@ -157,15 +205,21 @@ function flipPixelRows(image: { width: number; height: number; data: Uint8Array 
   }
 }
 
-function losslessPng(texture: EmbeddedTextureInput, flipY: boolean): EmbeddedTextureInput {
-  const decoded = decodeImage(texture.bytes, texture.mimeType);
+function losslessPng(
+  texture: EmbeddedTextureInput,
+  flipY: boolean,
+  budget: ImageByteBudget,
+): EmbeddedTextureInput {
+  const decoded = decodeImage(texture.bytes, texture.mimeType, budget, texture.resource);
   if (flipY) flipPixelRows(decoded);
+  budget.reserve(inspectImagePayload(texture.bytes, texture.mimeType, texture.resource), texture.resource + ' PNG output');
   const output = new PNG({ width: decoded.width, height: decoded.height });
   output.data.set(decoded.data);
+  const bytes = PNG.sync.write(output);
   return {
     resource: `${texture.resource}.png`,
     mimeType: 'image/png',
-    bytes: new Uint8Array(PNG.sync.write(output)),
+    bytes,
   };
 }
 
@@ -177,10 +231,11 @@ function packMetallicRoughness(
   roughness: EmbeddedTextureInput | undefined,
   metallic: EmbeddedTextureInput | undefined,
   flipY: boolean,
+  budget: ImageByteBudget,
 ): EmbeddedTextureInput | null {
   if (!roughness && !metallic) return null;
-  const rough = roughness ? decodeImage(roughness.bytes, roughness.mimeType) : null;
-  const metal = metallic ? decodeImage(metallic.bytes, metallic.mimeType) : null;
+  const rough = roughness ? decodeImage(roughness.bytes, roughness.mimeType, budget, roughness.resource) : null;
+  const metal = metallic ? decodeImage(metallic.bytes, metallic.mimeType, budget, metallic.resource) : null;
   if (flipY) {
     if (rough) flipPixelRows(rough);
     if (metal) flipPixelRows(metal);
@@ -190,6 +245,12 @@ function packMetallicRoughness(
   if ((rough && (rough.width !== width || rough.height !== height)) || (metal && (metal.width !== width || metal.height !== height))) {
     throw new Error('Metallic and roughness maps must have identical dimensions for deterministic GLB packing.');
   }
+  budget.reserve({
+    width,
+    height,
+    pixelCount: width * height,
+    decodedByteLength: width * height * 4,
+  }, 'Packed metallic/roughness output');
   const output = new PNG({ width, height });
   for (let pixel = 0; pixel < width * height; pixel += 1) {
     const offset = pixel * 4;
@@ -199,10 +260,11 @@ function packMetallicRoughness(
     output.data[offset + 3] = 255;
   }
   const names = [roughness?.resource, metallic?.resource].filter(Boolean).join('+');
+  const bytes = PNG.sync.write(output);
   return {
     resource: `packed:${names}`,
     mimeType: 'image/png',
-    bytes: new Uint8Array(PNG.sync.write(output)),
+    bytes,
   };
 }
 
@@ -262,6 +324,7 @@ export function embedMaterialTextures(
   const binaryParts: Uint8Array[] = [binary];
   const offsetRef = { value: binary.byteLength };
   const reports: EmbeddedMaterialReport[] = [];
+  const imageBudget = new ImageByteBudget('Material texture conversion');
   const resourceCache = new Map<string, number>();
   const normalizedTextures = new Map(
     [...textures].map(([name, value]) => [name.toLocaleLowerCase('en-US'), value]),
@@ -275,7 +338,6 @@ export function embedMaterialTextures(
     const key = `${texture.mimeType}:${texture.resource.toLocaleLowerCase('en-US')}`;
     const cached = resourceCache.get(key);
     if (cached !== undefined) return cached;
-    imageDimensions(texture.bytes, texture.mimeType);
     const index = addEmbeddedTexture(json, binaryParts, offsetRef, texture);
     resourceCache.set(key, index);
     return index;
@@ -290,18 +352,18 @@ export function embedMaterialTextures(
     material.pbrMetallicRoughness ??= {};
     const report: EmbeddedMaterialReport = { material: definition.name, sourceTextureFlipY, textures: [] };
     if (definition.textures.baseColor) {
-      const resource = losslessPng(resolve(definition.textures.baseColor), sourceTextureFlipY);
+      const resource = losslessPng(resolve(definition.textures.baseColor), sourceTextureFlipY, imageBudget);
       material.pbrMetallicRoughness.baseColorTexture = { index: add(resource) };
       report.textures.push({ semantic: 'baseColor', resource: resource.resource, mimeType: resource.mimeType, colorSpace: 'srgb' });
     }
     if (definition.textures.normal) {
-      const resource = losslessPng(resolve(definition.textures.normal), sourceTextureFlipY);
+      const resource = losslessPng(resolve(definition.textures.normal), sourceTextureFlipY, imageBudget);
       material.normalTexture = { index: add(resource) };
       report.textures.push({ semantic: 'normal', resource: resource.resource, mimeType: resource.mimeType, colorSpace: 'linear' });
     }
     const roughness = definition.textures.roughness ? resolve(definition.textures.roughness) : undefined;
     const metallic = definition.textures.metallic ? resolve(definition.textures.metallic) : undefined;
-    const packed = packMetallicRoughness(roughness, metallic, sourceTextureFlipY);
+    const packed = packMetallicRoughness(roughness, metallic, sourceTextureFlipY, imageBudget);
     if (packed) {
       material.pbrMetallicRoughness.metallicRoughnessTexture = { index: add(packed) };
       if (roughness) material.pbrMetallicRoughness.roughnessFactor = 1;
@@ -325,25 +387,43 @@ export function embedMaterialTextures(
 export function validateEmbeddedGlbTextures(bytes: Uint8Array): void {
   const { json, binary } = parseGlbContainer(bytes);
   if ((json.buffers ?? []).some((buffer) => !!buffer.uri)) throw new Error('GLB contains an external buffer URI.');
+  const imageBudget = new ImageByteBudget('Embedded GLB images');
   for (const image of json.images ?? []) {
     if (image.uri) throw new Error(`GLB image ${image.name || '(unnamed)'} contains an external URI.`);
-    if (!Number.isInteger(image.bufferView)) throw new Error(`GLB image ${image.name || '(unnamed)'} has no embedded bufferView.`);
+    if (!Number.isSafeInteger(image.bufferView) || image.bufferView! < 0) {
+      throw new Error(`GLB image ${image.name || '(unnamed)'} has no valid embedded bufferView.`);
+    }
     if (image.mimeType !== 'image/jpeg' && image.mimeType !== 'image/png') {
       throw new Error(`GLB image ${image.name || '(unnamed)'} has unsupported MIME type ${image.mimeType || '(missing)'}.`);
     }
     const bufferView = json.bufferViews?.[image.bufferView!];
     if (!bufferView) throw new Error(`GLB image ${image.name || '(unnamed)'} references a missing bufferView.`);
-    const start = bufferView.byteOffset ?? 0;
-    if (start < 0 || bufferView.byteLength <= 0 || start + bufferView.byteLength > binary.byteLength) {
+    const start = bufferView.byteOffset === undefined ? 0 : bufferView.byteOffset;
+    if (bufferView.buffer !== 0
+      || !Number.isSafeInteger(start)
+      || !Number.isSafeInteger(bufferView.byteLength)
+      || start < 0
+      || bufferView.byteLength <= 0
+      || !Number.isSafeInteger(start + bufferView.byteLength)
+      || start + bufferView.byteLength > binary.byteLength) {
       throw new Error(`GLB image ${image.name || '(unnamed)'} exceeds the embedded buffer.`);
     }
+    const payload = binary.subarray(start, start + bufferView.byteLength);
+    decodeImage(payload, image.mimeType, imageBudget, `GLB image ${image.name || '(unnamed)'}`);
   }
   const textureCount = json.textures?.length ?? 0;
+  for (const [textureIndex, texture] of (json.textures ?? []).entries()) {
+    if (!Number.isSafeInteger(texture.source) || texture.source < 0 || texture.source >= (json.images?.length ?? 0)) {
+      throw new Error(`GLB texture ${textureIndex} references missing image ${texture.source}.`);
+    }
+  }
   for (const material of json.materials ?? []) {
     const indices = [
       material.pbrMetallicRoughness?.baseColorTexture?.index,
       material.pbrMetallicRoughness?.metallicRoughnessTexture?.index,
       material.normalTexture?.index,
+      material.occlusionTexture?.index,
+      material.emissiveTexture?.index,
     ].filter((value): value is number => value !== undefined);
     for (const index of indices) {
       if (!Number.isInteger(index) || index < 0 || index >= textureCount) {

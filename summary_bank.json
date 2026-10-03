@@ -176,11 +176,12 @@
         "source/frontend/src/utils/materialRepair.ts",
         "source/frontend/src/utils/materialRepair.test.ts",
         "source/frontend/src/utils/glbContainer.ts",
-        "source/frontend/src/utils/glbContainer.test.ts"
+        "source/frontend/src/utils/glbContainer.test.ts",
+        "source/frontend/src/utils/imagePayload.ts"
       ],
       "notes": [
         "UI material repair is a reversible editor transaction; preparation failure disposes every material and texture acquired before the error.",
-        "JPEG/PNG inputs are embedded as PNG; metallic and roughness occupy glTF B/G channels, and source-row flipping is explicit so OBJ and glTF texture coordinates agree.",
+        "JPEG/PNG inputs are embedded as PNG; signatures and decoded dimensions are validated before repair. Metallic and roughness occupy glTF B/G channels, and source-row flipping is explicit so OBJ and glTF texture coordinates agree.",
         "Generated assets, screenshots, job-specific reports, and private source paths remain under excluded output/runtime locations and must not enter context routes."
       ]
     },
@@ -248,7 +249,7 @@
     },
     "workflow__game_ready_cli": {
       "description": "Versioned local job parsing, bounded input, validation, immutable generation publication, and machine-readable evidence.",
-      "max_kb": 200,
+      "max_kb": 216,
       "paths": [
         "source/frontend/scripts/game-ready-cli.ts",
         "source/frontend/scripts/game-ready-producer.ts",
@@ -261,8 +262,11 @@
         "source/frontend/src/utils/gameReadyGeneration.test.ts",
         "source/frontend/src/utils/gameReadyValidation.ts",
         "source/frontend/src/utils/gameReadyValidation.test.ts",
+        "source/frontend/src/utils/imagePayload.ts",
+        "source/frontend/src/utils/imagePayload.test.ts",
         "source/frontend/src/utils/modelResourceBundle.ts",
         "source/frontend/src/utils/textureImageReadiness.ts",
+        "source/frontend/src/utils/nodeThreeRuntime.test.ts",
         "source/frontend/src/loaders/fbx.ts",
         "source/frontend/src/utils/glbContainer.ts",
         "source/frontend/package.json"
@@ -272,6 +276,8 @@
         "Inputs are read sequentially through one open handle per file under the remaining aggregate budget; one global direction-transfer mode replaces repetitive clip declarations while explicit per-clip overrides remain supported.",
         "V2 retains strict OBJ/MTL material repair. V3 preserve-existing accepts self-contained GLB or explicitly selected FBX sidecars, fails closed on missing/unready resources or dropped material assignments, and observes cancellation before the atomic generation commit.",
         "The CLI's Node Three.js image runtime decodes PNG/JPEG pixels and supplies canvas/image behavior for texture readiness and GLB export; it is part of producer identity.",
+        "Node Three export honors requested PNG/JPEG MIME with matching signatures; shared header preflight bounds image edges, pixels, JPEG decoder memory, and aggregate decoded RGBA allocations before decode/canvas allocation.",
+        "Embedded GLB validation checks image signatures, payload decoding, image buffer references, material texture indices, and one aggregate decoded-image budget; preserve-existing roundtrips asymmetric PNG/JPEG textures across duplicate-named material slots.",
         "Canonical producer and sorted role-tagged input identity select an immutable generation; producer identity hashes the executable local dependency list and package manifests so helper changes cannot retain an older source identity.",
         "Model, normalized job, resolved mapping, and report are staged and fsynced before a last-written hash manifest and one directory rename, then the optional current pointer is replaced.",
         "A neutral two-motion caller-owned job runs through the actual CLI, checks sampled motion/raw skin/decoded material content after re-import, and preserves the prior generation and caller inputs on malformed mapping, missing clip, or injected publication failure; a clean copied tool workspace proves no consumer checkout is required and the production guard rejects game/engine references.",
@@ -281,9 +287,10 @@
     },
     "workflow__game_ready_neutral_proof": {
       "description": "Neutral caller-owned saved-job proof, re-import checks, publication rollback, and production dependency boundaries.",
-      "max_kb": 136,
+      "max_kb": 164,
       "paths": [
         "source/frontend/src/utils/gameReadyCli.test.ts",
+        "source/frontend/tests/helpers/skinned-glb-fixture.ts",
         "source/frontend/src/utils/boundedFileRead.test.ts",
         "source/frontend/scripts/node-three-runtime.ts",
         "source/frontend/scripts/check-game-ready-dependencies.mjs",
@@ -294,7 +301,7 @@
       ],
       "notes": [
         "The fixture is a small noncombat two-motion rig with caller-supplied mapping and constraints; it invokes the actual saved-job CLI, reimports the published GLB, and checks transforms, timing, skin, material, and provenance.",
-        "V3 preserve-existing coverage uses a caller-owned textured skinned GLB and the independent skinned animated FBX. It checks embedded texture pixels, explicit sidecar resolution, animation/skin round-trip, and cancellation before publication; v2 repair coverage remains separate.",
+        "V3 preserve-existing coverage uses caller-owned textured skinned GLB fixtures, including asymmetric PNG/JPEG images in duplicate-named material slots, and the independent skinned animated FBX. It checks pixel orientation and texture-slot assignments after export/re-import, explicit sidecar resolution, animation/skin round-trip, and cancellation before publication; v2 repair coverage remains separate.",
         "Malformed mapping, missing source clip, and injected publication failure preserve the prior valid generation and caller-owned inputs. The dependency guard rejects fight-game-study/GaimEngine checkout references without making game acceptance a RustSMF concern.",
         "The runtime receipt is generated under excluded test-results output and is evidence only; it is not a context-bank route or source input."
       ]
@@ -941,7 +948,7 @@
     },
     "workflow__fitted_rig": {
       "description": "Explicit topology fitting, strict motion coverage, preserved skin bindings, and receipt-producing three-state comparison.",
-      "max_kb": 128,
+      "max_kb": 144,
       "paths": [
         "docs/dev/FITTED_RIG.md",
         "source/frontend/src/utils/fittedRig.ts",
@@ -953,6 +960,7 @@
         "source/frontend/src/utils/fitRigJob.test.ts",
         "source/frontend/scripts/fit-rig-cli.ts",
         "source/frontend/scripts/node-three-runtime.ts",
+        "source/frontend/src/utils/imagePayload.ts",
         "source/frontend/scripts/fit-rig-preview.ts",
         "source/frontend/src/rig-comparison/index.html",
         "source/frontend/src/rig-comparison/comparison.js",
