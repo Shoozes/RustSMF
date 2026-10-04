@@ -58,11 +58,13 @@
     },
     "workflow__project_integrity": {
       "description": "Project-doc and release integrity contracts: TODO and Pitfall Ledger shape, exact Guard targets, palette scope, synchronized app versions, imports, and Rust module declarations.",
-      "max_kb": 80,
+      "max_kb": 84,
       "paths": [
         "scripts/project-integrity-lib.mjs",
         "scripts/verify-project-integrity.mjs",
         "scripts/project-integrity.test.mjs",
+        "scripts/verify-rust.mjs",
+        "scripts/rust-verification.test.mjs",
         "scripts/README.md",
         "run.ps1",
         "source/package.json",
@@ -977,7 +979,7 @@
     },
     "feature__runtime_pose_contact": {
       "description": "Versioned Rust support-pose correction and conditioned-cycle transition baking, calibrated chains, vendoring contracts, and native/browser WASM proof.",
-      "max_kb": 100,
+      "max_kb": 108,
       "paths": [
         "source/pose-contact/Cargo.toml",
         "source/pose-contact/Cargo.lock",
@@ -988,6 +990,7 @@
         "source/pose-contact/tests/transition_v1.rs",
         "source/pose-contact/tests/support/transition_fixture.rs",
         "source/pose-contact/tests/browser-transition.mjs",
+        "source/pose-contact/tests/transition-runtime-proof.mjs",
         "source/pose-contact/examples/transition_probe.rs",
         "source/pose-contact/examples/transition_receipt.rs",
         "docs/dev/POSE_CONTACT.md",
@@ -998,7 +1001,7 @@
         "Canonical v1.rs is vendored verbatim where consumers cannot snapshot the RustSMF path crate; it uses existing libm 0.2.16.",
         "Input is parent-first uniform-scale local TRS and one/two calibrated direct chains with independent limb subtrees; output is corrected full TRS, aligned joint orientations, and bounded diagnostics.",
         "Calibrate the hip bend plane as pole × upper-axis and knee plane normal with the positive (hip-to-knee) × (knee-to-ankle) sign. No contact schedule or root travel is owned here.",
-        "Native/WASM parity covered four fixtures and 548 exact numeric outputs; the Rust gate is source npm run verify:rust."
+        "Native/WASM parity covered four fixtures and 548 exact numeric outputs; source npm run verify:rust is the shared compile-only gate and npm run transition:runtime-proof rebuilds and receipts the native/browser-WASM transition artifacts."
       ]
     }
   },

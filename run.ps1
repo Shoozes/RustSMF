@@ -579,7 +579,7 @@ switch -Exact ($NormalizedTask) {
         Write-Ok "[CONTEXT] Passed."
     }
     "verify" {
-        Write-Info "[VERIFY] Lint coverage + lint + build + docs/context checks..."
+        Write-Info "[VERIFY] Lint, build, docs/context, and shared Rust checks..."
         $ok = $true
         if (-not (Invoke-ProjectIntegrityVerification)) { $ok = $false }
         if (-not (Invoke-ContextBankVerification)) { $ok = $false }
@@ -597,18 +597,7 @@ switch -Exact ($NormalizedTask) {
             if (-not (Invoke-FrontendNpm @("run", "check:entry-chunks"))) { $ok = $false; Write-Warn "chunk check failed" }
             if (-not (Invoke-FrontendNpm @("run", "test:unit"))) { $ok = $false; Write-Warn "unit tests failed" }
         }
-        if (Test-Path $SrcTauriDir) {
-            Push-Location $SrcTauriDir
-            & cargo fmt --all -- --check 2>&1 | Out-String | Write-Host
-            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "cargo fmt check failed" }
-            & cargo clippy --all-targets -- -D warnings 2>&1 | Out-String | Write-Host
-            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "cargo clippy failed" }
-            & cargo test 2>&1 | Out-String | Write-Host
-            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "cargo test failed" }
-            & cargo check 2>&1 | Out-String | Write-Host
-            if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "cargo check failed" }
-            Pop-Location
-        }
+        if (-not (Invoke-SourceNpm @("run", "verify:rust"))) { $ok = $false; Write-Warn "shared Rust verification failed" }
         if ($ok) {
             Write-Ok "[VERIFY] Passed."
         } else {

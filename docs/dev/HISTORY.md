@@ -2,6 +2,69 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-04 — Bind transition proof hashes to compared artifacts
+
+The browser parity step now hashes the WASM bytes passed to Chromium and checks
+the native executable hash before and after running it. Receipt generation
+requires those hashes to match the final artifact files and rejects a missing or
+failed browser comparison. This closes the gap where an artifact changed during
+parity could have received a passing receipt with a later, unrelated hash.
+
+Verified locally on `main` at `4aeb34d1831154a85405c0161c329ff15141672d`
+with the unpublished Rust-verification and transition-proof working-tree changes:
+`node --test scripts/rust-verification.test.mjs` passed 10 tests;
+`npm.cmd run verify:rust` passed those 10 regressions and nine Cargo checks
+across both crates (10 Tauri and 16 pose-contact tests);
+`npm.cmd run transition:runtime-proof` rebuilt both artifacts and passed native/
+Chromium parity on nine frames with fingerprint `61931913f4cced0d`;
+`node scripts/verify-context-bank.mjs` passed 44 groups with zero warnings;
+`node scripts/verify-project-integrity.mjs` passed. Every listed command exited
+0. The runtime receipt recorded pose-contact source-tree SHA-256
+`b5e0bfb073b106a3f23b73145c8a970cda04296a2008a63277f7132b436054f6`,
+native artifact SHA-256
+`065b44648d0e7734832e7b21f029bcb2e874de8e81d181ed4bd349fbb2655a64`,
+and WASM artifact SHA-256
+`8e89d0dacef45bb13002b5f4c52c0400c7033c7294f78ab4c0da4faf7a458ccd`.
+The browser-reported hashes matched both final files.
+
+The same unpublished working-tree candidate then passed the full local gate on
+2026-10-04, in order. Each command below exited 0; `-ExecutionPolicy Bypass` was
+process-scoped because this host blocks unsigned PowerShell scripts by default.
+
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -Task verify`:
+  project integrity (17 tests), context bank (44 groups and 10 tests), Git main
+  safeguards (9 tests), lint and typechecks, production build, the frontend
+  unit suite (92 files), and the shared nine-check Rust gate passed.
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -Task test:e2e -NoGenEye`:
+  105/105 browser tests passed.
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -Task test:journey -NoGenEye`:
+  all five sequential journeys passed, including the hand-wave capture.
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -Task test:visual-strict`:
+  3/3 strict tests passed. The Original snapshot remains unchanged at SHA-256
+  `e5ee611a6b1b3fced0c152eacf42d4797fa084ab4f621476075297581a111846`.
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -Task desktop-smoke`:
+  unbundled release executable built; 10 Rust boundary tests and 13 native IPC
+  mock browser tests passed.
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -Task package:windows`:
+  built `source/src-tauri/target/release/bundle/nsis/RustSMF_0.2.0_x64-setup.exe`
+  (2,204,325 bytes), SHA-256
+  `696889acfe85324f6a83b3cee399e4e45a5cbd8da716e3d6ecc89fe922bc7113`.
+  A separate file hash matched the launcher report.
+
+The six Modern viewport screenshots (1920x1080, 1440x900, 1280x800,
+1024x768, 800x900, and 390x844) and the 1440x900 DPR 1.25 capture were
+reviewed. File/product commands, workspace tabs, viewport controls, and status
+remained visible or reachable without clipping; no baseline was updated.
+Playwright's native IPC mocks are separate from attended Windows OS-dialog
+evidence. The installer was built and hashed, but not installed or launched.
+Only this evidence and review prose changed after the six gates; the context
+bank and project-integrity validators passed again. No application or proof
+source changed after the gate.
+
+The installer and Playwright captures remain under ignored build/test output
+for this candidate's local review; a later scoped cleanup may remove them after
+their hashes and visual decisions are no longer needed.
+
 ## 2026-10-03 — Bounded game-ready PNG/JPEG handling
 
 The Node Three runtime now encodes the requested PNG or JPEG format with a
@@ -24,6 +87,63 @@ Local proof: app and test typechecks, ESLint, production-`any` guard, game-ready
 dependency guard, frontend production build, entry-chunk check, context route
 validation, and all 509 frontend unit tests across 92 files passed. The full
 suite includes the PNG/JPEG CLI export/reimport proof.
+
+## 2026-10-03 — Runtime cleanup and clean Git reproduction
+
+Removed workspace-generated builds, installed dependencies, test output, stale
+candidate/proof checkouts, Playwright captures, and one-off diagnostic output.
+Local model inputs and `runtime-data/publish-paths.json` remain; the latter is
+static publisher policy. Existing main-worktree edits were preserved. The
+temporary reproduction checkout and its generated outputs were removed after
+verification.
+
+A fresh shallow checkout of upstream `main` at
+`c7b5f3e7cdd7b46c816e6a4ac218cbc6ae941bdb` passed:
+
+- `pwsh -NoProfile -File .\run.ps1 -Task setup` — exit 0.
+- `pwsh -NoProfile -File .\run.ps1 -Task verify` — exit 0; project/context
+  guards, lint, typechecks, production build, 500 frontend unit tests, and 10
+  Rust tests passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye` — exit 0; 105/105
+  browser tests passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:journey -NoGenEye` — exit 0; all
+  five product journeys passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task desktop-smoke` — exit 0; optimized
+  Windows executable built, 10 Rust boundary tests and 13 native IPC tests
+  passed.
+
+Setup reported six high-severity npm advisories. Its installed npm version
+removed 15 `peer` metadata flags from the temporary lockfile without changing
+resolved package versions; no dependency updates were applied.
+
+## 2026-09-28 — Unified Rust verification and transition runtime proof
+
+Moved Rust verification into `scripts/verify-rust.mjs`. The workspace's
+`npm run verify:rust` and `run.ps1 -Task verify` now reach the same owner, which
+preflights both crate manifests and runs formatting, Clippy, tests, and native
+checks for `src-tauri` and `pose-contact`, plus the pose-contact wasm32 check.
+Missing crates or Cargo and any failed check return a nonzero result. Regression
+tests cover the full command plan, missing-crate handling, pose-contact test and
+WASM failures, and the routing from both entrypoints.
+
+Added `npm run transition:runtime-proof` as a separate release-qualification
+command. It builds both transition artifacts before running browser parity and
+emits JSON with the Git revision, pose-contact source-tree SHA-256, native and
+WASM artifact hashes, and comparison result. The browser test consumes the
+built artifacts; compile-only Rust verification remains separate.
+
+Local proof on 2026-09-28: `pwsh -NoProfile -File .\run.ps1 -Task verify`
+passed project-integrity (17 tests), context-bank validation (44 groups and 10
+tests), launcher/process guards (11 tests), frontend unit tests (500), Rust
+gate regressions (9), all 10 Tauri tests, and all 16 pose-contact tests. The
+separate `npm.cmd run transition:runtime-proof` passed on Chromium
+148.0.7778.96 with fingerprint `61931913f4cced0d`. Its source revision was
+`c7b5f3e7cdd7b46c816e6a4ac218cbc6ae941bdb`; source-tree SHA-256 was
+`18c9154e8a31935217d1f9cdc1e17303684c75f80beab7b85fef1a1deefc74fc`, native
+artifact SHA-256 was
+`2e0b3292d1d7535edb275761564b5a745b53da31eba449468277ad6a02545bc3`, and
+WASM artifact SHA-256 was
+`8e89d0dacef45bb13002b5f4c52c0400c7033c7294f78ab4c0da4faf7a458ccd`.
 
 ## 2026-09-25 — Portable pose-contact v1
 

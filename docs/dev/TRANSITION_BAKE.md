@@ -94,18 +94,21 @@ are included in the API.
 ## Focused local proof
 
 ```powershell
-cargo fmt --manifest-path source/pose-contact/Cargo.toml --all -- --check
-cargo clippy --manifest-path source/pose-contact/Cargo.toml --offline --all-targets -- -D warnings
-cargo test --manifest-path source/pose-contact/Cargo.toml --offline
-cargo check --manifest-path source/pose-contact/Cargo.toml --offline
-cargo check --manifest-path source/pose-contact/Cargo.toml --offline --target wasm32-unknown-unknown
-cargo build --manifest-path source/pose-contact/Cargo.toml --offline --target wasm32-unknown-unknown --example transition_probe
-cargo build --manifest-path source/pose-contact/Cargo.toml --offline --example transition_receipt
-node source/pose-contact/tests/browser-transition.mjs
+Set-Location source
+npm.cmd run verify:rust
+npm.cmd run transition:runtime-proof
 ```
 
-The browser probe uses the repository's existing Playwright Chromium, closes its
-owned browser, and asserts the same fixtures as native tests inside WebAssembly.
+`verify:rust` is the compile-only gate shared by `run.ps1 -Task verify` and the
+workspace verification script. The separate runtime-proof command rebuilds the
+native receipt and browser-WASM probe before it runs the browser comparison. It
+uses the repository's Playwright Chromium, closes its owned browser, and asserts
+the same fixtures as native tests inside WebAssembly. Its JSON receipt records
+the Git revision, a SHA-256 of the pose-contact source tree, the native and
+WASM artifact hashes, and the native/browser comparison result.
+The browser comparison hashes the WASM bytes supplied to Chromium and checks
+the native executable hash before and after running it. Receipt generation
+rejects either artifact if its final hash differs from the comparison hash.
 It compares native and browser fingerprints over all 480 local-TRS f64 values
 in the supported and airborne knee-boundary fixtures, including their exact bits.
 It proves deterministic baking, source receipt, support residual, lengths, and
@@ -116,7 +119,8 @@ consumer rig calibration, adapter behavior or visual acceptance for game assets.
 
 Verified 2026-09-25 on Windows, Rust `1.98.1`, Node `26.5.0`, and Playwright
 Chromium `148.0.7778.96`. Source base: `c28cc525e8b90de19f67c0fbabf7395c87e54f67`
-with the local transition additions. All eight proof commands above exited 0;
+with the local transition additions. The original eight per-crate/browser proof
+commands exited 0;
 native tests passed 16 cases (six transition tests and ten existing solver
 tests). The browser probe passed its shared assertions and native/browser
 local-TRS bit parity, fingerprint `61931913f4cced0d`.
@@ -138,5 +142,8 @@ fix: frame 2 projects to `5.000000000000` degrees, leg 0 remains unsupported,
 and the request returns seven accepted frames. The same numerical tolerance and
 5–145-degree limits remain in force. This demonstrates the generic interpolation
 boundary defect and its correction, without changing consumer support/phase policy.
-The ignored local diagnostic retains its generator and replay log under
-`output/transition-diagnosis`; it is outside the generic API and context routes.
+The ignored local diagnostic retained its generator and replay log under
+`output/transition-diagnosis` at the time of this bake. Those generated
+artifacts were removed during the 2026-10-03 runtime-data cleanup. The numerical
+results above remain the durable record; that local harness is not required to
+build the app.

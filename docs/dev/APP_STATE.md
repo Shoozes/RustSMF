@@ -285,8 +285,13 @@ roll. The solver intentionally rejects non-uniform local scales, invalid axes,
 unsupported chains, and non-finite inputs. It does not author contact intervals,
 root travel, action eligibility, persistence, or arbitrary anatomy.
 
-`cargo test` and native/WASM `cargo check` for this crate run inside
-`npm run verify:rust`. See [POSE_CONTACT.md](POSE_CONTACT.md) for the v1 call,
+The single `npm run verify:rust` gate checks formatting, Clippy, tests, and
+native compilation for both `src-tauri` and `pose-contact`, plus pose-contact's
+wasm32 target. `npm run transition:runtime-proof` separately rebuilds the native
+and browser-WASM transition probes, compares their results, and prints a JSON
+receipt bound to the Git revision, pose-contact source-tree hash, and both
+artifact hashes. Both commands are required for transition release qualification.
+See [POSE_CONTACT.md](POSE_CONTACT.md) for the v1 call,
 vendoring receipt, calibration details, and compatibility boundary.
 
 The sibling `transition_v1::bake_transition_v1` API bakes caller-conditioned

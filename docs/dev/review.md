@@ -1,6 +1,6 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-09-25
+Last reviewed: 2026-10-04
 
 Current behavior and architecture belong in [APP_STATE.md](APP_STATE.md),
 acceptance outcomes and completion criteria in [TODO.md](TODO.md), and dated
@@ -8,16 +8,23 @@ proof in [HISTORY.md](HISTORY.md).
 
 ## Current findings
 
+- The 2026-10-04 candidate was based on
+  `4aeb34d1831154a85405c0161c329ff15141672d` and included
+  Rust-verification and transition-proof working-tree edits. Its full local
+  gate passed: `verify`, 105 browser tests,
+  five sequential journeys, three strict visuals, desktop smoke, and Windows
+  NSIS packaging. Six Modern viewport screenshots and the 1.25 DPR capture
+  were reviewed; exact commands and installer hash are in HISTORY.
 - The standalone generic pose-contact crate now returns corrected local TRS and
   calibrated world orientations from current parent-first poses. All ten native
   tests pass; four fixtures produced 548 identical numeric outputs across
   native and wasm32. The previous-plane fallback retains its signed bend side
   when target and pole align. The API boundary and source hash are recorded in
   [POSE_CONTACT.md](POSE_CONTACT.md) and [HISTORY.md](HISTORY.md).
-- Selective publication is verified on an isolated candidate excluding unfinished
-  retargeting work. The guarded staged-only helper binds paths and exact base/tree
-  IDs, preserves owner edits, and retries failed pushes without duplicate commits.
-  The candidate release gate and artifact hash are recorded in HISTORY.
+- Selective publication was verified on an isolated v0.2 candidate in September.
+  The guarded staged-only helper binds paths and exact base/tree IDs, preserves
+  owner edits, and retries failed pushes without duplicate commits. The
+  2026-10-04 Rust-verification candidate follows this scoped publication path.
 
 - The completed Calm Modern shell cut remains the baseline. The four v0.2
   outcomes—Modern visual refresh, UI hierarchy, user journeys and regression
@@ -28,7 +35,7 @@ proof in [HISTORY.md](HISTORY.md).
   journeys, strict visuals, desktop smoke, and NSIS packaging gates passed.
   Exact counts, artifact hash, and remote-ref retirement evidence are in
   `docs/dev/HISTORY.md`. The shipped version is synchronized at 0.2.0.
-- The context bank validates 43 groups and a focused default orientation under
+- The context bank validates 44 groups and a focused default orientation under
   its focused budget. Defaults remain limited to orientation; the DAE/FBX
   readiness and viewport-helper routes are focused, not loaded globally.
 - The integrity scan found no production TODO/stub, broken relative import or
@@ -52,9 +59,9 @@ proof in [HISTORY.md](HISTORY.md).
 - Large load/viewport modules remain integration owners with focused leaf
   controllers and helpers. The current inventory did not establish a safer
   additional split boundary, so no size-only refactor was made.
-- The desktop smoke used native IPC mocks; it is not a new manual Windows
-  dialog or packaged-installer installation check. Existing attended dialog
-  evidence remains documented in HISTORY. The package artifact was built and
-  hashed, but installation/launch was not repeated for this pass.
+- The 2026-10-04 desktop smoke used native IPC mocks; it does not establish a
+  new manual Windows dialog or packaged-installer installation check. Existing
+  attended dialog evidence remains in HISTORY. The new package artifact was
+  built and hashed, without an installation or launch test.
 - [HUMANOID_POSE_REVIEW.md](HUMANOID_POSE_REVIEW.md) owns the angular-review
   contract. Private models and diagnostic output remain ignored.

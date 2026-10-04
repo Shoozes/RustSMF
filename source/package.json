@@ -28,7 +28,8 @@
     "game-ready": "npm --workspace frontend run game-ready --",
     "fit-rig": "npm --workspace frontend run fit-rig --",
     "fit-rig-preview": "npm --workspace frontend run fit-rig-preview --",
-    "verify:rust": "cd src-tauri && cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test && cargo check && cd ../pose-contact && cargo fmt --all -- --check && cargo clippy --all-targets -- -D warnings && cargo test && cargo check && cargo check --target wasm32-unknown-unknown",
+    "verify:rust": "node --test ../scripts/rust-verification.test.mjs && node ../scripts/verify-rust.mjs",
+    "transition:runtime-proof": "node pose-contact/tests/transition-runtime-proof.mjs",
     "verify": "npm run check:lint-coverage && npm run lint && npm run typecheck && npm run typecheck:test && npm run check:production-any && npm run check:game-ready-dependencies && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && npm run verify:rust",
     "desktop:smoke": "pwsh -File ../run.ps1 -Task desktop-smoke"
   },
