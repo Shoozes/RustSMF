@@ -25,7 +25,7 @@ fixture that does not require Fighter Lab metadata or a combat runtime.
 
 - `run.bat` / `run.ps1` own the Windows menu and installed development launch (`-Task run`). Cleanup targets only this checkout's normalized Node script paths, preserving unrelated servers. Setup propagates Rust failure; Vite resolves hoisted or frontend-local packages.
 - File input, drop and native picking support SMF, GLB/GLTF, FBX, DAE/Collada and OBJ. A bounded bundle resolves selected relative buffers, images and MTL files. Missing, ambiguous, oversized or malformed resources fail before model replacement. Tracked external-GLTF fixtures prove exact sidecar hashes and contained relative URIs.
-- All model inputs have a 256 MiB limit, checked before browser reads and again before parsing. Native byte payloads accept ArrayBuffer, Uint8Array or validated byte arrays. Rust opens one authorized canonical regular file and bounds both reported and observed sizes against replacement/growth races. Unreadable selections report an Open error.
+- All model inputs have a 256 MiB limit, checked before browser reads and again before parsing. Native byte payloads accept ArrayBuffer, Uint8Array or validated byte arrays. Rust opens authorized canonical regular files and bounds both reported and observed sizes against replacement/growth races. Selected bundles also retain a 256 MiB aggregate limit while reading, with each file constrained by the remaining observed byte budget. Unreadable selections report an Open error.
 - A replacement requested while pose, animation, skin, rig, editor, or Outliner history is dirty opens an accessible Cancel/Discard decision. File bytes are not materialized until the decision is made; Cancel preserves the current root, selection, dirty flags, and status, while Discard permits one replacement. Parse failure or stale completion keeps the previous model mounted.
 - Open, append, retarget, repair, export and save share latest-intent ownership. New operations invalidate stale UI completions and dispose stale resources; failures preserve the mounted model and dirty authoring state.
 - SMF import/export uses a typed Web Worker with owned transferable buffers, nested payload validation, monotonic progress, cancellation, a 120-second timeout, and explicit termination. The client rechecks an abort signal after worker handlers are installed and before `postMessage`, so setup-time cancellation cannot publish or leave a task running. The codec bounds encoded input/output to 256 MiB, decoded allocation estimates to 512 MiB, section reads to declared offsets, strings to 4,095 bytes, and allocation-driving texture/mesh/rig/animation counts; non-finite numeric values and invalid byte ranges fail closed. Synchronous fallback is limited to worker construction or initial `postMessage` failure; runtime worker errors surface instead of repeating work on the UI thread.
@@ -290,7 +290,9 @@ native compilation for both `src-tauri` and `pose-contact`, plus pose-contact's
 wasm32 target. `npm run transition:runtime-proof` separately rebuilds the native
 and browser-WASM transition probes, compares their results, and prints a JSON
 receipt bound to the Git revision, pose-contact source-tree hash, and both
-artifact hashes. Both commands are required for transition release qualification.
+artifact hashes. Cargo's artifact messages select the exact build outputs for
+the comparison and final hashes, including custom target directories. Both
+commands are required for transition release qualification.
 See [POSE_CONTACT.md](POSE_CONTACT.md) for the v1 call,
 vendoring receipt, calibration details, and compatibility boundary.
 

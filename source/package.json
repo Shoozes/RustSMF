@@ -34,6 +34,6 @@
     "desktop:smoke": "pwsh -File ../run.ps1 -Task desktop-smoke"
   },
   "engines": {
-    "node": ">=22"
+    "node": "^22.13.0 || >=24"
   }
 }

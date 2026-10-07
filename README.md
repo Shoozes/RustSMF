@@ -21,7 +21,7 @@ pwsh -NoProfile -File .\run.ps1 -Task run
 
 For the browser development shell, run `pwsh -NoProfile -File .\run.ps1 -Task dev`. To build the Windows NSIS installer, run `pwsh -NoProfile -File .\run.ps1 -Task package:windows`; the command reports the installer path and SHA-256.
 
-The frontend uses TypeScript/React, the desktop boundary uses Rust/Tauri, and Node.js 22 or newer is required. Verification and test commands are listed in [App state](docs/dev/APP_STATE.md#verification).
+The frontend uses TypeScript/React and the desktop boundary uses Rust/Tauri. Use Node.js 22.13 or later within the 22.x line, or Node.js 24 and newer, as required by the pinned build tools. Verification and test commands are listed in [App state](docs/dev/APP_STATE.md#verification).
 
 ## Product ownership
 

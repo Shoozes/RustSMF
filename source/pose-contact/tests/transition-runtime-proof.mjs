@@ -1,14 +1,12 @@
 import { createHash } from 'node:crypto'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
-import { relative, resolve, sep } from 'node:path'
+import { isAbsolute, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const crateRoot = resolve(fileURLToPath(new URL('../', import.meta.url)))
 const repositoryRoot = resolve(fileURLToPath(new URL('../../../', import.meta.url)))
 const browserScript = fileURLToPath(new URL('./browser-transition.mjs', import.meta.url))
-const nativeArtifact = resolve(crateRoot, 'target/debug/examples/transition_receipt' + (process.platform === 'win32' ? '.exe' : ''))
-const wasmArtifact = resolve(crateRoot, 'target/wasm32-unknown-unknown/debug/examples/transition_probe.wasm')
 const comparePaths = (left, right) => (left < right ? -1 : left > right ? 1 : 0)
 
 export function createTransitionRuntimePlan(cratePath = crateRoot) {
@@ -16,14 +14,20 @@ export function createTransitionRuntimePlan(cratePath = crateRoot) {
     {
       id: 'native-build',
       command: 'cargo',
-      args: ['build', '--example', 'transition_receipt'],
+      args: ['build', '--example', 'transition_receipt', '--message-format=json-render-diagnostics'],
       cwd: cratePath,
+      captureOutput: true,
+      artifactName: 'native',
+      exampleName: 'transition_receipt',
     },
     {
       id: 'wasm-build',
       command: 'cargo',
-      args: ['build', '--target', 'wasm32-unknown-unknown', '--example', 'transition_probe'],
+      args: ['build', '--target', 'wasm32-unknown-unknown', '--example', 'transition_probe', '--message-format=json-render-diagnostics'],
       cwd: cratePath,
+      captureOutput: true,
+      artifactName: 'wasm32',
+      exampleName: 'transition_probe',
     },
     {
       id: 'browser-parity',
@@ -37,19 +41,65 @@ export function createTransitionRuntimePlan(cratePath = crateRoot) {
 }
 
 function runCommand(step) {
-  return spawnSync(step.command, step.args, {
+  const result = spawnSync(step.command, step.args, {
     cwd: step.cwd,
     env: step.env ?? process.env,
     encoding: 'utf8',
     stdio: step.captureOutput ? 'pipe' : 'inherit',
     windowsHide: true,
   })
+  if (step.artifactName && result.stderr) process.stderr.write(result.stderr)
+  return result
+}
+
+export function transitionBuildArtifact(output, step) {
+  const paths = new Set()
+  for (const line of (output ?? '').split(/\r?\n/)) {
+    if (!line.trimStart().startsWith('{')) continue
+    let message
+    try {
+      message = JSON.parse(line)
+    } catch {
+      throw new Error(`Cargo returned invalid JSON during ${step.id}.`)
+    }
+    if (message.reason !== 'compiler-artifact'
+      || message.target?.name !== step.exampleName
+      || !message.target?.kind?.includes('example')
+      || message.profile?.test === true
+      || typeof message.manifest_path !== 'string'
+      || resolve(message.manifest_path) !== resolve(step.cwd, 'Cargo.toml')) continue
+
+    const candidates = step.artifactName === 'native'
+      ? [message.executable]
+      : (message.filenames ?? []).filter((path) => typeof path === 'string' && path.endsWith('.wasm'))
+    for (const path of candidates) {
+      if (typeof path !== 'string' || !isAbsolute(path) || (step.artifactName === 'native' && path.endsWith('.wasm'))) {
+        throw new Error(`Cargo did not report a usable ${step.artifactName} artifact during ${step.id}.`)
+      }
+      paths.add(path)
+    }
+  }
+  if (paths.size !== 1) {
+    throw new Error(`Cargo must report exactly one ${step.exampleName} artifact during ${step.id}; found ${paths.size}.`)
+  }
+  return [...paths][0]
 }
 
 export function executeTransitionRuntimePlan(plan, invoke = runCommand) {
   let browserResult
+  const artifactPaths = {}
   for (const step of plan) {
-    const result = invoke(step)
+    const invocation = step.id === 'browser-parity'
+      ? {
+          ...step,
+          env: {
+            ...step.env,
+            RUSTSMF_TRANSITION_NATIVE_ARTIFACT: artifactPaths.native,
+            RUSTSMF_TRANSITION_WASM_ARTIFACT: artifactPaths.wasm32,
+          },
+        }
+      : step
+    const result = invoke(invocation)
     const command = `${step.command} ${step.args.join(' ')}`
     if (result.error) {
       if (result.error.code === 'ENOENT' && step.command === 'cargo') {
@@ -65,11 +115,12 @@ export function executeTransitionRuntimePlan(plan, invoke = runCommand) {
         .trim()
       throw new Error(`Transition runtime proof failed during ${step.id}: ${command} returned ${status}.${output ? `\n${output}` : ''}`)
     }
+    if (step.artifactName) artifactPaths[step.artifactName] = transitionBuildArtifact(result.stdout, step)
     if (step.id === 'browser-parity') browserResult = result.stdout
   }
 
   try {
-    return JSON.parse((browserResult ?? '').trim())
+    return { comparison: JSON.parse((browserResult ?? '').trim()), artifactPaths }
   } catch (error) {
     throw new Error(`Browser parity did not return a valid JSON receipt: ${error instanceof Error ? error.message : String(error)}`)
   }
@@ -136,7 +187,7 @@ function main() {
       .split(/\r?\n/)
       .filter(Boolean)
     const plan = createTransitionRuntimePlan()
-    const comparison = executeTransitionRuntimePlan(plan)
+    const { comparison, artifactPaths } = executeTransitionRuntimePlan(plan)
     const after = sourceSnapshot()
     if (before.sha256 !== after.sha256) {
       throw new Error('Pose-contact source changed while the native/WASM artifacts were being built and compared; rerun the proof against a stable source tree.')
@@ -144,12 +195,12 @@ function main() {
 
     const artifacts = {
       native: {
-        path: relative(repositoryRoot, nativeArtifact).split(sep).join('/'),
-        sha256: sha256File(nativeArtifact),
+        path: relative(repositoryRoot, artifactPaths.native).split(sep).join('/'),
+        sha256: sha256File(artifactPaths.native),
       },
       wasm32: {
-        path: relative(repositoryRoot, wasmArtifact).split(sep).join('/'),
-        sha256: sha256File(wasmArtifact),
+        path: relative(repositoryRoot, artifactPaths.wasm32).split(sep).join('/'),
+        sha256: sha256File(artifactPaths.wasm32),
       },
     }
     assertTransitionArtifactHashes(comparison, artifacts)

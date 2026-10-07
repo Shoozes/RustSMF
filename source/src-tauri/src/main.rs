@@ -188,10 +188,31 @@ fn read_file_bundle_sync(paths: Vec<PathBuf>) -> Result<Vec<Vec<u8>>, String> {
         metadata.push((path.clone(), file, file_metadata.len(), limit));
     }
 
-    metadata
+    read_bundle_readers_bounded(metadata, MAX_NATIVE_FILE_BYTES)
+}
+
+fn read_bundle_readers_bounded<R: Read>(
+    readers: Vec<(PathBuf, R, u64, u64)>,
+    max_bytes: u64,
+) -> Result<Vec<Vec<u8>>, String> {
+    let mut observed_bytes = 0_u64;
+    readers
         .into_iter()
         .map(|(path, file, reported_len, limit)| {
-            read_bytes_bounded(file, reported_len, &path, limit)
+            let remaining = max_bytes - observed_bytes;
+            let bytes = read_bytes_bounded(file, reported_len, &path, limit.min(remaining))
+                .map_err(|error| {
+                    if remaining < limit && error.starts_with("MODEL_INPUT_TOO_LARGE:") {
+                        format!(
+                            "RESOURCE_BUNDLE_TOO_LARGE: {} exceeds the remaining bundle budget of {remaining} bytes; {error}",
+                            path.display()
+                        )
+                    } else {
+                        error
+                    }
+                })?;
+            observed_bytes += bytes.len() as u64;
+            Ok(bytes)
         })
         .collect()
 }
@@ -807,6 +828,33 @@ mod tests {
                 .expect_err("reads that grow past reported metadata must remain bounded");
         assert!(growth_rejection.starts_with("MODEL_INPUT_TOO_LARGE:"));
         assert!(growth_rejection.contains("while reading"));
+    }
+
+    #[test]
+    fn native_bundle_reads_bound_observed_growth_across_files() {
+        let readers = || {
+            vec![
+                (
+                    std::path::PathBuf::from("primary.bin"),
+                    std::io::Cursor::new(b"1234"),
+                    2,
+                    8,
+                ),
+                (
+                    std::path::PathBuf::from("sidecar.bin"),
+                    std::io::Cursor::new(b"5678"),
+                    2,
+                    8,
+                ),
+            ]
+        };
+        let exact = super::read_bundle_readers_bounded(readers(), 8)
+            .expect("observed bundle bytes exactly at the limit should be accepted");
+        assert_eq!(exact, vec![b"1234".to_vec(), b"5678".to_vec()]);
+
+        let growth = super::read_bundle_readers_bounded(readers(), 7)
+            .expect_err("individually valid files must not exceed the observed bundle limit");
+        assert!(growth.starts_with("RESOURCE_BUNDLE_TOO_LARGE:"));
     }
 
     #[test]

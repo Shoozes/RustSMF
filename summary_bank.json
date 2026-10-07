@@ -58,7 +58,7 @@
     },
     "workflow__project_integrity": {
       "description": "Project-doc and release integrity contracts: TODO and Pitfall Ledger shape, exact Guard targets, palette scope, synchronized app versions, imports, and Rust module declarations.",
-      "max_kb": 84,
+      "max_kb": 88,
       "paths": [
         "scripts/project-integrity-lib.mjs",
         "scripts/verify-project-integrity.mjs",
@@ -791,6 +791,10 @@
         "README.md",
         "docs/dev/review.md",
         "run.ps1",
+        "scripts/verify-rust.mjs",
+        "scripts/rust-verification.test.mjs",
+        "source/pose-contact/tests/transition-runtime-proof.mjs",
+        "source/pose-contact/tests/browser-transition.mjs",
         "source/package.json",
         "source/frontend/package.json",
         "source/frontend/scripts/run-unit-tests.mjs",

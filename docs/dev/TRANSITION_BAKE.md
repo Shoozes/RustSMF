@@ -106,6 +106,10 @@ uses the repository's Playwright Chromium, closes its owned browser, and asserts
 the same fixtures as native tests inside WebAssembly. Its JSON receipt records
 the Git revision, a SHA-256 of the pose-contact source tree, the native and
 WASM artifact hashes, and the native/browser comparison result.
+The paths come from Cargo's compiler-artifact messages for the exact crate and
+examples, including when `CARGO_TARGET_DIR` or Cargo configuration changes the
+output directory. Missing or ambiguous artifacts fail before Chromium starts.
+See [Cargo artifact messages](https://doc.rust-lang.org/cargo/reference/external-tools.html#artifact-messages).
 The browser comparison hashes the WASM bytes supplied to Chromium and checks
 the native executable hash before and after running it. Receipt generation
 rejects either artifact if its final hash differs from the comparison hash.

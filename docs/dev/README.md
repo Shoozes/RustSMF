@@ -5,7 +5,7 @@ Keep developer docs concise and evidence-based. This repo has one current-state 
 ## Durable Homes
 
 - `APP_STATE.md`: what the app currently does, architecture ownership, limits, and verified commands.
-- `TODO.md`: active work only. Use `Backlog status: empty` when no work remains; otherwise every task states What, Why, Where, When, How, Done when, and Verification.
+- `TODO.md`: active work and the retained v0.2 outcome criteria. State the backlog status explicitly; use `Backlog status: empty` when no work or retained release criteria remain. Every active task states What, Why, Where, When, How, Done when, and Verification.
 - `HISTORY.md`: completed work and durable verification evidence.
 - `review.md`: latest concise repo/app integrity snapshot, linking the dated command record in `HISTORY.md`.
 - `PITFALL_LEDGER.md`: repeated or high-risk failures, written as prevention records rather than progress history.
@@ -27,4 +27,4 @@ Keep developer docs concise and evidence-based. This repo has one current-state 
 
 Avoid copying the same completed-work narrative into multiple docs. Link to the durable owner instead. Canonical verification commands and launch instructions are centralized in APP_STATE.md "Primary commands" / "Verification" (other surfaces link or summarize to reduce duplication of lists).
 
-Exact discovered test counts belong in dated verification evidence, not repeated current-state prose. Gated backlog tasks must identify the missing external evidence or interactive lane and define completion conditions; completed items move to `HISTORY.md`.
+Exact discovered test counts belong in dated verification evidence, not repeated current-state prose. Gated backlog tasks must identify the missing external evidence or interactive lane and define completion conditions. Completed-work narratives and proof move to `HISTORY.md`; the selected release's measurable outcome criteria may remain in `TODO.md` as an explicitly completed closeout record.

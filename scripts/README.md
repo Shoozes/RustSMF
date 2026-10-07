@@ -6,7 +6,7 @@ Current command entry points:
 - `run.ps1`: human-friendly setup, dev, verify, e2e, recorded journey, and desktop-smoke tasks; optional GenEye browser runs use checked argv manifests instead of shell command strings.
 - `verify-rust.mjs`: the single Rust verification owner for the Tauri and pose-contact crates, including native checks and pose-contact wasm32; both public verification entrypoints delegate to it.
 - `rust-verification.test.mjs`: command coverage, missing-crate and failure propagation, launcher routing, and fresh transition-build ordering regressions run as part of `npm run verify:rust`.
-- `source/pose-contact/tests/transition-runtime-proof.mjs`, exposed as `npm run transition:runtime-proof`: rebuilds both transition artifacts before browser parity and emits their source/artifact hashes.
+- `source/pose-contact/tests/transition-runtime-proof.mjs`, exposed as `npm run transition:runtime-proof`: builds both transition examples, selects Cargo-reported output paths, runs browser parity on those exact artifacts, and emits their source/artifact hashes.
 - `context-bank-lib.mjs`: shared summary-bank parsing, path expansion, budget, and generation library.
 - `verify-context-bank.mjs`: Node.js structure/path/budget guard used by `run.ps1 -Task context` and `verify`.
 - `verify-project-integrity.mjs`: Node.js guard for readable UTF-8 durable docs, explicit empty or populated TODO contracts, portable current-doc references, research-note status, relative frontend imports that resolve to files, and Rust module declarations. Active tasks cannot retain the empty-backlog marker.

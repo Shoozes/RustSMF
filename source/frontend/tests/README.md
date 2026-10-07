@@ -20,7 +20,7 @@ browser requests them, causing startup 404s before any app assertions run.
 
 Playwright may require execution outside a managed sandbox when Chromium launch is rejected with `spawn EPERM`. That is a harness permission failure, not an application test failure. The local browser lane is authoritative; exact suite counts and outcomes belong in the dated verification record in `docs/dev/HISTORY.md`.
 
-The local Node 26.5 lane emits `[DEP0205] module.register()` from Playwright 1.60's TypeScript ESM loader. It is an upstream runner deprecation warning, not an app/test failure; do not suppress it or disable Playwright's TypeScript loader. The repository continues to require Node 22 or newer.
+The local Node 26.5 lane emits `[DEP0205] module.register()` from Playwright 1.60's TypeScript ESM loader. It is an upstream runner deprecation warning, not an app/test failure; do not suppress it or disable Playwright's TypeScript loader. The workspace's declared Node range is `^22.13.0 || >=24`, matching the pinned build tools.
 
 If a managed run reaches the test bodies but exits with `browserContext.close: spawn EPERM`, classify it as teardown-only harness evidence, keep the nonzero exit honest, and verify that the runner-owned preview server on port 5173 is stopped before the next command. Do not weaken teardown assertions or label the command green.
 

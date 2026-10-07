@@ -1,6 +1,6 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-10-04
+Last reviewed: 2026-10-07
 
 Current behavior and architecture belong in [APP_STATE.md](APP_STATE.md),
 acceptance outcomes and completion criteria in [TODO.md](TODO.md), and dated
@@ -8,6 +8,21 @@ proof in [HISTORY.md](HISTORY.md).
 
 ## Current findings
 
+- The 2026-10-07 review began on clean `main` at
+  `30e531bb8d5e672e9da3128c08ea52431e631f37`, the prior closeout commit.
+  Coverage included current contracts and manifests, repository integrity and
+  context routes, the changed Rust/proof runners and their tests, native input
+  and write ownership, load/replacement/save ordering, and texture readiness.
+  There were no intervening source changes for the delta review.
+- Cleanup fixed two reproduced defects: transition proof consumed old default
+  artifacts when Cargo built into a custom directory, and native bundle reads
+  could exceed their aggregate limit when files grew after metadata inspection.
+  Cargo-reported paths now drive comparison and hashes; each native read uses
+  the remaining observed bundle budget. Focused regression and command evidence
+  is recorded in [HISTORY.md](HISTORY.md).
+- The Node engine declarations and lockfile metadata now match the pinned
+  tools' requirement, `^22.13.0 || >=24`. The verification route includes the
+  shared Rust gate and transition artifact selection owners.
 - The 2026-10-04 candidate was based on
   `4aeb34d1831154a85405c0161c329ff15141672d` and included
   Rust-verification and transition-proof working-tree edits. Its full local
@@ -40,7 +55,8 @@ proof in [HISTORY.md](HISTORY.md).
   readiness and viewport-helper routes are focused, not loaded globally.
 - The integrity scan found no production TODO/stub, broken relative import or
   re-export, or unresolved Rust module. The `placeholder` match is a real
-  Outliner input hint; Rust `expect()` matches are test assertions.
+  Outliner input hint. The pose solver's `expect()` is guarded by its supported
+  target invariant; other Rust matches are test assertions.
 - Animated-target Outliner rename in `source/frontend/src/utils/modelAuthoring.ts`
   remains fail-closed because name-based clip bindings could break; support
   would require one atomic update across base clips, edited clips, playback, and

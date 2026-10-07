@@ -2,6 +2,90 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-07 — Review and scoped boundary cleanup
+
+Reviewed clean `main` at `30e531bb8d5e672e9da3128c08ea52431e631f37`,
+the previous verified closeout commit. No later source changes were present.
+Coverage included routed verification and runtime-proof owners, native read/
+write/recovery contracts, load/replacement/save ordering, worker cancellation,
+texture readiness, manifests, and project/context integrity. Review and recheck
+were read-only; the explicitly requested cleanup then repaired these findings.
+
+- With `CARGO_TARGET_DIR` pointing to a separate cache, the old transition
+  proof exited 0 but compared the previous default-directory artifacts.
+  The runner now selects the exact crate/example outputs from Cargo's JSON
+  artifact messages and supplies those paths to browser parity and final
+  hashing. Missing, ambiguous, unrelated, or non-native outputs fail before
+  browser execution. Existing source and artifact-drift checks remain active.
+- Native bundle metadata could fit the aggregate limit while observed reads
+  grew beyond it. A small two-reader fixture reproduced eight observed bytes
+  against a seven-byte bundle limit. Reads now consume the remaining aggregate
+  budget; the same fixture passes at eight bytes and rejects growth at seven.
+- Both workspace manifests and their lockfile metadata now declare
+  `^22.13.0 || >=24`, matching the pinned tooling. Node 22.0 contradicted those
+  requirements; 22.13.0 and 24.0.0 satisfy every locked Node engine. This is a
+  metadata compatibility check, not a run of the suite on those two runtimes.
+
+The existing verification route now includes the shared Rust gate and runtime
+proof owners. The project-integrity route measured 85.6 KiB after regression
+coverage grew; its focused budget increased from 84 to 88 KiB. All 44 groups
+validate with zero warnings; defaults remain orientation-only. Current docs
+and the review snapshot describe the repaired contracts.
+
+Verified the local cleanup candidate on Windows with PowerShell 7.6.6,
+Node 26.5.0 and Cargo 1.98.1. These commands exited 0:
+
+- `node --test scripts/rust-verification.test.mjs`: 13 regressions passed.
+- `cargo test --manifest-path source/src-tauri/Cargo.toml tests::native_bundle_reads_bound_observed_growth_across_files -- --exact --nocapture`:
+  the focused native growth regression passed after reproducing the failure.
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -Task verify`:
+  documentation/context/process/Git guards, lint, typechecks, production build,
+  all 92 frontend unit files, 13 Rust-gate regressions, nine Cargo checks,
+  11 Tauri tests, and 16 pose-contact tests passed.
+- From `source/frontend`, `npm.cmd run test:e2e -- tests/native.spec.ts --reporter=line`:
+  13/13 native IPC mock browser tests passed.
+- `node source/pose-contact/tests/transition-runtime-proof.mjs`, once with
+  the default target and once with `CARGO_TARGET_DIR` set to the task-owned
+  `output/review-cleanup-20261007/cargo-target`: both passed nine corrected
+  frames and fingerprint `61931913f4cced0d`, with the reported paths pointing
+  to the respective Cargo outputs.
+- `pwsh -NoProfile -ExecutionPolicy Bypass -File .\run.ps1 -Task context`
+  passed after the evidence/documentation edits; `git diff --check` passed.
+
+Both final runtime receipts bind pose-contact source-tree SHA-256
+`3615f55f08f6924e48d94336a4eb3ba5adb17d56891f6ff3f3d02645fc78fb67`.
+Default native artifact SHA-256:
+`065b44648d0e7734832e7b21f029bcb2e874de8e81d181ed4bd349fbb2655a64`;
+custom-target native SHA-256:
+`0a0d897537370e01b7e0deee53640b8f7f53fc465fe9a2553da86faef81d24eb`;
+both WASM SHA-256:
+`8e89d0dacef45bb13002b5f4c52c0400c7033c7294f78ab4c0da4faf7a458ccd`.
+
+Logs, receipts, ownership state and custom-target probe artifacts are retained
+under ignored `output/review-cleanup-20261007` for local candidate review.
+The owner state records their purpose and scoped cleanup route. Browser/native
+mock checks do not add attended OS-dialog or installer evidence. Full browser,
+journey, strict visual and Windows package results remain the 2026-10-04 record;
+those release lanes were not rerun for this cleanup.
+The final process check found no workspace-owned build/browser process or
+listener on port 5173. At that local closeout, the changes were unstaged for review.
+
+The follow-up dropin/work assessment classified all three findings as verified
+complete. The current pose-contact source inventory/hash and both artifact
+hashes matched the passed default/custom receipts; workspace engine metadata
+matched the lockfile. No unprocessed research-inbox items or additional
+in-scope implementation remained, so the existing gate evidence was reused.
+
+Publication closeout checked an isolated filesystem snapshot of the exact
+staged candidate. `node --test scripts/rust-verification.test.mjs` passed all
+13 regressions there. A direct `rustc --test` harness containing the staged
+native reader functions and their existing aggregate-growth regression passed
+that one case; this scoped check supplements the earlier full Tauri gate.
+Both project-integrity and context-bank validators passed in the snapshot.
+The unchanged application/proof sources retain the full verification, native
+IPC, and default/custom runtime evidence above. Scoped publication logs and
+the explicit 16-path allowlist are retained in ignored task-owned output.
+
 ## 2026-10-04 — Bind transition proof hashes to compared artifacts
 
 The browser parity step now hashes the WASM bytes passed to Chromium and checks

@@ -26,6 +26,18 @@ function makeRustRepository({ includeTauri = true, includePoseContact = true } =
   return root
 }
 
+function cargoArtifactOutput(step, path, manifestPath = resolve(step.cwd, 'Cargo.toml')) {
+  return JSON.stringify({
+    reason: 'compiler-artifact',
+    manifest_path: manifestPath,
+    target: { kind: ['example'], name: step.exampleName },
+    profile: { test: false },
+    filenames: [path],
+    executable: step.artifactName === 'native' ? path : null,
+    fresh: true,
+  })
+}
+
 describe('shared Rust verification gate', () => {
   it('checks both native crates and the pose-contact WASM target', () => {
     const root = makeRustRepository()
@@ -146,9 +158,9 @@ describe('transition runtime-proof command', () => {
   it('builds native and wasm artifacts before invoking browser parity', () => {
     const plan = createTransitionRuntimePlan('C:/fixture/pose-contact')
     assert.deepEqual(plan.map((step) => step.id), ['native-build', 'wasm-build', 'browser-parity'])
-    assert.deepEqual(plan[0].args, ['build', '--example', 'transition_receipt'])
+    assert.deepEqual(plan[0].args, ['build', '--example', 'transition_receipt', '--message-format=json-render-diagnostics'])
     assert.deepEqual(plan[1].args, [
-      'build', '--target', 'wasm32-unknown-unknown', '--example', 'transition_probe',
+      'build', '--target', 'wasm32-unknown-unknown', '--example', 'transition_probe', '--message-format=json-render-diagnostics',
     ])
     assert.equal(plan[2].env.RUSTSMF_TRANSITION_RUNTIME_PROOF, '1')
   })
@@ -160,12 +172,77 @@ describe('transition runtime-proof command', () => {
       assert.throws(
         () => executeTransitionRuntimePlan(plan, (step) => {
           calls.push(step.id)
-          return { status: step.id === failingId ? 101 : 0 }
+          return {
+            status: step.id === failingId ? 101 : 0,
+            stdout: cargoArtifactOutput(step, resolve('fixture-cache', 'transition_receipt.exe')),
+          }
         }),
         new RegExp(`${failingId}.*exit code 101`),
       )
       assert.ok(!calls.includes('browser-parity'))
     }
+  })
+
+  it('compares exactly the Cargo-reported artifacts in a custom target directory', () => {
+    const plan = createTransitionRuntimePlan(resolve('fixture/pose-contact'))
+    const paths = {
+      native: resolve('custom target cache', 'transition_receipt.exe'),
+      wasm32: resolve('custom target cache', 'transition_probe.wasm'),
+    }
+    const calls = []
+    const comparison = { status: 'passed', fingerprint: 'fixture-fingerprint' }
+    const result = executeTransitionRuntimePlan(plan, (step) => {
+      calls.push(step)
+      return {
+        status: 0,
+        stdout: step.artifactName
+          ? cargoArtifactOutput(step, paths[step.artifactName])
+          : JSON.stringify(comparison),
+      }
+    })
+    assert.deepEqual(result.artifactPaths, paths)
+    assert.deepEqual(result.comparison, comparison)
+    assert.equal(calls.at(-1).env.RUSTSMF_TRANSITION_NATIVE_ARTIFACT, paths.native)
+    assert.equal(calls.at(-1).env.RUSTSMF_TRANSITION_WASM_ARTIFACT, paths.wasm32)
+  })
+
+  it('rejects missing, ambiguous, unrelated, and non-native build artifacts before browser parity', () => {
+    const plan = createTransitionRuntimePlan(resolve('fixture/pose-contact'))
+    const nativePath = resolve('custom target cache', 'transition_receipt.exe')
+    const outputs = [
+      '',
+      '{bad-json}',
+      cargoArtifactOutput(plan[0], nativePath, resolve('another-crate/Cargo.toml')),
+      cargoArtifactOutput(plan[0], nativePath) + '\n'
+        + cargoArtifactOutput(plan[0], resolve('other-cache/transition_receipt.exe')),
+      cargoArtifactOutput(plan[0], resolve('custom target cache', 'transition_receipt.wasm')),
+    ]
+    for (const stdout of outputs) {
+      const calls = []
+      assert.throws(
+        () => executeTransitionRuntimePlan(plan, (step) => {
+          calls.push(step.id)
+          return { status: 0, stdout }
+        }),
+        /Cargo.*(?:artifact|JSON)/,
+      )
+      assert.deepEqual(calls, ['native-build'])
+    }
+  })
+
+  it('rejects browser execution without Cargo-reported artifact paths', () => {
+    const browserScript = fileURLToPath(new URL('../source/pose-contact/tests/browser-transition.mjs', import.meta.url))
+    const result = spawnSync(process.execPath, [browserScript], {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        RUSTSMF_TRANSITION_RUNTIME_PROOF: '1',
+        RUSTSMF_TRANSITION_NATIVE_ARTIFACT: '',
+        RUSTSMF_TRANSITION_WASM_ARTIFACT: '',
+      },
+    })
+    assert.equal(result.status, 1)
+    assert.match(result.stderr, /must supply absolute Cargo-reported/)
   })
 
   it('rejects standalone browser execution that could consume stale artifacts', () => {

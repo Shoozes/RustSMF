@@ -2,20 +2,23 @@ import { readFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { isAbsolute } from 'node:path';
 
 const require = createRequire(new URL('../../frontend/package.json', import.meta.url));
 if (process.env.RUSTSMF_TRANSITION_RUNTIME_PROOF !== '1') {
   throw new Error('Run npm run transition:runtime-proof; direct browser execution does not rebuild its artifacts.');
 }
+const nativeArtifact = process.env.RUSTSMF_TRANSITION_NATIVE_ARTIFACT;
+const wasmArtifact = process.env.RUSTSMF_TRANSITION_WASM_ARTIFACT;
+if (!nativeArtifact || !wasmArtifact || !isAbsolute(nativeArtifact) || !isAbsolute(wasmArtifact)) {
+  throw new Error('Runtime proof must supply absolute Cargo-reported native and WASM artifact paths.');
+}
 const { chromium } = require('@playwright/test');
-const bytes = await readFile(new URL('../target/wasm32-unknown-unknown/debug/examples/transition_probe.wasm', import.meta.url));
-const receipt = new URL(`../target/debug/examples/transition_receipt${process.platform === 'win32' ? '.exe' : ''}`, import.meta.url);
+const bytes = await readFile(wasmArtifact);
 const sha256 = (value) => createHash('sha256').update(value).digest('hex');
-const nativeArtifact = fileURLToPath(receipt);
-const nativeSha256 = sha256(await readFile(receipt));
+const nativeSha256 = sha256(await readFile(nativeArtifact));
 const nativeFingerprint = execFileSync(nativeArtifact, { encoding: 'utf8' }).trim();
-if (sha256(await readFile(receipt)) !== nativeSha256) {
+if (sha256(await readFile(nativeArtifact)) !== nativeSha256) {
   throw new Error('Native transition artifact changed while its fingerprint was evaluated.');
 }
 const browser = await chromium.launch({
