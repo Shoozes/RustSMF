@@ -3,7 +3,7 @@ import { SAMPLE_OBJ, SAMPLE_SMF, getBrowserErrors, pausePlaybackIfRunning, setup
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { parseSelectedBone } from './helpers/format-assertions';
 import { dragEndpointHandle, dragRigIkTarget, dragTransformHandle, setViewportLayout } from './helpers/viewport-interactions';
-import { clickSecondaryCommand } from './helpers/modern-shell';
+import { selectWorkspace, clickSecondaryCommand  } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -24,7 +24,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('editor-undo-btn')).toBeDisabled();
       await expect(page.getByTestId('editor-redo-btn')).toBeDisabled();
 
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       const canvas = page.getByTestId('three-canvas');
       await expect(canvas).toHaveAttribute('data-workspace-pose', 'rest');
       await expect(canvas).toHaveAttribute('data-bone-labels-enabled', 'false');
@@ -38,7 +38,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
       await expect(page.getByTestId('editor-redo-btn')).toBeDisabled();
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(canvas).toHaveAttribute('data-workspace-pose', 'animation');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
 
@@ -71,7 +71,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       const originalRootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
       expect(originalRootId).toBeTruthy();
 
-      await page.getByTestId('mode-tab-rig').click();
+      await selectWorkspace(page, 'rig');
       await expect(page.getByTestId('rig-bone-count')).toHaveText('0');
       await expect(page.getByTestId('rig-skinned-mesh-count')).toHaveText('0');
       await expect(page.getByTestId('rig-prepare-static-panel')).toBeVisible();
@@ -82,7 +82,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('rig-prepare-static-panel')).toHaveCount(0);
       await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
 
-      await page.getByTestId('mode-tab-export').click();
+      await selectWorkspace(page, 'export');
       const diagnostics = page.getByTestId('smf-diagnostics-panel');
       await expect(diagnostics).toHaveAttribute('data-smf-can-export', 'true');
       await expect(page.getByTestId('export-smf-btn')).toBeEnabled();
@@ -95,18 +95,18 @@ test.describe('RustSMF rig flow (Chromium)', () => {
 
       await page.getByTestId('editor-undo-btn').click();
       await expect(page.getByTestId('status-text')).toContainText(/Undid prepare root skeleton for static meshes/i);
-      await page.getByTestId('mode-tab-rig').click();
+      await selectWorkspace(page, 'rig');
       await expect(page.getByTestId('rig-bone-count')).toHaveText('0');
       await expect(page.getByTestId('rig-skinned-mesh-count')).toHaveText('0');
       await expect(page.getByTestId('rig-prepare-static-panel')).toBeVisible();
-      await page.getByTestId('mode-tab-export').click();
+      await selectWorkspace(page, 'export');
       await expect(diagnostics).toHaveAttribute('data-smf-can-export', 'false');
       await expect(diagnostics).toContainText('SMF_NO_SKINNED_SKELETON');
       await expect(page.getByTestId('export-smf-btn')).toBeDisabled();
 
       await page.getByTestId('editor-redo-btn').click();
       await expect(page.getByTestId('status-text')).toContainText(/Redid prepare root skeleton for static meshes/i);
-      await page.getByTestId('mode-tab-rig').click();
+      await selectWorkspace(page, 'rig');
       await expect(page.getByTestId('rig-bone-count')).toHaveText('1');
       await expect(page.getByTestId('rig-skinned-mesh-count')).toHaveText('1');
 
@@ -131,7 +131,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await pausePlaybackIfRunning(page);
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
 
       const childBone = page.getByTestId('inspector')
         .locator('li li > div')
@@ -155,16 +155,16 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('rig-tool-move')).toHaveAttribute('title', /coordinated rig-space rewrite/i);
 
       await page.getByTestId('transform-x-btn').click();
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
-      await page.getByTestId('mode-tab-export').click({ force: true });
+      await selectWorkspace(page, 'export');
       await page.getByTestId('smf-roundtrip-check-btn').click();
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 15000 });
 
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       await page.getByTestId('transform-reset-btn').click();
       await expect(page.getByTestId('status-text')).toContainText(/Reset SMF_Node_\d+ to its bind pose/i);
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
       await page.getByTestId('editor-undo-btn').click();
       await expect(page.getByTestId('status-text')).toContainText(/Undid Reset bind pose SMF_Node_\d+/i);
@@ -182,7 +182,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips|verts/i);
 
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       await expect(page.getByTestId('three-canvas')).toBeVisible();
 
       const inspector = page.getByTestId('inspector');
@@ -214,11 +214,11 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(singleCanvas).toHaveAttribute('data-bone-transform-source', 'endpoint-drag');
       await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'false');
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
       await page.getByTestId('editor-undo-btn').click({ force: true });
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
 
       const canceledDrag = await dragEndpointHandle(page, selectedBone, undefined, async () => {
         await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'false');
@@ -229,9 +229,9 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'false');
       await expect(page.getByTestId('status-text')).toContainText(/Canceled endpoint drag .* restored the prior pose/i);
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
 
       await setViewportLayout(page, 'quad');
       const quadDragOk = await dragEndpointHandle(page, selectedBone);
@@ -251,7 +251,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await pausePlaybackIfRunning(page);
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
 
       const inspector = page.getByTestId('inspector');
       const childBone = inspector.locator('li li > div').filter({ hasText: /SMF_Node_\d+/ }).first();
@@ -274,23 +274,23 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('rig-ik-result')).toBeVisible();
       await expect(page.getByTestId('status-text')).toContainText(/Recorded IK pose .* one 2-bone transaction/i);
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
       await page.getByTestId('editor-undo-btn').click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Undid IK pose/i);
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
 
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       expect(await dragRigIkTarget(page, 'escape')).toBe(true);
       await expect(page.getByTestId('status-text')).toContainText(/Canceled IK pose .* restored the full chain/i);
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
 
       await page.getByTestId('editor-redo-btn').click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Redid IK pose/i);
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
 
-      await page.getByTestId('mode-tab-export').click({ force: true });
+      await selectWorkspace(page, 'export');
       await page.getByTestId('smf-roundtrip-check-btn').click();
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 5000 });
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-status', 'passed');
@@ -310,7 +310,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await pausePlaybackIfRunning(page);
 
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       const boneEntry = page.getByTestId('inspector')
         .locator('li > div')
         .filter({ hasText: /FixtureTip/ })
@@ -325,7 +325,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(canvas).toHaveAttribute('data-bone-transform-owner', 'pose');
       await expect(page.getByTestId('status-text')).toContainText(/Recorded transform pose edit for FixtureTip/i);
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: false');
       await page.getByTestId('editor-undo-btn').click({ force: true });
@@ -347,7 +347,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Redid viewport animation keyframe for FixtureTip/i);
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
-      await page.getByTestId('mode-tab-export').click({ force: true });
+      await selectWorkspace(page, 'export');
       await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
       await page.getByTestId('smf-roundtrip-check-btn').click();
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 15000 });

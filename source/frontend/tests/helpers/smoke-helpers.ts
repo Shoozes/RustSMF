@@ -1,3 +1,4 @@
+import { selectWorkspace, showModernPanel } from './modern-shell';
 import { expect, type Locator, type Page } from '@playwright/test';
 import fs from 'fs';
 import path from 'path';
@@ -25,10 +26,16 @@ export const SAMPLE_EXTERNAL_GLTF_BUFFER = requireFixture('../fixtures/external-
 export const SAMPLE_EXTERNAL_GLTF_TEXTURE = requireFixture('../fixtures/external-gltf/texture.png');
 
 export async function pausePlaybackIfRunning(page: Page): Promise<void> {
-  const pauseButton = page.locator('button').filter({ hasText: /Pause|⏸/i }).first();
-  if (await pauseButton.count() > 0) {
-    await pauseButton.click({ force: true }).catch(() => {});
-    await page.waitForTimeout(120);
+  const mode = await page.getByTestId('app-shell').getAttribute('data-editor-mode') as 'view' | 'rig' | 'skin' | 'animate' | 'export';
+  const drawer = page.getByTestId('modern-support-panel');
+  const panel = await drawer.count() ? await drawer.getAttribute('data-panel') : null;
+  const button = page.getByTestId('timeline-play-btn');
+  if (!await button.isVisible()) await selectWorkspace(page, 'animate', false);
+  if (/Pause|⏸/i.test(await button.textContent() ?? '')) await button.click();
+  await expect(button).not.toContainText(/Pause|⏸/i);
+  if (mode !== 'animate') {
+    await selectWorkspace(page, mode, false);
+    if (panel === 'scene' || panel === 'properties') await showModernPanel(page, panel);
   }
 }
 

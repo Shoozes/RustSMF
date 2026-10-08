@@ -1,6 +1,6 @@
 # RustSMF
 
-RustSMF is a Tauri + React + Three.js editor for inspecting and authoring model geometry, rigs, animation, and skin weights. It reads and exports SMF, GLB/GLTF, FBX, DAE/Collada, and OBJ with format-aware diagnostics.
+RustSMF is a Tauri + React + Three.js editor for inspecting and authoring model geometry, rigs, animation, and skin weights. It reads SMF, GLB/GLTF, FBX, DAE/Collada, and OBJ and exports SMF, GLB, FBX, and DAE with format-aware diagnostics.
 
 ![RustSMF Modern overview](docs/images/rustsmf-modern-overview.png)
 
@@ -37,7 +37,8 @@ Jobs are caller-owned. Fighter-specific mappings, clip choices, endpoints, and g
 
 - [User guide](docs/user/README.md): workflows and format choices.
 - [App state](docs/dev/APP_STATE.md): current behavior, architecture, limits, and verification commands.
-- [TODO](docs/dev/TODO.md): the four completed v0.2 productization outcomes and their acceptance evidence.
+- [TODO](docs/dev/TODO.md): the frontend coverage/polish pass and four completed v0.2 outcomes.
+- [Frontend coverage](source/frontend/tests/README.md#supported-feature-evidence-matrix): supported workflows and their executable evidence.
 - [Latest review](docs/dev/review.md): current findings and verification evidence.
 - [History](docs/dev/HISTORY.md): completed work and dated command records.
 - [Context bank](summary_bank.json): focused feature, subsystem, issue, and workflow routes.

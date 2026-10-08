@@ -43,6 +43,28 @@ function toTightArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 }
 
 describe('fbx export', () => {
+  it('preserves working-space diffuse and emissive colors without mutating the source', async () => {
+    const source = makeStaticScene();
+    const material = (source.children[0] as THREE.Mesh).material as THREE.MeshLambertMaterial;
+    material.emissive.setRGB(0.08, 0.16, 0.24);
+    material.emissiveIntensity = 0.5;
+    const color = material.color.clone(), emissive = material.emissive.clone();
+    const loaded = await loadFBX(toTightArrayBuffer(await exportFBX(source)));
+    try {
+      let restored: THREE.MeshLambertMaterial | undefined;
+      loaded.root.traverse(object => {
+        if (object instanceof THREE.Mesh) restored = object.material as THREE.MeshLambertMaterial;
+      });
+      assert.ok(restored);
+      assert.ok(restored.color.toArray().every((v, i) => Math.abs(v - color.toArray()[i]) < 1e-5));
+      assert.ok(restored.emissive.toArray().every((v, i) => Math.abs(v - emissive.toArray()[i]) < 1e-5));
+      assert.equal(restored.emissiveIntensity, 0.5);
+      assert.deepEqual(material.color, color);
+      assert.deepEqual(material.emissive, emissive);
+    } finally {
+      loaded.mixer.stopAllAction(); disposeThreeObject(loaded.root); disposeThreeObject(source);
+    }
+  });
   it('writes binary FBX bytes, not the old GLB fallback', async () => {
     const bytes = await exportFBX(makeStaticScene());
     const header = new TextDecoder().decode(bytes.slice(0, 21));

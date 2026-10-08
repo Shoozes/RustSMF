@@ -2,13 +2,13 @@ import { test, expect } from '@playwright/test';
 import { createSkinnedGlbFixtureInput, createSkinnedGlbFixtureInputWithOptions, createSkinnedGltfFixtureInputWithOptions } from './helpers/skinned-glb-fixture';
 import { parseRetargetProfile } from '../src/utils/retargetProfile';
 import { readFile } from 'node:fs/promises';
-import { showModernPanel } from './helpers/modern-shell';
+import { selectWorkspace, showModernPanel  } from './helpers/modern-shell';
 
 test('authored contact patches survive browser profile import/export and invalid ownership disables application',async({page})=>{
   await page.goto('/');
   await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
   await expect(page.getByTestId('status-text')).not.toContainText('Loading',{timeout:15000});
-  await page.getByTestId('mode-tab-animate').click({force:true});
+  await selectWorkspace(page, 'animate');
   const panel=page.getByTestId('retarget-profile-controls');await panel.locator('summary').click();
   const leg=(side:string)=>({hip:side+'Hip',knee:side+'Knee',ankle:side+'Foot',soleOffset:[0,-.1,0],pole:[0,0,1],minBendDegrees:0,maxBendDegrees:160,maxPelvisCorrection:.2});
   const patch={foot:'right',positionMode:'plane',orientationMode:'animated',contactPatch:[{point:[0,-.1,-.1]},{bone:'RightToe',point:[0,-.02,.1]}],startFrame:0,endFrame:16,blendFrames:0};
@@ -29,7 +29,7 @@ test('saved profile import, strict errors, export and retarget are visible and u
   await page.goto('/');
   await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
   await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
-  await page.getByTestId('mode-tab-animate').click({ force: true });
+  await selectWorkspace(page, 'animate');
   const panel = page.getByTestId('retarget-profile-controls');
   await panel.locator('summary').click();
   const profile = { $schema: 'rustsmf.retarget-profile.v1', targetClipNames: { FixtureBend: 'Target Reference' },
@@ -75,7 +75,7 @@ test('saved endpoint envelopes resolve target clips, report errors and apply as 
   await page.goto('/');
   await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
   await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
-  await page.getByTestId('mode-tab-animate').click({ force: true });
+  await selectWorkspace(page, 'animate');
   const panel=page.getByTestId('retarget-profile-controls'); await panel.locator('summary').click();
   const endpoint={targetClip:'FixtureBend',targetFrame:10,spanFrames:4,rootOffset:[0,0,0]};
   const profile={$schema:'rustsmf.retarget-profile.v1',retarget:{clips:['Source Motion'],manualMap:{FixtureRoot:'FixtureRoot',FixtureTip:'FixtureTip'},
@@ -99,7 +99,7 @@ test('saved axial redistribution validates conflicts and applies through the bro
   await page.goto('/');
   await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInputWithOptions({ withHeadChain: true }));
   await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
-  await page.getByTestId('mode-tab-animate').click({ force: true });
+  await selectWorkspace(page, 'animate');
   const panel = page.getByTestId('retarget-profile-controls'); await panel.locator('summary').click();
   const retarget = { manualMap: { FixtureRoot: 'FixtureRoot', FixtureTip: 'FixtureTip', FixtureHead: 'FixtureHead' }, clips: ['Source Motion'],
     sourceReferencePose: 'rest', interpolation: 'step', sampleRateHz: 60, alignMappedBoneDirections: false,
@@ -125,7 +125,7 @@ test('saved neck/head constraints correct rejected source motion in one undoable
   await page.goto('/');
   await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInputWithOptions({ withHeadChain: true }));
   await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
-  await page.getByTestId('mode-tab-animate').click({ force: true });
+  await selectWorkspace(page, 'animate');
   const panel = page.getByTestId('retarget-profile-controls'); await panel.locator('summary').click();
   const joint = (bone: string, limit: number) => ({ bone, referenceRotation: [0, 0, 0, 1], twistAxis: [0, 1, 0], bendAxis: [1, 0, 0],
     flexionDegrees: [-limit, limit], lateralDegrees: [-limit, limit], twistDegrees: [-90, 90], maximumSwingDegrees: limit });
@@ -156,7 +156,7 @@ test('explicit replacement rejects collisions and remains undoable', async ({ pa
   await page.goto('/');
   await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
   await expect(page.getByTestId('status-text')).not.toContainText('Loading', {timeout:15000});
-  await page.getByTestId('mode-tab-animate').click({force:true});
+  await selectWorkspace(page, 'animate');
   const panel=page.getByTestId('retarget-profile-controls');
   await panel.locator('summary').click();
   const profile={$schema:'rustsmf.retarget-profile.v1',targetClipNames:{},retarget:{
@@ -183,7 +183,7 @@ test('saved body ranges reject before replacement or report actionable frame war
   await page.goto('/');
   await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
   await expect(page.getByTestId('status-text')).not.toContainText('Loading',{timeout:15000});
-  await page.getByTestId('mode-tab-animate').click({force:true});
+  await selectWorkspace(page, 'animate');
   const panel=page.getByTestId('retarget-profile-controls');await panel.locator('summary').click();
   const profile={$schema:'rustsmf.retarget-profile.v1',targetClipNames:{},retarget:{
     manualMap:{FixtureRoot:'FixtureRoot',FixtureTip:'FixtureTip'},clips:['Source Motion'],sampleRateHz:60,applyUpCorrection:false,

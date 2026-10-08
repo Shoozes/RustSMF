@@ -5,6 +5,7 @@ import * as THREE from 'three';
  * Binary Export (Version 7500)
  * Vendored from https://github.com/Shoozes/FBXExporter-threejs at a3749b6.
  * License: MIT, preserved in FBXExporter-threejs.LICENSE.txt.
+ * RustSMF patch: sRGB diffuse/emissive fields and explicit emissive intensity.
  *
  * References:
  * - FBX 7500 Binary Format Specifications
@@ -476,8 +477,14 @@ export class FBXExporter {
 	_exportMaterial( material, materialId ) {
 		const node = new FbxNode( 'Material' ).addProperty( BigInt( materialId ) ).addProperty( nameWithClass( material.name || 'Material', 'Material' ) ).addProperty( 'Material' );
 		node.addChild( new FbxNode( 'Version' ).addProperty( 102 ) ).addChild( new FbxNode( 'ShadingModel' ).addProperty( 'Lambert' ) ).addChild( new FbxNode( 'MultiLayer' ).addProperty( 0 ) );
-		const color = material.color || new THREE.Color( 0.5, 0.5, 0.5 );
+		// FBX color properties are sRGB; never mutate the source working-space colors.
+		const color = ( material.color || new THREE.Color( 0.5, 0.5, 0.5 ) ).clone().convertLinearToSRGB();
 		const props = new FbxNode( 'Properties70' ).addChild( createP( 'DiffuseColor', 'ColorRGB', 'Color', 'A', [ new Double( color.r ), new Double( color.g ), new Double( color.b ) ] ) ).addChild( createP( 'TransparencyFactor', 'Number', '', 'A', new Double( 1.0 - ( material.opacity ?? 1.0 ) ) ) );
+		if ( material.emissive ) {
+			const emissive = material.emissive.clone().convertLinearToSRGB();
+			props.addChild( createP( 'EmissiveColor', 'ColorRGB', 'Color', 'A', [ new Double( emissive.r ), new Double( emissive.g ), new Double( emissive.b ) ] ) );
+			props.addChild( createP( 'EmissiveFactor', 'Number', '', 'A', new Double( material.emissiveIntensity ?? 1 ) ) );
+		}
 		node.addChild( props );
 		return node;
 	}

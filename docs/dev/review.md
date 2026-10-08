@@ -1,12 +1,28 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-10-07
+Last reviewed: 2026-10-08
 
 Current behavior and architecture belong in [APP_STATE.md](APP_STATE.md),
 acceptance outcomes and completion criteria in [TODO.md](TODO.md), and dated
 proof in [HISTORY.md](HISTORY.md).
 
 ## Current findings
+
+- The frontend coverage and Modern simplification pass completed locally on
+  `main` based on `0eef1a961734e031a21c4f1b59ad8e9dde6fbcc9`. The supported-feature
+  matrix now routes all capabilities to concrete positive and protection/
+  continuity assertions. Ten journey files run eleven stories sequentially.
+- Modern now uses one compact command strip, a workspace chooser and Tools
+  closed by default. Duplicate Skin actions and permanent instructions were
+  removed. Common history stays in the toolbar; More is a flat command list.
+  Keyboard navigation, pointer reachability, compact errors and touch targets
+  passed; Original's strict image remains unchanged.
+- Reproduced fixes preserve metadata through rig creation/rename/delete and
+  history, encode FBX material colors correctly without source mutation, and
+  keep fallback export reasons visible. The final source gate passed 510 unit
+  tests, 124 browser checks, eleven stories and three strict visuals. Exact
+  identity and retained evidence are in HISTORY. No remaining reproduced defect
+  was left open; Windows dialogs and packaging were outside this frontend pass.
 
 - The 2026-10-07 review began on clean `main` at
   `30e531bb8d5e672e9da3128c08ea52431e631f37`, the prior closeout commit.
@@ -50,7 +66,7 @@ proof in [HISTORY.md](HISTORY.md).
   journeys, strict visuals, desktop smoke, and NSIS packaging gates passed.
   Exact counts, artifact hash, and remote-ref retirement evidence are in
   `docs/dev/HISTORY.md`. The shipped version is synchronized at 0.2.0.
-- The context bank validates 44 groups and a focused default orientation under
+- The context bank validates 46 groups and a focused default orientation under
   its focused budget. Defaults remain limited to orientation; the DAE/FBX
   readiness and viewport-helper routes are focused, not loaded globally.
 - The integrity scan found no production TODO/stub, broken relative import or

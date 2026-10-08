@@ -6,6 +6,9 @@ import {
   setupBrowserDiagnostics,
 } from '../helpers/smoke-helpers';
 import { showModernPanel } from '../helpers/modern-shell';
+import { clickSecondaryCommand } from '../helpers/modern-shell';
+import { exportEvidence, watchJourneyErrors } from '../helpers/product-journey';
+import { expectAssetContinuity } from '../helpers/asset-evidence';
 
 async function renameFirstSubmodel(page: import('@playwright/test').Page, nextName: string): Promise<void> {
   const row = page.getByTestId('outliner-submodel-0');
@@ -20,6 +23,7 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('product journey preserves dirty work through cancel and failed missing-resource replacement', async ({ page }) => {
+  const assertErrors = watchJourneyErrors(page, [/Resource URI .*mesh\.bin.*not found/]);
   await page.goto('/');
   const input = page.getByTestId('model-file-input');
   const status = page.getByTestId('status-text');
@@ -28,6 +32,7 @@ test('product journey preserves dirty work through cancel and failed missing-res
   await showModernPanel(page, 'scene');
   await renameFirstSubmodel(page, 'Dirty_Work_Preserved');
   const mountedRootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+  const authored = await exportEvidence(page);
 
   await input.setInputFiles([SAMPLE_EXTERNAL_GLTF, SAMPLE_EXTERNAL_GLTF_TEXTURE]);
   await expect(page.getByTestId('replacement-dialog')).toBeVisible();
@@ -35,6 +40,7 @@ test('product journey preserves dirty work through cancel and failed missing-res
   await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', mountedRootId!);
   await expect(page.getByTestId('outliner')).toContainText('Dirty_Work_Preserved');
   await expect(status).toContainText(/replacement canceled/i);
+  expectAssetContinuity(await exportEvidence(page), authored);
 
   await input.setInputFiles([SAMPLE_EXTERNAL_GLTF, SAMPLE_EXTERNAL_GLTF_TEXTURE]);
   await expect(page.getByTestId('replacement-dialog')).toBeVisible();
@@ -45,4 +51,32 @@ test('product journey preserves dirty work through cancel and failed missing-res
 
   await renameFirstSubmodel(page, 'Work_Continued_After_Failure');
   await expect(page.getByTestId('outliner')).toContainText('Work_Continued_After_Failure');
+  assertErrors();
+});
+
+test('product journey rejects malformed project and recovery without losing editable work', async ({ page }) => {
+  const assertErrors = watchJourneyErrors(page);
+  await page.goto('/');
+  await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
+  await expect(page.getByTestId('status-text')).toContainText(/Loaded/, { timeout: 15_000 });
+  await showModernPanel(page, 'scene');
+  await renameFirstSubmodel(page, 'Malformed_Project_Survivor');
+  const root = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
+  const before = await exportEvidence(page);
+  const pending = page.waitForEvent('filechooser');
+  await clickSecondaryCommand(page, 'open-project-btn');
+  await (await pending).setFiles({ name: 'malformed.rsproj', mimeType: 'application/json', buffer: Buffer.from('{"kind":"broken"}') });
+  await expect(page.getByTestId('status-text')).toContainText(/PROJECT_INVALID/, { timeout: 15_000 });
+  await expect(page.getByTestId('replacement-dialog')).toHaveCount(0);
+  await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', root!);
+  expectAssetContinuity(await exportEvidence(page), before);
+  // Corrupt the persisted input, without changing the mounted editor state.
+  await page.evaluate(() => localStorage.setItem('rustsmf.project.autosave.0', '{"kind":"broken"}'));
+  await clickSecondaryCommand(page, 'recover-project-btn');
+  await expect(page.getByTestId('status-text')).toContainText(/Project recovery error: PROJECT_INVALID/);
+  await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', root!);
+  await renameFirstSubmodel(page, 'Still_Editable');
+  await page.getByTestId('editor-undo-btn').click();
+  await expect(page.getByTestId('outliner')).toContainText('Malformed_Project_Survivor');
+  assertErrors();
 });

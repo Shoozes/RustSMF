@@ -138,7 +138,7 @@ export default function App() {
   const [outlinerRevision, setOutlinerRevision] = useState(0);
   const [materialSourceRevision, setMaterialSourceRevision] = useState(0);
   const [selectedOutlinerIds, setSelectedOutlinerIds] = useState<string[]>([]);
-  const [modernPanel, setModernPanel] = useState<ModernPanel>('scene');
+  const [modernPanel, setModernPanel] = useState<ModernPanel>(null);
   const [modernSkinTool, setModernSkinTool] = useState<ModernSkinTool>('pick');
   const modernPanelRef = useRef<HTMLDivElement | null>(null);
   const modernPanelTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -950,6 +950,7 @@ export default function App() {
     if (editorMode === 'skin') {
       return (
         <SkinPanel
+          compact={theme.shellVariant === 'modern'}
           dataTestId={theme.shellVariant === 'modern' ? 'skin-advanced-panel' : 'skin-workspace-panel'}
           selected={ui.selected}
           skeleton={model.skeleton}
@@ -1108,6 +1109,7 @@ export default function App() {
 
   const handleEditorModeChange = useCallback((mode: EditorMode) => {
     if (mode === 'skin') setModernSkinTool('pick');
+    setModernPanel(null);
     setEditorMode(mode);
   }, [setEditorMode]);
 
@@ -1151,14 +1153,7 @@ export default function App() {
   }, [editorMode, handleSkinPaintModeChange, onSkinPaintRadiusChange, selectedBoneName, skinPaintRadius, theme.shellVariant]);
 
   useEffect(() => {
-    if (theme.shellVariant !== 'modern') return;
-    const compactQuery = window.matchMedia('(max-width: 1100px)');
-    const syncPanelForViewport = () => {
-      setModernPanel(compactQuery.matches || editorMode === 'skin' ? null : editorMode === 'view' ? 'scene' : 'properties');
-    };
-    syncPanelForViewport();
-    compactQuery.addEventListener('change', syncPanelForViewport);
-    return () => compactQuery.removeEventListener('change', syncPanelForViewport);
+    setModernPanel(null);
   }, [editorMode, theme.shellVariant]);
 
   // Setup keyboard once
@@ -1279,6 +1274,7 @@ export default function App() {
     <div className="inspector-stack">
       <Inspector
         title={theme.panelTitles.inspector}
+        compact={theme.shellVariant === 'modern'}
         selected={ui.selected}
         clips={model.clips}
         currentClipName={playback.currentClipName}
@@ -1303,6 +1299,9 @@ export default function App() {
   );
 
   const showTimeline = theme.shellVariant === 'original' ? workspace.showTimeline : editorMode === 'animate';
+  const statusText = theme.shellVariant === 'modern' && ui.status.startsWith('Three.js viewport ready')
+    ? 'Ready'
+    : ui.status;
 
   return (
     <div
@@ -1332,6 +1331,8 @@ export default function App() {
         onFileChange={handleFileInputChange}
         editorMode={editorMode}
         setEditorMode={handleEditorModeChange}
+        toolsOpen={modernPanel !== null}
+        onOpenTools={(trigger) => modernPanel ? closeModernPanel() : openModernPanel(editorMode === 'view' ? 'scene' : 'properties', trigger)}
         {...viewportControlsProps}
         theme={theme}
         themeId={themeId}
@@ -1370,10 +1371,10 @@ export default function App() {
             </button>
             {modernPanel === 'scene' ? outlinerPanel : propertiesPanel}
             <div className="modern-panel-switcher" role="group" aria-label="Supporting panel">
-              <button type="button" className={modernPanel === 'scene' ? 'active' : ''} aria-pressed={modernPanel === 'scene'} data-testid="modern-panel-scene" onClick={(event) => openModernPanel('scene', event.currentTarget)}>
+              <button type="button" className={modernPanel === 'scene' ? 'active' : ''} aria-pressed={modernPanel === 'scene'} data-testid="modern-panel-scene" onClick={() => setModernPanel('scene')}>
                 <ListBullets size={17} aria-hidden="true" /><span>Scene</span>
               </button>
-              <button type="button" className={modernPanel === 'properties' ? 'active' : ''} aria-pressed={modernPanel === 'properties'} data-testid="modern-panel-properties" onClick={(event) => openModernPanel('properties', event.currentTarget)}>
+              <button type="button" className={modernPanel === 'properties' ? 'active' : ''} aria-pressed={modernPanel === 'properties'} data-testid="modern-panel-properties" onClick={() => setModernPanel('properties')}>
                 <SlidersHorizontal size={17} aria-hidden="true" /><span>Properties</span>
               </button>
             </div>
@@ -1460,15 +1461,10 @@ export default function App() {
               strength={skinPaintStrength}
               dirty={skinEditHasDirtyState}
               blockReason={skinEditBlockReason}
-              undoAvailable={skinUndoAvailable}
-              redoAvailable={skinRedoAvailable}
               onToolChange={setModernSkinTool}
               onPaintModeChange={handleSkinPaintModeChange}
               onRadiusChange={onSkinPaintRadiusChange}
               onStrengthChange={onSkinPaintStrengthChange}
-              onUndo={undoSkinPaint}
-              onRedo={redoSkinPaint}
-              onOpenAdvanced={(trigger) => openModernPanel('properties', trigger)}
             />
           )}
           {theme.shellVariant === 'modern' && (
@@ -1476,21 +1472,9 @@ export default function App() {
           )}
           {theme.shellVariant === 'modern' && !hasModel && !ui.isLoading && (
             <div className="modern-empty-state" data-testid="modern-empty-state">
-              <div className="modern-empty-eyebrow">Model workspace</div>
-              <h1>Start with a model</h1>
-              <p>Open or drop an SMF, GLB, GLTF, FBX, DAE, or OBJ asset to inspect it.</p>
+              <p>Drop a model here</p>
               <button type="button" className="modern-empty-open" data-testid="modern-empty-open" onClick={handleOpen}>
-                Open model
-              </button>
-            </div>
-          )}
-          {theme.shellVariant === 'modern' && hasModel && editorMode !== 'skin' && (
-            <div className="modern-panel-triggers" aria-label="Supporting panels">
-              <button type="button" aria-pressed={modernPanel === 'scene'} data-testid="modern-scene-trigger" onClick={(event) => openModernPanel('scene', event.currentTarget)}>
-                <ListBullets size={17} aria-hidden="true" /><span>Scene</span>
-              </button>
-              <button type="button" aria-pressed={modernPanel === 'properties'} data-testid="modern-properties-trigger" onClick={(event) => openModernPanel('properties', event.currentTarget)}>
-                <SlidersHorizontal size={17} aria-hidden="true" /><span>Properties</span>
+                or open a file
               </button>
             </div>
           )}
@@ -1524,11 +1508,11 @@ export default function App() {
               )}
             </div>
           )}
-          <div data-testid="status-text" aria-live="polite" title={ui.status} className={`status-overlay absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${ui.isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
-            {ui.status}
+          <div data-testid="status-text" aria-live="polite" title={statusText} className={`status-overlay absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${ui.isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
+            {statusText}
             {ui.isLoading && ' …'}
           </div>
-          <div className="viewport-drop-hint absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 pointer-events-none">Drop {supportedModelFormatsLabel()} here</div>
+          {theme.shellVariant === 'original' && <div className="viewport-drop-hint absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded bg-black/40 text-slate-400 pointer-events-none">Drop {supportedModelFormatsLabel()} here</div>}
         </div>
 
         {theme.shellVariant === 'original' && propertiesPanel}

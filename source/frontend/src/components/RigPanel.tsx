@@ -96,7 +96,9 @@ export default function RigPanel({
   const canSpinRig = report.boneCount > 0 && !isSmfSource;
   const canUseEndpoint = selectedIsDeformBone && report.boneCount > 0;
   const canUseIk = selectedIsDeformBone && report.boneCount > 1;
-  const selectedMetadata = selected && selected !== 'Scene' ? rigMetadata.bones[selected] : undefined;
+  const selectedMetadata = selectedIsDeformBone
+    ? rigMetadata.bones[selected] ?? { primaryAxis: 'y', locked: false, pinned: false }
+    : undefined;
 
   useEffect(() => {
     setRenameValue(selected === 'Scene' ? '' : selected);
@@ -146,6 +148,7 @@ export default function RigPanel({
         <div className="grid grid-cols-3 gap-1 mb-2" data-testid="rig-tool-row">
           <button
             data-testid="rig-tool-select"
+            aria-pressed={rigToolMode === 'select'}
             className={`px-1 py-0.5 text-xs ${rigToolMode === 'select' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
             onClick={() => onRigToolModeChange('select')}
           >
@@ -153,6 +156,7 @@ export default function RigPanel({
           </button>
           <button
             data-testid="rig-tool-endpoint"
+            aria-pressed={rigToolMode === 'endpoint'}
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'endpoint' ? 'bg-sky-400 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!canUseEndpoint}
             onClick={() => onRigToolModeChange('endpoint')}
@@ -162,6 +166,7 @@ export default function RigPanel({
           </button>
           <button
             data-testid="rig-tool-add-child"
+            aria-pressed={rigToolMode === 'add-child'}
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'add-child' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!canCreateChild}
             onClick={() => onRigToolModeChange('add-child')}
@@ -171,6 +176,7 @@ export default function RigPanel({
           </button>
           <button
             data-testid="rig-tool-move"
+            aria-pressed={rigToolMode === 'move'}
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'move' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!canCreateChild}
             onClick={() => onRigToolModeChange('move')}
@@ -180,6 +186,7 @@ export default function RigPanel({
           </button>
           <button
             data-testid="rig-tool-rotate"
+            aria-pressed={rigToolMode === 'rotate'}
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'rotate' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!canCreateChild}
             onClick={() => onRigToolModeChange('rotate')}
@@ -189,6 +196,7 @@ export default function RigPanel({
           </button>
           <button
             data-testid="rig-tool-ik"
+            aria-pressed={rigToolMode === 'ik'}
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'ik' ? 'bg-amber-400 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!canUseIk}
             onClick={() => onRigToolModeChange('ik')}

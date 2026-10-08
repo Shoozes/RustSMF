@@ -24,26 +24,25 @@
       "description": "Lean current-state orientation. Use a focused feature or subsystem group before reading broader source.",
       "max_kb": 64,
       "paths": [
-        "README.md",
         "docs/dev/APP_STATE.md",
         "docs/dev/TODO.md"
       ],
       "notes": [
         "TODO owns executable work and completion conditions.",
         "APP_STATE owns shipped behavior; review.md is opened only for integrity-pass evidence.",
-        "The 64 KiB orientation cap leaves measured headroom for current-state docs and remains far below the 256 KiB generation ceiling; dated measurements live in HISTORY.md."
+        "The 64 KiB orientation cap leaves measured headroom for current-state docs and remains far below the 256 KiB generation ceiling; dated measurements live in HISTORY.md.",
+        "README launch/format entry remains in issue__verification_current_head and is read directly during task intake; orientation retains current state and the work queue."
       ]
     },
     "workflow__context_bank": {
       "description": "Portable context routing, validation, generation, and controller entry points.",
-      "max_kb": 100,
+      "max_kb": 104,
       "paths": [
         "summary_bank.json",
         "scripts/context-bank-lib.mjs",
         "scripts/verify-context-bank.mjs",
         "scripts/generate-context.mjs",
         "scripts/context-bank.test.mjs",
-        "scripts/README.md",
         ".tools/get-context.ps1",
         ".agents/skills/summary-bank-json/SKILL.md"
       ],
@@ -53,7 +52,8 @@
         "Generation never truncates a file or writes when --out - is requested; scans, globs, explicit paths, and trees honor runtime and configured directory exclusions.",
         "Explicit paths reject symlink ancestors and Windows drive-relative escapes.",
         "The repo-local summary-bank skill adds RustSMF ownership and native verification to the global context-bank policy.",
-        "Generated text regions normalize CRLF to LF before rendering and budget accounting; source files and binary evidence are never rewritten."
+        "Generated text regions normalize CRLF to LF before rendering and budget accounting; source files and binary evidence are never rewritten.",
+        "Measured 100.5 KiB after adding focused journey routes; the 104 KiB cap retains the required native sources without widening defaults."
       ]
     },
     "workflow__project_integrity": {
@@ -117,14 +117,15 @@
       ]
     },
     "feature__theme_system": {
-      "description": "Persisted theme registry, canvas-first Modern shell, Original SMF presentation, responsive behavior, and visual evidence.",
-      "max_kb": 200,
+      "description": "Persisted themes, Modern model viewer with a workspace chooser and disclosed tools, Original SMF presentation, responsive behavior and visual evidence.",
+      "max_kb": 208,
       "paths": [
         "source/frontend/src/theme.ts",
         "source/frontend/src/theme.test.ts",
         "source/frontend/src/hooks/useAppTheme.ts",
         "source/frontend/src/App.tsx",
         "source/frontend/src/components/Toolbar.tsx",
+        "source/frontend/src/components/ModernSkinWorkspace.tsx",
         "source/frontend/src/components/ViewportControls.tsx",
         "source/frontend/src/main.tsx",
         "source/frontend/src/index.css",
@@ -135,16 +136,18 @@
         "source/frontend/tests/visual.spec.ts",
         "source/frontend/tests/modern-shell.spec.ts",
         "design-qa.md",
-        "docs/references/theme-qa/README.md"
+        "docs/references/theme-qa/README.md",
+        "source/frontend/tests/modern-authoring-layout.spec.ts"
       ],
       "notes": [
         "Original preserves the old editor's simplicity and compact hierarchy, including quad view before model load.",
         "Modern palette ownership lives in modern.css under the Lumen Alloy theme scope; shared index.css owns layout and behavior, and Original selectors stay explicitly scoped.",
         "The loaded-SMF strict snapshot is owned by tests__browser_shell_lifecycle in shell-model.spec.ts; this group owns the responsive and Original strict captures in visual.spec.ts.",
         "Theme definitions own shell variants, labels, panel copy, camera scale, and grid behavior; shared behavior should not branch on theme IDs.",
-        "Modern keeps one supporting panel, closes drawers by default on compact screens, and mounts the full timeline only in Animate.",
+        "Modern uses one compact icon strip and a workspace chooser; Tools opens the single drawer, closed by default at every size. Desktop tools reserve a side strip; compact tools overlay the canvas. Skin keeps four icons and two brush sliders; the full timeline mounts only in Animate.",
         "ViewportControls exposes separate Rig fade and reversible Hide rig/Show rig controls so helper geometry can be removed for shaded-skin inspection without mutating source or export state.",
-        "docs/references/theme-qa/README.md owns the preserved-source comparison and final fidelity evidence paths."
+        "docs/references/theme-qa/README.md owns the preserved-source comparison and final fidelity evidence paths.",
+        "The feature cap retains routed shell source and six-size authoring proof; detailed Skin behavior stays in feature__skin_weights rather than enlarging this theme route."
       ]
     },
     "feature__model_outliner_materials": {
@@ -521,11 +524,13 @@
         "source/frontend/src/utils/smfRigPolicy.test.ts",
         "source/frontend/src/utils/staticMeshSkinPrep.ts",
         "source/frontend/src/utils/staticMeshSkinPrep.test.ts",
-        "source/frontend/tests/rig.spec.ts"
+        "source/frontend/tests/rig.spec.ts",
+        "source/frontend/tests/journeys/rig-continuity.journey.spec.ts"
       ],
       "notes": [
         "Static non-SMF meshes can be promoted to one root-bound skeleton; preparation is reversible through the shared rig history and participates in dirty replacement protection.",
-        "Rig metadata persists primary axis, lock, and pin fields through standalone bounded JSON and project envelopes. IK skips locked/pinned joints; explicit solve-and-bake creates one animation history transaction and honors clip locks."
+        "Rig metadata persists primary axis, lock, and pin fields through standalone bounded JSON and project envelopes. IK skips locked/pinned joints; explicit solve-and-bake creates one animation history transaction and honors clip locks.",
+        "Rig continuity owns structural metadata regression here; the combined IK/key/project story is routed by workflow__frontend_authoring_journeys."
       ]
     },
     "feature__model_diagnostics": {
@@ -685,13 +690,19 @@
         "source/frontend/src/test/installFileReaderTestPolyfill.ts",
         "source/frontend/src/vite-env.d.ts",
         "source/frontend/tests/fixtures/invalid-model.gml",
-        "source/frontend/tests/helpers/*.ts",
         "source/frontend/scripts/run-unit-tests.mjs",
         "source/frontend/scripts/check-entry-chunks.mjs",
         "source/frontend/scripts/check-eslint-coverage.mjs",
         "source/frontend/scripts/check-production-any.mjs",
         "source/frontend/scripts/run-strict-visuals.mjs",
-        "source/frontend/scripts/run-playwright-geneye.mjs"
+        "source/frontend/scripts/run-playwright-geneye.mjs",
+        "source/frontend/tests/helpers/smoke-helpers.ts",
+        "source/frontend/tests/helpers/format-assertions.ts",
+        "source/frontend/tests/helpers/asset-evidence.ts",
+        "source/frontend/tests/helpers/product-journey.ts",
+        "source/frontend/tests/asset-evidence.spec.ts",
+        "source/frontend/tests/format-dispatch.spec.ts",
+        "source/frontend/tests/project-recovery.spec.ts"
       ]
     },
     "tests__browser_shell_lifecycle": {
@@ -718,7 +729,7 @@
       ]
     },
     "workflow__recorded_browser_journey": {
-      "description": "Single-worker sequential browser journeys for real-SMF animation and skin authoring plus four product workflows covering format conversion, project continuity, resource readiness, and dirty-work preservation.",
+      "description": "Recorded real-SMF hand-wave journey, precision Skin repair, keyed motion and semantic project continuity; shared single-worker journey command.",
       "max_kb": 104,
       "paths": [
         "source/frontend/playwright.journey.config.ts",
@@ -726,22 +737,19 @@
         "source/frontend/scripts/run-playwright-geneye.mjs",
         "source/frontend/src/loaders/handWaveWeightRepair.test.ts",
         "source/frontend/tests/journeys/hand-wave.journey.spec.ts",
-        "source/frontend/tests/journeys/open-inspect-export.journey.spec.ts",
-        "source/frontend/tests/journeys/project-continuity.journey.spec.ts",
-        "source/frontend/tests/journeys/format-roundtrip.journey.spec.ts",
-        "source/frontend/tests/journeys/failure-preserves-work.journey.spec.ts",
         "source/frontend/tests/helpers/smoke-helpers.ts",
         "source/frontend/tests/helpers/modern-shell.ts",
         "source/frontend/tests/helpers/external-fbx-fixture.ts",
         "source/frontend/tests/helpers/timeline-interactions.ts",
         "source/frontend/tests/helpers/viewport-interactions.ts",
         "source/frontend/package.json",
-        "source/frontend/tests/README.md"
+        "source/frontend/tests/helpers/asset-evidence.ts",
+        "source/frontend/tests/helpers/product-journey.ts"
       ],
       "notes": [
-        "All five journeys are excluded from the default browser gate and run sequentially with one worker; the retained hand-wave case records one deterministic 1440x900, 125%-DPI workflow through the production preview server, including exact mini-node repair of the fixture's torso/sleeve weighting defect.",
-        "The four product journeys cover SMF-to-GLB roundtrip, project save/reopen continuity, generated external-FBX sidecar readiness and skinned animation roundtrip, and dirty-work preservation through cancel/failure replacement paths.",
-        "Generated screenshots, test results, traces, WebM, and GenEye temporal evidence remain ignored runtime output; rerun test:journey to produce current evidence through the checked argv manifest."
+        "The targeted hand-wave command retains one recorded 1440x900 DPR 1.25 journey; test:journey runs all eleven stories sequentially with one worker.",
+        "workflow__product_continuity_journeys owns core format/project/replacement stories; workflow__frontend_authoring_journeys owns five additional editing stories. tests__quality owns the feature evidence matrix.",
+        "All generated video, screenshots, traces and decoded exports remain ignored runtime evidence."
       ]
     },
     "feature__project_recovery": {
@@ -754,13 +762,14 @@
         "source/frontend/src/backend-client/tauri.ts",
         "source/src-tauri/src/main.rs",
         "source/frontend/tests/lifecycle.spec.ts",
-        "source/frontend/tests/native.spec.ts"
+        "source/frontend/tests/project-recovery.spec.ts"
       ],
       "notes": [
         "The project envelope embeds a validated GLB snapshot and bounded workspace state, including rig metadata, without replacing asset export formats.",
         "Project state validation reuses the supported model-format registry, so every supported source format, including DAE, survives project round-trip while the embedded asset remains GLB.",
         "Native writes are serialized and use unique staged files; project save rotates bounded generations with restoration on failure, while recovery discovery/read accepts only the exact owned regular-file generations.",
-        "Foreground saves remain single-flight. Autosave coalesces work to the newest trailing request while a write is active; successful model replacement invalidates queued old-model work and waits for an issued write before swapping roots, while canceled/failed pickers leave recovery work intact."
+        "Foreground saves remain single-flight. Autosave coalesces work to the newest trailing request while a write is active; successful model replacement invalidates queued old-model work and waits for an issued write before swapping roots, while canceled/failed pickers leave recovery work intact.",
+        "Focused project-recovery.spec.ts proves serialized state and continued save; native.spec.ts write/race coverage remains in subsystem__tauri_bridge."
       ]
     },
     "issue__smf_conversion_spatial_fidelity": {
@@ -798,13 +807,13 @@
         "source/package.json",
         "source/frontend/package.json",
         "source/frontend/scripts/run-unit-tests.mjs",
-        "source/frontend/tests/README.md",
         "source/frontend/playwright.config.ts"
       ],
       "notes": [
         "review.md owns the latest assessment; HISTORY.md owns dated command evidence and TODO.md owns forward work. APP_STATE.md supplies broader product contracts only when needed.",
         "Use the test:e2e:list package script for browser inventory so npm cannot consume Playwright's --list flag and accidentally run the suite.",
-        "Classify browser failures by assertion, launch, and teardown phase; a historical managed-process caveat must never hide a current product assertion failure, and runner-owned ports must be clear after interrupted runs."
+        "Classify browser failures by assertion, launch, and teardown phase; a historical managed-process caveat must never hide a current product assertion failure, and runner-owned ports must be clear after interrupted runs.",
+        "tests__quality owns the full feature evidence matrix; this route keeps command and current-review ownership."
       ]
     },
     "issue__external_model_resources": {
@@ -1006,6 +1015,47 @@
         "Input is parent-first uniform-scale local TRS and one/two calibrated direct chains with independent limb subtrees; output is corrected full TRS, aligned joint orientations, and bounded diagnostics.",
         "Calibrate the hip bend plane as pole × upper-axis and knee plane normal with the positive (hip-to-knee) × (knee-to-ankle) sign. No contact schedule or root travel is owned here.",
         "Native/WASM parity covered four fixtures and 548 exact numeric outputs; source npm run verify:rust is the shared compile-only gate and npm run transition:runtime-proof rebuilds and receipts the native/browser-WASM transition artifacts."
+      ]
+    },
+    "workflow__product_continuity_journeys": {
+      "description": "Core semantic format, project, sidecar and failed replacement/recovery browser stories.",
+      "max_kb": 72,
+      "paths": [
+        "source/frontend/playwright.journey.config.ts",
+        "source/frontend/tests/journeys/open-inspect-export.journey.spec.ts",
+        "source/frontend/tests/journeys/project-continuity.journey.spec.ts",
+        "source/frontend/tests/journeys/format-roundtrip.journey.spec.ts",
+        "source/frontend/tests/journeys/failure-preserves-work.journey.spec.ts",
+        "source/frontend/tests/helpers/asset-evidence.ts",
+        "source/frontend/tests/helpers/product-journey.ts",
+        "source/frontend/tests/helpers/modern-shell.ts",
+        "source/frontend/tests/helpers/smoke-helpers.ts",
+        "source/frontend/tests/helpers/external-fbx-fixture.ts"
+      ],
+      "notes": [
+        "Independent accessor checks verify geometry, binds, influences, images and every keyed pose; malformed project and recovery inputs preserve the mounted editor."
+      ]
+    },
+    "workflow__frontend_authoring_journeys": {
+      "description": "Profile, rig/metadata, IK/key editing, Skin weights and static Model/material continuity through ordinary frontend actions.",
+      "max_kb": 96,
+      "paths": [
+        "source/frontend/playwright.journey.config.ts",
+        "source/frontend/tests/journeys/retarget-continuity.journey.spec.ts",
+        "source/frontend/tests/journeys/rig-continuity.journey.spec.ts",
+        "source/frontend/tests/journeys/ik-animation-continuity.journey.spec.ts",
+        "source/frontend/tests/journeys/skin-continuity.journey.spec.ts",
+        "source/frontend/tests/journeys/model-material-continuity.journey.spec.ts",
+        "source/frontend/tests/helpers/asset-evidence.ts",
+        "source/frontend/tests/helpers/product-journey.ts",
+        "source/frontend/tests/helpers/modern-shell.ts",
+        "source/frontend/tests/helpers/skinned-glb-fixture.ts",
+        "source/frontend/tests/helpers/viewport-interactions.ts",
+        "source/frontend/tests/helpers/timeline-interactions.ts"
+      ],
+      "notes": [
+        "Profile drafts persist in the app session and standalone files; project assertions cover existing applied model/clip and rig metadata fields without adding schema state.",
+        "Rig mutation history reconciles created/renamed/deleted metadata entries. Skin SMF comparisons model uint8 quantization explicitly."
       ]
     }
   },

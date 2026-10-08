@@ -7,7 +7,7 @@ import { startSmfCodecProbe, stopSmfCodecProbe } from './helpers/smf-codec-probe
 import { parseSelectedBone, fileToBase64 } from './helpers/format-assertions';
 import { paintOnMeshInViewport } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
-import { clickSecondaryCommand, showModernPanel, showSkinAdvanced } from './helpers/modern-shell';
+import { selectWorkspace, clickSecondaryCommand, showModernPanel, showSkinAdvanced  } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -118,10 +118,10 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(fixture.name, { timeout: 15000 });
       const originalRootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
       expect(originalRootId).toBeTruthy();
-      await page.getByTestId('mode-tab-rig').click();
+      await selectWorkspace(page, 'rig');
       await page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first().click({ force: true });
       await page.getByTestId('transform-x-btn').click();
-      await page.getByTestId('mode-tab-animate').click();
+      await selectWorkspace(page, 'animate');
       await pausePlaybackIfRunning(page);
       await page.getByTestId('animation-insert-key-btn').click();
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
@@ -162,7 +162,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await page.goto('/');
       await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
-      await page.getByTestId('mode-tab-export').click();
+      await selectWorkspace(page, 'export');
       await expect(page.getByTestId('save-smf-report-btn')).toBeVisible();
 
       const downloadNames: string[] = [];
@@ -195,11 +195,11 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await input.setInputFiles(skinnedFixtureInput);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       await expect(page.getByTestId('rig-workspace-panel')).toBeVisible();
       await expect(page.getByTestId('rig-validation-status')).toContainText(/pass/i);
       await expect(page.getByTestId('rig-bone-count')).toContainText('2');
-      await page.getByTestId('mode-tab-skin').click({ force: true });
+      await selectWorkspace(page, 'skin');
       await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
       await showSkinAdvanced(page);
       await expect(page.getByTestId('skin-normalize-btn')).toBeEnabled();
@@ -241,7 +241,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
 
         await expect(page.getByTestId('status-text')).toContainText('Loaded FBX', { timeout: 15000 });
         await expect(page.getByTestId('status-text')).not.toContainText(/Loaded:.*\.smf|mixamo|FixtureRoot|FixtureTip/i);
-        await page.getByTestId('mode-tab-skin').click({ force: true });
+        await selectWorkspace(page, 'skin');
         await showSkinAdvanced(page);
         await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: false');
         await expect(page.getByTestId('skin-export-block')).toHaveCount(0);
@@ -265,14 +265,14 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await input.setInputFiles(await createSkinnedGlbFixtureInput());
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       await expect(page.getByTestId('inspector')).toBeVisible();
       const firstBone = page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first();
       await expect(firstBone).toBeVisible();
       await firstBone.click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
       await page.getByTestId('transform-x-btn').click({ force: true }).catch(() => {});
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
       await pausePlaybackIfRunning(page);
       await page.getByTestId('animation-insert-key-btn').click();
@@ -294,7 +294,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
         await expect(page.getByTestId('status-text')).toContainText('Loaded FBX', { timeout: 15000 });
         await expect(page.getByTestId('status-text')).not.toContainText(/Loaded:.*\.smf|mixamo|FixtureTip|Pose edit dirty/i);
 
-        await page.getByTestId('mode-tab-animate').click({ force: true });
+        await selectWorkspace(page, 'animate');
         await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
         await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: false');
       } finally {
@@ -311,10 +311,10 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       const originalRootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');
       expect(originalRootId).toBeTruthy();
 
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       await page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first().click({ force: true });
       await page.getByTestId('transform-x-btn').click({ force: true });
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
 
       await input.setInputFiles(SAMPLE_SMF);
@@ -330,7 +330,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await page.getByTestId('confirm-model-replacement').click();
       await expect(page.getByTestId('status-text')).toContainText(/Loaded:.*\.smf/i, { timeout: 15000 });
       await expect(page.getByTestId('three-canvas')).not.toHaveAttribute('data-model-root-id', originalRootId!);
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
     });
 
@@ -342,20 +342,23 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
 
+      await showModernPanel(page, 'scene');
+
       const firstSubmodel = page.getByTestId('outliner-submodel-0');
+      await showModernPanel(page, 'scene');
       const firstVisibilityToggle = page.getByTestId('outliner-visibility-toggle-0');
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
       await firstVisibilityToggle.click();
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
 
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       const inspector = page.getByTestId('inspector');
       const boneEntry = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
       await expect(boneEntry).toBeVisible();
       await boneEntry.click({ force: true });
       await page.getByTestId('transform-x-btn').click({ force: true });
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
 
       await page.getByTestId('editor-undo-btn').click({ force: true });

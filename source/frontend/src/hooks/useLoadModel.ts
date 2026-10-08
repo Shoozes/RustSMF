@@ -662,7 +662,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       poseEdits: clonePoseEditMap(poseEditsRef.current),
       skinEditState: cloneSkinEditState(skinEditStateRef.current),
       skinIndices: captureRigSkinIndexSnapshots(model.root),
-      metadata: cloneRigMetadata(rigMetadata),
+      metadata: normalizeRigMetadata(rigMetadata, model.root, skeleton),
     };
   }, [model.root, model.skeleton, rigMetadata, ui.selected]);
 
@@ -847,6 +847,19 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   ) => {
     if (!before || !after) return false;
 
+    const nextMetadata = normalizeRigMetadata(after.metadata, model.root, model.skeleton);
+    for (const previous of before.bones) {
+      const current = after.bones.find(item => item.bone === previous.bone);
+      if (current?.name === previous.name) continue;
+      if (current && before.metadata?.bones[previous.name]) {
+        nextMetadata.bones[current.name] = { ...before.metadata.bones[previous.name] };
+      }
+      delete nextMetadata.bones[previous.name];
+    }
+    after.metadata = normalizeRigMetadata(nextMetadata, model.root, model.skeleton);
+    if (model.root) writeRigMetadata(model.root, after.metadata);
+    setRigMetadata(cloneRigMetadata(after.metadata));
+
     pushEditorHistoryEntry({
       id: `rig-${editorHistoryIdRef.current += 1}`,
       label,
@@ -856,7 +869,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       order: allocateHistoryOrder(),
     });
     return true;
-  }, [allocateHistoryOrder, pushEditorHistoryEntry]);
+  }, [allocateHistoryOrder, model.root, model.skeleton, pushEditorHistoryEntry]);
 
   const pushAnimationHistory = useCallback((
     label: string,
@@ -1526,6 +1539,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
         const srcFmt = lastSourceFormatRef.current;
         const isFBXSource = srcFmt === 'fbx';
+        let fallbackNote = '';
 
         if (isFBXSource) {
           ui.setStatus('Exporting FBX-loaded model to binary .fbx...');
@@ -1534,6 +1548,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
             return;
           } catch (e: unknown) {
             if (!isCurrentExport()) return;
+            fallbackNote = ` FBX fallback: ${errorMessage(e)}.`;
             ui.setStatus(`FBX export error: ${errorMessage(e)}. Falling back to generic GLB...`);
           }
         }
@@ -1552,6 +1567,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
             return;
           } catch (error: unknown) {
             if (!isCurrentExport()) return;
+            fallbackNote = ` DAE fallback: ${errorMessage(error)}.`;
             ui.setStatus(`DAE export error: ${errorMessage(error)}. Falling back to generic GLB...`);
           }
         }
@@ -1565,7 +1581,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
           ui.setStatus('Export canceled.');
           return;
         }
-        ui.setStatus(`Exported .glb (verified ${summary.boneCount} bones, ${summary.clipCount} clips).`);
+        ui.setStatus(fallbackNote
+          ? `Exported .glb.${fallbackNote} Verified ${summary.boneCount} bones, ${summary.clipCount} clips.`
+          : `Exported .glb (verified ${summary.boneCount} bones, ${summary.clipCount} clips).`);
       } catch (e: unknown) {
         if (!isCurrentExport()) return;
         if (e instanceof SmfCodecCancelledError) return;

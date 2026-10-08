@@ -49,11 +49,11 @@ export default function RetargetProfileControls({ disabled, onRetarget, value, o
     <p>Import a saved job or profile, then select source animation files. Profile paths are not opened.</p>
     <label>Import profile <input type="file" accept=".json" disabled={busy} data-testid="retarget-profile-import"
       onChange={(event) => { const file = event.currentTarget.files?.[0]; event.currentTarget.value = ''; if (file) void importProfile(file); }} /></label>
+    {(error || parsed.error) && <p role="alert">{error || parsed.error}</p>}
     <label style={{ display: 'block' }}>Profile JSON
       <textarea value={draft} rows={10} spellCheck={false} disabled={busy} data-testid="retarget-profile-json"
         style={{ width: '100%', fontFamily: 'monospace', color: 'var(--ui-text)', background: 'var(--ui-surface-inset)', padding: '0.5rem' }} onChange={(event) => { onChange({ ...value, draft: event.target.value }); setError(''); }} />
     </label>
-    {(error || parsed.error) && <p role="alert">{error || parsed.error}</p>}
     {draft !== saved && <p>Profile edits are not exported.</p>}
     <button type="button" disabled={busy || !parsed.profile} onClick={() => void exportProfile()} data-testid="retarget-profile-export">Export profile</button>
     <label className="outliner-append-action">Retarget with profile

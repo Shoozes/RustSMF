@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   ArrowUUpLeft,
   ArrowUUpRight,
+  CaretDown,
   DotsThreeVertical,
   Export as ExportIcon,
   FloppyDisk,
   FolderOpen,
-  Palette,
+  SlidersHorizontal,
 } from '@phosphor-icons/react';
 import { isEditorMode, type EditorMode } from '../store';
 import {
@@ -40,6 +41,8 @@ interface ToolbarProps extends Omit<ViewportControlsProps, 'variant'> {
   theme: AppThemeDefinition;
   themeId: AppThemeId;
   setThemeId: (themeId: AppThemeId) => void;
+  onOpenTools: (trigger: HTMLButtonElement) => void;
+  toolsOpen: boolean;
 }
 
 const MODES: EditorMode[] = ['view', 'rig', 'skin', 'animate', 'export'];
@@ -84,6 +87,7 @@ const HiddenWorkspaceSelect: React.FC<WorkspaceTabsProps> = ({ editorMode, isLoa
     }}
     disabled={isLoading}
     className="sr-only"
+    tabIndex={-1}
     title="Editor mode (foundation for quad/mode-specific tools)"
   >
     {MODES.map((mode) => <option key={mode} value={mode}>{labels[mode]}</option>)}
@@ -140,6 +144,36 @@ const SecondaryCommands: React.FC<Pick<ToolbarProps,
 );
 
 const ModernToolbar: React.FC<ToolbarProps> = (props) => {
+  const headerRef = useRef<HTMLElement>(null);
+  const workspaceRef = useRef<HTMLDetailsElement>(null);
+  const closeSiblingMenus = (event: React.SyntheticEvent<HTMLDetailsElement>) => {
+    const opened = event.currentTarget;
+    if (!opened.open) return;
+    headerRef.current?.querySelectorAll<HTMLDetailsElement>('details[open]').forEach(menu => {
+      if (menu !== opened) menu.open = false;
+    });
+  };
+  useEffect(() => {
+    const closeOutside = (event: PointerEvent) => {
+      headerRef.current?.querySelectorAll<HTMLDetailsElement>('details[open]').forEach((menu) => {
+        if (event.target instanceof Node && !menu.contains(event.target)) menu.open = false;
+      });
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      headerRef.current?.querySelectorAll<HTMLDetailsElement>('details[open]').forEach((menu) => {
+        menu.open = false;
+        menu.querySelector('summary')?.focus();
+        event.preventDefault();
+      });
+    };
+    document.addEventListener('pointerdown', closeOutside);
+    document.addEventListener('keydown', closeOnEscape);
+    return () => {
+      document.removeEventListener('pointerdown', closeOutside);
+      document.removeEventListener('keydown', closeOnEscape);
+    };
+  }, []);
   const {
     onOpen,
     onSaveProject,
@@ -155,43 +189,60 @@ const ModernToolbar: React.FC<ToolbarProps> = (props) => {
     theme,
     themeId,
     setThemeId,
+    onOpenTools,
+    toolsOpen,
   } = props;
   return (
-    <header className="toolbar modern-toolbar">
+    <header ref={headerRef} className="toolbar modern-toolbar">
       <div className="modern-appbar">
         <div className="toolbar-brand">{theme.chromeLabel}</div>
         <div className="toolbar-action-group modern-primary-actions" aria-label="Primary file actions">
-          <button className="toolbar-action" data-testid="open-model-btn" onClick={onOpen} disabled={isLoading} aria-label="Open asset">
-            <FolderOpen size={18} aria-hidden="true" /><span>Open</span>
+          <button className="toolbar-action" data-testid="open-model-btn" onClick={onOpen} disabled={isLoading} aria-label="Open asset" title="Open asset">
+            <FolderOpen size={18} aria-hidden="true" />
           </button>
-          <button className="toolbar-action toolbar-action-muted" data-testid="save-project-btn" onClick={onSaveProject} disabled={isLoading || !hasModel} aria-label="Save project">
-            <FloppyDisk size={18} aria-hidden="true" /><span>Save</span>
+          <button className="toolbar-action toolbar-action-muted" data-testid="save-project-btn" onClick={onSaveProject} disabled={isLoading || !hasModel} aria-label="Save project" title="Save project">
+            <FloppyDisk size={18} aria-hidden="true" />
           </button>
         </div>
         <div className="toolbar-action-group modern-history-actions" aria-label="Editor history">
           <button className="toolbar-action toolbar-action-muted" data-testid="editor-undo-btn" onClick={onUndo} disabled={isLoading || !undoAvailable} title="Undo editor transaction" aria-label="Undo" type="button">
-            <ArrowUUpLeft size={18} aria-hidden="true" /><span>Undo</span>
+            <ArrowUUpLeft size={18} aria-hidden="true" />
           </button>
           <button className="toolbar-action toolbar-action-muted" data-testid="editor-redo-btn" onClick={onRedo} disabled={isLoading || !redoAvailable} title="Redo editor transaction" aria-label="Redo" type="button">
-            <ArrowUUpRight size={18} aria-hidden="true" /><span>Redo</span>
+            <ArrowUUpRight size={18} aria-hidden="true" />
           </button>
         </div>
-        <button className="toolbar-action modern-export-action" data-testid="export-btn" onClick={onExport} disabled={isLoading} title="Export the current project as an asset" aria-label="Export asset">
-          <ExportIcon size={18} aria-hidden="true" /><span>Export</span>
+        <details ref={workspaceRef} className="toolbar-menu modern-workspace-menu" onToggle={closeSiblingMenus}>
+          <summary className="toolbar-menu-summary" data-testid="modern-workspace-button" aria-label={`Workspace: ${theme.workspaceLabels[editorMode]}`}>
+            <span>{theme.workspaceLabels[editorMode]}</span><CaretDown size={12} aria-hidden="true" />
+          </summary>
+          <div className="toolbar-menu-panel modern-workspace-menu-panel">
+            <WorkspaceTabs editorMode={editorMode} isLoading={isLoading} labels={theme.workspaceLabels} setEditorMode={(mode) => {
+              setEditorMode(mode);
+              if (workspaceRef.current) {
+                workspaceRef.current.open = false;
+                workspaceRef.current.querySelector('summary')?.focus();
+              }
+            }} />
+          </div>
+        </details>
+        <button className="toolbar-action modern-tools-action" data-testid={editorMode === 'skin' ? 'modern-skin-advanced' : 'modern-tools-button'} onClick={(event) => onOpenTools(event.currentTarget)} disabled={isLoading || !hasModel} aria-label="Tools" title={`${theme.workspaceLabels[editorMode]} tools`} aria-pressed={toolsOpen}>
+          <SlidersHorizontal size={18} aria-hidden="true" />
         </button>
-        <details className="toolbar-menu modern-command-menu">
+        <button className="toolbar-action modern-export-action" data-testid="export-btn" onClick={onExport} disabled={isLoading || !hasModel} title="Export asset" aria-label="Export asset">
+          <ExportIcon size={18} aria-hidden="true" />
+        </button>
+        <details className="toolbar-menu modern-command-menu" onToggle={closeSiblingMenus}>
           <summary className="toolbar-menu-summary" data-testid="modern-more-menu-button" aria-label="More commands">
             <DotsThreeVertical size={20} aria-hidden="true" />
           </summary>
           <div className="toolbar-menu-panel modern-command-menu-panel" data-testid="modern-more-menu-panel">
-            <div className="modern-menu-heading">Project and formats</div>
+            <button className="toolbar-action modern-mobile-redo" data-testid="modern-menu-redo" onClick={onRedo} disabled={isLoading || !redoAvailable} type="button">Redo</button>
             <SecondaryCommands {...props} />
-            <div className="modern-menu-heading"><Palette size={16} aria-hidden="true" />Appearance</div>
             <ThemeSwitcher theme={theme} themeId={themeId} setThemeId={setThemeId} />
           </div>
         </details>
       </div>
-      <WorkspaceTabs editorMode={editorMode} isLoading={isLoading} labels={theme.workspaceLabels} setEditorMode={setEditorMode} />
       <HiddenWorkspaceSelect editorMode={editorMode} isLoading={isLoading} labels={theme.workspaceLabels} setEditorMode={setEditorMode} />
     </header>
   );

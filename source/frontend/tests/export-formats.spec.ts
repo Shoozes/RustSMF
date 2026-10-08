@@ -7,7 +7,7 @@ import { openViewportDisplayMenu, setViewportLayout, dragRigMoveInOrthoPane, dra
 import { setRangeValue } from './helpers/timeline-interactions';
 import { decodeProjectDocument } from '../src/utils/projectCodec';
 import { createExternalFbxFixtureInputs } from './helpers/external-fbx-fixture';
-import { clickSecondaryCommand, revealSecondaryCommands, showAnimateTimeline, showModernPanel } from './helpers/modern-shell';
+import { selectWorkspace, clickSecondaryCommand, revealSecondaryCommands, showAnimateTimeline, showModernPanel  } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -79,6 +79,8 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await showModernPanel(page, 'scene');
 
+    await showModernPanel(page, 'scene');
+
     const row = page.getByTestId('outliner-submodel-0');
     await expect(row).toBeVisible();
     await row.locator('.outliner-name-btn').click();
@@ -138,8 +140,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       const fileInput = page.getByTestId('model-file-input');
       await expect(fileInput).toHaveAttribute('accept', /.*\.fbx.*/);
 
-      // Drop hint mentions FBX
-      await expect(page.locator('text=/Drop .* here/')).toContainText(/fbx/i);
+      await expect(page.getByTestId('modern-empty-state')).toContainText('Drop a model here');
 
       // Dedicated FBX export is available independently of source-aware Export.
       await revealSecondaryCommands(page);
@@ -162,7 +163,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await exportBtn.click();
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.fbx/i, { timeout: 5000 });
 
-      await page.getByTestId('mode-tab-export').click({ force: true });
+      await selectWorkspace(page, 'export');
       const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
       await expect(diagnosticsPanel).toHaveAttribute('data-smf-can-export', 'false');
       await expect(page.getByTestId('export-smf-btn')).toBeDisabled();
@@ -185,10 +186,10 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expectRenderedScreenshot(page.getByTestId('three-canvas'));
       expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
 
-      await page.getByTestId('mode-tab-export').click({ force: true });
+      await selectWorkspace(page, 'export');
       await expect(page.getByTestId('texture-export-policy-panel')).toBeVisible();
       await expect(page.getByTestId('smf-material-texture-row')).toHaveCount(1);
-      await page.getByTestId('mode-tab-view').click({ force: true });
+      await selectWorkspace(page, 'view');
 
       const downloadPromise = page.waitForEvent('download');
       await clickSecondaryCommand(page, 'export-fbx-btn');
@@ -291,7 +292,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(inspector).toContainText(/FixtureRoot|FixtureTip/i);
       await expect(page.getByTestId('timeline')).toBeVisible();
 
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       await expect(page.getByTestId('rig-workspace-panel')).toBeVisible();
       const rootBoneEntry = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
       await expect(rootBoneEntry).toBeVisible();
@@ -319,6 +320,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(rigCanvas).toHaveAttribute('data-rig-tool-mode', 'add-child');
       await page.getByTestId('rig-snap-step').selectOption('0.25');
       await expect(page.getByTestId('status-text')).toContainText(/Rig snap set to 0.25 units/i);
+      await page.getByTestId('modern-panel-close').click();
       const rigCanvasBox = await rigCanvas.boundingBox();
       expect(rigCanvasBox).toBeTruthy();
       await page.mouse.click(
@@ -327,6 +329,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       );
       await expect(page.getByTestId('status-text')).toContainText(/Created child bone FixtureTip_child under FixtureTip from (top|front|side) pane with 0.25 snap/i);
       await expect(rigCanvas).toHaveAttribute('data-rig-add-child-pane-role', /top|front|side/);
+      await showModernPanel(page, 'properties');
       await expect(page.getByTestId('rig-bone-count')).toContainText('3');
       await expect(inspector).toContainText(/Selected\s*FixtureTip_child/i);
 
@@ -457,7 +460,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('rig-bone-count')).toContainText('2');
       await expect(inspector).toContainText(/Selected\s*FixtureSpine/i);
 
-      await page.getByTestId('mode-tab-export').click({ force: true });
+      await selectWorkspace(page, 'export');
       const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
       await expect(diagnosticsPanel).toBeVisible();
       await expect(diagnosticsPanel).toHaveAttribute('data-smf-can-export', 'true');
@@ -468,7 +471,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true');
       await page.getByTestId('save-smf-report-btn').click();
       await expect(page.getByTestId('status-text')).toContainText(/Saved SMF diagnostic report/i, { timeout: 5000 });
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
 
       const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /FixtureSpine|FixtureTip/ }).first();
       await anyBoneEntry.click({ force: true });
@@ -517,7 +520,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(canvas).toHaveAttribute('data-shader-enabled', 'true');
       await expect(canvas).toHaveAttribute('data-model-opacity', '0.35');
 
-      await page.getByTestId('mode-tab-export').click({ force: true });
+      await selectWorkspace(page, 'export');
       const policyPanel = page.getByTestId('texture-export-policy-panel');
       await expect(policyPanel).toBeVisible();
       await expect(policyPanel.getByTestId('texture-export-policy-row')).toHaveCount(4);
@@ -579,6 +582,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(inspector).not.toContainText(/Bones \(\d+\)/i);
 
       await showModernPanel(page, 'scene');
+      await showModernPanel(page, 'scene');
       const outliner = page.getByTestId('outliner');
       await expect(outliner).not.toContainText(/Bones/i);  // or + clips if any
 
@@ -587,7 +591,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       // Visual smoke for static render
       await expectRenderedScreenshot(page.getByTestId('viewport-container'));
 
-      await page.getByTestId('mode-tab-export').click({ force: true });
+      await selectWorkspace(page, 'export');
       const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
       await expect(diagnosticsPanel).toHaveAttribute('data-smf-can-export', 'false');
       await expect(diagnosticsPanel).toContainText(/SMF diagnostics: blocked/i);
@@ -650,6 +654,8 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
 
+      await showModernPanel(page, 'scene');
+
       const row = page.getByTestId('outliner-submodel-0');
       const name = row.locator('.outliner-name');
       const originalName = (await name.textContent())?.trim();
@@ -683,6 +689,8 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await page.goto('/');
       await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+
+      await showModernPanel(page, 'scene');
 
       const names = page.getByTestId('outliner-submodel-list').locator('.outliner-name');
       const originalCount = await names.count();
@@ -723,7 +731,10 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await page.goto('/');
       await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+      await showModernPanel(page, 'scene');
       await page.getByTestId('outliner-submodel-0').locator('.outliner-name-btn').click();
+
+      await showModernPanel(page, 'scene');
 
       const positionX = page.getByTestId('outliner-position-0');
       await positionX.fill('1.25');
@@ -738,6 +749,8 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Flipped winding/i);
       await page.getByTestId('outliner-prepare-geometry-btn').click();
       await expect(page.getByTestId('status-text')).toContainText(/Prepared geometry attributes/i);
+
+      await showModernPanel(page, 'scene');
 
       const names = page.getByTestId('outliner-submodel-list').locator('.outliner-name');
       const beforeAppend = await names.count();
@@ -757,6 +770,8 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       const input = page.getByTestId('model-file-input');
       await input.setInputFiles(await createSkinnedGlbFixtureInputWithOptions({ withSiblingMesh: true }));
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
+
+      await showModernPanel(page, 'scene');
 
       const names = page.getByTestId('outliner-submodel-list').locator('.outliner-name');
       const skinnedRow = page.locator('.outliner-item').filter({ hasText: 'FixtureSkinnedMesh' });

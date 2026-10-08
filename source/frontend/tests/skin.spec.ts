@@ -4,7 +4,7 @@ import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { parseSelectedBone } from './helpers/format-assertions';
 import { cancelPaintOnMeshInViewport, hoverPickableBoneInViewport, paintInViewport, paintOnMeshInViewport, setViewportLayout } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
-import { clickSecondaryCommand, showModernPanel, showSkinAdvanced } from './helpers/modern-shell';
+import { selectWorkspace, clickSecondaryCommand, showModernPanel, showSkinAdvanced  } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -21,7 +21,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await pausePlaybackIfRunning(page);
 
-      await page.getByTestId('mode-tab-skin').click({ force: true });
+      await selectWorkspace(page, 'skin');
       await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
       await expect(page.getByTestId('modern-skin-tool-pick')).toHaveAttribute('aria-pressed', 'true');
       await showSkinAdvanced(page);
@@ -54,7 +54,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
 
-      await page.getByTestId('mode-tab-skin').click();
+      await selectWorkspace(page, 'skin');
       const workspace = page.getByTestId('skin-workspace-panel');
       await expect(workspace).toBeVisible();
       await expect(workspace).toHaveAttribute('data-active-tool', 'pick');
@@ -102,7 +102,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await pausePlaybackIfRunning(page);
 
-      await page.getByTestId('mode-tab-skin').click({ force: true });
+      await selectWorkspace(page, 'skin');
       await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
       await showSkinAdvanced(page);
 
@@ -137,7 +137,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await pausePlaybackIfRunning(page);
 
-      await page.getByTestId('mode-tab-skin').click({ force: true });
+      await selectWorkspace(page, 'skin');
       await showSkinAdvanced(page);
       const inspector = page.getByTestId('inspector');
       const bone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
@@ -170,7 +170,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await pausePlaybackIfRunning(page);
 
       const skinTab = page.getByTestId('mode-tab-skin');
-      await skinTab.click({ force: true });
+      await selectWorkspace(page, 'skin');
       await expect(skinTab).toHaveAttribute('aria-selected', 'true');
       await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
       await showSkinAdvanced(page);
@@ -295,7 +295,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await pausePlaybackIfRunning(page);
 
       const skinTab = page.getByTestId('mode-tab-skin');
-      await skinTab.click({ force: true });
+      await selectWorkspace(page, 'skin');
       await expect(skinTab).toHaveAttribute('aria-selected', 'true');
       await showSkinAdvanced(page);
       const inspector = page.getByTestId('inspector');
@@ -322,7 +322,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       expect(await paintCanvas.getAttribute('data-skin-inspected-vertex')).toBe(null);
       await expect(paintCanvas).toHaveAttribute('data-skin-paint-vertex-refs', '');
 
-      await page.getByTestId('mode-tab-view').click({ force: true });
+      await selectWorkspace(page, 'view');
       await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-editor-mode', 'view');
       expect(await paintCanvas.getAttribute('data-skin-brush-hover')).toBe(null);
       expect(await paintCanvas.getAttribute('data-skin-paint-active')).toBe(null);
@@ -337,7 +337,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await pausePlaybackIfRunning(page);
-      await page.getByTestId('mode-tab-skin').click({ force: true });
+      await selectWorkspace(page, 'skin');
       await showSkinAdvanced(page);
 
       await expect(page.getByTestId('skin-diagnostics')).toContainText(/Meshes \/ vertices/i);

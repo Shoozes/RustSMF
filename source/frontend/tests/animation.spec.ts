@@ -7,7 +7,7 @@ import {
 import { escapeRegex } from './helpers/format-assertions';
 import { clickPickableBoneInViewport, setViewportLayout } from './helpers/viewport-interactions';
 import { setRangeValue, clickTimelineLaneAt, dragSelectedTimelineMarkerTo } from './helpers/timeline-interactions';
-import { clickSecondaryCommand, showAnimateTimeline } from './helpers/modern-shell';
+import { selectWorkspace, clickSecondaryCommand, showAnimateTimeline, showModernPanel } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -26,14 +26,14 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
       await pausePlaybackIfRunning(page);
 
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       const inspector = page.getByTestId('inspector');
       const boneEntry = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
       await expect(boneEntry).toBeVisible();
       await boneEntry.click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
       await expect(page.getByTestId('animation-workflow-hint')).toContainText(/Select a bone.*pose it.*Insert/i);
       await page.getByTestId('transform-rot-negative-btn').scrollIntoViewIfNeeded();
@@ -79,7 +79,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
       await pausePlaybackIfRunning(page);
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
       await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
       await expect(page.getByTestId('animation-delete-clip-btn')).toBeDisabled();
@@ -190,7 +190,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
       await pausePlaybackIfRunning(page);
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('animation-create-btn')).toBeEnabled();
       await page.getByTestId('animation-new-name-input').fill('Rest Pose Start');
       await page.getByTestId('animation-new-duration-input').fill('1.25');
@@ -218,7 +218,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
 
       await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
 
       const source = await createSkinnedGltfFixtureInputWithOptions({ clipName: 'Source Motion' });
       await page.getByTestId('animation-retarget-clips').locator('input').setInputFiles(source);
@@ -241,12 +241,12 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await pausePlaybackIfRunning(page);
 
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       const inspector = page.getByTestId('inspector');
       await inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first().click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await page.getByTestId('animation-trim-start-input').fill('0.10');
       await page.getByTestId('animation-trim-end-input').fill('0.40');
       await page.getByTestId('animation-trim-btn').click();
@@ -276,7 +276,10 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
       await pausePlaybackIfRunning(page);
 
+      await showModernPanel(page, 'scene');
+
       const firstSubmodel = page.getByTestId('outliner-submodel-0');
+      await showModernPanel(page, 'scene');
       const firstVisibilityToggle = page.getByTestId('outliner-visibility-toggle-0');
       await expect(firstSubmodel).toBeVisible();
       await firstVisibilityToggle.click();
@@ -285,7 +288,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
       await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
 
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       const inspector = page.getByTestId('inspector');
       const boneEntry = inspector
         .locator('li > div')
@@ -298,7 +301,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(canvas).toHaveAttribute('data-transform-owner', 'pose');
       await expect(canvas).toHaveAttribute('data-transform-attached', 'true');
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
       await expect(canvas).toHaveAttribute('data-transform-owner', 'animation');
       await expect(canvas).toHaveAttribute('data-transform-attached', 'true');
@@ -345,14 +348,14 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Updated animation keyframe/i);
       await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', /[1-9]\d*/);
 
-      await page.getByTestId('mode-tab-export').click({ force: true });
+      await selectWorkspace(page, 'export');
       await expect(canvas).toHaveAttribute('data-transform-owner', 'disabled');
       await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
       await page.getByTestId('smf-roundtrip-check-btn').click();
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 15000 });
       await expect(page.getByTestId('status-text')).toContainText(/SMF roundtrip check passed/i);
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
       await page.getByTestId('animation-delete-key-btn').click();
       await expect(page.getByTestId('status-text')).toContainText(/Deleted animation keyframe/i);
@@ -371,14 +374,14 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
       await pausePlaybackIfRunning(page);
 
-      await page.getByTestId('mode-tab-rig').click({ force: true });
+      await selectWorkspace(page, 'rig');
       const inspector = page.getByTestId('inspector');
       const boneEntry = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
       await expect(boneEntry).toBeVisible();
       await boneEntry.click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureRoot/i);
 
-      await page.getByTestId('mode-tab-animate').click({ force: true });
+      await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('animation-scope-select')).toHaveValue('bone');
       await page.getByTestId('animation-scope-select').selectOption('branch');
       await expect(page.getByTestId('status-text')).toContainText(/Animation edit scope set to Branch/i);
@@ -432,10 +435,9 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       // Canvas still rendering post-interactions
       await expect(page.getByTestId('three-canvas')).toBeVisible();
 
-      // Nothing-to-export path (tests status for empty export attempt)
+      // Empty projects disable the primary export; explicit format guards explain the rejection.
       await page.goto('/');
-      await page.getByTestId('export-btn').click();
-      await expect(page.getByTestId('status-text')).toContainText(/Nothing to export/i);
+      await expect(page.getByTestId('export-btn')).toBeDisabled();
       await clickSecondaryCommand(page, 'export-glb-btn');
       await expect(page.getByTestId('status-text')).toContainText(/Nothing to export as GLB/i);
       await clickSecondaryCommand(page, 'export-fbx-btn');

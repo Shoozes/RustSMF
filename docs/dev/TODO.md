@@ -1,9 +1,19 @@
 # RustSMF TODO
 
-Last reviewed: 2026-09-25
+Last reviewed: 2026-10-08
 
 Backlog status: the four v0.2 productization outcomes are complete (2026-09-25).
 Their measurable acceptance criteria and final evidence remain below as a closeout record.
+
+## Frontend coverage and Modern polish
+
+- What: Prove every supported frontend capability with a feature-to-evidence matrix, strengthen the five core journeys, and add profile, rig, IK/animation, Skin, and Model/material continuity stories.
+- Why: Establish semantic and persistence evidence beyond status messages and isolated controls.
+- Where: Frontend domain specs, `tests/journeys/`, independent asset-evidence helpers, Modern styles, Inspector/Rig metadata integration, and current verification docs/routes.
+- When: Completed 2026-10-08 after the final source gate and responsive review; the four completed v0.2 outcomes below remain closed.
+- How: Use ordinary browser actions and independent exported-content assertions, fix reproduced defects, and simplify Modern within flat Lumen Alloy: one compact icon strip, a workspace chooser, tools closed by default, four Skin tool icons, two sliders and short contextual text. This follows the user's 2026-10-08 request to reduce text/buttons and replaces the previous two-row composition. Preserve Original and public project/profile formats.
+- Done when: Every supported feature row has passing positive and applicable failure/history/persistence evidence; all ten journeys, verify, normal browser tests, and strict visuals pass on the final candidate; the required six sizes and DPI/input lanes are reviewed; Original baselines remain unchanged; docs/routes and owned-process cleanup are current.
+- Verification: Sequential `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, and `test:visual-strict`. Browser and mocked IPC are the acceptance lanes; real OS dialogs, packaging and version changes are excluded. Separately authorized publication binds and verifies the staged candidate through `.tools/gitpush.ps1 -StagedOnly`.
 
 Fighter-specific acceptance remains caller-owned. Codec, rig, and export work
 stay closed unless one of these journeys exposes a reproducible defect with a

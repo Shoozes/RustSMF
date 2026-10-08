@@ -29,6 +29,7 @@ interface SkinPanelProps {
   showPaintVertices: boolean;
   onTogglePaintVertices?: () => void;
   editorMode?: string;
+  compact?: boolean;
   skinEditHasDirtyState: boolean;
   skinEditBlockReason: string | null;
   skinPaintMode: SkinWeightEditMode;
@@ -107,6 +108,7 @@ export default function SkinPanel({
   skinDiagnostics,
   skinSelectedVertex,
   editorMode = 'skin',
+  compact = false,
 }: SkinPanelProps) {
   const selectedBonePresent = !!selected && selected !== 'Scene';
   const hasSkeleton = !!skeleton && skeleton.bones.length > 0;
@@ -123,11 +125,13 @@ export default function SkinPanel({
 
   return (
     <div className="inspector" data-testid={dataTestId} data-editor-mode={editorMode}>
-      <div className="panel-title">Skin Workspace</div>
-      <div className="text-xs text-slate-300 mb-2">Inspect and refine per-bone vertex influences.</div>
-      <div className="text-[10px] text-slate-400">Source format: {sourceFormat || 'unknown'}</div>
-      <div className="text-[10px] text-slate-400 mt-1">Skin targets available: {hasSkeleton ? 'yes' : 'no'}</div>
-      <div className="text-xs mt-3">
+      <div className="panel-title">{compact ? 'Brush' : 'Skin Workspace'}</div>
+      {!compact && <>
+        <div className="text-xs text-slate-300 mb-2">Inspect and refine per-bone vertex influences.</div>
+        <div className="text-[10px] text-slate-400">Source format: {sourceFormat || 'unknown'}</div>
+        <div className="text-[10px] text-slate-400 mt-1">Skin targets available: {hasSkeleton ? 'yes' : 'no'}</div>
+      </>}
+      {!compact && <div className="text-xs mt-3">
         <div className="mb-1 text-slate-400">Selected</div>
         <div className="font-mono text-amber-300 break-all">
           {formatBoneDisplayName(selected || 'Scene', boneAliases)}
@@ -137,7 +141,7 @@ export default function SkinPanel({
             ? 'Transforms from Inspector and gizmo affect this bone immediately.'
             : 'Select a bone to adjust weights before export conversion.'}
         </div>
-      </div>
+      </div>}
       <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
         {onToggleWeightPreview && (
           <button
@@ -172,14 +176,14 @@ export default function SkinPanel({
         )}
       </div>
       <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
-        <div className="text-slate-400 mb-1">Skin paint</div>
-        <div className="text-slate-300 text-[10px] mb-2">
+        {!compact && <div className="text-slate-400 mb-1">Skin paint</div>}
+        {(!compact || !isPaintEnabled) && <div className="text-slate-300 text-[10px] mb-2">
           {isPaintEnabled
             ? showPaintVertices
               ? 'Select a mini vertex node for exact targeting, or brush the surface for a broader stroke.'
               : 'Brush the surface to edit nearby mesh vertices; Show Vertices enables exact mini-node targeting.'
             : 'Select a bone to enable skin painting.'}
-        </div>
+        </div>}
         <label className="flex items-center justify-between gap-2 text-slate-400 mb-2">
           <span>Paint pose</span>
           <select
@@ -202,6 +206,7 @@ export default function SkinPanel({
         <div className="flex gap-1 mb-2">
           <button
             data-testid="skin-paint-mode-set"
+            aria-pressed={skinPaintMode === 'set'}
             className={`px-1 py-0 text-xs ${skinPaintMode === 'set' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!isPaintEnabled}
             onClick={() => onSkinPaintModeChange('set')}
@@ -210,6 +215,7 @@ export default function SkinPanel({
           </button>
           <button
             data-testid="skin-paint-mode-add"
+            aria-pressed={skinPaintMode === 'add'}
             className={`px-1 py-0 text-xs ${skinPaintMode === 'add' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!isPaintEnabled}
             onClick={() => onSkinPaintModeChange('add')}
@@ -218,6 +224,7 @@ export default function SkinPanel({
           </button>
           <button
             data-testid="skin-paint-mode-subtract"
+            aria-pressed={skinPaintMode === 'subtract'}
             className={`px-1 py-0 text-xs ${skinPaintMode === 'subtract' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!isPaintEnabled}
             onClick={() => onSkinPaintModeChange('subtract')}
@@ -226,6 +233,7 @@ export default function SkinPanel({
           </button>
           <button
             data-testid="skin-paint-mode-smooth"
+            aria-pressed={skinPaintMode === 'smooth'}
             className={`px-1 py-0 text-xs ${skinPaintMode === 'smooth' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!hasSkeleton}
             onClick={() => onSkinPaintModeChange('smooth')}
@@ -234,6 +242,7 @@ export default function SkinPanel({
           </button>
           <button
             data-testid="skin-paint-mode-auto"
+            aria-pressed={skinPaintMode === 'auto'}
             className={`px-1 py-0 text-xs ${skinPaintMode === 'auto' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
             disabled={!isPaintEnabled}
             onClick={() => onSkinPaintModeChange('auto')}

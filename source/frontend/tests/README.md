@@ -10,7 +10,7 @@ browser requests them, causing startup 404s before any app assertions run.
 
 - `pwsh -File run.ps1 -Task verify`: context-bank validation/tests, fail-closed ESLint coverage, lint, app and test typechecks, production `any` guard, production build, chunk checks, frontend units, and Rust fmt/clippy/tests/check.
 - `pwsh -File run.ps1 -Task test:e2e`: Playwright through the checked `geneye-playwright.json` argv manifest with deterministic GenEye artifact review; add `-NoGenEye` for the independent browser-only lane.
-- `pwsh -NoProfile -File .\run.ps1 -Task test:journey`: runs five product journeys sequentially through `playwright.journey.config.ts`: the retained hand-wave workflow, SMF open/inspect/GLB export/re-import, project edit/save/reopen/continue, external-FBX sidecar readiness plus skinned-animation FBX roundtrip, and dirty-work preservation through canceled and failed missing-resource replacements. The hand-wave capture is written under ignored `output/playwright/hand-wave-journey/`; raw results use ignored `test-results/product-journeys/`.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:journey -NoGenEye`: runs eleven stories sequentially through `playwright.journey.config.ts`: the retained hand-wave and four core product journeys, a malformed project/recovery story, and five authoring-continuity journeys for profiles, Rig, IK/animation, Skin, and Model/materials. The hand-wave capture is written under ignored `output/playwright/hand-wave-journey/`; raw results use ignored `test-results/product-journeys/`.
 - `npm.cmd run test:journey:hand-wave`: targeted hand-wave run for focused repair work.
 - `pwsh -File run.ps1 -Task desktop-smoke`: unbundled Tauri build, Rust native tests, and the native IPC browser suite.
 - `pwsh -NoProfile -File .\run.ps1 -Task package:windows`: NSIS installer build; prints the artifact path and SHA-256.
@@ -31,6 +31,69 @@ $env:RUSTSMF_PLAYWRIGHT_EXECUTABLE = '<approved-absolute-Chrome-or-Edge-path>'
 npm.cmd run test:e2e -- --reporter=line
 ```
 
+## Supported Feature Evidence Matrix
+
+This matrix covers supported fixture behavior in Chromium and deterministic
+Tauri IPC mocks. Each reference below names executable assertions, not a manual
+checklist. The final candidate must pass every referenced owning suite and the
+separate journey gate. Real Windows dialogs and arbitrary third-party assets
+are separate acceptance lanes. Known format restrictions remain explicit.
+
+Paths in this table are relative to this directory unless prefixed `src/`
+(relative to the frontend). `journeys/` stories exercise ordinary pointer,
+keyboard, and file-selection paths without forced clicks or editor-state setters.
+
+| Supported capability | Positive evidence | Protection, history, or continuity evidence |
+| --- | --- | --- |
+| Browser Open: SMF, GLB, GLTF, FBX, DAE, OBJ | `format-dispatch.spec.ts`: six Open/default-export/re-import cases, independent geometry/bone/clip/motion checks | `lifecycle.spec.ts`: selected read failures and latest-intent success/error races |
+| Native Open/read/save boundaries | `native.spec.ts`: native open/read/export and bounded GLTF bundle | Native cancel, malformed payload, delayed picker/read, write serialization cases in that suite |
+| Drag/drop loading | `lifecycle.spec.ts`: latest async load wins between file input and drop | Stale read errors and dirty replacement cases in that suite |
+| Selected FBX/GLTF sidecars and ready textures | `journeys/format-roundtrip.journey.spec.ts`: decoded embedded PNG, named bones and animated FBX round trip | `journeys/failure-preserves-work.journey.spec.ts`: missing buffer cancel/discard retains semantic asset and continued edits |
+| OBJ/MTL, DAE resources, PNG/JPEG bounds | `export-formats.spec.ts` sidecar cases; `src/utils/modelResourceBundle.test.ts`, `src/utils/materialRepair.test.ts`, `src/utils/imagePayload.test.ts` | Missing/ambiguous/unsafe URI, signature, dimension, aggregate decoded-memory and cleanup cases in those owners |
+| Project save/open and new edits | `journeys/project-continuity.journey.spec.ts`: decoded envelope/GLB, rename/reopen/edit/undo/redo | Malformed project and dirty cancel/discard in `journeys/failure-preserves-work.journey.spec.ts` |
+| Serialized selection, clip, time, speed and rig metadata | `project-recovery.spec.ts`: restored explicit state, semantic saved motion and subsequent edits | Recovery cancel retains dirty root; discard restores project; new history remains usable |
+| Recovery generations and corrupt storage | `project-recovery.spec.ts`: IPC recovery, save and single write ownership | `journeys/failure-preserves-work.journey.spec.ts`: malformed browser recovery preserves work; `src/utils/projectCodec.test.ts` envelope bounds |
+| Foreground save and autosave ownership | `native.spec.ts`: export waits for active autosave and coalesces newest edits | Native rapid save, stale completion, replacement waits and cancel cases |
+| Modern commands, workspace chooser and one drawer | `modern-shell.spec.ts`: six visible desktop command buttons, one strip under 48 px, hidden workspace choices and tools closed on load; all choices/actions remain reachable | Keyboard trap, menu/drawer Escape and focus return, coarse-pointer targets, backing DPR 1/1.25/2 |
+| Themes and compact layouts | `visual.spec.ts`: Modern six-size matrix and Original persisted shell | Original strict snapshot; `src/theme.test.ts`, project integrity palette/scope guards |
+| Bone/clip keyboard selection | `modern-shell.spec.ts`: keyboard hierarchy expansion, selection, clip switching and visible focus | Pointer selection remains exercised by all authoring journeys |
+| Camera orbit/pan/zoom/reset, scale fitting, single/quad and 3D/ortho | `shell-model.spec.ts`: shared camera focus, scale-independent fitting and layouts; `visual.spec.ts` viewport/menu cases | `src/utils/viewportLayout.test.ts` and browser camera-state checks |
+| Bone aliases, labels and viewport picking | `journeys/hand-wave.journey.spec.ts`: hover/pick aliases and real character hierarchy | `rig.spec.ts` and `src/utils/boneAliases.test.ts` preserve source identifiers |
+| Outliner selection, multiselect and visibility | `shell-model.spec.ts`: select/hide/unhide/context actions and overlays | Global chronology in `lifecycle.spec.ts`; post-reopen visibility undo in Model/material journey |
+| Static rename/order/duplicate/delete | `journeys/model-material-continuity.journey.spec.ts`; `export-formats.spec.ts` static authoring and sibling order | Undo/redo, project/GLB continuity; SMF/source-binding disabled contracts |
+| Static transforms and material assignment | Model/material journey verifies decoded matrix TRS; `export-formats.spec.ts` surface authoring | `src/utils/modelSurfaceAuthoring.test.ts` rejects animated/skinned/SMF targets and invalid materials |
+| Flip winding, normals/tangents and append | Model/material journey and `export-formats.spec.ts` static authoring | Undo and restored geometry; `src/utils/modelSurfaceAuthoring.test.ts` bounded append/failure guards |
+| Rigged material repair and texture embedding | Model/material journey: independent image signature and source geometry/skin preservation | Semantic undo/redo and project reopen; `src/utils/materialRepair.test.ts` PBR maps, failure cleanup and source isolation |
+| Display overlays, opacity, textures and diagnostics | `shell-model.spec.ts` display controls; `visual.spec.ts` menus/quad labels | `src/utils/viewportDisplayController.test.ts`, `src/utils/materialPreview.test.ts`, `src/utils/geometryDiagnostics.test.ts`: disposable/read-only source and export isolation |
+| Static root skeleton preparation | `journeys/rig-continuity.journey.spec.ts`: hierarchy, raw root influences and compatible SMF export | `rig.spec.ts`: undo/redo, dirty replacement and unsupported static-SMF gate |
+| Rig rename/add/delete/reparent/detach/spin | Rig continuity journey covers creation, rename, deletion and restored hierarchy; `src/utils/rigEdits.test.ts` owns structural operations | `rig.spec.ts` SMF policy; rig edit tests cover cycles, weighted deletion, clip bindings and source-safe index remapping |
+| Rig metadata axis/lock/pin/save/load/clear | Rig continuity journey verifies actual standalone JSON and project state | Rename preserves metadata, created bones gain defaults, delete/undo restores it; IK journey respects root locks/pins |
+| Pose nudges, bind reset and gizmo ownership | `rig.spec.ts`: pose undo, bind reset and real TransformControls | `animation.spec.ts`: Rig pose versus Animate key ownership; `src/hooks/poseEdits.test.ts` |
+| Endpoint and constrained IK gestures | `rig.spec.ts`: single/quad Endpoint, IK settings and bounded drag | Cancel/atomic history; IK journey independently checks restored rotations and locked/pinned root |
+| Explicit IK solve-and-bake | `journeys/ik-animation-continuity.journey.spec.ts`: fresh target bake and saved authored clip | Undo/redo invalidates stale target; clip locks and bounded solver cases in `src/utils/rigIk.test.ts` and animation owners |
+| Clip create/duplicate/rename/delete/order/duration/retime/trim | `animation.spec.ts` clip tools, pose-based creation and finite trim | Transaction undo/redo and locked-bone policy; IK and hand-wave project continuity |
+| Bone/Branch/Full Rig key insert/update/delete/copy/paste/move | `animation.spec.ts` scoped keys and timeline gestures; IK journey Branch clipboard/editing | `src/utils/animationScope.test.ts`, `src/utils/animationEdits.test.ts`: scope fingerprints, locks, incompatible clipboard and finite timing |
+| Playback, scrub, speed, snap, loop/sample/interpolation metadata | `animation.spec.ts`; hand-wave preview; recovery serialized time/speed | IK journey exposes Quadratic's linear preview; `src/utils/animationTimeline.test.ts`, `src/utils/workspacePlayback.test.ts` preserve timing/workspace ownership |
+| Named-rig retarget source selection | `animation.spec.ts` named GLTF retarget; profile journey mapped moving clips | One transaction undo/redo; explicit maps and missing/ambiguous source guards in retarget unit owners |
+| Portable profile import/edit/export and session draft | `journeys/retarget-continuity.journey.spec.ts`: normalized standalone file, workspace switch and selected source | Strict invalid JSON disables application; profile paths are never opened; applied clip project/GLB continuity |
+| Advanced profile contacts/endpoints/twist/head/ranges/replacement | `retarget-profile.spec.ts`: all seven bounded profile scenarios | Invalid ownership/conflicts, missing clips, reject/report diagnostics, explicit replacement and undo |
+| Skin Pick/Paint/Erase/Smooth and brush controls | `skin.spec.ts`: direct tools/shortcuts, target/flow/falloff and pointer state; Skin journey real surface Set/Smooth | Gesture cancel and workspace cleanup; semantic paint undo/redo and raw influence comparison |
+| Skin normalize/auto-weight algorithms | Skin journey: nearest-segment disabled-option contract and configurable inverse-distance batch | `src/utils/skinWeights.test.ts` owns all six algorithms, influence caps, invalid weights and indexed regional smoothing |
+| Skin Rest/Frozen/Live, diagnostics, heatmap and precision vertices | Skin journey explicit pose/warning states; `skin.spec.ts` diagnostics; hand-wave exact mini-node repair | Workspace cleanup and raw slots; `src/utils/weightPreview.test.ts`, `src/utils/skinDiagnostics.test.ts`, sampling/unit owners |
+| Skin project/export persistence | Skin journey GLB/project tuples and independently quantized SMF weights/joints | Hand-wave saved/reopened corrected wave; export guards reject malformed skin layouts |
+| Default source-aware export | `format-dispatch.spec.ts`: SMF→SMF, FBX→FBX, DAE→DAE, GLB/GLTF/OBJ→GLB | Static OBJ's SMF action is blocked; one-shot FBX encoder failure produces semantically preserved GLB with a visible fallback reason |
+| Explicit GLB/FBX/DAE/SMF export and conversion | `export-formats.spec.ts`; strengthened SMF/FBX and authored journeys | Loader/export unit gates reject dropped moving tracks, invalid geometry and unsupported SMF structures before save |
+| Semantic round-trip assertions | `asset-evidence.spec.ts`: known indexed tuples, hierarchy and independently sampled tracks | Deliberate weight/hierarchy/motion corruption and truncated containers must fail; compare all key times plus start/mid/end |
+| Rig comparison viewer and capture receipts | `rig-comparison.spec.ts`: synchronized real poses, aliases, duration and backward seek | Missing/short/oversized clips and partial-load cleanup; receipts bind actual rendered inputs |
+
+Project envelopes persist their existing model/clip state, rig metadata and
+selection/playback fields. Undo history, camera/brush settings and profile
+drafts are not project fields. Saving does not clear authoring histories or
+dirty replacement protection. SMF weight checks model uint8 quantization and
+decoded normalization explicitly. Held FBX object channels may be omitted only
+when every source key equals the retained static transform; moving channels
+remain required. No tolerance is increased to make an unexplained loss pass.
+
 ## Browser Suite Ownership
 
 | Suite | Primary ownership |
@@ -46,10 +109,14 @@ npm.cmd run test:e2e -- --reporter=line
 | `visual.spec.ts` | Modern/Original geometry/defaults, source texture thumbnails, reference-derived shelves/top strip/keyframe lane, narrow layout, viewport/menu visual coherence |
 | `retarget-profile.spec.ts` | Collapsed saved-profile UI, strict error visibility, app-owned draft persistence, source selection, and undoable application |
 | `rig-comparison.spec.ts` | Real-GLB three-state strict clip/duration coverage, deterministic multi-frame clocking, exact nested game transforms, mapped/unmapped skeleton colors, mesh opacity, selected-joint axes/bend plane, draw receipts, and partial-load cleanup |
+| `asset-evidence.spec.ts` | Independent container/accessor decoding, known skin tuples, sampled motion, and deliberate corruption detection |
+| `format-dispatch.spec.ts` | Six browser Open/default-export/re-import paths and blocked static-SMF control |
+| `project-recovery.spec.ts` | IPC recovery cancel/discard, explicit serialized state, semantic continued save and history |
+| `modern-authoring-layout.spec.ts` | Six selected Rig/profile-error/Skin layouts, ordinary control reachability, fractional DPI and Escape/focus return |
 
 The 37 tests formerly in `smoke.spec.ts` retain their titles across the current domain-owned browser suites. Use `npm.cmd run test:e2e:list` for the authoritative count after adding or moving cases. The dedicated script prevents npm from consuming Playwright's `--list` flag and accidentally starting the full suite.
 
-All `tests/journeys/*.journey.spec.ts` files are intentionally excluded from the default browser gate. The dedicated config uses one worker and disables parallel execution. The hand-wave story records a deterministic real-SMF path through clip creation, viewport selection and hover aliases, Branch-keyed animation, precision Skin repair, and corrected playback. The four product stories cover file conversion, project continuity, external resource readiness with animated roundtrip, and failed replacement safety.
+All `tests/journeys/*.journey.spec.ts` files are intentionally excluded from the default browser gate. The dedicated config uses one worker and disables parallel execution. The hand-wave story records a deterministic real-SMF path through clip creation, viewport selection and hover aliases, Branch-keyed animation, precision Skin repair, corrected playback, and saved/reopened semantic continuity. Core stories cover file conversion, project continuity, external resource readiness, and failed replacement/recovery safety. Five authoring stories extend those checks across profile application, rig structure/metadata, IK and keyed animation, raw skin influences, and Model/material editing.
 
 The GenEye manifests execute the pinned Playwright CLI through `scripts/run-playwright-geneye.mjs` with `shell=false`. The hand-wave journey keeps Playwright's raw artifact inside `test-results/product-journeys` for deterministic ingestion, saves the review copy under repo-level ignored output, and deletes the redundant raw video after the attachment copy is secure so GenEye reviews one source video rather than duplicate bytes.
 
@@ -58,10 +125,13 @@ The hand-wave journey fails on document overflow, blocked or disabled primary co
 ## Shared Browser Helpers
 
 - `helpers/smoke-helpers.ts`: fixtures, browser diagnostics, synthetic drops, tolerant screenshot checks.
+- `helpers/modern-shell.ts`: ordinary workspace-chooser and Tools actions, disclosure readiness and focus ownership; Original still uses its visible tabs.
 - `helpers/viewport-interactions.ts`: pointer, gizmo, Endpoint, IK, Skin, layout, and pane drag actions.
 - `helpers/timeline-interactions.ts`: slider and keyframe-lane actions.
 - `helpers/smf-codec-probe.ts`: worker progress and page-heartbeat observation.
 - `helpers/format-assertions.ts`: selected-bone parsing, regex escaping, base64, and GLB JSON inspection.
+- `helpers/asset-evidence.ts`: independent binary accessors, hierarchy/binds, raw influences, image signatures, matrix/TRS, clips and every keyed pose; held/looping motion avoids endpoint aliasing.
+- `helpers/product-journey.ts`: ordinary downloads, project chooser, bone selection, playback and strict unexpected-error checks.
 - `helpers/skinned-glb-fixture.ts`: option-keyed generated indexed skinned GLB variants for texture, material, and sibling-order coverage.
 - `helpers/external-fbx-fixture.ts`: generated ASCII FBX plus referenced PNG sidecar for deterministic selected-resource resolution.
 - `helpers/smf-stress-fixture.ts`: bounded 300,000-vertex SMF worker fixture whose grid layout stresses codec volume without pathological render overdraw.

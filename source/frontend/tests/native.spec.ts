@@ -14,7 +14,7 @@ import {
   updateTauriMock,
 } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
-import { clickSecondaryCommand, showSkinAdvanced } from './helpers/modern-shell';
+import { selectWorkspace, clickSecondaryCommand, showSkinAdvanced  } from './helpers/modern-shell';
 import { cancelPaintOnMeshInViewport } from './helpers/viewport-interactions';
 
 function readSampleBytes(samplePath: string | null): number[] {
@@ -414,7 +414,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
       await getTauriMockSnapshot(page)
     ).activeWrites, { timeout: 15000 }).toBe(1);
 
-    await page.getByTestId('mode-tab-rig').click({ force: true });
+    await selectWorkspace(page, 'rig');
     const firstBone = page.getByTestId('inspector').locator('li > div').filter({ hasText: /SMF_Node_/ }).first();
     await expect(firstBone).toBeVisible();
     await firstBone.click({ force: true });
@@ -493,7 +493,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
 
-    await page.getByTestId('mode-tab-skin').click({ force: true });
+    await selectWorkspace(page, 'skin');
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
     await showSkinAdvanced(page);
     const inspector = page.getByTestId('inspector');
@@ -521,11 +521,11 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
     await expect(page.getByTestId('skin-export-block')).toHaveCount(0);
 
-    await page.getByTestId('mode-tab-export').click();
+    await selectWorkspace(page, 'export');
     await expect(page.getByTestId('status-text')).toContainText('Export canceled.');
     await expect(canvas).toHaveAttribute('data-model-root-id', rootId!);
-    await page.getByTestId('mode-tab-view').click();
-    await page.getByTestId('mode-tab-skin').click();
+    await selectWorkspace(page, 'view');
+    await selectWorkspace(page, 'skin');
     await showSkinAdvanced(page);
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
     await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
@@ -560,14 +560,14 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('status-text')).toContainText(/Loaded:/i, { timeout: 15000 });
     await pausePlaybackIfRunning(page);
 
-    await page.getByTestId('mode-tab-rig').click({ force: true });
+    await selectWorkspace(page, 'rig');
     const rigPanel = page.getByTestId('inspector');
     const firstBone = rigPanel.locator('li > div').filter({ hasText: /SMF_Node_/ }).first();
     await expect(firstBone).toBeVisible({ timeout: 8000 });
     await firstBone.click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*SMF_Node_\d+/i);
 
-    await page.getByTestId('mode-tab-animate').click({ force: true });
+    await selectWorkspace(page, 'animate');
     await expect(page.getByTestId('animation-insert-key-btn')).toBeEnabled();
     await page.getByTestId('animation-insert-key-btn').click();
     await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
@@ -579,9 +579,9 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('status-text')).toContainText('Export canceled.', { timeout: 5000 });
     await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
-    await page.getByTestId('mode-tab-export').click();
-    await page.getByTestId('mode-tab-view').click();
-    await page.getByTestId('mode-tab-animate').click();
+    await selectWorkspace(page, 'export');
+    await selectWorkspace(page, 'view');
+    await selectWorkspace(page, 'animate');
     await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
     await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', rootId!);
     await expect(page.getByTestId('status-text')).toContainText('Export canceled.');

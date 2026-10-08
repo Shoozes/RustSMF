@@ -1,3 +1,4 @@
+import { selectWorkspace, showModernPanel } from './helpers/modern-shell';
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import {
   SAMPLE_SMF,
@@ -67,6 +68,7 @@ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
       ? ['.toolbar', '.modern-appbar', '.mode-tablist']
       .map((selector) => document.querySelector<HTMLElement>(selector))
       .filter((element): element is HTMLElement => element !== null)
+      .filter(element => element.checkVisibility())
       .map((element) => ({
         className: element.className,
         clientWidth: element.clientWidth,
@@ -133,20 +135,31 @@ test.describe('RustSMF visual confirmations', () => {
       await page.goto('/');
 
       await expect(page).toHaveTitle(/RustSMF/i);
-      await expect(page.getByTestId('status-text')).toContainText('Three.js viewport ready');
+      await expect(page.getByTestId('status-text')).toContainText('Ready');
       await expect(page.getByTestId('app-shell')).toHaveAttribute('data-ui-theme', 'lumen-alloy');
       await expect(page.getByTestId('open-model-btn')).toBeVisible();
       await expect(page.getByTestId('export-btn')).toBeVisible();
       const appbar = page.locator('.modern-appbar');
       const appbarRect = await getRequiredRect(appbar);
-      const modeTabs = page.getByRole('tablist', { name: 'Editor workspace mode' });
-      const modeTabsRect = await getRequiredRect(modeTabs);
-      expect(modeTabsRect.top).toBeGreaterThanOrEqual(appbarRect.bottom - 1);
+      const workspace = page.getByTestId('modern-workspace-button');
+      const workspaceRect = await getRequiredRect(workspace);
+      expect(workspaceRect.top).toBeGreaterThanOrEqual(appbarRect.top);
+      expect(workspaceRect.bottom).toBeLessThanOrEqual(appbarRect.bottom + 1);
+      expect((await getRequiredRect(page.locator('.modern-toolbar'))).height).toBeLessThanOrEqual(48);
+      await workspace.click();
       for (const mode of MODERN_MODES) {
         await expect(page.getByTestId(`mode-tab-${mode}`)).toBeVisible();
       }
+      await expectNoHorizontalOverflow(page);
+      await page.keyboard.press('Escape');
+      await expect(workspace).toBeFocused();
+      await expect(page.getByTestId('mode-tab-rig')).toBeHidden();
       for (const commandId of ['open-model-btn', 'save-project-btn', 'editor-undo-btn', 'editor-redo-btn', 'export-btn']) {
         const command = page.getByTestId(commandId);
+        if (viewport.width <= 720 && commandId === 'editor-redo-btn') {
+          await expect(command).toBeHidden();
+          continue;
+        }
         await expect(command, commandId).toBeVisible();
         const rect = await getRequiredRect(command);
         expect(rect.left).toBeGreaterThanOrEqual(appbarRect.left - 1);
@@ -251,7 +264,7 @@ test.describe('RustSMF visual confirmations', () => {
     ))).toBe(true);
     await pausePlaybackIfRunning(page);
 
-    await page.getByTestId('mode-tab-animate').click();
+    await selectWorkspace(page, 'animate');
     await expect(page.getByTestId('timeline')).toBeVisible();
     const timeline = await getRequiredRect(page.getByTestId('timeline'));
     const timelineControls = await getRequiredRect(page.locator('.timeline-controls'));
@@ -301,6 +314,8 @@ test.describe('RustSMF visual confirmations', () => {
 
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await expect(page.getByTestId('status-text')).toContainText(/Loaded|bones|clips/i);
+    await expect(page.getByTestId('modern-support-panel')).toHaveCount(0);
+    await showModernPanel(page, 'scene');
     await expect(page.getByTestId('outliner')).toContainText(/Scene Root|Bone|Mesh/i);
     await expect(page.getByTestId('inspector')).toHaveCount(0);
     await expect(page.getByTestId('timeline')).toHaveCount(0);
@@ -308,7 +323,7 @@ test.describe('RustSMF visual confirmations', () => {
     await page.getByTestId('modern-panel-properties').click();
     await expect(page.getByTestId('inspector')).toContainText(/Bones \(\d+\)/i);
     await expect(page.getByTestId('outliner')).toHaveCount(0);
-    await page.getByTestId('mode-tab-animate').click();
+    await selectWorkspace(page, 'animate');
     await expect(page.getByTestId('timeline')).toBeVisible();
 
     await pausePlaybackIfRunning(page);
@@ -323,7 +338,7 @@ test.describe('RustSMF visual confirmations', () => {
     await page.getByTestId('model-file-input').setInputFiles(SAMPLE_SMF);
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
     await pausePlaybackIfRunning(page);
-    await page.getByTestId('mode-tab-rig').click({ force: true });
+    await selectWorkspace(page, 'rig');
 
     const childBone = page.getByTestId('inspector').locator('li li > div').filter({ hasText: /SMF_Node_\d+/ }).first();
     await expect(childBone).toBeVisible({ timeout: 8000 });

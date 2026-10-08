@@ -25,6 +25,7 @@ interface InspectorProps {
   showBonePanel?: boolean;
   showTransformControls?: boolean;
   editorMode?: EditorMode;
+  compact?: boolean;
 }
 
 const ROTATION_STEP_RADIANS = 0.2;
@@ -62,6 +63,7 @@ const Inspector: React.FC<InspectorProps> = ({
   showBonePanel = true,
   showTransformControls = true,
   editorMode = 'view',
+  compact = false,
 }) => {
   // State for collapsible bone hierarchy (starts with top-level roots expanded for usability)
   const [expandedBones, setExpandedBones] = React.useState<Set<string>>(new Set());
@@ -110,6 +112,24 @@ const Inspector: React.FC<InspectorProps> = ({
         <div
           className={`cursor-pointer px-1 rounded hover:bg-slate-700 ${isSelected ? 'bg-slate-600' : ''}`}
           onClick={() => onSelectBone && onSelectBone(bone.name)}
+          role="treeitem"
+          tabIndex={0}
+          aria-label={alias ? `${bone.name}, ${alias}` : bone.name}
+          aria-selected={isSelected}
+          aria-expanded={hasChildren ? isExpanded : undefined}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+              event.preventDefault();
+              onSelectBone?.(bone.name);
+            } else if (hasChildren && (event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
+              event.preventDefault();
+              setExpandedBones(previous => {
+                const next = new Set(previous);
+                if (event.key === 'ArrowRight') next.add(bone.uuid); else next.delete(bone.uuid);
+                return next;
+              });
+            }
+          }}
           style={{ paddingLeft: `${depth * 12}px` }}
           data-testid={`bone-tree-item-${bone.name || bone.uuid}`}
           data-rig-bone-detached={isDetached ? 'true' : 'false'}
@@ -129,7 +149,7 @@ const Inspector: React.FC<InspectorProps> = ({
           {isDetached && <span className="ml-1 text-slate-500">(detached)</span>}
         </div>
         {hasChildren && isExpanded && (
-          <ul className="pl-0 m-0">
+          <ul className="pl-0 m-0" role="group">
             {childBones.map((child) => renderBoneTree(child, depth + 1))}
           </ul>
         )}
@@ -149,10 +169,10 @@ const Inspector: React.FC<InspectorProps> = ({
       <div className="text-xs">
         <div className="mb-1 text-slate-400">Selected</div>
         <div data-testid="inspector-selected" className="font-mono text-amber-300 break-all">{selected}</div>
-        <div className="inspector-help-copy mt-3 text-[10px] text-slate-400">
+        {!compact && <div className="inspector-help-copy mt-3 text-[10px] text-slate-400">
           {workspaceHelp[0]}<br />
           {workspaceHelp[1]}
-        </div>
+        </div>}
         {showClipList && clips.length > 0 && (
           <div className="mt-3">
             <div className="panel-title">Clips</div>
@@ -164,6 +184,15 @@ const Inspector: React.FC<InspectorProps> = ({
                   currentClipName === (c.name || `clip_${idx}`) ? 'bg-slate-600' : 'hover:bg-slate-700'
                 }`}
                 onClick={() => onChangeClip(c)}
+                role="button"
+                tabIndex={0}
+                aria-pressed={currentClipName === (c.name || `clip_${idx}`)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onChangeClip(c);
+                  }
+                }}
               >
                 {c.name || `clip_${idx}`} ({(c.duration || 0).toFixed(2)}s)
               </div>
@@ -183,13 +212,13 @@ const Inspector: React.FC<InspectorProps> = ({
               </button>
             )}
             <div className="max-h-24 overflow-auto text-[10px]">
-              <ul className="pl-0 m-0 list-none">
+              <ul className="pl-0 m-0 list-none" role="tree" aria-label="Rig bones">
                 {rootBones.map((root) => renderBoneTree(root, 0))}
               </ul>
             </div>
             {usesIndexedSmfBoneNames && (
               <div data-testid="smf-indexed-bone-guidance" className="mt-1 text-[10px] leading-snug text-slate-500">
-                {boneAliases.size > 0
+                {compact ? 'Source bone IDs are preserved on export.' : boneAliases.size > 0
                   ? 'Mixamo-style aliases identify this known humanoid layout for editing. Source IDs stay unchanged for SMF export fidelity.'
                   : 'SMF stores indexed bone IDs. Hover or click the visible rig to match an ID to a body part.'}
               </div>
@@ -204,10 +233,10 @@ const Inspector: React.FC<InspectorProps> = ({
             role="group"
             aria-label="Selected bone pose controls"
           >
-            <div>
+            {!compact && <div>
               Pose for: <span className="font-mono text-amber-300">{selected}</span>
               {editorMode === 'rig' ? ' (Rig Select owns the viewport gizmo)' : ' (viewport gizmo detached)'}
-            </div>
+            </div>}
             <button data-testid="transform-x-btn" aria-label="Move selected bone positive X" title="Move +0.1 on X" className="mr-1 mt-0.5 px-1 py-0 bg-slate-700 hover:bg-slate-600" onClick={() => {
               onNudgeBone?.(selected, { x: 0.1 });
             }}> +X </button>
@@ -264,13 +293,13 @@ const Inspector: React.FC<InspectorProps> = ({
                 >S</button>
               </div>
             )}
-            <span className="ml-1 text-slate-500">
+            {!compact && <span className="ml-1 text-slate-500">
               {editorMode === 'rig'
                 ? '(rest-pose workspace; T/R/S selects the gizmo mode)'
                 : editorMode === 'animate'
                   ? '(pose the bone, scrub to a time, then Insert or Update the key)'
                   : '(rest-pose workspace; Skin owns paint input)'}
-            </span>
+            </span>}
           </div>
         )}
       </div>

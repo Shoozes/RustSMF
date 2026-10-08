@@ -1,0 +1,68 @@
+import { test, expect, downloadBytes, exportEvidence, pauseJourney, reopenProject, watchJourneyErrors } from '../helpers/product-journey';
+import { createSkinnedGlbFixtureInput, createSkinnedGltfFixtureInputWithOptions } from '../helpers/skinned-glb-fixture';
+import { selectWorkspace, showModernPanel  } from '../helpers/modern-shell';
+import { expectAssetContinuity, expectMotion } from '../helpers/asset-evidence';
+
+test('product journey saves a portable profile and continues its applied motion after project reopen', async ({ page }) => {
+  const assertErrors = watchJourneyErrors(page);
+  await page.goto('/');
+  await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+  await expect(page.getByTestId('status-text')).toContainText(/Loaded:/, { timeout: 15_000 });
+  await pauseJourney(page);
+  await showModernPanel(page, 'properties');
+  const panel = page.getByTestId('retarget-profile-controls');
+  await panel.locator('summary').click();
+  const profile = { $schema: 'rustsmf.retarget-profile.v1', targetClipNames: {}, retarget: {
+    manualMap: { FixtureRoot: 'FixtureRoot', FixtureTip: 'FixtureTip' }, clips: ['Source Motion'],
+    sampleRateHz: 60, applyUpCorrection: false, alignMappedBoneDirections: false,
+  } };
+  await page.getByTestId('retarget-profile-import').setInputFiles({ name: 'profile.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(profile)) });
+  const editor = page.getByTestId('retarget-profile-json');
+  await expect(editor).toContainText('FixtureTip');
+  await expect(panel.getByRole('alert')).toHaveCount(0);
+  const valid = await editor.inputValue();
+  await editor.fill('{"bad":true}');
+  await expect(panel.getByRole('alert')).toBeVisible();
+  await expect(page.getByTestId('retarget-profile-source')).toBeDisabled();
+  await editor.fill(valid);
+  await expect(panel.getByRole('alert')).toHaveCount(0);
+  const savedProfile = await downloadBytes(page, 'retarget-profile-export');
+  const normalized = JSON.parse(savedProfile.toString());
+  expect(normalized.$schema).toBe(profile.$schema);
+  expect(normalized.retarget.manualMap).toEqual(profile.retarget.manualMap);
+  expect(normalized).not.toHaveProperty('sourceModel');
+  await selectWorkspace(page, 'rig');
+  await selectWorkspace(page, 'animate');
+  await panel.locator('summary').click();
+  await expect(editor).toHaveValue(valid);
+  await page.getByTestId('retarget-profile-import').setInputFiles({ name: 'saved-profile.json', mimeType: 'application/json', buffer: savedProfile });
+  await page.getByTestId('retarget-profile-source').setInputFiles(await createSkinnedGltfFixtureInputWithOptions({ clipName: 'Source Motion' }));
+  await expect(page.getByTestId('status-text')).toContainText('using the saved profile', { timeout: 15_000 });
+  await panel.locator('summary').click();
+  const applied = await exportEvidence(page);
+  expect(applied.clips.map(c => c.name)).toEqual(['FixtureBend', 'Source Motion']);
+  expect(applied.clips[1].duration).toBeCloseTo(0.5, 5);
+  expectMotion(applied.clips[1]);
+  await page.getByTestId('editor-undo-btn').click();
+  expect((await exportEvidence(page)).clips.map(c => c.name)).toEqual(['FixtureBend']);
+  await page.getByTestId('editor-redo-btn').click();
+  expectAssetContinuity(await exportEvidence(page), applied);
+  const project = await downloadBytes(page, 'save-project-btn');
+  expect(JSON.parse(project.toString()).state.currentClipName).toBe('Source Motion');
+  await reopenProject(page, project);
+  await pauseJourney(page);
+  expectAssetContinuity(await exportEvidence(page), applied);
+  await showModernPanel(page, 'properties');
+  await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Source Motion');
+  await page.getByTestId('animation-clip-name-input').fill('Continued Motion');
+  await page.getByTestId('animation-rename-clip-btn').click();
+  const glb = await downloadBytes(page, 'export-glb-btn', true);
+  await page.getByTestId('model-file-input').setInputFiles({ name: 'continued.glb', mimeType: 'model/gltf-binary', buffer: glb });
+  await page.getByTestId('confirm-model-replacement').click();
+  await expect(page.getByTestId('status-text')).toContainText('Loaded: continued.glb', { timeout: 15_000 });
+  await pauseJourney(page);
+  const continued = await exportEvidence(page);
+  expect(continued.clips.map(c => c.name)).toEqual(['FixtureBend', 'Continued Motion']);
+  expectMotion(continued.clips[1]);
+  assertErrors();
+});

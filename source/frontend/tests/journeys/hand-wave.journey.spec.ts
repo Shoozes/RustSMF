@@ -10,7 +10,9 @@ import {
   setupBrowserDiagnostics,
 } from '../helpers/smoke-helpers';
 import { setRangeValue } from '../helpers/timeline-interactions';
-import { showModernPanel, showSkinAdvanced } from '../helpers/modern-shell';
+import { selectWorkspace, showModernPanel, showSkinAdvanced  } from '../helpers/modern-shell';
+import { downloadBytes, exportEvidence, reopenProject, watchJourneyErrors } from '../helpers/product-journey';
+import { expectAssetContinuity, expectMotion } from '../helpers/asset-evidence';
 import {
   clickPickableBoneInViewport,
   hoverPickableBoneInViewport,
@@ -332,7 +334,7 @@ async function orbitViewport(page: Page, selectedBoneName: string, radians: numb
     await page.getByTestId('viewport-layout-single').click();
     await expect(canvas).toHaveAttribute('data-viewport-layout', 'single');
   }
-  await page.getByTestId('mode-tab-animate').click();
+  await selectWorkspace(page, 'animate');
   await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
   const box = await canvas.boundingBox();
   if (!box) throw new Error('The viewport canvas has no screen bounds.');
@@ -345,7 +347,7 @@ async function orbitViewport(page: Page, selectedBoneName: string, radians: numb
   await page.mouse.down({ button: 'left' });
   await page.mouse.move(endX, y, { steps: 8 });
   await page.mouse.up({ button: 'left' });
-  await page.getByTestId('mode-tab-skin').click();
+  await selectWorkspace(page, 'skin');
   await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
   await expect(page.getByTestId('modern-skin-tool-paint')).toBeEnabled();
   await page.getByTestId('modern-skin-tool-paint').click();
@@ -360,7 +362,7 @@ async function orbitViewportPasses(page: Page, selectedBoneName: string, passes:
 }
 
 async function resetViewportCamera(page: Page, selectedBoneName: string): Promise<void> {
-  await page.getByTestId('mode-tab-animate').click();
+  await selectWorkspace(page, 'animate');
   await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
   // R controls the selected bone's rotate gizmo while a bone owns transform input.
   // Clear that owner first so the same shortcut reaches the camera reset path.
@@ -371,7 +373,7 @@ async function resetViewportCamera(page: Page, selectedBoneName: string): Promis
   await showModernPanel(page, 'properties');
   await expandBonePath(page);
   await selectBone(page, selectedBoneName);
-  await page.getByTestId('mode-tab-skin').click();
+  await selectWorkspace(page, 'skin');
   await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
   await page.getByTestId('modern-skin-tool-paint').click();
   await showSkinAdvanced(page);
@@ -444,6 +446,7 @@ test('headless user journey creates and previews a hand-wave animation', async (
   const page = await context.newPage();
   const video = page.video();
   setupBrowserDiagnostics(page);
+  const assertErrors = watchJourneyErrors(page);
 
   try {
     await page.goto('/');
@@ -461,9 +464,7 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await expectNoDocumentOverflow(page);
     await captureStep(page, '02-character-loaded.png');
 
-    const animateTab = page.getByTestId('mode-tab-animate');
-    await expectActionable(animateTab);
-    await animateTab.click();
+    await selectWorkspace(page, 'animate');
     await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
     await expect(page.getByTestId('animation-workflow-hint')).toContainText(/Select a bone.*Branch.*whole chain/i);
 
@@ -526,7 +527,7 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await expect(page.getByTestId('time-display')).toContainText('0.50');
     await captureStep(page, '09-wave-before-weight-paint.png');
 
-    await page.getByTestId('mode-tab-skin').click();
+    await selectWorkspace(page, 'skin');
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
     await selectSkinBoneOnCanvas(page, skinRepairBone);
     await expect(page.getByTestId('skin-workspace-panel')).toContainText('LeftForeArm');
@@ -607,7 +608,7 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await page.getByTestId('skin-paint-vertices-btn').click();
     await expect(page.getByTestId('skin-paint-vertices-btn')).toContainText('Show Vertices');
     await expect(page.getByTestId('skin-paint-vertices-btn')).toHaveAttribute('aria-pressed', 'false');
-    await page.getByTestId('mode-tab-animate').click();
+    await selectWorkspace(page, 'animate');
     await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
     await selectBone(page, 'SMF_Node_2');
     await page.getByTestId('timeline-reset-btn').click();
@@ -619,6 +620,16 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await pausePlaybackIfRunning(page);
 
     await expectNoDocumentOverflow(page);
+    const authored = await exportEvidence(page);
+    expect(authored.joints).toHaveLength(24);
+    expect(authored.clips).toHaveLength(13);
+    expectMotion(authored.clips.find(clip => clip.name === 'Hand Wave')!);
+    const project = await downloadBytes(page, 'save-project-btn');
+    await reopenProject(page, project);
+    await pausePlaybackIfRunning(page);
+    expectAssetContinuity(await exportEvidence(page), authored);
+    await captureStep(page, '13-saved-wave.png');
+    assertErrors();
     expect(getBrowserErrors(page).filter((message) => message.includes('ERROR'))).toEqual([]);
   } finally {
     await context.close().catch(() => {});

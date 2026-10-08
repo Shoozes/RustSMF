@@ -10,9 +10,29 @@ The previous Calm Modern shell cut and the v0.2 Lumen Alloy productization pass 
 
 ## Product hierarchy
 
-Modern keeps file and product commands on the first toolbar row and Model, Rig, Skin, Animate, and Export on the second. Camera, layout, and display controls stay inside the viewport. Scene and Properties share one contextual drawer; compact layouts start with it closed. Status uses a slim, single-line region.
+The 2026-10-08 simplification replaces the released two-row hierarchy with one compact command strip and one workspace chooser. File/history/export actions use named icons and tooltips. Camera, layout, and display stay in the viewport. Tools opens one Scene/Properties drawer; it starts closed at every size. Status remains a slim single line.
 
-Skin retains its bounded tool rail and contextual brush card. Pick, Paint, Erase, Smooth, brush size, strength, and history remain direct. Exact source identifiers, diagnostics, pose sampling, auto-weight algorithms, and batch operations stay behind Advanced.
+Skin exposes four icons and two brush sliders. Duplicate Paint/Erase and history buttons, the full-height rail, and the permanent shortcut/help paragraphs are removed. Common history stays in the toolbar; narrow Redo remains in More. Tools opens exact values, pose modes, auto-weighting and diagnostics. Dirty state and errors remain visible.
+
+## Frontend polish — 2026-10-08
+
+The working surface is a model viewer, with a quiet graphite command strip,
+small rectangular controls and restrained brass selection. It has no hero,
+subtitle, permanent technical shelves or decorative cards. Tests bound the
+closed desktop strip to six visible buttons and 48 px maximum height; the five
+workspace choices appear only while the chooser is open. Modern
+supporting fields/actions now use 32 px desktop targets; coarse-pointer
+controls and sliders retain the 44 px floor. Bone hierarchy and clip rows support keyboard
+selection and visible focus. Grouped inputs fit the drawer width. Modern uses
+one full-height drawer scroll instead of inheriting Original's compact panel
+cap; profile validation appears above the JSON field. Expert
+controls remain disclosed; the viewport stays the primary working surface.
+Pointer checks verify that chooser menus remain above the drawer, and that
+closing the drawer returns focus to the persistent Tools trigger.
+
+`source/frontend/tests/modern-authoring-layout.spec.ts` adds selected Rig,
+invalid-profile and Live Skin warning captures at all six sizes, including
+1440x900 DPR 1.25. Final visual review and gate results are recorded in HISTORY.
 
 ## Lumen Alloy treatment
 
@@ -20,6 +40,8 @@ Modern owns graphite surfaces, off-white text, and restrained brass active state
 
 ## Acceptance evidence
 
-The browser, five sequential journey, strict visual, desktop smoke, and Windows packaging gates passed. Screenshots were reviewed at all six listed CSS viewports, including the 1440x900 DPR 1.25 case. Only the intended Modern loaded-SMF snapshot was updated. The Original strict screenshot is unchanged at SHA-256 `e5ee611a6b1b3fced0c152eacf42d4797fa084ab4f621476075297581a111846`.
+The v0.2 release gate completed in September. The 2026-10-08 frontend candidate passed verify (510 frontend units), 124 browser checks, eleven sequential stories and three strict visuals. The new layout was reviewed at all six sizes, including the fractional-DPI lane, selected tools, validation errors and Live Skin warnings. Keyboard navigation, drawer dismissal/focus return, DPR backing sizes and 44 x 44 px touch targets passed. Only the two intended Modern snapshots changed. Original remains byte-identical at SHA-256 `e5ee611a6b1b3fced0c152eacf42d4797fa084ab4f621476075297581a111846`.
+
+The curated overview now shows the model with the tools closed. Modern's empty status is simply Ready. Browser and mocked IPC are this pass's acceptance lanes; real OS dialogs, packaging and version changes were excluded.
 
 `source/frontend/tests/modern-shell.spec.ts` owns command visibility, one-drawer behavior, coarse-pointer target size, and DPR backing dimensions. `source/frontend/tests/visual.spec.ts` owns responsive shell, viewport controls, Modern/Original geometry, and strict screenshot evidence. `docs/dev/review.md` records suite outcomes; `docs/dev/HISTORY.md` records the final evidence entry.

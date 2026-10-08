@@ -2,6 +2,66 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-08 — Frontend coverage and Modern simplification
+
+Completed locally on `main` from clean baseline
+`0eef1a961734e031a21c4f1b59ad8e9dde6fbcc9`. The final frontend/tests/routes
+manifest contains 43 changed files with source SHA-256
+`a106cdd985c2bbe8ce4358da5a57479f58244a87a053bcc9629aef53bfd7dab8`.
+It is retained at `output/frontend-polish-20261008/final-candidate-source.json`;
+the source identity was checked unchanged after the full gate. Documentation
+and the curated overview were finalized separately and reverified.
+
+- Added the supported-feature evidence matrix and five authoring journeys for
+  profiles, rig structure/metadata, IK and keyed animation, Skin influences,
+  and Model/material editing. The ten journey files now run eleven sequential
+  stories. Existing stories gained independent geometry, hierarchy, material,
+  skin, duration and sampled-motion checks, plus malformed project/recovery
+  preservation. The hand-wave capture and targeted command remain available.
+- Repaired rig metadata reconciliation through creation, rename, deletion and
+  undo/redo. FBX export now converts working-space diffuse/emissive colors to
+  sRGB without mutating materials and preserves emissive intensity. Default
+  export fallback keeps its explanation visible. Known fixture values and
+  deliberate oracle corruption exercise the assertions themselves.
+- Followed the user's request to reduce text and buttons: one compact icon
+  strip, one workspace chooser, Tools closed on load, a flat More list, and
+  four Skin tool icons plus two sliders. Removed duplicate history/paint
+  actions, permanent instructions, the empty hero and renderer/format startup
+  text. Original keeps its visual baseline. The drawer owns one scroll, visible
+  errors, keyboard selection/focus, dismissal and focus return. Touch controls
+  have a 44 x 44 px floor; desktop supporting actions have a 32 px floor.
+
+The final gate ran sequentially on Windows with PowerShell 7.6.6,
+Node 26.5.0 and Cargo 1.98.1. All commands exited 0:
+
+- `pwsh -NoProfile -File .\run.ps1 -Task verify`: context/project/process/Git
+  guards, lint, app/test typechecks, build/chunk gates, 510 frontend tests across
+  92 unit files, and the nine Rust verification checks passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:e2e -NoGenEye`: 124 passed.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:journey -NoGenEye`: 11 passed
+  sequentially, including the recorded hand-wave and continued saved editing.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:visual-strict`: 3 passed.
+
+Reviewed Modern at 1920x1080, 1440x900 (including DPR 1.25), 1280x800,
+1024x768, 800x900 and 390x844: closed tools, selected Rig, invalid profile
+feedback and Live Skin warnings. DPR 1/1.25/2 backing-size checks and the
+coarse-pointer lane passed. Accepted only the intended Modern loaded-SMF and
+export snapshots. Original remains unchanged at SHA-256
+`e5ee611a6b1b3fced0c152eacf42d4797fa084ab4f621476075297581a111846`.
+The README overview was refreshed from the test-owned model capture.
+
+Retained exact results/logs and 28 UI captures under
+`output/frontend-polish-20261008/`; the hand-wave frames/WebM remain under
+`output/playwright/hand-wave-journey/`. The owner receipt records the preview
+lifetime and teardown; port 5173 was released. Generated output remains
+ignored. The four v0.2 outcomes stay closed. After local review, the operator
+authorized Closeout and Publish for this same 50-file batch. Publication uses
+the guarded staged-only helper with an exact base/tree and literal path
+allowlist; the isolated staged candidate and results are retained under
+`output/frontend-publish-20261008/`. Browser/mocked IPC, supported bounded
+fixtures and existing fidelity limits define acceptance; real OS dialogs,
+fighter acceptance, packaging, version changes and deployment were excluded.
+
 ## 2026-10-07 — Review and scoped boundary cleanup
 
 Reviewed clean `main` at `30e531bb8d5e672e9da3128c08ea52431e631f37`,
