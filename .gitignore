@@ -20,6 +20,11 @@ git/
 github/
 
 # Tools and metadata
+/.tools/
+/.agents/
+/_gen_controller.pyw
+/_generate_structure.py
+/docs/references/old-src/GLBtoSMF/_generate_structure.py
 .secrets/
 _backup/
 _structure_with_content.txt
@@ -28,7 +33,6 @@ current_structure.txt
 tmp_struct.txt
 build_phase_prompt.txt
 _temp_payload.txt
-.tools/_focus_log.txt
 
 # Playwright
 /test-results/

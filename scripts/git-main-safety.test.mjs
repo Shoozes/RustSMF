@@ -4,16 +4,51 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
 import test from "node:test";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const privateHelpers = [
+  ".tools/git-main-common.ps1", ".tools/gitpush.ps1",
+  ".tools/gitpull.ps1", ".tools/git-staged-publish.ps1", ".tools/project.json",
+];
+const hasPrivateHelpers = privateHelpers.some(path => existsSync(resolve(repoRoot, path)));
+const missingPrivateHelpers = privateHelpers.filter(path => !existsSync(resolve(repoRoot, path)));
+const maintainerTest = (name, fn) => test(name, {
+  skip: hasPrivateHelpers ? false : "Private maintainer helpers are not distributed with public source.",
+}, t => {
+  assert.deepEqual(missingPrivateHelpers, [], "Private helper installation is incomplete.");
+  return fn(t);
+});
 
 async function readRepoFile(path) {
   return readFile(resolve(repoRoot, path), "utf8");
 }
 
-test("main synchronization scripts remain fail-closed", async () => {
+test("public source excludes private scaffolding from tracking and context routes", async () => {
+  const [ignore, bankSource] = await Promise.all([
+    readRepoFile(".gitignore"), readRepoFile("summary_bank.json"),
+  ]);
+  const privatePaths = [".tools/", ".agents/", "_gen_controller.pyw", "_generate_structure.py",
+    "docs/references/old-src/GLBtoSMF/_generate_structure.py"];
+  for (const path of privatePaths) assert.ok(ignore.split(/\r?\n/).includes(`/${path}`), `Ignore private path ${path}`);
+  const bank = JSON.parse(bankSource);
+  for (const directory of [".tools", ".agents"]) assert.ok(bank.defaults.skip_dirs.includes(directory));
+  for (const group of Object.values(bank.groups)) {
+    for (const path of group.paths ?? []) {
+      assert.ok(!privatePaths.some(privatePath => path === privatePath || path.startsWith(privatePath)),
+        `Public context route requires private path ${path}`);
+    }
+  }
+  const root = spawnSync("git", ["rev-parse", "--show-toplevel"], { cwd: repoRoot, encoding: "utf8" });
+  if (root.status === 0 && resolve(root.stdout.trim()) === repoRoot) {
+    const tracked = spawnSync("git", ["ls-files", "--", ...privatePaths], { cwd: repoRoot, encoding: "utf8" });
+    assert.equal(tracked.status, 0, tracked.stderr);
+    assert.equal(tracked.stdout, "", "Private scaffolding must remain untracked.");
+  }
+});
+
+maintainerTest("main synchronization scripts remain fail-closed", async () => {
   const [common, push, pull, staged] = await Promise.all([
     readRepoFile(".tools/git-main-common.ps1"),
     readRepoFile(".tools/gitpush.ps1"),
@@ -106,7 +141,7 @@ function fixture(t) {
   return { work, remote, git, base, tree, publish, unchangedOwner };
 }
 
-test('selected publication preserves partial staging and unrelated untracked work; retry is idempotent', t => {
+maintainerTest('selected publication preserves partial staging and unrelated untracked work; retry is idempotent', t => {
   const f = fixture(t);
   const result = f.publish();
   assert.equal(result.status, 0, result.stdout + result.stderr);
@@ -122,7 +157,7 @@ test('selected publication preserves partial staging and unrelated untracked wor
   f.unchangedOwner();
 });
 
-test('selected publication rejects a staged path outside the allowlist', t => {
+maintainerTest('selected publication rejects a staged path outside the allowlist', t => {
   const f = fixture(t);
   const result = f.publish({ paths: ['other.txt'] });
   assert.notEqual(result.status, 0);
@@ -131,7 +166,7 @@ test('selected publication rejects a staged path outside the allowlist', t => {
   f.unchangedOwner();
 });
 
-test('selected publication rejects changed staged bytes', t => {
+maintainerTest('selected publication rejects changed staged bytes', t => {
   const f = fixture(t);
   f.git(['add', 'mixed.txt']);
   const result = f.publish();
@@ -141,7 +176,7 @@ test('selected publication rejects changed staged bytes', t => {
   f.unchangedOwner();
 });
 
-test('selected publication stops before committing when the remote advances', t => {
+maintainerTest('selected publication stops before committing when the remote advances', t => {
   const f = fixture(t);
   const newHead = f.git(['-c', 'user.name=Remote', '-c', 'user.email=test@example.invalid',
     'commit-tree', `${f.base}^{tree}`, '-p', f.base, '-m', 'remote advance'], f.remote);
@@ -154,7 +189,7 @@ test('selected publication stops before committing when the remote advances', t 
   f.unchangedOwner();
 });
 
-test('failed push retains exactly one candidate commit and supports retry', t => {
+maintainerTest('failed push retains exactly one candidate commit and supports retry', t => {
   const f = fixture(t);
   f.git(['config', 'receive.denyAllUpdates', 'true'], f.remote);
   // A receive hook provides a portable, deterministic rejection on Windows Git.
@@ -177,7 +212,7 @@ test('failed push retains exactly one candidate commit and supports retry', t =>
   f.unchangedOwner();
 });
 
-test('failed commit preserves the reviewed index and owner work', t => {
+maintainerTest('failed commit preserves the reviewed index and owner work', t => {
   const f = fixture(t);
   writeFileSync(resolve(f.work, '.git/hooks/pre-commit'), '#!/bin/sh\nexit 1\n');
   const result = f.publish();
@@ -188,7 +223,7 @@ test('failed commit preserves the reviewed index and owner work', t => {
   f.unchangedOwner();
 });
 
-test('selected publication rejects unrelated outgoing commits', t => {
+maintainerTest('selected publication rejects unrelated outgoing commits', t => {
   const f = fixture(t);
   f.git(['commit', '--allow-empty', '-m', 'first candidate']);
   f.git(['commit', '--allow-empty', '-m', 'unreviewed extra commit']);
@@ -199,7 +234,7 @@ test('selected publication rejects unrelated outgoing commits', t => {
   f.unchangedOwner();
 });
 
-test("main guard accepts the current worktree before touching credentials", () => {
+maintainerTest("main guard accepts the current worktree before touching credentials", () => {
   const command = [
     "$ErrorActionPreference = 'Stop'",
     "Set-Location -LiteralPath $env:RUSTSMF_GIT_SAFETY_REPO",

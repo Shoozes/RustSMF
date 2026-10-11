@@ -1,5 +1,11 @@
 # Publishing a selected batch on main
 
+This is the maintainer workflow for optional private Git helpers. `.tools/` and
+`.agents/` are ignored local folders and are absent from public source. Setup,
+builds and application verification use the public launcher and scripts without
+these folders. Contributors can use standard Git; no maintainer credentials or
+helper installation is required.
+
 Use `.tools/gitpush.ps1` only after explicit publication authorization and review.
 The default mode retains the existing whole-worktree staging and clean-sync
 behavior. Use `-StagedOnly` when unrelated work must remain local.
@@ -38,7 +44,10 @@ remote already contains that candidate, retry verifies alignment. Any other
 outgoing commit or remote advancement requires fresh review and verification.
 Never regenerate ExpectedBase from the new HEAD merely to get past a rejection.
 
-`node --test scripts/git-main-safety.test.mjs` exercises this transaction with
-disposable local repositories and receive hooks. These tests do not load the
+`node --test scripts/git-main-safety.test.mjs` guards the public exclusions and
+context routes. When private helpers are installed, it also exercises this
+transaction with disposable local repositories and receive hooks. With all
+helpers absent, those private checks are explicitly skipped; a partial helper
+installation fails rather than hiding missing files. The tests do not load the
 production token. Owner work remains subject to a before/after preservation check
 as part of closeout; hooks that modify files require fresh inspection.

@@ -2,6 +2,14 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-11 — Public source scaffolding cleanup
+
+Removed the 19 tracked files under `.tools/`, `.agents/`, the two root Python inventory/controller scripts and the old GLBtoSMF inventory-generator copy from the public main tree, starting from clean `d57ce823f6dd8a4915e97b34d456a2260a49b101`. Local copies remain ignored, including the guarded maintainer helpers. The active independent-FBX fixture generator/validator remain public.
+
+Public context routes and developer instructions now use the existing Node tools and launcher without requiring private agent/helper files. The Git regression always checks public exclusions and route portability; all nine private transaction checks still run with local helpers installed, explicitly skip with all helpers absent, and fail for incomplete local installations. The local lane passed 10/10 tests, including partial staging, rejected candidates, remote advancement and failed-push retry. Context validation passed with 47 groups, 66.1 KiB defaults and zero warnings; project integrity and whitespace checks passed.
+
+The exact staged public snapshot, isolated `run.ps1 -Task verify` command/result, protected local-file checks and guarded main-publication alignment are retained in the compact receipt and log under ignored `output/preview-0.2.1/public-source-cleanup/`. Application code, rendered preview image, installer and sample are unchanged. This removes files from current public source; historical commits and the existing `v0.2.1-preview` source tag are preserved.
+
 ## 2026-10-11 — Public preview download and quickstart review
 
 Reviewed the signed-out GitHub repository, 0.2.1 release and sample file view from clean main `d2ee99eb62b97d64376a1c81e150db5200239e65`. The README's download was below the large product image, the sample opened a binary file page, the release repeated its title and plain filenames, and the user guide began with source-launch commands.

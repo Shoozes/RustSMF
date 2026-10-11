@@ -2,7 +2,7 @@
 
 ## Maintainer workflow and ownership
 
-Work locally on `main`, preserve existing changes, and publish only an explicitly reviewed scope through `.tools/gitpush.ps1`. AGENTS.md and `GIT_PUBLISH.md` own the full guarded synchronization contract. Public user/contributor entry points stay in the root README and CONTRIBUTING.md.
+Work locally on `main`, preserve existing changes, and publish only an explicitly reviewed scope. Maintainers use their ignored local `.tools/gitpush.ps1`; these private helpers and `.agents/` are absent from public source. AGENTS.md and `GIT_PUBLISH.md` own the maintainer synchronization contract. Public setup and checks use `run.ps1`; user/contributor entry points stay in the root README and CONTRIBUTING.md.
 
 RustSMF owns import/export, rig inspection, skin editing, retargeting, generic pose constraints, animation sampling and reproducible asset processing. `fight-game-study` owns fighter definitions, moves, candidate selection and game visual acceptance. `GaimEngine` owns scheduling, hosts, packages and target delivery. Jobs and game-specific mappings/appearance remain caller-owned; tool work reopens for a reproducible defect with a bounded noncombat fixture.
 
@@ -35,8 +35,8 @@ Use the canonical launcher for close-safe sessions. Direct `npm run dev` and `np
 - Update `review.md` after repo-wide integrity or stewardship passes; keep detailed completed changes and command ledgers in `HISTORY.md`.
 - Update `PITFALL_LEDGER.md` when a failure mode is likely to recur or took investigation to understand.
 - Update `summary_bank.json` when paths move, groups become stale, or a new feature/issue needs focused context.
-- Keep repo-local Codex skills project-specific; use the global skill when it already owns the workflow instead of maintaining a duplicate copy.
-- Run `pwsh -File run.ps1 -Task context` after editing project docs or the context bank; it checks durable-doc/TODO/portable-path/import/module contracts plus context routing. `pwsh -File run.ps1 -Task verify` includes the same validators, the main-synchronization safety regression, and application checks.
+- Keep private local agent settings and helper files ignored. Public context generation uses `node scripts/generate-context.mjs --group <group> --out -`.
+- Run `pwsh -File run.ps1 -Task context` after editing project docs or the context bank; it checks durable-doc/TODO/portable-path/import/module contracts plus context routing. `pwsh -File run.ps1 -Task verify` includes the same validators, public-source exclusions, and application checks. Private main-synchronization regressions run only when local helpers are installed.
 - The `source` workspace `npm.cmd run verify` owns the application/Rust gate, including the game-ready dependency guard; the root launcher adds repository documentation, context, process-ownership, and main-synchronization checks.
 
 Avoid copying the same completed-work narrative into multiple docs. Link to the durable owner instead. Canonical verification commands and launch instructions are centralized in APP_STATE.md "Primary commands" / "Verification" (other surfaces link or summarize to reduce duplication of lists).

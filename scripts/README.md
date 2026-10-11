@@ -14,6 +14,6 @@ Current command entry points:
 - `project-integrity.test.mjs`: regression coverage for the project-integrity guard and the workspace verification-script contract, including the game-ready dependency boundary.
 - `generate-context.mjs`: bounded context manifest generator; `--out -` writes only to stdout.
 - `context-bank.test.mjs`: validator and generator regressions.
-- `.tools/*`: agent/context/git helper scripts.
+- `git-main-safety.test.mjs`: guards public exclusions and portable context routes. Private maintainer Git checks run when local helpers are installed; public checkouts explicitly skip those private checks.
 - `source/frontend/scripts/*`: frontend lint-coverage, production-type, build-chunk, visual, GenEye Playwright entry, and dev-lifecycle helpers.
 

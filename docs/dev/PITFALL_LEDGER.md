@@ -295,7 +295,7 @@ Last reviewed: 2026-09-25 (stable PL IDs and Guard references plus v0.2 palette,
 
 **Why it happened:** The prior local push/pull controls could initialize or repoint a remote, remove ignored/tracked files, reset/clean/stash a worktree, fall back to `ours`/`theirs` conflict selection, and force-push after a failed rebase. Those actions make a review decision outside the workspace and can erase work that has not been inspected.
 
-**Where:** `.tools/git-main-common.ps1`, `.tools/gitpush.ps1`, `.tools/gitpull.ps1`, `.tools/project.json`, and `scripts/git-main-safety.test.mjs`.
+**Where:** Optional ignored local `.tools/` Git helpers and configuration; `scripts/git-main-safety.test.mjs` and `docs/dev/GIT_PUBLISH.md` own their public test/documentation entry.
 
 **How to catch it:** Parse both PowerShell entry points and run the main-safety test, including its current-worktree preflight before credential access. Before a real sync, require the configured `origin` URL, current `main`, no active Git operation or conflict, an ignored untracked token file, and a clean pull worktree. After a push, fetch and compare `HEAD` with `origin/main`.
 
@@ -303,7 +303,7 @@ Last reviewed: 2026-09-25 (stable PL IDs and Guard references plus v0.2 palette,
 
 **Relevance check:** Current. Any future GUI or automation wrapper around Git must reuse this contract rather than adding convenience fallback paths.
 
-**Next prevention step:** Keep `scripts/git-main-safety.test.mjs` in `run.ps1 -Task verify` and manually review any proposed relaxation of the main-only or conflict-stop policy.
+**Next prevention step:** Keep `scripts/git-main-safety.test.mjs` in `run.ps1 -Task verify` and manually review any proposed relaxation of the main-only or conflict-stop policy. Private helper tests run when installed locally and explicitly skip when all helpers are absent from public source; the public exclusion/context-route guard always runs.
 
 ### Q: What pitfall are we preventing?
 
