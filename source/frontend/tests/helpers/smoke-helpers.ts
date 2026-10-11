@@ -351,7 +351,7 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
 export async function updateTauriMock(
   page: Page,
   patch: Partial<Pick<TauriMockInit,
-    'cancelOpen' | 'cancelSave' | 'failOpen' | 'failRead' | 'failWrite' | 'openDelayMs' | 'readDelayMs' | 'writeDelayMs'
+    'cancelOpen' | 'cancelSave' | 'failOpen' | 'failRead' | 'failWrite' | 'openDelayMs' | 'readDelayMs' | 'writeDelayMs' | 'openPaths' | 'resourceBytes'
   >>,
 ): Promise<void> {
   await page.evaluate((statePatch) => {

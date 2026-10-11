@@ -372,13 +372,13 @@
         "source/frontend/src/utils/modelFormat.ts",
         "source/frontend/src/utils/modelFormat.test.ts",
         "source/frontend/tests/export-formats.spec.ts",
-        "source/frontend/tests/README.md",
         "docs/user/README.md"
       ],
       "notes": [
         "ColladaLoader is the browser import authority; DAE imports synthesize missing vertex normals and await sidecar image readiness before releasing temporary URLs, while the local serializer writes 1.4.1 Y_UP visual scenes, materials, geometry, controllers, inverse bind matrices, and matrix animation channels.",
         "Export validates by re-importing before save and rejects duplicate joint names or non-triangle geometry. External texture images are not embedded by the DAE writer; use GLB for texture-fidelity export.",
         "Imports keep selected sidecar image URLs alive until bounded readiness settles, then remove and report unavailable maps; user-facing import guidance lives in docs/user/README.md. ZIP archives remain containers, not model inputs; users must extract and select the DAE plus authorized sidecars.",
+        "The shared test policy and cross-feature evidence matrix are owned by tests__quality; this route keeps the DAE implementation, direct tests and format guidance.",
         "The 2026-09-20 supplied pair matched on Y_UP/0.01m units, 28 animation channels and 76 timing samples; the with-skin source passed RustSMF start/mid/end single and quad visual inspection with no observed leg/torso failure or self-clipping. This is source-inspection evidence, not game or retarget acceptance."
       ]
     },
@@ -645,7 +645,7 @@
     },
     "subsystem__tauri_bridge": {
       "description": "Tauri command adapters, native file dialogs, authorized bounded reads, staged serialized writes, recovery ownership, and native smoke coverage.",
-      "max_kb": 96,
+      "max_kb": 104,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/backend-client/lazyClient.ts",
@@ -665,7 +665,7 @@
         "Rust owns native open/save dialogs; reads require a canonical path previously selected by the native dialog, saves do not accept a frontend path, and all blocking file work is capped at 256 MiB.",
         "Native reads open the authorized canonical file once, reject non-regular paths, and reject a stream that grows beyond the same 256 MiB cap after metadata inspection.",
         "The frontend passes a Uint8Array byte view to save_file_binary rather than constructing an explicit Array.from number array; typed IPC remains bounded by the same native limit.",
-        "Native read responses are untrusted: binaryPayload.ts accepts only ArrayBuffer, Uint8Array, or arrays of integer bytes from 0 through 255 so coercion cannot wrap malformed values.",
+        "Native Open requires exactly one supported model before reading or replacing authoring state. Native read responses are untrusted: binaryPayload.ts requires one payload per selected file and accepts only ArrayBuffer, Uint8Array, or arrays of integer bytes from 0 through 255 so coercion cannot wrap malformed values.",
         "Rust owns dialog invocation through its pinned tauri-plugin-dialog dependency; the frontend has no unused dialog-plugin package.",
         "The native CSP permits local blob fetches and the WebView2 IPC hostname. Foreground saves await active autosave before opening their destination dialog. All native writes share one async serialization owner, stage and sync complete payloads before replacement, and restore the previous destination when installation fails.",
         "Project recovery discovery and reads accept only the owned target plus .bak1 and .bak2 regular files; arbitrary app-data siblings fail before filesystem access.",
@@ -773,6 +773,7 @@
         "Project state validation reuses the supported model-format registry, so every supported source format, including DAE, survives project round-trip while the embedded asset remains GLB.",
         "Native writes are serialized and use unique staged files; project save rotates bounded generations with restoration on failure, while recovery discovery/read accepts only the exact owned regular-file generations.",
         "Foreground saves remain single-flight. Autosave coalesces work to the newest trailing request while a write is active; successful model replacement invalidates queued old-model work and waits for an issued write before swapping roots, while canceled/failed pickers leave recovery work intact.",
+        "A refused recovery write surfaces a Save Project action without losing prior recovery bytes or live edits. A current successful retry clears only the autosave-owned error; unrelated errors remain visible. The browser quota regression proves manual project bytes and resumed recovery through ordinary edits.",
         "Focused project-recovery.spec.ts proves serialized state and continued save; native.spec.ts write/race coverage remains in subsystem__tauri_bridge."
       ]
     },
@@ -1084,6 +1085,7 @@
       "notes": [
         "The bundled THIRD_PARTY_LICENSES.txt contains exact deduplicated upstream notice bytes; it is intentionally not loaded into context packs. The inventory and bundle configuration own its consumers.",
       "Preview notes and HISTORY own real installed Windows UI observations, separately from browser/mocked IPC and human-attested evidence. Bind those observations to installer/executable/resource hashes, preserve recovery generations and verify removal of the owned installation/processes. Selected main publication follows workflow__git_main_sync.",
+      "For the completed local integrity candidate after the public preview, load docs__orientation for current acceptance and HISTORY for source/artifact evidence. Keep its installer identity separate from the published preview; fault-injected IPC counts and browser quota refusal remain automated evidence.",
         "The sample is project-generated. Existing third-party/unidentified fixtures retain separate provenance; no new grant is inferred for them.",
         "Generated installers, screenshots, journals and native-test backup data remain ignored and outside context routes."
       ]

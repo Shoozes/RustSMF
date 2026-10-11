@@ -4,7 +4,7 @@
 
 import { invoke } from '@tauri-apps/api/core'
 import { bytesToArrayBuffer } from '../loaders'
-import { normalizeBinaryPayload } from './binaryPayload'
+import { normalizeBinaryBundlePayload, normalizeBinaryPayload } from './binaryPayload'
 import {
   assertModelFileSize,
   assertModelInputSize,
@@ -62,6 +62,10 @@ export async function openFile(): Promise<OpenResult | null> {
       const selected = await invokeCommand<string | string[] | null>('open_file')
       if (!selected) return null
       if (Array.isArray(selected)) {
+        const modelCount = selected.filter((path) => detectModelFormat(path) !== '').length
+        if (modelCount > 1) {
+          return { error: 'Select exactly one supported model file; the remaining selected files are treated as sidecars.' }
+        }
         const modelIndex = selected.findIndex((path) => detectModelFormat(path) !== '')
         if (modelIndex < 0) {
           return { error: 'No supported model file was selected. Select one .smf, .glb, .gltf, .fbx, .dae, or .obj file with optional sidecars.' }
@@ -304,8 +308,7 @@ export async function readBinaryBundle(paths: readonly string[]): Promise<readon
   }
   if (paths.length === 0) throw new Error('Cannot read an empty model resource bundle.')
   const payload = await invokeCommand<unknown>('read_files_binary', { paths })
-  if (!Array.isArray(payload)) throw new Error('Native binary bundle payload is invalid: expected a file array.')
-  return payload.map((entry, index) => normalizeBinaryPayload(entry, paths[index] || `resource ${index + 1}`))
+  return normalizeBinaryBundlePayload(payload, paths)
 }
 
 function assertBrowserBundleMetadata(files: readonly File[]): void {

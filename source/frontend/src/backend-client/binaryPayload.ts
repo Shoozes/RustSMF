@@ -33,3 +33,14 @@ export function normalizeBinaryPayload(value: unknown, sourceName: string): Uint
   }
   return bytes;
 }
+
+export function normalizeBinaryBundlePayload(value: unknown, sourceNames: readonly string[]): readonly Uint8Array[] {
+  if (!Array.isArray(value)) {
+    throw new BinaryPayloadError('expected a file payload array.');
+  }
+  if (value.length !== sourceNames.length) {
+    const label = sourceNames.length === 1 ? 'file payload' : 'file payloads';
+    throw new BinaryPayloadError(`expected ${sourceNames.length} ${label}; received ${value.length}.`);
+  }
+  return value.map((entry, index) => normalizeBinaryPayload(entry, sourceNames[index]));
+}

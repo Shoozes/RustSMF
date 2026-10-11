@@ -2,17 +2,41 @@
 
 Last reviewed: 2026-10-11
 
-Backlog status: 0.2.1 preview readiness is complete locally. The four v0.2 outcomes and the frontend coverage pass remain complete; their acceptance records stay below.
+Backlog status: no active implementation tasks remain from the selected batch. Local Windows acceptance of the frontend integrity fixes is complete. The public preview, public-source cleanup, four v0.2 outcomes and frontend coverage pass remain closed within their stated acceptance lanes.
+
+## Local Windows candidate acceptance
+
+- What: Package the completed local frontend integrity fixes and check the installed candidate through real Windows dialogs.
+- Why: Browser and mocked IPC evidence cannot establish the behavior of the newly built installed application.
+- Where: The existing desktop/package commands, native Open/Save/project/recovery workflows, and ignored candidate evidence under `output/windows-integrity-20261011/`.
+- When: Completed locally on 2026-10-11 after source-bound frontend proof, desktop smoke, packaging, installed-app checks and owned cleanup.
+- How: Bind unchanged frontend proof to current source, build an identified installer, preserve current recovery generations, test only owned assets/destinations, then restore recovery and remove the owned installation/processes. Keep the existing public preview and tag unchanged.
+- Done when: Desktop smoke and NSIS packaging pass; the installed candidate rejects ambiguous model selections before dirty replacement, preserves continued editing, loads valid sidecars, saves/reopens/exports and recovers editable work; recovery bytes/timestamps restore exactly; owned resources release; docs/routes distinguish this local candidate from the public installer.
+- Verification: The eight changed runtime/test/launcher inputs matched the completed four frontend gates. `desktop-smoke` passed its release build, 11 Rust boundary tests and 17 IPC cases; `package:windows` passed. Ten installed Windows UI/cleanup cases and independent project/export/recovery checks passed. The identified unsigned candidate, reviewed captures and exact recovery/resource restoration are recorded in HISTORY. Guarded source publication follows `GIT_PUBLISH.md`; replacement release assets remain separately scoped.
+
+## Local integrity cleanup after the public preview
+
+- What: Surface refused recovery writes, require unambiguous native model selection and exact IPC bundle counts, preserve continued editing, and reconcile current docs with the public preview.
+- Why: The read-only review/recheck at `9885311` found silent browser autosave refusal, native multiple-model acceptance, unchecked reply counts and stale source/release/render-test claims.
+- Where: `useLoadModel.ts`, the Tauri adapter/binary payload owner, native/recovery specs, public launcher, current-state/review/test docs and focused Summary Bank routes.
+- When: Completed locally on 2026-10-11 after focused checks and all four sequential frontend gates. The separately authorized source-publication closeout is recorded in HISTORY; the public Windows preview keeps its original package identity.
+- How: Prove failures before repair, keep one payload per selected file, expose a Save Project action for refused recovery, clear only the autosave-owned error on a current retry, and use ordinary edits/history/save/retry checks with isolated browser storage and IPC faults.
+- Done when: Refused saves preserve prior recovery bytes and live edits; manual save and storage retry succeed; invalid native selections perform no reads or replacement; missing/extra replies retain editable work and retry succeeds; broader verification passes, Original stays unchanged, docs/routes agree and owned processes release.
+- Verification: Five focused payload units and 19 native/recovery checks passed; the complete local gate passed `verify` (517 units), normal browser tests (139), sequential journeys (11) and strict visuals (3). Exact source inputs, commands/results and cleanup are in `output/review-cleanup-20261011/` and HISTORY. New native-OS/package acceptance is not inferred from these mocks.
+
+The local Windows candidate outcome above closes the package/native boundary
+for these fixes. Distribution requires a separate reviewed scope; the existing
+public installer keeps its accepted source/package identity.
 
 ## 0.2.1 preview polish and sharing readiness
 
 - What: Prepare a quiet Windows preview with MIT licensing, visible-model capture guards, offline Help, a redistributable demo and clear source/contribution docs.
 - Why: Finish the sharing gaps identified after the completed frontend coverage pass.
 - Where: Modern shell/status/Help, render-evidence tests, preview demo generator, first-party license/notices, manifests/locks/bundle resources and preview documentation.
-- When: Completed locally on 2026-10-11 after the six automated gates and the actual installed Windows UI checks, recovery restoration and owned cleanup. Browser/mocked IPC and real UI observations remain separate.
+- When: Completed on 2026-10-11 after the six automated gates, actual installed Windows UI checks, recovery restoration and owned cleanup; the separately authorized preview is public at `v0.2.1-preview`, source `05a32fe`. Browser/mocked IPC and real UI observations remain separate.
 - How: Preserve the flat Modern theme and Original strict baseline, decode actual canvas pixels with HTML chrome excluded, disclose technical success details, bundle notices/sample and verify the 0.2.1 candidate locally. Preserve existing recovery generations for the attended test.
 - Done when: All six sequential gates pass on the final candidate; all six Modern sizes and DPI/input lanes are reviewed; Original remains unchanged; the actual installed app passes the attended checklist; original recovery data and task-owned resource disposition are verified; docs and routes contain accurate evidence.
-- Verification: `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, `test:visual-strict`, `desktop-smoke`, `package:windows`, plus the observed installed-app checklist in `docs/user/PREVIEW_0_2_1.md`. The separately authorized main publication uses an isolated staged candidate and `.tools/gitpush.ps1 -StagedOnly`; no public release/tag is included.
+- Verification: `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, `test:visual-strict`, `desktop-smoke`, `package:windows`, plus the observed installed-app checklist in `docs/user/PREVIEW_0_2_1.md`. Published installer/source identity, notes and checksums remain in the preview record. Public main excludes private scaffolding; optional maintainer publication uses the ignored guarded helper.
 
 ## Frontend coverage and Modern polish
 
@@ -21,7 +45,7 @@ Backlog status: 0.2.1 preview readiness is complete locally. The four v0.2 outco
 - Where: Frontend domain specs, `tests/journeys/`, independent asset-evidence helpers, Modern styles, Inspector/Rig metadata integration, and current verification docs/routes.
 - When: Completed 2026-10-08 after the final source gate and responsive review; the four completed v0.2 outcomes below remain closed.
 - How: Use ordinary browser actions and independent exported-content assertions, fix reproduced defects, and simplify Modern within flat Lumen Alloy: one compact icon strip, a workspace chooser, tools closed by default, four Skin tool icons, two sliders and short contextual text. This follows the user's 2026-10-08 request to reduce text/buttons and replaces the previous two-row composition. Preserve Original and public project/profile formats.
-- Done when: Every supported feature row has passing positive and applicable failure/history/persistence evidence; all ten journeys, verify, normal browser tests, and strict visuals pass on the final candidate; the required six sizes and DPI/input lanes are reviewed; Original baselines remain unchanged; docs/routes and owned-process cleanup are current.
+- Done when: Every supported feature row has passing positive and applicable failure/history/persistence evidence; eleven stories across ten journey files, verify, normal browser tests, and strict visuals pass on the final candidate; the required six sizes and DPI/input lanes are reviewed; Original baselines remain unchanged; docs/routes and owned-process cleanup are current.
 - Verification: Sequential `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, and `test:visual-strict`. Browser and mocked IPC are the acceptance lanes; real OS dialogs, packaging and version changes are excluded. Separately authorized publication binds and verifies the staged candidate through `.tools/gitpush.ps1 -StagedOnly`.
 
 Fighter-specific acceptance remains caller-owned. Codec, rig, and export work

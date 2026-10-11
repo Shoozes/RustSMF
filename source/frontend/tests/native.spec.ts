@@ -16,6 +16,7 @@ import {
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { selectWorkspace, clickSecondaryCommand, showSkinAdvanced  } from './helpers/modern-shell';
 import { cancelPaintOnMeshInViewport } from './helpers/viewport-interactions';
+import { renameSubmodel, watchJourneyErrors } from './helpers/product-journey';
 
 function readSampleBytes(samplePath: string | null): number[] {
   if (!samplePath) return [];
@@ -127,6 +128,81 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     expect(readCall?.args).toMatchObject({ path: SAMPLE_OBJ });
     expect(snapshot.writes).toHaveLength(0);
   });
+
+  for (const selection of [
+    { label: 'multiple model files', paths: [SAMPLE_OBJ, SAMPLE_EXTERNAL_GLTF], error: /Select exactly one supported model file/ },
+    { label: 'sidecars without a model', paths: [SAMPLE_EXTERNAL_GLTF_BUFFER, SAMPLE_EXTERNAL_GLTF_TEXTURE], error: /No supported model file was selected/ },
+  ]) {
+    test(`native open rejects ${selection.label} before reading or replacing edited work`, async ({ page }) => {
+      const assertErrors = watchJourneyErrors(page);
+      await installTauriMock(page, {
+        openPath: SAMPLE_OBJ, openPaths: selection.paths,
+        savePath: 'C:\\fixtures\\unused-selection.glb',
+        sampleBytes: readSampleBytes(SAMPLE_OBJ), resourceBytes: selection.paths.map(readSampleBytes),
+      });
+      await page.goto('/');
+      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
+      await expect(page.getByTestId('status-text')).toContainText(/Loaded:/, { timeout: 15_000 });
+      await renameSubmodel(page, 'Preserved_Before_Invalid_Open');
+      const canvas = page.getByTestId('three-canvas');
+      const root = await canvas.getAttribute('data-model-root-id');
+      expect(root).toBeTruthy();
+      await page.getByTestId('open-model-btn').click();
+      await expect(page.getByTestId('error-banner')).toContainText(selection.error);
+      await expect(page.getByTestId('replacement-dialog')).toBeHidden();
+      await expect(canvas).toHaveAttribute('data-model-root-id', root!);
+      const snapshot = await getTauriMockSnapshot(page);
+      expect(snapshot.calls.filter(call => call.cmd.startsWith('read_file'))).toHaveLength(0);
+      await renameSubmodel(page, 'Continued_After_Invalid_Open');
+      await page.getByTestId('editor-undo-btn').click();
+      await expect(page.getByTestId('outliner')).toContainText('Preserved_Before_Invalid_Open');
+      await page.getByTestId('editor-redo-btn').click();
+      await expect(page.getByTestId('outliner')).toContainText('Continued_After_Invalid_Open');
+      assertErrors();
+    });
+  }
+
+  for (const received of [0, 2]) {
+    test(`native bundle rejects ${received} payloads for one selected file and keeps editing usable`, async ({ page }) => {
+      const expectedError = new RegExp(`Native binary payload is invalid: expected 1 file payload; received ${received}`);
+      const assertErrors = watchJourneyErrors(page, [expectedError]);
+      const bytes = readSampleBytes(SAMPLE_OBJ);
+      await installTauriMock(page, {
+        openPath: SAMPLE_OBJ, openPaths: [SAMPLE_OBJ],
+        savePath: 'C:\\fixtures\\unused-cardinality.glb', sampleBytes: bytes,
+        resourceBytes: received === 0 ? [] : [bytes, [42]],
+      });
+      await page.goto('/');
+      await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
+      await expect(page.getByTestId('status-text')).toContainText(/Loaded:/, { timeout: 15_000 });
+      await renameSubmodel(page, 'Preserved_Before_Invalid_Bundle');
+      const canvas = page.getByTestId('three-canvas');
+      const root = await canvas.getAttribute('data-model-root-id');
+      expect(root).toBeTruthy();
+      await page.getByTestId('open-model-btn').click();
+      await page.getByTestId('confirm-model-replacement').click();
+      await expect(page.getByTestId('error-banner')).toContainText(expectedError);
+      await expect(page.getByTestId('status-text')).not.toContainText('docs/references/');
+      await expect(canvas).toHaveAttribute('data-model-root-id', root!);
+      const snapshot = await getTauriMockSnapshot(page);
+      expect(snapshot.calls.filter(call => call.cmd === 'read_files_binary')).toHaveLength(1);
+      await renameSubmodel(page, 'Continued_After_Invalid_Bundle');
+      await page.getByTestId('editor-undo-btn').click();
+      await expect(page.getByTestId('outliner')).toContainText('Preserved_Before_Invalid_Bundle');
+      await page.getByTestId('editor-redo-btn').click();
+      await expect(page.getByTestId('outliner')).toContainText('Continued_After_Invalid_Bundle');
+      const autosaves = (await getTauriMockSnapshot(page)).autosaves.length;
+      await expect.poll(async () => (await getTauriMockSnapshot(page)).autosaves.length).toBeGreaterThan(autosaves);
+      await expect(page.getByTestId('error-banner')).toContainText(expectedError);
+      await updateTauriMock(page, { resourceBytes: [bytes] });
+      await page.getByTestId('open-model-btn').click();
+      await page.getByTestId('confirm-model-replacement').click();
+      await expect(page.getByTestId('status-text')).toContainText(/Loaded: test\.obj/, { timeout: 15_000 });
+      await expect(canvas).not.toHaveAttribute('data-model-root-id', root!);
+      await expect(page.getByTestId('error-banner')).toBeHidden();
+      assertErrors();
+    });
+  }
 
   test('native open rejects malformed byte payloads without mounting a model', async ({ page }) => {
     const invalidPath = 'C:\\tmp\\malformed-native.glb';

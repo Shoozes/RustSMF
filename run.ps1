@@ -619,7 +619,7 @@ switch -Exact ($NormalizedTask) {
         if (-not (Invoke-FrontendNpm @("run", "test:unit"))) { exit 1 }
     }
     "test:journey" {
-        Write-Info "[JOURNEY] Running the five sequential product journeys..."
+        Write-Info "[JOURNEY] Running sequential frontend journeys..."
         $genEyeRanJourney = Invoke-GenEyePlaywright `
             -ManifestPath (Join-Path $FrontendDir "geneye-journey.json") `
             -RunName "rustsmf-product-journeys" `
@@ -703,7 +703,7 @@ Tasks:
   context       - validate project docs/imports/modules and summary-bank routing
   test:unit     - frontend unit tests only
   test:e2e      - Playwright through the checked GenEye argv manifest (use -NoGenEye for browser-only)
-  test:journey  - GenEye-reviewed hand-wave journey with retained Modern-shell WebM/screenshots
+  test:journey  - sequential frontend journeys with retained hand-wave captures (use -NoGenEye for browser-only)
   test:visual-strict - opt-in strict SMF visual snapshot checks
   test:visual-update - refresh opt-in strict SMF visual snapshots
   desktop-smoke - release build + Rust tests + native IPC browser checks

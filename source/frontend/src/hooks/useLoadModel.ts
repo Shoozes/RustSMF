@@ -1235,7 +1235,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       }
       ui.setErrorMsg(`Load error: ${msg}`);
       const separator = /[.!?]$/.test(msg) ? ' ' : '. ';
-      ui.setStatus(`Load error: ${msg}${separator}Try ${supportedModelFormatsLabel()} from docs/references/old-src/datafiles/SMF/.`);
+      ui.setStatus(`Load error: ${msg}${separator}Select one supported model with its required sidecars.`);
     } finally {
       if (isCurrentLoad()) ui.setIsLoading(false);
     }
@@ -1404,13 +1404,16 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         if (!isCurrentAutosave()) return;
         const data = await buildProjectBytes(false);
         if (!isCurrentAutosave()) return;
-        await (await getTauriClient()).autosaveProject(data);
+        const saved = await (await getTauriClient()).autosaveProject(data);
+        if (!isCurrentAutosave()) return;
+        if (!saved) throw new Error('Recovery snapshot could not be stored. Use Save Project to keep your edits.');
+        ui.setErrorMsg((message) => message.startsWith('Project autosave error:') ? '' : message);
       } catch (error: unknown) {
         if (isCurrentAutosave()) throw error;
       }
     };
     await drainPendingAutosave();
-  }, [buildProjectBytes, drainPendingAutosave, model.root]);
+  }, [buildProjectBytes, drainPendingAutosave, model.root, ui]);
 
   const startProjectLoad = useCallback(async (
     bytes: Uint8Array,

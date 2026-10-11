@@ -8,6 +8,8 @@
 
 The authored sample generator and its unit checks are `scripts/generate-preview-demo.ts` and `src/utils/previewDemo.test.ts`; fixture/provided-asset grants are documented separately in `fixtures/PROVENANCE.md`.
 
+Installed Windows evidence is separate from these browser/IPC assertions. The local integrity candidate passed desktop smoke, NSIS packaging and ten real UI/cleanup cases on 2026-10-11: invalid selections with preserved history, Open/Save cancellation, project reopen/continued editing, independently parsed GLB export/re-import, valid sidecars, recovery and Help focus return. Exact source/installer/executable/resource identities, two reviewed captures and restored recovery/owned cleanup are in `output/windows-integrity-20261011/` and HISTORY. Fault-injected reply counts and browser quota refusal retain their automated lane; the public preview keeps its original installer acceptance.
+
 The test layout mirrors runtime ownership. Keep behavior in the narrowest suite that owns the risk; do not rebuild a single catch-all smoke file.
 
 Skin paint and cancellation use shared viewport probes in `helpers/viewport-interactions.ts`. Require a confirmed mesh hover hit before pointer-down so missed probes cannot orbit the camera. Cancellation still verifies unchanged raw influences and history through the actual gesture path.
@@ -56,14 +58,14 @@ keyboard, and file-selection paths without forced clicks or editor-state setters
 | Supported capability | Positive evidence | Protection, history, or continuity evidence |
 | --- | --- | --- |
 | Browser Open: SMF, GLB, GLTF, FBX, DAE, OBJ | `format-dispatch.spec.ts`: six Open/default-export/re-import cases, independent geometry/bone/clip/motion checks | `lifecycle.spec.ts`: selected read failures and latest-intent success/error races |
-| Native Open/read/save boundaries | `native.spec.ts`: native open/read/export and bounded GLTF bundle | Native cancel, malformed payload, delayed picker/read, write serialization cases in that suite |
+| Native Open/read/save boundaries | `native.spec.ts`: native open/read/export and bounded GLTF bundle | Multiple-model/no-model rejection before reads, short/extra payload rejection, preserved edits/history/retry, native cancel, malformed bytes, delayed picker/read and write serialization |
 | Drag/drop loading | `lifecycle.spec.ts`: latest async load wins between file input and drop | Stale read errors and dirty replacement cases in that suite |
 | Selected FBX/GLTF sidecars and ready textures | `journeys/format-roundtrip.journey.spec.ts`: decoded embedded PNG, named bones and animated FBX round trip | `journeys/failure-preserves-work.journey.spec.ts`: missing buffer cancel/discard retains semantic asset and continued edits |
 | OBJ/MTL, DAE resources, PNG/JPEG bounds | `export-formats.spec.ts` sidecar cases; `src/utils/modelResourceBundle.test.ts`, `src/utils/materialRepair.test.ts`, `src/utils/imagePayload.test.ts` | Missing/ambiguous/unsafe URI, signature, dimension, aggregate decoded-memory and cleanup cases in those owners |
 | Project save/open and new edits | `journeys/project-continuity.journey.spec.ts`: decoded envelope/GLB, rename/reopen/edit/undo/redo | Malformed project and dirty cancel/discard in `journeys/failure-preserves-work.journey.spec.ts` |
 | Serialized selection, clip, time, speed and rig metadata | `project-recovery.spec.ts`: restored explicit state, semantic saved motion and subsequent edits | Recovery cancel retains dirty root; discard restores project; new history remains usable |
-| Recovery generations and corrupt storage | `project-recovery.spec.ts`: IPC recovery, save and single write ownership | `journeys/failure-preserves-work.journey.spec.ts`: malformed browser recovery preserves work; `src/utils/projectCodec.test.ts` envelope bounds |
-| Foreground save and autosave ownership | `native.spec.ts`: export waits for active autosave and coalesces newest edits | Native rapid save, stale completion, replacement waits and cancel cases |
+| Recovery generations and corrupt storage | `project-recovery.spec.ts`: IPC recovery, save and single write ownership | Browser quota refusal is visible, keeps prior recovery bytes and live edits, permits independently decoded manual save, and retries when storage returns; malformed recovery journey and `src/utils/projectCodec.test.ts` envelope bounds |
+| Foreground save and autosave ownership | `native.spec.ts`: export waits for active autosave and coalesces newest edits | Native rapid save, stale completion, replacement waits and cancel; successful autosave keeps an unrelated load error visible; recovery retry clears only its own warning |
 | Modern commands, workspace chooser and one drawer | `modern-shell.spec.ts`: six visible desktop command buttons, one strip under 48 px, hidden workspace choices and tools closed on load; all choices/actions remain reachable | Keyboard trap, menu/drawer Escape and focus return, coarse-pointer targets, backing DPR 1/1.25/2 |
 | Themes and compact layouts | `visual.spec.ts`: Modern six-size matrix and Original persisted shell | Original strict snapshot; `src/theme.test.ts`, project integrity palette/scope guards |
 | Bone/clip keyboard selection | `modern-shell.spec.ts`: keyboard hierarchy expansion, selection, clip switching and visible focus | Pointer selection remains exercised by all authoring journeys |
@@ -172,7 +174,7 @@ The native sidecar browser case applies `tauri.conf.json`'s connection policy be
 
 ## Visual Policy
 
-Default e2e uses `expectRenderedScreenshot()` byte-size assertions to prove meaningful rendering without machine-specific WebGL baselines. Strict snapshots cover the real-SMF loaded bone state, export state, and Original-theme shell and live beside `shell-model.spec.ts`, `export-formats.spec.ts`, and `visual.spec.ts`. A palette refresh may update affected Modern baselines only; the Original strict baseline must remain unchanged.
+Default e2e uses `expectRenderedScreenshot()` decoded canvas-pixel assertions, excluding overlapping HTML controls. The preview rendering lane disables grid, axes and rig helpers to prove the model itself is visible; encoded byte size is not rendering evidence. Strict snapshots cover the real-SMF loaded bone state, export state, and Original-theme shell and live beside `shell-model.spec.ts`, `export-formats.spec.ts`, and `visual.spec.ts`. A palette refresh may update affected Modern baselines only; the Original strict baseline must remain unchanged.
 
 Do not commit `playwright-report/`, `test-results/`, or repo-level `output/`; all generated captures and journey media are reproducible review artifacts. Keep the Playwright server on build + preview, keep one server owner per command, and preserve test titles when moving ownership so filters and pitfall references remain stable.
 
