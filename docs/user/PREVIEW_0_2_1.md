@@ -1,6 +1,6 @@
 # RustSMF 0.2.1 Windows preview
 
-Status: local preview acceptance is complete. All six automated gates passed on 2026-10-09. The actual installed Windows app and OS dialogs passed a locally observed UI automation run on 2026-10-11, followed by recovery restoration and removal of the owned test installation/processes. No public release download or tag has been published.
+Status: local preview acceptance is complete. All six automated gates passed on 2026-10-09. The actual installed Windows app and OS dialogs passed a locally observed UI automation run on 2026-10-11, followed by recovery restoration and removal of the owned test installation/processes. The [0.2.1 preview release](https://github.com/Shoozes/RustSMF/releases/tag/v0.2.1-preview) provides the installer, sample, notes and checksums.
 
 ## What changed
 
@@ -10,7 +10,7 @@ The preview includes the project-generated Signal Robot GLB and MIT licensing fo
 
 ## Install and try
 
-Use the reported `RustSMF_0.2.1_x64-setup.exe` and verify its SHA-256 against the final local receipt. Install per-user and launch from the installed shortcut. WebView2 is required; the configured NSIS bootstrapper can require network access. This preview is unsigned.
+Download [RustSMF_0.2.1_x64-setup.exe](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe) and verify its SHA-256 against [SHA256SUMS.txt](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/SHA256SUMS.txt). Install per-user and launch from the installed shortcut. WebView2 is required; the configured NSIS bootstrapper can require network access. This preview is unsigned.
 
 The installed application directory includes `examples/rustsmf-demo.glb` and `licenses`. Open the sample, inspect its rig, then choose Animate and preview Wave and Turn. Save Project creates an editable `.rsproj`; Export produces a model for another tool. Use More > Help while offline.
 

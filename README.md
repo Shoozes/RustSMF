@@ -6,13 +6,17 @@ RustSMF is a local editor for SMF, GLB/GLTF, FBX, DAE/Collada and OBJ models, ri
 
 ## Windows preview
 
-The **0.2.1 Windows preview** targets Windows x64. Build its NSIS installer with PowerShell 7:
+Download the **[0.2.1 Windows x64 preview installer](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe)**. The [preview release](https://github.com/Shoozes/RustSMF/releases/tag/v0.2.1-preview) includes the sample, notes and SHA-256 checksums.
+
+Install `RustSMF_0.2.1_x64-setup.exe`, then launch RustSMF from its shortcut. WebView2 is required; the installer handles the configured bootstrapper. The installer is unsigned. See [preview notes](docs/user/PREVIEW_0_2_1.md) for verified workflows and limits.
+
+To build the NSIS installer from source with PowerShell 7:
 
 ```powershell
 pwsh -NoProfile -File .\run.ps1 -Task package:windows
 ```
 
-The command reports the installer path and SHA-256. Install the resulting `RustSMF_0.2.1_x64-setup.exe`, then launch RustSMF from its shortcut. WebView2 is required; the installer handles the configured bootstrapper. The installer is unsigned. See [preview notes](docs/user/PREVIEW_0_2_1.md) for the verified workflows and limits. No public release download is published yet.
+The command reports the installer path and SHA-256.
 
 ## Try it
 
