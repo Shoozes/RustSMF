@@ -1,23 +1,20 @@
-# RustSMF User Notes
+# RustSMF User Guide
 
-RustSMF is a local Tauri + browser-runnable model tool for loading, previewing, pose-editing, and exporting SMF, GLB/GLTF, FBX, DAE/Collada, and OBJ assets.
+## Start with the Windows preview
 
-## Launch
+1. [Download the Windows x64 installer](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe), install it and launch **RustSMF** from Start.
+2. [Download Signal Robot](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb). Use **Open** (the folder icon) or drop the file into the viewport.
+3. Choose **Animate**, open **Tools**, select **Wave** or **Turn**, and press **Play** in the bottom timeline.
+4. **Save Project** keeps an editable `.rsproj`; **Export** writes the sample as GLB. **More > Help** works offline.
 
-From the repo root:
+The [preview notes](PREVIEW_0_2_1.md) cover requirements and checksums. Drag to orbit, right-drag to pan and scroll to zoom. Select required sidecars together with other models.
 
-```powershell
-.\run.bat
-pwsh -File run.ps1
-```
+<details>
+<summary>Launch from source</summary>
 
-Both commands open the numbered launcher menu. Choose `2. Run if already installed`, or run `.\run.bat 2` / `pwsh -File run.ps1 -Task run` directly. Use `pwsh -File run.ps1 -Task dev` for the browser-only Vite app.
+Follow [source setup](../../README.md#run-from-source) and the [launcher guide](../dev/README.md#source-launcher).
 
-## Launcher contract
-
-- Windows canonical path: `run.bat` / `run.ps1` provide close-safe process handling for normal workflows.
-- Direct launches (`run.ps1 -Task dev`, `npm run dev`, `npm run tauri:dev`) are supported for ad-hoc use but do not provide the same Windows orphan-prevention guarantees.
-- For new tasks, prefer launcher paths first; then switch to direct runs only if intentionally required.
+</details>
 
 ## Supported Flow
 

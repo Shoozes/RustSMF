@@ -1,34 +1,45 @@
 # RustSMF
 
-RustSMF is a local editor for SMF, GLB/GLTF, FBX, DAE/Collada and OBJ models, rigs, animation and skin weights. Files stay on your machine.
+RustSMF is a local editor for SMF, GLB/GLTF, FBX, DAE/Collada and OBJ models, rigs, animation and skin weights. Your files stay on your machine.
+
+[**Download for Windows x64**](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe) · [0.2.1 preview notes](https://github.com/Shoozes/RustSMF/releases/tag/v0.2.1-preview) · [Sample model](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb)
 
 ![RustSMF Modern with the included Signal Robot sample](docs/images/rustsmf-modern-overview.png)
 
-## Windows preview
+*Signal Robot in the Modern workspace. The sample includes Wave and Turn animations.*
 
-Download the **[0.2.1 Windows x64 preview installer](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe)**. The [preview release](https://github.com/Shoozes/RustSMF/releases/tag/v0.2.1-preview) includes the sample, notes and SHA-256 checksums.
-
-Install `RustSMF_0.2.1_x64-setup.exe`, then launch RustSMF from its shortcut. WebView2 is required; the installer handles the configured bootstrapper. The installer is unsigned. See [preview notes](docs/user/PREVIEW_0_2_1.md) for verified workflows and limits.
-
-To build the NSIS installer from source with PowerShell 7:
-
-```powershell
-pwsh -NoProfile -File .\run.ps1 -Task package:windows
-```
-
-The command reports the installer path and SHA-256.
+<a id="windows-preview"></a>
 
 ## Try it
 
-1. Open [the included Signal Robot](examples/rustsmf-demo.glb), or drop a supported model into the viewport. Select sidecars together when a model needs them.
-2. Drag to orbit, right-drag to pan, and scroll to zoom. Choose **Animate**, open **Tools**, and preview **Wave** or **Turn**.
-3. **Save Project** keeps your editable model, clips, rig metadata and supported workspace state. **Export** writes a model for another tool. More offers explicit formats and offline Help.
+1. Install the **0.2.1 Windows x64 preview** using the `.exe` above, then launch **RustSMF** from Start or its shortcut. GitHub's source-code ZIP and tar.gz downloads are for building the app yourself.
+2. Download [Signal Robot](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb). Click **Open** (the folder icon) and select the downloaded `rustsmf-demo.glb`, or drop it into the viewport.
+3. Choose **Animate** from the workspace chooser. Open **Tools**, select **Wave** or **Turn**, and press **Play** in the bottom timeline.
+4. **Save Project** keeps an editable `.rsproj`. **Export** writes a model for another tool; the sample exports as GLB. **More** offers explicit export formats and offline **Help**.
 
-The sample is project-generated and MIT licensed. It has five bones, two two-second clips and three materials, with no external texture or asset dependency.
+Drag to orbit, right-drag to pan and scroll to zoom. The sample has five bones, three materials and two two-second clips, with no external files to find. See the [user guide](docs/user/README.md) for other models and editing controls.
+
+<details>
+<summary>Windows requirements and download verification</summary>
+
+This is an **unsigned preview**, tested on Windows 11 Home x64. WebView2 is required; the installer includes its bootstrapper, which may need internet access.
+
+Use [SHA256SUMS.txt](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/SHA256SUMS.txt) to check the downloaded file. For the default Downloads folder, PowerShell can calculate the installer hash:
+
+```powershell
+Get-FileHash "$env:USERPROFILE\Downloads\RustSMF_0.2.1_x64-setup.exe" -Algorithm SHA256
+```
+
+Compare the `Hash` value with the installer entry in `SHA256SUMS.txt`. The release also includes offline preview notes and the MIT license.
+
+</details>
 
 ## Formats and practical limits
 
-Imports: **SMF, GLB/GLTF, FBX, DAE/Collada and OBJ**. Exports: **SMF, GLB, FBX and DAE**.
+| Action | Formats |
+| --- | --- |
+| Open | SMF, GLB/GLTF, FBX, DAE/Collada, OBJ |
+| Export | SMF, GLB, FBX, DAE |
 
 Supported geometry, skeletons and clips have automated round-trip coverage. GLB is the self-contained texture path. SMF cannot store scale animation; DAE export keeps external textures external. Duplicate GLB node names can change to keep animation bindings unambiguous. Unsupported structures and missing resources produce diagnostics; arbitrary third-party assets can exceed these supported contracts.
 
@@ -36,7 +47,7 @@ See the [user guide](docs/user/README.md) and [current format limits](docs/dev/A
 
 ## Run from source
 
-Use PowerShell 7, the declared Node range (`^22.13.0 || >=24`), Rust and the [Tauri Windows prerequisites](https://v2.tauri.app/start/prerequisites/):
+Clone or unpack the source, then open PowerShell 7 in the repository root. Install the declared Node range (`^22.13.0 || >=24`), Rust and the [Tauri Windows prerequisites](https://v2.tauri.app/start/prerequisites/):
 
 ```powershell
 pwsh -NoProfile -File .\run.ps1 -Task setup
@@ -44,6 +55,8 @@ pwsh -NoProfile -File .\run.ps1 -Task run
 ```
 
 `run.ps1 -Task dev` opens the browser development shell. The frontend uses React/TypeScript and Three.js; the desktop boundary uses Rust/Tauri.
+
+After setup, build the NSIS installer with `pwsh -NoProfile -File .\run.ps1 -Task package:windows`. The command reports its path and SHA-256.
 
 ## Contribute and report problems
 

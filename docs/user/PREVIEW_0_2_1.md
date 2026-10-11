@@ -1,6 +1,6 @@
 # RustSMF 0.2.1 Windows preview
 
-Status: local preview acceptance is complete. All six automated gates passed on 2026-10-09. The actual installed Windows app and OS dialogs passed a locally observed UI automation run on 2026-10-11, followed by recovery restoration and removal of the owned test installation/processes. The [0.2.1 preview release](https://github.com/Shoozes/RustSMF/releases/tag/v0.2.1-preview) provides the installer, sample, notes and checksums.
+The [0.2.1 preview release](https://github.com/Shoozes/RustSMF/releases/tag/v0.2.1-preview) is available for Windows x64. It includes the verified installer, sample, offline notes, license and checksums.
 
 ## What changed
 
@@ -10,9 +10,15 @@ The preview includes the project-generated Signal Robot GLB and MIT licensing fo
 
 ## Install and try
 
-Download [RustSMF_0.2.1_x64-setup.exe](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe) and verify its SHA-256 against [SHA256SUMS.txt](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/SHA256SUMS.txt). Install per-user and launch from the installed shortcut. WebView2 is required; the configured NSIS bootstrapper can require network access. This preview is unsigned.
+1. Download [the Windows x64 installer](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe), install it and launch **RustSMF** from Start or its shortcut. The source-code ZIP and tar.gz are for building the app yourself.
+2. Download [Signal Robot](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb), click **Open** (the folder icon), and select the downloaded `rustsmf-demo.glb`.
+3. Choose **Animate**, open **Tools**, select **Wave** or **Turn**, and press **Play** in the bottom timeline.
+4. **Save Project** creates an editable `.rsproj`; **Export** writes a model for another tool. This sample exports as GLB. Use **More > Help** while offline.
 
-The installed application directory includes `examples/rustsmf-demo.glb` and `licenses`. Open the sample, inspect its rig, then choose Animate and preview Wave and Turn. Save Project creates an editable `.rsproj`; Export produces a model for another tool. Use More > Help while offline.
+This unsigned preview was checked on Windows 11 Home x64. WebView2 is required; its installer bootstrapper may need internet access. [SHA256SUMS.txt](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/SHA256SUMS.txt) identifies the expected download hashes. The installed application also includes the sample under `examples` and third-party notices under `licenses`.
+
+<details>
+<summary>Build identity and verification record</summary>
 
 ## Verified local artifact
 
@@ -38,6 +44,8 @@ NSIS installed per-user into a test-owned directory with exit 0. The installed e
 5. **Passed:** both app/WebView process trees exit, the owned installation and registration are removed, and all three original recovery files match backup bytes, lengths and precise UTC timestamps. The newer resume copy remains recoverable separately.
 
 Compact observations, independent asset assertions and useful compositor captures are retained in ignored `output/preview-0.2.1/native-test/`; process and restoration identities are in `native-owner.json`. These observations apply to the identified Windows x64 package and bounded fixtures.
+
+</details>
 
 ## Limits
 

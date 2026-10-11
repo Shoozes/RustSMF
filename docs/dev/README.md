@@ -10,6 +10,12 @@ The 0.2.1 preview adds first-party MIT metadata, installed dependency notices an
 
 Keep developer docs concise and evidence-based. This repo has one current-state doc, one backlog, one pitfall ledger, and one context bank.
 
+### Source launcher
+
+From the repository root, `run.bat` or `pwsh -File run.ps1` opens the numbered menu. Choose `2. Run if already installed`, or use `run.bat 2` / `pwsh -File run.ps1 -Task run` directly. `-Task dev` launches browser development.
+
+Use the canonical launcher for close-safe sessions. Direct `npm run dev` and `npm run tauri:dev` launches are supported for ad-hoc use but do not provide the same orphan-prevention guarantees. Process ownership belongs to the launcher; stop only the processes owned by the current run.
+
 ## Durable Homes
 
 - `APP_STATE.md`: what the app currently does, architecture ownership, limits, and verified commands.

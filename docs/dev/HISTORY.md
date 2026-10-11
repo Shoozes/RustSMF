@@ -2,6 +2,16 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-11 — Public preview download and quickstart review
+
+Reviewed the signed-out GitHub repository, 0.2.1 release and sample file view from clean main `d2ee99eb62b97d64376a1c81e150db5200239e65`. The README's download was below the large product image, the sample opened a binary file page, the release repeated its title and plain filenames, and the user guide began with source-launch commands.
+
+Moved the download and direct sample links above the existing Modern image, added explicit Open/Animate/Tools/Play/Save/Export steps, separated installer downloads from source archives, and put requirements, checksums and build records behind disclosure. The user guide starts with the installed app; source-launch details live in developer docs. The release presentation uses the real product image, direct links and the same quickstart. The repository description and release shortcut are scoped presentation changes.
+
+Whitespace and project-integrity checks passed (289 frontend source/test files, 11 durable docs); context validation passed with 47 groups, 65.8 KiB defaults and zero warnings. An initial context-budget overflow was resolved by removing duplicated launch prose and retaining its developer owner, without raising budgets. Application code and strict visual images are unchanged. The native-tested installer remains SHA-256 `cfa9bbf7f14f80a4ec18a9561ab3c180d62b26e935b21148a2815e1c5f0188ab`; the sample remains `749527c997ac44e34a5e4d45e7860df5a9db5eb0977e4957cfb6b82a84acf9c7`. Only release notes and their checksum entry are revised; the original published notes/checksums remain in retained local release evidence. Source tag `v0.2.1-preview` stays bound to `05a32fe`.
+
+The compact review receipt and before/after screenshots under ignored `output/preview-0.2.1/new-user-review/` record the exact documentation candidate, publication results, rendered page checks, download identities and owned browser cleanup. This is a documentation/download review; it adds no installed-application acceptance claim.
+
 ## 2026-10-11 — 0.2.1 preview polish and sharing readiness
 
 Implemented from 2026-10-09 and closed out locally on main from clean base `0973968a3db7c5ac29d7830b4fce2cf8d7abc0a3`. The 35-path implementation source/config/notice manifest used for the automated and native run is bound to SHA-256 `8f730726ebfa764754126cb0b8cfbe6542c233baffb2bf3c67d0baf36698940a`, retained under `output/preview-0.2.1/`. Closeout documentation and Summary Bank notes are finalized separately; the publication receipt binds the exact staged tree and isolated verification snapshot.
