@@ -88,27 +88,26 @@ Get-FileHash source/pose-contact/src/v1.rs -Algorithm SHA256
 
 ## License and attribution
 
-This checkout has no root `LICENSE`, `COPYING`, or `NOTICE` file, and the crate
-manifest does not declare a license. Do not infer a reuse or redistribution
-grant from the source hash or attribution. On 2026-09-27, the repository
-operator/rights holder explicitly authorized project-specific redistribution of
-the exact API v1 solver and transition v1 companion listed below, including
-their source and compiled native/WebAssembly runtimes, into
-`Shoozes/fight-game-study`. This authorization covers committing and pushing
-those pinned artifacts to that receiving repository. It does not add a general
-license to this crate or authorize unrelated recipients or uses. Retain this
-source attribution with distributed copies: `Shoozes/RustSMF`,
-`source/pose-contact/src/v1.rs`, API v1, SHA-256
+RustSMF project-owned code is available under the MIT License in the repository
+root, copyright (c) 2026 Shoozes. The license applies to this crate and other
+project-owned code; it does not relicense third-party dependencies or assets.
+
+Retain this source attribution with distributed copies of the solver:
+`Shoozes/RustSMF`, `source/pose-contact/src/v1.rs`, API v1, SHA-256
 `9398bf533e50eb6a5fcaadc50a6e6b2594ab4ecfb1def4a2e96e67f275b8540c`.
 
 The authorized transition companion is `Shoozes/RustSMF`,
 `source/pose-contact/src/transition_v1.rs`, API v1, SHA-256
 `fc8555bec627aa11327a8635705d9b26938b581eeabf0a56f7b1df23dff0bdc1`.
-Compiled and vendored artifacts include `libm 0.2.16`; carry its selected
-third-party license and required notice with the receiving distribution. The
-locally available dependency license offers MIT terms (and also Apache-2.0); this
-project-specific permission does not select or change the dependency license.
 
+`libm 0.2.16` is a separate dependency licensed `MIT`; RustSMF
+redistributions must carry its complete upstream license and copyright notices.
+The root `THIRD_PARTY_NOTICES.md` records this dependency and other locked app
+dependencies. The older project-specific authorization dated 2026-09-27
+permitted delivery of these exact pinned solver artifacts to
+`Shoozes/fight-game-study`; the repository-wide MIT license now governs
+project-owned source and does not replace that historical delivery record or
+any dependency terms.
 Do not copy, port, or reimplement the solver equations. The exact generic source
 module and hash receipt are included with the RustSMF delivery. The local proof
 commands are:

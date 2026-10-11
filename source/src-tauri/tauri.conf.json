@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "RustSMF",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "identifier": "com.shoozes.rustsmf",
   "build": {
     "beforeDevCommand": "node frontend/scripts/start-vite-dev.mjs",
@@ -13,7 +13,9 @@
   "app": {
     "security": {
       "csp": "default-src 'self'; connect-src 'self' ipc: http://ipc.local http://ipc.localhost http://localhost:5173 ws://localhost:5173 blob:; img-src 'self' asset: data: blob:; media-src 'self' asset: data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; worker-src 'self' blob:; font-src 'self' data:;",
-      "capabilities": ["default"]
+      "capabilities": [
+        "default"
+      ]
     },
     "windows": [
       {
@@ -28,8 +30,18 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
-    "icon": ["icons/icon.png"],
-    "resources": {}
+    "targets": [
+      "nsis"
+    ],
+    "icon": [
+      "icons/icon.png"
+    ],
+    "resources": {
+      "../../LICENSE": "licenses/LICENSE",
+      "../../THIRD_PARTY_NOTICES.md": "licenses/THIRD_PARTY_NOTICES.md",
+      "../../THIRD_PARTY_LICENSES.txt": "licenses/THIRD_PARTY_LICENSES.txt",
+      "../../examples/rustsmf-demo.glb": "examples/rustsmf-demo.glb",
+      "../frontend/src/vendor/FBXExporter-threejs.LICENSE.txt": "licenses/FBXExporter-threejs.LICENSE.txt"
+    }
   }
 }

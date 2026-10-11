@@ -1,13 +1,14 @@
 import { test, expect } from '@playwright/test';
+import { PNG } from 'pngjs';
 import fs from 'node:fs';
-import { SAMPLE_EXTERNAL_GLTF, SAMPLE_EXTERNAL_GLTF_BUFFER, SAMPLE_EXTERNAL_GLTF_TEXTURE, SAMPLE_FBX, SAMPLE_INDEPENDENT_FBX, SAMPLE_OBJ, SAMPLE_SMF, expectRenderedScreenshot, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
+import { SAMPLE_EXTERNAL_GLTF, SAMPLE_EXTERNAL_GLTF_TEXTURE, SAMPLE_FBX, SAMPLE_INDEPENDENT_FBX, SAMPLE_OBJ, SAMPLE_SMF, expectRenderedScreenshot, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput, createSkinnedGlbFixtureInputWithOptions } from './helpers/skinned-glb-fixture';
 import { readGlbJson } from './helpers/format-assertions';
 import { openViewportDisplayMenu, setViewportLayout, dragRigMoveInOrthoPane, dragRigRotateInOrthoPane } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
 import { decodeProjectDocument } from '../src/utils/projectCodec';
 import { createExternalFbxFixtureInputs } from './helpers/external-fbx-fixture';
-import { selectWorkspace, clickSecondaryCommand, revealSecondaryCommands, showAnimateTimeline, showModernPanel  } from './helpers/modern-shell';
+import { expectLoadDetails, selectWorkspace, clickSecondaryCommand, revealSecondaryCommands, showAnimateTimeline, showModernPanel  } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -178,7 +179,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
         /Loaded FBX: independent_skinned\.fbx/i,
         { timeout: 15000 },
       );
-      await expect(page.getByTestId('status-text')).toContainText(/bones: 2|clips: 1/i);
+      await expectLoadDetails(page, /bones: 2.*clips: 1/i);
       await showAnimateTimeline(page);
       await showModernPanel(page, 'properties');
       await expect(page.getByTestId('inspector')).toContainText(/IndependentRoot|IndependentTip/i);
@@ -210,7 +211,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
         /Loaded FBX: independent-skinned-roundtrip\.fbx/i,
         { timeout: 15000 },
       );
-      await expect(page.getByTestId('status-text')).toContainText(/bones: 2|clips: 1/i);
+      await expectLoadDetails(page, /bones: 2.*clips: 1/i);
       await showAnimateTimeline(page);
       await expect(page.getByTestId('timeline')).toBeVisible();
       expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
@@ -243,7 +244,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
         buffer: bytes,
       });
       await expect(page.getByTestId('status-text')).toContainText(/Loaded FBX: generated-skinned-roundtrip\.fbx/i, { timeout: 15000 });
-      await expect(page.getByTestId('status-text')).toContainText(/bones: 2|clips: 1/i);
+      await expectLoadDetails(page, /bones: 2.*clips: 1/i);
       await showAnimateTimeline(page);
       await expect(page.getByTestId('timeline')).toBeVisible();
       expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
@@ -270,7 +271,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
 
       await input.setInputFiles({ name: 'generated-skinned-roundtrip.dae', mimeType: 'model/vnd.collada+xml', buffer: bytes });
       await expect(page.getByTestId('status-text')).toContainText(/Loaded: generated-skinned-roundtrip\.dae/i, { timeout: 15000 });
-      await expect(page.getByTestId('status-text')).toContainText(/bones: 2|clips: 1/i);
+      await expectLoadDetails(page, /bones: 2.*clips: 1/i);
       await showAnimateTimeline(page);
       await expect(page.getByTestId('timeline')).toBeVisible();
       expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
@@ -610,11 +611,27 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
 
     test('external GLTF bundle loads its buffer and texture sidecars', async ({ page }) => {
       await page.goto('/');
-
+      // The fixed nine-byte fixture is an IPC/hash input, not a renderable triangle.
+      const scene = JSON.parse(fs.readFileSync(SAMPLE_EXTERNAL_GLTF, 'utf8'));
+      const geometry = Buffer.from(new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1]).buffer);
+      scene.buffers[0].byteLength = geometry.byteLength;
+      scene.bufferViews = [
+        { buffer: 0, byteOffset: 0, byteLength: 36, target: 34962 },
+        { buffer: 0, byteOffset: 36, byteLength: 24, target: 34962 },
+      ];
+      scene.accessors = [
+        { bufferView: 0, componentType: 5126, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] },
+        { bufferView: 1, componentType: 5126, count: 3, type: 'VEC2', min: [0, 0], max: [1, 1] },
+      ];
+      scene.meshes[0].primitives[0].attributes.TEXCOORD_0 = 1;
+      const image = new PNG({ width: 2, height: 2 });
+      for (let i = 0; i < 4; i++) image.data.set([220, 175, 80, 255], i * 4);
+      const texture = PNG.sync.write(image);
+      expect(PNG.sync.read(texture).data).toEqual(image.data);
       await page.getByTestId('model-file-input').setInputFiles([
-        SAMPLE_EXTERNAL_GLTF,
-        SAMPLE_EXTERNAL_GLTF_BUFFER,
-        SAMPLE_EXTERNAL_GLTF_TEXTURE,
+        { name: 'scene.gltf', mimeType: 'model/gltf+json', buffer: Buffer.from(JSON.stringify(scene)) },
+        { name: 'mesh.bin', mimeType: 'application/octet-stream', buffer: geometry },
+        { name: 'texture.png', mimeType: 'image/png', buffer: texture },
       ]);
 
       await expect(page.getByTestId('status-text')).toContainText(/Loaded: scene\.gltf/i, { timeout: 15000 });

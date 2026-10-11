@@ -4,6 +4,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import { measureCanvasPixels } from './render-evidence';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -47,21 +48,35 @@ export interface SyntheticDropFile {
 
 export async function expectRenderedScreenshot(
   locator: Locator,
-  minBytes = 3000,
+  minPixels = 3000,
   options?: { strict?: boolean; name?: string; threshold?: number; maxDiffPixelRatio?: number },
 ): Promise<void> {
+  const canvas = await locator.evaluate(element => element.tagName === 'CANVAS')
+    ? locator : locator.locator('canvas[data-testid="three-canvas"]');
+  await expect(canvas).toBeVisible();
+  await expect.poll(async () => {
+    const bounds = await canvas.evaluate(element => {
+      const rect = element.getBoundingClientRect();
+      const selectors = '.viewport-controls-overlay, .status-overlay, .modern-support-panel, .modern-empty-state, [data-testid="loading-overlay"], .viewport-drop-hint, .quad-pane-label';
+      const excluded = Array.from(document.querySelectorAll<HTMLElement>(selectors)).map(overlay => overlay.getBoundingClientRect())
+        .filter(overlay => overlay.width > 0 && overlay.height > 0)
+        .map(overlay => ({ x: overlay.x - rect.x, y: overlay.y - rect.y, width: overlay.width, height: overlay.height }));
+      return { width: rect.width, height: rect.height, excluded };
+    });
+    const shot = await canvas.screenshot();
+    const size = measureCanvasPixels(shot);
+    const scaleX = size.width / bounds.width, scaleY = size.height / bounds.height;
+    return measureCanvasPixels(shot, bounds.excluded.map(rect => ({
+      x: rect.x * scaleX, y: rect.y * scaleY, width: rect.width * scaleX, height: rect.height * scaleY,
+    }))).contentPixels;
+  }, { message: 'Canvas must contain rendered scene pixels, excluding HTML controls', timeout: 10_000, intervals: [100, 250, 500] }).toBeGreaterThanOrEqual(minPixels);
   if (options?.strict && process.env.RUSTSMF_STRICT_VISUALS === '1') {
     // Opt-in visual regression for key states. Default e2e keeps tolerant checks for WebGL stability.
     const name = options.name || 'viewport';
     const threshold = options.threshold ?? 0.2;
     const maxDiffPixelRatio = options.maxDiffPixelRatio ?? 0.03;
     await expect(locator).toHaveScreenshot(`${name}.png`, { threshold, maxDiffPixelRatio });
-    return;
   }
-  // Default: tolerant byte-size smoke. Avoids brittle per-machine WebGL differences.
-  // Still proves the viewport actually rendered something substantial (model + grid + axes etc.).
-  const shot = await locator.screenshot();
-  expect(shot.length).toBeGreaterThan(minBytes);
 }
 
 export async function withBrowserFileArrayBufferDelay(

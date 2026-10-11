@@ -10,7 +10,7 @@ import {
   setupBrowserDiagnostics,
 } from '../helpers/smoke-helpers';
 import { setRangeValue } from '../helpers/timeline-interactions';
-import { selectWorkspace, showModernPanel, showSkinAdvanced  } from '../helpers/modern-shell';
+import { expectLoadDetails, selectWorkspace, showModernPanel, showSkinAdvanced  } from '../helpers/modern-shell';
 import { downloadBytes, exportEvidence, reopenProject, watchJourneyErrors } from '../helpers/product-journey';
 import { expectAssetContinuity, expectMotion } from '../helpers/asset-evidence';
 import {
@@ -457,7 +457,7 @@ test('headless user journey creates and previews a hand-wave animation', async (
     const modelInput = page.getByTestId('model-file-input');
     await modelInput.setInputFiles(SAMPLE_SMF);
     await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15_000 });
-    await expect(page.getByTestId('status-text')).toContainText(/bones:\s*24|clips:\s*12/i);
+    await expectLoadDetails(page, /bones:\s*24.*clips:\s*12/i);
     await pausePlaybackIfRunning(page);
     await showModernPanel(page, 'properties');
     await expect(page.getByTestId('smf-indexed-bone-guidance')).toBeVisible();

@@ -1,46 +1,50 @@
 # RustSMF
 
-RustSMF is a Tauri + React + Three.js editor for inspecting and authoring model geometry, rigs, animation, and skin weights. It reads SMF, GLB/GLTF, FBX, DAE/Collada, and OBJ and exports SMF, GLB, FBX, and DAE with format-aware diagnostics.
+RustSMF is a local editor for SMF, GLB/GLTF, FBX, DAE/Collada and OBJ models, rigs, animation and skin weights. Files stay on your machine.
 
-![RustSMF Modern overview](docs/images/rustsmf-modern-overview.png)
+![RustSMF Modern with the included Signal Robot sample](docs/images/rustsmf-modern-overview.png)
 
-## Supported formats and fidelity
+## Windows preview
 
-SMF is the native format. GLB/GLTF, FBX, DAE/Collada, and OBJ provide source-aware inspection, editing, and export paths. Compatible skinned GLB/FBX models can convert to SMF; unsupported structures fail closed with diagnostics before export.
+The **0.2.1 Windows preview** targets Windows x64. Build its NSIS installer with PowerShell 7:
 
-Round trips preserve supported geometry, skeletons, and clips. Fidelity depends on the format: DAE external textures are resolved from selected sidecars but are not embedded on export; SMF does not store scale animation; ambiguous duplicate GLB node names may be made unique for Three.js bindings. ZIP containers and unsupported format features are not accepted as complete model inputs. See the [user guide](docs/user/README.md) for per-format behavior and the [current limits](docs/dev/APP_STATE.md#current-limits) for details.
+```powershell
+pwsh -NoProfile -File .\run.ps1 -Task package:windows
+```
 
-## Launch
+The command reports the installer path and SHA-256. Install the resulting `RustSMF_0.2.1_x64-setup.exe`, then launch RustSMF from its shortcut. WebView2 is required; the installer handles the configured bootstrapper. The installer is unsigned. See [preview notes](docs/user/PREVIEW_0_2_1.md) for the verified workflows and limits. No public release download is published yet.
 
-From the repository root on Windows, use PowerShell 7:
+## Try it
+
+1. Open [the included Signal Robot](examples/rustsmf-demo.glb), or drop a supported model into the viewport. Select sidecars together when a model needs them.
+2. Drag to orbit, right-drag to pan, and scroll to zoom. Choose **Animate**, open **Tools**, and preview **Wave** or **Turn**.
+3. **Save Project** keeps your editable model, clips, rig metadata and supported workspace state. **Export** writes a model for another tool. More offers explicit formats and offline Help.
+
+The sample is project-generated and MIT licensed. It has five bones, two two-second clips and three materials, with no external texture or asset dependency.
+
+## Formats and practical limits
+
+Imports: **SMF, GLB/GLTF, FBX, DAE/Collada and OBJ**. Exports: **SMF, GLB, FBX and DAE**.
+
+Supported geometry, skeletons and clips have automated round-trip coverage. GLB is the self-contained texture path. SMF cannot store scale animation; DAE export keeps external textures external. Duplicate GLB node names can change to keep animation bindings unambiguous. Unsupported structures and missing resources produce diagnostics; arbitrary third-party assets can exceed these supported contracts.
+
+See the [user guide](docs/user/README.md) and [current format limits](docs/dev/APP_STATE.md#current-limits).
+
+## Run from source
+
+Use PowerShell 7, the declared Node range (`^22.13.0 || >=24`), Rust and the [Tauri Windows prerequisites](https://v2.tauri.app/start/prerequisites/):
 
 ```powershell
 pwsh -NoProfile -File .\run.ps1 -Task setup
 pwsh -NoProfile -File .\run.ps1 -Task run
 ```
 
-For the browser development shell, run `pwsh -NoProfile -File .\run.ps1 -Task dev`. To build the Windows NSIS installer, run `pwsh -NoProfile -File .\run.ps1 -Task package:windows`; the command reports the installer path and SHA-256.
+`run.ps1 -Task dev` opens the browser development shell. The frontend uses React/TypeScript and Three.js; the desktop boundary uses Rust/Tauri.
 
-The frontend uses TypeScript/React and the desktop boundary uses Rust/Tauri. Use Node.js 22.13 or later within the 22.x line, or Node.js 24 and newer, as required by the pinned build tools. Verification and test commands are listed in [App state](docs/dev/APP_STATE.md#verification).
+## Contribute and report problems
 
-## Product ownership
+[Contributing](CONTRIBUTING.md) covers setup, local checks and a useful bug report. [Frontend evidence](source/frontend/tests/README.md#supported-feature-evidence-matrix) maps supported workflows to executable checks. Maintainer state, work records and verification history live in [developer docs](docs/dev/README.md).
 
-| Responsibility | Owner |
-| --- | --- |
-| Fighter definitions, moves, contact expectations, candidate selection, and game visual acceptance | fight-game-study |
-| Import/export, rig inspection, skin editing, retargeting, generic pose constraints, animation sampling, and reproducible asset processing | this repository |
-| Scheduling, hosts, packages, scene/prefab execution, and target delivery | GaimEngine |
+## License
 
-Jobs are caller-owned. Fighter-specific mappings, clip choices, endpoints, and gameplay appearance are accepted by the receiving project. RustSMF reopens work only for reproducible tool defects with bounded noncombat fixtures.
-
-## Project references
-
-- [User guide](docs/user/README.md): workflows and format choices.
-- [App state](docs/dev/APP_STATE.md): current behavior, architecture, limits, and verification commands.
-- [TODO](docs/dev/TODO.md): the frontend coverage/polish pass and four completed v0.2 outcomes.
-- [Frontend coverage](source/frontend/tests/README.md#supported-feature-evidence-matrix): supported workflows and their executable evidence.
-- [Latest review](docs/dev/review.md): current findings and verification evidence.
-- [History](docs/dev/HISTORY.md): completed work and dated command records.
-- [Context bank](summary_bank.json): focused feature, subsystem, issue, and workflow routes.
-
-Work locally on `main`, preserve owner changes, and push only when explicitly requested through `.tools/gitpush.ps1`. See [AGENTS.md](AGENTS.md) for the full local contract.
+Project-owned code and the Signal Robot sample are [MIT licensed](LICENSE), copyright 2026 Shoozes. Third-party code, fixtures and reference assets retain their own terms. [Third-party notices](THIRD_PARTY_NOTICES.md) and [fixture provenance](source/frontend/tests/fixtures/PROVENANCE.md) describe that boundary; unidentified assets receive no new reuse grant.

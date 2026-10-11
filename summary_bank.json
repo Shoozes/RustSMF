@@ -22,7 +22,7 @@
   "groups": {
     "docs__orientation": {
       "description": "Lean current-state orientation. Use a focused feature or subsystem group before reading broader source.",
-      "max_kb": 64,
+      "max_kb": 72,
       "paths": [
         "docs/dev/APP_STATE.md",
         "docs/dev/TODO.md"
@@ -30,7 +30,7 @@
       "notes": [
         "TODO owns executable work and completion conditions.",
         "APP_STATE owns shipped behavior; review.md is opened only for integrity-pass evidence.",
-        "The 64 KiB orientation cap leaves measured headroom for current-state docs and remains far below the 256 KiB generation ceiling; dated measurements live in HISTORY.md.",
+        "The 72 KiB orientation cap leaves measured headroom for current-state docs and remains far below the 256 KiB generation ceiling; dated measurements live in HISTORY.md.",
         "README launch/format entry remains in issue__verification_current_head and is read directly during task intake; orientation retains current state and the work queue."
       ]
     },
@@ -58,8 +58,9 @@
     },
     "workflow__project_integrity": {
       "description": "Project-doc and release integrity contracts: TODO and Pitfall Ledger shape, exact Guard targets, palette scope, synchronized app versions, imports, and Rust module declarations.",
-      "max_kb": 88,
+      "max_kb": 104,
       "paths": [
+        ".gitattributes",
         "scripts/project-integrity-lib.mjs",
         "scripts/verify-project-integrity.mjs",
         "scripts/project-integrity.test.mjs",
@@ -72,7 +73,8 @@
         "source/src-tauri/Cargo.toml",
         "source/src-tauri/tauri.conf.json",
         "docs/dev/TODO.md",
-        "docs/research-inbox/README.md"
+        "docs/research-inbox/README.md",
+        "LICENSE"
       ],
       "notes": [
         "The guard is local and read-only: it reports missing durable docs, malformed or silently empty backlogs, machine-local paths in current-facing docs, unreviewed inbox notes, unresolved relative frontend imports, and unresolved Rust mod declarations before the application verification lane runs.",
@@ -81,7 +83,8 @@
         "The workspace verify script must retain the same game-ready dependency guard used by run.ps1; the project-integrity regression catches drift between the public npm and launcher entry points.",
         "Palette input contracts are theme-owned in feature__theme_system; stable ledger records are routed in workflow__pitfall_guard_validation.",
         "Relative-import candidates must be files; a bare directory without an index module fails even when the directory itself exists.",
-        "Active TODO fields must contain completion criteria and cannot coexist with the empty-backlog marker."
+        "Active TODO fields must contain completion criteria and cannot coexist with the empty-backlog marker.",
+        "The 0.2.1 preview gate validates first-party MIT metadata, matching lock versions and exact installed notice/sample resource mappings. The measured owner/tests expansion uses a 104 KiB focused cap."
       ]
     },
     "workflow__pitfall_guard_validation": {
@@ -118,7 +121,7 @@
     },
     "feature__theme_system": {
       "description": "Persisted themes, Modern model viewer with a workspace chooser and disclosed tools, Original SMF presentation, responsive behavior and visual evidence.",
-      "max_kb": 208,
+      "max_kb": 224,
       "paths": [
         "source/frontend/src/theme.ts",
         "source/frontend/src/theme.test.ts",
@@ -137,7 +140,11 @@
         "source/frontend/tests/modern-shell.spec.ts",
         "design-qa.md",
         "docs/references/theme-qa/README.md",
-        "source/frontend/tests/modern-authoring-layout.spec.ts"
+        "source/frontend/tests/modern-authoring-layout.spec.ts",
+        "source/frontend/src/components/HelpDialog.tsx",
+        "source/frontend/src/utils/modernStatus.ts",
+        "source/frontend/src/utils/modernStatus.test.ts",
+        "source/frontend/tests/preview-readiness.spec.ts"
       ],
       "notes": [
         "Original preserves the old editor's simplicity and compact hierarchy, including quad view before model load.",
@@ -702,7 +709,10 @@
         "source/frontend/tests/helpers/product-journey.ts",
         "source/frontend/tests/asset-evidence.spec.ts",
         "source/frontend/tests/format-dispatch.spec.ts",
-        "source/frontend/tests/project-recovery.spec.ts"
+        "source/frontend/tests/project-recovery.spec.ts",
+        "source/frontend/tests/helpers/render-evidence.ts",
+        "source/frontend/tests/render-evidence.spec.ts",
+        "source/frontend/tests/preview-readiness.spec.ts"
       ]
     },
     "tests__browser_shell_lifecycle": {
@@ -1056,6 +1066,32 @@
       "notes": [
         "Profile drafts persist in the app session and standalone files; project assertions cover existing applied model/clip and rig metadata fields without adding schema state.",
         "Rig mutation history reconciles created/renamed/deleted metadata entries. Skin SMF comparisons model uint8 quantization explicitly."
+      ]
+    },
+    "workflow__preview_release": {
+      "description": "0.2.1 Windows preview, first-party licensing and installed notice/sample contracts, generated demo and trustworthy model/Help captures.",
+      "max_kb": 64,
+      "paths": [
+        ".gitattributes",
+        "README.md",
+        "CONTRIBUTING.md",
+        "LICENSE",
+        "THIRD_PARTY_NOTICES.md",
+        "docs/user/PREVIEW_0_2_1.md",
+        "examples/README.md",
+        "source/frontend/tests/fixtures/PROVENANCE.md",
+        "source/frontend/scripts/generate-preview-demo.ts",
+        "source/frontend/src/utils/previewDemo.ts",
+        "source/frontend/src/utils/previewDemo.test.ts",
+        "source/frontend/tests/preview-readiness.spec.ts",
+        "source/frontend/tests/helpers/render-evidence.ts",
+        "source/frontend/tests/render-evidence.spec.ts"
+      ],
+      "notes": [
+        "The bundled THIRD_PARTY_LICENSES.txt contains exact deduplicated upstream notice bytes; it is intentionally not loaded into context packs. The inventory and bundle configuration own its consumers.",
+      "Preview notes and HISTORY own real installed Windows UI observations, separately from browser/mocked IPC and human-attested evidence. Bind those observations to installer/executable/resource hashes, preserve recovery generations and verify removal of the owned installation/processes. Selected main publication follows workflow__git_main_sync.",
+        "The sample is project-generated. Existing third-party/unidentified fixtures retain separate provenance; no new grant is inferred for them.",
+        "Generated installers, screenshots, journals and native-test backup data remain ignored and outside context routes."
       ]
     }
   },

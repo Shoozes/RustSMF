@@ -42,6 +42,7 @@ interface ToolbarProps extends Omit<ViewportControlsProps, 'variant'> {
   themeId: AppThemeId;
   setThemeId: (themeId: AppThemeId) => void;
   onOpenTools: (trigger: HTMLButtonElement) => void;
+  onOpenHelp: (trigger: HTMLElement) => void;
   toolsOpen: boolean;
 }
 
@@ -240,6 +241,12 @@ const ModernToolbar: React.FC<ToolbarProps> = (props) => {
             <button className="toolbar-action modern-mobile-redo" data-testid="modern-menu-redo" onClick={onRedo} disabled={isLoading || !redoAvailable} type="button">Redo</button>
             <SecondaryCommands {...props} />
             <ThemeSwitcher theme={theme} themeId={themeId} setThemeId={setThemeId} />
+            <button type="button" className="toolbar-action" data-testid="help-open" onClick={event => {
+              const menu = event.currentTarget.closest('details');
+              const trigger = menu?.querySelector('summary') ?? event.currentTarget;
+              if (menu) menu.open = false;
+              props.onOpenHelp(trigger);
+            }}>Help</button>
           </div>
         </details>
       </div>

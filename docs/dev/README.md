@@ -1,5 +1,13 @@
 # Developer Docs
 
+## Maintainer workflow and ownership
+
+Work locally on `main`, preserve existing changes, and publish only an explicitly reviewed scope through `.tools/gitpush.ps1`. AGENTS.md and `GIT_PUBLISH.md` own the full guarded synchronization contract. Public user/contributor entry points stay in the root README and CONTRIBUTING.md.
+
+RustSMF owns import/export, rig inspection, skin editing, retargeting, generic pose constraints, animation sampling and reproducible asset processing. `fight-game-study` owns fighter definitions, moves, candidate selection and game visual acceptance. `GaimEngine` owns scheduling, hosts, packages and target delivery. Jobs and game-specific mappings/appearance remain caller-owned; tool work reopens for a reproducible defect with a bounded noncombat fixture.
+
+The 0.2.1 preview adds first-party MIT metadata, installed dependency notices and a project-generated sample. `docs/user/PREVIEW_0_2_1.md` owns the observed installed-app acceptance and limits; current source state and dated proof remain in APP_STATE and HISTORY. Real Windows UI checks are separate from browser and mocked IPC evidence.
+
 Keep developer docs concise and evidence-based. This repo has one current-state doc, one backlog, one pitfall ledger, and one context bank.
 
 ## Durable Homes

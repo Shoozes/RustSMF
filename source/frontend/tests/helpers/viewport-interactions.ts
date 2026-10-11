@@ -235,6 +235,17 @@ export const paintInViewport = async (
   return true;
 };
 
+const SKIN_PAINT_TARGETS: RelativePoint[] = [
+  { x: 50, y: 50 }, { x: 55, y: 55 }, { x: 60, y: 60 },
+  { x: 45, y: 55 }, { x: 50, y: 65 }, { x: 60, y: 70 },
+  { x: 40, y: 60 }, { x: 70, y: 60 }, { x: 30, y: 40 },
+  { x: 40, y: 40 }, { x: 50, y: 40 }, { x: 60, y: 40 },
+  { x: 70, y: 40 }, { x: 30, y: 50 }, { x: 70, y: 50 },
+  { x: 30, y: 70 }, { x: 40, y: 70 }, { x: 50, y: 70 }, { x: 70, y: 70 },
+  ...[10, 20, 25, 30, 40, 45, 50, 55, 60, 70, 75, 80, 90]
+    .flatMap(x => [10, 20, 25, 30, 40, 45, 50, 55, 60, 70, 75, 80, 90].map(y => ({ x, y }))),
+];
+
 export const paintOnMeshInViewport = async (
   page: Page,
   options?: { requireDirty?: boolean },
@@ -243,29 +254,7 @@ export const paintOnMeshInViewport = async (
   const box = await canvas.boundingBox();
   if (!box) return false;
 
-  const meshProbePercents = [10, 20, 25, 30, 40, 45, 50, 55, 60, 70, 75, 80, 90];
-  const targets: RelativePoint[] = [
-    { x: 50, y: 50 },
-    { x: 55, y: 55 },
-    { x: 60, y: 60 },
-    { x: 45, y: 55 },
-    { x: 50, y: 65 },
-    { x: 60, y: 70 },
-    { x: 40, y: 60 },
-    { x: 70, y: 60 },
-    { x: 30, y: 40 },
-    { x: 40, y: 40 },
-    { x: 50, y: 40 },
-    { x: 60, y: 40 },
-    { x: 70, y: 40 },
-    { x: 30, y: 50 },
-    { x: 70, y: 50 },
-    { x: 30, y: 70 },
-    { x: 40, y: 70 },
-    { x: 50, y: 70 },
-    { x: 70, y: 70 },
-    ...meshProbePercents.flatMap((x) => meshProbePercents.map((y) => ({ x, y }))),
-  ];
+  const targets = SKIN_PAINT_TARGETS;
 
   const moveToPaintHit = async (target: RelativePoint): Promise<boolean> => {
     const x = box.x + (box.width * target.x) / 100;
@@ -417,21 +406,16 @@ export const cancelPaintOnMeshInViewport = async (
   const box = await canvas.boundingBox();
   if (!box) return false;
 
-  const targets: RelativePoint[] = [
-    { x: 50, y: 50 },
-    { x: 55, y: 55 },
-    { x: 60, y: 60 },
-    { x: 45, y: 55 },
-    { x: 50, y: 65 },
-    { x: 60, y: 70 },
-    { x: 40, y: 60 },
-    { x: 70, y: 60 },
-  ];
+  const targets = SKIN_PAINT_TARGETS;
 
   for (const target of targets) {
     const x = box.x + (box.width * target.x) / 100;
     const y = box.y + (box.height * target.y) / 100;
     await page.mouse.move(x, y);
+    await page.waitForTimeout(25);
+    // A missed down/drag belongs to camera orbit and changes later probe positions.
+    if (await canvas.getAttribute('data-skin-brush-hover') !== 'active'
+      || Number(await canvas.getAttribute('data-skin-paint-hit-count')) <= 0) continue;
     await page.mouse.down({ button: 'left' });
     await page.mouse.move(x + 16, y + 12);
     await page.waitForTimeout(80);

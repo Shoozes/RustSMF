@@ -289,6 +289,42 @@ export function findVersionSyncErrors(repoRoot) {
   return errors
 }
 
+export function findPreviewIntegrityErrors(repoRoot) {
+  const root = resolve(repoRoot)
+  const errors = []
+  const required = ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_LICENSES.txt', 'examples/rustsmf-demo.glb']
+  for (const file of required) if (!isFile(resolve(root, file))) errors.push(`missing preview distribution file: ${file}`)
+  for (const file of ['source/package.json', 'source/frontend/package.json']) {
+    const absolute = resolve(root, file)
+    if (!isFile(absolute)) { errors.push(`missing license metadata: ${file}`); continue }
+    try { if (JSON.parse(readFileSync(absolute, 'utf8')).license !== 'MIT') errors.push(`${file}: project license must be MIT`) }
+    catch { errors.push(`${file}: invalid JSON license metadata`) }
+  }
+  for (const file of ['source/src-tauri/Cargo.toml', 'source/pose-contact/Cargo.toml']) {
+    const absolute = resolve(root, file)
+    if (!isFile(absolute) || !/^license\s*=\s*"MIT"/m.test(readFileSync(absolute, 'utf8'))) errors.push(`${file}: project license must be MIT`)
+  }
+  try {
+    const config = JSON.parse(readFileSync(resolve(root, 'source/src-tauri/tauri.conf.json'), 'utf8'))
+    const frontend = JSON.parse(readFileSync(resolve(root, 'source/frontend/package.json'), 'utf8'))
+    const lock = JSON.parse(readFileSync(resolve(root, 'source/package-lock.json'), 'utf8'))
+    if (lock.packages?.frontend?.version !== frontend.version) errors.push('frontend package-lock version must match the app version')
+    if (lock.packages?.frontend?.license !== 'MIT' || lock.packages?.['']?.license !== 'MIT') errors.push('package-lock first-party license metadata must be MIT')
+    const cargoLock = readFileSync(resolve(root, 'source/src-tauri/Cargo.lock'), 'utf8')
+    const lockedVersion = /\[\[package\]\]\s+name = "rustsmf"\s+version = "([^"]+)"/.exec(cargoLock)?.[1]
+    if (lockedVersion !== frontend.version) errors.push('Tauri Cargo.lock version must match the app version')
+    const resources = config.bundle?.resources
+    for (const [source, destination] of Object.entries({
+      '../../LICENSE': 'licenses/LICENSE',
+      '../../THIRD_PARTY_NOTICES.md': 'licenses/THIRD_PARTY_NOTICES.md',
+      '../../THIRD_PARTY_LICENSES.txt': 'licenses/THIRD_PARTY_LICENSES.txt',
+      '../frontend/src/vendor/FBXExporter-threejs.LICENSE.txt': 'licenses/FBXExporter-threejs.LICENSE.txt',
+      '../../examples/rustsmf-demo.glb': 'examples/rustsmf-demo.glb',
+    })) if (resources?.[source] !== destination) errors.push(`preview bundle resource must map ${source} to ${destination}`)
+  } catch { errors.push('preview version/resource metadata must be readable and complete') }
+  return errors
+}
+
 export function findNonPortableCurrentDocReferences(repoRoot) {
   const root = resolve(repoRoot)
   const errors = []
@@ -343,6 +379,7 @@ export function validateProjectIntegrity(repoRoot) {
   errors.push(...findPitfallGuardErrors(root))
   errors.push(...findThemeIntegrityErrors(root))
   errors.push(...findVersionSyncErrors(root))
+  errors.push(...findPreviewIntegrityErrors(root))
 
   return {
     errors,

@@ -6,7 +6,7 @@ import {
   setupBrowserDiagnostics,
 } from '../helpers/smoke-helpers';
 import { createExternalFbxFixtureInputs } from '../helpers/external-fbx-fixture';
-import { clickSecondaryCommand, showAnimateTimeline, showModernPanel } from '../helpers/modern-shell';
+import { expectLoadDetails, clickSecondaryCommand, showAnimateTimeline, showModernPanel } from '../helpers/modern-shell';
 import { expectAssetContinuity, expectMotion, expectNumbersClose, sampleTrack } from '../helpers/asset-evidence';
 import { exportEvidence, pauseJourney, watchJourneyErrors } from '../helpers/product-journey';
 
@@ -31,8 +31,7 @@ test('product journey resolves an FBX sidecar and preserves skinned animation th
 
   await input.setInputFiles(SAMPLE_INDEPENDENT_FBX);
   await expect(status).toContainText(/Loaded FBX: independent_skinned\.fbx/i, { timeout: 15_000 });
-  await expect(status).toContainText(/bones: 2/i);
-  await expect(status).toContainText(/clips: 1/i);
+  await expectLoadDetails(page, /bones: 2.*clips: 1/i);
   await showModernPanel(page, 'properties');
   await expect(page.getByTestId('inspector')).toContainText(/IndependentRoot|IndependentTip/i);
   await showAnimateTimeline(page);
@@ -57,8 +56,7 @@ test('product journey resolves an FBX sidecar and preserves skinned animation th
     buffer: bytes,
   });
   await expect(status).toContainText(/Loaded FBX: product-roundtrip\.fbx/i, { timeout: 15_000 });
-  await expect(status).toContainText(/bones: 2/i);
-  await expect(status).toContainText(/clips: 1/i);
+  await expectLoadDetails(page, /bones: 2.*clips: 1/i);
   await showAnimateTimeline(page);
   await expect(page.getByTestId('timeline')).toBeVisible();
   await pauseJourney(page);

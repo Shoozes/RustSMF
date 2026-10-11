@@ -1,12 +1,24 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-10-08
+Last reviewed: 2026-10-11
 
 Current behavior and architecture belong in [APP_STATE.md](APP_STATE.md),
 acceptance outcomes and completion criteria in [TODO.md](TODO.md), and dated
 proof in [HISTORY.md](HISTORY.md).
 
 ## Current findings
+
+- The 0.2.1 Windows preview is closed out locally on `main` from
+  `0973968a3db7c5ac29d7830b4fce2cf8d7abc0a3`. Modern adds offline Help with
+  focus wrapping and return, compact ordinary load status, and decoded canvas
+  render guards. The generated Signal Robot replaces the blank README image.
+- First-party MIT metadata, pinned dependency notices, fixture provenance,
+  contribution guidance and installed sample/license resources are integrated.
+  All six automated gates passed (514 units, 134 browser checks, 11 journeys and 3 strict visuals);
+  the real installed-app UI run passed on 2026-10-11 and is recorded separately
+  in HISTORY and the preview notes. Recovery restoration and test installation/
+  process removal were verified. No human-attested run is inferred from the
+  automated observations.
 
 - The frontend coverage and Modern simplification pass completed locally on
   `main` based on `0eef1a961734e031a21c4f1b59ad8e9dde6fbcc9`. The supported-feature

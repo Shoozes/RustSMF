@@ -1,5 +1,15 @@
 import { expect, type Page } from '@playwright/test';
 
+export async function expectLoadDetails(page: Page, expected: RegExp): Promise<void> {
+  await revealSecondaryCommands(page);
+  await page.getByTestId('help-open').click();
+  const details = page.getByTestId('help-status-details');
+  await details.locator('summary').click();
+  await expect(details).toContainText(expected);
+  await page.getByTestId('help-close').click();
+  await expect(page.getByTestId('modern-more-menu-button')).toBeFocused();
+}
+
 async function settleShellLayout(page: Page): Promise<void> {
   await page.evaluate(() => new Promise<void>((resolve) => {
     requestAnimationFrame(() => requestAnimationFrame(() => resolve()));

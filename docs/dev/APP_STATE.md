@@ -1,6 +1,16 @@
 # RustSMF App State
 
-Last reviewed: 2026-10-08
+Last reviewed: 2026-10-11
+
+## 0.2.1 Windows preview
+
+The application manifests and lock metadata are synchronized at 0.2.1. The independent pose-contact crate remains 0.1.0. The actual installed Windows preview passed a locally observed UI automation run on 2026-10-11: visible geometry/animation, native Open/Save cancellation, sidecars, project save/reopen/continued editing, GLB round-trip, blocked destination and recovery. Original recovery bytes and timestamps were restored; the owned test installation and processes were removed. Earlier 0.2.0 evidence remains dated evidence for its own source.
+
+Modern adds offline More > Help, explicit modal focus wrapping/Escape return, and short successful load messages with full details disclosed in Help and the status tooltip. Resource warnings, synchronous fallback, errors and dirty replacement protection remain visible. The toolbar, closed single drawer and flat Lumen Alloy theme stay intact; Original keeps its existing presentation.
+
+Render smoke checks decode actual canvas pixels and exclude overlapping HTML controls. Loaded-model preview checks disable grid, axes and rig helpers; encoded file size is no longer accepted as rendering evidence. A project-generated five-bone, two-clip GLB provides the redistributable quickstart and README screenshot. Its raw geometry, influences, materials and motion are independently inspected.
+
+Project-owned source is MIT licensed, with locked dependency notices and separately documented fixture provenance. The installed license/notices and sample matched their source hashes. Preview verification and platform acceptance are tracked in TODO, HISTORY and the preview notes; real Windows UI observations remain distinct from browser tests and mocked IPC. The preview is unsigned and no public release/tag or other-platform certification is claimed.
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, DAE/Collada, and OBJ models. This document owns current behavior, architecture boundaries, format limits, and the verification contract. Forward work belongs in `TODO.md`; dated command evidence belongs in `HISTORY.md` and the latest assessment in `review.md`; recurring failure analysis belongs in `PITFALL_LEDGER.md`.
 

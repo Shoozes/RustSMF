@@ -1,6 +1,16 @@
 # Frontend Test Contract
 
+## Preview rendering and Help
+
+`preview-readiness.spec.ts` independently inspects the distributed Signal Robot GLB (five bones, three materials, normalized raw skin, two moving two-second clips) and opens it through the ordinary file input. Six viewport cases prove visible model pixels with grid, axes and rig helpers disabled, concise status/disclosed details, offline Help layout, focus wrapping, Escape and close-button focus return.
+
+`helpers/render-evidence.ts` decodes PNG pixels; `expectRenderedScreenshot` masks HTML overlays and polls for actual scene content. `render-evidence.spec.ts` rejects uniform canvases and an image larger than the former byte threshold whose only content is surrounding chrome. It also rejects truncated PNGs. Empty-shell captures prove layout, not loaded model rendering. Strict references retain their existing owners.
+
+The authored sample generator and its unit checks are `scripts/generate-preview-demo.ts` and `src/utils/previewDemo.test.ts`; fixture/provided-asset grants are documented separately in `fixtures/PROVENANCE.md`.
+
 The test layout mirrors runtime ownership. Keep behavior in the narrowest suite that owns the risk; do not rebuild a single catch-all smoke file.
+
+Skin paint and cancellation use shared viewport probes in `helpers/viewport-interactions.ts`. Require a confirmed mesh hover hit before pointer-down so missed probes cannot orbit the camera. Cancellation still verifies unchanged raw influences and history through the actual gesture path.
 
 Run `verify` and browser/preview gates sequentially in one checkout. Both build
 the same production output; a concurrent rebuild can replace assets while the

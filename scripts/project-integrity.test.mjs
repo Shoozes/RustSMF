@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { spawnSync } from 'node:child_process'
 import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, it } from 'node:test'
@@ -9,6 +10,7 @@ import {
   findPitfallGuardErrors,
   findThemeIntegrityErrors,
   findVersionSyncErrors,
+  findPreviewIntegrityErrors,
   validateTodoDocument,
   validateProjectIntegrity,
 } from './project-integrity-lib.mjs'
@@ -20,6 +22,56 @@ afterEach(() => {
 })
 
 describe('project integrity checks', () => {
+  it('preserves upstream notice bytes while retaining source whitespace checks', () => {
+    const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-notice-attributes-'))
+    temporaryRoots.push(root)
+    const git = args => spawnSync('git', args, { cwd: root, encoding: 'utf8' })
+    assert.equal(git(['init', '-q', '--initial-branch=main']).status, 0)
+    writeFileSync(join(root, '.gitattributes'), readFileSync(new URL('../.gitattributes', import.meta.url)))
+    const notice = Buffer.from('Upstream notice with a preserved space. \r\n')
+    writeFileSync(join(root, 'THIRD_PARTY_LICENSES.txt'), notice)
+    mkdirSync(join(root, 'source/frontend/src'), { recursive: true })
+    const source = 'source/frontend/src/whitespace-probe.ts'
+    writeFileSync(join(root, source), 'export const value = 1; \r\n')
+    assert.equal(git(['add', '--', '.gitattributes', 'THIRD_PARTY_LICENSES.txt', source]).status, 0)
+    const rejected = git(['diff', '--cached', '--check'])
+    assert.notEqual(rejected.status, 0)
+    assert.match(rejected.stdout, /whitespace-probe\.ts.*trailing whitespace/)
+    assert.doesNotMatch(rejected.stdout, /THIRD_PARTY_LICENSES\.txt/)
+    const stagedNotice = spawnSync('git', ['show', ':THIRD_PARTY_LICENSES.txt'], { cwd: root })
+    assert.equal(stagedNotice.status, 0)
+    assert.deepEqual(stagedNotice.stdout, notice)
+    writeFileSync(join(root, source), 'export const value = 1;\n')
+    assert.equal(git(['add', '--', source]).status, 0)
+    assert.equal(git(['diff', '--cached', '--check']).status, 0)
+  })
+
+  it('requires licensed preview resources and synchronized lockfile versions', () => {
+    const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-preview-integrity-'))
+    temporaryRoots.push(root)
+    for (const folder of ['source/frontend', 'source/src-tauri', 'source/pose-contact', 'examples']) mkdirSync(join(root, folder), { recursive: true })
+    for (const file of ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_LICENSES.txt', 'examples/rustsmf-demo.glb']) writeFileSync(join(root, file), 'fixture')
+    writeFileSync(join(root, 'source/package.json'), JSON.stringify({ license: 'MIT' }))
+    writeFileSync(join(root, 'source/frontend/package.json'), JSON.stringify({ version: '0.2.1', license: 'MIT' }))
+    writeFileSync(join(root, 'source/package-lock.json'), JSON.stringify({ packages: { '': { license: 'MIT' }, frontend: { version: '0.2.1', license: 'MIT' } } }))
+    for (const file of ['source/src-tauri/Cargo.toml', 'source/pose-contact/Cargo.toml']) writeFileSync(join(root, file), '[package]\nlicense = "MIT"\n')
+    writeFileSync(join(root, 'source/src-tauri/Cargo.lock'), '[[package]]\nname = "rustsmf"\nversion = "0.2.1"\n')
+    const resources = {
+      '../../LICENSE': 'licenses/LICENSE', '../../THIRD_PARTY_NOTICES.md': 'licenses/THIRD_PARTY_NOTICES.md',
+      '../../THIRD_PARTY_LICENSES.txt': 'licenses/THIRD_PARTY_LICENSES.txt',
+      '../frontend/src/vendor/FBXExporter-threejs.LICENSE.txt': 'licenses/FBXExporter-threejs.LICENSE.txt',
+      '../../examples/rustsmf-demo.glb': 'examples/rustsmf-demo.glb',
+    }
+    writeFileSync(join(root, 'source/src-tauri/tauri.conf.json'), JSON.stringify({ bundle: { resources } }))
+    assert.deepEqual(findPreviewIntegrityErrors(root), [])
+    writeFileSync(join(root, 'source/src-tauri/Cargo.lock'), '[[package]]\nname = "rustsmf"\nversion = "0.2.0"\n')
+    writeFileSync(join(root, 'source/frontend/package.json'), JSON.stringify({ version: '0.2.1', license: 'UNLICENSED' }))
+    writeFileSync(join(root, 'source/src-tauri/tauri.conf.json'), JSON.stringify({ bundle: { resources: {} } }))
+    const errors = findPreviewIntegrityErrors(root).join('\n')
+    assert.match(errors, /project license must be MIT/)
+    assert.match(errors, /Cargo.lock version must match/)
+    assert.match(errors, /preview bundle resource must map/)
+  })
   it('collects static relative imports and re-exports without package imports', () => {
     assert.deepEqual(
       collectRelativeModuleSpecifiers("import React from 'react'; export { value } from './value'; import('./lazy');"),

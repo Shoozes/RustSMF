@@ -1,6 +1,7 @@
 [package]
+license = "MIT"
 name = "rustsmf"
-version = "0.2.0"
+version = "0.2.1"
 description = "RustSMF - Modern SMF/GLB/FBX 3D model & animation tool (Tauri + Three.js)"
 authors = ["Shoozes"]
 edition = "2021"

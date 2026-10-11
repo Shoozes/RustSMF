@@ -6,6 +6,8 @@ import Timeline from './components/Timeline'
 import Outliner from './components/Outliner'
 import Inspector from './components/Inspector'
 import Toolbar from './components/Toolbar'
+import HelpDialog from './components/HelpDialog'
+import { modernStatus } from './utils/modernStatus'
 import ViewportControls, { type ViewportControlsProps } from './components/ViewportControls'
 import { ListBullets, SlidersHorizontal, X } from '@phosphor-icons/react'
 import SkinPanel from './components/SkinPanel';
@@ -139,6 +141,8 @@ export default function App() {
   const [materialSourceRevision, setMaterialSourceRevision] = useState(0);
   const [selectedOutlinerIds, setSelectedOutlinerIds] = useState<string[]>([]);
   const [modernPanel, setModernPanel] = useState<ModernPanel>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const helpTriggerRef = useRef<HTMLElement | null>(null);
   const [modernSkinTool, setModernSkinTool] = useState<ModernSkinTool>('pick');
   const modernPanelRef = useRef<HTMLDivElement | null>(null);
   const modernPanelTriggerRef = useRef<HTMLButtonElement | null>(null);
@@ -1299,9 +1303,7 @@ export default function App() {
   );
 
   const showTimeline = theme.shellVariant === 'original' ? workspace.showTimeline : editorMode === 'animate';
-  const statusText = theme.shellVariant === 'modern' && ui.status.startsWith('Three.js viewport ready')
-    ? 'Ready'
-    : ui.status;
+  const statusText = theme.shellVariant === 'modern' ? modernStatus(ui.status) : ui.status;
 
   return (
     <div
@@ -1333,11 +1335,19 @@ export default function App() {
         setEditorMode={handleEditorModeChange}
         toolsOpen={modernPanel !== null}
         onOpenTools={(trigger) => modernPanel ? closeModernPanel() : openModernPanel(editorMode === 'view' ? 'scene' : 'properties', trigger)}
+        onOpenHelp={trigger => {
+          setModernPanel(null);
+          helpTriggerRef.current = trigger;
+          setHelpOpen(true);
+        }}
         {...viewportControlsProps}
         theme={theme}
         themeId={themeId}
         setThemeId={handleThemeChange}
       />
+
+      {theme.shellVariant === 'modern' && <HelpDialog open={helpOpen} status={ui.status}
+        onDismiss={() => setHelpOpen(false)} onClosed={() => helpTriggerRef.current?.focus()} />}
 
       {/* Simple pure error banner (no extra deps) - always in DOM even when not shown (for e2e), hidden via style when no error */}
       <div
@@ -1508,7 +1518,7 @@ export default function App() {
               )}
             </div>
           )}
-          <div data-testid="status-text" aria-live="polite" title={statusText} className={`status-overlay absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${ui.isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
+          <div data-testid="status-text" aria-live="polite" title={ui.status} className={`status-overlay absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${ui.isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
             {statusText}
             {ui.isLoading && ' …'}
           </div>

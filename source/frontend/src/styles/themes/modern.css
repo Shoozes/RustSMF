@@ -1,4 +1,34 @@
 /* Lumen Alloy palette and the Modern-only editor shell. */
+.app-shell[data-shell-variant="modern"] .preview-help {
+  position: fixed;
+  inset: 1rem;
+  width: min(38rem, calc(100% - 2rem));
+  max-height: calc(100% - 2rem);
+  margin: auto;
+  padding: 1.25rem;
+  overflow: auto;
+  border: 1px solid var(--ui-border-strong);
+  border-radius: 0.2rem;
+  background: var(--ui-surface);
+  color: var(--ui-text);
+  box-shadow: none;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}
+.app-shell[data-shell-variant="modern"] .preview-help::backdrop { background: rgba(0, 0, 0, 0.5); }
+.preview-help header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.preview-help h2 { margin: 0; color: var(--ui-text-strong); font-size: 1rem; font-weight: 500; }
+.preview-help button { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border: 1px solid var(--ui-border); border-radius: 0.2rem; background: var(--ui-control); color: var(--ui-text); }
+.preview-help :is(button, summary):focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 3px; }
+.preview-help-version, .preview-help-license { color: var(--ui-text-muted); font-size: 0.75rem; }
+.preview-help dt { margin-top: 0.875rem; color: var(--ui-text-strong); font-weight: 500; }
+.preview-help dd { margin: 0.125rem 0 0; }
+.preview-help kbd { color: var(--ui-accent); font: inherit; }
+.preview-help details { margin-top: 1rem; padding-top: 0.75rem; border-top: 1px solid var(--ui-border); }
+.preview-help summary { cursor: pointer; min-height: 2rem; }
+.preview-help details p { overflow-wrap: anywhere; }
+@media (pointer: coarse) { .preview-help button { width: 2.75rem; height: 2.75rem; } .preview-help summary { min-height: 2.75rem; } }
+
 .app-shell[data-shell-variant="modern"][data-ui-theme="lumen-alloy"] {
   --ui-app-background: #101111;
   --ui-surface: #191a1a;

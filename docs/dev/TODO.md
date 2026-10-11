@@ -1,9 +1,18 @@
 # RustSMF TODO
 
-Last reviewed: 2026-10-08
+Last reviewed: 2026-10-11
 
-Backlog status: the four v0.2 productization outcomes are complete (2026-09-25).
-Their measurable acceptance criteria and final evidence remain below as a closeout record.
+Backlog status: 0.2.1 preview readiness is complete locally. The four v0.2 outcomes and the frontend coverage pass remain complete; their acceptance records stay below.
+
+## 0.2.1 preview polish and sharing readiness
+
+- What: Prepare a quiet Windows preview with MIT licensing, visible-model capture guards, offline Help, a redistributable demo and clear source/contribution docs.
+- Why: Finish the sharing gaps identified after the completed frontend coverage pass.
+- Where: Modern shell/status/Help, render-evidence tests, preview demo generator, first-party license/notices, manifests/locks/bundle resources and preview documentation.
+- When: Completed locally on 2026-10-11 after the six automated gates and the actual installed Windows UI checks, recovery restoration and owned cleanup. Browser/mocked IPC and real UI observations remain separate.
+- How: Preserve the flat Modern theme and Original strict baseline, decode actual canvas pixels with HTML chrome excluded, disclose technical success details, bundle notices/sample and verify the 0.2.1 candidate locally. Preserve existing recovery generations for the attended test.
+- Done when: All six sequential gates pass on the final candidate; all six Modern sizes and DPI/input lanes are reviewed; Original remains unchanged; the actual installed app passes the attended checklist; original recovery data and task-owned resource disposition are verified; docs and routes contain accurate evidence.
+- Verification: `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, `test:visual-strict`, `desktop-smoke`, `package:windows`, plus the observed installed-app checklist in `docs/user/PREVIEW_0_2_1.md`. The separately authorized main publication uses an isolated staged candidate and `.tools/gitpush.ps1 -StagedOnly`; no public release/tag is included.
 
 ## Frontend coverage and Modern polish
 

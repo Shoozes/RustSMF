@@ -1,5 +1,13 @@
 # Modern UI Design QA — v0.2 productization complete
 
+## 0.2.1 preview polish
+
+The scene remains the dominant working surface: a small rectangular graphite command strip, restrained brass emphasis and no persistent technical shelf. Help appears only under More as a flat reading plane with keyboard focus wrapping, Escape dismissal and focus return. Successful load status keeps the filename; full counts are available on demand and warnings remain visible.
+
+The curated overview uses the project-generated Signal Robot. `preview-readiness.spec.ts` checks actual shaded model pixels with grid, axes and rig helpers disabled at all six sizes, including fractional DPR. The helper excludes HTML chrome and rejects blank PNGs even when their encoded size exceeds the previous threshold. Empty-shell captures establish layout only. Existing strict references own the loaded editor states; Original's image is protected unchanged.
+
+The focused six-size model/Help captures were reviewed for model visibility, readable text, control reachability, narrow wrapping and dismissal. The installed Windows preview was also observed through local UI automation on 2026-10-11, including geometry/clip motion, Help dismissal/focus, dialogs, sidecars and recovered editing. Final gate and native observations belong in HISTORY; builds, browser tests and mocked IPC remain separate lanes.
+
 The previous Calm Modern shell cut and the v0.2 Lumen Alloy productization pass are complete. Modern has release-level responsive evidence; the Original SMF presentation remains a separately scoped, strict visual baseline.
 
 - Previous Calm Modern reference: `docs/references/modern-ui/focused-studio-selected.png`
