@@ -24,7 +24,7 @@
   "groups": {
     "docs__orientation": {
       "description": "Lean current-state orientation. Use a focused feature or subsystem group before reading broader source.",
-      "max_kb": 72,
+      "max_kb": 74,
       "paths": [
         "docs/dev/APP_STATE.md",
         "docs/dev/TODO.md"
@@ -32,7 +32,7 @@
       "notes": [
         "TODO owns executable work and completion conditions.",
         "APP_STATE owns shipped behavior; review.md is opened only for integrity-pass evidence.",
-        "The 72 KiB orientation cap leaves measured headroom for current-state docs and remains far below the 256 KiB generation ceiling; dated measurements live in HISTORY.md.",
+        "The 74 KiB orientation cap accommodates the measured current-state and task-record content; defaults remain two docs under the unchanged 256 KiB generation ceiling.",
         "README launch/format entry remains in issue__verification_current_head and is read directly during task intake; orientation retains current state and the work queue."
       ]
     },
@@ -114,8 +114,8 @@
       ]
     },
     "feature__theme_system": {
-      "description": "Persisted themes, Modern model viewer with a workspace chooser and disclosed tools, Original SMF presentation, responsive behavior and visual evidence.",
-      "max_kb": 224,
+      "description": "Persisted themes, Modern model viewer with task drawers, Original presentation, responsive behavior and visual evidence.",
+      "max_kb": 232,
       "paths": [
         "source/frontend/src/theme.ts",
         "source/frontend/src/theme.test.ts",
@@ -135,20 +135,20 @@
         "design-qa.md",
         "docs/references/theme-qa/README.md",
         "source/frontend/tests/modern-authoring-layout.spec.ts",
-        "source/frontend/src/components/HelpDialog.tsx",
-        "source/frontend/src/utils/modernStatus.ts",
-        "source/frontend/src/utils/modernStatus.test.ts",
-        "source/frontend/tests/preview-readiness.spec.ts"
+        "source/frontend/tests/preview-readiness.spec.ts",
+        "source/frontend/src/components/WorkspaceTasks.tsx",
+        "source/frontend/src/components/workspaceTaskContext.ts"
       ],
       "notes": [
         "Original preserves the old editor's simplicity and compact hierarchy, including quad view before model load.",
         "Modern palette ownership lives in modern.css under the Lumen Alloy theme scope; shared index.css owns layout and behavior, and Original selectors stay explicitly scoped.",
         "The loaded-SMF strict snapshot is owned by tests__browser_shell_lifecycle in shell-model.spec.ts; this group owns the responsive and Original strict captures in visual.spec.ts.",
         "Theme definitions own shell variants, labels, panel copy, camera scale, and grid behavior; shared behavior should not branch on theme IDs.",
-        "Modern uses one compact icon strip and a workspace chooser; Tools opens the single drawer, closed by default at every size. Desktop tools reserve a side strip; compact tools overlay the canvas. Skin keeps four icons and two brush sliders; the full timeline mounts only in Animate.",
+        "Modern uses one icon strip and workspace chooser. Tools opens a closed-by-default task drawer; inactive tasks stay mounted. Skin keeps four viewport icons, with its brush card hidden while Tools is open. The full timeline mounts only in Animate.",
         "ViewportControls exposes separate Rig fade and reversible Hide rig/Show rig controls so helper geometry can be removed for shaded-skin inspection without mutating source or export state.",
         "docs/references/theme-qa/README.md owns the preserved-source comparison and final fidelity evidence paths.",
-        "The feature cap retains routed shell source and six-size authoring proof; detailed Skin behavior stays in feature__skin_weights rather than enlarging this theme route."
+        "The theme cap includes the shared task-shell source and six-size authoring proof; detailed Skin behavior stays in its authoring route.",
+        "Shared task navigation and authoring actions are routed in feature__workspace_tasks; Help and concise status behavior retain their preview workflow owner."
       ]
     },
     "feature__model_outliner_materials": {
@@ -165,8 +165,6 @@
         "source/frontend/src/utils/materialPreview.test.ts",
         "source/frontend/src/utils/textureCompat.ts",
         "source/frontend/src/utils/textureCompat.test.ts",
-        "source/frontend/src/utils/viewportDisplayController.ts",
-        "source/frontend/src/utils/viewportDisplayController.test.ts",
         "source/frontend/src/utils/selectionOverlay.ts",
         "source/frontend/src/utils/selectionOverlay.test.ts"
       ],
@@ -589,10 +587,11 @@
     },
     "feature__skin_authoring": {
       "description": "Skin paint and regional smoothing, Modern direct-paint chrome, brush indexing, auto-weight algorithms, history, exportability, and browser ownership.",
-      "max_kb": 152,
+      "max_kb": 154,
       "paths": [
         "source/frontend/src/components/SkinPanel.tsx",
         "source/frontend/src/components/ModernSkinWorkspace.tsx",
+        "source/frontend/src/components/ModernSkinWorkspace.test.ts",
         "source/frontend/src/utils/skinWeights.ts",
         "source/frontend/src/utils/skinWeights.test.ts",
         "source/frontend/src/utils/skinBrushIndex.ts",
@@ -615,7 +614,7 @@
         "Skin diagnostics reads raw four-slot attributes for the hovered vertex and aggregate mesh counts, preserving invalid references/weights as stable issue codes instead of silently clamping them.",
         "Brush sampling exposes Rest / Bind, Frozen Current, and Live Animation modes; workspacePlayback is intentionally shared with animation authoring so the selected sample matches the displayed pose. Frozen Current owns a captured bone-matrix snapshot and Live Animation displays a safety warning.",
         "Weight preview is a non-destructive vertex-color display; original color attributes and material vertex-color modes are restored on disable/export.",
-        "Modern starts Skin with a slim Pick/Paint/Erase/Smooth rail and contextual brush card; Pick routes viewport clicks to bone selection, Smooth performs bounded regional weight averaging without requiring a selected bone, and diagnostics/exact controls stay behind Advanced. Original keeps the full legacy panel.",
+        "Modern starts Skin with a slim Pick/Paint/Erase/Smooth rail and contextual brush card. Tools exposes Brush/Weights/Display; Scene retains shared unsaved/export-block state without brush sliders. Pick selects bones and Smooth needs no selected bone. Original retains its full panel. Workspace task tests own drawer reachability; component tests own clean/dirty/blocked notice rendering.",
         "Batch history comparisons use a mesh/vertex snapshot index rather than repeated linear scans.",
         "Skin undo/redo entries are bounded to 50 entries and 32 MiB per direction; oldest-entry eviction reports through the status surface."
       ]
@@ -1084,10 +1083,30 @@
       ],
       "notes": [
         "The bundled THIRD_PARTY_LICENSES.txt contains exact deduplicated upstream notice bytes; it is intentionally not loaded into context packs. The inventory and bundle configuration own its consumers.",
-      "Preview notes and HISTORY own real installed Windows UI observations, separately from browser/mocked IPC and human-attested evidence. Bind those observations to installer/executable/resource hashes, preserve recovery generations and verify removal of the owned installation/processes. Selected main publication follows workflow__git_main_sync.",
-      "For the completed local integrity candidate after the public preview, load docs__orientation for current acceptance and HISTORY for source/artifact evidence. Keep its installer identity separate from the published preview; fault-injected IPC counts and browser quota refusal remain automated evidence.",
+        "Preview notes and HISTORY own real installed Windows UI observations, separately from browser/mocked IPC and human-attested evidence. Bind those observations to installer/executable/resource hashes, preserve recovery generations and verify removal of the owned installation/processes. Selected main publication follows workflow__git_main_sync.",
+        "For the completed local integrity candidate after the public preview, load docs__orientation for current acceptance and HISTORY for source/artifact evidence. Keep its installer identity separate from the published preview; fault-injected IPC counts and browser quota refusal remain automated evidence.",
         "The sample is project-generated. Existing third-party/unidentified fixtures retain separate provenance; no new grant is inferred for them.",
         "Generated installers, screenshots, journals and native-test backup data remain ignored and outside context routes."
+      ]
+    },
+    "feature__workspace_tasks": {
+      "description": "Modern task tabs, mounted drafts, accessible icon/file actions, secondary disclosures and drawer focus integration.",
+      "max_kb": 160,
+      "paths": [
+        "source/frontend/src/components/WorkspaceTasks.tsx",
+        "source/frontend/src/components/workspaceTaskContext.ts",
+        "source/frontend/src/components/Inspector.tsx",
+        "source/frontend/src/App.tsx",
+        "source/frontend/src/styles/themes/modern.css",
+        "source/frontend/tests/helpers/modern-shell.ts",
+        "source/frontend/tests/modern-authoring-layout.spec.ts",
+        "source/frontend/tests/workspace-tasks.spec.ts",
+        "design-qa.md"
+      ],
+      "notes": [
+        "Model Objects/Surface/Details; Rig Pose/Hierarchy/Setup; Skin Brush/Weights/Display; Animate Clips/Pose/Transfer. Original uses unwrapped controls.",
+        "Feature-specific panels and semantic assertions retain their Model, Rig, Skin, animation and profile routes. Native details and ordinary task clicks preserve user reachability; no visibility overrides or editor setters.",
+        "Inactive sections remain mounted. workspace-tasks.spec.ts guards tabs/focus, drafts, Enter/Space picker cancellation, native control/text keys, Scene Skin state and touch targets. Keyboard playback ownership stays in subsystem__load_editor_orchestration; viewport tool keys stay in subsystem__viewport_editor. Skin notice rendering retains feature__skin_authoring ownership. Source changes do not replace the published Windows preview."
       ]
     }
   },

@@ -1,7 +1,8 @@
+import { workspaceControl, selectWorkspace, showModernPanel } from '../helpers/modern-shell';
 import fs from 'node:fs';
 import { test, expect, downloadBytes, exportEvidence, renameSubmodel, reopenProject, watchJourneyErrors } from '../helpers/product-journey';
 import { SAMPLE_EXTERNAL_GLTF_TEXTURE } from '../helpers/smoke-helpers';
-import { selectWorkspace, showModernPanel  } from '../helpers/modern-shell';
+
 import { expectAssetContinuity, expectNumbersClose } from '../helpers/asset-evidence';
 
 const quad = (name: string) => `o ${name}\nv -0.35 0 0\nv 0.35 0 0\nv 0.35 1 0\nv -0.35 1 0\nusemtl SurfaceMaterial\nf 1 2 3\nf 1 3 4\n`;
@@ -12,25 +13,25 @@ test('product journey edits a static surface and saves reversible rigged materia
   await page.getByTestId('model-file-input').setInputFiles({ name: 'surface.obj', mimeType: 'text/plain', buffer: Buffer.from(quad('Surface')) });
   await expect(page.getByTestId('status-text')).toContainText(/Loaded/i, { timeout: 15_000 });
   await renameSubmodel(page, 'AuthoredSurface');
-  await page.getByTestId('outliner-duplicate-btn').click();
+  await (await workspaceControl(page, 'outliner-duplicate-btn')).click();
   await expect(page.getByTestId('outliner-submodel-count')).toContainText('2');
-  await page.getByTestId('outliner-move-earlier-btn').click();
-  await page.getByTestId('outliner-delete-btn').click();
+  await (await workspaceControl(page, 'outliner-move-earlier-btn')).click();
+  await (await workspaceControl(page, 'outliner-delete-btn')).click();
   await expect(page.getByTestId('outliner-submodel-count')).toContainText('1');
   await page.getByTestId('editor-undo-btn').click();
   await expect(page.getByTestId('outliner-submodel-count')).toContainText('2');
   await page.getByTestId('editor-redo-btn').click();
-  await page.getByTestId('outliner-submodel-0').locator('.outliner-name-btn').click();
-  await page.getByTestId('outliner-position-0').fill('0.5');
-  await page.getByTestId('outliner-position-0').press('Tab');
-  await page.getByTestId('outliner-scale-input').fill('1.2');
-  await page.getByTestId('outliner-scale-input').press('Tab');
-  await page.getByTestId('outliner-material-input').fill('SurfaceMaterial');
-  await page.getByTestId('outliner-material-btn').click();
-  await page.getByTestId('outliner-flip-winding-btn').click();
+  await (await workspaceControl(page, 'outliner-submodel-0')).locator('.outliner-name-btn').click();
+  await (await workspaceControl(page, 'outliner-position-0')).fill('0.5');
+  await (await workspaceControl(page, 'outliner-position-0')).press('Tab');
+  await (await workspaceControl(page, 'outliner-scale-input')).fill('1.2');
+  await (await workspaceControl(page, 'outliner-scale-input')).press('Tab');
+  await (await workspaceControl(page, 'outliner-material-input')).fill('SurfaceMaterial');
+  await (await workspaceControl(page, 'outliner-material-btn')).click();
+  await (await workspaceControl(page, 'outliner-flip-winding-btn')).click();
   await page.getByTestId('editor-undo-btn').click();
-  await page.getByTestId('outliner-prepare-geometry-btn').click();
-  await page.getByTestId('outliner-append-static').locator('input').setInputFiles({ name: 'append.obj', mimeType: 'text/plain', buffer: Buffer.from(quad('Appended')) });
+  await (await workspaceControl(page, 'outliner-prepare-geometry-btn')).click();
+  await (await workspaceControl(page, 'outliner-append-static')).locator('input').setInputFiles({ name: 'append.obj', mimeType: 'text/plain', buffer: Buffer.from(quad('Appended')) });
   await expect(page.getByTestId('outliner-submodel-count')).toContainText('2');
   await page.getByTestId('editor-undo-btn').click();
   await expect(page.getByTestId('outliner-submodel-count')).toContainText('1');
@@ -39,14 +40,14 @@ test('product journey edits a static surface and saves reversible rigged materia
   expectNumbersClose(staticAsset.poses.find(p => p.name === 'AuthoredSurface')!.scale, [1.2, 1.2, 1.2]);
   await selectWorkspace(page, 'rig');
   await showModernPanel(page, 'properties');
-  await page.getByTestId('rig-prepare-root-skeleton').click();
+  await (await workspaceControl(page, 'rig-prepare-root-skeleton')).click();
   const prepared = await downloadBytes(page, 'export-glb-btn', true);
   await page.getByTestId('model-file-input').setInputFiles({ name: 'prepared-surface.glb', mimeType: 'model/gltf-binary', buffer: prepared });
   await page.getByTestId('confirm-model-replacement').click();
   await expect(page.getByTestId('status-text')).toContainText('Loaded: prepared-surface.glb', { timeout: 15_000 });
   const beforeRepair = await exportEvidence(page);
   await showModernPanel(page, 'scene');
-  await page.getByTestId('outliner-repair-materials').locator('input').setInputFiles([
+  await (await workspaceControl(page, 'outliner-repair-materials')).locator('input').setInputFiles([
     { name: 'repair.obj', mimeType: 'text/plain', buffer: Buffer.from(`mtllib repair.mtl\n${quad('AuthoredSurface').replace('f 1 2 3', 'usemtl RepairedMaterial\nf 1 2 3')}`) },
     { name: 'repair.mtl', mimeType: 'text/plain', buffer: Buffer.from('newmtl RepairedMaterial\nKd 0.2 0.4 0.8\nmap_Kd repair.png\n') },
     { name: 'repair.png', mimeType: 'image/png', buffer: fs.readFileSync(SAMPLE_EXTERNAL_GLTF_TEXTURE) },
@@ -69,7 +70,7 @@ test('product journey edits a static surface and saves reversible rigged materia
   expectNumbersClose(reopened.poses.find(p => p.name === 'AuthoredSurface')!.translation, [0.5, 0, 0]);
   expectNumbersClose(reopened.poses.find(p => p.name === 'AuthoredSurface')!.scale, [1.2, 1.2, 1.2]);
   await showModernPanel(page, 'scene');
-  await page.getByTestId('outliner-visibility-toggle-0').click();
+  await (await workspaceControl(page, 'outliner-visibility-toggle-0')).click();
   await expect(page.getByTestId('outliner-submodel-0')).toHaveAttribute('data-visible', 'false');
   await page.getByTestId('editor-undo-btn').click();
   await expect(page.getByTestId('outliner-submodel-0')).toHaveAttribute('data-visible', 'true');

@@ -18,6 +18,18 @@ Follow [source setup](../../README.md#run-from-source) and the [launcher guide](
 
 ## Supported Flow
 
+### Modern tools in current source
+
+Open **Tools**, then choose a short task tab: Model **Objects / Surface / Details**, Rig **Pose / Hierarchy / Setup**, Skin **Brush / Weights / Display**, or Animate **Clips / Pose / Transfer**. Hover an icon for its action name; Tab reaches it by keyboard. Secondary settings expand from their headings. Arrow keys switch task tabs; Escape closes Tools and returns focus. Unfinished fields survive tab changes. Skin's brush sliders appear beside the model when Tools is closed.
+
+Skin's unsaved-weight and export-block notices also stay visible when Tools switches to Scene.
+
+Space activates a focused button; playback Space and viewport R/S/T shortcuts work outside text fields and controls that handle those keys.
+
+The published 0.2.1 installer retains the earlier drawer layout; these menu changes are currently local source work.
+
+### Authoring and formats
+
 - Open `.smf`, `.glb`, `.gltf`, `.fbx`, `.dae`, or `.obj` by native dialog, file input, or drag/drop. Browser read failures and malformed native byte responses are reported as errors rather than being treated as picker cancellation.
 - Save Project stores a validated GLB snapshot with bounded workspace state; reopening preserves the supported source format, including DAE, so source-aware editing and export policy remain consistent.
 - Choose the default Modern theme or the compact Original SMF theme. Modern keeps the model canvas central: Open, Save, Undo, Redo, and Export stay in the primary bar; Open Project, Recover, explicit GLB/FBX/SMF actions, backend status, and theme selection are under More. Tools starts closed at every size and opens one Scene or Properties drawer when needed. More also contains offline Help; successful load counts are available there instead of remaining in the slim status line. The full Timeline appears only in Animate. The Original theme starts in quad view even before a model loads and follows the preserved editor format with a 136 px left tool shelf, 128 px Submodels shelf, fixed numbered tabs, an 80 px top strip, square low-chrome controls, dense red/black quad grids, real base-color texture thumbnails in the Submodels list, and an upper Animation timeline whose ruler, sample divisions, and green/red keyframes match the old placement without changing model/edit state.

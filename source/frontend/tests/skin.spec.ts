@@ -1,10 +1,11 @@
+import { workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showModernPanel, showSkinAdvanced } from './helpers/modern-shell';
+
 import { test, expect } from '@playwright/test';
 import { pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { parseSelectedBone } from './helpers/format-assertions';
 import { cancelPaintOnMeshInViewport, hoverPickableBoneInViewport, paintInViewport, paintOnMeshInViewport, setViewportLayout } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
-import { selectWorkspace, clickSecondaryCommand, showModernPanel, showSkinAdvanced  } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -43,7 +44,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       expect(noBoneHitCount).toBe(0);
       expect(await canvas.getAttribute('data-skin-brush-x')).toBe(null);
 
-      const reason = page.getByTestId('skin-export-block');
+      const reason = (await workspaceControl(page, 'skin-export-block'));
       await expect(reason).toHaveCount(0);
       await clickSecondaryCommand(page, 'export-smf-btn');
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.smf/i, { timeout: 5000 });
@@ -55,7 +56,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
 
       await selectWorkspace(page, 'skin');
-      const workspace = page.getByTestId('skin-workspace-panel');
+      const workspace = (await workspaceControl(page, 'skin-workspace-panel'));
       await expect(workspace).toBeVisible();
       await expect(workspace).toHaveAttribute('data-active-tool', 'pick');
       await expect(page.getByTestId('modern-support-panel')).toHaveCount(0);
@@ -107,12 +108,12 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await showSkinAdvanced(page);
 
       const inspector = page.getByTestId('inspector');
-      const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+      const bone = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first());
       await expect(bone).toBeVisible();
       await bone.click({ force: true });
       await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
 
-      await page.getByTestId('skin-paint-mode-add').click({ force: true }).catch(() => {});
+      await (await workspaceControl(page, 'skin-paint-mode-add')).click();
       await setRangeValue(page, 'skin-paint-target', 1);
       await setRangeValue(page, 'skin-paint-radius', 1);
       await setRangeValue(page, 'skin-paint-strength', 1);
@@ -140,11 +141,11 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await selectWorkspace(page, 'skin');
       await showSkinAdvanced(page);
       const inspector = page.getByTestId('inspector');
-      const bone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
+      const bone = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first());
       await expect(bone).toBeVisible();
       await bone.click({ force: true });
 
-      await page.getByTestId('skin-paint-mode-set').click({ force: true });
+      await (await workspaceControl(page, 'skin-paint-mode-set')).click();
       await setRangeValue(page, 'skin-paint-target', 0.35);
       await setRangeValue(page, 'skin-paint-strength', 0.5);
       await setRangeValue(page, 'skin-paint-falloff', 2);
@@ -176,7 +177,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await showSkinAdvanced(page);
 
       const inspector = page.getByTestId('inspector');
-      const bone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
+      const bone = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first());
       await expect(bone).toBeVisible();
       await bone.click({ force: true });
       await page.waitForTimeout(50);
@@ -187,7 +188,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(paintCanvas).toHaveAttribute('data-transform-owner', 'disabled');
       await expect(paintCanvas).toHaveAttribute('data-transform-attached', 'false');
 
-      await page.getByTestId('skin-paint-mode-add').click({ force: true }).catch(() => {});
+      await (await workspaceControl(page, 'skin-paint-mode-add')).click();
       await expect(page.getByTestId('skin-paint-mode-add')).toHaveClass(/bg-emerald-500/);
       await setRangeValue(page, 'skin-paint-target', 1);
       await setRangeValue(page, 'skin-paint-radius', 1);
@@ -237,10 +238,10 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
       await expect(page.getByTestId('skin-paint-undo-btn')).toBeEnabled();
 
-      await page.getByTestId('skin-autoskin-algorithm').selectOption('closest-two-segments');
-      await page.getByTestId('skin-paint-mode-auto').click({ force: true }).catch(() => {});
+      await (await workspaceControl(page, 'skin-autoskin-algorithm')).selectOption('closest-two-segments');
+      await (await workspaceControl(page, 'skin-paint-mode-auto')).click();
       await expect(page.getByTestId('skin-paint-mode-auto')).toHaveClass(/bg-emerald-500/);
-      await page.getByTestId('skin-paint-target-mode').selectOption('vertex');
+      await (await workspaceControl(page, 'skin-paint-target-mode')).selectOption('vertex');
       await setRangeValue(page, 'skin-paint-radius', 0.35);
       await setRangeValue(page, 'skin-paint-strength', 1);
       expect(await paintOnMeshInViewport(page)).toBe(true);
@@ -258,18 +259,18 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await page.getByTestId('editor-redo-btn').click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Redid skin edit/i);
 
-      await page.getByTestId('skin-autoskin-algorithm').selectOption('nearest-segment');
+      await (await workspaceControl(page, 'skin-autoskin-algorithm')).selectOption('nearest-segment');
       await expect(page.getByTestId('skin-autoskin-power')).toBeDisabled();
       await expect(page.getByTestId('skin-autoskin-normal-weighting')).toBeDisabled();
       await expect(page.getByTestId('skin-autoskin-max-influences')).toBeDisabled();
-      await page.getByTestId('skin-autoskin-algorithm').selectOption('segment-distance-normal');
+      await (await workspaceControl(page, 'skin-autoskin-algorithm')).selectOption('segment-distance-normal');
       await setRangeValue(page, 'skin-autoskin-power', 3);
       await setRangeValue(page, 'skin-autoskin-normal-weighting', 0.5);
       await setRangeValue(page, 'skin-autoskin-max-influences', 2);
       await expect(page.getByTestId('skin-autoskin-power')).toHaveValue('3');
       await expect(page.getByTestId('skin-autoskin-normal-weighting')).toHaveValue('0.5');
       await expect(page.getByTestId('skin-autoskin-max-influences')).toHaveValue('2');
-      await page.getByTestId('skin-autoskin-btn').click({ force: true });
+      await (await workspaceControl(page, 'skin-autoskin-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Auto skin/i);
       await expect(page.getByTestId('status-text')).toContainText(/power 3, normal 0.5, max 2/i);
       await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
@@ -299,7 +300,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(skinTab).toHaveAttribute('aria-selected', 'true');
       await showSkinAdvanced(page);
       const inspector = page.getByTestId('inspector');
-      const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+      const bone = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first());
       await expect(bone).toBeVisible();
       await bone.click({ force: true });
       await page.waitForTimeout(50);
@@ -308,7 +309,7 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       const selectedBone = parseSelectedBone(statusText);
       expect(selectedBone).toBe('FixtureTip');
 
-      await page.getByTestId('skin-paint-mode-subtract').click({ force: true }).catch(() => {});
+      await (await workspaceControl(page, 'skin-paint-mode-subtract')).click();
       await setRangeValue(page, 'skin-paint-radius', 1);
       await setRangeValue(page, 'skin-paint-strength', 1);
       const paintCanvas = page.getByTestId('three-canvas');
@@ -349,16 +350,16 @@ test.describe('RustSMF skin flow (Chromium)', () => {
       await expect(canvas).toHaveAttribute('data-skin-paint-pose', 'rest');
       await expect(canvas).toHaveAttribute('data-workspace-pose', 'rest');
       await expect(canvas).toHaveAttribute('data-bone-labels-enabled', 'false');
-      await page.getByTestId('skin-paint-pose').selectOption('frozen');
+      await (await workspaceControl(page, 'skin-paint-pose')).selectOption('frozen');
       await expect(page.getByTestId('skin-paint-pose')).toHaveValue('frozen');
       await expect(page.getByTestId('skin-paint-pose-warning')).toHaveCount(0);
       await expect(canvas).toHaveAttribute('data-skin-paint-pose', 'frozen');
       await expect(canvas).toHaveAttribute('data-workspace-pose', 'animation');
-      await page.getByTestId('skin-paint-pose').selectOption('live');
+      await (await workspaceControl(page, 'skin-paint-pose')).selectOption('live');
       await expect(canvas).toHaveAttribute('data-skin-paint-pose', 'live');
       await expect(canvas).toHaveAttribute('data-workspace-pose', 'animation');
       await expect(page.getByTestId('skin-paint-pose-warning')).toBeVisible();
-      await page.getByTestId('skin-paint-pose').selectOption('rest');
+      await (await workspaceControl(page, 'skin-paint-pose')).selectOption('rest');
       await expect(canvas).toHaveAttribute('data-skin-paint-pose', 'rest');
       await expect(canvas).toHaveAttribute('data-workspace-pose', 'rest');
     });

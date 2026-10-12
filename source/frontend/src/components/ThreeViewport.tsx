@@ -1303,6 +1303,9 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         cancelRigIkDrag();
         return;
       }
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey
+        || target?.isContentEditable || target?.closest('input, textarea, select')) return;
       const tc = transformControlsControllerRef.current?.controls;
       if (tc && transformTargetRef.current) {
         const k = e.key.toLowerCase();

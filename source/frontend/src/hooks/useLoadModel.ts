@@ -1850,6 +1850,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   // Keyboard handler (can be used in useEffect in App or moved)
   const setupKeyboard = useCallback((historyHandlers: KeyboardEditorHistoryHandlers = {}) => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
       const target = e.target instanceof HTMLElement ? e.target : null;
       const tagName = target?.tagName.toLowerCase();
       const isTextInput = tagName === 'input' || tagName === 'textarea' || tagName === 'select' || target?.isContentEditable === true;
@@ -1878,6 +1879,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         return;
       }
       if (key === ' ') {
+        if (target?.closest('button, a[href], summary, [role="button"], [role="tab"], [role="treeitem"]')) return;
         e.preventDefault();
         playbackRef.current.setIsPlaying(p => !p);
       }

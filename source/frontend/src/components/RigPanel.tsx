@@ -1,3 +1,6 @@
+import { PanelAction, PanelFileAction, TaskDetails, TaskSection } from './WorkspaceTasks';
+import { useWorkspaceTask } from './workspaceTaskContext';
+import { ArrowClockwise, ArrowsOutCardinal, Bone, CrosshairSimple, CursorClick, Diamond, FloppyDisk, FolderOpen, PencilSimple, Plus, Trash, TreeStructure } from '@phosphor-icons/react';
 import { useEffect, useState } from 'react';
 import { RIG_SNAP_STEPS, type RigSpinAxis, type RigToolMode } from '../utils/rigEdits';
 import {
@@ -80,6 +83,7 @@ export default function RigPanel({
   hasActiveClip,
   editorMode = 'rig',
 }: RigPanelProps) {
+  const task = useWorkspaceTask();
   const visibleIssues = report.issues.slice(0, 6);
   const isSmfSource = sourceFormat === 'smf';
   const smfControlReason = (control: SmfRigControl): string | undefined => (
@@ -111,9 +115,17 @@ export default function RigPanel({
     }
   }, [parentOptions, parentValue]);
 
+  const detachedNotice = selected && selected !== 'Scene' && !selectedIsDeformBone && sourceFormat !== 'smf' ? (
+    <div data-testid="rig-detached-selection-note" className="text-[10px] text-slate-500 mb-2">
+      {task ? 'Detached node. Connect it to pose or paint.' : 'Detached hierarchy node is visible for selection; deform edits stay gated until the node is connected.'}
+    </div>
+  ) : null;
+
   return (
     <div className="inspector" data-testid="rig-workspace-panel" data-editor-mode={editorMode}>
       <div className="panel-title">Rig Workspace</div>
+      <TaskSection task="setup">
+      <TaskDetails label="Rig details">
       <div className="text-[10px] text-slate-400">Selected: <span className="font-mono text-amber-300">{selected || 'Scene'}</span></div>
       <div className="mt-2 grid grid-cols-2 gap-1 text-[10px]">
         <div className="bg-slate-900/60 px-1 py-1 rounded">
@@ -125,6 +137,7 @@ export default function RigPanel({
           <div data-testid="rig-skinned-mesh-count" className="text-slate-200">{report.skinnedMeshCount}</div>
         </div>
       </div>
+      </TaskDetails>
       {canPrepareRootSkeleton && (
         <div
           className="mt-2 rounded border border-amber-500/40 bg-amber-950/20 p-1"
@@ -133,28 +146,30 @@ export default function RigPanel({
           <div className="text-[10px] text-amber-200 mb-1">
             Static mesh loaded without a skeleton. Prepare a root bone to enable child bones and weight painting.
           </div>
-          <button
+          <PanelAction icon={Bone} label={'Prepare root skeleton'}
             type="button"
             data-testid="rig-prepare-root-skeleton"
             className="w-full px-1 py-1 text-xs bg-amber-500 text-slate-950 hover:bg-amber-400"
             onClick={() => onPrepareRootSkeleton?.()}
           >
             Prepare root skeleton
-          </button>
+          </PanelAction>
         </div>
       )}
+      </TaskSection>
       <div className="mt-2 border-t border-slate-700 pt-2">
+        <TaskSection task="pose">
         <div className="text-slate-400 text-[10px] mb-1">Tool</div>
         <div className="grid grid-cols-3 gap-1 mb-2" data-testid="rig-tool-row">
-          <button
+          <PanelAction icon={CursorClick} label={'Select bone'}
             data-testid="rig-tool-select"
             aria-pressed={rigToolMode === 'select'}
             className={`px-1 py-0.5 text-xs ${rigToolMode === 'select' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
             onClick={() => onRigToolModeChange('select')}
           >
             Select
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={CrosshairSimple} label={'Move bone endpoint'}
             data-testid="rig-tool-endpoint"
             aria-pressed={rigToolMode === 'endpoint'}
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'endpoint' ? 'bg-sky-400 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
@@ -163,8 +178,8 @@ export default function RigPanel({
             title="Drag the selected bone endpoint as one reversible pose edit"
           >
             Endpoint
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={Plus} label={'Add child bone in viewport'}
             data-testid="rig-tool-add-child"
             aria-pressed={rigToolMode === 'add-child'}
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'add-child' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
@@ -173,8 +188,8 @@ export default function RigPanel({
             title={smfControlReason('create-child')}
           >
             Add child
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={ArrowsOutCardinal} label={'Move bone'}
             data-testid="rig-tool-move"
             aria-pressed={rigToolMode === 'move'}
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'move' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
@@ -183,8 +198,8 @@ export default function RigPanel({
             title={smfControlReason('move')}
           >
             Move
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={ArrowClockwise} label={'Rotate bone'}
             data-testid="rig-tool-rotate"
             aria-pressed={rigToolMode === 'rotate'}
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'rotate' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
@@ -193,8 +208,8 @@ export default function RigPanel({
             title={smfControlReason('rotate')}
           >
             Rotate
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={TreeStructure} label={'Pose IK chain'}
             data-testid="rig-tool-ik"
             aria-pressed={rigToolMode === 'ik'}
             className={`px-1 py-0.5 text-xs disabled:opacity-50 ${rigToolMode === 'ik' ? 'bg-amber-400 text-slate-950' : 'bg-slate-700 hover:bg-slate-600'}`}
@@ -203,7 +218,7 @@ export default function RigPanel({
             title="Pose the selected end effector through a constrained ancestor chain"
           >
             IK
-          </button>
+          </PanelAction>
         </div>
         {rigToolMode === 'ik' && (
           <div className="mb-2 rounded border border-amber-500/40 bg-amber-950/20 p-1" data-testid="rig-ik-settings">
@@ -287,7 +302,7 @@ export default function RigPanel({
                 {rigIkLastResult.status.replace('-', ' ')} · {rigIkLastResult.distanceToTarget.toFixed(4)} target distance
               </div>
             )}
-            <button
+            <PanelAction icon={Diamond} label={'Solve and bake IK keys'}
               type="button"
               data-testid="rig-ik-bake-btn"
               className="mt-1 w-full px-1 py-0.5 text-xs bg-amber-500 text-slate-950 hover:bg-amber-400 disabled:opacity-50"
@@ -296,11 +311,15 @@ export default function RigPanel({
               title="Solve the last IK target and write the affected chain as one animation transaction"
             >
               Solve &amp; bake IK keys
-            </button>
+            </PanelAction>
           </div>
         )}
+        </TaskSection>
+        <TaskSection task={['pose', 'setup']}>
         <div className="mb-2 rounded border border-slate-700 bg-slate-950/40 p-1" data-testid="rig-metadata-panel">
-          <div className="mb-1 text-[10px] text-slate-300">Rig metadata</div>
+          {(!task || task.active === 'setup') && <div className="mb-1 text-[10px] text-slate-300">Rig metadata</div>}
+          <TaskSection task="pose">
+          <TaskDetails label="Constraints">
           {selectedMetadata && selectedIsDeformBone ? (
             <>
               <label className="block text-[10px] text-slate-400">
@@ -338,10 +357,12 @@ export default function RigPanel({
           ) : (
             <div className="text-[10px] text-slate-500">Select a deform bone to edit its axis, lock, and pin metadata.</div>
           )}
+          </TaskDetails>
+          </TaskSection>
+          <TaskSection task="setup">
           <div className="mt-1 grid grid-cols-3 gap-1">
-            <button type="button" data-testid="rig-save-metadata" className="px-1 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50" disabled={!report.boneCount} onClick={onSaveRigMetadata}>Save</button>
-            <label className="px-1 py-0.5 text-xs text-center bg-slate-700 hover:bg-slate-600 cursor-pointer">
-              Load
+            <PanelAction icon={FloppyDisk} label={'Save rig metadata'} type="button" data-testid="rig-save-metadata" className="px-1 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50" disabled={!report.boneCount} onClick={onSaveRigMetadata}>Save</PanelAction>
+            <PanelFileAction icon={FolderOpen} label="Load" title="Load rig metadata" disabled={!report.boneCount} className="px-1 py-0.5 text-xs text-center bg-slate-700 hover:bg-slate-600 cursor-pointer">
               <input
                 type="file"
                 accept=".rig.json,application/json"
@@ -354,10 +375,13 @@ export default function RigPanel({
                   event.currentTarget.value = '';
                 }}
               />
-            </label>
-            <button type="button" data-testid="rig-clear-metadata" className="px-1 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50" disabled={!report.boneCount} onClick={onClearRigMetadata}>Clear</button>
+            </PanelFileAction>
+            <PanelAction icon={Trash} label={'Clear rig metadata'} type="button" data-testid="rig-clear-metadata" className="px-1 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50" disabled={!report.boneCount} onClick={onClearRigMetadata}>Clear</PanelAction>
           </div>
+          </TaskSection>
         </div>
+        </TaskSection>
+        <TaskSection task="pose">
         <label className="flex items-center gap-1 mb-2 text-[10px] text-slate-400">
           <span className="shrink-0">Snap</span>
           <select
@@ -376,6 +400,8 @@ export default function RigPanel({
             ))}
           </select>
         </label>
+        </TaskSection>
+        <TaskSection task="hierarchy">
         <div className="text-slate-400 text-[10px] mb-1">Edit</div>
         <div className="flex gap-1 mb-2">
           <input
@@ -387,7 +413,7 @@ export default function RigPanel({
             aria-label="Bone name"
             title={smfControlReason('rename')}
           />
-          <button
+          <PanelAction icon={PencilSimple} label={'Rename bone'}
             data-testid="rig-rename-btn"
             className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50"
             disabled={!canRename}
@@ -395,7 +421,7 @@ export default function RigPanel({
             title={smfControlReason('rename')}
           >
             Rename
-          </button>
+          </PanelAction>
         </div>
         <div className="flex gap-1 mb-2">
           <select
@@ -411,7 +437,7 @@ export default function RigPanel({
               <option key={name} value={name}>{name}</option>
             ))}
           </select>
-          <button
+          <PanelAction icon={TreeStructure} label={'Reparent bone'}
             data-testid="rig-reparent-btn"
             className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50"
             disabled={!canReparent || !parentValue}
@@ -419,7 +445,7 @@ export default function RigPanel({
             title={smfControlReason('reparent')}
           >
             Reparent
-          </button>
+          </PanelAction>
         </div>
         <div className="flex gap-1 mb-2">
           <input
@@ -431,7 +457,7 @@ export default function RigPanel({
             aria-label="New child bone name"
             title={smfControlReason('create-child')}
           />
-          <button
+          <PanelAction icon={Plus} label={'Create child bone'}
             data-testid="rig-create-child-btn"
             className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600 disabled:opacity-50"
             disabled={!canCreateChild}
@@ -439,9 +465,9 @@ export default function RigPanel({
             title={smfControlReason('create-child')}
           >
             Child
-          </button>
+          </PanelAction>
         </div>
-        <button
+        <PanelAction icon={Trash} label={'Delete bone'}
           data-testid="rig-delete-bone-btn"
           className="w-full px-1 py-0.5 text-xs bg-rose-950/70 hover:bg-rose-900/80 border border-rose-800/70 text-rose-100 disabled:opacity-50"
           disabled={!canRename}
@@ -449,8 +475,8 @@ export default function RigPanel({
           title={smfControlReason('delete')}
         >
           Delete Selected
-        </button>
-        <button
+        </PanelAction>
+        <PanelAction icon={TreeStructure} label={selectedIsDeformBone ? 'Detach selected bone' : 'Connect selected bone'}
           data-testid="rig-detach-toggle-btn"
           data-rig-detach-mode={selectedIsDeformBone ? 'detach' : 'connect'}
           className="mt-1 w-full px-1 py-0.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-100 disabled:opacity-50"
@@ -459,7 +485,10 @@ export default function RigPanel({
           title={smfControlReason('detach-connect')}
         >
           {selectedIsDeformBone ? 'Detach Selected' : 'Connect Selected'}
-        </button>
+        </PanelAction>
+        {task && detachedNotice}
+        </TaskSection>
+        <TaskSection task="setup">
         <div className="mt-2 text-slate-400 text-[10px] mb-1">Spin</div>
         <div className="grid grid-cols-3 gap-1 mb-2" data-testid="rig-spin-row">
           {(['x', 'y', 'z'] as const).map((axis) => (
@@ -475,6 +504,7 @@ export default function RigPanel({
             </button>
           ))}
         </div>
+        <TaskDetails label="Format limits">
         {isSmfSource && (
           <div className="mb-2 grid gap-1 rounded border border-slate-700 bg-slate-950/40 p-1" data-testid="smf-rig-policy">
             <div className="text-[10px] text-slate-300">SMF edit policy</div>
@@ -490,11 +520,12 @@ export default function RigPanel({
             ))}
           </div>
         )}
-        {selected && selected !== 'Scene' && !selectedIsDeformBone && sourceFormat !== 'smf' && (
-          <div data-testid="rig-detached-selection-note" className="text-[10px] text-slate-500 mb-2">
-            Detached hierarchy node is visible for selection; deform edits stay gated until the node is connected.
-          </div>
-        )}
+        {!task && detachedNotice}
+        </TaskDetails>
+        </TaskSection>
+        {task && (report.status === 'error' || report.status === 'warning') && <div className="workspace-warning" role="status">Rig checks need attention. Open Setup to review them.</div>}
+        <TaskSection task="setup">
+        <TaskDetails label="Checks">
         <div className="text-slate-400 text-[10px] mb-1">Validation</div>
         <div data-testid="rig-validation-status" className={`text-xs ${statusClass(report.status)}`}>
           {report.status === 'pass'
@@ -522,6 +553,8 @@ export default function RigPanel({
             {report.issues.length - visibleIssues.length} more issue{report.issues.length - visibleIssues.length === 1 ? '' : 's'} hidden.
           </div>
         )}
+        </TaskDetails>
+        </TaskSection>
       </div>
     </div>
   );

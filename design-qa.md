@@ -1,5 +1,15 @@
 # Modern UI Design QA — v0.2 productization complete
 
+## Task drawers — 2026-10-11
+
+The user selected mockup 2, Task tabs, after three image-generated options based on real Animate/Skin captures. The implementation keeps flat Lumen Alloy surfaces and a model-first workspace. Only the active task is visible: Model has Objects/Surface/Details; Rig has Pose/Hierarchy/Setup; Skin has Brush/Weights/Display; Animate has Clips/Pose/Transfer.
+
+Common actions use existing Phosphor symbols with accessible names and native tooltips. Arrow keys, Home and End navigate task tabs. Secondary pose steps, constraints, clip timing/order and brush settings use disclosures. New animation opens from its icon; tab switching keeps unfinished fields mounted. The Skin brush card appears when Tools is closed, avoiding duplicate sliders. Warnings and unsaved work remain visible. Original takes the existing unwrapped markup path; its stylesheet and committed reference are unchanged.
+
+The final frontend gate passed verify, 139 browser checks, 11 journeys and three strict visuals. All committed strict references remain unchanged. Reviewed task/responsive/touch captures and keyboard/DPR observations are bound to the source receipt in HISTORY. These source changes do not replace the published Windows preview.
+
+The subsequent integrity recheck reproduced hidden Skin state in Scene. The notice now sits above the drawer switcher, including at 390 px, with no duplicate brush sliders. Both repaired captures were reviewed. `workspace-tasks.spec.ts` makes tab keys, focus, draft continuity, keyboard picker cancellation and 44 px touch targets durable guards. The final gate passed verify (520 units), 144 browser checks, 11 journeys and three strict visuals; references are unchanged. HISTORY owns command/source evidence.
+
 ## 0.2.1 preview polish
 
 The scene remains the dominant working surface: a small rectangular graphite command strip, restrained brass emphasis and no persistent technical shelf. Help appears only under More as a flat reading plane with keyboard focus wrapping, Escape dismissal and focus return. Successful load status keeps the filename; full counts are available on demand and warnings remain visible.

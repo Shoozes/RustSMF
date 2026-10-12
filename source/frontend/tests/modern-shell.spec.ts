@@ -1,7 +1,7 @@
+import { workspaceControl, selectWorkspace, showModernPanel } from './helpers/modern-shell';
 import { expect, test, type Page } from '@playwright/test';
 import { SAMPLE_SMF, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
-import { selectWorkspace, showModernPanel  } from './helpers/modern-shell';
 
 test('Modern bone hierarchy and clip selection work from the keyboard with visible focus', async ({ page }) => {
   await page.goto('/');
@@ -9,20 +9,20 @@ test('Modern bone hierarchy and clip selection work from the keyboard with visib
   await expect(page.getByTestId('status-text')).toContainText(/Loaded:/, { timeout: 15_000 });
   await selectWorkspace(page, 'rig');
   await showModernPanel(page, 'properties');
-  const root = page.getByTestId('bone-tree-item-FixtureRoot');
+  const root = (await workspaceControl(page, 'bone-tree-item-FixtureRoot'));
   await root.focus();
   await root.press('Enter');
   await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureRoot');
   await root.press('ArrowLeft');
   await expect(page.getByTestId('bone-tree-item-FixtureTip')).toHaveCount(0);
   await root.press('ArrowRight');
-  const tip = page.getByTestId('bone-tree-item-FixtureTip');
+  const tip = (await workspaceControl(page, 'bone-tree-item-FixtureTip'));
   await tip.focus();
   await tip.press('Space');
   await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
   await expect(tip).toHaveCSS('outline-style', 'solid');
   await selectWorkspace(page, 'animate');
-  await page.getByTestId('animation-duplicate-clip-btn').click();
+  await (await workspaceControl(page, 'animation-duplicate-clip-btn')).click();
   const original = page.getByTestId('clip-item-0');
   await original.focus();
   await original.press('Enter');
@@ -236,7 +236,7 @@ test.describe('Calm Modern shell', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Loaded:/, { timeout: 15_000 });
       await selectWorkspace(page, 'rig');
       await showModernPanel(page, 'properties');
-      await page.getByTestId('bone-tree-item-FixtureTip').click();
+      await (await workspaceControl(page, 'bone-tree-item-FixtureTip')).click();
       await selectWorkspace(page, 'skin');
       for (const id of ['modern-skin-radius', 'modern-skin-strength']) {
         expect((await page.getByTestId(id).boundingBox())!.height).toBeGreaterThanOrEqual(44);

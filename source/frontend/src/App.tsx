@@ -11,9 +11,10 @@ import { modernStatus } from './utils/modernStatus'
 import ViewportControls, { type ViewportControlsProps } from './components/ViewportControls'
 import { ListBullets, SlidersHorizontal, X } from '@phosphor-icons/react'
 import SkinPanel from './components/SkinPanel';
-import ModernSkinWorkspace, { type ModernSkinTool } from './components/ModernSkinWorkspace';
+import ModernSkinWorkspace, { ModernSkinState, type ModernSkinTool } from './components/ModernSkinWorkspace';
 import RigPanel from './components/RigPanel';
 import AnimatePanel from './components/AnimatePanel';
+import WorkspaceTasks, { TaskSection } from './components/WorkspaceTasks';
 import ExportPanel from './components/ExportPanel';
 import { useAppTheme } from './hooks/useAppTheme'
 import { useLoadModel } from './hooks/useLoadModel'
@@ -1093,8 +1094,8 @@ export default function App() {
     const panel = modernPanelRef.current;
     if (!panel) return;
     const focusable = Array.from(panel.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-    ));
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
+    )).filter(element => element.tabIndex >= 0 && element.getClientRects().length > 0 && !element.closest('[hidden]'));
     if (focusable.length === 0) {
       event.preventDefault();
       panel.focus();
@@ -1379,7 +1380,19 @@ export default function App() {
             <button type="button" className="modern-panel-close" data-testid="modern-panel-close" aria-label="Close supporting panel" onClick={closeModernPanel}>
               <X size={18} aria-hidden="true" />
             </button>
-            {modernPanel === 'scene' ? outlinerPanel : propertiesPanel}
+            <WorkspaceTasks
+              key={`${modernPanel}-${editorMode}`}
+              mode={modernPanel === 'scene' ? 'view' : editorMode}
+              title={modernPanel === 'scene' ? 'Model' : theme.workspaceLabels[editorMode]}
+              initialTask={modernPanel === 'properties' && editorMode === 'rig' && canPrepareRootSkeleton ? 'setup' : modernPanel === 'properties' && editorMode === 'view' ? 'details' : undefined}
+            >
+              {editorMode === 'view' ? <>{outlinerPanel}<TaskSection task="details">{propertiesPanel}</TaskSection></> : modernPanel === 'scene' ? outlinerPanel : propertiesPanel}
+            </WorkspaceTasks>
+            {modernPanel === 'scene' && editorMode === 'skin' && (skinEditHasDirtyState || skinEditBlockReason) && (
+              <div className="px-3 py-2">
+                <ModernSkinState dirty={skinEditHasDirtyState} blockReason={skinEditBlockReason} />
+              </div>
+            )}
             <div className="modern-panel-switcher" role="group" aria-label="Supporting panel">
               <button type="button" className={modernPanel === 'scene' ? 'active' : ''} aria-pressed={modernPanel === 'scene'} data-testid="modern-panel-scene" onClick={() => setModernPanel('scene')}>
                 <ListBullets size={17} aria-hidden="true" /><span>Scene</span>
@@ -1471,6 +1484,7 @@ export default function App() {
               strength={skinPaintStrength}
               dirty={skinEditHasDirtyState}
               blockReason={skinEditBlockReason}
+              showBrushControls={!modernPanel}
               onToolChange={setModernSkinTool}
               onPaintModeChange={handleSkinPaintModeChange}
               onRadiusChange={onSkinPaintRadiusChange}

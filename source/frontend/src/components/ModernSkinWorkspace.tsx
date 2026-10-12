@@ -19,6 +19,7 @@ interface ModernSkinWorkspaceProps {
   strength: number;
   dirty: boolean;
   blockReason: string | null;
+  showBrushControls?: boolean;
   onToolChange: (tool: ModernSkinTool) => void;
   onPaintModeChange: (mode: SkinWeightEditMode) => void;
   onRadiusChange: (value: number) => void;
@@ -65,6 +66,14 @@ function SkinToolButton({
   );
 }
 
+export function ModernSkinState({ dirty, blockReason }: Pick<ModernSkinWorkspaceProps, 'dirty' | 'blockReason'>) {
+  if (!dirty && !blockReason) return null;
+  return <div className="modern-skin-state" data-testid="modern-skin-state" aria-live="polite">
+    {dirty && <span data-dirty={dirty}>Unsaved weights</span>}
+    {blockReason && <span role="alert" className="modern-skin-error" data-testid="modern-skin-export-block">{blockReason}</span>}
+  </div>;
+}
+
 export default function ModernSkinWorkspace({
   selected,
   skeleton,
@@ -73,6 +82,7 @@ export default function ModernSkinWorkspace({
   strength,
   dirty,
   blockReason,
+  showBrushControls = true,
   onToolChange,
   onPaintModeChange,
   onRadiusChange,
@@ -115,7 +125,7 @@ export default function ModernSkinWorkspace({
         </SkinToolButton>
       </div>
 
-      <div className="modern-skin-float" data-testid="modern-skin-float">
+      {showBrushControls && <div className="modern-skin-float" data-testid="modern-skin-float">
         <div className="modern-skin-float-heading">
           <div>
             <strong title="Selected bone">{selectedLabel}</strong>
@@ -149,11 +159,8 @@ export default function ModernSkinWorkspace({
           />
           <output>{Math.round(strength * 100)}%</output>
         </label>
-        {(dirty || blockReason) && <div className="modern-skin-state" data-testid="modern-skin-state" aria-live="polite">
-          {dirty && <span data-dirty={dirty}>Unsaved weights</span>}
-          {blockReason && <span className="modern-skin-error" data-testid="modern-skin-export-block">{blockReason}</span>}
-        </div>}
-      </div>
+        <ModernSkinState dirty={dirty} blockReason={blockReason} />
+      </div>}
     </section>
   );
 }

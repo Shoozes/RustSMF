@@ -1,6 +1,7 @@
+import { workspaceControl, selectWorkspace, showModernPanel } from '../helpers/modern-shell';
 import { test, expect, downloadBytes, exportEvidence, pauseJourney, reopenProject, watchJourneyErrors } from '../helpers/product-journey';
 import { createSkinnedGlbFixtureInput, createSkinnedGltfFixtureInputWithOptions } from '../helpers/skinned-glb-fixture';
-import { selectWorkspace, showModernPanel  } from '../helpers/modern-shell';
+
 import { expectAssetContinuity, expectMotion } from '../helpers/asset-evidence';
 
 test('product journey saves a portable profile and continues its applied motion after project reopen', async ({ page }) => {
@@ -10,14 +11,14 @@ test('product journey saves a portable profile and continues its applied motion 
   await expect(page.getByTestId('status-text')).toContainText(/Loaded:/, { timeout: 15_000 });
   await pauseJourney(page);
   await showModernPanel(page, 'properties');
-  const panel = page.getByTestId('retarget-profile-controls');
-  await panel.locator('summary').click();
+  const panel = (await workspaceControl(page, 'retarget-profile-controls'));
+  await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();
   const profile = { $schema: 'rustsmf.retarget-profile.v1', targetClipNames: {}, retarget: {
     manualMap: { FixtureRoot: 'FixtureRoot', FixtureTip: 'FixtureTip' }, clips: ['Source Motion'],
     sampleRateHz: 60, applyUpCorrection: false, alignMappedBoneDirections: false,
   } };
-  await page.getByTestId('retarget-profile-import').setInputFiles({ name: 'profile.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(profile)) });
-  const editor = page.getByTestId('retarget-profile-json');
+  await (await workspaceControl(page, 'retarget-profile-import')).setInputFiles({ name: 'profile.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(profile)) });
+  const editor = (await workspaceControl(page, 'retarget-profile-json'));
   await expect(editor).toContainText('FixtureTip');
   await expect(panel.getByRole('alert')).toHaveCount(0);
   const valid = await editor.inputValue();
@@ -33,12 +34,12 @@ test('product journey saves a portable profile and continues its applied motion 
   expect(normalized).not.toHaveProperty('sourceModel');
   await selectWorkspace(page, 'rig');
   await selectWorkspace(page, 'animate');
-  await panel.locator('summary').click();
+  await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();
   await expect(editor).toHaveValue(valid);
-  await page.getByTestId('retarget-profile-import').setInputFiles({ name: 'saved-profile.json', mimeType: 'application/json', buffer: savedProfile });
-  await page.getByTestId('retarget-profile-source').setInputFiles(await createSkinnedGltfFixtureInputWithOptions({ clipName: 'Source Motion' }));
+  await (await workspaceControl(page, 'retarget-profile-import')).setInputFiles({ name: 'saved-profile.json', mimeType: 'application/json', buffer: savedProfile });
+  await (await workspaceControl(page, 'retarget-profile-source')).setInputFiles(await createSkinnedGltfFixtureInputWithOptions({ clipName: 'Source Motion' }));
   await expect(page.getByTestId('status-text')).toContainText('using the saved profile', { timeout: 15_000 });
-  await panel.locator('summary').click();
+  await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();
   const applied = await exportEvidence(page);
   expect(applied.clips.map(c => c.name)).toEqual(['FixtureBend', 'Source Motion']);
   expect(applied.clips[1].duration).toBeCloseTo(0.5, 5);
@@ -54,8 +55,8 @@ test('product journey saves a portable profile and continues its applied motion 
   expectAssetContinuity(await exportEvidence(page), applied);
   await showModernPanel(page, 'properties');
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Source Motion');
-  await page.getByTestId('animation-clip-name-input').fill('Continued Motion');
-  await page.getByTestId('animation-rename-clip-btn').click();
+  await (await workspaceControl(page, 'animation-clip-name-input')).fill('Continued Motion');
+  await (await workspaceControl(page, 'animation-rename-clip-btn')).click();
   const glb = await downloadBytes(page, 'export-glb-btn', true);
   await page.getByTestId('model-file-input').setInputFiles({ name: 'continued.glb', mimeType: 'model/gltf-binary', buffer: glb });
   await page.getByTestId('confirm-model-replacement').click();

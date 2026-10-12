@@ -1,3 +1,4 @@
+import { workspaceControl, expectLoadDetails, selectWorkspace, showModernPanel, showSkinAdvanced } from '../helpers/modern-shell';
 import { createHash } from 'node:crypto';
 import { mkdir, readdir, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
@@ -10,7 +11,7 @@ import {
   setupBrowserDiagnostics,
 } from '../helpers/smoke-helpers';
 import { setRangeValue } from '../helpers/timeline-interactions';
-import { expectLoadDetails, selectWorkspace, showModernPanel, showSkinAdvanced  } from '../helpers/modern-shell';
+
 import { downloadBytes, exportEvidence, reopenProject, watchJourneyErrors } from '../helpers/product-journey';
 import { expectAssetContinuity, expectMotion } from '../helpers/asset-evidence';
 import {
@@ -136,7 +137,7 @@ async function expectNoDocumentOverflow(page: Page): Promise<void> {
 
 async function expandBonePath(page: Page): Promise<void> {
   for (const boneName of armHierarchyPath) {
-    const item = page.getByTestId(`bone-tree-item-${boneName}`);
+    const item = (await workspaceControl(page, `bone-tree-item-${boneName}`));
     await item.scrollIntoViewIfNeeded();
     await expect(item).toBeVisible();
     const toggle = item.locator('span').first();
@@ -150,7 +151,7 @@ async function selectBone(page: Page, boneName: string): Promise<void> {
   if (!await page.getByTestId('inspector').isVisible()) {
     await showModernPanel(page, 'properties');
   }
-  const bone = page.getByTestId(`bone-tree-item-${boneName}`);
+  const bone = (await workspaceControl(page, `bone-tree-item-${boneName}`));
   await bone.scrollIntoViewIfNeeded();
   await expectActionable(bone);
   await bone.click();
@@ -158,7 +159,7 @@ async function selectBone(page: Page, boneName: string): Promise<void> {
 }
 
 async function selectSkinBoneOnCanvas(page: Page, boneName: string): Promise<void> {
-  const workspace = page.getByTestId('skin-workspace-panel');
+  const workspace = (await workspaceControl(page, 'skin-workspace-panel'));
   await expect(workspace).toBeVisible();
   if (await workspace.getAttribute('data-active-tool') !== 'pick') {
     await page.getByTestId('modern-skin-tool-pick').click();
@@ -367,7 +368,7 @@ async function resetViewportCamera(page: Page, selectedBoneName: string): Promis
   // R controls the selected bone's rotate gizmo while a bone owns transform input.
   // Clear that owner first so the same shortcut reaches the camera reset path.
   await showModernPanel(page, 'scene');
-  await page.getByTestId('outliner-scene-root').click();
+  await (await workspaceControl(page, 'outliner-scene-root')).click();
   await page.keyboard.press('r');
   await page.waitForTimeout(120);
   await showModernPanel(page, 'properties');
@@ -393,7 +394,7 @@ async function poseBoneFromBind(
   rotationClicks: number,
 ): Promise<void> {
   await selectBone(page, boneName);
-  await page.getByTestId('transform-reset-btn').click();
+  await (await workspaceControl(page, 'transform-reset-btn')).click();
   await expect(page.getByTestId('status-text')).toContainText(new RegExp(`${boneName}.*bind pose`, 'i'));
   const rotateControl = page.getByTestId(rotationControlTestId(axis, rotationClicks));
   await expectActionable(rotateControl);
@@ -416,7 +417,7 @@ async function insertWavePose(
   await poseBoneFromBind(page, wavingArm.forearm, 'y', pose.forearmRotationClicks);
   await poseBoneFromBind(page, wavingArm.hand, 'y', pose.handRotationClicks);
   await selectBone(page, wavingArm.upperArm);
-  await page.getByTestId('animation-insert-key-btn').click();
+  await (await workspaceControl(page, 'animation-insert-key-btn')).click();
   await expect(page.getByTestId('status-text')).toContainText(/Inserted branch animation keyframes/i);
   await expect(page.getByTestId('animation-selected-key')).toContainText(`${time.toFixed(2)}s`);
   await page.waitForTimeout(180);
@@ -460,7 +461,7 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await expectLoadDetails(page, /bones:\s*24.*clips:\s*12/i);
     await pausePlaybackIfRunning(page);
     await showModernPanel(page, 'properties');
-    await expect(page.getByTestId('smf-indexed-bone-guidance')).toBeVisible();
+    await expect(await workspaceControl(page, 'smf-indexed-bone-guidance')).toBeVisible();
     await expectNoDocumentOverflow(page);
     await captureStep(page, '02-character-loaded.png');
 
@@ -468,10 +469,10 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
     await expect(page.getByTestId('animation-workflow-hint')).toContainText(/Select a bone.*Branch.*whole chain/i);
 
-    await page.getByTestId('animation-new-name-input').fill('Hand Wave');
-    await page.getByTestId('animation-new-duration-input').fill('2');
-    await page.getByTestId('animation-new-pose-select').selectOption('rest');
-    const createButton = page.getByTestId('animation-create-btn');
+    await (await workspaceControl(page, 'animation-new-name-input')).fill('Hand Wave');
+    await (await workspaceControl(page, 'animation-new-duration-input')).fill('2');
+    await (await workspaceControl(page, 'animation-new-pose-select')).selectOption('rest');
+    const createButton = (await workspaceControl(page, 'animation-create-btn'));
     await expectActionable(createButton);
     await createButton.click();
     await expect(page.getByTestId('status-text')).toContainText(/Created animation clip Hand Wave from the rest pose/i);
@@ -497,9 +498,9 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await selectBone(page, wavingArm.upperArm);
     await expect(page.getByTestId('animate-workspace-panel')).toContainText(`Selected bone: ${wavingArm.upperArm}`);
     await expect(page.getByTestId('animation-insert-key-btn')).toBeEnabled();
-    await page.getByTestId('animation-snap-step-select').selectOption('0.5');
-    await page.getByTestId('animation-interpolation-select').selectOption('linear');
-    await page.getByTestId('animation-scope-select').selectOption('branch');
+    await (await workspaceControl(page, 'animation-snap-step-select')).selectOption('0.5');
+    await (await workspaceControl(page, 'animation-interpolation-select')).selectOption('linear');
+    await (await workspaceControl(page, 'animation-scope-select')).selectOption('branch');
     await expect(page.getByTestId('status-text')).toContainText(/Animation edit scope set to Branch/i);
     await captureStep(page, '05-arm-chain-selected.png');
 
@@ -530,24 +531,27 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await selectWorkspace(page, 'skin');
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
     await selectSkinBoneOnCanvas(page, skinRepairBone);
+    await expect(page.getByTestId('inspector-selected')).toHaveText(skinRepairBone);
+    await page.getByTestId('modern-panel-close').click();
     await expect(page.getByTestId('skin-workspace-panel')).toContainText('LeftForeArm');
-    await page.getByTestId('skin-paint-pose').selectOption('frozen');
-    await page.getByTestId('skin-paint-target-mode').selectOption('vertex');
-    await page.getByTestId('skin-paint-mode-subtract').click();
+    await showSkinAdvanced(page);
+    await (await workspaceControl(page, 'skin-paint-pose')).selectOption('frozen');
+    await (await workspaceControl(page, 'skin-paint-target-mode')).selectOption('vertex');
+    await (await workspaceControl(page, 'skin-paint-mode-subtract')).click();
     await setRangeValue(page, 'skin-paint-radius', 0.4);
     await setRangeValue(page, 'skin-paint-strength', 1);
     await setRangeValue(page, 'skin-paint-target', 1);
     await setRangeValue(page, 'skin-paint-falloff', 1);
-    await page.getByTestId('skin-weight-preview-btn').click();
+    await (await workspaceControl(page, 'skin-weight-preview-btn')).click();
     await expect(page.getByTestId('skin-weight-preview-btn')).toContainText('Hide Weights');
-    await page.getByTestId('skin-paint-vertices-btn').click();
+    await (await workspaceControl(page, 'skin-paint-vertices-btn')).click();
     await expect(page.getByTestId('skin-paint-vertices-btn')).toContainText('Hide Vertices');
     await expect(page.getByTestId('skin-paint-vertices-btn')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-skin-points-enabled', 'true');
 
     const frontLowerTarget = torsoSeamTargets.frontLower;
     const torsoTarget = await findFixturePaintTarget(page, frontLowerTarget, frontLowerTarget.posedWorld);
-    const selectedVertex = page.getByTestId('skin-selected-vertex');
+    const selectedVertex = (await workspaceControl(page, 'skin-selected-vertex'));
     expect(frontLowerTarget.vertexIds.has(torsoTarget.vertexId)).toBe(true);
     await expectSelectedVertexInTarget(selectedVertex, frontLowerTarget);
     await expect(selectedVertex).toContainText('SMF_Node_13 · LeftForeArm');
@@ -558,7 +562,7 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await page.mouse.move(8, 8);
     await captureStep(page, '10-torso-influence-before.png');
 
-    await page.getByTestId('skin-paint-mode-set').scrollIntoViewIfNeeded();
+    await (await workspaceControl(page, 'skin-paint-mode-set')).scrollIntoViewIfNeeded();
     await paintFixtureTarget(page, frontLowerTarget, skinRepairBone);
     const correctedTarget = await findFixturePaintTarget(page, frontLowerTarget, frontLowerTarget.correctedWorld);
     expect(frontLowerTarget.vertexIds.has(correctedTarget.vertexId)).toBe(true);
@@ -575,7 +579,7 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
 
     await resetViewportCamera(page, wavingArm.upperArm);
-    await page.getByTestId('skin-paint-mode-set').click();
+    await (await workspaceControl(page, 'skin-paint-mode-set')).click();
     await page.getByTestId('viewport-layout-quad').click();
     await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-viewport-layout', 'quad');
     const sleeveBeforeTarget = await findFixturePaintTargetAcrossViews(
@@ -602,10 +606,10 @@ test('headless user journey creates and previews a hand-wave animation', async (
     await page.mouse.move(8, 8);
     await captureStep(page, '11-torso-and-sleeve-corrected.png');
 
-    await page.getByTestId('skin-weight-preview-btn').scrollIntoViewIfNeeded();
-    await page.getByTestId('skin-weight-preview-btn').click();
+    await (await workspaceControl(page, 'skin-weight-preview-btn')).scrollIntoViewIfNeeded();
+    await (await workspaceControl(page, 'skin-weight-preview-btn')).click();
     await expect(page.getByTestId('skin-weight-preview-btn')).toContainText('Show Weights');
-    await page.getByTestId('skin-paint-vertices-btn').click();
+    await (await workspaceControl(page, 'skin-paint-vertices-btn')).click();
     await expect(page.getByTestId('skin-paint-vertices-btn')).toContainText('Show Vertices');
     await expect(page.getByTestId('skin-paint-vertices-btn')).toHaveAttribute('aria-pressed', 'false');
     await selectWorkspace(page, 'animate');

@@ -1,7 +1,8 @@
 import { expect, type Page } from '@playwright/test';
+import { workspaceControl } from './modern-shell';
 
 export const setRangeValue = async (page: Page, testId: string, value: number): Promise<void> => {
-  const slider = page.getByTestId(testId);
+  const slider = await workspaceControl(page, testId);
   await slider.fill(String(value));
   await slider.dispatchEvent('input');
   await page.waitForTimeout(20);

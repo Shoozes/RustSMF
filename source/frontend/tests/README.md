@@ -1,5 +1,11 @@
 # Frontend Test Contract
 
+## Modern task navigation
+
+`helpers/modern-shell.ts` follows authoring controls through their visible task tab and native disclosure before acting. It uses pointer/keyboard controls, never editor-state setters or CSS visibility overrides. Existing semantic assertions remain in their feature/journey owners. Model, Rig, Skin and Animate keep inactive task content mounted so drafts survive tab changes. The six-size authoring lane owns selected controls, invalid profiles, Live Skin warnings, overflow and drawer focus return.
+
+`workspace-tasks.spec.ts` guards arrow wrapping/Home/End, one tab stop and named panel relationships, visible focus traversal/Escape return, unfinished clip/profile fields, keyboard file selection with empty-selection cancellation, profile errors after disclosure closure, Skin unsaved visibility/history in Scene at wide/narrow sizes, and 44 px coarse-pointer symbols/tabs in every workspace. Enter/Space press the named picker after its event subscription and focus check. Space activates authoring controls without changing playback; R/S typed in a rig field preserve its transform mode. Companion assertions retain viewer shortcuts outside controls. `ModernSkinWorkspace.test.ts` checks clean/dirty/export-block notice rendering. Picker automation is browser evidence, not native Windows dialog evidence. Prior reviewed task/DPI captures remain source-specific.
+
 ## Preview rendering and Help
 
 `preview-readiness.spec.ts` independently inspects the distributed Signal Robot GLB (five bones, three materials, normalized raw skin, two moving two-second clips) and opens it through the ordinary file input. Six viewport cases prove visible model pixels with grid, axes and rig helpers disabled, concise status/disclosed details, offline Help layout, focus wrapping, Escape and close-button focus return.

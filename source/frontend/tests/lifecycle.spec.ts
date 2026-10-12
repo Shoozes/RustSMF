@@ -1,3 +1,5 @@
+import { workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showModernPanel, showSkinAdvanced } from './helpers/modern-shell';
+
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
 import { SAMPLE_FBX, SAMPLE_SMF, SyntheticDropFile, dispatchSyntheticDrop, restoreBrowserFileArrayBuffer, withBrowserFileArrayBufferDelay, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
@@ -7,7 +9,6 @@ import { startSmfCodecProbe, stopSmfCodecProbe } from './helpers/smf-codec-probe
 import { parseSelectedBone, fileToBase64 } from './helpers/format-assertions';
 import { paintOnMeshInViewport } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
-import { selectWorkspace, clickSecondaryCommand, showModernPanel, showSkinAdvanced  } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -120,10 +121,10 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       expect(originalRootId).toBeTruthy();
       await selectWorkspace(page, 'rig');
       await page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first().click({ force: true });
-      await page.getByTestId('transform-x-btn').click();
+      await (await workspaceControl(page, 'transform-x-btn')).click();
       await selectWorkspace(page, 'animate');
       await pausePlaybackIfRunning(page);
-      await page.getByTestId('animation-insert-key-btn').click();
+      await (await workspaceControl(page, 'animation-insert-key-btn')).click();
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
       await withBrowserFileArrayBufferDelay(page, {
@@ -213,13 +214,13 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await expect(page.getByTestId('skin-paint-target-mode')).toBeEnabled();
 
       const inspector = page.getByTestId('inspector');
-      const fixtureBone = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
+      const fixtureBone = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first());
       await fixtureBone.click({ force: true });
       await page.waitForTimeout(60);
       const selectedBefore = parseSelectedBone(await page.getByTestId('status-text').textContent());
       expect(selectedBefore).toBe('FixtureRoot');
 
-      await page.getByTestId('skin-paint-mode-add').click({ force: true }).catch(() => {});
+      await (await workspaceControl(page, 'skin-paint-mode-add')).click();
       await setRangeValue(page, 'skin-paint-target', 1);
       await setRangeValue(page, 'skin-paint-radius', 1);
       await setRangeValue(page, 'skin-paint-strength', 1);
@@ -267,15 +268,15 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/generated-skinned-fixture|bones: 2|clips: 1/i);
       await selectWorkspace(page, 'rig');
       await expect(page.getByTestId('inspector')).toBeVisible();
-      const firstBone = page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+      const firstBone = await workspaceLocator(page, page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first());
       await expect(firstBone).toBeVisible();
       await firstBone.click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
-      await page.getByTestId('transform-x-btn').click({ force: true }).catch(() => {});
+      await (await workspaceControl(page, 'transform-x-btn')).click();
       await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
       await pausePlaybackIfRunning(page);
-      await page.getByTestId('animation-insert-key-btn').click();
+      await (await workspaceControl(page, 'animation-insert-key-btn')).click();
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
       await withBrowserFileArrayBufferDelay(page, {
@@ -313,7 +314,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
 
       await selectWorkspace(page, 'rig');
       await page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first().click({ force: true });
-      await page.getByTestId('transform-x-btn').click({ force: true });
+      await (await workspaceControl(page, 'transform-x-btn')).click();
       await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
 
@@ -344,19 +345,19 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
 
       await showModernPanel(page, 'scene');
 
-      const firstSubmodel = page.getByTestId('outliner-submodel-0');
+      const firstSubmodel = (await workspaceControl(page, 'outliner-submodel-0'));
       await showModernPanel(page, 'scene');
-      const firstVisibilityToggle = page.getByTestId('outliner-visibility-toggle-0');
+      const firstVisibilityToggle = (await workspaceControl(page, 'outliner-visibility-toggle-0'));
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
       await firstVisibilityToggle.click();
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
 
       await selectWorkspace(page, 'rig');
       const inspector = page.getByTestId('inspector');
-      const boneEntry = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+      const boneEntry = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first());
       await expect(boneEntry).toBeVisible();
       await boneEntry.click({ force: true });
-      await page.getByTestId('transform-x-btn').click({ force: true });
+      await (await workspaceControl(page, 'transform-x-btn')).click();
 
       await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');

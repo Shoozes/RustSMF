@@ -1,4 +1,5 @@
-import { selectWorkspace, showModernPanel } from './helpers/modern-shell';
+import { workspaceLocator, workspaceControl, selectWorkspace, showModernPanel } from './helpers/modern-shell';
+
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import {
   SAMPLE_SMF,
@@ -316,12 +317,13 @@ test.describe('RustSMF visual confirmations', () => {
     await expect(page.getByTestId('modern-support-panel')).toHaveCount(0);
     await showModernPanel(page, 'scene');
     await expect(page.getByTestId('outliner')).toContainText(/Scene Root|Bone|Mesh/i);
-    await expect(page.getByTestId('inspector')).toHaveCount(0);
+    await expect(page.getByTestId('inspector')).toBeHidden();
     await expect(page.getByTestId('timeline')).toHaveCount(0);
 
     await page.getByTestId('modern-panel-properties').click();
     await expect(page.getByTestId('inspector')).toContainText(/Bones \(\d+\)/i);
-    await expect(page.getByTestId('outliner')).toHaveCount(0);
+    await expect(page.getByTestId('outliner-submodel-list')).toBeHidden();
+    await expect(page.getByTestId('workspace-task-details')).toHaveAttribute('aria-selected', 'true');
     await selectWorkspace(page, 'animate');
     await expect(page.getByTestId('timeline')).toBeVisible();
 
@@ -339,11 +341,11 @@ test.describe('RustSMF visual confirmations', () => {
     await pausePlaybackIfRunning(page);
     await selectWorkspace(page, 'rig');
 
-    const childBone = page.getByTestId('inspector').locator('li li > div').filter({ hasText: /SMF_Node_\d+/ }).first();
+    const childBone = await workspaceLocator(page, page.getByTestId('inspector').locator('li li > div').filter({ hasText: /SMF_Node_\d+/ }).first());
     await expect(childBone).toBeVisible({ timeout: 8000 });
     await childBone.click({ force: true });
-    await page.getByTestId('rig-tool-ik').click();
-    await page.getByTestId('rig-ik-chain-length').selectOption('1');
+    await (await workspaceControl(page, 'rig-tool-ik')).click();
+    await (await workspaceControl(page, 'rig-ik-chain-length')).selectOption('1');
     await expect(page.getByTestId('rig-ik-settings')).toBeVisible();
 
     expect(await dragRigIkTarget(page)).toBe(true);

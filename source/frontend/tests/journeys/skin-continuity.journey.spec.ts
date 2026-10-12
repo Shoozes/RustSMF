@@ -1,6 +1,7 @@
+import { workspaceControl, selectWorkspace, showSkinAdvanced } from '../helpers/modern-shell';
 import { test, expect, downloadBytes, exportEvidence, pauseJourney, reopenProject, selectBone, watchJourneyErrors } from '../helpers/product-journey';
 import { createSkinnedGlbFixtureInput } from '../helpers/skinned-glb-fixture';
-import { selectWorkspace, showSkinAdvanced  } from '../helpers/modern-shell';
+
 import { paintOnMeshInViewport, cancelPaintOnMeshInViewport } from '../helpers/viewport-interactions';
 import { setRangeValue } from '../helpers/timeline-interactions';
 import { expectAssetContinuity, expectNumbersClose } from '../helpers/asset-evidence';
@@ -18,11 +19,11 @@ test('product journey authors skin weights and preserves raw influences through 
   await selectWorkspace(page, 'skin');
   await showSkinAdvanced(page);
   for (const mode of ['rest', 'frozen', 'live', 'rest']) {
-    await page.getByTestId('skin-paint-pose').selectOption(mode);
+    await (await workspaceControl(page, 'skin-paint-pose')).selectOption(mode);
     await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-skin-paint-pose', mode);
     await expect(page.getByTestId('skin-paint-pose-warning')).toHaveCount(mode === 'live' ? 1 : 0);
   }
-  await page.getByTestId('skin-paint-mode-set').click();
+  await (await workspaceControl(page, 'skin-paint-mode-set')).click();
   await setRangeValue(page, 'skin-paint-radius', 0.5);
   await setRangeValue(page, 'skin-paint-target', 0.35);
   await setRangeValue(page, 'skin-paint-strength', 1);
@@ -32,36 +33,36 @@ test('product journey authors skin weights and preserves raw influences through 
   const painted = await exportEvidence(page);
   expect(painted.primitives[0].attributes.WEIGHTS_0).not.toEqual(baseline.primitives[0].attributes.WEIGHTS_0);
   await showSkinAdvanced(page);
-  await page.getByTestId('skin-paint-undo-btn').click();
+  await (await workspaceControl(page, 'skin-paint-undo-btn')).click();
   expectNumbersClose((await exportEvidence(page)).primitives[0].attributes.WEIGHTS_0, baseline.primitives[0].attributes.WEIGHTS_0);
-  await page.getByTestId('skin-paint-redo-btn').click();
+  await (await workspaceControl(page, 'skin-paint-redo-btn')).click();
   expectNumbersClose((await exportEvidence(page)).primitives[0].attributes.WEIGHTS_0, painted.primitives[0].attributes.WEIGHTS_0);
-  await page.getByTestId('skin-paint-mode-add').click();
+  await (await workspaceControl(page, 'skin-paint-mode-add')).click();
   await page.getByTestId('modern-panel-close').click();
   expect(await cancelPaintOnMeshInViewport(page)).toBe(true);
   await expect(page.getByTestId('three-canvas')).not.toHaveAttribute('data-skin-paint-active', 'active');
   const canceled = await exportEvidence(page);
   expect(canceled.primitives[0].attributes.WEIGHTS_0).not.toEqual(painted.primitives[0].attributes.WEIGHTS_0);
   await showSkinAdvanced(page);
-  await page.getByTestId('skin-paint-undo-btn').click();
+  await (await workspaceControl(page, 'skin-paint-undo-btn')).click();
   expectNumbersClose((await exportEvidence(page)).primitives[0].attributes.WEIGHTS_0, painted.primitives[0].attributes.WEIGHTS_0);
-  await page.getByTestId('skin-paint-mode-smooth').click();
+  await (await workspaceControl(page, 'skin-paint-mode-smooth')).click();
   await page.getByTestId('modern-panel-close').click();
   expect(await paintOnMeshInViewport(page)).toBe(true);
   await showSkinAdvanced(page);
-  await page.getByTestId('skin-normalize-btn').click();
+  await (await workspaceControl(page, 'skin-normalize-btn')).click();
   for (const algorithm of ['segment-distance-normal', 'nearest-bone-origin', 'closest-two-segments', 'selected-branch']) {
-    await page.getByTestId('skin-autoskin-algorithm').selectOption(algorithm);
-    await page.getByTestId('skin-autoskin-btn').click();
+    await (await workspaceControl(page, 'skin-autoskin-algorithm')).selectOption(algorithm);
+    await (await workspaceControl(page, 'skin-autoskin-btn')).click();
     const weights = (await exportEvidence(page)).primitives[0].attributes.WEIGHTS_0;
     for (let i = 0; i < weights.length; i += 4) expect(weights.slice(i, i + 4).reduce((sum, w) => sum + w, 0)).toBeCloseTo(1, 5);
   }
-  await page.getByTestId('skin-autoskin-algorithm').selectOption('nearest-segment');
+  await (await workspaceControl(page, 'skin-autoskin-algorithm')).selectOption('nearest-segment');
   await expect(page.getByTestId('skin-autoskin-max-influences')).toBeDisabled();
-  await page.getByTestId('skin-autoskin-btn').click();
-  await page.getByTestId('skin-autoskin-algorithm').selectOption('segment-inverse-distance');
+  await (await workspaceControl(page, 'skin-autoskin-btn')).click();
+  await (await workspaceControl(page, 'skin-autoskin-algorithm')).selectOption('segment-inverse-distance');
   await setRangeValue(page, 'skin-autoskin-max-influences', 2);
-  await page.getByTestId('skin-autoskin-btn').click();
+  await (await workspaceControl(page, 'skin-autoskin-btn')).click();
   await expect(page.getByTestId('skin-dirty-state')).toContainText(/true/i);
   const authored = await exportEvidence(page);
   const attrs = authored.primitives[0].attributes;

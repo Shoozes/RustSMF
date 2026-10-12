@@ -4,9 +4,11 @@ Last reviewed: 2026-10-11
 
 ## 0.2.1 Windows preview
 
-The application manifests and lock metadata are synchronized at 0.2.1. The independent pose-contact crate remains 0.1.0. The actual installed Windows preview passed a locally observed UI automation run on 2026-10-11: visible geometry/animation, native Open/Save cancellation, sidecars, project save/reopen/continued editing, GLB round-trip, blocked destination and recovery. Original recovery bytes and timestamps were restored; the owned test installation and processes were removed. Earlier 0.2.0 evidence remains dated evidence for its own source.
+Application manifests/locks remain at 0.2.1; pose-contact remains 0.1.0. HISTORY and preview notes bind the completed installed-Windows checks to their source/artifacts, including restored recovery and removed test resources. Earlier evidence remains specific to its recorded source.
 
-Modern adds offline More > Help, explicit modal focus wrapping/Escape return, and short successful load messages with full details disclosed in Help and the status tooltip. Resource warnings, synchronous fallback, errors and dirty replacement protection remain visible. The toolbar, closed single drawer and flat Lumen Alloy theme stay intact; Original keeps its existing presentation.
+Modern keeps offline More > Help, short status and visible errors/recovery. Current source uses three task tabs in each Model, Rig, Skin and Animate drawer, named icon actions and secondary disclosures. Tab switching preserves drafts; arrow keys navigate and Escape returns focus. The Skin brush card hides while Tools is open; Scene retains a compact unsaved/export-block notice. Original keeps its presentation. These menus do not change the public installer.
+
+Focused controls own their native keys: Space activates buttons/disclosures without toggling playback, and text fields retain R/S/T input without changing viewport tools. Viewer shortcuts remain available outside those controls; chronological undo/redo keeps its existing owner.
 
 Render smoke checks decode actual canvas pixels and exclude overlapping HTML controls. Loaded-model preview checks disable grid, axes and rig helpers; encoded file size is no longer accepted as rendering evidence. A project-generated five-bone, two-clip GLB provides the redistributable quickstart and README screenshot. Its raw geometry, influences, materials and motion are independently inspected.
 
@@ -14,7 +16,7 @@ Project-owned source is MIT licensed, with locked dependency notices and separat
 
 Source after the published preview reports recovery autosave refusal with a Save Project action, clears that warning only after a current successful autosave, and preserves unrelated errors. Native Open rejects selections without exactly one model before asking to replace dirty work; native bundle replies require one validated byte payload per selected file. Load errors give a portable model/sidecar hint. These frontend fixes retain the existing formats and app version; the released installer keeps its original acceptance record.
 
-This source also passed desktop smoke, NSIS packaging and ten installed Windows UI/cleanup checks on 2026-10-11. Native invalid selections preserve editing/history; real save/reopen/export, sidecars, recovery and Help work on the identified candidate. Original recovery bytes, timestamps and attributes were restored and the owned installation/processes removed. HISTORY binds the local installer and source inputs; it does not replace the public preview artifact.
+The prior integrity batch, published as `1831bc9`, passed desktop smoke, packaging and ten installed Windows UI/cleanup checks on 2026-10-11. HISTORY binds its source/installer and exact recovery restoration. The newer task drawers have a separate frontend gate; these menus have no new installed-Windows acceptance claim.
 
 RustSMF is a Tauri + React + Three.js desktop/web editor for loading, inspecting, posing, animating, skinning, and exporting SMF, GLB/GLTF, FBX, DAE/Collada, and OBJ models. This document owns current behavior, architecture boundaries, format limits, and the verification contract. Forward work belongs in `TODO.md`; dated command evidence belongs in `HISTORY.md` and the latest assessment in `review.md`; recurring failure analysis belongs in `PITFALL_LEDGER.md`.
 

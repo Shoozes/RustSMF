@@ -1,8 +1,9 @@
+import { workspaceControl, selectWorkspace, clickSecondaryCommand, showModernPanel } from './helpers/modern-shell';
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { getTauriMockSnapshot, installTauriMock, SAMPLE_OBJ } from './helpers/smoke-helpers';
-import { selectWorkspace, clickSecondaryCommand, showModernPanel  } from './helpers/modern-shell';
+
 import { readAssetEvidence, expectMotion } from './helpers/asset-evidence';
 import { downloadBytes, renameSubmodel, watchJourneyErrors } from './helpers/product-journey';
 
@@ -43,8 +44,8 @@ test('IPC recovery cancel preserves edits, discard restores serialized state, an
   await expect(page.getByTestId('rig-primary-axis')).toHaveValue('x');
   await expect(page.getByTestId('rig-lock-toggle')).toBeChecked();
   await selectWorkspace(page, 'animate');
-  await page.getByTestId('animation-clip-name-input').fill('Continued Recovery');
-  await page.getByTestId('animation-rename-clip-btn').click();
+  await (await workspaceControl(page, 'animation-clip-name-input')).fill('Continued Recovery');
+  await (await workspaceControl(page, 'animation-rename-clip-btn')).click();
   await page.getByTestId('save-project-btn').click();
   await expect(page.getByTestId('status-text')).toContainText(/Saved.*project/i);
   const snapshot = await getTauriMockSnapshot(page);

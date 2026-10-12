@@ -1,3 +1,5 @@
+import { workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showSkinAdvanced } from './helpers/modern-shell';
+
 import { expect, test } from '@playwright/test';
 import fs from 'fs';
 import {
@@ -14,7 +16,7 @@ import {
   updateTauriMock,
 } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
-import { selectWorkspace, clickSecondaryCommand, showSkinAdvanced  } from './helpers/modern-shell';
+
 import { cancelPaintOnMeshInViewport } from './helpers/viewport-interactions';
 import { renameSubmodel, watchJourneyErrors } from './helpers/product-journey';
 
@@ -491,10 +493,10 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     ).activeWrites, { timeout: 15000 }).toBe(1);
 
     await selectWorkspace(page, 'rig');
-    const firstBone = page.getByTestId('inspector').locator('li > div').filter({ hasText: /SMF_Node_/ }).first();
+    const firstBone = await workspaceLocator(page, page.getByTestId('inspector').locator('li > div').filter({ hasText: /SMF_Node_/ }).first());
     await expect(firstBone).toBeVisible();
     await firstBone.click({ force: true });
-    await page.getByTestId('transform-x-btn').click({ force: true });
+    await (await workspaceControl(page, 'transform-x-btn')).click();
     await page.waitForTimeout(1400);
     await updateTauriMock(page, { writeDelayMs: 50 });
 
@@ -510,7 +512,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     const previousRootId = await canvas.getAttribute('data-model-root-id');
     expect(previousRootId).toBeTruthy();
     await updateTauriMock(page, { writeDelayMs: 3000 });
-    await page.getByTestId('transform-y-btn').click({ force: true });
+    await (await workspaceControl(page, 'transform-y-btn')).click();
     await expect.poll(async () => (
       await getTauriMockSnapshot(page)
     ).activeWrites, { timeout: 15000 }).toBe(1);
@@ -573,17 +575,17 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('skin-workspace-panel')).toBeVisible();
     await showSkinAdvanced(page);
     const inspector = page.getByTestId('inspector');
-    const bone = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+    const bone = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first());
     await expect(bone).toBeVisible();
     await bone.click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
 
-    await page.getByTestId('skin-paint-mode-add').click({ force: true }).catch(() => {});
-    await page.getByTestId('skin-paint-target').fill('1');
+    await (await workspaceControl(page, 'skin-paint-mode-add')).click();
+    await (await workspaceControl(page, 'skin-paint-target')).fill('1');
     await page.getByTestId('skin-paint-target').dispatchEvent('input');
-    await page.getByTestId('skin-paint-radius').fill('1');
+    await (await workspaceControl(page, 'skin-paint-radius')).fill('1');
     await page.getByTestId('skin-paint-radius').dispatchEvent('input');
-    await page.getByTestId('skin-paint-strength').fill('1');
+    await (await workspaceControl(page, 'skin-paint-strength')).fill('1');
     await page.getByTestId('skin-paint-strength').dispatchEvent('input');
 
     const canvas = page.getByTestId('three-canvas');
@@ -638,14 +640,14 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
 
     await selectWorkspace(page, 'rig');
     const rigPanel = page.getByTestId('inspector');
-    const firstBone = rigPanel.locator('li > div').filter({ hasText: /SMF_Node_/ }).first();
+    const firstBone = await workspaceLocator(page, rigPanel.locator('li > div').filter({ hasText: /SMF_Node_/ }).first());
     await expect(firstBone).toBeVisible({ timeout: 8000 });
     await firstBone.click({ force: true });
     await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*SMF_Node_\d+/i);
 
     await selectWorkspace(page, 'animate');
     await expect(page.getByTestId('animation-insert-key-btn')).toBeEnabled();
-    await page.getByTestId('animation-insert-key-btn').click();
+    await (await workspaceControl(page, 'animation-insert-key-btn')).click();
     await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
     const rootId = await page.getByTestId('three-canvas').getAttribute('data-model-root-id');

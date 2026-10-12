@@ -1,3 +1,4 @@
+import { workspaceControl, showModernPanel, clickSecondaryCommand } from '../helpers/modern-shell';
 import { expect, test } from '@playwright/test';
 import {
   SAMPLE_EXTERNAL_GLTF,
@@ -5,16 +6,15 @@ import {
   SAMPLE_OBJ,
   setupBrowserDiagnostics,
 } from '../helpers/smoke-helpers';
-import { showModernPanel } from '../helpers/modern-shell';
-import { clickSecondaryCommand } from '../helpers/modern-shell';
+
 import { exportEvidence, watchJourneyErrors } from '../helpers/product-journey';
 import { expectAssetContinuity } from '../helpers/asset-evidence';
 
 async function renameFirstSubmodel(page: import('@playwright/test').Page, nextName: string): Promise<void> {
-  const row = page.getByTestId('outliner-submodel-0');
+  const row = (await workspaceControl(page, 'outliner-submodel-0'));
   await row.locator('.outliner-name-btn').click();
-  await page.getByTestId('outliner-rename-input').fill(nextName);
-  await page.getByTestId('outliner-rename-btn').click();
+  await (await workspaceControl(page, 'outliner-rename-input')).fill(nextName);
+  await (await workspaceControl(page, 'outliner-rename-btn')).click();
   await expect(row.locator('.outliner-name')).toHaveText(nextName);
 }
 

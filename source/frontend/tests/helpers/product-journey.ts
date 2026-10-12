@@ -1,6 +1,7 @@
+import { workspaceControl, selectWorkspace, clickSecondaryCommand, showModernPanel } from './modern-shell';
 import fs from 'node:fs';
 import { expect, type Page, test } from '@playwright/test';
-import { selectWorkspace, clickSecondaryCommand, showModernPanel  } from './modern-shell';
+
 import { readAssetEvidence } from './asset-evidence';
 
 export { test, expect };
@@ -18,7 +19,7 @@ export function watchJourneyErrors(page: Page, allowed: RegExp[] = []): () => vo
 export async function downloadBytes(page: Page, id: string, secondary = false): Promise<Buffer> {
   const pending = page.waitForEvent('download');
   if (secondary) await clickSecondaryCommand(page, id);
-  else await page.getByTestId(id).click();
+  else await (await workspaceControl(page, id)).click();
   const download = await pending;
   const file = await download.path();
   expect(file).not.toBeNull();
@@ -41,16 +42,16 @@ export async function reopenProject(page: Page, bytes: Buffer): Promise<void> {
 export async function selectBone(page: Page, name: string): Promise<void> {
   await showModernPanel(page, 'properties');
   const inspector = page.getByTestId('inspector');
-  const row = page.getByTestId(`bone-tree-item-${name}`);
+  const row = await workspaceControl(page, `bone-tree-item-${name}`);
   await row.click();
   await expect(inspector).toContainText(new RegExp(`Selected\\s*${name}`));
 }
 
 export async function renameSubmodel(page: Page, name: string): Promise<void> {
   await showModernPanel(page, 'scene');
-  await page.getByTestId('outliner-submodel-0').locator('.outliner-name-btn').click();
-  await page.getByTestId('outliner-rename-input').fill(name);
-  await page.getByTestId('outliner-rename-btn').click();
+  await (await workspaceControl(page, 'outliner-submodel-0')).locator('.outliner-name-btn').click();
+  await (await workspaceControl(page, 'outliner-rename-input')).fill(name);
+  await (await workspaceControl(page, 'outliner-rename-btn')).click();
   await expect(page.getByTestId('outliner')).toContainText(name);
 }
 

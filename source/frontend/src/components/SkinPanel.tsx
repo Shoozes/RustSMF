@@ -1,3 +1,6 @@
+import { PanelAction, TaskDetails, TaskSection } from './WorkspaceTasks';
+import { useWorkspaceTask } from './workspaceTaskContext';
+import { ArrowUUpLeft, ArrowUUpRight, DotsNine, Drop, Equals, Eye, MagicWand, Minus, Plus, Scales, Tag } from '@phosphor-icons/react';
 import * as THREE from 'three';
 import { useMemo } from 'react';
 import { deriveMixamoMinimalBoneAliases, formatBoneDisplayName } from '../utils/boneAliases';
@@ -110,6 +113,7 @@ export default function SkinPanel({
   editorMode = 'skin',
   compact = false,
 }: SkinPanelProps) {
+  const task = useWorkspaceTask();
   const selectedBonePresent = !!selected && selected !== 'Scene';
   const hasSkeleton = !!skeleton && skeleton.bones.length > 0;
   const boneAliases = useMemo(
@@ -142,29 +146,30 @@ export default function SkinPanel({
             : 'Select a bone to adjust weights before export conversion.'}
         </div>
       </div>}
+      <TaskSection task="display">
       <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
         {onToggleWeightPreview && (
-          <button
+          <PanelAction icon={Eye} label={showWeightPreview ? 'Hide weights' : 'Show weights'}
             data-testid="skin-weight-preview-btn"
             className="px-1 py-0 bg-slate-700 hover:bg-slate-600 text-xs mr-1"
             onClick={onToggleWeightPreview}
             aria-pressed={showWeightPreview}
           >
             {showWeightPreview ? 'Hide' : 'Show'} Weights
-          </button>
+          </PanelAction>
         )}
         {onToggleBoneLabels && (
-          <button
+          <PanelAction icon={Tag} label={showBoneLabels ? 'Hide bone labels' : 'Show bone labels'}
             data-testid="skin-bone-label-btn"
             className="px-1 py-0 bg-slate-700 hover:bg-slate-600 text-xs mr-1"
             onClick={onToggleBoneLabels}
             aria-pressed={showBoneLabels}
           >
             {showBoneLabels ? 'Hide' : 'Show'} Labels
-          </button>
+          </PanelAction>
         )}
         {onTogglePaintVertices && (
-          <button
+          <PanelAction icon={DotsNine} label={showPaintVertices ? 'Hide vertices' : 'Show vertices'}
             data-testid="skin-paint-vertices-btn"
             className="px-1 py-0 bg-slate-700 hover:bg-slate-600 text-xs"
             onClick={onTogglePaintVertices}
@@ -172,10 +177,12 @@ export default function SkinPanel({
             title="Show mini vertex nodes colored by the selected bone's weight"
           >
             {showPaintVertices ? 'Hide' : 'Show'} Vertices
-          </button>
+          </PanelAction>
         )}
       </div>
+      </TaskSection>
       <div className="mt-2 text-[9px] border-t border-slate-700 pt-1">
+        <TaskSection task="brush">
         {!compact && <div className="text-slate-400 mb-1">Skin paint</div>}
         {(!compact || !isPaintEnabled) && <div className="text-slate-300 text-[10px] mb-2">
           {isPaintEnabled
@@ -198,13 +205,15 @@ export default function SkinPanel({
             ))}
           </select>
         </label>
+        </TaskSection>
         {skinPaintPoseWarning && (
           <div className="text-amber-300 text-[10px] mb-2" data-testid="skin-paint-pose-warning">
             {skinPaintPoseWarning}
           </div>
         )}
+        <TaskSection task="brush">
         <div className="flex gap-1 mb-2">
-          <button
+          <PanelAction icon={Equals} label={'Set skin weight'}
             data-testid="skin-paint-mode-set"
             aria-pressed={skinPaintMode === 'set'}
             className={`px-1 py-0 text-xs ${skinPaintMode === 'set' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
@@ -212,8 +221,8 @@ export default function SkinPanel({
             onClick={() => onSkinPaintModeChange('set')}
           >
             Set
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={Plus} label={'Add skin weight'}
             data-testid="skin-paint-mode-add"
             aria-pressed={skinPaintMode === 'add'}
             className={`px-1 py-0 text-xs ${skinPaintMode === 'add' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
@@ -221,8 +230,8 @@ export default function SkinPanel({
             onClick={() => onSkinPaintModeChange('add')}
           >
             Add
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={Minus} label={'Subtract skin weight'}
             data-testid="skin-paint-mode-subtract"
             aria-pressed={skinPaintMode === 'subtract'}
             className={`px-1 py-0 text-xs ${skinPaintMode === 'subtract' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
@@ -230,8 +239,8 @@ export default function SkinPanel({
             onClick={() => onSkinPaintModeChange('subtract')}
           >
             Subtract
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={Drop} label={'Smooth skin weights'}
             data-testid="skin-paint-mode-smooth"
             aria-pressed={skinPaintMode === 'smooth'}
             className={`px-1 py-0 text-xs ${skinPaintMode === 'smooth' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
@@ -239,8 +248,8 @@ export default function SkinPanel({
             onClick={() => onSkinPaintModeChange('smooth')}
           >
             Smooth
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={MagicWand} label={'Automatic brush weights'}
             data-testid="skin-paint-mode-auto"
             aria-pressed={skinPaintMode === 'auto'}
             className={`px-1 py-0 text-xs ${skinPaintMode === 'auto' ? 'bg-emerald-500' : 'bg-slate-700 hover:bg-slate-600'}`}
@@ -248,45 +257,50 @@ export default function SkinPanel({
             onClick={() => onSkinPaintModeChange('auto')}
           >
             Auto
-          </button>
+          </PanelAction>
         </div>
         <div className="flex gap-1 mb-2">
-          <button
+          <PanelAction icon={ArrowUUpLeft} label={'Undo skin edit'}
             data-testid="skin-paint-undo-btn"
             className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600"
             disabled={!skinUndoAvailable}
             onClick={onUndoSkinPaint}
           >
             Undo
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={ArrowUUpRight} label={'Redo skin edit'}
             data-testid="skin-paint-redo-btn"
             className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600"
             disabled={!skinRedoAvailable}
             onClick={onRedoSkinPaint}
           >
             Redo
-          </button>
+          </PanelAction>
         </div>
+        </TaskSection>
+        <TaskSection task="weights">
         <div className="flex gap-1 mb-2">
-          <button
+          <PanelAction icon={Scales} label={'Normalize weights'}
             data-testid="skin-normalize-btn"
             className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600"
             disabled={!hasSkeleton}
             onClick={onNormalizeSkinWeights}
           >
             Normalize
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={MagicWand} label={'Auto weight model'}
             data-testid="skin-autoskin-btn"
             className="px-1 py-0 text-xs bg-slate-700 hover:bg-slate-600"
             disabled={!hasSkeleton}
             onClick={onAutoSkinWeights}
           >
             Auto Skin
-          </button>
+          </PanelAction>
         </div>
+        </TaskSection>
+        <TaskSection task={['brush', 'weights']}>
         <div className="grid gap-1.5 text-[10px] mb-2" data-testid="skin-autoskin-options">
+          <TaskSection task="brush">
           <label className="flex items-center justify-between gap-2 text-slate-400">
             <span>Brush target</span>
             <select
@@ -300,6 +314,8 @@ export default function SkinPanel({
               <option value="triangle">Triangle</option>
             </select>
           </label>
+          </TaskSection>
+          <TaskSection task="weights">
           <label className="flex items-center justify-between gap-2 text-slate-400">
             <span>Algorithm</span>
             <select
@@ -362,7 +378,10 @@ export default function SkinPanel({
               className="w-40"
             />
           </label>
+          </TaskSection>
         </div>
+        </TaskSection>
+        <TaskSection task="brush">
         <div className="grid gap-1.5 text-[10px]">
           <label className="flex items-center justify-between gap-2 text-slate-400">
             <span>Radius</span>
@@ -392,6 +411,7 @@ export default function SkinPanel({
               className="w-40"
             />
           </label>
+          <TaskDetails label="Brush settings">
           <label className="flex items-center justify-between gap-2 text-slate-400">
             <span>Target weight</span>
             <input
@@ -420,19 +440,27 @@ export default function SkinPanel({
               className="w-40"
             />
           </label>
+          </TaskDetails>
         </div>
+        </TaskSection>
       </div>
+      {task && skinEditHasDirtyState && <div className="workspace-unsaved" role="status">Unsaved weights</div>}
+      <TaskDetails label="Skin details">
       <div className="mt-2 text-[10px] border-t border-slate-700 pt-1" data-testid="skin-dirty-state">
         <div className={skinEditHasDirtyState ? 'text-amber-300' : 'text-slate-500'}>
           {skinEditHasDirtyState ? 'Skin edit dirty: true' : 'Skin edit dirty: false'}
         </div>
-        {skinEditBlockReason && (
+        {skinEditBlockReason && !task && (
           <div className="text-rose-300 mt-1" data-testid="skin-export-block">
             {skinEditBlockReason}
           </div>
         )}
       </div>
+      </TaskDetails>
+      {task && skinEditBlockReason && <div className="workspace-warning" data-testid="skin-export-block" role="alert">{skinEditBlockReason}</div>}
+      <TaskSection task="weights">
       <div className="mt-2 text-[10px] border-t border-slate-700 pt-1" data-testid="skin-diagnostics">
+        <TaskDetails label="Weight checks">
         <div className="text-slate-400 mb-1">Influence diagnostics</div>
         <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 text-slate-300">
           <span>Meshes / vertices</span><span>{skinDiagnostics.meshCount} / {skinDiagnostics.vertexCount}</span>
@@ -440,6 +468,7 @@ export default function SkinPanel({
           <span>Invalid references</span><span>{skinDiagnostics.invalidReferenceCount}</span>
           <span>Invalid weights</span><span>{skinDiagnostics.invalidWeightCount}</span>
         </div>
+        </TaskDetails>
         {skinSelectedVertex ? (
           <div className="mt-2" data-testid="skin-selected-vertex">
             <div className="text-amber-300">
@@ -488,9 +517,12 @@ export default function SkinPanel({
           <div className="text-slate-500 mt-1">Hover a skinned vertex in the viewport to inspect its four raw slots.</div>
         )}
       </div>
+      </TaskSection>
+      <TaskDetails label="Format limits">
       <div className="text-[10px] text-slate-500 mt-2">
         For non-SMF skinned imports, export remains a guarded SMF conversion. Use GLB export for scale/asset fidelity.
       </div>
+      </TaskDetails>
     </div>
   );
 }

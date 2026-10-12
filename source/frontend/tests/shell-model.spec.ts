@@ -1,3 +1,5 @@
+import { workspaceLocator, workspaceControl, selectWorkspace, revealSecondaryCommands, showAnimateTimeline, showModernPanel, showSkinAdvanced } from './helpers/modern-shell';
+
 import { test, expect } from '@playwright/test';
 import { BAD_INPUT_FOR_ERROR_TEST, SAMPLE_SMF, expectRenderedScreenshot, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import {
@@ -15,7 +17,6 @@ import {
   setViewportLayout,
 } from './helpers/viewport-interactions';
 import { setRangeValue } from './helpers/timeline-interactions';
-import { selectWorkspace, revealSecondaryCommands, showAnimateTimeline, showModernPanel, showSkinAdvanced  } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -186,11 +187,11 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await expect(page.getByTestId('outliner')).toContainText(/Scene Root|Bone|Mesh/i);
       await expect(page.getByTestId('outliner-submodel-count')).toContainText(/\d+ mesh/i);
       await showModernPanel(page, 'scene');
-      const firstSubmodel = page.getByTestId('outliner-submodel-0');
+      const firstSubmodel = (await workspaceControl(page, 'outliner-submodel-0'));
       await expect(firstSubmodel).toBeVisible();
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
       await showModernPanel(page, 'scene');
-      const firstVisibilityToggle = page.getByTestId('outliner-visibility-toggle-0');
+      const firstVisibilityToggle = (await workspaceControl(page, 'outliner-visibility-toggle-0'));
       await expect(firstVisibilityToggle).toHaveAttribute('aria-pressed', 'true');
       await firstVisibilityToggle.click();
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
@@ -212,9 +213,9 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await firstSubmodel.locator('button').first().click();
       await expect(firstSubmodel).toHaveAttribute('data-selected', 'true');
       await expect(page.getByTestId('outliner-selection-count')).toContainText('1 selected');
-      await page.getByTestId('outliner-select-all-btn').click();
+      await (await workspaceControl(page, 'outliner-select-all-btn')).click();
       await expect(page.getByTestId('outliner-selection-count')).toContainText(/selected/);
-      await page.getByTestId('outliner-hide-selected-btn').click();
+      await (await workspaceControl(page, 'outliner-hide-selected-btn')).click();
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
       await page.keyboard.press('Control+Z');
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
@@ -222,15 +223,15 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await page.keyboard.press('Control+Y');
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
       await expect(page.getByTestId('status-text')).toContainText(/Redid hide selected submodels/i);
-      await page.getByTestId('outliner-unhide-all-btn').click();
+      await (await workspaceControl(page, 'outliner-unhide-all-btn')).click();
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'true');
       await firstSubmodel.locator('button').first().click();
-      await page.getByTestId('outliner-hide-unselected-btn').click();
+      await (await workspaceControl(page, 'outliner-hide-unselected-btn')).click();
       if (await page.getByTestId('outliner-submodel-1').count() > 0) {
         await expect(page.getByTestId('outliner-submodel-1')).toHaveAttribute('data-visible', 'false');
       }
-      await page.getByTestId('outliner-unhide-all-btn').click();
-      await page.getByTestId('outliner-clear-selection-btn').click();
+      await (await workspaceControl(page, 'outliner-unhide-all-btn')).click();
+      await (await workspaceControl(page, 'outliner-clear-selection-btn')).click();
       await expect(page.getByTestId('outliner-selection-count')).toContainText('0 selected');
 
       await showAnimateTimeline(page);
@@ -270,9 +271,9 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await expect(page.getByTestId('outliner-selection-count')).toContainText('1 selected');
       await expect(page.getByTestId('outliner').locator('[data-selected="true"]').first()).toBeVisible();
       await expect(canvas).toHaveAttribute('data-selection-overlay-count', /[1-9]\d*/);
-      await page.getByTestId('outliner-hide-selected-btn').click();
+      await (await workspaceControl(page, 'outliner-hide-selected-btn')).click();
       await expect(canvas).toHaveAttribute('data-selection-overlay-count', '0');
-      await page.getByTestId('outliner-unhide-all-btn').click();
+      await (await workspaceControl(page, 'outliner-unhide-all-btn')).click();
       await expect(canvas).toHaveAttribute('data-selection-overlay-count', /[1-9]\d*/);
       expect(await openPickableObjectContextInViewport(page)).toBe(true);
       await expect(page.getByTestId('status-text')).toContainText(/Submodel context actions ready/i);
@@ -415,8 +416,8 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       const inspector = page.getByTestId('inspector');
       await expect(inspector).toContainText(/Bones \(\d+\)/i);
       // Verify collapsible UI present (hierarchy with toggles)
-      await expect(inspector.locator('span').filter({ hasText: /[+-]/ }).first()).toBeVisible();
-      const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /./ }).nth(0);
+      await expect(await workspaceLocator(page, inspector.locator('span').filter({ hasText: /[+-]/ }).first())).toBeVisible();
+      const anyBoneEntry = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /./ }).nth(0));
       if (await anyBoneEntry.count() > 0) {
         await anyBoneEntry.click({ force: true }).catch(() => {});
         await page.waitForTimeout(60);
@@ -670,10 +671,10 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
 
       await selectWorkspace(page, 'rig');
       const inspector = page.getByTestId('inspector');
-      const boneEntry = inspector
+      const boneEntry = await workspaceLocator(page, inspector
         .locator('li > div')
         .filter({ hasText: /SMF_Node_\d+/ })
-        .first();
+        .first());
       await expect(boneEntry).toBeVisible({ timeout: 8000 });
       await boneEntry.click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
@@ -868,7 +869,7 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
 
       await showModernPanel(page, 'properties');
       const inspector = page.getByTestId('inspector');
-      const firstBone = inspector.locator('li > div').filter({ hasText: /./ }).first();
+      const firstBone = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /./ }).first());
       await firstBone.click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
       const selectedBefore = parseSelectedBone(await page.getByTestId('status-text').textContent());
@@ -916,21 +917,21 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
 
       await showModernPanel(page, 'scene');
 
-      const selectedSubmodel = page.getByTestId('outliner-submodel-0');
+      const selectedSubmodel = (await workspaceControl(page, 'outliner-submodel-0'));
       await selectedSubmodel.locator('.outliner-name-btn').click();
       await expect(selectedSubmodel).toHaveAttribute('data-selected', 'true');
       await expect(page.getByTestId('outliner-selection-count')).toContainText('1 selected');
 
       await selectWorkspace(page, 'rig');
-      const boneEntry = page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+      const boneEntry = await workspaceLocator(page, page.getByTestId('inspector').locator('li > div').filter({ hasText: /FixtureTip/ }).first());
       await boneEntry.click({ force: true });
       await expect(page.getByTestId('inspector-selected')).toHaveText('FixtureTip');
-      await page.getByTestId('transform-x-btn').click();
+      await (await workspaceControl(page, 'transform-x-btn')).click();
 
       await selectWorkspace(page, 'animate');
       await pausePlaybackIfRunning(page);
       await setRangeValue(page, 'scrub-slider', 0.2);
-      await page.getByTestId('animation-insert-key-btn').click();
+      await (await workspaceControl(page, 'animation-insert-key-btn')).click();
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
       const scrubState = await canvas.getAttribute('data-playback-time');
@@ -938,7 +939,7 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await selectWorkspace(page, 'skin');
       await showSkinAdvanced(page);
       await page.getByTestId('modern-skin-tool-paint').click();
-      await page.getByTestId('skin-paint-mode-add').click();
+      await (await workspaceControl(page, 'skin-paint-mode-add')).click();
       await setRangeValue(page, 'skin-paint-target', 1);
       await setRangeValue(page, 'skin-paint-radius', 1);
       await setRangeValue(page, 'skin-paint-strength', 1);
@@ -954,12 +955,12 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       };
 
       await selectWorkspace(page, 'rig');
-      await page.getByTestId('rig-tool-select').click();
+      await (await workspaceControl(page, 'rig-tool-select')).click();
       await expect(canvas).toHaveAttribute('data-transform-attached', 'true');
       await expect(canvas).not.toHaveAttribute('data-endpoint-x');
       await expect(canvas).not.toHaveAttribute('data-rig-ik-target-screen-x');
 
-      await page.getByTestId('rig-tool-endpoint').click();
+      await (await workspaceControl(page, 'rig-tool-endpoint')).click();
       await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
       await expectPair('data-endpoint-x', 'data-endpoint-y');
       await expect(canvas).not.toHaveAttribute('data-rig-ik-target-screen-x');
@@ -970,7 +971,7 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
 
       await selectWorkspace(page, 'rig');
       await expectPair('data-endpoint-x', 'data-endpoint-y');
-      await page.getByTestId('rig-tool-ik').click();
+      await (await workspaceControl(page, 'rig-tool-ik')).click();
       await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
       await expect(canvas).not.toHaveAttribute('data-endpoint-x');
       await expectPair('data-rig-ik-target-screen-x', 'data-rig-ik-target-screen-y');
@@ -980,7 +981,7 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
       await selectWorkspace(page, 'rig');
       await expectPair('data-rig-ik-target-screen-x', 'data-rig-ik-target-screen-y');
-      await page.getByTestId('rig-tool-select').click();
+      await (await workspaceControl(page, 'rig-tool-select')).click();
       await expect(canvas).not.toHaveAttribute('data-rig-ik-target-screen-x');
       await expect(canvas).toHaveAttribute('data-transform-attached', 'true');
 
@@ -1027,7 +1028,7 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await showModernPanel(page, 'scene');
       await showModernPanel(page, 'scene');
-      const repair = page.getByTestId('outliner-repair-materials');
+      const repair = (await workspaceControl(page, 'outliner-repair-materials'));
       await expect(repair.locator('input')).toBeEnabled();
       await repair.locator('input').setInputFiles([
         { name: 'fixture.obj', mimeType: 'text/plain', buffer: Buffer.from(MATERIAL_REPAIR_OBJ) },
@@ -1078,7 +1079,7 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       // Also exercises toggle for collapse/expand
       await showModernPanel(page, 'properties');
       const inspector = page.getByTestId('inspector');
-      const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /./ }).nth(0);
+      const anyBoneEntry = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /./ }).nth(0));
       if (await anyBoneEntry.count() > 0) {
         await anyBoneEntry.click({ force: true }).catch(() => {});
         await page.waitForTimeout(60);
@@ -1136,12 +1137,12 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await expectRenderedScreenshot(canvas);
 
       // Exercise transform buttons + new Cycle 3 editor UI (gizmo modes T/R/S + weight preview toggle) for full bone UX coverage (list/raycast + controls + viz)
-      const xBtn = inspector.getByTestId('transform-x-btn');
+      const xBtn = (await workspaceControl(page, 'transform-x-btn'));
       if (await xBtn.count() > 0) {
         await xBtn.click({ force: true }).catch(() => {});
         await page.waitForTimeout(40);
       }
-      const resetBtn = inspector.getByTestId('transform-reset-btn');
+      const resetBtn = (await workspaceControl(page, 'transform-reset-btn'));
       if (await resetBtn.count() > 0) {
         await resetBtn.click({ force: true }).catch(() => {});
         await page.waitForTimeout(40);
@@ -1149,14 +1150,14 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
 
       // Exercise Cycle 3 editor UI buttons (mode + weight preview) - coverage for new controls (T/R/S + weight viz toggle)
       // Clicks ensure no crash, DOM present, state updates (toggle twice for weight)
-      const weightBtn = inspector.getByTestId('weight-preview-btn');
+      const weightBtn = (await workspaceControl(page, 'weight-preview-btn'));
       if (await weightBtn.count() > 0) {
         await weightBtn.click({ force: true }).catch(() => {});
         await page.waitForTimeout(40);
         await weightBtn.click({ force: true }).catch(() => {}); // toggle off
         await page.waitForTimeout(40);
       }
-      const tBtn = inspector.getByTestId('mode-translate-btn');
+      const tBtn = (await workspaceControl(page, 'mode-translate-btn'));
       if (await tBtn.count() > 0) {
         await tBtn.click({ force: true }).catch(() => {});
         await page.waitForTimeout(40);
@@ -1225,24 +1226,24 @@ test.describe('RustSMF shell model flow (Chromium)', () => {
       await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
 
       // Weight preview toggle (for weight preview behavior)
-      const weightBtn = page.getByTestId('weight-preview-btn');
+      const weightBtn = (await workspaceControl(page, 'weight-preview-btn'));
       if (await weightBtn.count() > 0) {
         await expect(weightBtn).toBeVisible();
       }
 
       await selectWorkspace(page, 'rig');
       const inspector = page.getByTestId('inspector');
-      const boneEntry = inspector.locator('li > div').filter({ hasText: /./ }).first();
+      const boneEntry = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /./ }).first());
       await expect(boneEntry).toBeVisible();
       await boneEntry.click({ force: true });
 
       // Transform buttons (for drag/gizmo coverage)
-      await expect(page.getByTestId('transform-x-btn')).toBeVisible();
+      await expect(await workspaceControl(page, 'transform-x-btn')).toBeVisible();
       await expect(page.getByTestId('mode-translate-btn')).toBeVisible();
       await expect(canvas).toHaveAttribute('data-transform-owner', 'pose');
       await expect(canvas).toHaveAttribute('data-transform-attached', 'true');
 
       // Bone selection via inspector (raycast complement)
-      await expect(inspector.locator('li > div').filter({ hasText: /./ }).first()).toBeVisible();
+      await expect(await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /./ }).first())).toBeVisible();
     });
 });

@@ -1,3 +1,5 @@
+import { workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showAnimateTimeline, showModernPanel } from './helpers/modern-shell';
+
 import { test, expect } from '@playwright/test';
 import { SAMPLE_SMF, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import {
@@ -7,7 +9,6 @@ import {
 import { escapeRegex } from './helpers/format-assertions';
 import { clickPickableBoneInViewport, setViewportLayout } from './helpers/viewport-interactions';
 import { setRangeValue, clickTimelineLaneAt, dragSelectedTimelineMarkerTo } from './helpers/timeline-interactions';
-import { selectWorkspace, clickSecondaryCommand, showAnimateTimeline, showModernPanel } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -28,7 +29,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
 
       await selectWorkspace(page, 'rig');
       const inspector = page.getByTestId('inspector');
-      const boneEntry = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+      const boneEntry = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first());
       await expect(boneEntry).toBeVisible();
       await boneEntry.click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
@@ -36,10 +37,10 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('animate-workspace-panel')).toBeVisible();
       await expect(page.getByTestId('animation-workflow-hint')).toContainText(/Select a bone.*pose it.*Insert/i);
-      await page.getByTestId('transform-rot-negative-btn').scrollIntoViewIfNeeded();
+      await (await workspaceControl(page, 'transform-rot-negative-btn')).scrollIntoViewIfNeeded();
       await expect(page.getByTestId('transform-rot-negative-btn')).toBeVisible();
       await pausePlaybackIfRunning(page);
-      await page.getByTestId('animation-snap-step-select').selectOption('0.1');
+      await (await workspaceControl(page, 'animation-snap-step-select')).selectOption('0.1');
       await expect(page.getByTestId('status-text')).toContainText(/Animation snap set to 0\.10s/i);
       await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', '2');
 
@@ -86,9 +87,9 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('animation-loop-toggle')).toBeChecked();
       await expect(page.getByTestId('animation-sample-multiplier-input')).toHaveValue('1');
 
-      await page.getByTestId('animation-loop-toggle').uncheck({ force: true });
+      await (await workspaceControl(page, 'animation-loop-toggle')).uncheck({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Animation clip FixtureBend loop disabled/i);
-      await page.getByTestId('animation-sample-multiplier-input').fill('3');
+      await (await workspaceControl(page, 'animation-sample-multiplier-input')).fill('3');
       await expect(page.getByTestId('status-text')).toContainText(/sample frame multiplier set to 3/i);
       await expect(page.getByTestId('animation-sample-multiplier-input')).toHaveValue('3');
 
@@ -105,7 +106,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Redid set animation clip FixtureBend sample frame multiplier to 3/i);
       await expect(page.getByTestId('animation-sample-multiplier-input')).toHaveValue('3');
 
-      await page.getByTestId('animation-duplicate-clip-btn').click();
+      await (await workspaceControl(page, 'animation-duplicate-clip-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Duplicated animation clip FixtureBend as FixtureBend Copy/i);
       await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend Copy');
       await expect(page.getByTestId('animation-loop-toggle')).not.toBeChecked();
@@ -113,15 +114,15 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('animation-delete-clip-btn')).toBeEnabled();
       await expect(page.getByTestId('clip-item-1')).toContainText(/FixtureBend Copy/);
 
-      await page.getByTestId('animation-clip-name-input').fill('Hero Bend');
-      await page.getByTestId('animation-rename-clip-btn').click();
+      await (await workspaceControl(page, 'animation-clip-name-input')).fill('Hero Bend');
+      await (await workspaceControl(page, 'animation-rename-clip-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Renamed animation clip FixtureBend Copy to Hero Bend/i);
       await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Hero Bend');
       await expect(page.getByTestId('clip-item-1')).toContainText(/Hero Bend/);
       await expect(page.getByTestId('animation-move-clip-down-btn')).toBeDisabled();
       await expect(page.getByTestId('animation-move-clip-up-btn')).toBeEnabled();
 
-      await page.getByTestId('animation-move-clip-up-btn').click();
+      await (await workspaceControl(page, 'animation-move-clip-up-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Moved animation clip Hero Bend up/i);
       await expect(page.getByTestId('clip-item-0')).toContainText(/Hero Bend/);
       await expect(page.getByTestId('clip-item-1')).toContainText(/^FixtureBend/);
@@ -148,7 +149,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
 
       await page.getByTestId('editor-redo-btn').click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Redid rename animation clip FixtureBend Copy to Hero Bend/i);
-      await page.getByTestId('animation-delete-clip-btn').click();
+      await (await workspaceControl(page, 'animation-delete-clip-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Deleted animation clip Hero Bend/i);
       await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
       await expect(page.getByTestId('animation-delete-clip-btn')).toBeDisabled();
@@ -160,7 +161,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('animation-delete-clip-btn')).toBeEnabled();
 
       await expect(page.getByTestId('animation-duration-input')).toHaveValue('0.5');
-      await page.getByTestId('animation-duration-input').fill('1.5');
+      await (await workspaceControl(page, 'animation-duration-input')).fill('1.5');
       await expect(page.getByTestId('status-text')).toContainText(/Set animation clip Hero Bend duration to 1\.50s/i);
       await expect(page.getByTestId('animation-duration-input')).toHaveValue('1.5');
       await page.getByTestId('editor-undo-btn').click({ force: true });
@@ -170,7 +171,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Redid set animation clip Hero Bend duration to 1\.50s/i);
       await expect(page.getByTestId('animation-duration-input')).toHaveValue('1.5');
 
-      await page.getByTestId('animation-retime-input').fill('0.75');
+      await (await workspaceControl(page, 'animation-retime-input')).fill('0.75');
       await expect(page.getByTestId('status-text')).toContainText(/Retimed animation clip Hero Bend from 1\.50s to 0\.75s/i);
       await expect(page.getByTestId('animation-retime-input')).toHaveValue('0.75');
       await page.getByTestId('editor-undo-btn').click({ force: true });
@@ -192,10 +193,10 @@ test.describe('RustSMF animation flow (Chromium)', () => {
 
       await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('animation-create-btn')).toBeEnabled();
-      await page.getByTestId('animation-new-name-input').fill('Rest Pose Start');
-      await page.getByTestId('animation-new-duration-input').fill('1.25');
-      await page.getByTestId('animation-new-pose-select').selectOption('rest');
-      await page.getByTestId('animation-create-btn').click();
+      await (await workspaceControl(page, 'animation-new-name-input')).fill('Rest Pose Start');
+      await (await workspaceControl(page, 'animation-new-duration-input')).fill('1.25');
+      await (await workspaceControl(page, 'animation-new-pose-select')).selectOption('rest');
+      await (await workspaceControl(page, 'animation-create-btn')).click();
 
       await expect(page.getByTestId('status-text')).toContainText(/Created animation clip Rest Pose Start from the rest pose/i);
       await expect(page.getByTestId('animate-summary').locator('div').first().locator('strong')).toHaveText('2');
@@ -221,7 +222,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await selectWorkspace(page, 'animate');
 
       const source = await createSkinnedGltfFixtureInputWithOptions({ clipName: 'Source Motion' });
-      await page.getByTestId('animation-retarget-clips').locator('input').setInputFiles(source);
+      await (await workspaceControl(page, 'animation-retarget-clips')).locator('input').setInputFiles(source);
 
       await expect(page.getByTestId('status-text')).toContainText(/Retargeted 1 clip across 2 mapped bones/i, { timeout: 15000 });
       await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Source Motion');
@@ -247,9 +248,9 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
 
       await selectWorkspace(page, 'animate');
-      await page.getByTestId('animation-trim-start-input').fill('0.10');
-      await page.getByTestId('animation-trim-end-input').fill('0.40');
-      await page.getByTestId('animation-trim-btn').click();
+      await (await workspaceControl(page, 'animation-trim-start-input')).fill('0.10');
+      await (await workspaceControl(page, 'animation-trim-end-input')).fill('0.40');
+      await (await workspaceControl(page, 'animation-trim-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Trimmed animation clip FixtureBend to 0\.30s/i);
       await expect(page.getByTestId('animation-duration-input')).toHaveValue('0.3');
 
@@ -259,9 +260,9 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await page.getByTestId('editor-redo-btn').click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Redid trim animation clip FixtureBend/i);
 
-      await page.getByTestId('animation-lock-bone-btn').click();
+      await (await workspaceControl(page, 'animation-lock-bone-btn')).click();
       await expect(page.getByTestId('animation-lock-state')).toContainText('Locked bones: 1');
-      await page.getByTestId('animation-insert-key-btn').click();
+      await (await workspaceControl(page, 'animation-insert-key-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/all bones.*locked/i);
       await page.getByTestId('editor-undo-btn').click({ force: true });
       await expect(page.getByTestId('animation-lock-state')).toContainText('Locked bones: 0');
@@ -278,9 +279,9 @@ test.describe('RustSMF animation flow (Chromium)', () => {
 
       await showModernPanel(page, 'scene');
 
-      const firstSubmodel = page.getByTestId('outliner-submodel-0');
+      const firstSubmodel = (await workspaceControl(page, 'outliner-submodel-0'));
       await showModernPanel(page, 'scene');
-      const firstVisibilityToggle = page.getByTestId('outliner-visibility-toggle-0');
+      const firstVisibilityToggle = (await workspaceControl(page, 'outliner-visibility-toggle-0'));
       await expect(firstSubmodel).toBeVisible();
       await firstVisibilityToggle.click();
       await expect(firstSubmodel).toHaveAttribute('data-visible', 'false');
@@ -290,10 +291,10 @@ test.describe('RustSMF animation flow (Chromium)', () => {
 
       await selectWorkspace(page, 'rig');
       const inspector = page.getByTestId('inspector');
-      const boneEntry = inspector
+      const boneEntry = await workspaceLocator(page, inspector
         .locator('li > div')
         .filter({ hasText: /FixtureTip/ })
-        .first();
+        .first());
       await expect(boneEntry).toBeVisible({ timeout: 8000 });
       await boneEntry.click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
@@ -312,12 +313,12 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(canvas).toHaveAttribute('data-viewport-pane-role', animatePick!.paneRole);
       await expect(canvas).toHaveAttribute('data-viewport-picked-bone', animatePick!.bone);
       await expect(page.getByTestId('status-text')).toContainText(new RegExp(`Selected:\\s*${escapeRegex(animatePick!.bone)}`));
-      await page.getByTestId('animation-interpolation-select').selectOption('step');
+      await (await workspaceControl(page, 'animation-interpolation-select')).selectOption('step');
       await expect(page.getByTestId('status-text')).toContainText(/Animation interpolation set to step/i);
-      await page.getByTestId('animation-interpolation-select').selectOption('quadratic');
+      await (await workspaceControl(page, 'animation-interpolation-select')).selectOption('quadratic');
       await expect(page.getByTestId('status-text')).toContainText(/Animation interpolation set to quadratic/i);
       await expect(page.getByTestId('animation-interpolation-note')).toContainText(/SMF metadata.*live preview uses linear/i);
-      await page.getByTestId('animation-insert-key-btn').click();
+      await (await workspaceControl(page, 'animation-insert-key-btn')).click();
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
       await expect(page.getByTestId('animation-selected-key')).not.toContainText('none');
       await expect(page.getByTestId('status-text')).toContainText(/Inserted animation keyframe/i);
@@ -333,10 +334,10 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Redid insert animation keyframe/i);
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
-      await page.getByTestId('animation-copy-key-btn').click();
+      await (await workspaceControl(page, 'animation-copy-key-btn')).click();
       await expect(page.getByTestId('animation-paste-key-btn')).toBeEnabled();
       await setRangeValue(page, 'scrub-slider', 0.37);
-      await page.getByTestId('animation-paste-key-btn').click();
+      await (await workspaceControl(page, 'animation-paste-key-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Pasted animation keyframe/i);
 
       await page.keyboard.press('Control+Z');
@@ -344,7 +345,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await page.keyboard.press('Control+Y');
       await expect(page.getByTestId('status-text')).toContainText(/Redid paste animation keyframe/i);
 
-      await page.getByTestId('animation-update-key-btn').click();
+      await (await workspaceControl(page, 'animation-update-key-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Updated animation keyframe/i);
       await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', /[1-9]\d*/);
 
@@ -357,7 +358,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
 
       await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
-      await page.getByTestId('animation-delete-key-btn').click();
+      await (await workspaceControl(page, 'animation-delete-key-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Deleted animation keyframe/i);
       await page.keyboard.press('Control+Z');
       await expect(page.getByTestId('status-text')).toContainText(/Undid delete animation keyframe/i);
@@ -376,16 +377,16 @@ test.describe('RustSMF animation flow (Chromium)', () => {
 
       await selectWorkspace(page, 'rig');
       const inspector = page.getByTestId('inspector');
-      const boneEntry = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
+      const boneEntry = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first());
       await expect(boneEntry).toBeVisible();
       await boneEntry.click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureRoot/i);
 
       await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('animation-scope-select')).toHaveValue('bone');
-      await page.getByTestId('animation-scope-select').selectOption('branch');
+      await (await workspaceControl(page, 'animation-scope-select')).selectOption('branch');
       await expect(page.getByTestId('status-text')).toContainText(/Animation edit scope set to Branch/i);
-      await page.getByTestId('animation-insert-key-btn').click();
+      await (await workspaceControl(page, 'animation-insert-key-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Inserted branch animation keyframes for Branch \(FixtureRoot, FixtureTip\)/i);
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
@@ -424,7 +425,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('time-display')).toContainText(/0\.[0-9]/);
 
       // Clip list items: click first clip (if present) and assert no crash / UI still live
-      const firstClip = page.getByTestId('clip-item-0');
+      const firstClip = await workspaceControl(page, 'clip-item-0');
       if (await firstClip.count() > 0) {
         await firstClip.click();
         await page.waitForTimeout(80);

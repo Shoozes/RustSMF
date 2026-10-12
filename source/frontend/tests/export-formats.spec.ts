@@ -1,3 +1,5 @@
+import { workspaceLocator, workspaceControl, expectLoadDetails, selectWorkspace, clickSecondaryCommand, revealSecondaryCommands, showAnimateTimeline, showModernPanel } from './helpers/modern-shell';
+
 import { test, expect } from '@playwright/test';
 import { PNG } from 'pngjs';
 import fs from 'node:fs';
@@ -8,7 +10,6 @@ import { openViewportDisplayMenu, setViewportLayout, dragRigMoveInOrthoPane, dra
 import { setRangeValue } from './helpers/timeline-interactions';
 import { decodeProjectDocument } from '../src/utils/projectCodec';
 import { createExternalFbxFixtureInputs } from './helpers/external-fbx-fixture';
-import { expectLoadDetails, selectWorkspace, clickSecondaryCommand, revealSecondaryCommands, showAnimateTimeline, showModernPanel  } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -36,17 +37,17 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
 
       // Exercise bone selection + transforms/gizmo (functional, Cycle 3) before export (covers desktop sim path)
       const inspector = page.getByTestId('inspector');
-      const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /./ }).nth(0);
+      const anyBoneEntry = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /./ }).nth(0));
       if (await anyBoneEntry.count() > 0) {
         await anyBoneEntry.click({ force: true }).catch(() => {});
         await page.waitForTimeout(60);
       }
-      const scaleBtn = inspector.getByTestId('mode-scale-btn');
+      const scaleBtn = (await workspaceControl(page, 'mode-scale-btn'));
       if (await scaleBtn.count() > 0) {
         await scaleBtn.click({ force: true }).catch(() => {});
         await expect(page.getByTestId('status-text')).toContainText(/SMF export does not support scale edits/i);
       }
-      const xBtn = inspector.getByTestId('transform-x-btn');
+      const xBtn = (await workspaceControl(page, 'transform-x-btn'));
       if (await xBtn.count() > 0) {
         await xBtn.click({ force: true }).catch(() => {});
         await page.waitForTimeout(40);
@@ -82,7 +83,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
 
     await showModernPanel(page, 'scene');
 
-    const row = page.getByTestId('outliner-submodel-0');
+    const row = (await workspaceControl(page, 'outliner-submodel-0'));
     await expect(row).toBeVisible();
     await row.locator('.outliner-name-btn').click();
 
@@ -295,11 +296,11 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
 
       await selectWorkspace(page, 'rig');
       await expect(page.getByTestId('rig-workspace-panel')).toBeVisible();
-      const rootBoneEntry = inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first();
+      const rootBoneEntry = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureRoot/ }).first());
       await expect(rootBoneEntry).toBeVisible();
       await rootBoneEntry.click({ force: true });
-      await page.getByTestId('rig-rename-input').fill('FixtureSpine');
-      await page.getByTestId('rig-rename-btn').click({ force: true });
+      await (await workspaceControl(page, 'rig-rename-input')).fill('FixtureSpine');
+      await (await workspaceControl(page, 'rig-rename-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Renamed bone FixtureRoot to FixtureSpine/i);
       await expect(page.getByTestId('rig-validation-status')).toContainText(/pass/i);
       await expect(inspector).toContainText(/FixtureSpine/i);
@@ -310,16 +311,16 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Redid rename rig bone FixtureRoot to FixtureSpine/i);
       await expect(inspector).toContainText(/FixtureSpine/i);
 
-      const tipBoneEntry = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+      const tipBoneEntry = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first());
       await expect(tipBoneEntry).toBeVisible();
       await tipBoneEntry.click({ force: true });
 
       await setViewportLayout(page, 'quad');
-      await page.getByTestId('rig-tool-add-child').click({ force: true });
+      await (await workspaceControl(page, 'rig-tool-add-child')).click();
       await expect(page.getByTestId('rig-tool-add-child')).toHaveClass(/bg-emerald-500/);
       const rigCanvas = page.getByTestId('three-canvas');
       await expect(rigCanvas).toHaveAttribute('data-rig-tool-mode', 'add-child');
-      await page.getByTestId('rig-snap-step').selectOption('0.25');
+      await (await workspaceControl(page, 'rig-snap-step')).selectOption('0.25');
       await expect(page.getByTestId('status-text')).toContainText(/Rig snap set to 0.25 units/i);
       await page.getByTestId('modern-panel-close').click();
       const rigCanvasBox = await rigCanvas.boundingBox();
@@ -334,7 +335,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('rig-bone-count')).toContainText('3');
       await expect(inspector).toContainText(/Selected\s*FixtureTip_child/i);
 
-      await page.getByTestId('rig-tool-move').click({ force: true });
+      await (await workspaceControl(page, 'rig-tool-move')).click();
       await expect(page.getByTestId('rig-tool-move')).toHaveClass(/bg-emerald-500/);
       await expect(rigCanvas).toHaveAttribute('data-rig-tool-mode', 'move');
       await dragRigMoveInOrthoPane(page);
@@ -351,7 +352,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('rig-bone-count')).toContainText('3');
       await expect(inspector).toContainText(/Selected\s*FixtureTip_child/i);
 
-      await page.getByTestId('rig-tool-rotate').click({ force: true });
+      await (await workspaceControl(page, 'rig-tool-rotate')).click();
       await expect(page.getByTestId('rig-tool-rotate')).toHaveClass(/bg-emerald-500/);
       await expect(rigCanvas).toHaveAttribute('data-rig-tool-mode', 'rotate');
       await dragRigRotateInOrthoPane(page);
@@ -382,12 +383,12 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await page.getByTestId('editor-undo-btn').click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Undid create rig bone FixtureTip_child/i);
       await expect(page.getByTestId('rig-bone-count')).toContainText('2');
-      await page.getByTestId('rig-tool-select').click({ force: true });
+      await (await workspaceControl(page, 'rig-tool-select')).click();
       await expect(page.getByTestId('rig-tool-select')).toHaveClass(/bg-emerald-500/);
       await setViewportLayout(page, 'single');
 
-      await page.getByTestId('rig-create-child-input').fill('FixtureExtra');
-      await page.getByTestId('rig-create-child-btn').click({ force: true });
+      await (await workspaceControl(page, 'rig-create-child-input')).fill('FixtureExtra');
+      await (await workspaceControl(page, 'rig-create-child-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Created child bone FixtureExtra under FixtureTip/i);
       await expect(page.getByTestId('rig-bone-count')).toContainText('3');
       await expect(inspector).toContainText(/Selected\s*FixtureExtra/i);
@@ -399,8 +400,8 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('rig-bone-count')).toContainText('3');
       await expect(inspector).toContainText(/Selected\s*FixtureExtra/i);
 
-      await page.getByTestId('rig-reparent-parent').selectOption('FixtureSpine');
-      await page.getByTestId('rig-reparent-btn').click({ force: true });
+      await (await workspaceControl(page, 'rig-reparent-parent')).selectOption('FixtureSpine');
+      await (await workspaceControl(page, 'rig-reparent-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Reparented FixtureExtra under FixtureSpine/i);
       await expect(page.getByTestId('rig-validation-status')).toContainText(/pass/i);
       await page.getByTestId('editor-undo-btn').click({ force: true });
@@ -409,7 +410,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Redid reparent rig bone FixtureExtra under FixtureSpine/i);
 
       await expect(page.getByTestId('rig-detach-toggle-btn')).toHaveAttribute('data-rig-detach-mode', 'detach');
-      await page.getByTestId('rig-detach-toggle-btn').click({ force: true });
+      await (await workspaceControl(page, 'rig-detach-toggle-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Detached FixtureExtra from the deform skeleton/i);
       await expect(page.getByTestId('rig-bone-count')).toContainText('2');
       await expect(page.getByTestId('bone-tree-item-FixtureExtra')).toHaveAttribute('data-rig-bone-detached', 'true');
@@ -423,7 +424,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await page.getByTestId('editor-redo-btn').click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Redid detach rig bone FixtureExtra/i);
       await expect(page.getByTestId('rig-bone-count')).toContainText('2');
-      await page.getByTestId('rig-detach-toggle-btn').click({ force: true });
+      await (await workspaceControl(page, 'rig-detach-toggle-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Connected FixtureExtra to the deform skeleton/i);
       await expect(page.getByTestId('rig-bone-count')).toContainText('3');
       await expect(page.getByTestId('bone-tree-item-FixtureExtra')).toHaveAttribute('data-rig-bone-detached', 'false');
@@ -435,7 +436,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Redid connect rig bone FixtureExtra/i);
       await expect(page.getByTestId('rig-bone-count')).toContainText('3');
 
-      await page.getByTestId('rig-spin-z-btn').click({ force: true });
+      await (await workspaceControl(page, 'rig-spin-z-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Spun rig Z 90 degrees/i);
       await expect(page.getByTestId('rig-bone-count')).toContainText('3');
       await expect(inspector).toContainText(/Selected\s*FixtureExtra/i);
@@ -447,8 +448,8 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Redid spin rig Z/i);
       await expect(page.getByTestId('rig-bone-count')).toContainText('3');
 
-      await page.getByTestId('transform-x-btn').click({ force: true });
-      await page.getByTestId('rig-delete-bone-btn').click({ force: true });
+      await (await workspaceControl(page, 'transform-x-btn')).click();
+      await (await workspaceControl(page, 'rig-delete-bone-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Deleted bone FixtureExtra/i);
       await expect(page.getByTestId('rig-bone-count')).toContainText('2');
       await expect(inspector).toContainText(/Selected\s*FixtureSpine/i);
@@ -474,11 +475,11 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Saved SMF diagnostic report/i, { timeout: 5000 });
       await selectWorkspace(page, 'rig');
 
-      const anyBoneEntry = inspector.locator('li > div').filter({ hasText: /FixtureSpine|FixtureTip/ }).first();
+      const anyBoneEntry = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureSpine|FixtureTip/ }).first());
       await anyBoneEntry.click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Selected:/i);
 
-      const xBtn = inspector.getByTestId('transform-x-btn');
+      const xBtn = (await workspaceControl(page, 'transform-x-btn'));
       if (await xBtn.count() > 0) {
         await xBtn.click({ force: true }).catch(() => {});
         await page.waitForTimeout(40);
@@ -673,15 +674,15 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
 
       await showModernPanel(page, 'scene');
 
-      const row = page.getByTestId('outliner-submodel-0');
+      const row = (await workspaceControl(page, 'outliner-submodel-0'));
       const name = row.locator('.outliner-name');
       const originalName = (await name.textContent())?.trim();
       expect(originalName).toBeTruthy();
       await row.locator('.outliner-name-btn').click();
 
       await expect(page.getByTestId('outliner-rename-form')).toBeVisible();
-      await page.getByTestId('outliner-rename-input').fill('Renamed_OBJ_Part');
-      await page.getByTestId('outliner-rename-btn').click();
+      await (await workspaceControl(page, 'outliner-rename-input')).fill('Renamed_OBJ_Part');
+      await (await workspaceControl(page, 'outliner-rename-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Renamed submodel .* to Renamed_OBJ_Part/i);
       await expect(name).toHaveText('Renamed_OBJ_Part');
 
@@ -713,14 +714,14 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       const originalCount = await names.count();
       expect(originalCount).toBeGreaterThan(0);
 
-      await page.getByTestId('outliner-submodel-0').locator('.outliner-name-btn').click();
-      await page.getByTestId('outliner-duplicate-btn').click();
+      await (await workspaceControl(page, 'outliner-submodel-0')).locator('.outliner-name-btn').click();
+      await (await workspaceControl(page, 'outliner-duplicate-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Duplicated submodel .* as .*Copy/i);
       const duplicatedCount = await names.count();
       expect(duplicatedCount).toBeGreaterThan(originalCount);
       await expect(page.locator('.outliner-item').filter({ hasText: /Copy/ }).last()).toHaveAttribute('data-selected', 'true');
 
-      await page.getByTestId('outliner-delete-btn').click();
+      await (await workspaceControl(page, 'outliner-delete-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Deleted submodel/i);
       await expect(names).toHaveCount(originalCount);
 
@@ -749,11 +750,11 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
       await showModernPanel(page, 'scene');
-      await page.getByTestId('outliner-submodel-0').locator('.outliner-name-btn').click();
+      await (await workspaceControl(page, 'outliner-submodel-0')).locator('.outliner-name-btn').click();
 
       await showModernPanel(page, 'scene');
 
-      const positionX = page.getByTestId('outliner-position-0');
+      const positionX = (await workspaceControl(page, 'outliner-position-0'));
       await positionX.fill('1.25');
       await positionX.press('Tab');
       await expect(page.getByTestId('status-text')).toContainText(/Transformed/i);
@@ -762,16 +763,16 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await page.getByTestId('editor-redo-btn').click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Redid transform static submodel/i);
 
-      await page.getByTestId('outliner-flip-winding-btn').click();
+      await (await workspaceControl(page, 'outliner-flip-winding-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Flipped winding/i);
-      await page.getByTestId('outliner-prepare-geometry-btn').click();
+      await (await workspaceControl(page, 'outliner-prepare-geometry-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Prepared geometry attributes/i);
 
       await showModernPanel(page, 'scene');
 
       const names = page.getByTestId('outliner-submodel-list').locator('.outliner-name');
       const beforeAppend = await names.count();
-      await page.getByTestId('outliner-append-static').locator('input[type="file"]').setInputFiles(SAMPLE_OBJ);
+      await (await workspaceControl(page, 'outliner-append-static')).locator('input[type="file"]').setInputFiles(SAMPLE_OBJ);
       await expect(page.getByTestId('status-text')).toContainText(/Appended static model/i, { timeout: 15000 });
       // OBJ imports retain their asset group and mesh as two Outliner rows,
       // while the append history entry remains one asset-level operation.
@@ -794,7 +795,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       const skinnedRow = page.locator('.outliner-item').filter({ hasText: 'FixtureSkinnedMesh' });
       await skinnedRow.locator('.outliner-name-btn').click();
       await expect(page.getByTestId('outliner-move-later-btn')).toBeEnabled();
-      await page.getByTestId('outliner-move-later-btn').click();
+      await (await workspaceControl(page, 'outliner-move-later-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Moved submodel FixtureSkinnedMesh later/i);
 
       const movedNames = await names.allTextContents();

@@ -1,3 +1,6 @@
+import { PanelAction, PanelFileAction, TaskSection } from './WorkspaceTasks';
+import { useWorkspaceTask } from './workspaceTaskContext';
+import { ArrowDown, ArrowsClockwise, ArrowUp, Copy, Cube, Eye, EyeSlash, PaintBucket, PencilSimple, Plus, SelectionAll, SelectionInverse, SelectionSlash, Trash } from '@phosphor-icons/react';
 import React from 'react';
 import type { ModelObjectReorderDirection } from '../utils/modelAuthoring';
 import type { ModelTransformPatch } from '../utils/modelSurfaceAuthoring';
@@ -71,6 +74,7 @@ const Outliner: React.FC<OutlinerProps> = ({
   materialRepairDisabledReason,
   onRepairRiggedMaterials,
 }) => {
+  const task = useWorkspaceTask();
   const meshCount = items.filter((item) => item.kind !== 'group').length;
   const selectedSet = new Set(selectedItemIds);
   const selectedCount = selectedItemIds.length;
@@ -96,6 +100,7 @@ const Outliner: React.FC<OutlinerProps> = ({
   return (
     <div data-testid="outliner" className="sidebar">
       <div className="panel-title">{title}</div>
+      <TaskSection task="objects">
       <div className="outliner-root-row">
         <button
           type="button"
@@ -114,27 +119,28 @@ const Outliner: React.FC<OutlinerProps> = ({
       )}
       {hasItems && (
         <div className="outliner-actions" aria-label="Outliner selection actions">
-          <button type="button" data-testid="outliner-select-all-btn" onClick={onSelectAll}>
+          <PanelAction icon={SelectionAll} label={'Select all objects'} type="button" data-testid="outliner-select-all-btn" onClick={onSelectAll}>
             All
-          </button>
-          <button type="button" data-testid="outliner-clear-selection-btn" onClick={onClearSelection} disabled={!hasSelection}>
+          </PanelAction>
+          <PanelAction icon={SelectionSlash} label={'Clear object selection'} type="button" data-testid="outliner-clear-selection-btn" onClick={onClearSelection} disabled={!hasSelection}>
             Clear
-          </button>
-          <button type="button" data-testid="outliner-hide-selected-btn" onClick={onHideSelected} disabled={!hasSelection}>
+          </PanelAction>
+          <PanelAction icon={EyeSlash} label={'Hide selected objects'} type="button" data-testid="outliner-hide-selected-btn" onClick={onHideSelected} disabled={!hasSelection}>
             Hide sel
-          </button>
-          <button type="button" data-testid="outliner-hide-unselected-btn" onClick={onHideUnselected} disabled={!hasSelection}>
+          </PanelAction>
+          <PanelAction icon={SelectionInverse} label={'Hide unselected objects'} type="button" data-testid="outliner-hide-unselected-btn" onClick={onHideUnselected} disabled={!hasSelection}>
             Hide other
-          </button>
-          <button type="button" data-testid="outliner-unhide-all-btn" onClick={onUnhideAll}>
+          </PanelAction>
+          <PanelAction icon={Eye} label={'Show all objects'} type="button" data-testid="outliner-unhide-all-btn" onClick={onUnhideAll}>
             Show all
-          </button>
+          </PanelAction>
           <span data-testid="outliner-selection-count">{selectedCount} selected</span>
         </div>
       )}
+      </TaskSection>
       <div className="outliner-import-actions">
-        <label className="outliner-append-action" data-testid="outliner-append-static">
-          Append static
+        <TaskSection task="objects">
+        <PanelFileAction icon={Plus} label="Append static" disabled={!objectEditingEnabled} className="outliner-append-action" data-testid="outliner-append-static">
           <input
             type="file"
             accept=".glb,.gltf,.obj,.fbx,.dae"
@@ -146,13 +152,14 @@ const Outliner: React.FC<OutlinerProps> = ({
               event.currentTarget.value = '';
             }}
           />
-        </label>
-        <label
+        </PanelFileAction>
+        </TaskSection>
+        <TaskSection task="surface">
+        <PanelFileAction icon={PaintBucket} label="Repair materials" disabled={!materialRepairEnabled}
           className="outliner-append-action"
           data-testid="outliner-repair-materials"
           title={materialRepairEnabled ? 'Select one OBJ with its MTL and JPEG/PNG texture files' : materialRepairDisabledReason}
         >
-          Repair materials
           <input
             type="file"
             accept=".obj,.mtl,.jpg,.jpeg,.png"
@@ -165,8 +172,10 @@ const Outliner: React.FC<OutlinerProps> = ({
               event.currentTarget.value = '';
             }}
           />
-        </label>
+        </PanelFileAction>
+        </TaskSection>
       </div>
+      <TaskSection task="objects">
       {selectedItem && (
         <form
           className="outliner-rename-form"
@@ -186,14 +195,14 @@ const Outliner: React.FC<OutlinerProps> = ({
             aria-describedby={objectEditingDisabledReason ? 'outliner-editing-disabled-reason' : undefined}
             onChange={(event) => setRenameValue(event.currentTarget.value)}
           />
-          <button
+          <PanelAction icon={PencilSimple} label={'Rename object'}
             type="submit"
             data-testid="outliner-rename-btn"
             disabled={!objectEditingEnabled || !renameValue.trim() || renameValue.trim() === selectedItem.name}
             title={objectEditingDisabledReason}
           >
             Rename
-          </button>
+          </PanelAction>
           {objectEditingDisabledReason && (
             <span id="outliner-editing-disabled-reason" className="outliner-rename-note" data-testid="outliner-editing-disabled-reason">
               {objectEditingDisabledReason}
@@ -203,7 +212,7 @@ const Outliner: React.FC<OutlinerProps> = ({
       )}
       {selectedItem && (
         <div className="outliner-order-actions" aria-label="Selected submodel order">
-          <button
+          <PanelAction icon={Copy} label={'Duplicate object'}
             type="button"
             data-testid="outliner-duplicate-btn"
             disabled={!objectEditingEnabled}
@@ -211,8 +220,8 @@ const Outliner: React.FC<OutlinerProps> = ({
             onClick={onDuplicateSelected}
           >
             Duplicate
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={Trash} label={'Delete object'}
             type="button"
             data-testid="outliner-delete-btn"
             disabled={!objectEditingEnabled}
@@ -220,8 +229,8 @@ const Outliner: React.FC<OutlinerProps> = ({
             onClick={onDeleteSelected}
           >
             Delete
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={ArrowUp} label={'Move object earlier'}
             type="button"
             data-testid="outliner-move-earlier-btn"
             disabled={!objectEditingEnabled || !canMoveSelectedEarlier}
@@ -229,8 +238,8 @@ const Outliner: React.FC<OutlinerProps> = ({
             onClick={() => onMoveSelected('earlier')}
           >
             Move up
-          </button>
-          <button
+          </PanelAction>
+          <PanelAction icon={ArrowDown} label={'Move object later'}
             type="button"
             data-testid="outliner-move-later-btn"
             disabled={!objectEditingEnabled || !canMoveSelectedLater}
@@ -238,9 +247,13 @@ const Outliner: React.FC<OutlinerProps> = ({
             onClick={() => onMoveSelected('later')}
           >
             Move down
-          </button>
+          </PanelAction>
         </div>
       )}
+      </TaskSection>
+      <TaskSection task="surface">
+      {task && selectedItem && <div className="workspace-context">{selectedItem.name}</div>}
+      {task && objectEditingDisabledReason && <div className="outliner-rename-note">{objectEditingDisabledReason}</div>}
       {selectedItem && (
         <div className="outliner-surface-actions" data-testid="outliner-surface-actions">
           <div className="outliner-rename-note">Static model authoring</div>
@@ -285,14 +298,16 @@ const Outliner: React.FC<OutlinerProps> = ({
               data-testid="outliner-material-input"
               onChange={(event) => setMaterialValue(event.target.value)}
             />
-            <button type="button" disabled={!objectEditingEnabled || !materialValue.trim()} data-testid="outliner-material-btn" onClick={() => onAssignMaterial(materialValue)}>Material</button>
+            <PanelAction icon={PaintBucket} label={'Assign material'} type="button" disabled={!objectEditingEnabled || !materialValue.trim()} data-testid="outliner-material-btn" onClick={() => onAssignMaterial(materialValue)}>Material</PanelAction>
           </div>
           <div className="flex gap-1 mt-1">
-            <button type="button" disabled={!objectEditingEnabled} data-testid="outliner-flip-winding-btn" onClick={onFlipWinding}>Flip winding</button>
-            <button type="button" disabled={!objectEditingEnabled} data-testid="outliner-prepare-geometry-btn" onClick={onPrepareGeometry}>Normals/tangents</button>
+            <PanelAction icon={ArrowsClockwise} label={'Flip winding'} type="button" disabled={!objectEditingEnabled} data-testid="outliner-flip-winding-btn" onClick={onFlipWinding}>Flip winding</PanelAction>
+            <PanelAction icon={Cube} label={'Prepare normals and tangents'} type="button" disabled={!objectEditingEnabled} data-testid="outliner-prepare-geometry-btn" onClick={onPrepareGeometry}>Normals/tangents</PanelAction>
           </div>
         </div>
       )}
+      </TaskSection>
+      <TaskSection task="objects">
       <div className="outliner-list" data-testid="outliner-submodel-list">
         {items.length === 0 ? (
           <div className="outliner-empty">No model loaded</div>
@@ -338,16 +353,19 @@ const Outliner: React.FC<OutlinerProps> = ({
                   onClick={() => onToggleVisibility(item.id)}
                   title={item.visible ? 'Hide submodel' : 'Show submodel'}
                 >
-                  {item.visible ? 'On' : 'Off'}
+                  {task ? item.visible ? <Eye size={17} aria-hidden="true" /> : <EyeSlash size={17} aria-hidden="true" /> : item.visible ? 'On' : 'Off'}
                 </button>
               </div>
             );
           })
         )}
       </div>
+      </TaskSection>
+      <TaskSection task="details">
       <div className="y-up-note mt-2">
         Y-up (Three). SMF Z-up + DQ converted via loaders/coord.ts
       </div>
+      </TaskSection>
     </div>
   );
 };

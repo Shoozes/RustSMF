@@ -1,9 +1,10 @@
+import { workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand } from './helpers/modern-shell';
+
 import { test, expect } from '@playwright/test';
 import { SAMPLE_OBJ, SAMPLE_SMF, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { parseSelectedBone } from './helpers/format-assertions';
 import { dragEndpointHandle, dragRigIkTarget, dragTransformHandle, setViewportLayout } from './helpers/viewport-interactions';
-import { selectWorkspace, clickSecondaryCommand  } from './helpers/modern-shell';
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -29,12 +30,12 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(canvas).toHaveAttribute('data-workspace-pose', 'rest');
       await expect(canvas).toHaveAttribute('data-bone-labels-enabled', 'false');
       const inspector = page.getByTestId('inspector');
-      const boneEntry = inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first();
+      const boneEntry = await workspaceLocator(page, inspector.locator('li > div').filter({ hasText: /FixtureTip/ }).first());
       await expect(boneEntry).toBeVisible();
       await boneEntry.click({ force: true });
       await expect(page.getByTestId('status-text')).toContainText(/Selected:\s*FixtureTip/i);
 
-      await page.getByTestId('transform-x-btn').click({ force: true });
+      await (await workspaceControl(page, 'transform-x-btn')).click();
       await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
       await expect(page.getByTestId('editor-redo-btn')).toBeDisabled();
 
@@ -75,7 +76,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('rig-bone-count')).toHaveText('0');
       await expect(page.getByTestId('rig-skinned-mesh-count')).toHaveText('0');
       await expect(page.getByTestId('rig-prepare-static-panel')).toBeVisible();
-      await page.getByTestId('rig-prepare-root-skeleton').click();
+      await (await workspaceControl(page, 'rig-prepare-root-skeleton')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Prepared root skeleton "Root" on 1 mesh/i);
       await expect(page.getByTestId('rig-bone-count')).toHaveText('1');
       await expect(page.getByTestId('rig-skinned-mesh-count')).toHaveText('1');
@@ -133,14 +134,14 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await pausePlaybackIfRunning(page);
       await selectWorkspace(page, 'rig');
 
-      const childBone = page.getByTestId('inspector')
+      const childBone = await workspaceLocator(page, page.getByTestId('inspector')
         .locator('li li > div')
         .filter({ hasText: /SMF_Node_\d+/ })
-        .first();
+        .first());
       await expect(childBone).toBeVisible({ timeout: 8000 });
       await childBone.click({ force: true });
 
-      const policy = page.getByTestId('smf-rig-policy');
+      const policy = await workspaceControl(page, 'smf-rig-policy');
       await expect(policy).toBeVisible();
       await expect(page.getByTestId('smf-rig-policy-rename')).toHaveAttribute('data-smf-rig-supported', 'false');
       await expect(page.getByTestId('smf-rig-policy-structure')).toContainText(/head nodes.*skin indices.*animation/i);
@@ -154,7 +155,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('rig-tool-move')).toBeDisabled();
       await expect(page.getByTestId('rig-tool-move')).toHaveAttribute('title', /coordinated rig-space rewrite/i);
 
-      await page.getByTestId('transform-x-btn').click();
+      await (await workspaceControl(page, 'transform-x-btn')).click();
       await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
       await selectWorkspace(page, 'export');
@@ -162,7 +163,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 15000 });
 
       await selectWorkspace(page, 'rig');
-      await page.getByTestId('transform-reset-btn').click();
+      await (await workspaceControl(page, 'transform-reset-btn')).click();
       await expect(page.getByTestId('status-text')).toContainText(/Reset SMF_Node_\d+ to its bind pose/i);
       await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: false');
@@ -186,10 +187,10 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('three-canvas')).toBeVisible();
 
       const inspector = page.getByTestId('inspector');
-      const boneEntry = inspector
+      const boneEntry = await workspaceLocator(page, inspector
         .locator('li > div')
         .filter({ hasText: /SMF_Node_\d+/ })
-        .first();
+        .first());
       await expect(boneEntry).toBeVisible({ timeout: 8000 });
       await boneEntry.click({ force: true });
       await page.waitForTimeout(80);
@@ -202,7 +203,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       const singleCanvas = page.getByTestId('three-canvas');
       await expect(singleCanvas).toHaveAttribute('data-transform-owner', 'pose');
       await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'true');
-      await page.getByTestId('rig-tool-endpoint').click();
+      await (await workspaceControl(page, 'rig-tool-endpoint')).click();
       await expect(singleCanvas).toHaveAttribute('data-rig-tool-mode', 'endpoint');
       await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'false');
       const singleDrag = await dragEndpointHandle(page, selectedBone, undefined, async () => {
@@ -242,7 +243,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
 
       await setViewportLayout(page, 'single');
       await expect(singleCanvas).not.toHaveAttribute('data-endpoint-drag', 'active');
-      await page.getByTestId('rig-tool-select').click();
+      await (await workspaceControl(page, 'rig-tool-select')).click();
       await expect(singleCanvas).toHaveAttribute('data-transform-attached', 'true');
     });
 
@@ -254,17 +255,17 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await selectWorkspace(page, 'rig');
 
       const inspector = page.getByTestId('inspector');
-      const childBone = inspector.locator('li li > div').filter({ hasText: /SMF_Node_\d+/ }).first();
+      const childBone = await workspaceLocator(page, inspector.locator('li li > div').filter({ hasText: /SMF_Node_\d+/ }).first());
       await expect(childBone).toBeVisible({ timeout: 8000 });
       await childBone.click({ force: true });
 
       const canvas = page.getByTestId('three-canvas');
-      await page.getByTestId('rig-tool-ik').click();
+      await (await workspaceControl(page, 'rig-tool-ik')).click();
       await expect(page.getByTestId('rig-tool-ik')).toHaveClass(/bg-amber-400/);
       await expect(page.getByTestId('rig-ik-settings')).toBeVisible();
-      await page.getByTestId('rig-ik-chain-length').selectOption('1');
-      await page.getByTestId('rig-ik-pole-axis').selectOption('z');
-      await page.getByTestId('rig-ik-joint-limit').selectOption('120');
+      await (await workspaceControl(page, 'rig-ik-chain-length')).selectOption('1');
+      await (await workspaceControl(page, 'rig-ik-pole-axis')).selectOption('z');
+      await (await workspaceControl(page, 'rig-ik-joint-limit')).selectOption('120');
       await expect(canvas).toHaveAttribute('data-rig-tool-mode', 'ik');
       await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
 
@@ -311,10 +312,10 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await pausePlaybackIfRunning(page);
 
       await selectWorkspace(page, 'rig');
-      const boneEntry = page.getByTestId('inspector')
+      const boneEntry = await workspaceLocator(page, page.getByTestId('inspector')
         .locator('li > div')
         .filter({ hasText: /FixtureTip/ })
-        .first();
+        .first());
       await expect(boneEntry).toBeVisible({ timeout: 8000 });
       await boneEntry.click({ force: true });
 

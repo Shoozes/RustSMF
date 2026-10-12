@@ -4,6 +4,8 @@ import type { BoneNudgeDelta } from '../hooks/poseEdits';
 import type { EditorMode } from '../store';
 import { deriveMixamoMinimalBoneAliases } from '../utils/boneAliases';
 import { getRigRootBones, isRigBone, isRigBoneDetached } from '../utils/rigHierarchy';
+import { TaskDetails, TaskSection } from './WorkspaceTasks';
+import { useWorkspaceTask } from './workspaceTaskContext';
 
 interface InspectorProps {
   title?: string;
@@ -65,6 +67,9 @@ const Inspector: React.FC<InspectorProps> = ({
   editorMode = 'view',
   compact = false,
 }) => {
+  const task = useWorkspaceTask();
+  const selectionTask = task?.mode === 'skin' ? 'brush' : task?.mode === 'rig' || task?.mode === 'animate' ? 'pose' : 'details';
+  const hierarchyTask = task?.mode === 'rig' ? 'hierarchy' : task?.mode === 'skin' ? 'weights' : task?.mode === 'animate' ? 'pose' : 'details';
   // State for collapsible bone hierarchy (starts with top-level roots expanded for usability)
   const [expandedBones, setExpandedBones] = React.useState<Set<string>>(new Set());
   const visibleBones = React.useMemo(
@@ -167,12 +172,15 @@ const Inspector: React.FC<InspectorProps> = ({
     <div data-testid="inspector" className="inspector" data-editor-mode={editorMode}>
       <div className="panel-title">{title}</div>
       <div className="text-xs">
+        <TaskSection task={task?.mode === 'rig' ? ['pose', 'hierarchy'] : task?.mode === 'skin' ? ['brush', 'weights'] : selectionTask}>
         <div className="mb-1 text-slate-400">Selected</div>
         <div data-testid="inspector-selected" className="font-mono text-amber-300 break-all">{selected}</div>
         {!compact && <div className="inspector-help-copy mt-3 text-[10px] text-slate-400">
           {workspaceHelp[0]}<br />
           {workspaceHelp[1]}
         </div>}
+        </TaskSection>
+        <TaskSection task={task?.mode === 'animate' ? 'clips' : 'details'}>
         {showClipList && clips.length > 0 && (
           <div className="mt-3">
             <div className="panel-title">Clips</div>
@@ -199,7 +207,10 @@ const Inspector: React.FC<InspectorProps> = ({
             ))}
           </div>
         )}
+        </TaskSection>
+        <TaskSection task={hierarchyTask}>
         {showBonePanel && visibleBones.length > 0 && (
+          <TaskDetails label="Bones" initialOpen={task?.mode === 'rig'}>
           <div className="mt-3">
             <div className="panel-title">Bones ({visibleBones.length})</div>
             {onToggleBoneLabels && (
@@ -224,10 +235,14 @@ const Inspector: React.FC<InspectorProps> = ({
               </div>
             )}
           </div>
+          </TaskDetails>
         )}
+        </TaskSection>
 
         {/* Quick pose controls write through the pose-edit layer; Rig also owns the viewport gizmo. */}
+        <TaskSection task={selectionTask}>
         {showTransformControls && selected && selected !== 'Scene' && (
+          <TaskDetails label="Pose steps">
           <div
             className="mt-2 text-[9px] border-t border-slate-700 pt-1"
             role="group"
@@ -301,7 +316,9 @@ const Inspector: React.FC<InspectorProps> = ({
                   : '(rest-pose workspace; Skin owns paint input)'}
             </span>}
           </div>
+          </TaskDetails>
         )}
+        </TaskSection>
       </div>
     </div>
   );

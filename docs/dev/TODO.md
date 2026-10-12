@@ -2,7 +2,27 @@
 
 Last reviewed: 2026-10-11
 
-Backlog status: no active implementation tasks remain from the selected batch. Local Windows acceptance of the frontend integrity fixes is complete. The public preview, public-source cleanup, four v0.2 outcomes and frontend coverage pass remain closed within their stated acceptance lanes.
+Backlog status: no active implementation tasks remain. The task-drawer integrity recheck is complete; prior outcomes remain closed.
+
+## Task-drawer integrity recheck
+
+- What: Keep Skin state visible in Scene and make task-tab observations durable regressions.
+- Why: The review found hidden unsaved weights when Skin switched to Scene, plus task/draft/picker proof kept only in ignored probes.
+- Where: Shared Modern Skin state, drawer integration, workspace-task browser checks and their routes.
+- When: Completed locally on 2026-10-11 after read-only review/recheck of `1831bc9` plus the existing 42-file batch, focused repair and the final frontend gate.
+- How: Place Skin state inside Scene, keep duplicate brush sliders hidden, and use ordinary tabs, keys and file selection. Preserve Original, formats, recovery data and existing work.
+- Done when: Skin state stays visible at 1440 and 390 px; tabs, drafts, picker cancellation, focus and touch have repository tests; focused controls retain native Space/text keys and viewer shortcuts still work; four frontend gates, docs/routes and owned cleanup pass.
+- Verification: Final isolated verify (520 units), browser suite (146), journeys (11) and strict visuals (3) passed. Keyboard fixes passed 24 repeated cases and 21 neighboring checks. The 46-file candidate, 39 frontend inputs, command results and cleanup are bound in `output/menu-publish-20261011/`. Original references and the public installer retain their identities; HISTORY owns final results.
+
+## Modern task drawers
+
+- What: Implement the selected Task tabs mockup for the busy Model, Rig, Skin and Animate menus.
+- Why: Reduce always-visible text and buttons while keeping authoring actions discoverable.
+- Where: Shared workspace tasks/actions, Modern drawer integration, four authoring panels, profile controls and their browser/journey paths.
+- When: Completed locally on 2026-10-11 after the user's option 2 selection, responsive review and final frontend gate.
+- How: Use three short labeled tabs per workspace, named icon tooltips, keyboard navigation and disclosed secondary controls. Keep drafts mounted across tabs, errors/unsaved work visible, and one drawer. Preserve Original and public formats.
+- Done when: Ordinary UI paths reach all relocated actions; tab/draft/focus and six-size/DPI/touch review pass; existing frontend gates and Original strict reference pass; docs/routes and owned cleanup are current.
+- Verification: Sequential verify (517 units), browser suite (139), journeys (11) and strict visuals (3) passed. Reviewed captures, source hashes and owned cleanup are in `output/menu-polish-20261011/` and HISTORY. Publication/packaging remain separate.
 
 ## Local Windows candidate acceptance
 
