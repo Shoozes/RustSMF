@@ -2,6 +2,18 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-15 — Test dummy showcase
+
+After sampler publication `7297e0e`, replaced the README overview with an actual Modern capture of the user-selected local named-bone dummy. The caption distinguishes the shown reference from the Signal Robot download still included with 0.2.1. The selected file has 25 named bones, ten clips and six embedded textures; two clip names are still generic. Asset identity and the private retention boundary are recorded in ASSET_PROVENANCE.
+
+Ordinary Open, Animate/Tools clip selection, keyboard scrubbing, Play/Pause and helper visibility controls were exercised against the existing local production build. Walk playback time advanced; the canvas contains visible model pixels with grid, axes and rig hidden. No browser warnings/errors or document overflow were observed at 1280x720. Two rapid saved captures shared canvas pixels and are not used as motion proof. Existing regression footage remains `output/playwright/hand-wave-journey/hand-wave-journey.webm`, covering the separate SMF fixture's wave and torso/sleeve weight repair; its current run passed in the sampler candidate's 12-journey gate. The new screenshot does not establish GLB weight-repair parity with that fixture.
+
+The user spotted an upside-down face before publication. A private derivative flips only the Face primitive's 27 V coordinates and updates their accessor bounds. Independent comparison preserves every other binary byte, all other JSON fields, rig, influences, clips and embedded images; ordinary browser review confirms eyebrows above the eyes. The original GLB is untouched. A new actual viewport capture replaces the rejected overview, with no browser warnings/errors.
+
+`output/playwright/dummy-showcase/receipt.json` retains the screenshot/source identities, observed checks and resource disposition. No production code, fixture, strict baseline, installer, release download or application version changed. No new build or inference was launched for the capture. The subsequent authorized publication checks an isolated copy of the four-file staged candidate; its `publication` record binds checks, destination, confirmed commit and owned scratch cleanup. Source and corrected GLBs, Tripo drafts and borrowed references remain private.
+
+AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=dummy-showcase
+
 ## 2026-10-15 — Portable retarget contract and Rust sampler
 
 Completed the selected local contract/sampler slice on main `2343b08dafc39e67d3dfdc824cec7d10215ce9e1`, preserving the five initial documentation edits and all Sable/ZIP/export source fixes. Rust exposes a bounded versioned JSON/native request and a partial `sample-trs-v1` response; bake mode and every bake option refuse explicitly. The copied frontend adapter includes helper/rest hierarchy, explicit bindings, source/target references and endpoint clips. No production worker/client, UI, profile/project/export format, app/crate version or installer changed.

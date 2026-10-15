@@ -4,9 +4,9 @@ RustSMF is a local editor for SMF, GLB/GLTF, FBX, DAE/Collada and OBJ models, ri
 
 [**Download for Windows x64**](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe) · [0.2.1 preview notes](https://github.com/Shoozes/RustSMF/releases/tag/v0.2.1-preview) · [Sample model](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb)
 
-![RustSMF Modern with the included Signal Robot sample](docs/images/rustsmf-modern-overview.png)
+![Our test dummy in RustSMF Modern, with animation controls and Tools closed](docs/images/rustsmf-modern-overview.png)
 
-*Signal Robot in the Modern workspace. The sample includes Wave and Turn animations.*
+*Our test dummy in Modern, with Walk selected. The quickstart below uses Signal Robot, the smaller sample included with the 0.2.1 preview.*
 
 <a id="windows-preview"></a>
 
@@ -75,4 +75,4 @@ After setup, build the NSIS installer with `pwsh -NoProfile -File .\run.ps1 -Tas
 
 Project-owned code and the Signal Robot and Sable samples are [MIT licensed](LICENSE), copyright 2026 Shoozes. Third-party code, fixtures and reference assets retain their own terms. [Third-party notices](THIRD_PARTY_NOTICES.md) and [fixture provenance](source/frontend/tests/fixtures/PROVENANCE.md) describe that boundary; unidentified assets receive no new reuse grant.
 
-AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
+AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=dummy-showcase | change=updated overview and preview caption
