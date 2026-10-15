@@ -4,7 +4,7 @@ Last reviewed: 2026-10-15
 
 ## Original Sable sample and motion pack
 
-Sable in `examples/black-cat/` is an original image-guided Tripo Pro cat repaired in Blender, with 24 original joints/keys, Idle/Walk/Run/Sit and a packed 1K atlas. Independent guards cover full loop transforms/skin, every key/midpoint, actual recovery and project/GLB continuity. Run reserves 0.3 mm paw clearance; rebuilding uses a separate destination. The [guide](../../examples/black-cat/README.md) owns usage/limits; the [register](ASSET_PROVENANCE.md) owns rights and HISTORY owns evidence. Drafts/references stay private. Signal Robot, installer and app controls remain unchanged.
+Sable in `examples/black-cat/` is an original image-guided Tripo Pro cat repaired in Blender, with 24 original joints/keys, Idle/Walk/Run/Sit and a packed 1K atlas. Independent guards cover full loop transforms/skin, every key/midpoint, actual recovery and project/GLB continuity. Run reserves 0.3 mm paw clearance; rebuilding uses a separate destination. The [guide](../../examples/black-cat/README.md) owns usage/limits; the [register](ASSET_PROVENANCE.md) owns rights and HISTORY owns evidence. Drafts/references stay private. Sable and the reviewed export cleanup are published in `2343b08`; Signal Robot remains the installer sample. App controls are unchanged.
 
 ## Export presets and queues on current source
 
@@ -20,13 +20,13 @@ ZIP intake was introduced in `da98cba`. Current source accepts omitted directory
 
 Animate > Transfer now uses shared Rust API v1 for mapping/preflight (native Tauri on desktop, actual WASM in a browser worker). Mixamo, UE4 mannequin, Unity humanoid and Rigify deform naming include side/chain context and fingers. Explicit maps remain authoritative; ambiguity and numeric rigs require review. Mapping details holds overrides, diagnostics, profile drafts and portable export of the reviewed explicit map.
 
-The complete existing TypeScript clip solver runs in a dedicated worker on both platforms. Source selection prepares a private preview; Apply commits once through animation history. Cancel/discard, input revisions, leaving Animate and disposal reject stale results. Closing Tools may retain preview. Project saves and exports continue to use canonical clips during preview; undo/redo and continued editing retain their owners. Public setup/dev/build generate locally pinned WASM bindings. Runtime failures are visible without synchronous fallback.
+Production baking stays in its TypeScript worker; [experimental Rust sampling](RETARGET_SAMPLER.md) has native/WASM parity and explicit bake refusal. Source selection prepares a private preview; Apply commits once through animation history. Cancel/discard, input revisions, leaving Animate and disposal reject stale results. Closing Tools may retain preview. Project saves and exports continue to use canonical clips during preview; undo/redo and continued editing retain their owners. Public setup/dev/build generate locally pinned WASM bindings. Runtime failures are visible without synchronous fallback.
 
 Transfer copies and raw-clip Retime preserve glTF cubic-spline motion, including rotation and scale. Trim subdivides vector/scale curves using boundary values and derivatives. Cubic rotation trims require existing rotation-key bounds or held endpoint regions; inserting a normalized quaternion key could change motion, so that case is refused before mutation with guidance to use existing keys or Retime. Custom/smooth trim interpolation is also refused. Shared key sampling honors the actual cubic/step/linear factory. History, project reopen and parsed GLB re-import have independent known-motion checks.
 
 The published cubic authoring batch at `040feb3` passed sequential verify (546 frontend units; 14 Rust checks), browser (163, no retries), journeys (11) and strict visuals (3) on unchanged implementation inputs. Routine output is compact JSON; HTML and successful UI captures are opt-in. Required visual/pixel and hand-wave checks remain enabled. HISTORY owns source identity, final results and the earlier review's separate proof.
 
-`RETARGET_ASSISTANCE.md` owns API, job and proof boundaries; TODO owns ordered followups. The published `ff43a13` gate passed verify, browser (160), journeys (11), strict visuals (3), native/actual-WASM parity (17 cases) and desktop smoke; HISTORY binds that source and reviewed captures. The one image-guided black-cat trial and borrowed pose reference are registered in `ASSET_PROVENANCE.md`; raw media and model drafts stay ignored and ineligible for public distribution pending rights/asset acceptance. No custom rig creation, rig replacement or automatic skinning is added. App version, release and installer remain unchanged; installed Windows evidence retains its earlier source identity.
+`RETARGET_ASSISTANCE.md` owns API, job and proof boundaries; TODO owns ordered followups. The published `ff43a13` gate passed verify, browser (160), journeys (11), strict visuals (3), native/actual-WASM parity (17 cases) and desktop smoke; HISTORY binds that source and reviewed captures. Sable is the accepted original asset pack; `ASSET_PROVENANCE.md` distinguishes its generation-specific rights from withheld raw drafts and borrowed references. Those private inputs are excluded from public samples. No custom rig creation, rig replacement or automatic skinning is added. App version, release and installer remain unchanged; installed Windows evidence retains its earlier source identity.
 
 ## 0.2.1 Windows preview
 
@@ -360,3 +360,5 @@ input contract, bounds, vendoring requirements, and native/browser WASM proof.
 AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
 
 AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
+
+AI-edited: 2026-10-15T16:07:12-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=aligned published Sable and private draft status

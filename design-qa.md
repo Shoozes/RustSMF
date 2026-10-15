@@ -1,5 +1,10 @@
 # Modern UI Design QA — v0.2 productization complete
 
+## Portable Rust sampler
+
+No UI/style changes. Production Transfer keeps its worker; existing captures
+remain applicable. HISTORY binds final strict and Original reference checks.
+
 ## Original Sable sample
 
 No controls, styles or layouts change. Subdued studio lights and asset-local roughness/specular settings retain a charcoal coat with readable eyes and silhouette. Fixed native front/left/right/back views cover rest, Walk/Run lift and mid/held Sit. Desktop/narrow browser captures supplement independent skin checks at every key/midpoint. A 1K atlas retains actual browser recovery. Original references remain fixed; HISTORY binds the gate. Viewport repeat differs from pack loop declarations.

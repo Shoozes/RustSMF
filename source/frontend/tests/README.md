@@ -4,13 +4,10 @@
 
 ## Original Sable asset pack
 
-`blackCatAsset.test.ts` checks hashes/maps, topology, raw skin, known motion,
-full loop transforms/skin and held Sit. Terminal/interior mutations must fail;
-floor uses every key/midpoint. `black-cat.spec.ts` checks ordinary playback and
-desktop/narrow pixels. The Sable journey checks geometry, materials, decoded atlas,
-influences and motion at 424 times through recovery/project/queued-GLB continuity.
-Blender rebuild and registered views supplement proof. The sample guide owns
-playback/state limits; private media is excluded.
+`blackCatAsset.test.ts` checks hashes, topology/skin, dense loop/floor motion
+and mutation controls. Browser/journey checks cover playback, recovery, project
+and queued GLB, including texture/influences and 424 motion times. The sample
+guide owns rebuilding/limits; private media stays excluded.
 
 ## Export queue
 
@@ -19,6 +16,12 @@ playback/state limits; private media is excluded.
 A generated `EXT_mesh_gpu_instancing` input independently checks instance translations through queue export/re-import. Snapshot units distinguish repeated private track/attribute copies from interleaved sharing, include texture backing/instance allocations and prove private geometry metadata/morph pixels with owned disposal. Material-reader units defer display changes until the final reader and then restore the latest settings.
 
 `src/utils/exportQueue.test.ts` proves bounded order, cancellation, failure/retry, stale results and disposal. `src/hooks/exportSnapshot.test.ts` proves copied authoring state, source-material restoration and cleanup. `src/utils/materialPreview.test.ts` covers nested/overlapping source readers and material registration replacement during a save. `src/loaders/dae.test.ts` guards joint `sid` output; the browser round-trip verifies named animated joints. Actual native dialogs and installed-app queue acceptance remain separate. [EXPORT_QUEUE.md](../../../docs/dev/EXPORT_QUEUE.md) owns the user and lifecycle contract; HISTORY owns final results.
+
+## Portable sampler
+
+`retargetPortable.test.ts` / `retargetInventory.test.ts` guard copied data and
+all solver fields. Runtime proof adds 14 sampler cases, 20 refusals and WASM
+cancellation. [Contract and native guards](../../../docs/dev/RETARGET_SAMPLER.md).
 
 ## Retarget assistance
 

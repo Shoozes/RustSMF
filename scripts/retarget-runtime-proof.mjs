@@ -106,6 +106,21 @@ async function main() {
     jointA: 'jointA',
     SMF_Node_0_extra: 'SMF_Node_0_extra',
   }, 'legitimate numeric-adjacent names must remain eligible for matching')
+  const sampler = JSON.parse(run(process.execPath, ['--import', 'tsx', 'scripts/retarget-sampler-proof.ts'], { cwd: resolve(root, 'source/frontend') }))
+  assert.ok(sampler.positives.length >= 14 && sampler.negatives.length >= 20, 'sampler corpus unexpectedly small')
+  for (const name of ['linear','smooth','step','cubic','constant','antipodal','slerp','small','float32','helper','references','single','irregular','decoded-gltf-cubic']) {
+    assert.ok(sampler.positives.some(c => c.name === name), `missing sampler case ${name}`)
+  }
+  const samplerInputs = [...sampler.positives.map(c => JSON.stringify(c.input)), ...sampler.negatives.map(c => JSON.stringify(c.request))]
+  const nativeSampler = JSON.parse(run('cargo', ['run', '--locked', '--release', '--manifest-path', crateManifest, '--target-dir', resolve(root, 'output/retarget-core/cargo-target'), '--example', 'sampler_receipt'], { input: JSON.stringify(samplerInputs) }))
+  assert.equal(nativeSampler.length, samplerInputs.length)
+  sampler.positives.forEach((c, i) => compare(nativeSampler[i], c.expected, `sampler.${c.name}.typescript-native`))
+  sampler.negatives.forEach((c, i) => {
+    const result = nativeSampler[sampler.positives.length + i]
+    assert.equal(result.status, 'error', c.name)
+    assert.equal(result.error.code, c.code, c.name)
+    assert.deepEqual(result.clips, [], `${c.name}: no partial result`)
+  })
   const { chromium } = createRequire(resolve(root, 'source/frontend/package.json'))('playwright')
   let browser
   const server = createServer((request, response) => {
@@ -151,6 +166,43 @@ async function main() {
       assert.deepEqual(diagnosticShape(wasmCase.result.diagnostics), diagnosticShape(nativeCase.result.diagnostics), `${nativeCase.name}: diagnostic codes must match exactly`)
       compare(wasmCase.result, nativeCase.result, `cases.${nativeCase.name}.result`)
     }
+    const wasmSampler = await page.evaluate(async (inputs) => {
+      const module = await import('/retarget_core.js')
+      return inputs.map(input => JSON.parse(module.sample_json_v1(input)))
+    }, samplerInputs)
+    compare(wasmSampler, nativeSampler, 'sampler.native-wasm')
+    sampler.positives.forEach((c, i) => compare(wasmSampler[i], c.expected, `sampler.${c.name}.typescript-wasm`))
+    const samplerWorker = await page.evaluate(async (input) => {
+      const code = `import init, { sample_json_v1 } from '${location.origin}/retarget_core.js';
+        await init('${location.origin}/retarget_core_bg.wasm');
+        self.onmessage = event => { self.postMessage({phase:'sampling'}); self.postMessage({phase:'result',result:JSON.parse(sample_json_v1(event.data))}); };
+        self.postMessage({phase:'ready'});`;
+      const url = URL.createObjectURL(new Blob([code],{type:'text/javascript'}));
+      const run = (cancel) => new Promise((resolveRun,reject) => {
+        const worker = new Worker(url,{type:'module'});
+        const timer = setTimeout(() => finish(() => reject(new Error('Sampler worker timed out'))),10000);
+        const finish = (done) => { clearTimeout(timer); worker.terminate(); done(); };
+        let terminated = false;
+        worker.onerror = event => finish(() => reject(new Error(event.message)));
+        worker.onmessage = event => {
+          if(event.data.phase === 'ready') {
+            const request = structuredClone(input);
+            if(cancel) request.sampleTimes = Array(20000).fill(.5);
+            worker.postMessage(JSON.stringify(request));
+          } else if(event.data.phase === 'sampling' && cancel) {
+            terminated = true; worker.terminate();
+            setTimeout(() => finish(() => resolveRun('terminated')),30);
+          } else if(event.data.phase === 'result') {
+            if(terminated || cancel) finish(() => reject(new Error('Cancelled WASM result escaped')));
+            else if(event.data.result.status !== 'sampled') finish(() => reject(new Error('Fresh WASM worker refused valid input')));
+            else finish(() => resolveRun('sampled'));
+          }
+        };
+      });
+      try { return { cancelled: await run(true), replacement: await run(false) }; }
+      finally { URL.revokeObjectURL(url); }
+    }, sampler.positives[0].input)
+    assert.deepEqual(samplerWorker, { cancelled: 'terminated', replacement: 'sampled' })
     assert.deepEqual(errors, [])
     const allDiagnostics = native.cases.map(({ name }, index) => ({
       name,
@@ -165,10 +217,14 @@ async function main() {
       browserWasm: { browser: 'Chromium', wasmSha256: built.provenance.generatedWasmSha256, glueSha256: built.provenance.glueSha256 },
       comparison: { casesCompared: native.cases.length, toleranceRelativeAbsolute: tolerance, mappingsExact: true, diagnosticsExact: true, numericFieldsWithinTolerance: true },
       cases: allDiagnostics,
+      sampler: { stage: 'sampler', fullBake: false, positiveCases: sampler.positives.length, refusalCases: sampler.negatives.length,
+        nativeRust: true, actualBrowserWasm: true, threeReference: true, knownValueAnchors: true, workerCancellation: samplerWorker, toleranceRelativeAbsolute: tolerance,
+        resultSha256: hash(Buffer.from(JSON.stringify(nativeSampler))),
+        cases: [...sampler.positives.map(c => ({ name: c.name, status: 'sampled' })), ...sampler.negatives.map(c => ({ name: c.name, code: c.code }))] },
       unexpectedBrowserErrors: errors,
     }
     writeFileSync(join(output, 'receipt.json'), `${JSON.stringify(receipt, null, 2)}\n`)
-    console.log(`Retarget native/WASM runtime proof passed in Chromium across ${native.cases.length} first-party cases; mappings and diagnostic codes exact; numbers within ${tolerance}.`)
+    console.log(`Retarget native/WASM runtime proof passed in Chromium across ${native.cases.length} preflight, ${sampler.positives.length} sampler and ${sampler.negatives.length} refusal cases; mappings and diagnostic codes exact; numbers within ${tolerance}.`)
   } finally {
     try {
       if (browser) await browser.close()

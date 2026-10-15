@@ -6,7 +6,24 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Sable review and final polish — 2026-10-15
+## Portable sampler implementation follow-through — 2026-10-15
+
+The copied portable contract, Rust TRS sampler and exhaustive option/report inventory pass Three/native/actual-WASM parity: 14 positive cases, 20 refusals and cancellation/replacement guards. Production baking stays TypeScript. Sequential verify (611 units; 14 Rust checks), browser (196), journeys (12), strict (3) and runtime proof (also 17 preflight cases) pass on unchanged inputs. HISTORY owns source/results. TODO selects core baking; Sable, ZIP/export, Original and private asset boundaries remain intact.
+
+## Published Sable review and recheck — 2026-10-15
+
+Reviewed clean local main and live `origin/main` at `2343b08dafc39e67d3dfdc824cec7d10215ce9e1`, tree `6bd8e0a35e83975f3798a4dea108bde8e3d38e91`. All 34 published blobs and working-file hashes, 14 required journey media and 32 reviewed captures match the publication receipt. Original's committed reference is unchanged; generated/private paths remain untracked. The earlier local gates below retain their original source identities; the final isolated publication gate is 605 frontend units / 14 Rust checks / 196 browser / 12 journeys / 3 strict, plus ten private-helper checks.
+
+Summary Bank routed the Sable recipe, independent raw-skin/motion assertions, browser/journey consumers, manifest/profile/provenance, export snapshot/material ownership and browser endpoint. Migration handoff inspection covered the current options/profile adapter, worker snapshots/protocol/runtime, job lifecycle, Rust/Tauri preflight boundary and actual native/WASM proof runner. This is a bounded source/delta review, not an exhaustive audit of every repository file.
+
+- Verified closed: terminal rotation/scale and interior-key mutation controls, dense floor sampling, non-destructive example profile, canonical recipe hashing and portable rebuild retain their source and bound evidence. All 30 focused asset/endpoint/snapshot/material tests pass again.
+- Verified closed: ZIP/export fixes and Original references are preserved. The independent publication rebuild produced the same GLB; retained Blender/native and browser views remain bound to that unchanged asset. No duplicate rebuild or capture is needed for this documentation cleanup.
+- New, repaired: TODO/review/current-state text still described published asset/export work as local or pending, and the provenance register routed completed work back to TODO. Current status now identifies `2343b08`; completed detail stays in HISTORY and the sample guide.
+- Unverified: arbitrary new poses, game contact, general animal-rig compatibility and a new installed Windows package remain separate. `guy.glb` ownership is confirmed but exact bytes remain unbound. Private Tripo drafts and borrowed media have no new distribution grant.
+
+No new runtime defect was reproduced in these reviewed paths. Cleanup changes documentation only. TODO selects a portable bake contract and Rust sampler parity as the first bounded migration slice, followed by core baking, advanced motion and production integration after complete parity. Existing TypeScript baking stays active. The local recheck receipt is `output/original-assets-20261015/review-receipt.json`; no publication belongs to this review.
+
+## Earlier Sable review and final polish — 2026-10-15
 
 Read-only recheck matched all 474 implementation inputs, 28 changed files and 14 required media to the prior receipt. Original references and five owner queue/snapshot/material files retain their hashes. Six initial asset units passed. No active research-inbox notes remain beyond its routing README.
 
@@ -165,3 +182,5 @@ open; TODO records the completed local acceptance and separate distribution scop
 
 ---
 AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
+
+AI-edited: 2026-10-15T16:07:12-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=rechecked published Sable proof and selected the bounded Rust sampler pass

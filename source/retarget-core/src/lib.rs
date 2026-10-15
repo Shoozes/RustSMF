@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+pub mod sampler;
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 pub const API_VERSION_V1: u32 = 1;

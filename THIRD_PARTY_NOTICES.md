@@ -34,6 +34,11 @@ commit `a3749b6`. Its separate attribution and MIT notice are in
 `source/frontend/src/vendor/FBXExporter-threejs.LICENSE.txt`. Preserve that
 notice with distributions containing the exporter.
 
+The experimental Rust sampler ports Three.js 0.182.0 interpolation behavior.
+Its upstream copyright and MIT text are retained in
+`source/retarget-core/THREE_LICENSE.txt`; preserve that notice when distributing
+the standalone core or its WASM build.
+
 ## Rust dependencies
 
 The Windows app dependency graph is rooted at `rustsmf` in

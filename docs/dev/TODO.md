@@ -2,57 +2,35 @@
 
 Last reviewed: 2026-10-15
 
-Backlog status: Sable animation guards and polish are complete. Export presets/queues are published as `0c7ab1d`; their verified cleanup accompanies Sable source publication. Complete Rust solver migration is next.
+Backlog status: Sable/export cleanup is published in `2343b08`; ZIP fixes remain intact. The portable contract and Rust sampler pass is complete locally (611 units, 14 Rust checks, 196 browser checks, 12 journeys, 3 strict checks; 17 preflight / 14 sampler / 20 refusal runtime cases). HISTORY owns source-bound proof. Core baking is next; production baking stays TypeScript until complete parity.
 
-## Sable final polish — complete
+## Rust solver migration: core baking — next
 
-- What: Sable animation guards, floor repair, presentation and safe rebuild.
-- Why: Close position-only loop proof and Run's 0.134 mm inter-key dip.
-- Where: Sable recipe and asset/browser guards.
-- When: Completed locally 2026-10-15; before Rust solver migration.
-- How: Check rotations, scale, skin and all keys/midpoints; retain the 0.1 mm floor tolerance.
-- Done when: Mutation controls, separate rebuild, dense project/export motion and registered/native plus desktop/narrow reviews pass; final verify/browser/journey/strict gates bind one candidate. Preserve owner fixes, Original, private media and owned cleanup. HISTORY owns proof; no publication/version/package work.
-- Verification: Sequential gates pass: 602 frontend units / 14 Rust checks / 196 browser / 12 journeys / 3 strict. HISTORY binds source and cleanup.
+- What: Port the inventoried core bake options to shared Rust behind explicit experimental capabilities, retaining the TypeScript production worker.
+- Why: Portable TRS sampling now matches native/WASM/Three; the shared core still refuses complete baking and every bake option.
+- Where: `source/retarget-core/src/sampler.rs`, `retargetPortable.ts`, `retargetInventory.ts`, `animationRetarget.ts`, `retargetParity.ts`, their fixtures and `scripts/retarget-runtime-proof.mjs`; routes `subsystem__retarget_core`, `workflow__retarget_sampler`, `feature__rig_retargeting`.
+- When: Next after the completed contract/sampler pass. Advanced motion and production cutover follow separately.
+- How: Port mapped rotations, helper/rest/reference composition, up/orientation correction, root scaling/extraction, direction modes/allowlists, leaf/preserved rotations, timing/resampling and opt-in scale. Use the inventory's defaults, profile/CLI adapters, refusal rules and guards. Preserve copied inputs, existing formats and sampler behavior. Refuse advanced options explicitly before producing output; do not silently drop them or route partial baking into the app.
+- Done when: Every core-classified option and report field has independent known-value and TypeScript/native/actual-WASM parity, including combinations, helpers, references, float32/STEP/cubic timing and endpoint samples. Numeric tolerances remain declared; unsupported combinations, malformed/oversized data and cancellation produce explicit errors with no partial outputs. Input buffers/rest data, Sable, ZIP/export guards and Original references remain intact. No new UI, rig creation/replacement, auto-skinning or synchronous fallback.
+- Verification: Extend existing animation/scale/reference/timing and portable fixtures; retain separate preflight/sampler/core-bake counts. Run focused checks, then sequential `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, `test:visual-strict` and `retarget:runtime-proof` on one final candidate. Preserve compact proof and release owned resources; no production cutover before advanced parity.
 
-## Original assets and animation packs
+### Remaining migration order
 
-- What: Sable GLB, editable Blender master and Idle/Walk/Run/Sit pack.
-- Why: Redistributable original demonstration media.
-- Where: `examples/black-cat/`, provenance and asset/browser guards; `feature__original_sable_asset`, `workflow__sable_rebuild`.
-- How: Paid-output CAT-TRIPO-002 replaces the rejected procedural design; drafts/references stay private.
-- When: Initial local acceptance 2026-10-15; polish above follows. Signal Robot remains the installer sample.
-- Done when: Four paws/connected tail, closed topology, normalized skin, 24 explicit joints, axes/units, known clip timing/motion/loop/hold and decoded texture survive playback, recovery, project and parsed GLB continuity. Preserve Original and owner fixes; no app rig/skin feature.
-- Verification: HISTORY binds the initial 601-unit/14-Rust/194-browser/12-journey/3-strict gate and later polish evidence. The sample guide owns limitations.
+1. **Core baking:** selected above; compare emitted tracks, reports and sampled motion with the retained TypeScript reference and independent fixtures.
+2. **Advanced motion:** port natural torso/leg/contact/pelvis/swing behavior, target curls, local corrections, recovery, pose ranges, head constraints, twist and endpoint envelopes, including their ordering and combinations. Reuse their existing known-value tests; Sable is an additional quadruped fixture, not evidence of general animal compatibility.
+3. **Production integration:** only after every supported option passes, route desktop baking to shared native Rust and web baking to WASM in the existing worker. Preserve lazy loading, private preview/Apply/history, copied buffers, job/revision correlation, progress, 120-second phase limits, cancellation during all phases, stale/replacement/disposal rejection and continued editing after failures. No synchronous fallback or second solver UI. Prove project/export continuity, the complete sequential gate above and `desktop-smoke`; distinguish native execution, actual browser WASM and mocked IPC.
 
-## Complete Rust solver migration — next
+Custom rig creation/replacement, automatic skinning, application versions, installer/release replacement and publication are outside these implementation slices. Separate commit/push authorization is required.
 
-- What: Move the complete current clip solver into shared Rust after parity, retaining the existing TypeScript worker as reference until acceptance.
-- Why: Share mapping and motion execution across native desktop and browser WASM without duplicating behavior or expanding the UI.
-- Where: `source/retarget-core`, existing retarget workers/snapshots and advanced profile fixtures; routes `subsystem__retarget_core`, `feature__retarget_assistance`, `feature__rig_retargeting` and `subsystem__natural_motion`.
-- When: Next selected outcome after Sable acceptance; this asset pass does not begin the migration.
-- How: Inventory current options and own a bounded portable request/result contract first. Port complete vertical slices with reference comparisons for helper ancestry/rest/reference poses, interpolation, timing, root/scale transfer, contacts, twist and endpoint constraints. Keep copied buffers, private preview, Apply/history, progress/cancellation/timeouts and stale/disposal contracts. Custom rig creation/replacement and auto-skinning remain excluded.
-- Done when: Every current supported option passes independent known-value checks and TypeScript-reference/native/actual-browser-WASM parity before Rust replaces production baking. Mapping/diagnostic structures match exactly; numeric tolerance is declared and justified. Cancellation in preparation/analysis/baking, worker/native failure, timeout, replacement/disposal and late completion preserve editable canonical work. Existing projects/profiles/CLI jobs/exports remain compatible; no synchronous fallback or second solver UI.
-- Verification: Extend existing advanced-profile fixtures instead of replacing them. Prove real native Rust and real browser WASM separately from mocked IPC; run the existing sequential frontend gate and retarget runtime proof on one final candidate. Retain compact source-bound evidence, review unchanged Original references and release owned resources.
-
-### Ordered followups
+### Ordered product followups
 
 | Order | Outcome | Completion boundary |
 | --- | --- | --- |
-| 1 | ZIP bundle intake — published `da98cba` | Complete; reviewed directory/progress fixes and container limits remain intact. |
-| 2 | Export presets and queues — published `0c7ab1d` | Complete; local reviewed snapshot/material-reader fixes remain preserved. HISTORY owns their proof. |
-| 3 | Original assets and animation packs | Complete; source-bound proof in HISTORY. Borrowed references and raw drafts stay private. |
-| 4 | Complete Rust solver migration — next | Every current option passes reference/native/WASM parity before replacing worker baking. |
-| 5 | Animal-chain assistance | Reviewed suggestions for existing quadruped, wing and tail rigs pass independent first-party fixtures; ambiguity requires explicit maps. No new rig creation. |
-
-## Export presets and queues
-
-- What: Explicit GLB/FBX/DAE/SMF presets and a bounded session queue of captured authored models.
-- Why: Avoid repeated setup and repeated successful writes.
-- Where: [EXPORT_QUEUE.md](EXPORT_QUEUE.md), queue/snapshot/preparation owners, Export drawer and existing save owner; route `feature__export_queue`.
-- When: Published on 2026-10-15 as `0c7ab1d`; subsequent integrity cleanup is recorded in HISTORY. Installer unchanged.
-- How: Capture owned inputs/options at Add; serialize validation and destinations with latest trailing recovery. Keep source-aware Export, explicit refusal and truthful download/native results. Modern details stay disclosed.
-- Done when: Count/byte bounds, order, cancellation, destination cancel, failure/retry, stale/disposal and source ownership preserve editable work; completed items never repeat; parsed geometry, influences and sampled motion pass through ordinary UI paths.
-- Verification: The published candidate passed 588 frontend units, 14 Rust checks and sequential 192/11/3 browser/journey/strict gates. HISTORY and `output/export-queue-20261015/publish/receipt.json` bind that source; the subsequent integrity recheck has its own HISTORY entry and receipt. Original references and ZIP fixes remain unchanged. Installed Windows queue checks remain a future packaging lane.
+| 1 | ZIP bundle intake — published `da98cba` | Complete; reviewed directory/progress fixes remain intact. |
+| 2 | Export presets and queues — published `0c7ab1d`, cleanup `2343b08` | Complete; owned snapshot/material-reader guards and source-specific proof remain in HISTORY. Installed Windows queue acceptance is separate. |
+| 3 | Original Sable assets and animation pack — published `2343b08` | Complete; the sample guide owns limits and rebuilding. Drafts and borrowed references remain private. |
+| 4 | Complete Rust solver migration | Contract/sampler complete locally; core baking next, then advanced motion and production integration. All supported options require reference/native/WASM parity before cutover. |
+| 5 | Animal-chain assistance | Later: reviewed existing quadruped, wing and tail suggestions with independent first-party fixtures; ambiguity requires explicit maps. No new rig creation. |
 
 ## Completed frontend source work
 
@@ -156,3 +134,7 @@ bounded noncombat fixture.
 AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
 
 AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
+
+AI-edited: 2026-10-15T16:07:12-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=retired published Sable/export tasks and bounded the Rust sampler migration slice
+
+AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-sampler | change=closed sampler proof and selected core baking

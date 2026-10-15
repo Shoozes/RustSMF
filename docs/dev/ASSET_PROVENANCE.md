@@ -17,7 +17,7 @@ CAT-TRIPO-001 used no texture/retopo/rigging credits and remains uncleared. Its 
 
 The [Tripo terms](https://www.tripo3d.ai/terms), updated July 11, 2025, section 5.2.2 permit paid users to use, modify, distribute and license their outputs subject to the agreement. [Rights guidance](https://www.tripo3d.ai/help/privacy-policy/how-to-use-tripo-models-commercially) distinguishes free and paid outputs. The new generation has observed Pro evidence; a credit balance alone would not establish it. Existing third-party fixture provenance remains owned by `source/frontend/tests/fixtures/PROVENANCE.md`.
 
-Upstream reference: [Mesh2Motion source at the reviewed revision](https://github.com/Mesh2Motion/mesh2motion-app/tree/653a9698f5f315523072f1c3ff3496100401317b). The original-assets outcome in TODO owns the Blender finishing and original Idle, Walk, Run and Sit clips.
+Upstream reference: [Mesh2Motion source at the reviewed revision](https://github.com/Mesh2Motion/mesh2motion-app/tree/653a9698f5f315523072f1c3ff3496100401317b). The finished Sable guide owns rebuilding and clip limits; HISTORY binds its acceptance and publication in `2343b08`.
 
 The procedural fallback passed technical checks but was visually rejected by the user. It is superseded and retained privately. The revised Sable preserves the desired near-profile stance and feline silhouette. Blender closes mouth/sole defects and triangulation artifacts, preserves the UV atlas, fits 24 joints, normalizes weights and authors four clips. No raw Tripo file is a public build dependency: the finished Blender scene owns editable geometry and its packed PNG. [The sample guide](../../examples/black-cat/README.md) owns axes, timing, loop declarations and rebuilding. Rights and technical acceptance remain separate.
 
@@ -26,3 +26,5 @@ AI-created: 2026-10-14T20:38:18-04:00 | agent=Codex/root | model=unknown | effor
 AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
 
 AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
+
+AI-edited: 2026-10-15T16:07:12-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=routed completed Sable acceptance to History and the sample guide

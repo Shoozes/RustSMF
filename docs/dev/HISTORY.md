@@ -2,6 +2,38 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-15 — Portable retarget contract and Rust sampler
+
+Completed the selected local contract/sampler slice on main `2343b08dafc39e67d3dfdc824cec7d10215ce9e1`, preserving the five initial documentation edits and all Sable/ZIP/export source fixes. Rust exposes a bounded versioned JSON/native request and a partial `sample-trs-v1` response; bake mode and every bake option refuse explicitly. The copied frontend adapter includes helper/rest hierarchy, explicit bindings, source/target references and endpoint clips. No production worker/client, UI, profile/project/export format, app/crate version or installer changed.
+
+The shared sampler implements STEP, linear/SLERP, natural smooth vectors and glTF cubic TRS with float32 key/value behavior, endpoint holds and helper matrix composition. Six native sampler tests add cooperative cancellation during validation/sampling, no partial output, immutability, JSON/output bounds and numeric-error refusal. The exhaustive typed/AST inventory covers 28 options and 34 report fields, their defaults/adapters/refusals and existing guard files. A final inspection corrected the report's empty-object local-reference default and added an actual-solver regression. Three.js interpolation attribution and its exact MIT notice accompany the Rust port.
+
+Independent anchors supplement native/WASM parity: Hermite position 0.59375, smooth position 1.25, helper world transforms and decoded glTF position/scale 1.25/1.3125. Actual Chromium WASM matches Three and native Rust across 14 positive cases, including constant/antipodal/small rotations, float32 STEP boundaries, irregular smooth keys and references. Twenty malformed/unsupported/bounded requests have exact error structures. An actual WASM worker is terminated after its sampling start signal; a fresh worker then succeeds. The original 17 mapping/preflight cases remain separate and passing.
+
+Final PowerShell/Node commands ran sequentially on 396 unchanged implementation/runner inputs, SHA-256 `42b0783cff09b75e58dd0004bc92c0a0371a26dab9ea68db84b567e05f2b946e`:
+
+- `pwsh -NoProfile -File run.ps1 -Task verify`: exit 0; 611 frontend units, 14 Rust verification checks (19 retarget-core tests), lint/type/build/project/context gates.
+- `pwsh -NoProfile -File run.ps1 -Task test:e2e -NoGenEye`: exit 0; 196 passed.
+- `pwsh -NoProfile -File run.ps1 -Task test:journey -NoGenEye`: exit 0; 12 passed sequentially, including Sable/project/queued-export continuity.
+- `pwsh -NoProfile -File run.ps1 -Task test:visual-strict`: exit 0; 3 passed with no baseline updates.
+- `pwsh -NoProfile -File run.ps1 -Task retarget:runtime-proof`: exit 0; 17 preflight / 14 sampler / 20 refusal cases, exact structures and `1e-6` relative/absolute numbers, plus actual worker cancellation/replacement.
+
+Focused checks passed 11 tests before the added default regression; that two-test inventory lane also passed. Context/project validators and their 29 tests pass. Early receipt entries distinguish a producer path/console-encoding error, repaired Unicode transcoding, tight route-budget checks and the superseded inventory candidate from final acceptance. No acceptance threshold or context budget was raised. Retained proof is consolidated in `output/retarget-runtime-proof/sampler-pass-receipt.json`; the public runtime command keeps its own compact `receipt.json`. Earlier Sable publication/media keep their original identities. TODO selects experimental core baking, then advanced motion and complete production parity; raw drafts/borrowed references remain private. No commit or push belongs to this local pass. The subsequent explicitly authorized publication includes the preceding review/docs cleanup, repairs four remaining TODO dash transcodes, and verifies the exact staged tree in an isolated public-source snapshot. `output/retarget-runtime-proof/publish/receipt.json` owns that candidate, its final commands, confirmed remote commit and owned cleanup; private helper checks remain separate from public-snapshot skips.
+
+AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-sampler
+
+## 2026-10-15 — Published Sable recheck and migration handoff
+
+Reviewed clean main and live origin at `2343b08dafc39e67d3dfdc824cec7d10215ce9e1`, tree `6bd8e0a35e83975f3798a4dea108bde8e3d38e91`. All 34 published blob IDs and working hashes, 14 required journey media and 32 reviewed captures match `output/original-assets-20261015/publish/receipt.json`. Original's reference is unchanged; no private/generated paths are tracked. That exact public candidate passed the isolated sequential gate: 605 frontend units / 14 Rust checks / 196 browser / 12 journeys / 3 strict, with nine public-snapshot private-only skips and ten separately passing maintainer-helper tests. These are reused publication results, not newly run full gates.
+
+Fresh `node --import tsx --test src/utils/blackCatAsset.test.ts src/test/browserTestEndpoint.test.ts src/hooks/exportSnapshot.test.ts src/utils/materialPreview.test.ts` from `source/frontend` passed 30 tests, including terminal rotation/scale/interior-key negative controls and all 424 key/midpoint floor samples. Source inspection confirms private worker baking remains TypeScript; native Rust and actual browser WASM currently prove mapping/preflight only. The publication's portable Blender rebuild and registered views still bind to unchanged asset bytes.
+
+`node scripts/verify-context-bank.mjs`, `node scripts/verify-project-integrity.mjs`, `node --test scripts/context-bank.test.mjs scripts/project-integrity.test.mjs` and `git diff --check` pass after documentation cleanup (29 validator tests; 55 groups within existing limits). Runtime: PowerShell 7.6.6 / Node v26.5.0. The full frontend gate is reused only for unchanged runtime/assets from the published tree.
+
+Cleanup reconciles stale publication/rights status and retires completed Sable/export TODO entries to this history. The next bounded migration slice is a versioned portable bake contract and independently checked Rust sampler, then core baking, advanced motion and production cutover after complete parity. No runtime, asset, UI, baseline, version, installer or public format changed. Existing context routes remain accurate. `output/original-assets-20261015/review-receipt.json` owns fresh command results, final documentation hashes and retained-proof references. No processes were launched that require continued ownership, no protected data or media was removed, and no commit/push was requested by this review.
+
+AI-edited: 2026-10-15T16:07:12-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=recorded published Sable recheck and bounded Rust migration handoff
+
 ## 2026-10-15 — Sable animation guards and final polish
 
 Completed the accepted local polish pass on main `0c7ab1d7aaea8b843f29b632ec74e7e4a125d54f`, preserving the existing 28-file working state and all five owner queue/snapshot/material source/test hashes. Read-only recheck matched the preceding 474-input gate, 28 working-file hashes and 14 required media. Its proof remains attached to its original source; the receipt's `polish` section owns this pass.

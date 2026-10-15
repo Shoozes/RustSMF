@@ -1149,7 +1149,7 @@
       ]
     },
     "subsystem__retarget_core": {
-      "description": "Pure Rust API v1 naming presets, mapping/preflight diagnostics, native commands, pinned WASM generation and actual runtime parity.",
+      "description": "Rust preflight, portable TRS sampler and native/WASM parity.",
       "max_kb": 160,
       "paths": [
         "source/retarget-core/Cargo.toml",
@@ -1162,11 +1162,11 @@
         "source/frontend/src/workers/retargetAnalysisTypes.ts",
         "scripts/build-retarget-wasm.mjs",
         "scripts/retarget-runtime-proof.mjs",
-        "docs/dev/RETARGET_ASSISTANCE.md"
+        "docs/dev/RETARGET_ASSISTANCE.md",
+        "source/retarget-core/THREE_LICENSE.txt"
       ],
       "notes": [
-        "Explicit maps win; ambiguous/opaque cases stay unresolved. Native and actual Chromium WASM compare the same first-party cases, exact mapping/diagnostic structures and 1e-6 numeric tolerance.",
-        "The independent crate stays at 0.1.0/API v1; application/profile/job/export formats remain compatible. Global CLI tooling is not required; generated runtime and local matching tool binaries are ignored."
+        "Explicit maps win; opaque/ambiguous rigs need review. Native/WASM parity uses exact structures and 1e-6 numbers."
       ]
     },
     "workflow__original_asset_workflow": {
@@ -1254,7 +1254,8 @@
         "examples/black-cat/README.md",
         "examples/black-cat/build_black_cat.py"
       ]
-    }
+    },
+    "workflow__retarget_sampler": {"description":"Portable sampler, solver inventory and parity proof.","max_kb":64,"paths":["source/frontend/src/workers/retargetPortable*","source/frontend/src/workers/retargetInventory*","source/frontend/scripts/retarget-sampler-*.ts","docs/dev/RETARGET_SAMPLER.md"]}
   },
   "exclusions": {}
 }
