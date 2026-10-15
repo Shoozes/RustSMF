@@ -1,4 +1,8 @@
 use serde::{Deserialize, Serialize};
+mod bake_math;
+pub mod baker;
+#[cfg(test)]
+mod baker_tests;
 pub mod sampler;
 use std::collections::{BTreeMap, HashMap, HashSet};
 

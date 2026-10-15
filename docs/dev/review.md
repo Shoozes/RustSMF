@@ -6,22 +6,22 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Portable sampler implementation follow-through — 2026-10-15
+## Published backup showcase review and recheck — 2026-10-15
 
-The copied portable contract, Rust TRS sampler and exhaustive option/report inventory pass Three/native/actual-WASM parity: 14 positive cases, 20 refusals and cancellation/replacement guards. Production baking stays TypeScript. Sequential verify (611 units; 14 Rust checks), browser (196), journeys (12), strict (3) and runtime proof (also 17 preflight cases) pass on unchanged inputs. HISTORY owns source/results. TODO selects core baking; Sable, ZIP/export, Original and private asset boundaries remain intact.
+Reviewed clean main and live origin at `b2fc740f8938aa757dec43304c0427595211e2ce`, tree `3d36f71c6b3025e1a911a369465fef0ad86ab0c4`. All three blobs, working/private asset hashes and the overview match the receipt. Coverage: public guidance, provenance/name repair, portable request/inventory, Rust sampler refusal and TypeScript bake boundary. This bounded delta review reuses unchanged runtime proof at its original source.
 
-## Published Sable review and recheck — 2026-10-15
+- Verified closed: only 38 joint names change in the backup derivative. All other JSON and the full binary payload match; six JPEGs decode and all twelve named clips remain. The 24 deform/14 helper mapping retains the complete fixture parent/role layout. The screenshot is the reviewed 1280x720 backup capture. Earlier UV variants remain private and are superseded for the showcase.
+- Verified closed: README distinguishes the pictured private dummy from the downloadable Signal Robot. No private/generated paths are tracked. Sable, ZIP/export source and Original references are unchanged.
+- Verified closed: contract/sampler publication `7297e0e` retains its complete gate and actual native/WASM proof. Fresh portable/inventory/alias checks pass 8/8; context/project validator tests pass 29/29. Production baking still calls the retained TypeScript solver; Rust sample mode explicitly refuses baking/options.
+- New, repaired in Cleanup: TODO still called the published sampler local. Status now identifies publication, and the selected next pass binds the inventory's 19 core options and 26 core report fields.
+- Next-pass prerequisite: `portableBakeRequest` copies only `mapping.map`; the retained solver also uses decisions/canonical roles, validation diagnostics and frame-correction quaternions. TODO requires this bake metadata and a distinct experimental result before core solving. This is a planned baking dependency, not a defect in the sample-only API.
+- Unverified: the showcase proves source/clip inventory and one pictured pose, not exhaustive playback/export, arbitrary-rig compatibility or installed Windows behavior. Advanced motion remains unimplemented; core baking now has separate local proof in RETARGET_CORE_BAKE.md. Private GLBs, Tripo drafts and borrowed references receive no public asset-pack grant.
 
-Reviewed clean local main and live `origin/main` at `2343b08dafc39e67d3dfdc824cec7d10215ce9e1`, tree `6bd8e0a35e83975f3798a4dea108bde8e3d38e91`. All 34 published blobs and working-file hashes, 14 required journey media and 32 reviewed captures match the publication receipt. Original's committed reference is unchanged; generated/private paths remain untracked. The earlier local gates below retain their original source identities; the final isolated publication gate is 605 frontend units / 14 Rust checks / 196 browser / 12 journeys / 3 strict, plus ten private-helper checks.
+This review originally changed records/TODO only. The subsequent core baking implementation, acceptance and authorized publication are routed in HISTORY and RETARGET_CORE_BAKE.md; production, UI, assets and release remain unchanged. The earlier review receipt remains `output/playwright/dummy-showcase/receipt.json` under `backupRename.review`.
 
-Summary Bank routed the Sable recipe, independent raw-skin/motion assertions, browser/journey consumers, manifest/profile/provenance, export snapshot/material ownership and browser endpoint. Migration handoff inspection covered the current options/profile adapter, worker snapshots/protocol/runtime, job lifecycle, Rust/Tauri preflight boundary and actual native/WASM proof runner. This is a bounded source/delta review, not an exhaustive audit of every repository file.
+## Earlier published Sable review — 2026-10-15
 
-- Verified closed: terminal rotation/scale and interior-key mutation controls, dense floor sampling, non-destructive example profile, canonical recipe hashing and portable rebuild retain their source and bound evidence. All 30 focused asset/endpoint/snapshot/material tests pass again.
-- Verified closed: ZIP/export fixes and Original references are preserved. The independent publication rebuild produced the same GLB; retained Blender/native and browser views remain bound to that unchanged asset. No duplicate rebuild or capture is needed for this documentation cleanup.
-- New, repaired: TODO/review/current-state text still described published asset/export work as local or pending, and the provenance register routed completed work back to TODO. Current status now identifies `2343b08`; completed detail stays in HISTORY and the sample guide.
-- Unverified: arbitrary new poses, game contact, general animal-rig compatibility and a new installed Windows package remain separate. `guy.glb` ownership is confirmed but exact bytes remain unbound. Private Tripo drafts and borrowed media have no new distribution grant.
-
-No new runtime defect was reproduced in these reviewed paths. Cleanup changes documentation only. TODO selects a portable bake contract and Rust sampler parity as the first bounded migration slice, followed by core baking, advanced motion and production integration after complete parity. Existing TypeScript baking stays active. The local recheck receipt is `output/original-assets-20261015/review-receipt.json`; no publication belongs to this review.
+The `2343b08` review verified 34 blobs, 46 media and 30 focused tests. Loop/floor guards, profile and portable rebuild remain closed. HISTORY's published Sable recheck and `output/original-assets-20261015/review-receipt.json` retain the full evidence. Earlier dummy/sampler handoff status is superseded above; new poses/game contact and installed Windows acceptance remain separate.
 
 ## Earlier Sable review and final polish — 2026-10-15
 
@@ -183,4 +183,4 @@ open; TODO records the completed local acceptance and separate distribution scop
 ---
 AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
 
-AI-edited: 2026-10-15T16:07:12-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=rechecked published Sable proof and selected the bounded Rust sampler pass
+AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-core-bake | change=linked completed core acceptance

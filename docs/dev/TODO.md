@@ -2,21 +2,31 @@
 
 Last reviewed: 2026-10-15
 
-Backlog status: Sable/export cleanup is published in `2343b08`; ZIP fixes remain intact. The portable contract and Rust sampler pass is complete locally (611 units, 14 Rust checks, 196 browser checks, 12 journeys, 3 strict checks; 17 preflight / 14 sampler / 20 refusal runtime cases). HISTORY owns source-bound proof. Core baking is next; production baking stays TypeScript until complete parity.
+Backlog status: experimental core baking is complete; advanced motion is next. Production remains TypeScript. Sable/ZIP/export and private asset boundaries remain intact. HISTORY owns source-bound proof and the publication receipt route.
 
-## Rust solver migration: core baking — next
+## Rust solver migration: core baking — complete
 
-- What: Port the inventoried core bake options to shared Rust behind explicit experimental capabilities, retaining the TypeScript production worker.
-- Why: Portable TRS sampling now matches native/WASM/Three; the shared core still refuses complete baking and every bake option.
-- Where: `source/retarget-core/src/sampler.rs`, `retargetPortable.ts`, `retargetInventory.ts`, `animationRetarget.ts`, `retargetParity.ts`, their fixtures and `scripts/retarget-runtime-proof.mjs`; routes `subsystem__retarget_core`, `workflow__retarget_sampler`, `feature__rig_retargeting`.
-- When: Next after the completed contract/sampler pass. Advanced motion and production cutover follow separately.
-- How: Port mapped rotations, helper/rest/reference composition, up/orientation correction, root scaling/extraction, direction modes/allowlists, leaf/preserved rotations, timing/resampling and opt-in scale. Use the inventory's defaults, profile/CLI adapters, refusal rules and guards. Preserve copied inputs, existing formats and sampler behavior. Refuse advanced options explicitly before producing output; do not silently drop them or route partial baking into the app.
-- Done when: Every core-classified option and report field has independent known-value and TypeScript/native/actual-WASM parity, including combinations, helpers, references, float32/STEP/cubic timing and endpoint samples. Numeric tolerances remain declared; unsupported combinations, malformed/oversized data and cancellation produce explicit errors with no partial outputs. Input buffers/rest data, Sable, ZIP/export guards and Original references remain intact. No new UI, rig creation/replacement, auto-skinning or synchronous fallback.
-- Verification: Extend existing animation/scale/reference/timing and portable fixtures; retain separate preflight/sampler/core-bake counts. Run focused checks, then sequential `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, `test:visual-strict` and `retarget:runtime-proof` on one final candidate. Preserve compact proof and release owned resources; no production cutover before advanced parity.
+- What: Closed: all 19 core options and 26 reports have experimental Rust baking.
+- Why: Establish core parity before advanced motion or production cutover.
+- Where: [RETARGET_CORE_BAKE.md](RETARGET_CORE_BAKE.md), route `workflow__retarget_core_bake`.
+- When: Completed on 2026-10-15.
+- How: Owned mapping metadata, borrowed inputs, typed results, native cancellation, real worker termination/replacement and atomic output bounds.
+- Done when: Closed; independent anchors and TypeScript/native/actual-WASM parity pass 29 bakes and 40 refusals.
+- Verification: Full gate passed. HISTORY and the compact receipt record exact source, commands, isolated strict graphics failure and clean default rerun.
+
+## Rust solver migration: advanced motion — next
+
+- What: Port the inventory's 9 advanced options and 8 advanced report fields behind an explicit experimental capability. Keep production baking in TypeScript.
+- Why: Core parity alone cannot replace the existing complete solver.
+- Where: Shared Rust bake modules, portable contract, inventory, retained TypeScript solver/domain fixtures and runtime proof; start with `workflow__retarget_core_bake` and the focused natural-motion/endpoint/profile routes.
+- When: Next after this completed core pass; production integration follows complete advanced parity.
+- How: Preserve the retained solver's actual ordering and adapters for torso/leg/contact/pelvis/swing motion, curls, recovery, local corrections, ranges, head constraints, twist and endpoint envelopes. Reuse independent fixtures and core regressions; extend capability/refusal checks without silently dropping options.
+- Done when: Every advanced option/report and supported combination matches TypeScript/native/actual-WASM, with exact track/report structures and 1e-6 numeric tolerance. Prove sampled motion/contact/endpoint values independently, cancellation, input ownership, bounded output and atomic failures. Preserve all core/Sable/ZIP/export/Original guards. No custom rig creation/replacement, auto-skinning, new UI or synchronous fallback.
+- Verification: Focused domain and native tests, then sequential `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, `test:visual-strict` and `retarget:runtime-proof` on one final implementation candidate. Count preflight/sampler/core/advanced cases separately; require actual baked tracks/reports. Retain compact proof; keep private dummy, borrowed and Tripo media out of public fixtures.
 
 ### Remaining migration order
 
-1. **Core baking:** selected above; compare emitted tracks, reports and sampled motion with the retained TypeScript reference and independent fixtures.
+1. **Core baking:** complete above; no production cutover.
 2. **Advanced motion:** port natural torso/leg/contact/pelvis/swing behavior, target curls, local corrections, recovery, pose ranges, head constraints, twist and endpoint envelopes, including their ordering and combinations. Reuse their existing known-value tests; Sable is an additional quadruped fixture, not evidence of general animal compatibility.
 3. **Production integration:** only after every supported option passes, route desktop baking to shared native Rust and web baking to WASM in the existing worker. Preserve lazy loading, private preview/Apply/history, copied buffers, job/revision correlation, progress, 120-second phase limits, cancellation during all phases, stale/replacement/disposal rejection and continued editing after failures. No synchronous fallback or second solver UI. Prove project/export continuity, the complete sequential gate above and `desktop-smoke`; distinguish native execution, actual browser WASM and mocked IPC.
 
@@ -29,7 +39,7 @@ Custom rig creation/replacement, automatic skinning, application versions, insta
 | 1 | ZIP bundle intake — published `da98cba` | Complete; reviewed directory/progress fixes remain intact. |
 | 2 | Export presets and queues — published `0c7ab1d`, cleanup `2343b08` | Complete; owned snapshot/material-reader guards and source-specific proof remain in HISTORY. Installed Windows queue acceptance is separate. |
 | 3 | Original Sable assets and animation pack — published `2343b08` | Complete; the sample guide owns limits and rebuilding. Drafts and borrowed references remain private. |
-| 4 | Complete Rust solver migration | Contract/sampler complete locally; core baking next, then advanced motion and production integration. All supported options require reference/native/WASM parity before cutover. |
+| 4 | Complete Rust solver migration | Contract/sampler published `7297e0e`; experimental core baking complete; advanced motion next, then production integration. All supported options require reference/native/WASM parity before cutover. |
 | 5 | Animal-chain assistance | Later: reviewed existing quadruped, wing and tail suggestions with independent first-party fixtures; ambiguity requires explicit maps. No new rig creation. |
 
 ## Completed frontend source work
@@ -137,4 +147,6 @@ AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=
 
 AI-edited: 2026-10-15T16:07:12-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=retired published Sable/export tasks and bounded the Rust sampler migration slice
 
-AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-sampler | change=closed sampler proof and selected core baking
+AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=synced publication and bounded core baking
+
+AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-core-bake | change=recorded core acceptance and remaining order

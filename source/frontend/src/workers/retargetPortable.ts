@@ -1,8 +1,11 @@
 import * as THREE from 'three';
-import type { SkeletonSnapshotV1 } from './retargetAnalysisTypes';
+import type { SkeletonSnapshotV1, AnalysisResultV1 } from './retargetAnalysisTypes';
+import type { AnimationRetargetReport } from '../utils/animationRetarget';
 import type { BakeInput } from './retargetProtocol';
 import type { ClipSnapshot } from './retargetSnapshot';
 export interface PortableTrackV1 {
+  name?: string;
+  boneChannel?: boolean;
   node: number;
   property: 'position' | 'quaternion' | 'scale';
   interpolation: 'step' | 'linear' | 'smooth' | 'gltf-cubic-spline';
@@ -24,8 +27,18 @@ export interface PortableBakeRequestV1 {
   source: SkeletonSnapshotV1;
   target: SkeletonSnapshotV1;
   mapping: Record<string, string>;
+  mappingDetails?: AnalysisResultV1['mapping'];
   clips: PortableClipJobV1[];
   sampleTimes: number[];
+}
+export interface PortableBakeResponseV1 {
+  apiVersion: 1;
+  stage: 'core-bake';
+  capabilities: ['core-bake-v1'];
+  status: 'baked' | 'error';
+  error?: { code: string; path: string; message: string };
+  clips: Array<{ clip: PortableClipV1; report: Omit<AnimationRetargetReport,
+    'forearmTwist' | 'endpointEnvelope' | 'jointConstraints' | 'targetChainCurls' | 'naturalMotion' | 'poseRanges' | 'localReferenceCorrections' | 'poseRecovery'> }>;
 }
 export interface PortablePoseV1 {
   local: Array<{ position: number[]; quaternion: number[]; scale: number[] }>;
@@ -63,7 +76,7 @@ export function portableBakeRequest(input: BakeInput, sampleTimes: readonly numb
       const interpolation = track.interpolation === 'gltf-cubic-spline' ? track.interpolation
         : ({ [THREE.InterpolateDiscrete]: 'step', [THREE.InterpolateLinear]: 'linear', [THREE.InterpolateSmooth]: 'smooth' } as const)[track.interpolation];
       if (!interpolation || property === 'quaternion' && interpolation === 'smooth') throw new Error(`Unsupported portable interpolation on ${track.name}.`);
-      return { node, property: property as PortableTrackV1['property'], interpolation, times: Array.from(track.times), values: Array.from(track.values) };
+      return { ...(operation === 'bake' ? { name: track.name, boneChannel: binding.nodeName === name } : {}), node, property: property as PortableTrackV1['property'], interpolation, times: Array.from(track.times), values: Array.from(track.values) };
     }) };
   };
   const clips = input.clips.map(({ clip, options }) => {
@@ -75,6 +88,7 @@ export function portableBakeRequest(input: BakeInput, sampleTimes: readonly numb
       endpointTargetClips: (endpointTargetClips ?? []).map(value => copyClip(value, input.target)) };
   });
   const result: PortableBakeRequestV1 = { apiVersion: 1, operation, source: structuredClone(input.source), target: structuredClone(input.target), mapping: { ...input.mapping.map }, clips, sampleTimes: [...sampleTimes] };
+  if (operation === 'bake') result.mappingDetails = structuredClone(input.mapping);
   const text = JSON.stringify(result, (_key, value: unknown) => {
     if (typeof value === 'number' && !Number.isFinite(value)) throw new Error('Portable input must contain finite numbers.');
     return value;

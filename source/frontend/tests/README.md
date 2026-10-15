@@ -23,6 +23,17 @@ A generated `EXT_mesh_gpu_instancing` input independently checks instance transl
 all solver fields. Runtime proof adds 14 sampler cases, 20 refusals and WASM
 cancellation. [Contract and native guards](../../../docs/dev/RETARGET_SAMPLER.md).
 
+## Experimental Rust core baking
+
+`retargetCoreBake.test.ts` and generated `retarget-bake-fixtures.ts` cover all
+19 core options and 26 reports, copied mapping metadata and independent motion
+anchors. `retarget:runtime-proof` compares actual tracks/reports against the
+TypeScript solver, native Rust and Chromium WASM with exact structure/order and
+1e-6 numeric tolerance. Native tests cover validation/bake cancellation and
+atomic bounded errors; real WASM workers prove termination and replacement.
+[Core contract](../../../docs/dev/RETARGET_CORE_BAKE.md) owns the boundary.
+Production baking remains TypeScript; advanced Rust baking remains refused.
+
 ## Retarget assistance
 
 `retarget-transfer.spec.ts` exercises actual browser WASM analysis and module-worker baking through ordinary file selection and named controls. It checks canonical project/export preservation during private playback/seek/speed changes, reviewed explicit-map export, mapping correction, discard, apply/history, cancellation during analysis/baking, stale completion, leaving Animate with retained drafts, and actionable WASM failure with continued editing. `native.spec.ts` separately covers mocked preflight/cancel IPC and actual worker baking without a browser WASM request; it is not native Rust execution or OS-dialog evidence.
@@ -237,3 +248,5 @@ When adding or moving a test:
 AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
 
 AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
+
+AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-core-bake | change=routed experimental bake proof

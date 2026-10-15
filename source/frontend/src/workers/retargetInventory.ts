@@ -1,7 +1,7 @@
 import type { AnimationRetargetOptions, AnimationRetargetReport } from '../utils/animationRetarget';
 interface Entry { slice: 'core' | 'advanced'; default: string; guard: string }
 interface OptionEntry extends Entry { adapter: string; refusal: string }
-/** Existing TypeScript behavior; no bake option is implemented by the Rust sampler yet. */
+/** TypeScript reference inventory; experimental Rust baking supports the core slice. */
 export const RETARGET_OPTIONS = {
   "clipName": {
     "slice": "core",

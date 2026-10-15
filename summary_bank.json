@@ -38,7 +38,7 @@
     },
     "workflow__context_bank": {
       "description": "Portable public context routing, validation, and generation entry points.",
-      "max_kb": 108,
+      "max_kb": 112,
       "paths": [
         "summary_bank.json",
         "scripts/context-bank-lib.mjs",
@@ -680,7 +680,7 @@
     },
     "tests__quality": {
       "description": "Verification contract, test inventory, shared browser fixtures, lint/type gates, and production-boundary checks.",
-      "max_kb": 130,
+      "max_kb": 132,
       "paths": [
         "source/frontend/package.json",
         "source/frontend/playwright.config.ts",
@@ -1156,7 +1156,8 @@
         "source/retarget-core/Cargo.lock",
         "source/retarget-core/LICENSE",
         "source/retarget-core/README.md",
-        "source/retarget-core/src/**",
+        "source/retarget-core/src/lib.rs",
+        "source/retarget-core/src/sampler.rs",
         "source/retarget-core/examples/**",
         "source/src-tauri/src/retarget.rs",
         "source/frontend/src/workers/retargetAnalysisTypes.ts",
@@ -1166,7 +1167,8 @@
         "source/retarget-core/THREE_LICENSE.txt"
       ],
       "notes": [
-        "Explicit maps win; opaque/ambiguous rigs need review. Native/WASM parity uses exact structures and 1e-6 numbers."
+        "Explicit maps win; opaque/ambiguous rigs need review. Native/WASM parity uses exact structures and 1e-6 numbers.",
+        "Experimental bake implementation and tests are owned by workflow__retarget_core_bake; production baking remains TypeScript."
       ]
     },
     "workflow__original_asset_workflow": {
@@ -1255,7 +1257,34 @@
         "examples/black-cat/build_black_cat.py"
       ]
     },
-    "workflow__retarget_sampler": {"description":"Portable sampler, solver inventory and parity proof.","max_kb":64,"paths":["source/frontend/src/workers/retargetPortable*","source/frontend/src/workers/retargetInventory*","source/frontend/scripts/retarget-sampler-*.ts","docs/dev/RETARGET_SAMPLER.md"]}
+    "workflow__retarget_sampler": {
+      "description": "Portable sampler, solver inventory and parity proof.",
+      "max_kb": 64,
+      "paths": [
+        "source/frontend/src/workers/retargetPortable*",
+        "source/frontend/src/workers/retargetInventory*",
+        "source/frontend/scripts/retarget-sampler-*.ts",
+        "docs/dev/RETARGET_SAMPLER.md"
+      ]
+    },
+    "workflow__retarget_core_bake": {
+      "description": "Experimental shared Rust core baking, typed portable result and reference/native/browser-WASM parity; no production cutover.",
+      "max_kb": 128,
+      "paths": [
+        "source/retarget-core/src/bake*.rs",
+        "source/retarget-core/examples/bake_receipt.rs",
+        "source/frontend/src/workers/retargetPortable*",
+        "source/frontend/src/workers/retargetInventory*",
+        "source/frontend/src/workers/retargetCoreBake.test.ts",
+        "source/frontend/scripts/retarget-bake-*.ts",
+        "scripts/retarget-runtime-proof.mjs",
+        "docs/dev/RETARGET_CORE_BAKE.md"
+      ],
+      "notes": [
+        "All 19 core options / 26 core report fields require actual baked tracks/reports and exact structure with 1e-6 numeric native/actual-WASM/TypeScript parity.",
+        "Sample-v1 and production TypeScript behavior remain separate; reject advanced or unknown features atomically. First-party generated fixtures only; private raw assets stay excluded."
+      ]
+    }
   },
   "exclusions": {}
 }

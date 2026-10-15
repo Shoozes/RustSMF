@@ -13,6 +13,10 @@ const MAX_SAMPLES: usize = 20_000;
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TrackV1 {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bone_channel: Option<bool>,
     pub node: usize,
     pub property: String,
     pub interpolation: String,
@@ -46,6 +50,8 @@ pub struct BakeRequestV1 {
     pub source: SkeletonSnapshotV1,
     pub target: SkeletonSnapshotV1,
     pub mapping: BTreeMap<String, String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mapping_details: Option<crate::RigMapV1>,
     pub clips: Vec<ClipJobV1>,
     pub sample_times: Vec<f64>,
 }
@@ -56,7 +62,7 @@ pub struct SampleErrorV1 {
     pub path: String,
     pub message: String,
 }
-#[derive(Clone, Debug, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct TransformV1 {
     pub position: [f64; 3],
@@ -96,8 +102,8 @@ pub struct SampleResponseV1 {
     pub target_rest: Option<PoseV1>,
     pub clips: Vec<SampledClipV1>,
 }
-type Checked<T> = Result<T, SampleErrorV1>;
-fn error(code: &str, path: &str, message: &str) -> SampleErrorV1 {
+pub(crate) type Checked<T> = Result<T, SampleErrorV1>;
+pub(crate) fn error(code: &str, path: &str, message: &str) -> SampleErrorV1 {
     SampleErrorV1 {
         code: code.into(),
         path: path.into(),
@@ -111,7 +117,7 @@ fn invalid(path: &str) -> SampleErrorV1 {
         "Invalid or out-of-bounds portable sampling input.",
     )
 }
-fn checkpoint(cancel: &impl Fn() -> bool) -> Checked<()> {
+pub(crate) fn checkpoint(cancel: &impl Fn() -> bool) -> Checked<()> {
     if cancel() {
         Err(error("SAMPLER_CANCELLED", "$", "Sampling cancelled."))
     } else {
@@ -124,7 +130,12 @@ fn bounded(values: &[f64], limit: f64) -> bool {
 fn quaternion(q: &[f64]) -> bool {
     bounded(q, 1.0001) && (q.iter().map(|v| v * v).sum::<f64>() - 1.0).abs() < 1e-4
 }
-fn skeleton(s: &SkeletonSnapshotV1, path: &str, cancel: &impl Fn() -> bool) -> Checked<()> {
+fn skeleton(
+    s: &SkeletonSnapshotV1,
+    path: &str,
+    cancel: &impl Fn() -> bool,
+    strict_world: bool,
+) -> Checked<()> {
     if s.nodes.is_empty() || s.nodes.len() > MAX_NODES || s.bones.is_empty() || s.bones.len() > 2048
     {
         return Err(invalid(path));
@@ -140,7 +151,11 @@ fn skeleton(s: &SkeletonSnapshotV1, path: &str, cancel: &impl Fn() -> bool) -> C
             || !quaternion(&node.quaternion)
             || !bounded(&node.scale, 1e6)
             || !bounded(&node.world_position, 1e12)
-            || !quaternion(&node.world_quaternion)
+            || if strict_world {
+                !quaternion(&node.world_quaternion)
+            } else {
+                !bounded(&node.world_quaternion, 1e6)
+            }
         {
             return Err(invalid(path));
         }
@@ -204,6 +219,7 @@ fn clip(
             .saturating_add(t.times.len())
             .saturating_add(t.values.len());
         if *values > MAX_VALUES
+            || t.name.as_ref().is_some_and(|s| s.len() > 4096)
             || t.node >= s.nodes.len()
             || !channels.insert((t.node, &t.property))
             || t.times.is_empty()
@@ -233,19 +249,26 @@ fn clip(
     Ok(())
 }
 fn inputs(r: &BakeRequestV1, cancel: &impl Fn() -> bool) -> Checked<()> {
+    validate(r, cancel, true)
+}
+pub(crate) fn validate(
+    r: &BakeRequestV1,
+    cancel: &impl Fn() -> bool,
+    sampling: bool,
+) -> Checked<()> {
     checkpoint(cancel)?;
     if r.api_version != 1 {
         return Err(invalid("apiVersion"));
     }
-    if r.operation != "sample" {
+    if r.operation != if sampling { "sample" } else { "bake" } {
         return Err(error(
             "SAMPLER_UNSUPPORTED_FEATURE",
             "operation",
             "This runtime samples TRS only; complete clip baking is not available.",
         ));
     }
-    skeleton(&r.source, "source", cancel)?;
-    skeleton(&r.target, "target", cancel)?;
+    skeleton(&r.source, "source", cancel, sampling)?;
+    skeleton(&r.target, "target", cancel, sampling)?;
     if r.clips.is_empty()
         || r.clips.len() > 256
         || r.sample_times.is_empty()
@@ -277,7 +300,7 @@ fn inputs(r: &BakeRequestV1, cancel: &impl Fn() -> bool) -> Checked<()> {
     let mut output = r.target.nodes.len() * 26;
     for job in &r.clips {
         checkpoint(cancel)?;
-        if !job.options.is_empty() {
+        if sampling && !job.options.is_empty() {
             return Err(error(
                 "SAMPLER_UNSUPPORTED_FEATURE",
                 "options",
@@ -310,7 +333,7 @@ fn inputs(r: &BakeRequestV1, cancel: &impl Fn() -> bool) -> Checked<()> {
                     .saturating_mul(s.nodes.len())
                     .saturating_mul(26),
             );
-            if output > MAX_VALUES {
+            if sampling && output > MAX_VALUES {
                 return Err(error(
                     "SAMPLER_OUTPUT_LIMIT",
                     "sampleTimes",
@@ -335,7 +358,7 @@ fn normalize(q: &mut [f64]) {
         }
     }
 }
-fn track(t: &TrackV1, time: f64) -> Vec<f64> {
+pub(crate) fn track(t: &TrackV1, time: f64) -> Vec<f64> {
     let size = if t.property == "quaternion" { 4 } else { 3 };
     let cubic = t.interpolation == "gltf-cubic-spline";
     let key = |i: usize, slot: usize, component: usize| {
@@ -422,7 +445,7 @@ fn track(t: &TrackV1, time: f64) -> Vec<f64> {
     }
     result
 }
-fn matrix(t: &TransformV1) -> [f64; 16] {
+pub(crate) fn matrix(t: &TransformV1) -> [f64; 16] {
     let [x, y, z, w] = t.quaternion;
     let [sx, sy, sz] = t.scale;
     [
@@ -444,7 +467,7 @@ fn matrix(t: &TransformV1) -> [f64; 16] {
         1.0,
     ]
 }
-fn multiply(a: &[f64; 16], b: &[f64; 16]) -> [f64; 16] {
+pub(crate) fn multiply(a: &[f64; 16], b: &[f64; 16]) -> [f64; 16] {
     let mut out = [0.0; 16];
     for col in 0..4 {
         for row in 0..4 {

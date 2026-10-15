@@ -97,7 +97,9 @@ smooth curves. Native tests additionally prove cooperative cancellation at
 validation and sampling checkpoints, input immutability, JSON limits and numeric
 output failure. No new arbitrary-asset or animal-rig equivalence claim follows.
 
-Core baking, advanced motion and production integration remain ordered in TODO.
+The separate [experimental core baker](RETARGET_CORE_BAKE.md) now emits core
+tracks/reports through `bake_json_v1`; `sample_json_v1` still refuses bake mode.
+Advanced motion and production integration remain ordered in TODO.
 HISTORY owns final commands/source evidence. Sable, ZIP/export guards, Original
 references and private raw asset boundaries remain preserved.
 

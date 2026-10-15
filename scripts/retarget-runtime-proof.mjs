@@ -121,6 +121,23 @@ async function main() {
     assert.equal(result.error.code, c.code, c.name)
     assert.deepEqual(result.clips, [], `${c.name}: no partial result`)
   })
+  const baking = JSON.parse(run(process.execPath, ['--import', 'tsx', 'scripts/retarget-bake-proof.ts'], { cwd: resolve(root, 'source/frontend') }))
+  assert.equal(baking.coreOptions.length, 19)
+  assert.equal(baking.coreReports.length, 26)
+  assert.ok(baking.positives.length >= 25 && baking.negatives.length >= 32, 'core bake corpus unexpectedly small')
+  const bakeInputs = [...baking.positives.map(c => JSON.stringify(c.input)), ...baking.negatives.map(c => JSON.stringify(c.request))]
+  const nativeBakes = JSON.parse(run('cargo', ['run', '--locked', '--release', '--manifest-path', crateManifest, '--target-dir', resolve(root, 'output/retarget-core/cargo-target'), '--example', 'bake_receipt'], { input: JSON.stringify(bakeInputs) }))
+  baking.positives.forEach((c, i) => {
+    assert.equal(nativeBakes[i].status, 'baked', c.name)
+    assert.ok(nativeBakes[i].clips.every(c => c.clip.tracks.length > 0), `${c.name}: actual baked tracks required`)
+    compare(nativeBakes[i], c.expected, `bake.${c.name}.typescript-native`)
+  })
+  baking.negatives.forEach((c, i) => {
+    const result = nativeBakes[baking.positives.length + i]
+    assert.equal(result.status, 'error', c.name)
+    assert.equal(result.error.code, c.code, c.name)
+    assert.deepEqual(result.clips, [], `${c.name}: atomic batch`)
+  })
   const { chromium } = createRequire(resolve(root, 'source/frontend/package.json'))('playwright')
   let browser
   const server = createServer((request, response) => {
@@ -172,10 +189,16 @@ async function main() {
     }, samplerInputs)
     compare(wasmSampler, nativeSampler, 'sampler.native-wasm')
     sampler.positives.forEach((c, i) => compare(wasmSampler[i], c.expected, `sampler.${c.name}.typescript-wasm`))
-    const samplerWorker = await page.evaluate(async (input) => {
-      const code = `import init, { sample_json_v1 } from '${location.origin}/retarget_core.js';
+    const wasmBakes = await page.evaluate(async (inputs) => {
+      const module = await import('/retarget_core.js')
+      return inputs.map(input => JSON.parse(module.bake_json_v1(input)))
+    }, bakeInputs)
+    compare(wasmBakes, nativeBakes, 'core-bake.native-wasm')
+    baking.positives.forEach((c, i) => compare(wasmBakes[i], c.expected, `bake.${c.name}.typescript-wasm`))
+    const workerProof = async (input, entry, status) => page.evaluate(async ({input, entry, status}) => {
+      const code = `import init, { ${entry} as execute } from '${location.origin}/retarget_core.js';
         await init('${location.origin}/retarget_core_bg.wasm');
-        self.onmessage = event => { self.postMessage({phase:'sampling'}); self.postMessage({phase:'result',result:JSON.parse(sample_json_v1(event.data))}); };
+        self.onmessage = event => { self.postMessage({phase:'sampling'}); self.postMessage({phase:'result',result:JSON.parse(execute(event.data))}); };
         self.postMessage({phase:'ready'});`;
       const url = URL.createObjectURL(new Blob([code],{type:'text/javascript'}));
       const run = (cancel) => new Promise((resolveRun,reject) => {
@@ -187,22 +210,28 @@ async function main() {
         worker.onmessage = event => {
           if(event.data.phase === 'ready') {
             const request = structuredClone(input);
-            if(cancel) request.sampleTimes = Array(20000).fill(.5);
+            if(cancel) {
+              if(entry === 'bake_json_v1') { request.clips = Array.from({length:100}, () => structuredClone(request.clips[0])); request.clips.forEach(c => c.options.sampleRateHz=240); }
+              else request.sampleTimes = Array(20000).fill(.5);
+            }
             worker.postMessage(JSON.stringify(request));
           } else if(event.data.phase === 'sampling' && cancel) {
             terminated = true; worker.terminate();
             setTimeout(() => finish(() => resolveRun('terminated')),30);
           } else if(event.data.phase === 'result') {
             if(terminated || cancel) finish(() => reject(new Error('Cancelled WASM result escaped')));
-            else if(event.data.result.status !== 'sampled') finish(() => reject(new Error('Fresh WASM worker refused valid input')));
-            else finish(() => resolveRun('sampled'));
+            else if(event.data.result.status !== status) finish(() => reject(new Error('Fresh WASM worker refused valid input')));
+            else finish(() => resolveRun(status));
           }
         };
       });
       try { return { cancelled: await run(true), replacement: await run(false) }; }
       finally { URL.revokeObjectURL(url); }
-    }, sampler.positives[0].input)
+    }, {input, entry, status})
+    const samplerWorker = await workerProof(sampler.positives[0].input, 'sample_json_v1', 'sampled')
     assert.deepEqual(samplerWorker, { cancelled: 'terminated', replacement: 'sampled' })
+    const bakeWorker = await workerProof(baking.positives[0].input, 'bake_json_v1', 'baked')
+    assert.deepEqual(bakeWorker, { cancelled: 'terminated', replacement: 'baked' })
     assert.deepEqual(errors, [])
     const allDiagnostics = native.cases.map(({ name }, index) => ({
       name,
@@ -221,10 +250,15 @@ async function main() {
         nativeRust: true, actualBrowserWasm: true, threeReference: true, knownValueAnchors: true, workerCancellation: samplerWorker, toleranceRelativeAbsolute: tolerance,
         resultSha256: hash(Buffer.from(JSON.stringify(nativeSampler))),
         cases: [...sampler.positives.map(c => ({ name: c.name, status: 'sampled' })), ...sampler.negatives.map(c => ({ name: c.name, code: c.code }))] },
+      coreBake: { stage: 'core-bake', productionCutover: false, positiveCases: baking.positives.length, refusalCases: baking.negatives.length,
+        options: baking.coreOptions, reports: baking.coreReports, nativeRust: true, actualBrowserWasm: true, typescriptReference: true,
+        actualBakedTracksAndReports: true, independentMotionAnchors: true, workerCancellation: bakeWorker, toleranceRelativeAbsolute: tolerance,
+        resultSha256: hash(Buffer.from(JSON.stringify(nativeBakes))),
+        cases: [...baking.positives.map(c => ({name:c.name,status:'baked'})), ...baking.negatives.map(c => ({name:c.name,code:c.code}))] },
       unexpectedBrowserErrors: errors,
     }
     writeFileSync(join(output, 'receipt.json'), `${JSON.stringify(receipt, null, 2)}\n`)
-    console.log(`Retarget native/WASM runtime proof passed in Chromium across ${native.cases.length} preflight, ${sampler.positives.length} sampler and ${sampler.negatives.length} refusal cases; mappings and diagnostic codes exact; numbers within ${tolerance}.`)
+    console.log(`Retarget native/WASM proof passed: ${native.cases.length} preflight, ${sampler.positives.length} sampler / ${sampler.negatives.length} refusals, ${baking.positives.length} core bakes / ${baking.negatives.length} refusals; exact structure and numbers within ${tolerance}.`)
   } finally {
     try {
       if (browser) await browser.close()
