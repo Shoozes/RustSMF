@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { retargetAnimationClip } from './animationRetarget';
+import { retargetWithWorkerProof as retargetAnimationClip } from '../workers/retargetParity';
 import { buildRigMap } from './rigMapping';
 import { parseClipScaleTransfer } from './retargetScale';
 

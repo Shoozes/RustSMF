@@ -1,5 +1,9 @@
 # Modern UI Design QA — v0.2 productization complete
 
+## Retarget review — 2026-10-14
+
+Current source keeps Animate > Transfer as one source action, compact progress/Cancel, and a private preview with Apply/Discard. Convention overrides, mapping rows, technical diagnostics and profile JSON live under Mapping details. Other workspaces and the flat graphite/off-white/brass palette retain their hierarchy. Pending work stays cancelable when Tools is closed; leaving Animate clears it. Preview uses the existing compact playback controls without the canonical authoring lane. Six reviewed sizes (1920×1080, 1440×900, 1280×800, 1024×768, 800×900 and 390×844), DPR 1/1.25/2, coarse targets, overflow, Escape and focus return passed. At narrow widths Tools overlays the model; closing it retains preview for viewing. All three strict checks passed with every committed reference unchanged. HISTORY binds the final source and captures; the public installer is unchanged.
+
 ## Task drawers — 2026-10-11
 
 The user selected mockup 2, Task tabs, after three image-generated options based on real Animate/Skin captures. The implementation keeps flat Lumen Alloy surfaces and a model-first workspace. Only the active task is visible: Model has Objects/Surface/Details; Rig has Pose/Hierarchy/Setup; Skin has Brush/Weights/Display; Animate has Clips/Pose/Transfer.
@@ -63,3 +67,6 @@ The v0.2 release gate completed in September. The 2026-10-08 frontend candidate 
 The curated overview now shows the model with the tools closed. Modern's empty status is simply Ready. Browser and mocked IPC are this pass's acceptance lanes; real OS dialogs, packaging and version changes were excluded.
 
 `source/frontend/tests/modern-shell.spec.ts` owns command visibility, one-drawer behavior, coarse-pointer target size, and DPR backing dimensions. `source/frontend/tests/visual.spec.ts` owns responsive shell, viewport controls, Modern/Original geometry, and strict screenshot evidence. `docs/dev/review.md` records suite outcomes; `docs/dev/HISTORY.md` records the final evidence entry.
+
+---
+AI-edited: 2026-10-14T21:08:43-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded completed retarget gate and draft limitations

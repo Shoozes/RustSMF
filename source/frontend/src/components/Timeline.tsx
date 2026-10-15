@@ -18,6 +18,7 @@ interface TimelineProps {
   onInsertKeyframeAtTime?: (time: number) => void;
   onMoveKeyframe?: (fromTime: number, toTime: number) => void;
   disabled?: boolean;
+  readOnlyPreview?: boolean;
 }
 
 interface DragState {
@@ -49,6 +50,7 @@ const Timeline: React.FC<TimelineProps> = ({
   onInsertKeyframeAtTime,
   onMoveKeyframe,
   disabled = false,
+  readOnlyPreview = false,
 }) => {
   const safeDuration = duration || 1;
   const markerTimes = keyframeTimes.slice(0, 80);
@@ -110,15 +112,16 @@ const Timeline: React.FC<TimelineProps> = ({
   };
 
   return (
-    <div data-testid="timeline" className="timeline">
+    <div data-testid="timeline" className="timeline" data-playback-source={readOnlyPreview?'transfer-preview':'editor'} aria-label={readOnlyPreview?'Transfer preview playback':undefined}>
       <div className="timeline-controls">
-        <button data-testid="timeline-play-btn" onClick={onTogglePlay} disabled={disabled}>
+        <button data-testid="timeline-play-btn" onClick={onTogglePlay} disabled={disabled} title={readOnlyPreview?'Play or pause the transfer preview':undefined}>
           {isPlaying ? 'Pause' : 'Play'}
         </button>
-        <button data-testid="timeline-reset-btn" onClick={onReset} disabled={disabled}>Reset</button>
+        <button data-testid="timeline-reset-btn" onClick={onReset} disabled={disabled} title={readOnlyPreview?'Reset the transfer preview':undefined}>Reset</button>
         <input
           type="range"
           data-testid="scrub-slider"
+          aria-label={readOnlyPreview?'Preview time':undefined}
           className="timeline-scrub accent-emerald-500"
           min={0}
           max={safeDuration}
@@ -142,7 +145,7 @@ const Timeline: React.FC<TimelineProps> = ({
           <option value="2">2x</option>
         </select>
       </div>
-      <div className="timeline-ruler" aria-hidden="true">
+      {!readOnlyPreview && <><div className="timeline-ruler" aria-hidden="true">
         {rulerTicks.map((tick) => (
           <span
             key={tick.position}
@@ -230,6 +233,7 @@ const Timeline: React.FC<TimelineProps> = ({
           ? `${keyframeTimes.length} keyframe time${keyframeTimes.length === 1 ? '' : 's'} from the active clip`
           : 'No keyframe times available for the active clip'}
       </div>
+      </>}
     </div>
   );
 };

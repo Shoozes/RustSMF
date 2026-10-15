@@ -75,17 +75,8 @@ test('clip and profile drafts survive task changes and keyboard file selection c
   await expect(page.getByTestId('animation-new-name-input')).toBeHidden();
 
   await page.getByTestId('workspace-task-transfer').click();
-  const profile = page.getByTestId('retarget-profile-controls');
-  await profile.locator('summary').click();
-  await page.getByTestId('retarget-profile-json').fill('{"unfinished":true}');
-  await expect(profile.getByRole('alert')).toBeVisible();
-  const errorText = await profile.getByRole('alert').innerText();
-  await profile.locator('summary').click();
-  await expect(page.locator('.animate-transfer-tools').getByRole('alert')).toHaveText(errorText);
-  await expect(page.locator('.animate-transfer-tools').getByRole('alert')).toBeVisible();
   const picker = page.getByRole('button', { name: 'Retarget clips', exact: true });
   await expect(picker).toHaveAttribute('title', /Retarget.*named-bone/);
-  await page.getByTestId('workspace-task-transfer').click();
   await page.keyboard.press('Tab');
   await expect(page.getByRole('tabpanel')).toBeFocused();
   await page.keyboard.press('Tab');
@@ -101,10 +92,20 @@ test('clip and profile drafts survive task changes and keyboard file selection c
   }
   await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-model-root-id', rootId!);
   await expect(page.getByTestId('error-banner')).toBeHidden();
+  const profile = await workspaceControl(page, 'retarget-profile-controls');
+  await profile.locator('summary').click();
+  await page.getByTestId('retarget-profile-json').fill('{"unfinished":true}');
+  await expect(profile.getByRole('alert')).toBeVisible();
+  const errorText = await profile.getByRole('alert').innerText();
+  await profile.locator('summary').click();
+  await expect(page.getByTestId('retarget-transfer').getByRole('alert')).toHaveText(errorText);
+  await page.getByTestId('retarget-mapping-details').locator(':scope > summary').click();
+  await expect(page.getByTestId('retarget-transfer').getByRole('alert')).toContainText(errorText);
+  await expect(picker).toBeDisabled();
   await page.getByTestId('workspace-task-clips').click();
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Unfinished rename');
   await page.getByTestId('workspace-task-transfer').click();
-  await profile.locator('summary').click();
+  await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();
   await expect(page.getByTestId('retarget-profile-json')).toHaveValue('{"unfinished":true}');
   await expect(profile.getByRole('alert')).toHaveText(errorText);
   assertErrors();

@@ -25,6 +25,8 @@ Use the canonical launcher for close-safe sessions. Direct `npm run dev` and `np
 - `PITFALL_LEDGER.md`: repeated or high-risk failures, written as prevention records rather than progress history.
 - `HUMANOID_POSE_REVIEW.md`: calibrated angular-review schema, CLI and diagnostic limits; candidate progress stays in HISTORY/TODO.
 - `POSE_CONTACT.md`: versioned Rust support-pose correction API, calibration/sign convention, and verbatim vendoring boundary.
+- `RETARGET_ASSISTANCE.md`: shared mapping/preflight API, background jobs, private preview, build tooling and proof boundaries.
+- `ASSET_PROVENANCE.md`: borrowed references, AI drafts, distribution eligibility and original replacement ownership.
 - `../../summary_bank.json`: context groups for features, subsystems, and issue clusters.
 - `../../source/frontend/tests/README.md`: frontend test policy and Playwright coverage map.
 

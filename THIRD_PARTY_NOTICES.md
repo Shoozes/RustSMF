@@ -2,8 +2,9 @@
 
 RustSMF project-owned code is licensed under the root MIT License. This file
 records third-party code that is bundled by the Windows app or used by the
-portable pose-contact source crate. It does not grant rights to test assets of
-unknown provenance; see `source/frontend/tests/fixtures/PROVENANCE.md`.
+portable pose-contact and retarget-core source crates. It does not grant rights
+to test assets of unknown provenance; see
+`source/frontend/tests/fixtures/PROVENANCE.md`.
 The full upstream license and copyright texts, package/version mappings, and
 source identities for locked frontend production packages and the Windows Rust
 dependency graph are collected in the root `THIRD_PARTY_LICENSES.txt`.
@@ -39,7 +40,11 @@ The Windows app dependency graph is rooted at `rustsmf` in
 `source/src-tauri/Cargo.toml` and pinned by `source/src-tauri/Cargo.lock`.
 The portable source solver is rooted at `rustsmf-pose-contact` in
 `source/pose-contact/Cargo.toml`; its runtime dependency is exactly `libm`
-0.2.16, pinned by `source/pose-contact/Cargo.lock`.
+0.2.16, pinned by `source/pose-contact/Cargo.lock`. The shared mapping and
+preflight core is rooted at `rustsmf-retarget-core` in
+`source/retarget-core/Cargo.toml` and pinned by
+`source/retarget-core/Cargo.lock`. Its native Windows graph now also includes
+`libm` 0.2.16. Its browser-WASM graph adds `wasm-bindgen` and generated JS glue.
 
 Crate manifests declare SPDX license expressions including MIT, Apache-2.0,
 BSD-3-Clause, MPL-2.0, Unicode-3.0, Zlib, 0BSD, and Unlicense. Each crate retains its declared terms. The pinned crate
@@ -48,6 +53,39 @@ copyright notices are in `THIRD_PARTY_LICENSES.txt`. Carry the other crates'
 package notices with distributions containing those dependencies. Cargo
 lockfiles pin the complete dependency versions. Do not substitute the root
 project MIT License for upstream terms.
+
+### Retarget core native and browser-WASM crate inventory
+
+This table is the union of the crate's Windows-native and
+`wasm32-unknown-unknown` normal dependency graphs selected with
+`cargo tree --locked --offline --edges normal`. The WASM-only dependencies are
+used to produce the browser glue; the application loads the generated glue and
+WASM locally. Exact versions and source checksums are in
+`source/retarget-core/Cargo.lock`, and complete upstream license payloads are
+indexed in `THIRD_PARTY_LICENSES.txt`.
+
+| Crate | Version | License expression | Graph |
+| --- | --- | --- | --- |
+| `bumpalo` | 3.20.3 | MIT OR Apache-2.0 | WASM |
+| `cfg-if` | 1.0.5 | MIT OR Apache-2.0 | WASM |
+| `itoa` | 1.0.18 | MIT OR Apache-2.0 | Native and WASM |
+| `libm` | 0.2.16 | MIT | Native and WASM |
+| `memchr` | 2.8.3 | Unlicense OR MIT | Native and WASM |
+| `once_cell` | 1.21.4 | MIT OR Apache-2.0 | WASM |
+| `proc-macro2` | 1.0.107 | MIT OR Apache-2.0 | Native and WASM |
+| `quote` | 1.0.47 | MIT OR Apache-2.0 | Native and WASM |
+| `rustversion` | 1.0.23 | MIT OR Apache-2.0 | WASM |
+| `serde` | 1.0.228 | MIT OR Apache-2.0 | Native and WASM |
+| `serde_core` | 1.0.228 | MIT OR Apache-2.0 | Native and WASM |
+| `serde_derive` | 1.0.228 | MIT OR Apache-2.0 | Native and WASM |
+| `serde_json` | 1.0.150 | MIT OR Apache-2.0 | Native and WASM |
+| `syn` | 2.0.119 | MIT OR Apache-2.0 | Native and WASM |
+| `unicode-ident` | 1.0.27 | (MIT OR Apache-2.0) AND Unicode-3.0 | Native and WASM |
+| `wasm-bindgen` | 0.2.126 | MIT OR Apache-2.0 | WASM |
+| `wasm-bindgen-macro` | 0.2.126 | MIT OR Apache-2.0 | WASM |
+| `wasm-bindgen-macro-support` | 0.2.126 | MIT OR Apache-2.0 | WASM |
+| `wasm-bindgen-shared` | 0.2.126 | MIT OR Apache-2.0 | WASM |
+| `zmij` | 1.0.23 | MIT | Native and WASM |
 
 ### Locked Windows app crate inventory
 

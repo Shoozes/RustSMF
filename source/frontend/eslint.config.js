@@ -15,6 +15,7 @@ export default defineConfig(
       'playwright-report/**',
       'test-results/**',
       'src/vendor/**',
+      'src/generated/retarget-core/**',
     ],
   },
   {

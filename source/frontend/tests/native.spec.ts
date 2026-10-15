@@ -1,4 +1,4 @@
-import { workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showSkinAdvanced } from './helpers/modern-shell';
+import { applyTransferPreview, workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showSkinAdvanced } from './helpers/modern-shell';
 
 import { expect, test } from '@playwright/test';
 import fs from 'fs';
@@ -15,7 +15,7 @@ import {
   setupBrowserDiagnostics,
   updateTauriMock,
 } from './helpers/smoke-helpers';
-import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
+import { createSkinnedGlbFixtureInput, createSkinnedGltfFixtureInputWithOptions } from './helpers/skinned-glb-fixture';
 
 import { cancelPaintOnMeshInViewport } from './helpers/viewport-interactions';
 import { renameSubmodel, watchJourneyErrors } from './helpers/product-journey';
@@ -674,4 +674,30 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     expect(snapshot.writes).toHaveLength(1);
     expect(snapshot.calls.map((call) => call.cmd)).toContain('save_file_binary');
   });
+});
+
+test('native retarget IPC mock correlates cancellation and keeps clip baking in a worker', async ({page}) => {
+  const mapping={ok:true,map:{FixtureRoot:'FixtureRoot',FixtureTip:'FixtureTip'},decisions:[
+    {source:'FixtureRoot',target:'FixtureRoot',method:'manual',confidence:1},
+    {source:'FixtureTip',target:'FixtureTip',method:'manual',confidence:1},
+  ],diagnostics:[],sourceUp:null,targetUp:null,sourceLateral:null,targetLateral:null,upCorrection:null,orientationCorrection:null};
+  await installTauriMock(page,{openPath:'unused.glb',savePath:'unused.glb',sampleBytes:[],retargetDelayMs:1000,
+    retargetResult:{apiVersion:1,status:'ready',mapping,diagnostics:[],proportions:null}});
+  const assertErrors=watchJourneyErrors(page),wasmRequests:string[]=[],workerRequests:string[]=[];
+  page.on('request',request=>{if(request.url().endsWith('.wasm'))wasmRequests.push(request.url());if(request.url().includes('retargetBakeRuntime-'))workerRequests.push(request.url());});
+  await page.goto('/');await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
+  await expect(page.getByTestId('status-text')).toContainText('Loaded:',{timeout:15000});await selectWorkspace(page,'animate');
+  const source=await createSkinnedGltfFixtureInputWithOptions({clipName:'Source Motion'});
+  await (await workspaceControl(page,'animation-retarget-clips')).locator('input').setInputFiles(source);
+  await expect.poll(async()=> (await getTauriMockSnapshot(page)).calls.some(call=>call.cmd==='retarget_preflight_v1')).toBe(true);
+  await page.getByTestId('retarget-cancel').click();
+  await expect.poll(async()=> (await getTauriMockSnapshot(page)).calls.some(call=>call.cmd==='cancel_retarget_preflight_v1')).toBe(true);
+  let snapshot=await getTauriMockSnapshot(page);
+  const started=snapshot.calls.find(call=>call.cmd==='retarget_preflight_v1')!.args as {jobId:number;input:{apiVersion:number;source:{bones:number[]}}};
+  expect(started.input.apiVersion).toBe(1);expect(started.input.source.bones).toHaveLength(2);
+  expect(snapshot.calls.find(call=>call.cmd==='cancel_retarget_preflight_v1')!.args).toEqual({jobId:started.jobId});
+  await updateTauriMock(page,{retargetDelayMs:0});
+  await (await workspaceControl(page,'animation-retarget-clips')).locator('input').setInputFiles(source);await applyTransferPreview(page);
+  snapshot=await getTauriMockSnapshot(page);expect(snapshot.calls.filter(call=>call.cmd==='retarget_preflight_v1')).toHaveLength(2);
+  expect(wasmRequests).toEqual([]);expect(workerRequests.length).toBeGreaterThan(0);assertErrors();
 });

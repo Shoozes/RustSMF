@@ -1,6 +1,14 @@
 # RustSMF App State
 
-Last reviewed: 2026-10-11
+Last reviewed: 2026-10-14
+
+## Retarget assistance on current source
+
+Animate > Transfer now uses shared Rust API v1 for mapping/preflight (native Tauri on desktop, actual WASM in a browser worker). Mixamo, UE4 mannequin, Unity humanoid and Rigify deform naming include side/chain context and fingers. Explicit maps remain authoritative; ambiguity and numeric rigs require review. Mapping details holds overrides, diagnostics, profile drafts and portable export of the reviewed explicit map.
+
+The complete existing TypeScript clip solver runs in a dedicated worker on both platforms. Source selection prepares a private preview; Apply commits once through animation history. Cancel/discard, input revisions, leaving Animate and disposal reject stale results. Closing Tools may retain preview. Project saves and exports continue to use canonical clips during preview; undo/redo and continued editing retain their owners. Public setup/dev/build generate locally pinned WASM bindings. Runtime failures are visible without synchronous fallback.
+
+`RETARGET_ASSISTANCE.md` owns API, job and proof boundaries; TODO owns ordered followups. Final sequential verify, browser (160), journeys (11), strict visuals (3), native/actual-WASM parity (17 cases) and desktop smoke passed; HISTORY binds the implementation inputs and reviewed captures. The one image-guided black-cat trial and borrowed pose reference are registered in `ASSET_PROVENANCE.md`; raw media and model drafts stay ignored and ineligible for public distribution pending rights/asset acceptance. No custom rig creation, rig replacement or automatic skinning is added. App version, release and installer remain unchanged; installed Windows evidence retains its earlier source identity.
 
 ## 0.2.1 Windows preview
 
@@ -52,7 +60,7 @@ and fidelity limits are unchanged; dated final proof belongs in `HISTORY.md`.
 - File input, drop and native picking support SMF, GLB/GLTF, FBX, DAE/Collada and OBJ. A bounded bundle resolves selected relative buffers, images and MTL files. Missing, ambiguous, oversized or malformed resources fail before model replacement. Tracked external-GLTF fixtures prove exact sidecar hashes and contained relative URIs.
 - All model inputs have a 256 MiB limit, checked before browser reads and again before parsing. Native byte payloads accept ArrayBuffer, Uint8Array or validated byte arrays. Rust opens authorized canonical regular files and bounds both reported and observed sizes against replacement/growth races. Selected bundles also retain a 256 MiB aggregate limit while reading, with each file constrained by the remaining observed byte budget. Unreadable selections report an Open error.
 - A replacement requested while pose, animation, skin, rig, editor, or Outliner history is dirty opens an accessible Cancel/Discard decision. File bytes are not materialized until the decision is made; Cancel preserves the current root, selection, dirty flags, and status, while Discard permits one replacement. Parse failure or stale completion keeps the previous model mounted.
-- Open, append, retarget, repair, export and save share latest-intent ownership. New operations invalidate stale UI completions and dispose stale resources; failures preserve the mounted model and dirty authoring state.
+- Open, append, repair, export and save share latest-intent ownership. Transfer has a separate captured-authoring-revision job owner and is invalidated by target replacement. New operations reject stale UI completions and dispose stale resources; failures preserve the mounted model and dirty authoring state.
 - SMF import/export uses a typed Web Worker with owned transferable buffers, nested payload validation, monotonic progress, cancellation, a 120-second timeout, and explicit termination. The client rechecks an abort signal after worker handlers are installed and before `postMessage`, so setup-time cancellation cannot publish or leave a task running. The codec bounds encoded input/output to 256 MiB, decoded allocation estimates to 512 MiB, section reads to declared offsets, strings to 4,095 bytes, and allocation-driving texture/mesh/rig/animation counts; non-finite numeric values and invalid byte ranges fail closed. Synchronous fallback is limited to worker construction or initial `postMessage` failure; runtime worker errors surface instead of repeating work on the UI thread.
 - Foreground save operations are globally single-flight and freshness-checked. A foreground request reserves its turn and awaits an active autosave instead of requiring another click. Autosave keeps at most the newest trailing request while a write is active, so slow writes cannot overlap or lose the latest edit. A successful model replacement invalidates queued old-model work and waits for any issued autosave write before swapping roots; canceled or failed pickers leave recovery work intact. User cancellation is distinct from failure. Save Project writes a versioned `.rsproj` envelope containing a validated GLB snapshot plus bounded workspace state, and reopening preserves the supported source format, including DAE, for source-aware editing and export policy; all native writes share one async serialization owner, stage and sync complete bytes before replacement, preserve the prior destination on install failure, and rotate bounded project generations. Browser fallback uses local storage/download, and native recovery discovery/read accepts only the owned target plus `.bak1` and `.bak2` regular files.
 
@@ -329,3 +337,6 @@ receipt and solver diagnostics, conditioning airborne interpolation knees with
 the existing solver and rejecting invalid source knees or exceeded correction
 limits without partial output. [TRANSITION_BAKE.md](TRANSITION_BAKE.md) owns the
 input contract, bounds, vendoring requirements, and native/browser WASM proof.
+
+---
+AI-edited: 2026-10-14T21:08:43-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded completed retarget gate and draft limitations

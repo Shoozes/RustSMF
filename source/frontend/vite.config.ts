@@ -9,6 +9,7 @@ const THREE_VENDOR_PATTERNS = [
 
 export default defineConfig({
   plugins: [react()],
+  worker: { format: 'es' },
   resolve: {
     dedupe: ['react', 'react-dom', 'three']
   },

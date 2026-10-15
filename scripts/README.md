@@ -4,7 +4,9 @@ Repo-level helper scripts live here when they are not part of the frontend packa
 
 Current command entry points:
 - `run.ps1`: human-friendly setup, dev, verify, e2e, recorded journey, and desktop-smoke tasks; optional GenEye browser runs use checked argv manifests instead of shell command strings.
-- `verify-rust.mjs`: the single Rust verification owner for the Tauri and pose-contact crates, including native checks and pose-contact wasm32; both public verification entrypoints delegate to it.
+- `verify-rust.mjs`: the single Rust verification owner for Tauri, pose-contact and retarget-core, including native checks and both portable crates' wasm32 checks; both public verification entrypoints delegate to it.
+- `build-retarget-wasm.mjs`: generates ignored browser glue/WASM using matching pinned project-local wasm-bindgen tooling; setup installs the tool, dev/typecheck/build use it.
+- `retarget-runtime-proof.mjs`, exposed as `run.ps1 -Task retarget:runtime-proof`: compares native Rust and actual Chromium WASM mappings/diagnostics across first-party fixtures and retains a compact artifact receipt.
 - `rust-verification.test.mjs`: command coverage, missing-crate and failure propagation, launcher routing, and fresh transition-build ordering regressions run as part of `npm run verify:rust`.
 - `source/pose-contact/tests/transition-runtime-proof.mjs`, exposed as `npm run transition:runtime-proof`: builds both transition examples, selects Cargo-reported output paths, runs browser parity on those exact artifacts, and emits their source/artifact hashes.
 - `context-bank-lib.mjs`: shared summary-bank parsing, path expansion, budget, and generation library.

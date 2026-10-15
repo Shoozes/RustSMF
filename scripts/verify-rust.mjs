@@ -7,6 +7,7 @@ const repositoryRoot = resolve(fileURLToPath(new URL('../', import.meta.url)))
 
 const rustCrates = [
   { name: 'src-tauri', directory: join('source', 'src-tauri') },
+  { name: 'retarget-core', directory: join('source', 'retarget-core'), wasm: true },
   { name: 'pose-contact', directory: join('source', 'pose-contact'), wasm: true },
 ]
 
@@ -84,7 +85,7 @@ export function runRustVerification({
 export function main() {
   try {
     const plan = runRustVerification()
-    console.log(`Rust verification passed: ${plan.length} checks across src-tauri and pose-contact.`)
+    console.log(`Rust verification passed: ${plan.length} checks across src-tauri, retarget-core, and pose-contact.`)
     return 0
   } catch (error) {
     console.error(`Rust verification failed: ${error instanceof Error ? error.message : String(error)}`)

@@ -50,11 +50,12 @@ See the [user guide](docs/user/README.md) and [current format limits](docs/dev/A
 Clone or unpack the source, then open PowerShell 7 in the repository root. Install the declared Node range (`^22.13.0 || >=24`), Rust and the [Tauri Windows prerequisites](https://v2.tauri.app/start/prerequisites/):
 
 ```powershell
+rustup target add wasm32-unknown-unknown
 pwsh -NoProfile -File .\run.ps1 -Task setup
 pwsh -NoProfile -File .\run.ps1 -Task run
 ```
 
-`run.ps1 -Task dev` opens the browser development shell. The frontend uses React/TypeScript and Three.js; the desktop boundary uses Rust/Tauri.
+`run.ps1 -Task dev` opens the browser development shell. Source builds use Rust for native and browser-WASM retarget analysis; setup installs the matching WASM generator locally. The frontend uses React/TypeScript and Three.js; the desktop boundary uses Rust/Tauri.
 
 After setup, build the NSIS installer with `pwsh -NoProfile -File .\run.ps1 -Task package:windows`. The command reports its path and SHA-256.
 

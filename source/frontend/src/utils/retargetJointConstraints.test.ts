@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { constrainHeadChain, parseClipJointConstraints } from './retargetJointConstraints';
 import { measurePoseJoint, type PoseJointRange } from './poseRanges';
-import { retargetAnimationClip } from './animationRetarget';
+import { retargetWithWorkerProof as retargetAnimationClip } from '../workers/retargetParity';
 import { buildRigMap } from './rigMapping';
 
 const range = (bone: string, cone: number): PoseJointRange => ({ bone, referenceRotation: [0, 0, 0, 1],

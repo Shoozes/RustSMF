@@ -49,12 +49,12 @@ describe('project integrity checks', () => {
   it('requires licensed preview resources and synchronized lockfile versions', () => {
     const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-preview-integrity-'))
     temporaryRoots.push(root)
-    for (const folder of ['source/frontend', 'source/src-tauri', 'source/pose-contact', 'examples']) mkdirSync(join(root, folder), { recursive: true })
+    for (const folder of ['source/frontend', 'source/src-tauri', 'source/pose-contact', 'source/retarget-core', 'examples']) mkdirSync(join(root, folder), { recursive: true })
     for (const file of ['LICENSE', 'THIRD_PARTY_NOTICES.md', 'THIRD_PARTY_LICENSES.txt', 'examples/rustsmf-demo.glb']) writeFileSync(join(root, file), 'fixture')
     writeFileSync(join(root, 'source/package.json'), JSON.stringify({ license: 'MIT' }))
     writeFileSync(join(root, 'source/frontend/package.json'), JSON.stringify({ version: '0.2.1', license: 'MIT' }))
     writeFileSync(join(root, 'source/package-lock.json'), JSON.stringify({ packages: { '': { license: 'MIT' }, frontend: { version: '0.2.1', license: 'MIT' } } }))
-    for (const file of ['source/src-tauri/Cargo.toml', 'source/pose-contact/Cargo.toml']) writeFileSync(join(root, file), '[package]\nlicense = "MIT"\n')
+    for (const file of ['source/src-tauri/Cargo.toml', 'source/pose-contact/Cargo.toml', 'source/retarget-core/Cargo.toml']) writeFileSync(join(root, file), '[package]\nlicense = "MIT"\n')
     writeFileSync(join(root, 'source/src-tauri/Cargo.lock'), '[[package]]\nname = "rustsmf"\nversion = "0.2.1"\n')
     const resources = {
       '../../LICENSE': 'licenses/LICENSE', '../../THIRD_PARTY_NOTICES.md': 'licenses/THIRD_PARTY_NOTICES.md',

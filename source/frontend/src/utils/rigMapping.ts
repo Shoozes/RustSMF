@@ -31,7 +31,7 @@ export type RigMapMethod = 'manual' | 'canonical' | 'normalized' | 'fuzzy';
 export interface RigMapDecision {
   source: string;
   target: string;
-  canonical?: CanonicalHumanoidBone;
+  canonical?: string;
   method: RigMapMethod;
   confidence: number;
 }

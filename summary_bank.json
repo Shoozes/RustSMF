@@ -24,7 +24,7 @@
   "groups": {
     "docs__orientation": {
       "description": "Lean current-state orientation. Use a focused feature or subsystem group before reading broader source.",
-      "max_kb": 74,
+      "max_kb": 80,
       "paths": [
         "docs/dev/APP_STATE.md",
         "docs/dev/TODO.md"
@@ -32,8 +32,8 @@
       "notes": [
         "TODO owns executable work and completion conditions.",
         "APP_STATE owns shipped behavior; review.md is opened only for integrity-pass evidence.",
-        "The 74 KiB orientation cap accommodates the measured current-state and task-record content; defaults remain two docs under the unchanged 256 KiB generation ceiling.",
-        "README launch/format entry remains in issue__verification_current_head and is read directly during task intake; orientation retains current state and the work queue."
+        "README launch/format entry remains in issue__verification_current_head and is read directly during task intake; orientation retains current state and the work queue.",
+        "Measured orientation is 78.6 KiB after retarget completion and its ordered asset queue; its two authority docs remain bounded at 80 KiB under the unchanged 256 KiB generation ceiling."
       ]
     },
     "workflow__context_bank": {
@@ -57,7 +57,7 @@
     },
     "workflow__project_integrity": {
       "description": "Project-doc and release integrity contracts: TODO and Pitfall Ledger shape, exact Guard targets, palette scope, synchronized app versions, imports, and Rust module declarations.",
-      "max_kb": 104,
+      "max_kb": 112,
       "paths": [
         ".gitattributes",
         "scripts/project-integrity-lib.mjs",
@@ -83,7 +83,7 @@
         "Palette input contracts are theme-owned in feature__theme_system; stable ledger records are routed in workflow__pitfall_guard_validation.",
         "Relative-import candidates must be files; a bare directory without an index module fails even when the directory itself exists.",
         "Active TODO fields must contain completion criteria and cannot coexist with the empty-backlog marker.",
-        "The 0.2.1 preview gate validates first-party MIT metadata, matching lock versions and exact installed notice/sample resource mappings. The measured owner/tests expansion uses a 104 KiB focused cap."
+        "The 0.2.1 preview gate validates first-party MIT metadata, matching lock versions and exact installed notice/sample resource mappings. The retarget crate metadata and Rust gate regressions fit the 112 KiB focused cap."
       ]
     },
     "workflow__pitfall_guard_validation": {
@@ -115,7 +115,7 @@
     },
     "feature__theme_system": {
       "description": "Persisted themes, Modern model viewer with task drawers, Original presentation, responsive behavior and visual evidence.",
-      "max_kb": 232,
+      "max_kb": 236,
       "paths": [
         "source/frontend/src/theme.ts",
         "source/frontend/src/theme.test.ts",
@@ -200,7 +200,8 @@
         "source/frontend/src/utils/animationRetarget.ts",
         "source/frontend/src/utils/animationRetarget.test.ts",
         "source/frontend/src/utils/retargetScale.ts",
-        "source/frontend/src/utils/retargetScale.test.ts"
+        "source/frontend/src/utils/retargetScale.test.ts",
+        "source/frontend/src/workers/retargetParity.ts"
       ],
       "notes": [
         "Opaque numeric rigs require an explicit reviewed map and never fuzzy-match; normalized segment ratios expose proportion mismatches that correct axes alone cannot solve.",
@@ -248,7 +249,8 @@
       "notes": [
         "The collapsed Animate surface accepts a complete v2 game-ready job or rustsmf.retarget-profile.v1 JSON, reports strict validation errors, and keeps the draft in app-owned state across panel unmounts.",
         "Standalone profiles reject sourceModel and complete-job imports strip it; users select source files at apply time, so saved profiles do not reopen owner-local paths.",
-        "React and CLI callers share profileClipOptions for clip naming, reference resolution, preservation, direction, natural-motion, timing, recovery, and scale-transfer settings; application is one animation-history transaction."
+        "React and CLI callers share profileClipOptions for clip naming, reference resolution, preservation, direction, natural-motion, timing, recovery, and scale-transfer settings; application is one animation-history transaction.",
+        "Animate Transfer stages worker results for private preview before one history transaction; feature__retarget_assistance owns that lifecycle. Reviewed preset maps export through the existing explicit manualMap fields."
       ]
     },
     "workflow__game_ready_cli": {
@@ -312,7 +314,7 @@
     },
     "feature__model_outliner_authoring": {
       "description": "Guarded non-SMF Outliner metadata, static structural/surface authoring, and bounded global history.",
-      "max_kb": 142,
+      "max_kb": 144,
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/components/Outliner.tsx",
@@ -673,7 +675,7 @@
     },
     "tests__quality": {
       "description": "Verification contract, test inventory, shared browser fixtures, lint/type gates, and production-boundary checks.",
-      "max_kb": 112,
+      "max_kb": 114,
       "paths": [
         "source/frontend/package.json",
         "source/frontend/playwright.config.ts",
@@ -1107,6 +1109,62 @@
         "Model Objects/Surface/Details; Rig Pose/Hierarchy/Setup; Skin Brush/Weights/Display; Animate Clips/Pose/Transfer. Original uses unwrapped controls.",
         "Feature-specific panels and semantic assertions retain their Model, Rig, Skin, animation and profile routes. Native details and ordinary task clicks preserve user reachability; no visibility overrides or editor setters.",
         "Inactive sections remain mounted. workspace-tasks.spec.ts guards tabs/focus, drafts, Enter/Space picker cancellation, native control/text keys, Scene Skin state and touch targets. Keyboard playback ownership stays in subsystem__load_editor_orchestration; viewport tool keys stay in subsystem__viewport_editor. Skin notice rendering retains feature__skin_authoring ownership. Source changes do not replace the published Windows preview."
+      ]
+    },
+    "feature__retarget_assistance": {
+      "description": "Cancelable frontend transfer jobs, copied worker snapshots, private preview and undoable Apply.",
+      "max_kb": 112,
+      "paths": [
+        "source/frontend/src/hooks/useRetargetTransfer.ts",
+        "source/frontend/src/components/RetargetTransferControls.tsx",
+        "source/frontend/src/workers/retargetJobClient.ts",
+        "source/frontend/src/workers/retargetJobClient.test.ts",
+        "source/frontend/src/workers/retargetProtocol.ts",
+        "source/frontend/src/workers/retargetSnapshot.ts",
+        "source/frontend/src/workers/retargetSnapshot.test.ts",
+        "source/frontend/src/workers/retargetBakeRuntime.ts",
+        "source/frontend/src/workers/retargetWorker.ts",
+        "source/frontend/src/utils/retargetPreview.ts",
+        "source/frontend/tests/retarget-transfer.spec.ts",
+        "docs/dev/RETARGET_ASSISTANCE.md",
+        "source/frontend/src/components/Timeline.tsx"
+      ],
+      "notes": [
+        "useLoadModel and App integration retain subsystem__load_editor_orchestration; rendering integration retains subsystem__viewport_editor. Public profiles retain feature__retarget_profiles.",
+        "subsystem__retarget_core owns shared native/WASM mapping and build tooling; the complete TypeScript solver remains in feature__rig_retargeting. Browser workers have no synchronous fallback. Preview resources and canonical editor resources have separate lifetimes."
+      ]
+    },
+    "subsystem__retarget_core": {
+      "description": "Pure Rust API v1 naming presets, mapping/preflight diagnostics, native commands, pinned WASM generation and actual runtime parity.",
+      "max_kb": 160,
+      "paths": [
+        "source/retarget-core/Cargo.toml",
+        "source/retarget-core/Cargo.lock",
+        "source/retarget-core/LICENSE",
+        "source/retarget-core/README.md",
+        "source/retarget-core/src/**",
+        "source/retarget-core/examples/**",
+        "source/src-tauri/src/retarget.rs",
+        "source/frontend/src/workers/retargetAnalysisTypes.ts",
+        "scripts/build-retarget-wasm.mjs",
+        "scripts/retarget-runtime-proof.mjs",
+        "docs/dev/RETARGET_ASSISTANCE.md"
+      ],
+      "notes": [
+        "Explicit maps win; ambiguous/opaque cases stay unresolved. Native and actual Chromium WASM compare the same first-party cases, exact mapping/diagnostic structures and 1e-6 numeric tolerance.",
+        "The independent crate stays at 0.1.0/API v1; application/profile/job/export formats remain compatible. Global CLI tooling is not required; generated runtime and local matching tool binaries are ignored."
+      ]
+    },
+    "workflow__original_asset_workflow": {
+      "description": "Borrowed-reference and AI draft provenance, distribution eligibility and original sample replacement boundaries.",
+      "max_kb": 24,
+      "paths": [
+        "docs/dev/ASSET_PROVENANCE.md",
+        "source/frontend/tests/fixtures/PROVENANCE.md",
+        "examples/README.md"
+      ],
+      "notes": [
+        "The reusable tripo-asset-workflow skill is global and contains no media. Raw Mesh2Motion references, generated images and Tripo drafts stay ignored; TODO owns Blender finishing and original animation-pack outcomes."
       ]
     }
   },

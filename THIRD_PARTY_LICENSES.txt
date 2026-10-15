@@ -11,6 +11,7 @@ Collected from exact versions in source/package-lock.json and Cargo.lock. Cached
 - cargo: same-file 1.0.6; declared Unlicense/MIT; `COPYING`; source: Cargo.lock checksum-verified archive
 - cargo: walkdir 2.5.0; declared Unlicense/MIT; `COPYING`; source: Cargo.lock checksum-verified archive
 - cargo: winapi-util 0.1.11; declared Unlicense OR MIT; `COPYING`; source: Cargo.lock checksum-verified archive
+- cargo: memchr 2.8.3; declared Unlicense OR MIT; `COPYING`; source: Cargo.lock checksum-verified archive
 
 ### Notice 025436edff4cfcdd (1062 bytes; SHA-256 025436edff4cfcdde17a5811fdea78892d8482efd1abdec5a17872d07a4f2112)
 - cargo: flate2 1.1.9; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
@@ -70,6 +71,7 @@ Collected from exact versions in source/package-lock.json and Cargo.lock. Cached
 - cargo: byteorder 1.5.0; declared Unlicense OR MIT; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
 - cargo: memchr 2.8.1; declared Unlicense OR MIT; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
 - cargo: walkdir 2.5.0; declared Unlicense/MIT; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+- cargo: memchr 2.8.3; declared Unlicense OR MIT; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
 
 ### Notice 123a331b5dbf04c3 (1066 bytes; SHA-256 123a331b5dbf04c30097fa43b8f858bc85df671fe776de498d01f3d6b7c1f69e)
 - cargo: libc 0.2.186; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
@@ -141,6 +143,12 @@ Collected from exact versions in source/package-lock.json and Cargo.lock. Cached
 - cargo: unicode-ident 1.0.24; declared (MIT OR Apache-2.0) AND Unicode-3.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
 - cargo: utf-8 0.7.6; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
 - cargo: zmij 1.0.21; declared MIT; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+- cargo: proc-macro2 1.0.107; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+- cargo: quote 1.0.47; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+- cargo: rustversion 1.0.23; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+- cargo: syn 2.0.119; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+- cargo: unicode-ident 1.0.27; declared (MIT OR Apache-2.0) AND Unicode-3.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+- cargo: zmij 1.0.23; declared MIT; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
 
 ### Notice 2537228d9a1b44a5 (1057 bytes; SHA-256 2537228d9a1b44a5dc595241349cae7090b326c8de165aaf89bfddef4a00d0fc)
 - cargo: time 0.3.47; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
@@ -182,6 +190,11 @@ Collected from exact versions in source/package-lock.json and Cargo.lock. Cached
 
 ### Notice 378f5840b258e277 (1057 bytes; SHA-256 378f5840b258e2779c39418f3f2d7b2ba96f1c7917dd6be0713f88305dbda397)
 - cargo: cfg-if 1.0.4; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+- cargo: cfg-if 1.0.5; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+- cargo: wasm-bindgen 0.2.126; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+- cargo: wasm-bindgen-macro 0.2.126; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+- cargo: wasm-bindgen-macro-support 0.2.126; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+- cargo: wasm-bindgen-shared 0.2.126; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
 
 ### Notice 3823dda7cf046602 (14088 bytes; SHA-256 3823dda7cf046602f4b4e77ec8e227863dc4736037cc85bb33d9f19febe16bb7)
 - cargo: libm 0.2.16; declared MIT; `LICENSE.txt`; source: Cargo.lock checksum-verified archive
@@ -277,6 +290,11 @@ Collected from exact versions in source/package-lock.json and Cargo.lock. Cached
 - cargo: typeid 1.0.3; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
 - cargo: unicode-ident 1.0.24; declared (MIT OR Apache-2.0) AND Unicode-3.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
 - cargo: utf-8 0.7.6; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
+- cargo: proc-macro2 1.0.107; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
+- cargo: quote 1.0.47; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
+- cargo: rustversion 1.0.23; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
+- cargo: syn 2.0.119; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
+- cargo: unicode-ident 1.0.27; declared (MIT OR Apache-2.0) AND Unicode-3.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
 
 ### Notice 6485b8ed310d3f03 (1071 bytes; SHA-256 6485b8ed310d3f0340bf1ad1f47645069ce4069dcc6bb46c7d5c6faf41de1fdb)
 - cargo: bitflags 1.3.2; declared MIT/Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
@@ -286,6 +304,9 @@ Collected from exact versions in source/package-lock.json and Cargo.lock. Cached
 - cargo: regex 1.12.4; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
 - cargo: regex-automata 0.4.14; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
 - cargo: regex-syntax 0.8.11; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
+
+### Notice 65f94e99ddaf4f5d (1059 bytes; SHA-256 65f94e99ddaf4f5d1782a6dae23f35d4293a9a01444a13135a6887017d353cee)
+- cargo: bumpalo 3.20.3; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
 
 ### Notice 65fc947f4bac882a (1079 bytes; SHA-256 65fc947f4bac882a2cd104ef73c246b1b037059df9f2b3a58b7f77f0b9e56071)
 - cargo: rfd 0.16.0; declared MIT; `LICENSE`; source: Cargo.lock checksum-verified archive
@@ -464,6 +485,12 @@ Collected from exact versions in source/package-lock.json and Cargo.lock. Cached
 - cargo: web_atoms 0.2.4; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
 - cargo: window-vibrancy 0.6.0; declared Apache-2.0 OR MIT; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
 - cargo: wry 0.55.1; declared Apache-2.0 OR MIT; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
+- cargo: bumpalo 3.20.3; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
+- cargo: cfg-if 1.0.5; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
+- cargo: wasm-bindgen 0.2.126; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
+- cargo: wasm-bindgen-macro 0.2.126; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
+- cargo: wasm-bindgen-macro-support 0.2.126; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
+- cargo: wasm-bindgen-shared 0.2.126; declared MIT OR Apache-2.0; `LICENSE-APACHE`; source: Cargo.lock checksum-verified archive
 
 ### Notice a825bd853ab71619 (1083 bytes; SHA-256 a825bd853ab71619a4923d7b4311221427848070ff44d990da39b0b274c1683f)
 - cargo: typenum 1.20.1; declared MIT OR Apache-2.0; `LICENSE-MIT`; source: Cargo.lock checksum-verified archive
@@ -693,6 +720,7 @@ Collected from exact versions in source/package-lock.json and Cargo.lock. Cached
 
 ### Notice f7db81051789b729 (1995 bytes; SHA-256 f7db81051789b729fea528a63ec4c938fdcb93d9d61d97dc8cc2e9df6d47f2a1)
 - cargo: unicode-ident 1.0.24; declared (MIT OR Apache-2.0) AND Unicode-3.0; `LICENSE-UNICODE`; source: Cargo.lock checksum-verified archive
+- cargo: unicode-ident 1.0.27; declared (MIT OR Apache-2.0) AND Unicode-3.0; `LICENSE-UNICODE`; source: Cargo.lock checksum-verified archive
 
 ### Notice fab3dd6bdab226f1 (16726 bytes; SHA-256 fab3dd6bdab226f1c08630b1dd917e11fcb4ec5e1e020e2c16f83a0a13863e85)
 - cargo: selectors 0.36.1; declared MPL-2.0; file `MPL-2.0 full text`; source: official Mozilla MPL 2.0 https://www.mozilla.org/media/MPL/2.0/index.815ca599c9df.txt
@@ -4056,6 +4084,37 @@ END OF TERMS AND CONDITIONS
 
 ```text
 Copyright (c) 2014 The Rust Project Developers
+
+Permission is hereby granted, free of charge, to any
+person obtaining a copy of this software and associated
+documentation files (the "Software"), to deal in the
+Software without restriction, including without
+limitation the rights to use, copy, modify, merge,
+publish, distribute, sublicense, and/or sell copies of
+the Software, and to permit persons to whom the Software
+is furnished to do so, subject to the following
+conditions:
+
+The above copyright notice and this permission notice
+shall be included in all copies or substantial portions
+of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF
+ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED
+TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT
+SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
+CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR
+IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+```
+
+
+### Notice 65f94e99ddaf4f5d
+
+```text
+Copyright (c) 2019 Nick Fitzgerald
 
 Permission is hereby granted, free of charge, to any
 person obtaining a copy of this software and associated

@@ -7,7 +7,7 @@
 // - Win32: taskkill /T + parentPid poll (tasklist). Unix: pkill -P or kill -TERM fallback.
 // - Keeps behavior identical to `vite` for HMR, port 5173, etc.
 
-import { spawn, execSync } from 'node:child_process';
+import { spawn, spawnSync, execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -20,6 +20,11 @@ const __dirname = path.dirname(__filename);
 const frontendDir = path.resolve(__dirname, '..');
 
 const require = createRequire(import.meta.url);
+const wasmBuild = spawnSync(process.execPath, [path.resolve(__dirname, '../../../scripts/build-retarget-wasm.mjs')], { stdio: 'inherit', windowsHide: true });
+if (wasmBuild.error || wasmBuild.status !== 0) {
+  console.error('Retarget WASM preparation failed. Run setup to install matching local tooling.', wasmBuild.error?.message ?? '');
+  process.exit(wasmBuild.status ?? 1);
+}
 const viteCli = path.resolve(path.dirname(require.resolve('vite/package.json')), 'bin', 'vite.js');
 
 const child = spawn(process.execPath, [viteCli], {

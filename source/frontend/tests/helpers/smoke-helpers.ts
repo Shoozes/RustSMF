@@ -215,6 +215,8 @@ export interface TauriMockInit {
   openDelayMs?: number;
   readDelayMs?: number;
   writeDelayMs?: number;
+  retargetResult?: unknown;
+  retargetDelayMs?: number;
 }
 
 interface TauriMockCall {
@@ -291,6 +293,12 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
       invoke: async (cmd: string, args?: Record<string, unknown>) => {
         state.calls.push({ cmd, args });
         switch (cmd) {
+          case 'retarget_preflight_v1':
+            if (state.retargetDelayMs) await new Promise(resolve => setTimeout(resolve, state.retargetDelayMs));
+            if (!state.retargetResult) throw new Error('mock preflight result was not configured');
+            return state.retargetResult;
+          case 'cancel_retarget_preflight_v1':
+            return true;
           case 'open_file':
             if (typeof state.openDelayMs === 'number' && state.openDelayMs > 0) {
               await new Promise((resolve) => setTimeout(resolve, state.openDelayMs));
@@ -351,7 +359,7 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
 export async function updateTauriMock(
   page: Page,
   patch: Partial<Pick<TauriMockInit,
-    'cancelOpen' | 'cancelSave' | 'failOpen' | 'failRead' | 'failWrite' | 'openDelayMs' | 'readDelayMs' | 'writeDelayMs' | 'openPaths' | 'resourceBytes'
+    'cancelOpen' | 'cancelSave' | 'failOpen' | 'failRead' | 'failWrite' | 'openDelayMs' | 'readDelayMs' | 'writeDelayMs' | 'openPaths' | 'resourceBytes' | 'retargetResult' | 'retargetDelayMs'
   >>,
 ): Promise<void> {
   await page.evaluate((statePatch) => {

@@ -1,10 +1,12 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { ArrowClockwise, ArrowDown, ArrowUp, ArrowsLeftRight, Copy, Diamond, FilePlus, Lock, LockOpen, PencilSimple, Scissors, Trash, ClipboardText } from '@phosphor-icons/react';
 import { PanelAction, PanelFileAction, TaskDetails, TaskSection } from './WorkspaceTasks';
 import { useWorkspaceTask } from './workspaceTaskContext';
 import RetargetProfileControls, { type RetargetProfileEditorState } from './RetargetProfileControls';
-import type { RetargetProfile } from '../utils/retargetProfile';
+import RetargetTransferControls from './RetargetTransferControls';
+import type { useRetargetTransfer } from '../hooks/useRetargetTransfer';
+import { parseRetargetProfile, type RetargetProfile } from '../utils/retargetProfile';
 import type { AnimationTimelineSummary } from '../utils/animationTimeline';
 import {
   isAnimationInterpolation,
@@ -66,6 +68,7 @@ interface AnimatePanelProps {
   onMoveClipDown: () => void;
   onCreateAnimation: (request: AnimationCreationRequest) => void;
   onRetargetAnimations: (files: readonly File[], profile?: RetargetProfile) => void;
+  retargetTransfer: ReturnType<typeof useRetargetTransfer>;
   retargetProfileState: RetargetProfileEditorState;
   onRetargetProfileChange: (value: RetargetProfileEditorState) => void;
   editorMode?: string;
@@ -110,6 +113,7 @@ export default function AnimatePanel({
   onMoveClipDown,
   onCreateAnimation,
   onRetargetAnimations,
+  retargetTransfer,
   retargetProfileState,
   onRetargetProfileChange,
   editorMode = 'animate',
@@ -133,6 +137,11 @@ export default function AnimatePanel({
   const task = useWorkspaceTask();
   const newAnimationRef = useRef<HTMLDetailsElement>(null);
   const newAnimationButtonRef = useRef<HTMLButtonElement>(null);
+  const sourceProfile = useMemo(() => {
+    if (!retargetProfileState.draft.trim()) return { profile: undefined, invalid: false, error: '' };
+    try { return { profile: parseRetargetProfile(retargetProfileState.draft), invalid: false, error: '' }; }
+    catch (cause) { return { profile: undefined, invalid: true, error: cause instanceof Error ? cause.message : String(cause) }; }
+  }, [retargetProfileState.draft]);
 
   useEffect(() => {
     setDraftClipName(currentClipName);
@@ -153,14 +162,14 @@ export default function AnimatePanel({
   };
 
   const retargetPicker = (
-    <PanelFileAction icon={ArrowsLeftRight} label="Retarget clips" disabled={!hasSkeleton}
+    <PanelFileAction icon={ArrowsLeftRight} label="Retarget clips" disabled={!hasSkeleton || sourceProfile.invalid}
       className="outliner-append-action" data-testid="animation-retarget-clips"
       title="Retarget named-bone FBX, DAE, GLB, or GLTF clips onto this rig. Use a saved profile for explicit numeric bone maps."
     >
-      <input type="file" accept=".fbx,.dae,.glb,.gltf,.bin,.png,.jpg,.jpeg,.webp,.ktx2" className="hidden" multiple disabled={!hasSkeleton}
+      <input type="file" accept=".fbx,.dae,.glb,.gltf,.bin,.png,.jpg,.jpeg,.webp,.ktx2" className="hidden" multiple disabled={!hasSkeleton || sourceProfile.invalid}
         onChange={(event) => {
           const files = Array.from(event.currentTarget.files ?? []);
-          if (files.length > 0) onRetargetAnimations(files);
+          if (files.length > 0) onRetargetAnimations(files, sourceProfile.profile);
           event.currentTarget.value = '';
         }}
       />
@@ -259,7 +268,8 @@ export default function AnimatePanel({
       </TaskDetails>
       </TaskSection>
       <TaskSection task="transfer">
-      {task && <div className="animate-transfer-tools">{retargetPicker}{retargetProfile}</div>}
+      {task && <RetargetTransferControls transfer={retargetTransfer} sourcePicker={retargetPicker} profileControls={retargetProfile} profileError={sourceProfile.error}/>}
+      {!task && retargetTransfer.state.phase!=='idle' && <RetargetTransferControls transfer={retargetTransfer} sourcePicker={retargetPicker} profileControls={retargetProfile}/>}
       </TaskSection>
       <TaskSection task="clips">
       <div className="animate-clip-tools" data-testid="animate-clip-tools">

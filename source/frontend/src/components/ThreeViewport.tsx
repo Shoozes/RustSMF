@@ -2,6 +2,8 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { SimpleOrbit } from '../utils/SimpleOrbit';
 import { disposeThreeObject } from '../utils/threeDisposal';
+import { createRetargetPreview } from '../utils/retargetPreview';
+import type { TransferPreview, TransferPreviewPlayback } from '../hooks/useRetargetTransfer';
 import { isThreeMesh, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
 import { restoreWeightPreview, applyWeightPreviewForBone } from '../utils/weightPreview';
 import { findClosestBone, DEFAULT_MAX_BONE_PICK_DIST, findBoneByName } from '../utils/bonePicker';
@@ -200,6 +202,9 @@ const writeViewportScaleTelemetry = (
 // No dead code or duplication with parent. All imperative three isolated here.
 
 interface ThreeViewportProps {
+  retargetPreview?: TransferPreview | null;
+  retargetPreviewPlayback?: TransferPreviewPlayback;
+  onRetargetPreviewTime?:(id:number,time:number)=>void;
   root: THREE.Group | null;
   skeleton?: THREE.Skeleton;
   clips: THREE.AnimationClip[];
@@ -264,6 +269,9 @@ interface ThreeViewportProps {
 // SimpleOrbit imported from ../utils/SimpleOrbit (filled modularity dir, single source of truth)
 
 const ThreeViewport: React.FC<ThreeViewportProps> = ({
+  retargetPreview = null,
+  retargetPreviewPlayback,
+  onRetargetPreviewTime,
   root,
   skeleton,
   clips,
@@ -385,6 +393,11 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
 
   // Local mixer + action owned here (viewport is the source of truth for three playback)
   const mixerRef = useRef<THREE.AnimationMixer | null>(null);
+  const retargetPreviewRef = useRef<ReturnType<typeof createRetargetPreview> | null>(null);
+  const previewPlaybackRef=useRef(retargetPreviewPlayback);previewPlaybackRef.current=retargetPreviewPlayback;
+  const previewTimeCallbackRef=useRef(onRetargetPreviewTime);previewTimeCallbackRef.current=onRetargetPreviewTime;
+  const previewPublishTimeRef=useRef(0);
+  const previewSeekRef=useRef<number|null>(null);
   const currentActionRef = useRef<THREE.AnimationAction | null>(null);
   const attachedModelRef = useRef<THREE.Object3D | null>(null);
   const skeletonHelperRef = useRef<DisposableSkeletonHelper | null>(null);
@@ -2375,7 +2388,16 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     const animate = () => {
       const mixer = mixerRef.current;
       const delta = clockRef.current.getDelta();
-      if (mixer) {
+      const transfer = retargetPreviewRef.current;
+      if (transfer) {
+        const intent=previewPlaybackRef.current;
+        if(intent?.playing)transfer.mixer.update(delta*intent.speed);
+        transfer.root.updateMatrixWorld(true);
+        if(performance.now()-previewPublishTimeRef.current>=50){
+          previewPublishTimeRef.current=performance.now();previewTimeCallbackRef.current?.(transfer.id,transfer.time);
+        }
+      }
+      if (mixer && !transfer) {
         if (workspaceAllowsPlayback(editorModeRef.current, skinPaintPoseRef.current)) {
           mixer.update(delta);
         }
@@ -2454,7 +2476,13 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
       const previousOverride = scene.overrideMaterial;
       scene.overrideMaterial = wireframeEnabledRef.current ? wireframeMaterialRef.current : null;
       renderer.setScissorTest(isQuad);
-      specs.forEach((spec) => {
+      const canonical = transfer ? attachedModelRef.current : null;
+      const canonicalVisible = canonical?.visible;
+      const canonicalHelper = transfer ? skeletonHelperRef.current : null;
+      const helperVisible = canonicalHelper?.visible;
+      if (canonical) canonical.visible = false;
+      if (canonicalHelper) canonicalHelper.visible = false;
+      try { specs.forEach((spec) => {
         const grids = viewportGridRefs.current;
         if (grids) {
           updateThemeViewportGridVisibility(
@@ -2470,7 +2498,10 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
         }
         renderer.clear(true, true, true);
         renderer.render(scene, spec.camera === cameraRef.current ? camera : spec.camera);
-      });
+      }); } finally {
+        if (canonical && canonicalVisible !== undefined) canonical.visible = canonicalVisible;
+        if (canonicalHelper && helperVisible !== undefined) canonicalHelper.visible = helperVisible;
+      }
       writeTransformHandleTelemetry();
       scene.overrideMaterial = previousOverride;
       if (!isQuad) {
@@ -2603,7 +2634,7 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
   useEffect(() => {
     const action = currentActionRef.current;
     const mixer = mixerRef.current;
-    if (!action || !mixer || workspaceUsesRestPose(editorMode, skinPaintPose)) return;
+    if (!action || !mixer || retargetPreviewRef.current || workspaceUsesRestPose(editorMode, skinPaintPose)) return;
 
     action.paused = !isPlaying || !workspaceAllowsPlayback(editorMode, skinPaintPose);
     // Apply scrub position (clamped by caller)
@@ -3145,12 +3176,31 @@ const ThreeViewport: React.FC<ThreeViewportProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- model attachment is intentionally root/skeleton-owned; clips, playback, layout, and display settings have focused effects.
   }, [root, skeleton]);  // <-- ONLY scene objects; playback/clips handled by other effects to prevent re-attach loops on every edit/tick
 
+  useEffect(() => {
+    if (!root || !retargetPreview || !sceneRef.current) return;
+    const preview = createRetargetPreview(root, retargetPreview);
+    previewSeekRef.current=null;
+    sceneRef.current.add(preview.root);
+    retargetPreviewRef.current = preview;
+    return () => {
+      retargetPreviewRef.current = null;
+      preview.dispose();
+    };
+  }, [root, retargetPreview]);
+
+  useEffect(()=>{
+    const preview=retargetPreviewRef.current;
+    if(!preview || !retargetPreviewPlayback || previewSeekRef.current===retargetPreviewPlayback.seekRevision)return;
+    previewSeekRef.current=retargetPreviewPlayback.seekRevision;preview.setTime(retargetPreviewPlayback.time);
+  },[retargetPreviewPlayback,retargetPreview]);
+
   return (
     <>
       <canvas
         ref={canvasRef}
         style={{ width: '100%', height: '100%' }}
         data-testid="three-canvas"
+        data-retarget-preview={retargetPreview ? 'true' : 'false'}
         data-model-root-id={root?.uuid ?? ''}
         data-playback-time={currentTime.toFixed(6)}
         data-editor-mode={editorMode}

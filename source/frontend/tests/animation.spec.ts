@@ -1,4 +1,4 @@
-import { workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showAnimateTimeline, showModernPanel } from './helpers/modern-shell';
+import { applyTransferPreview, clickEditorHistory, workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showAnimateTimeline, showModernPanel } from './helpers/modern-shell';
 
 import { test, expect } from '@playwright/test';
 import { SAMPLE_SMF, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
@@ -224,12 +224,13 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       const source = await createSkinnedGltfFixtureInputWithOptions({ clipName: 'Source Motion' });
       await (await workspaceControl(page, 'animation-retarget-clips')).locator('input').setInputFiles(source);
 
-      await expect(page.getByTestId('status-text')).toContainText(/Retargeted 1 clip across 2 mapped bones/i, { timeout: 15000 });
+      await applyTransferPreview(page);
+      await expect(page.getByTestId('status-text')).toContainText(/Retargeted 1 clip/i, { timeout: 15000 });
       await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Source Motion');
       await expect(page.getByTestId('animate-summary').locator('div').first().locator('strong')).toHaveText('2');
 
-      await page.getByTestId('editor-undo-btn').click({ force: true });
-      await expect(page.getByTestId('status-text')).toContainText(/Undid retarget 1 animation clip/i);
+      await clickEditorHistory(page,'undo');
+      await expect(page.getByTestId('status-text')).toContainText(/Undid transfer animation clips/i);
       await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
       await expect(page.getByTestId('animate-summary').locator('div').first().locator('strong')).toHaveText('1');
     });

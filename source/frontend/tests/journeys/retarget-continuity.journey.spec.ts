@@ -1,4 +1,4 @@
-import { workspaceControl, selectWorkspace, showModernPanel } from '../helpers/modern-shell';
+import { applyTransferPreview, clickEditorHistory, workspaceControl, selectWorkspace, showModernPanel } from '../helpers/modern-shell';
 import { test, expect, downloadBytes, exportEvidence, pauseJourney, reopenProject, watchJourneyErrors } from '../helpers/product-journey';
 import { createSkinnedGlbFixtureInput, createSkinnedGltfFixtureInputWithOptions } from '../helpers/skinned-glb-fixture';
 
@@ -37,16 +37,25 @@ test('product journey saves a portable profile and continues its applied motion 
   await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();
   await expect(editor).toHaveValue(valid);
   await (await workspaceControl(page, 'retarget-profile-import')).setInputFiles({ name: 'saved-profile.json', mimeType: 'application/json', buffer: savedProfile });
+  const canonical = await exportEvidence(page);
   await (await workspaceControl(page, 'retarget-profile-source')).setInputFiles(await createSkinnedGltfFixtureInputWithOptions({ clipName: 'Source Motion' }));
+  await expect(page.getByTestId('retarget-apply')).toBeVisible({ timeout: 15_000 });
+  expectAssetContinuity(await exportEvidence(page), canonical);
+  const previewProject = await downloadBytes(page, 'save-project-btn');
+  expect(JSON.parse(previewProject.toString()).state.currentClipName).toBe('FixtureBend');
+  await page.getByTestId('retarget-discard').click();
+  expectAssetContinuity(await exportEvidence(page), canonical);
+  await (await workspaceControl(page, 'retarget-profile-source')).setInputFiles(await createSkinnedGltfFixtureInputWithOptions({ clipName: 'Source Motion' }));
+  await applyTransferPreview(page);
   await expect(page.getByTestId('status-text')).toContainText('using the saved profile', { timeout: 15_000 });
   await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();
   const applied = await exportEvidence(page);
   expect(applied.clips.map(c => c.name)).toEqual(['FixtureBend', 'Source Motion']);
   expect(applied.clips[1].duration).toBeCloseTo(0.5, 5);
   expectMotion(applied.clips[1]);
-  await page.getByTestId('editor-undo-btn').click();
+  await clickEditorHistory(page, 'undo');
   expect((await exportEvidence(page)).clips.map(c => c.name)).toEqual(['FixtureBend']);
-  await page.getByTestId('editor-redo-btn').click();
+  await clickEditorHistory(page, 'redo');
   expectAssetContinuity(await exportEvidence(page), applied);
   const project = await downloadBytes(page, 'save-project-btn');
   expect(JSON.parse(project.toString()).state.currentClipName).toBe('Source Motion');

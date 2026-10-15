@@ -7,11 +7,12 @@ Keep changes focused on a supported model-editing workflow. Reproduce a problem 
 Use PowerShell 7, Node `^22.13.0 || >=24`, Rust and the [Tauri Windows prerequisites](https://v2.tauri.app/start/prerequisites/). From the repository root:
 
 ```powershell
+rustup target add wasm32-unknown-unknown
 pwsh -NoProfile -File .\run.ps1 -Task setup
 pwsh -NoProfile -File .\run.ps1 -Task dev
 ```
 
-`-Task run` starts the Tauri development application. An installed preview needs no Node or Rust development setup.
+`-Task run` starts the Tauri development application. Source builds need the WASM target for browser retarget analysis; setup installs the pinned generator locally. An installed preview needs no Node or Rust development setup.
 
 ## Local checks
 
@@ -24,7 +25,7 @@ pwsh -NoProfile -File .\run.ps1 -Task test:journey -NoGenEye
 pwsh -NoProfile -File .\run.ps1 -Task test:visual-strict
 ```
 
-Desktop changes also need `-Task desktop-smoke`. Preview acceptance additionally needs `-Task package:windows` and the observed installed-app checks in [preview notes](docs/user/PREVIEW_0_2_1.md). Native IPC mocks do not prove real Windows dialogs or installer behavior. Review screenshots before changing Modern references; preserve Original references.
+Retarget-core changes also need `-Task retarget:runtime-proof`; desktop changes need `-Task desktop-smoke`. Preview acceptance additionally needs `-Task package:windows` and the observed installed-app checks in [preview notes](docs/user/PREVIEW_0_2_1.md). Native IPC mocks do not prove real Windows dialogs or installer behavior. Review screenshots before changing Modern references; preserve Original references.
 
 ## Useful bug reports
 

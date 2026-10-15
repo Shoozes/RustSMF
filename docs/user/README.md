@@ -116,3 +116,7 @@ For GLB movesets with authored bone growth, `rig.retarget.clipScaleTransfer` is 
 - Skin-weight paint authoring and animation keyframe authoring are available for supported paths, with format-specific export limits still enforced.
 
 For developer state, backlog, and verification results, see `docs/dev/APP_STATE.md` and `docs/dev/TODO.md`.
+
+## Preview an animation transfer
+
+On current source builds, open a skinned target and choose Animate > Tools > Transfer. Choose source animation files (with any required sidecars), review the private preview, then Apply to keep it. Discard leaves saved clips unchanged; Apply is one Undo step. Mapping details holds naming presets, explicit corrections, diagnostics and portable profile import/export. Numeric rigs need reviewed explicit maps. Close Tools to see more of the preview; leaving Animate discards pending transfer work. The published 0.2.1 installer keeps its separately recorded feature set.

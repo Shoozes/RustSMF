@@ -1,4 +1,4 @@
-import { workspaceControl, selectWorkspace, showModernPanel } from './helpers/modern-shell';
+import { clickEditorHistory, applyTransferPreview, workspaceControl, selectWorkspace, showModernPanel } from './helpers/modern-shell';
 import { test, expect } from '@playwright/test';
 import { createSkinnedGlbFixtureInput, createSkinnedGlbFixtureInputWithOptions, createSkinnedGltfFixtureInputWithOptions } from './helpers/skinned-glb-fixture';
 import { parseRetargetProfile } from '../src/utils/retargetProfile';
@@ -56,6 +56,7 @@ test('saved profile import, strict errors, export and retarget are visible and u
   expect(file).not.toBeNull();
   expect(parseRetargetProfile(await readFile(file!, 'utf8'))).toEqual(parseRetargetProfile(valid));
   await (await workspaceControl(page, 'retarget-profile-source')).setInputFiles(await createSkinnedGltfFixtureInputWithOptions({ clipName: 'Source Motion' }));
+  await applyTransferPreview(page);
   await expect(page.getByTestId('status-text')).toContainText('using the saved profile', { timeout: 15000 });
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Source Motion');
   await page.screenshot({ path: '../../output/playwright/retarget-profile-applied.png' });
@@ -63,7 +64,7 @@ test('saved profile import, strict errors, export and retarget are visible and u
   await page.setViewportSize({ width: 900, height: 700 });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
   await page.screenshot({ path: '../../output/playwright/retarget-profile-closed-narrow.png' });
-  await page.getByTestId('editor-undo-btn').click({ force: true });
+  await clickEditorHistory(page,'undo');
   await showModernPanel(page, 'properties');
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
   await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();
@@ -90,9 +91,10 @@ test('saved endpoint envelopes resolve target clips, report errors and apply as 
   const pending=page.waitForEvent('download');await (await workspaceControl(page, 'retarget-profile-export')).click();const file=await(await pending).path();
   expect(parseRetargetProfile(await readFile(file!,'utf8')).retarget.clipEndpointEnvelopes).toEqual(profile.retarget.clipEndpointEnvelopes);
   await (await workspaceControl(page, 'retarget-profile-source')).setInputFiles(source);
+  await applyTransferPreview(page);
   await expect(page.getByTestId('status-text')).toContainText('using the saved profile',{timeout:15000});
-  await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();await page.getByTestId('editor-undo-btn').click({force:true});
-  await expect(page.getByTestId('status-text')).toContainText('Undid retarget 1 animation clip.');
+  await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();await clickEditorHistory(page,'undo');
+  await expect(page.getByTestId('status-text')).toContainText('Undid transfer animation clips.');
 });
 
 test('saved axial redistribution validates conflicts and applies through the browser transaction', async ({ page }) => {
@@ -115,10 +117,11 @@ test('saved axial redistribution validates conflicts and applies through the bro
   const file = await (await downloadPromise).path();
   expect(parseRetargetProfile(await readFile(file!, 'utf8')).retarget.clipForearmTwist).toEqual(retarget.clipForearmTwist);
   await (await workspaceControl(page, 'retarget-profile-source')).setInputFiles(await createSkinnedGltfFixtureInputWithOptions({ clipName: 'Source Motion', withHeadChain: true }));
+  await applyTransferPreview(page);
   await expect(page.getByTestId('status-text')).toContainText('using the saved profile', { timeout: 15000 });
   await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();
-  await page.getByTestId('editor-undo-btn').click({ force: true });
-  await expect(page.getByTestId('status-text')).toContainText('Undid retarget 1 animation clip.');
+  await clickEditorHistory(page,'undo');
+  await expect(page.getByTestId('status-text')).toContainText('Undid transfer animation clips.');
 });
 
 test('saved neck/head constraints correct rejected source motion in one undoable application', async ({ page }) => {
@@ -144,10 +147,11 @@ test('saved neck/head constraints correct rejected source motion in one undoable
   const downloaded = await (await downloadPromise).path();
   expect(parseRetargetProfile(await readFile(downloaded!, 'utf8')).retarget.clipJointConstraints!['Source Motion'].head).toBe('FixtureHead');
   await (await workspaceControl(page, 'retarget-profile-source')).setInputFiles(source);
+  await applyTransferPreview(page);
   await expect(page.getByTestId('status-text')).toContainText('using the saved profile', { timeout: 15000 });
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Source Motion');
   await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();
-  await page.getByTestId('editor-undo-btn').click({ force: true });
+  await clickEditorHistory(page,'undo');
   await showModernPanel(page, 'properties');
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
 });
@@ -169,11 +173,12 @@ test('explicit replacement rejects collisions and remains undoable', async ({ pa
   await expect(page.getByTestId('status-text')).toContainText('explicit replacement', {timeout:15000});
   await (await workspaceControl(page, 'retarget-profile-json')).fill(JSON.stringify({...profile,retarget:{...profile.retarget,replaceClips:['FixtureBend']}}));
   await (await workspaceControl(page, 'retarget-profile-source')).setInputFiles(source);
+  await applyTransferPreview(page);
   await expect(page.getByTestId('status-text')).toContainText('using the saved profile', {timeout:15000});
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
   await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();
-  await page.getByTestId('editor-undo-btn').click({force:true});
-  await expect(page.getByTestId('status-text')).toContainText('Undid retarget 1 animation clip.');
+  await clickEditorHistory(page,'undo');
+  await expect(page.getByTestId('status-text')).toContainText('Undid transfer animation clips.');
   await showModernPanel(page,'properties');
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
 });
@@ -200,8 +205,9 @@ test('saved body ranges reject before replacement or report actionable frame war
   profile.retarget.poseRanges.policy='report';
   await (await workspaceControl(page, 'retarget-profile-json')).fill(JSON.stringify(profile));
   await (await workspaceControl(page, 'retarget-profile-source')).setInputFiles(source);
-  await expect(page.getByTestId('status-text')).toContainText('Review 1 flagged clips',{timeout:15000});
-  await expect(page.getByTestId('status-text')).toContainText('FixtureTip');
+  await expect((await workspaceControl(page, 'retarget-bake-notes'))).toContainText('Review 1 flagged clips',{timeout:15000});
+  await expect(page.getByTestId('retarget-bake-notes')).toContainText('FixtureTip');
+  await applyTransferPreview(page);
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Source Motion');
   await page.screenshot({path:'../../output/playwright/retarget-body-ranges.png'});
 });

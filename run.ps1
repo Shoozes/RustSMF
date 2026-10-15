@@ -502,6 +502,8 @@ switch -Exact ($NormalizedTask) {
         Stop-StaleDevStack
         if (Test-Path $SourceDir) {
             if (-not (Invoke-SourceNpm @("install"))) { exit 1 }
+            & $NodeExecutable scripts/build-retarget-wasm.mjs --install-tools
+            if ($LASTEXITCODE -ne 0) { exit 1 }
             if (-not (Invoke-FrontendNpm @("exec", "--", "playwright", "install", "--with-deps"))) { exit 1 }
         } else {
             Write-Warn "Skip npm (no source yet)"
@@ -605,6 +607,9 @@ switch -Exact ($NormalizedTask) {
             exit 1
         }
     }
+    "retarget:runtime-proof" {
+        if (-not (Invoke-SourceNpm @("run", "retarget:runtime-proof"))) { exit 1 }
+    }
     "test:e2e" {
         Write-Info "[E2E] Running Playwright..."
         $genEyeRanProject = Invoke-GenEyePlaywright `
@@ -700,6 +705,7 @@ Tasks:
   compile       - production desktop build
   clean         - stop dev servers and remove generated build artifacts
   verify        - lint coverage/lint/typecheck/build/chunk/unit/Rust fmt+clippy+test+check
+  retarget:runtime-proof - native Rust / actual browser WASM mapping parity
   context       - validate project docs/imports/modules and summary-bank routing
   test:unit     - frontend unit tests only
   test:e2e      - Playwright through the checked GenEye argv manifest (use -NoGenEye for browser-only)

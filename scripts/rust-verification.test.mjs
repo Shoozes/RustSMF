@@ -12,10 +12,11 @@ import {
   executeTransitionRuntimePlan,
 } from '../source/pose-contact/tests/transition-runtime-proof.mjs'
 
-function makeRustRepository({ includeTauri = true, includePoseContact = true } = {}) {
+function makeRustRepository({ includeTauri = true, includeRetargetCore = true, includePoseContact = true } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'rustsmf-rust-verification-'))
   for (const [include, directory] of [
     [includeTauri, join(root, 'source', 'src-tauri')],
+    [includeRetargetCore, join(root, 'source', 'retarget-core')],
     [includePoseContact, join(root, 'source', 'pose-contact')],
   ]) {
     if (include) {
@@ -39,7 +40,7 @@ function cargoArtifactOutput(step, path, manifestPath = resolve(step.cwd, 'Cargo
 }
 
 describe('shared Rust verification gate', () => {
-  it('checks both native crates and the pose-contact WASM target', () => {
+  it('checks all Rust crates and each shared core WASM target', () => {
     const root = makeRustRepository()
     try {
       const plan = createRustVerificationPlan(root)
@@ -50,6 +51,11 @@ describe('shared Rust verification gate', () => {
           'src-tauri:Clippy',
           'src-tauri:tests',
           'src-tauri:native check',
+          'retarget-core:format',
+          'retarget-core:Clippy',
+          'retarget-core:tests',
+          'retarget-core:native check',
+          'retarget-core:wasm32-unknown-unknown check',
           'pose-contact:format',
           'pose-contact:Clippy',
           'pose-contact:tests',
@@ -63,13 +69,27 @@ describe('shared Rust verification gate', () => {
     }
   })
 
-  it('fails before running Cargo when either required crate is missing', () => {
+  it('fails before running Cargo when a required crate is missing', () => {
     const root = makeRustRepository({ includePoseContact: false })
     let calls = 0
     try {
       assert.throws(
         () => runRustVerification({ root, runCommand: () => { calls += 1; return { status: 0 } } }),
         /pose-contact: .*source[\\/]pose-contact[\\/]Cargo\.toml[\s\S]*Restore the complete repository checkout/,
+      )
+      assert.equal(calls, 0)
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  })
+
+  it('fails closed when the retarget-core manifest is missing', () => {
+    const root = makeRustRepository({ includeRetargetCore: false })
+    let calls = 0
+    try {
+      assert.throws(
+        () => runRustVerification({ root, runCommand: () => { calls += 1; return { status: 0 } } }),
+        /retarget-core: .*source[\\/]retarget-core[\\/]Cargo\.toml[\s\S]*Restore the complete repository checkout/,
       )
       assert.equal(calls, 0)
     } finally {

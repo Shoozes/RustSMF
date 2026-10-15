@@ -31,7 +31,9 @@
     "verify:rust": "node --test ../scripts/rust-verification.test.mjs && node ../scripts/verify-rust.mjs",
     "transition:runtime-proof": "node pose-contact/tests/transition-runtime-proof.mjs",
     "verify": "npm run check:lint-coverage && npm run lint && npm run typecheck && npm run typecheck:test && npm run check:production-any && npm run check:game-ready-dependencies && npm --workspace frontend run build && npm --workspace frontend run check:entry-chunks && npm --workspace frontend run test:unit && npm run verify:rust",
-    "desktop:smoke": "pwsh -File ../run.ps1 -Task desktop-smoke"
+    "desktop:smoke": "pwsh -File ../run.ps1 -Task desktop-smoke",
+    "retarget:wasm": "node ../scripts/build-retarget-wasm.mjs",
+    "retarget:runtime-proof": "node ../scripts/retarget-runtime-proof.mjs"
   },
   "engines": {
     "node": "^22.13.0 || >=24"

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { bakeEndpointEnvelope, finishEndpointEnvelope, parseEndpointEnvelopes, captureContactPointOffsets, type EndpointEnvelope } from './endpointEnvelope';
-import { retargetAnimationClip } from './animationRetarget';
+import { retargetWithWorkerProof as retargetAnimationClip } from '../workers/retargetParity';
 import { buildRigMap } from './rigMapping';
 import { parseRetargetProfile, profileClipOptions, RETARGET_PROFILE_SCHEMA } from './retargetProfile';
 

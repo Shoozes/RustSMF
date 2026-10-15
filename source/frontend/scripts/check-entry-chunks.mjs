@@ -37,6 +37,13 @@ try {
   if (workerBytes > 512 * 1024) {
     throw new Error(`modelWorker asset exceeds 512 KiB (${workerBytes} bytes)`);
   }
+  const retargetWorkers = readdirSync(join(dist, 'assets')).filter(name => /^retargetWorker-[^.]+\.js$/.test(name));
+  const retargetWasm = readdirSync(join(dist, 'assets')).filter(name => /^retarget_core_bg-[^.]+\.wasm$/.test(name));
+  if (retargetWorkers.length !== 1 || retargetWasm.length !== 1) throw new Error('expected one lazy retarget worker and one Rust WASM module');
+  for (const asset of [...retargetWorkers, ...retargetWasm]) {
+    if (html.includes(asset)) throw new Error(`retarget runtime asset is eagerly loaded: ${asset}`);
+    if (statSync(join(dist, 'assets', asset)).size > 1024 * 1024) throw new Error(`retarget runtime asset exceeds 1 MiB: ${asset}`);
+  }
 
   console.log(
     `Entry chunk check passed (three-vendor split; Tauri bridge lazy; ${workerAssets[0]} lazy, ${workerBytes} bytes).`,

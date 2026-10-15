@@ -108,3 +108,18 @@ export async function showAnimateTimeline(page: Page): Promise<void> {
   if (await page.getByTestId('workspace-task-pose').count()) await page.getByTestId('workspace-task-pose').click();
   await expect(page.getByTestId('timeline')).toBeVisible();
 }
+
+export async function applyTransferPreview(page: Page): Promise<void> {
+  const preview = await workspaceControl(page, 'retarget-apply');
+  await expect(preview).toBeVisible({ timeout: 15000 });
+  await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-retarget-preview', 'true');
+  await preview.click();
+  await expect(page.getByTestId('three-canvas')).toHaveAttribute('data-retarget-preview', 'false');
+}
+
+export async function clickEditorHistory(page:Page,action:'undo'|'redo'):Promise<void> {
+  const panel=page.getByTestId('modern-support-panel'),open=await panel.isVisible();
+  if(open)await page.getByRole('button',{name:'Close supporting panel',exact:true}).click();
+  await page.getByTestId(`editor-${action}-btn`).click();
+  if(open)await showModernPanel(page,'properties');
+}

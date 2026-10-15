@@ -1,5 +1,13 @@
 # Frontend Test Contract
 
+## Retarget assistance
+
+`retarget-transfer.spec.ts` exercises actual browser WASM analysis and module-worker baking through ordinary file selection and named controls. It checks canonical project/export preservation during private playback/seek/speed changes, reviewed explicit-map export, mapping correction, discard, apply/history, cancellation during analysis/baking, stale completion, leaving Animate with retained drafts, and actionable WASM failure with continued editing. `native.spec.ts` separately covers mocked preflight/cancel IPC and actual worker baking without a browser WASM request; it is not native Rust execution or OS-dialog evidence.
+
+`src/workers/retargetJobClient.test.ts` owns preparation/analysis/bake cancellation, revision correlation, replacement/disposal, timeouts, invalid responses, startup/post/runtime errors and native cancellation/late-result rejection. `retargetSnapshot.test.ts` guards owned rest/helper transforms, interpolation, copied buffers and private preview resource disposal. Existing animation, endpoint, twist, constraint and scale fixtures run through `retargetParity.ts` as well as the unchanged reference solver, comparing tracks/reports within `1e-6`.
+
+`run.ps1 -Task retarget:runtime-proof` rebuilds the shared core and compares native Rust with actual Chromium WASM across 17 first-party cases for all naming families, fingers, ambiguity, helpers, overrides, opaque rigs, proportions, reference frames and unmapped channels. Mappings/diagnostic structures are exact; numeric fields use `1e-6` relative/absolute tolerance. The retarget continuity journey previews/discards without changing saved work, then applies once and independently inspects sampled exported motion through undo/redo, project reopen and GLB re-import. Final candidate results belong in HISTORY.
+
 ## Modern task navigation
 
 `helpers/modern-shell.ts` follows authoring controls through their visible task tab and native disclosure before acting. It uses pointer/keyboard controls, never editor-state setters or CSS visibility overrides. Existing semantic assertions remain in their feature/journey owners. Model, Rig, Skin and Animate keep inactive task content mounted so drafts survive tab changes. The six-size authoring lane owns selected controls, invalid profiles, Live Skin warnings, overflow and drawer focus return.
@@ -31,6 +39,7 @@ browser requests them, causing startup 404s before any app assertions run.
 - `pwsh -NoProfile -File .\run.ps1 -Task test:journey -NoGenEye`: runs eleven stories sequentially through `playwright.journey.config.ts`: the retained hand-wave and four core product journeys, a malformed project/recovery story, and five authoring-continuity journeys for profiles, Rig, IK/animation, Skin, and Model/materials. The hand-wave capture is written under ignored `output/playwright/hand-wave-journey/`; raw results use ignored `test-results/product-journeys/`.
 - `npm.cmd run test:journey:hand-wave`: targeted hand-wave run for focused repair work.
 - `pwsh -File run.ps1 -Task desktop-smoke`: unbundled Tauri build, Rust native tests, and the native IPC browser suite.
+- `pwsh -File run.ps1 -Task retarget:runtime-proof`: native/real-browser-WASM mapping and diagnostics parity, with an ignored compact receipt.
 - `pwsh -NoProfile -File .\run.ps1 -Task package:windows`: NSIS installer build; prints the artifact path and SHA-256.
 - Rust owns dialog invocation through its pinned `tauri-plugin-dialog` dependency; the frontend has no unused dialog-plugin package. Native resource-bundle reads, staged writes, and project recovery remain deterministic IPC contracts; true OS-dialog interaction is evidence-gated.
 - `pwsh -File run.ps1 -Task test:visual-strict`: opt-in committed WebGL snapshots.
@@ -190,3 +199,6 @@ When adding or moving a test:
 2. Run the smallest relevant unit/spec first.
 3. Run `typecheck:test`, then the full appropriate gate.
 4. Update `docs/dev/PITFALL_LEDGER.md` only for a durable recurring failure mode.
+
+---
+AI-edited: 2026-10-14T20:59:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded final mapping and lifecycle proof contracts

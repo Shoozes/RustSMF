@@ -177,6 +177,7 @@ export default function App() {
     beginModelOperation,
     readModelResourceFiles,
     retargetAnimationsFromFiles,
+    retargetTransfer,
     handleSelectBone,
     renameSelectedBone,
     reparentSelectedBone,
@@ -1043,8 +1044,9 @@ export default function App() {
           onMoveClipDown={moveCurrentAnimationClipDown}
           onCreateAnimation={createAnimationFromPose}
           onRetargetAnimations={retargetAnimationsFromFiles}
+          retargetTransfer={retargetTransfer}
           retargetProfileState={retargetProfileState}
-          onRetargetProfileChange={setRetargetProfileState}
+          onRetargetProfileChange={value => { retargetTransfer.invalidate(); setRetargetProfileState(value); }}
           editorMode={editorMode}
         />
       );
@@ -1415,6 +1417,9 @@ export default function App() {
           }}
         >
           <ThreeViewport
+            retargetPreview={retargetTransfer.preview}
+            retargetPreviewPlayback={retargetTransfer.previewPlayback}
+            onRetargetPreviewTime={retargetTransfer.reportPreviewTime}
             root={model.root}
             skeleton={model.skeleton}
             clips={model.clips}
@@ -1532,6 +1537,13 @@ export default function App() {
               )}
             </div>
           )}
+          {theme.shellVariant === 'modern' && !modernPanel && retargetTransfer.state.error && <div className="transfer-viewport-progress" role="alert">
+            <span>Transfer failed</span><button type="button" onClick={event => openModernPanel('properties', event.currentTarget)}>Review transfer</button>
+          </div>}
+          {['preparing', 'analysis', 'bake'].includes(retargetTransfer.state.phase) && <div className="transfer-viewport-progress" role="status">
+            <span>{retargetTransfer.state.phase === 'preparing' ? 'Reading clips…' : retargetTransfer.state.phase === 'analysis' ? 'Reviewing rigs…' : 'Preparing preview…'}</span>
+            <button type="button" onClick={retargetTransfer.cancel}>Cancel transfer</button>
+          </div>}
           <div data-testid="status-text" aria-live="polite" title={ui.status} className={`status-overlay absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${ui.isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
             {statusText}
             {ui.isLoading && ' …'}
@@ -1544,14 +1556,15 @@ export default function App() {
 
       {showTimeline && (
         <Timeline
-          isPlaying={playback.isPlaying}
-          currentTime={playback.currentTime}
-          duration={playback.duration}
+          readOnlyPreview={!!retargetTransfer.preview}
+          isPlaying={retargetTransfer.preview ? retargetTransfer.previewPlayback.playing : playback.isPlaying}
+          currentTime={retargetTransfer.preview ? retargetTransfer.previewPlayback.time : playback.currentTime}
+          duration={retargetTransfer.preview ? retargetTransfer.preview.clips[retargetTransfer.preview.activeClip??0].duration : playback.duration}
           onTogglePlay={togglePlay}
-          onReset={() => playback.setCurrentTime(0)}
-          onScrub={onScrub}
-          onSpeedChange={setSpeed}
-          playbackSpeed={playback.playbackSpeed}
+          onReset={() => retargetTransfer.preview ? retargetTransfer.seekPreview(0) : playback.setCurrentTime(0)}
+          onScrub={retargetTransfer.preview ? retargetTransfer.seekPreview : onScrub}
+          onSpeedChange={retargetTransfer.preview ? retargetTransfer.setPreviewSpeed : setSpeed}
+          playbackSpeed={retargetTransfer.preview ? retargetTransfer.previewPlayback.speed : playback.playbackSpeed}
           sampleFrameMultiplier={animationClipMetadata.sampleFrameMultiplier}
           sampleFrameKeyCount={animationTimelineSummary.keyframeTimes.length}
           keyframeTimes={timelineKeyframeTimes}
@@ -1560,7 +1573,7 @@ export default function App() {
           onSelectKeyframe={selectAnimationKeyframeTime}
           onInsertKeyframeAtTime={insertAnimationKeyframeAtTime}
           onMoveKeyframe={moveSelectedAnimationKeyframe}
-          disabled={model.clips.length === 0}
+          disabled={!retargetTransfer.preview && model.clips.length === 0}
         />
       )}
 

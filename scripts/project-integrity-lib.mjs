@@ -300,7 +300,7 @@ export function findPreviewIntegrityErrors(repoRoot) {
     try { if (JSON.parse(readFileSync(absolute, 'utf8')).license !== 'MIT') errors.push(`${file}: project license must be MIT`) }
     catch { errors.push(`${file}: invalid JSON license metadata`) }
   }
-  for (const file of ['source/src-tauri/Cargo.toml', 'source/pose-contact/Cargo.toml']) {
+  for (const file of ['source/src-tauri/Cargo.toml', 'source/pose-contact/Cargo.toml', 'source/retarget-core/Cargo.toml']) {
     const absolute = resolve(root, file)
     if (!isFile(absolute) || !/^license\s*=\s*"MIT"/m.test(readFileSync(absolute, 'utf8'))) errors.push(`${file}: project license must be MIT`)
   }

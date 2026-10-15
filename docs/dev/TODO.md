@@ -1,8 +1,28 @@
 # RustSMF TODO
 
-Last reviewed: 2026-10-11
+Last reviewed: 2026-10-14
 
-Backlog status: no active implementation tasks remain. The task-drawer integrity recheck is complete; prior outcomes remain closed.
+Backlog status: the retarget assistance first pass is complete locally. Ordered followups below are queued, starting with ZIP bundle intake. Earlier completed outcomes remain closed.
+
+## Retarget assistance and original asset workflow
+
+- What: Complete one image-guided Tripo trial and a reusable global asset skill, then add shared Rust mapping/preflight and cancelable worker transfers with private preview and one undoable Apply.
+- Why: Carry useful naming and review assistance into RustSMF without adding custom rig creation, rig replacement, automatic skinning or a crowded frontend.
+- Where: `source/retarget-core`, Tauri commands, frontend job/snapshot/worker/preview owners, Animate Transfer, public WASM setup, focused tests and `RETARGET_ASSISTANCE.md` / `ASSET_PROVENANCE.md`.
+- When: Completed locally on 2026-10-14 on main, source base `fc48c76`. App version, installer and public release remain unchanged.
+- How: Keep explicit maps authoritative, ambiguous/numeric rigs unresolved without review, preserve the full existing TypeScript solver in a worker, capture owned rest inputs and reject stale results. Keep media private and generation bounded to one image/one model at 100 credits.
+- Done when: All four naming families and native/browser-WASM parity pass; advanced worker baking matches the reference; preview/cancel/discard/apply/history/project/export continuity pass through ordinary controls; six-size/DPI/input review and sequential verify, browser, journey, strict visual, runtime-proof and desktop-smoke gates pass on the final candidate; docs/routes and owned cleanup are complete.
+- Verification: Final sequential verify (528 units; 14 Rust checks), browser suite (160), journeys (11), strict visuals (3), native/actual-WASM parity (17 cases) and desktop smoke (release build; 18 IPC checks) passed. Six-size/DPI/input review, skill validation, source identity and owned cleanup are recorded in HISTORY and `output/retarget-assistance-20261014/`. The cat remains a private repair draft; its Blender/rights acceptance belongs to followup 3.
+
+### Ordered followups
+
+| Order | Outcome | Done when |
+| --- | --- | --- |
+| 1 | ZIP bundle intake | Existing import paths accept bounded safe archives with model/resource selection, explicit choice among multiple models, cancellation and desktop/web tests. ZIP remains a container; format limits stay unchanged. |
+| 2 | Export presets and queues | Deterministic sequential processing has cancellation, per-item results, safe destinations and retry without repeating completed items. |
+| 3 | Original assets and animation packs | Finish CAT-TRIPO-001 in Blender, repair anatomy/tail/topology, verify pose/deformation and rights, author original Idle/Walk/Run/Sit, retain editable source and distribute a self-contained GLB. Borrowed Mesh2Motion media stays excluded. |
+| 4 | Complete Rust solver migration | Every current option passes TypeScript-reference/native/WASM parity before replacing the worker solver. |
+| 5 | Animal-chain assistance | Reviewed suggestions for existing quadruped, wing and tail rigs pass independent first-party fixtures; ambiguous cases require explicit mappings. |
 
 ## Task-drawer integrity recheck
 
@@ -111,3 +131,6 @@ bounded noncombat fixture.
 - How: Enable the NSIS bundle, add `run.ps1 -Task package:windows`, capture the installer path and SHA-256, sync frontend/Cargo/Tauri versions to `0.2.0`, and re-run verification and packaging. Recheck all four selected origin refs immediately before retirement and delete them only if unique behavior is covered and no retention dependency exists.
 - Done when: `verify`, normal browser tests, all five journeys, strict visuals, desktop smoke, and Windows packaging pass; the post-bump `0.2.0` verify/package pass; README and HISTORY identify the artifact and hash; and each selected remote ref is either retired under the stated condition or retained with a recorded reason.
 - Verification: Sequentially run `verify`, `test:e2e -NoGenEye`, `test:journey`, `test:visual-strict`, `desktop-smoke`, and `package:windows`; then run `verify` and `package:windows` again after the version bump. Actual Windows OS-dialog checks remain separate from native IPC mocks.
+
+---
+AI-edited: 2026-10-14T21:08:43-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded completed retarget gate and draft limitations

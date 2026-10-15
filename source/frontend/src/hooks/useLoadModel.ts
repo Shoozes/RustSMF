@@ -151,10 +151,9 @@ import {
   type AnimationPoseSnapshot,
 } from '../utils/animationCreation';
 import { createAnimationAuthoringController } from '../utils/animationAuthoringController';
-import { buildRigMap } from '../utils/rigMapping';
-import { retargetAnimationClip } from '../utils/animationRetarget';
-import {poseRangeSummary} from '../utils/poseRanges';
-import { mergeRetargetClips, profileClipOptions, type RetargetProfile } from '../utils/retargetProfile';
+import { useRetargetTransfer } from './useRetargetTransfer';
+import { rememberRetargetRest } from '../workers/retargetSnapshot';
+import type { RetargetProfile } from '../utils/retargetProfile';
 import type { AnimationEditScope } from '../utils/animationScope';
 import {
   createChildBone,
@@ -337,6 +336,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const pendingReplacementRef = useRef<{ label: string; start: () => Promise<void> } | null>(null);
   const [pendingReplacement, setPendingReplacement] = useState<string | null>(null);
   const playbackRef = useRef(playback);
+  const cancelRetargetRef = useRef<() => void>(() => {});
+  const transferPlaybackRef=useRef<()=>boolean>(()=>false);
   useEffect(() => { playbackRef.current = playback }, [playback]);
   const allocateHistoryOrderRef = useRef(options.allocateHistoryOrder);
   const localHistoryOrderRef = useRef(0);
@@ -558,6 +559,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   }, []);
 
   const beginLoadRequest = useCallback(() => {
+    cancelRetargetRef.current();
     exportSeqGuardRef.current.next();
     const loadSeq = loadSeqGuardRef.current.next();
     cancelActiveSmfCodec();
@@ -767,6 +769,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     skeleton.init();
     skeleton.update();
     restoreRigSkinIndexSnapshots(snapshot.skinIndices);
+    rememberRetargetRest(skeleton);
 
     baseClipsRef.current = cloneAnimationClips(snapshot.baseClips);
     commitAnimationEditState(snapshot.animationEditState);
@@ -787,6 +790,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
     if (snapshot.prepared) {
       reapplyStaticMeshSkinPreparation(snapshot.preparation);
+      rememberRetargetRest(snapshot.preparation.skeleton);
       model.setSkeleton(snapshot.preparation.skeleton);
     } else {
       restoreStaticMeshSkinPreparation(snapshot.preparation);
@@ -859,6 +863,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     after.metadata = normalizeRigMetadata(nextMetadata, model.root, model.skeleton);
     if (model.root) writeRigMetadata(model.root, after.metadata);
     setRigMetadata(cloneRigMetadata(after.metadata));
+    if (model.skeleton) rememberRetargetRest(model.skeleton);
 
     pushEditorHistoryEntry({
       id: `rig-${editorHistoryIdRef.current += 1}`,
@@ -1147,6 +1152,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       const availableClips = loaded.clips || [];
 
       baseClipsRef.current = availableClips;
+      if (loaded.skeleton) rememberRetargetRest(loaded.skeleton);
       animationRestPoseRef.current = captureAnimationPose(loaded.skeleton ?? null);
       setRestPoseSnapshot(animationRestPoseRef.current);
       model.setRoot(root);
@@ -1881,7 +1887,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       if (key === ' ') {
         if (target?.closest('button, a[href], summary, [role="button"], [role="tab"], [role="treeitem"]')) return;
         e.preventDefault();
-        playbackRef.current.setIsPlaying(p => !p);
+        if(!transferPlaybackRef.current())playbackRef.current.setIsPlaying(p => !p);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -1889,7 +1895,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   }, [playbackRef, redoEditorHistory, undoEditorHistory]);
 
   const togglePlay = useCallback(() => {
-    playbackRef.current.toggle();
+    if(!transferPlaybackRef.current())playbackRef.current.toggle();
   }, [playbackRef]);
 
   const toggleWeightPreview = useCallback(() => {
@@ -2086,109 +2092,37 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
   }, [beginModelOperation, model.root, ui]);
 
-  const retargetAnimationsFromFiles = useCallback(async (files: readonly File[], profile?: RetargetProfile): Promise<void> => {
-    const targetRoot = model.root;
-    const targetSkeleton = model.skeleton;
-    if (!targetRoot || !targetSkeleton || targetSkeleton.bones.length === 0) {
-      ui.setStatus('Load a skinned target model before retargeting animation clips.');
-      return;
+  const transferInputs = [model.root, model.skeleton, animationEditState, skinEditState, rigMetadata,
+    editorUndoOrder, editorRedoOrder, skinUndoOrder, skinRedoOrder];
+  const transferRevisionRef = useRef({ inputs: transferInputs, revision: 0 });
+  if (transferInputs.some((input, index) => input !== transferRevisionRef.current.inputs[index])) {
+    transferRevisionRef.current = { inputs: transferInputs, revision: transferRevisionRef.current.revision + 1 };
+  }
+  const applyRetargetCandidate = useCallback((before: AnimationWorkspaceHistorySnapshot,
+    after: AnimationWorkspaceHistorySnapshot, profile?: RetargetProfile) => {
+    let replacementEdits = before.animationEditState;
+    for (const name of profile?.retarget.replaceClips ?? []) {
+      const originalName = before.baseClips.find(clip => (profile?.targetClipNames[clip.name] ?? clip.name) === name)?.name ?? name;
+      if (getAnimationClipLockedBoneNames(before.animationEditState, originalName, getSourceAnimationLockedBoneNames(originalName)).length) {
+        throw new Error(`Replacement clip ${name} contains locked bones; unlock it before replacing.`);
+      }
+      replacementEdits = deleteAnimationEditClip(replacementEdits, originalName);
     }
-    if (files.length === 0) return;
-    const isCurrentOperation = beginModelOperation();
-    ui.setIsLoading(true);
-    ui.setErrorMsg('');
-    ui.setStatus('Reading source animation rig...');
-    let loadedSource: Awaited<ReturnType<typeof loadFBX>> | Awaited<ReturnType<typeof loadDAE>> | Awaited<ReturnType<typeof loadGLB>> | null = null;
-    try {
-      const result = await (await getTauriClient()).readBrowserModelFiles(files);
-      if (!isCurrentOperation()) return;
-      if (result.error) throw new Error(result.error);
-      const format = detectModelFormat(result.name || '');
-      if (format !== 'fbx' && format !== 'dae' && format !== 'glb') {
-        throw new Error('Animation retargeting accepts FBX, DAE, GLB, or GLTF source rigs.');
-      }
-      if (!result.files || result.files.length === 0) throw new Error('The selected animation source has no readable files.');
-      const bundleFiles = result.files.map((file) => {
-        if (!file.data) throw new Error(`Animation source file ${file.name} has no readable bytes.`);
-        return { name: file.name, data: file.data };
-      });
-      const bundle = createModelResourceBundle(bundleFiles[0], bundleFiles.slice(1));
-      loadedSource = format === 'fbx' ? await loadFBX(bundle) : format === 'dae' ? await loadDAE(bundle) : await loadGLB(bundle);
-      if (!isCurrentOperation() || model.root !== targetRoot || model.skeleton !== targetSkeleton) {
-        throw new Error('The target model changed before animation retargeting completed.');
-      }
-      if (!loadedSource.skeleton || loadedSource.skeleton.bones.length === 0) {
-        throw new Error('The animation source has no skeleton.');
-      }
-      if (loadedSource.clips.length === 0) throw new Error('The animation source has no clips.');
-      const mapping = buildRigMap(loadedSource.skeleton, targetSkeleton, {
-        allowFuzzy: profile ? profile.retarget.allowFuzzy : true,
-        manualMap: profile?.retarget.manualMap,
-        requireManualForOpaqueNames: true,
-      });
-      if (!mapping.ok) {
-        throw new Error(mapping.diagnostics.filter((item) => item.level === 'error').map((item) => item.message).join(' '));
-      }
-      const before = captureAnimationWorkspaceSnapshot();
-      const targetClips = before.baseClips.map((clip) => {
-        const name = profile?.targetClipNames[clip.name];
-        if (!name || name === clip.name) return clip;
-        const renamed = clip.clone(); renamed.name = name; return renamed;
-      });
-      const existingNames = new Set(targetClips.map((clip, index) => getClipKey(clip, index)));
-      if (existingNames.size !== targetClips.length) throw new Error('Profile target clip names collide.');
-      const selected = profile?.retarget.clips?.length
-        ? loadedSource.clips.filter((clip) => profile.retarget.clips!.includes(clip.name)) : loadedSource.clips;
-      if (!selected.length || (profile?.retarget.clips && selected.length !== profile.retarget.clips.length)) throw new Error('Profile selects missing source clips.');
-      const retargetResults = selected.map((clip) => {
-        const options = profile ? profileClipOptions(profile, clip, loadedSource!.clips, targetClips) : { clipName: clip.name || 'retargeted_clip' };
-        return retargetAnimationClip(clip, loadedSource!.skeleton!, targetSkeleton, mapping, options);
-      });
-      const added=retargetResults.map(result=>result.clip);
-      const rangeWarnings=retargetResults.flatMap(result=>result.report.poseRanges?.issues.length ? [poseRangeSummary(result.report.poseRanges)] : []);
-      let replacementEdits = before.animationEditState;
-      for (const name of profile?.retarget.replaceClips ?? []) {
-        const originalName = before.baseClips.find(clip => (profile?.targetClipNames[clip.name] ?? clip.name) === name)?.name ?? name;
-        if (getAnimationClipLockedBoneNames(before.animationEditState, originalName, getSourceAnimationLockedBoneNames(originalName)).length) {
-          throw new Error(`Replacement clip ${name} contains locked bones; unlock it before replacing.`);
-        }
-        replacementEdits = deleteAnimationEditClip(replacementEdits, originalName);
-      }
-      const after: AnimationWorkspaceHistorySnapshot = {
-        baseClips: mergeRetargetClips(targetClips, added, profile?.retarget.replaceClips),
-        animationEditState: replacementEdits,
-        currentClipName: added[0].name,
-        currentTime: 0,
-      };
-      if (!applyAnimationWorkspaceSnapshot(after)) throw new Error('Retargeted clips could not be mounted in the animation workspace.');
-      pushAnimationWorkspaceHistory(`retarget ${added.length} animation clip${added.length === 1 ? '' : 's'}`, before, after);
-      const fuzzyCount = mapping.decisions.filter((decision) => decision.method === 'fuzzy').length;
-      ui.setStatus(
-        `Retargeted ${added.length} clip${added.length === 1 ? '' : 's'} across ${mapping.decisions.length} mapped bones${fuzzyCount > 0 ? `; review ${fuzzyCount} fuzzy match${fuzzyCount === 1 ? '' : 'es'}` : ''}${profile ? ' using the saved profile' : ''}.${rangeWarnings.length ? ` Review ${rangeWarnings.length} flagged clips. ${rangeWarnings.slice(0,3).join('; ')}` : ''}`,
-      );
-    } catch (error: unknown) {
-      if (!isCurrentOperation()) return;
-      const message = errorMessage(error);
-      ui.setErrorMsg(`Animation retarget error: ${message}`);
-      ui.setStatus(`Animation retarget error: ${message}`);
-    } finally {
-      if (loadedSource) {
-        loadedSource.mixer.stopAllAction();
-        disposeThreeObject(loadedSource.root);
-      }
-      if (isCurrentOperation()) ui.setIsLoading(false);
-    }
-  }, [
-    applyAnimationWorkspaceSnapshot,
-    beginModelOperation,
-    captureAnimationWorkspaceSnapshot,
-    getSourceAnimationLockedBoneNames,
-    model.root,
-    model.skeleton,
-    pushAnimationWorkspaceHistory,
-    ui,
-  ]);
-
+    const candidate = { ...after, animationEditState: replacementEdits };
+    if (!applyAnimationWorkspaceSnapshot(candidate)) throw new Error('Transferred clips could not be mounted.');
+    pushAnimationWorkspaceHistory('transfer animation clips', before, candidate);
+  }, [applyAnimationWorkspaceSnapshot, getSourceAnimationLockedBoneNames, pushAnimationWorkspaceHistory]);
+  const retargetTransfer = useRetargetTransfer({
+    root: model.root, skeleton: model.skeleton, authoringRevision: transferRevisionRef.current.revision,
+    mode: ui.editorMode, getClient: getTauriClient, capture: captureAnimationWorkspaceSnapshot,
+    apply: applyRetargetCandidate, setStatus: ui.setStatus,
+  });
+  cancelRetargetRef.current = retargetTransfer.invalidate;
+  transferPlaybackRef.current=()=>{
+    if(!retargetTransfer.preview)return false;
+    retargetTransfer.togglePreviewPlayback();return true;
+  };
+  const retargetAnimationsFromFiles = retargetTransfer.chooseSource;
   // Extracted for modularity: bone selection updates UI state + status (used by Inspector + Viewport raycast)
   const handleSelectBone = useCallback((name: string) => {
     ui.setSelected(name);
@@ -2340,6 +2274,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }
 
     model.setSkeleton(result.skeleton);
+    rememberRetargetRest(result.skeleton);
     const skinStateAfter = {
       ...skinEditStateRef.current,
       selectedBoneName: result.rootBoneName,
@@ -3620,6 +3555,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     beginModelOperation,
     readModelResourceFiles,
     retargetAnimationsFromFiles,
+    retargetTransfer,
     handleSelectBone,
     renameSelectedBone,
     reparentSelectedBone,

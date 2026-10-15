@@ -2,6 +2,8 @@
 // RustSMF Tauri entry. Minimal shell for the Three.js frontend.
 // Provides native file dialogs plus binary SMF/GLB I/O commands.
 
+mod retarget;
+
 use std::collections::HashSet;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
@@ -738,6 +740,7 @@ fn main() {
     let result = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(NativeFileAuthority::default())
+        .manage(retarget::RetargetPreflightJobs::default())
         .invoke_handler(tauri::generate_handler![
             open_file,
             open_project_file,
@@ -749,7 +752,9 @@ fn main() {
             save_project_atomic,
             autosave_project,
             discover_project_recovery,
-            read_project_recovery
+            read_project_recovery,
+            retarget::retarget_preflight_v1,
+            retarget::cancel_retarget_preflight_v1
         ])
         .run(tauri::generate_context!());
 

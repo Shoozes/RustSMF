@@ -1,0 +1,20 @@
+# Asset provenance register
+
+This register records inputs and intended replacements. It grants no additional rights to third-party or unidentified assets. Borrowed Mesh2Motion models, rigs, textures, motions and captures are excluded from public frontend samples and packs. Raw references, AI images and Tripo drafts remain in ignored local storage.
+
+| ID | Origin and identity | Role / eligibility | Next boundary |
+| --- | --- | --- | --- |
+| REF-FOX-001 | Mesh2Motion `mesh2motion-app` revision `653a9698f5f315523072f1c3ff3496100401317b`; `static/rigs/reference/fox.png`, `static/models/model-fox.glb`. Upstream declares art CC0 and code MIT. The model matches Model-Retargeter-App revision `41fa825d5e0211c68409d0bd9394b1cf7f0812e4`, `source/frontend/public/models/model-fox.glb`, Git blob `bce3073e78563839a52a2a9bb7ff34b83d6ee179` (77132 bytes). | Borrowed, local neutral-pose/framing reference only. No borrowed media is included by this pass. | Replace the demonstration role with an original black cat; similar stance does not establish rig equivalence. |
+| CAT-IMAGE-001 | One built-in image-generator edit using REF-FOX-001 only for stance/framing; original stylized black-cat design, four distinct paws and one connected tapered tail. Exact prompt, original file and hash retained locally. | AI-assisted draft input to one Tripo trial. No public sample or asset-pack eligibility claimed. | Preserve source reference and verify rights before any distribution. |
+| CAT-TRIPO-001 | One Smart Mesh P2.0 image-to-model generation, 100 existing credits. UI: 5720 quad faces / 5156 vertices. Downloaded GLB: 5156 vertices / 10296 triangles, one mesh/material, no armature or animation. SHA-256 `4da5809b7fb0cdd26237feb36f5fd612ff39070f7c683c7aca4d44ee585f8003`. Task URL stays in the private receipt. | Private draft. Four paws and attached tail observed from front, side and rear perspective. Tail tip/taper, shoulder/hip transitions and joint topology need Blender review. No new license or distribution eligibility claimed. | Verify the applicable account/output terms, finish anatomy/topology in Blender, retain editable source, test deformation, and author original clips before a public self-contained GLB. |
+| SAMPLE-SIGNAL-001 | Project-generated `examples/rustsmf-demo.glb`; source generator `source/frontend/scripts/generate-preview-demo.ts`. | Existing first-party quickstart sample. Its prior preview acceptance is unchanged. | Remains the public sample until an original replacement is independently accepted. |
+
+The trial used one generated image and one model generation; no texture, retopo, rigging or retry credits were spent. The GLB has a plain gray material and no UVs or textures, so the black appearance still needs authored materials. Independent raw-index inspection found 26 boundary edges, 10 non-manifold edges and two components. These are indexed-topology findings, not a welded-manifold assessment; Blender repair and deformation review remain required. Local records and reviewed geometry captures are under `output/retarget-assistance-20261014/asset-trial/`. The reusable global `tripo-asset-workflow` skill contains instructions only, with no model or image files.
+
+Before distributing a Tripo output, check [Tripo's rights guidance](https://www.tripo3d.ai/help/privacy-policy/how-to-use-tripo-models-commercially) and the terms applicable to that specific output/account. Free and paid output rights differ; a credit balance does not establish an entitlement. Existing third-party fixture provenance remains owned by `source/frontend/tests/fixtures/PROVENANCE.md`.
+
+Upstream reference: [Mesh2Motion source at the reviewed revision](https://github.com/Mesh2Motion/mesh2motion-app/tree/653a9698f5f315523072f1c3ff3496100401317b). The original-assets outcome in TODO owns the Blender finishing and original Idle, Walk, Run and Sit clips.
+
+---
+AI-created: 2026-10-14T20:38:18-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs
+AI-edited: 2026-10-14T21:08:43-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded completed retarget gate and draft limitations

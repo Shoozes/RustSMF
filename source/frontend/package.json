@@ -28,8 +28,12 @@
     "tauri:dev": "cd ../src-tauri && tauri dev",
     "tauri:build": "cd ../src-tauri && tauri build",
     "tauri:build:smoke": "cd ../src-tauri && tauri build --no-bundle",
-    "setup": "npm install && npx playwright install --with-deps",
-    "demo:generate": "tsx scripts/generate-preview-demo.ts"
+    "setup": "npm install && node ../../scripts/build-retarget-wasm.mjs --install-tools && npx playwright install --with-deps",
+    "demo:generate": "tsx scripts/generate-preview-demo.ts",
+    "predev": "node ../../scripts/build-retarget-wasm.mjs",
+    "prebuild": "node ../../scripts/build-retarget-wasm.mjs",
+    "pretypecheck": "node ../../scripts/build-retarget-wasm.mjs",
+    "retarget:runtime-proof": "node ../../scripts/retarget-runtime-proof.mjs"
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
