@@ -1,4 +1,4 @@
-import { applyTransferPreview, workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showSkinAdvanced } from './helpers/modern-shell';
+import { applyTransferPreview, workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showSkinAdvanced, showExportDetails } from './helpers/modern-shell';
 
 import { expect, test } from '@playwright/test';
 import fs from 'fs';
@@ -599,7 +599,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true');
     await expect(page.getByTestId('skin-export-block')).toHaveCount(0);
 
-    await selectWorkspace(page, 'export');
+    await showExportDetails(page);
     await expect(page.getByTestId('status-text')).toContainText('Export canceled.');
     await expect(canvas).toHaveAttribute('data-model-root-id', rootId!);
     await selectWorkspace(page, 'view');
@@ -657,7 +657,7 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
     await expect(page.getByTestId('status-text')).toContainText('Export canceled.', { timeout: 5000 });
     await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
-    await selectWorkspace(page, 'export');
+    await showExportDetails(page);
     await selectWorkspace(page, 'view');
     await selectWorkspace(page, 'animate');
     await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');

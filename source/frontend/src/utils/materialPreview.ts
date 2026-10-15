@@ -64,6 +64,7 @@ const TEXTURE_KEYS = [
 
 const roots = new WeakMap<THREE.Object3D, RootMaterialState>();
 const meshes = new WeakMap<THREE.Mesh, MeshSourceState>();
+const sourceReaders = new WeakMap<RootMaterialState, { count: number; restore: () => void }>();
 
 function clamp01(value: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -286,12 +287,22 @@ export function getSourceMaterialViews(mesh: THREE.Mesh): SourceMaterialView[] {
   return source.sourceMaterials.map(({ material, sourceMaps }) => ({ material, sourceMaps }));
 }
 
-export async function withSourceMaterialState<T>(
-  root: THREE.Object3D,
-  operation: () => Promise<T>,
-): Promise<T> {
+function exposeSourceMaterialState(root: THREE.Object3D): () => void {
   const entry = roots.get(root);
-  if (!entry) return operation();
+  if (!entry) return () => {};
+  const existing = sourceReaders.get(entry);
+  const release = () => {
+    const readers = sourceReaders.get(entry);
+    if (!readers || --readers.count > 0) return;
+    sourceReaders.delete(entry);
+    readers.restore();
+  };
+  if (existing) {
+    existing.count++;
+    restoreExportSourceState(entry);
+    restoreSourceAssignments(entry);
+    return release;
+  }
 
   const previewAssignments = entry.meshes.map(({ mesh }) => ({ mesh, material: mesh.material }));
   const previewColors = entry.meshes.map(({ mesh }) => ({
@@ -306,9 +317,7 @@ export async function withSourceMaterialState<T>(
 
   restoreExportSourceState(entry);
   restoreSourceAssignments(entry);
-  try {
-    return await operation();
-  } finally {
+  sourceReaders.set(entry, { count: 1, restore: () => {
     if (roots.get(root) === entry) {
       applyPreviewState(entry);
       previewColors.forEach(({ mesh, colorAttribute }) => {
@@ -326,5 +335,20 @@ export async function withSourceMaterialState<T>(
         mesh.material = material;
       });
     }
-  }
+  } });
+  return release;
+}
+
+/** Capture owned export inputs without leaving source materials exposed across an await. */
+export function withSourceMaterialStateSync<T>(root: THREE.Object3D, operation: () => T): T {
+  const restore = exposeSourceMaterialState(root);
+  try { return operation(); } finally { restore(); }
+}
+
+export async function withSourceMaterialState<T>(
+  root: THREE.Object3D,
+  operation: () => Promise<T>,
+): Promise<T> {
+  const restore = exposeSourceMaterialState(root);
+  try { return await operation(); } finally { restore(); }
 }

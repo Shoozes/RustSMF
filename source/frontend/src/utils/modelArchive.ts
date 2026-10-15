@@ -135,7 +135,8 @@ function parseEntries(bytes: Uint8Array): { entries: Entry[]; centralOffset: num
     const fileType = unixMode & 0xf000;
     const dosAttributes = external & 0xffff;
     if (dosAttributes & (0x0008 | 0x0400)) fail(`volume labels and reparse-point entries such as "${name}" are refused.`);
-    if (Boolean(dosAttributes & 0x0010) !== safe.directory) fail(`DOS directory attributes disagree for "${name}".`);
+    // Writers may omit host attributes; a set directory bit must still agree.
+    if ((dosAttributes & 0x0010) && !safe.directory) fail(`DOS directory attributes disagree for "${name}".`);
     if (fileType && fileType !== 0x8000 && fileType !== 0x4000) fail(`special file "${name}" is refused.`);
     if (fileType === 0x4000 && !safe.directory) fail(`directory attributes disagree for "${name}".`);
     if (safe.directory && fileType === 0x8000) fail(`file attributes disagree for directory "${name}".`);
@@ -284,7 +285,7 @@ export async function unpackModelArchive(
   }
   if (ranges.length > 0 && ranges[ranges.length - 1].end !== centralOffset) fail('unreferenced data appears before the central directory.');
 
-  const fileCount = prepared.length;
+  const fileCount = prepared.filter(({ entry }) => !entry.directory).length;
   for (const { entry, dataStart, dataEnd } of prepared) {
     if (options.signal?.aborted) throw new DOMException('Archive processing was cancelled.', 'AbortError');
     const compressed = bytes.subarray(dataStart, dataEnd);

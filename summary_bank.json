@@ -33,7 +33,7 @@
         "TODO owns executable work and completion conditions.",
         "APP_STATE owns shipped behavior; review.md is opened only for integrity-pass evidence.",
         "README launch/format entry remains in issue__verification_current_head and is read directly during task intake; orientation retains current state and the work queue.",
-        "APP_STATE and TODO remain bounded at 84 KiB, including the current integrity recheck and prioritized authoring defect. The generation ceiling remains 256 KiB."
+        "APP_STATE and TODO stay within 84 KiB, including ZIP cleanup and export queue state. The generation ceiling remains 256 KiB."
       ]
     },
     "workflow__context_bank": {
@@ -115,7 +115,7 @@
     },
     "feature__theme_system": {
       "description": "Persisted themes, Modern model viewer with task drawers, Original presentation, responsive behavior and visual evidence.",
-      "max_kb": 238,
+      "max_kb": 242,
       "paths": [
         "source/frontend/src/theme.ts",
         "source/frontend/src/theme.test.ts",
@@ -315,7 +315,7 @@
     },
     "feature__model_outliner_authoring": {
       "description": "Guarded non-SMF Outliner metadata, static structural/surface authoring, and bounded global history.",
-      "max_kb": 144,
+      "max_kb": 146,
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/components/Outliner.tsx",
@@ -438,7 +438,8 @@
       "notes": [
         "One pure candidate builder must own pose, animation, and live-skin application.",
         "Indexed runtime geometry is expanded to SMF triangle soup before worker validation.",
-        "All saves stay globally single-flight and freshness-checked."
+        "All saves stay globally single-flight and freshness-checked.",
+        "feature__export_queue owns preset captures, bounded ordered saves and retry; direct source-aware Export retains its existing policy."
       ]
     },
     "issue__glb_roundtrip_identity": {
@@ -679,7 +680,7 @@
     },
     "tests__quality": {
       "description": "Verification contract, test inventory, shared browser fixtures, lint/type gates, and production-boundary checks.",
-      "max_kb": 128,
+      "max_kb": 130,
       "paths": [
         "source/frontend/package.json",
         "source/frontend/playwright.config.ts",
@@ -1201,8 +1202,30 @@
       ],
       "notes": [
         "Open/drop only. ZIP is a container; project/profile/export formats and Transfer/Append selection remain unchanged.",
+        "Empty directory markers may omit host attributes; conflicting/special metadata remains refused. Progress counts ordinary files.",
         "subsystem__load_editor_orchestration owns useLoadModel replacement and stale-scene commit guards; issue__external_model_resources owns loader-specific resource contracts.",
         "Native authority stays in the existing Rust read commands. Issued native reads finish bounded and serialized; canceled results are ignored. Fresh native archive buffers transfer ownership."
+      ]
+    },
+    "feature__export_queue": {
+      "description": "Captured format presets and bounded session queue: ownership, preparation, sequential destinations, cancellation and retry.",
+      "max_kb": 92,
+      "paths": [
+        "docs/dev/EXPORT_QUEUE.md",
+        "source/frontend/src/utils/exportQueue.ts",
+        "source/frontend/src/utils/exportQueue.test.ts",
+        "source/frontend/src/hooks/exportSnapshot.ts",
+        "source/frontend/src/hooks/exportSnapshot.test.ts",
+        "source/frontend/src/hooks/exportPreparation.ts",
+        "source/frontend/src/components/ExportQueuePanel.tsx",
+        "source/frontend/src/components/ExportPanel.tsx",
+        "source/frontend/tests/export-queue.spec.ts"
+      ],
+      "notes": [
+        "useLoadModel and App integration remain in subsystem__load_editor_orchestration and feature__theme_system.",
+        "Captures own source materials, images, skin, hierarchy and clips; eight rows / 128 MiB inputs; results use the existing 256 MiB save bound.",
+        "The foreground save owner reserves the queue and retains latest trailing autosave; pending/preparation cancellation cannot revoke issued native saves.",
+        "Explicit formats never fall back; completed native saves and browser download issuance are excluded from retry. Browser/mock IPC is separate from installed Windows evidence."
       ]
     }
   },

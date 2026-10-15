@@ -25,6 +25,7 @@ function sidecars() {
   scene.bufferViews[0].byteLength = positions.byteLength;
   Object.assign(scene.accessors[0], { componentType: 5126, min: [-1,0,0], max: [1,2,0] });
   return {
+    'asset/': new Uint8Array(),
     'asset/model.gltf': Buffer.from(JSON.stringify(scene)),
     'asset/mesh.bin': Buffer.from(positions.buffer),
     'asset/texture.png': texture,

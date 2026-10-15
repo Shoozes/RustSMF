@@ -8,6 +8,7 @@ import {
   unregisterMaterialPreviewRoot,
   updateMaterialPreview,
   withSourceMaterialState,
+  withSourceMaterialStateSync,
 } from './materialPreview';
 
 function makeFixture() {
@@ -24,6 +25,29 @@ function makeFixture() {
 }
 
 describe('material preview isolation', () => {
+  it('keeps source materials exposed when a queue capture nests inside an async save', async () => {
+    const { root, material, texture } = makeFixture(); registerMaterialPreviewRoot(root);
+    updateMaterialPreview(root, { textureEnabled: false, modelOpacity: 0.2 });
+    await withSourceMaterialState(root, async () => {
+      assert.equal(material.opacity, 0.8); assert.equal(material.map, texture);
+      assert.equal(withSourceMaterialStateSync(root, () => material.map), texture);
+      assert.equal(material.opacity, 0.8); assert.equal(material.map, texture);
+      assert.throws(() => withSourceMaterialStateSync(root, () => { throw new Error('capture refused'); }), /refused/);
+      assert.equal(material.map, texture);
+    });
+    assert.equal(material.opacity, 0.8 * 0.2); assert.equal(material.map, null);
+  });
+
+  it('restores preview only after overlapping source readers finish in either order', async () => {
+    const { root, material, texture } = makeFixture(); registerMaterialPreviewRoot(root);
+    updateMaterialPreview(root, { textureEnabled: false });
+    let finishFirst!: () => void, finishLast!: () => void;
+    const first = withSourceMaterialState(root, () => new Promise<void>(resolve => { finishFirst = resolve; }));
+    const last = withSourceMaterialState(root, () => new Promise<void>(resolve => { finishLast = resolve; }));
+    finishFirst(); await first; assert.equal(material.map, texture);
+    finishLast(); await last; assert.equal(material.map, null);
+  });
+
   it('restores source material, sampler, and assignment during async export', async () => {
     const { root, mesh, material, texture } = makeFixture();
     registerMaterialPreviewRoot(root);
@@ -75,6 +99,18 @@ describe('material preview isolation', () => {
     assert.equal(texture.wrapS, THREE.ClampToEdgeWrapping);
     assert.equal(mesh.geometry.getAttribute('color'), undefined);
     assert.equal(material.vertexColors, false);
+  });
+
+  it('keeps a replaced material registration independent of old readers', async () => {
+    const { root, mesh, texture } = makeFixture(); registerMaterialPreviewRoot(root);
+    let finish!: () => void;
+    const oldSave = withSourceMaterialState(root, () => new Promise<void>(resolve => { finish = resolve; }));
+    unregisterMaterialPreviewRoot(root);
+    const replacement = new THREE.MeshStandardMaterial({ map: texture, opacity: 0.6 }); mesh.material = replacement;
+    registerMaterialPreviewRoot(root); updateMaterialPreview(root, { textureEnabled: false, modelOpacity: 0.2 });
+    assert.equal(withSourceMaterialStateSync(root, () => replacement.opacity), 0.6);
+    assert.equal(replacement.opacity, 0.6 * 0.2); assert.equal(replacement.map, null);
+    finish(); await oldSave; assert.equal(replacement.opacity, 0.6 * 0.2); assert.equal(replacement.map, null);
   });
 
   it('reports registered source materials while a preview material is mounted', () => {

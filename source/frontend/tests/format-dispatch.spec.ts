@@ -1,4 +1,4 @@
-import { selectWorkspace } from './helpers/modern-shell';
+import { showExportDetails } from './helpers/modern-shell';
 import { test, expect } from '@playwright/test';
 import fs from 'node:fs';
 import { createSkinnedGlbFixtureInput, createSkinnedGltfFixtureInputWithOptions } from './helpers/skinned-glb-fixture';
@@ -57,7 +57,7 @@ test('SMF export stays blocked for a static OBJ until rig preparation while defa
   await page.goto('/');
   await page.getByTestId('model-file-input').setInputFiles(SAMPLE_OBJ);
   await expect(page.getByTestId('status-text')).toContainText(/Loaded/i, { timeout: 15_000 });
-  await selectWorkspace(page, 'export');
+  await showExportDetails(page);
   await expect(page.getByTestId('export-smf-btn')).toBeDisabled();
   await expect(page.getByTestId('smf-diagnostics-panel')).toContainText('SMF_NO_SKINNED_SKELETON');
   expect((await downloadBytes(page, 'export-btn')).toString('ascii', 0, 4)).toBe('glTF');

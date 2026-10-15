@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useEffect, useState } from 'react';
+import { useCallback, useMemo, useRef, useEffect, useState, useSyncExternalStore } from 'react';
 import type * as THREE from 'three';
 import type { OpenResult, TauriClient } from '../backend-client/tauri';
 import { createLazyClientLoader } from '../backend-client/lazyClient';
@@ -41,6 +41,9 @@ import {
 } from './editorSnapshots';
 import { useSmfCodecTask } from './useSmfCodecTask';
 import { useModelArchive } from './useModelArchive';
+import { ExportQueue, type ExportPreset } from '../utils/exportQueue';
+import { captureExportSnapshot, type ExportSnapshot } from './exportSnapshot';
+import { prepareQueuedExport } from './exportPreparation';
 import { ArchiveCancelledError } from '../workers/modelArchiveClient';
 import type {
   BoneTransformEditEvent,
@@ -432,6 +435,19 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const exportSeqGuardRef = useRef(createSeqGuard());
   const autosaveSeqGuardRef = useRef(createSeqGuard());
   const isExportingRef = useRef(false);
+  const [exportQueue] = useState(() => new ExportQueue<ExportSnapshot>());
+  const exportQueueState = useSyncExternalStore(exportQueue.subscribe, exportQueue.getState);
+  const [exportQueueError, setExportQueueError] = useState('');
+  const queueLifetimeRef = useRef({ generation: 0 });
+  useEffect(() => {
+    const lifetime = queueLifetimeRef.current;
+    const generation = ++lifetime.generation;
+    return () => {
+      exportQueue.cancel();
+      // React's development effect replay reuses this owner before microtasks run.
+      queueMicrotask(() => { if (lifetime.generation === generation) exportQueue.dispose(); });
+    };
+  }, [exportQueue]);
   const activeAutosavePromiseRef = useRef<Promise<void> | null>(null);
   const pendingAutosaveTaskRef = useRef<(() => Promise<void>) | null>(null);
   const {
@@ -563,12 +579,14 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
   const beginLoadRequest = useCallback(() => {
     cancelArchive();
+    exportQueue.cancel();
+    setExportQueueError('');
     cancelRetargetRef.current();
     exportSeqGuardRef.current.next();
     const loadSeq = loadSeqGuardRef.current.next();
     cancelActiveSmfCodec();
     return loadSeq;
-  }, [cancelActiveSmfCodec, cancelArchive]);
+  }, [cancelActiveSmfCodec, cancelArchive, exportQueue]);
 
   const beginModelOperation = useCallback(() => {
     const sequence = beginLoadRequest();
@@ -1358,6 +1376,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const withExportBusy = useCallback(async (
     actionLabel: string,
     action: (isCurrentExport: () => boolean) => Promise<void>,
+    options: { waitForAutosave?: boolean } = {},
   ) => {
     if (isExportingRef.current) {
       ui.setStatus(`${actionLabel} already has another save in progress. Wait for it to finish.`);
@@ -1373,7 +1392,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     try {
       // Reserve the foreground save before draining background work so a click
       // during autosave completes without overlapping writes or requiring retry.
-      await activeAutosavePromiseRef.current;
+      if (options.waitForAutosave !== false) await activeAutosavePromiseRef.current;
       if (!isCurrentExport()) return;
       await action(isCurrentExport);
     } catch (e: unknown) {
@@ -1527,6 +1546,41 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       animationEdits: animationEditStateRef.current,
     });
   }, [model.clips, model.root, model.skeleton]);
+
+  const enqueueExport = useCallback((preset: ExportPreset, basename: string) => {
+    if (ui.isLoading || isExportingRef.current) return;
+    setExportQueueError('');
+    try {
+      exportQueue.add(preset, basename || model.root?.name || 'rustsmf-model', limit => captureExportSnapshot({
+        sourceSmf: lastSmfDataRef.current, root: model.root, skeleton: model.skeleton ?? null,
+        clips: model.clips, poseEdits: poseEditsRef.current, animationEdits: animationEditStateRef.current,
+      }, preset, limit));
+    } catch (error: unknown) { setExportQueueError(errorMessage(error)); }
+  }, [exportQueue, model.clips, model.root, model.skeleton, ui.isLoading]);
+
+  const runExportQueue = useCallback(async () => {
+    await withExportBusy('Export queue', async isCurrent => {
+      setExportQueueError('');
+      await exportQueue.run({
+        isCurrent,
+        prepare: async (snapshot, preset, signal) => {
+          // Reserve the queue immediately so waiting for recovery is cancelable.
+          await activeAutosavePromiseRef.current;
+          return prepareQueuedExport(snapshot, preset, signal, isCurrent);
+        },
+        save: async (bytes, filename, signal) => {
+          const client = await getTauriClient();
+          if (!isCurrent() || signal.aborted) return 'canceled';
+          const native = !!(Reflect.get(window, '__TAURI__') || Reflect.get(window, '__TAURI_INTERNALS__'));
+          const saved = await client.saveFile(bytes, filename);
+          return saved ? native ? 'saved' : 'downloaded' : 'canceled';
+        },
+      });
+      if (isCurrent()) ui.setStatus('Export queue stopped. Review item results in Export.');
+    }, { waitForAutosave: false });
+  }, [exportQueue, ui, withExportBusy]);
+
+  const cancelExportQueue = useCallback(() => exportQueue.cancel(), [exportQueue]);
 
   const handleExport = useCallback(async () => {
     const smfData = lastSmfDataRef.current;
@@ -3561,6 +3615,12 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     handleExportFbx,
     handleExportDae,
     handleExportSmf,
+    exportQueue,
+    exportQueueState,
+    exportQueueError,
+    enqueueExport,
+    runExportQueue,
+    cancelExportQueue,
     handleRunSmfRoundtripCheck,
     handleSaveSmfDiagnosticReport,
     handleFileInputChange,

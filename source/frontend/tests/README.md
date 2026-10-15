@@ -1,5 +1,11 @@
 # Frontend Test Contract
 
+## Export queue
+
+`export-queue.spec.ts` covers four explicit presets through ordinary chooser, pointer and keyboard paths. Independent GLB accessors prove geometry, raw influences, hierarchy and known motion after each format's re-import. FBX and DAE also receive structural checks; SMF expects generated joint names and byte-weight quantization. Decoded PNG pixels and source materials prove texture capture. Other cases cover owned captures after edits/replacement, mesh-only options, safe names, imported SMF fidelity, preparation cancellation, retry without repeated successes, mocked destination cancel/write failure, issued saves, recovery serialization and cancellation while waiting for recovery. Six viewport sizes, DPR 1/1.25/2, coarse targets, overflow, Escape and focus return cover the disclosed controls.
+
+`src/utils/exportQueue.test.ts` proves bounded order, cancellation, failure/retry, stale results and disposal. `src/hooks/exportSnapshot.test.ts` proves copied authoring state, source-material restoration and cleanup. `src/utils/materialPreview.test.ts` covers nested/overlapping source readers and material registration replacement during a save. `src/loaders/dae.test.ts` guards joint `sid` output; the browser round-trip verifies named animated joints. Actual native dialogs and installed-app queue acceptance remain separate. [EXPORT_QUEUE.md](../../../docs/dev/EXPORT_QUEUE.md) owns the user and lifecycle contract; HISTORY owns final results.
+
 ## Retarget assistance
 
 `retarget-transfer.spec.ts` exercises actual browser WASM analysis and module-worker baking through ordinary file selection and named controls. It checks canonical project/export preservation during private playback/seek/speed changes, reviewed explicit-map export, mapping correction, discard, apply/history, cancellation during analysis/baking, stale completion, leaving Animate with retained drafts, and actionable WASM failure with continued editing. `native.spec.ts` separately covers mocked preflight/cancel IPC and actual worker baking without a browser WASM request; it is not native Rust execution or OS-dialog evidence.
@@ -89,7 +95,7 @@ keyboard, and file-selection paths without forced clicks or editor-state setters
 | Project save/open and new edits | `journeys/project-continuity.journey.spec.ts`: decoded envelope/GLB, rename/reopen/edit/undo/redo | Malformed project and dirty cancel/discard in `journeys/failure-preserves-work.journey.spec.ts` |
 | Serialized selection, clip, time, speed and rig metadata | `project-recovery.spec.ts`: restored explicit state, semantic saved motion and subsequent edits | Recovery cancel retains dirty root; discard restores project; new history remains usable |
 | Recovery generations and corrupt storage | `project-recovery.spec.ts`: IPC recovery, save and single write ownership | Browser quota refusal is visible, keeps prior recovery bytes and live edits, permits independently decoded manual save, and retries when storage returns; malformed recovery journey and `src/utils/projectCodec.test.ts` envelope bounds |
-| Foreground save and autosave ownership | `native.spec.ts`: export waits for active autosave and coalesces newest edits | Native rapid save, stale completion, replacement waits and cancel; successful autosave keeps an unrelated load error visible; recovery retry clears only its own warning |
+| Foreground save and autosave ownership | `native.spec.ts`: export waits for active autosave and coalesces newest edits; `export-queue.spec.ts`: serialized queue and cancelable recovery wait | Native rapid save, stale completion, replacement waits and cancel; issued queue writes settle honestly; successful autosave keeps an unrelated load error visible; recovery retry clears only its own warning |
 | Modern commands, workspace chooser and one drawer | `modern-shell.spec.ts`: six visible desktop command buttons, one strip under 48 px, hidden workspace choices and tools closed on load; all choices/actions remain reachable | Keyboard trap, menu/drawer Escape and focus return, coarse-pointer targets, backing DPR 1/1.25/2 |
 | Themes and compact layouts | `visual.spec.ts`: Modern six-size matrix and Original persisted shell | Original strict snapshot; `src/theme.test.ts`, project integrity palette/scope guards |
 | Bone/clip keyboard selection | `modern-shell.spec.ts`: keyboard hierarchy expansion, selection, clip switching and visible focus | Pointer selection remains exercised by all authoring journeys |
@@ -210,4 +216,4 @@ When adding or moving a test:
 4. Update `docs/dev/PITFALL_LEDGER.md` only for a durable recurring failure mode.
 
 ---
-AI-edited: 2026-10-15T01:48:27-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified ZIP intake and lifecycle boundaries
+AI-edited: 2026-10-15T04:46:35-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue evidence and preserved ZIP ownership

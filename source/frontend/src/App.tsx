@@ -174,6 +174,12 @@ export default function App() {
     handleExportFbx,
     handleExportDae,
     handleExportSmf,
+    exportQueue,
+    exportQueueState,
+    exportQueueError,
+    enqueueExport,
+    runExportQueue,
+    cancelExportQueue,
     handleRunSmfRoundtripCheck,
     handleSaveSmfDiagnosticReport,
     handleFileInputChange,
@@ -1058,6 +1064,10 @@ export default function App() {
     if (editorMode === 'export') {
       return (
         <ExportPanel
+          quiet={theme.shellVariant === 'modern'}
+          queue={{ state: exportQueueState, error: exportQueueError, disabled: ui.isLoading || !model.root,
+            enqueue: enqueueExport, run: runExportQueue, cancel: cancelExportQueue,
+            retry: () => exportQueue.retry(), remove: id => exportQueue.remove(id), clear: () => exportQueue.clear() }}
           sourceFormat={sourceFormat}
           hasSkeleton={hasSkinnedModel}
           editorMode={editorMode}
@@ -1548,6 +1558,10 @@ export default function App() {
           {['preparing', 'analysis', 'bake'].includes(retargetTransfer.state.phase) && <div className="transfer-viewport-progress" role="status">
             <span>{retargetTransfer.state.phase === 'preparing' ? 'Reading clips…' : retargetTransfer.state.phase === 'analysis' ? 'Reviewing rigs…' : 'Preparing preview…'}</span>
             <button type="button" onClick={retargetTransfer.cancel}>Cancel transfer</button>
+          </div>}
+          {exportQueueState.running && <div className="transfer-viewport-progress" role="status" data-testid="export-queue-progress">
+            <span>{exportQueueState.stopping ? 'Stopping after current operation…' : 'Export queue running…'}</span>
+            <button type="button" disabled={exportQueueState.stopping} onClick={cancelExportQueue}>Cancel queue</button>
           </div>}
           <div data-testid="status-text" aria-live="polite" title={ui.status} className={`status-overlay absolute bottom-2 left-2 text-[10px] px-2 py-0.5 rounded pointer-events-none ${ui.isLoading ? 'bg-amber-900/70 text-amber-200' : 'bg-black/50 text-slate-300'}`}>
             {statusText}

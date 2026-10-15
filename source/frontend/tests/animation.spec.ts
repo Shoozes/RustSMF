@@ -1,4 +1,4 @@
-import { applyTransferPreview, clickEditorHistory, workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showAnimateTimeline, showModernPanel } from './helpers/modern-shell';
+import { applyTransferPreview, clickEditorHistory, workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showAnimateTimeline, showModernPanel, showExportDetails } from './helpers/modern-shell';
 
 import { test, expect, type Page } from '@playwright/test';
 import { SAMPLE_SMF, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
@@ -476,7 +476,7 @@ test.describe('RustSMF animation flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Updated animation keyframe/i);
       await expect(page.getByTestId('timeline-keyframe-lane')).toHaveAttribute('data-keyframe-count', /[1-9]\d*/);
 
-      await selectWorkspace(page, 'export');
+      await showExportDetails(page);
       await expect(canvas).toHaveAttribute('data-transform-owner', 'disabled');
       await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
       await page.getByTestId('smf-roundtrip-check-btn').click();

@@ -845,3 +845,19 @@
   .app-shell[data-shell-variant="modern"] .retarget-transfer :is(select, input) { min-height: 2.75rem; }
 }
 .app-shell[data-shell-variant="modern"] .timeline[data-playback-source="transfer-preview"] { min-height: 0; }
+.app-shell[data-shell-variant="modern"] .export-queue { color: var(--ui-text); border-bottom: 1px solid var(--ui-border); padding-bottom: 0.75rem; }
+.app-shell[data-shell-variant="modern"] .export-queue :is(button, select, input:not([type="checkbox"])) { background: var(--ui-surface-raised); border: 1px solid var(--ui-border); color: var(--ui-text-strong); border-radius: 0.25rem; padding: 0.375rem 0.5rem; }
+.app-shell[data-shell-variant="modern"] .export-queue :is(summary, button, select, input):focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.app-shell[data-shell-variant="modern"] .export-queue :is(.export-queue-note, .export-queue-result) { color: var(--ui-text-muted); }
+.app-shell[data-shell-variant="modern"] .export-queue-error { color: var(--ui-status-error); }
+.app-shell[data-shell-variant="modern"] [data-testid="export-workspace-panel"] > .panel-title { display: none; }
+.app-shell[data-shell-variant="modern"] .export-format-details > summary { display: list-item; padding: 0.5rem 0; min-height: 2.25rem; font-size: 0.75rem; cursor: pointer; }
+.app-shell[data-shell-variant="modern"] .export-format-details > summary:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.app-shell[data-shell-variant="modern"] .export-queue :is(button, select, input:not([type="checkbox"])) { min-height: 2.25rem; }
+.app-shell[data-shell-variant="modern"] .modern-support-panel .inspector .export-queue :is(.export-queue-add, .export-queue-items) button { min-width: 2.25rem; }
+@media (pointer: coarse) {
+  .app-shell[data-shell-variant="modern"] .export-format-details > summary { min-height: 2.75rem; }
+  .app-shell[data-shell-variant="modern"] .export-queue :is(button, select, summary, input:not([type="checkbox"])) { min-height: 2.75rem; }
+  .app-shell[data-shell-variant="modern"] .export-queue-options label:has(input[type="checkbox"]) { min-height: 2.75rem; }
+  .app-shell[data-shell-variant="modern"] .modern-support-panel .inspector .export-queue :is(.export-queue-add, .export-queue-items) button { min-width: 2.75rem; }
+}

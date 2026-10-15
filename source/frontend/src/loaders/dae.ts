@@ -217,7 +217,7 @@ function controllerBlock(mesh: THREE.SkinnedMesh, controllerId: string, geometry
 
 function visualNode(object: THREE.Object3D, ids: Map<THREE.Object3D, string>, geometryIds: Map<THREE.Object3D, string>, controllerIds: Map<THREE.Object3D, string>, materialIds: Map<THREE.Object3D, string>, rootBoneId: string | undefined): string {
   const id = ids.get(object)!;
-  const type = isThreeBone(object) ? ' type="JOINT"' : '';
+  const type = isThreeBone(object) ? ` type="JOINT" sid="${xmlEscape(object.name || id)}"` : '';
   const matrix = rowMajorMatrix(object.matrixAutoUpdate ? new THREE.Matrix4().compose(object.position, object.quaternion, object.scale) : object.matrix);
   const children = object.children.map((child) => visualNode(child, ids, geometryIds, controllerIds, materialIds, rootBoneId)).join('');
   let instance = '';

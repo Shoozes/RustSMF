@@ -1,4 +1,4 @@
-import { workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showModernPanel, showSkinAdvanced } from './helpers/modern-shell';
+import { workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showModernPanel, showSkinAdvanced, showExportDetails } from './helpers/modern-shell';
 
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
@@ -163,7 +163,7 @@ test.describe('RustSMF lifecycle flow (Chromium)', () => {
       await page.goto('/');
       await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
       await expect(page.getByTestId('status-text')).not.toContainText('Loading', { timeout: 15000 });
-      await selectWorkspace(page, 'export');
+      await showExportDetails(page);
       await expect(page.getByTestId('save-smf-report-btn')).toBeVisible();
 
       const downloadNames: string[] = [];

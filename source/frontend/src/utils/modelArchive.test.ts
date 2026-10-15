@@ -86,6 +86,21 @@ test('unpacks nested model resources, directory entries, deflate, and ZIP commen
   assert.equal(new TextDecoder().decode(result[1].data), 'mesh');
 });
 
+test('accepts empty directory markers without DOS attributes and counts only file progress', async () => {
+  for (const attrs of [0, 0o40755 << 16]) {
+    const input = archive([
+      { name: 'scene/', method: 8 },
+      { name: 'scene/empty/' },
+      { name: 'scene/model.obj', data: bytes('o model') },
+    ]);
+    for (const central of centralOffsets(input).slice(0, 2)) put32(input, central + 38, attrs);
+    const progress: number[][] = [];
+    const files = await unpackModelArchive(input, { onProgress: (done, total) => progress.push([done, total]) });
+    assert.deepEqual(files, [{ name: 'scene/model.obj', data: bytes('o model') }]);
+    assert.deepEqual(progress, [[1, 1]]);
+  }
+});
+
 test('rejects unsafe, encoded, duplicate, and nested archive names', async () => {
   for (const name of ['../escape.obj', '%2e%2e/escape.obj', '/root.obj', 'C:/root.obj', 'a\\b.obj', 'nested.zip']) {
     await assert.rejects(unpackModelArchive(archive([{ name, data: bytes('x') }])), /refused|unsafe|encoded/i);
@@ -100,10 +115,14 @@ test('rejects file-parent collisions and inconsistent special-file attributes', 
     { name: 'scene', data: bytes('file') }, { name: 'scene/model.gltf', data: bytes('{}') },
   ])), /path conflicts with parent/i);
 
-  const dosMismatch = archive([{ name: 'scene/', data: new Uint8Array() }]);
+  const dosMismatch = archive([{ name: 'scene.obj', data: bytes('x') }]);
   const central = centralOffsets(dosMismatch)[0];
-  put32(dosMismatch, central + 38, 0);
+  put32(dosMismatch, central + 38, 0x10);
   await assert.rejects(unpackModelArchive(dosMismatch), /DOS directory attributes disagree/i);
+
+  const regularDirectory = archive([{ name: 'scene/' }]);
+  put32(regularDirectory, centralOffsets(regularDirectory)[0] + 38, 0o100644 << 16);
+  await assert.rejects(unpackModelArchive(regularDirectory), /file attributes disagree for directory/i);
 
   const macSpecial = archive([{ name: 'device.obj', data: bytes('x') }]);
   const macCentral = centralOffsets(macSpecial)[0];
@@ -134,7 +153,7 @@ test('honors cancellation before parsing and reports completed ordinary files', 
   const controller = new AbortController(); controller.abort();
   await assert.rejects(unpackModelArchive(archive([{ name: 'map.obj', data: bytes('x') }]), { signal: controller.signal }), { name: 'AbortError' });
   const progress: Array<[number, number]> = [];
-  await unpackModelArchive(archive([{ name: 'one.obj', data: bytes('1') }, { name: 'two.mtl', data: bytes('2') }]), {
+  await unpackModelArchive(archive([{ name: 'empty/' }, { name: 'one.obj', data: bytes('1') }, { name: 'two.mtl', data: bytes('2') }]), {
     onProgress: (completed, total) => progress.push([completed, total]),
   });
   assert.deepEqual(progress, [[1, 2], [2, 2]]);

@@ -2,27 +2,27 @@
 
 Last reviewed: 2026-10-15
 
-Backlog status: retarget assistance (`ff43a13`) and cubic review/cleanup (`040feb3`) are published. ZIP intake is complete; HISTORY owns its guarded publication. Next: export presets and queues. Earlier outcomes stay closed.
+Backlog status: Export presets/queues are complete; original assets and animation packs are next. The reviewed ZIP directory fixes are preserved in this source batch. HISTORY owns completed proof.
 
-## ZIP bundle intake
+## Export presets and queues
 
-- What: Open bounded model/resource ZIPs through existing browser and desktop import paths.
-- Why: Support generated asset bundles without manual extraction or permanent frontend controls.
-- Where: Archive parser/worker/client, load orchestration, Tauri adapter, temporary model picker, focused tests and `ZIP_INTAKE.md`.
-- When: Completed locally on 2026-10-15 from clean main `040feb3`; selected for authorized main publication.
-- How: Validate records, paths, CRC and observed expansion; retain resource paths; require explicit model choice; cancel/dispose jobs and ignore late native reads. Reuse replacement/recovery and format contracts.
-- Done when: Safe stored/deflated archives work in browser and mocked native paths; model formats, sidecars, choice, cancel/failure preservation and project/export continuity pass. Six-size/DPI/input checks, sequential verify/browser/journey/strict gates, docs/routes and owned cleanup complete. No asset distribution or installer change.
-- Verification: 27 focused units and 16 ZIP browser cases pass, including a reproduced/repaired queued native-read timeout. Final sequential verify (563 frontend units plus repository/Rust checks), browser (179, no retries), journeys (11) and strict visuals (3) pass on unchanged implementation inputs. Six reviewed captures, source identity, compact results and owned cleanup are bound in HISTORY and `output/zip-intake-20261015/receipt.json`. Native IPC remains mocked; the issued native read cannot be aborted, and late bytes are ignored.
+- What: Explicit GLB/FBX/DAE/SMF presets and a bounded session queue of captured authored models.
+- Why: Avoid repeated setup and repeated successful writes.
+- Where: [EXPORT_QUEUE.md](EXPORT_QUEUE.md), queue/snapshot/preparation owners, Export drawer and existing save owner; route `feature__export_queue`.
+- When: Complete on 2026-10-15; guarded main publication is recorded by the publication receipt. Installer unchanged.
+- How: Capture owned inputs/options at Add; serialize validation and destinations with latest trailing recovery. Keep source-aware Export, explicit refusal and truthful download/native results. Modern details stay disclosed.
+- Done when: Count/byte bounds, order, cancellation, destination cancel, failure/retry, stale/disposal and source ownership preserve editable work; completed items never repeat; parsed geometry, influences and sampled motion pass through ordinary UI paths.
+- Verification: 588 frontend units and 14 Rust checks; 192 browser tests, 11 journeys and 3 strict visuals pass sequentially on the final candidate. The focused set passes 32 units and 13 browser cases; eight reviewed captures cover six sizes, DPR and coarse/focus checks. Original references and initial ZIP fixes are unchanged. HISTORY and `output/export-queue-20261015/receipt.json` bind source/results. Installed Windows queue checks remain a future packaging lane.
 
 ## Cubic clip authoring integrity
 
-- What: Preserve imported glTF cubic-spline motion through direct Trim and Retime, and inspect their shared key-sampling consumers.
-- Why: The review reproduced changed motion in the existing authoring helpers. A `.5–1.5s` trim begins at X `.5` instead of `.59375`; stretching `2s` to `4s` changes midpoint X from `1.25` to `1.5`. This repair precedes new intake features.
-- Where: `source/frontend/src/utils/animationEdits.ts`, `animationAuthoringController.ts`, their unit/browser consumers, and the first-party `tests/helpers/cubic-retarget-fixture.ts`. Use `feature__animation_authoring`; Transfer's serialization/interpolation owner is routed by `feature__retarget_assistance`.
-- When: Completed locally on 2026-10-14 after the review cleanup, focused repair and the sequential frontend gate.
-- How: Reproduce through ordinary controls and check tangent timing, boundary samples and affected channel readers. Preserve unedited channels, locks, one history transaction, undo/redo and public project/export formats. Reject an unsupported edit before mutation with an actionable explanation rather than silently changing motion. Keep custom rigs, asset distribution and the Rust solver port outside this repair.
-- Done when: Independent known samples survive supported raw-cubic edits, history, project reopen and parsed GLB re-import; unsupported cases preserve editable work and explain the refusal. Existing linear/step editing and frontend gates remain green, with current docs/routes and owned cleanup.
-- Verification: Both original mismatches were reproduced and repaired. Focused units (45) and two ordinary browser flows prove independent motion, atomic refusal, history and project/GLB continuity. Sequential verify (546 units; 14 Rust checks), browser (163, no retries), journeys (11) and strict visuals (3) pass on unchanged implementation inputs. HISTORY and `output/cubic-authoring-20261014/receipt.json` bind source, results, retained evidence and cleanup. Cubic rotation cuts between keys remain explicitly unsupported; existing-key cuts and Retime preserve motion.
+- What: Preserve raw glTF cubic motion through Trim/Retime and shared sampling.
+- Why: Reproduced boundary and tangent-timing errors changed motion.
+- Where: Animation edit/controller owners and first-party cubic fixtures; `feature__animation_authoring`.
+- When: Complete, published as `040feb3`.
+- How: Preserve channels, locks, atomic history, project and export contracts; refuse unsupported cuts before mutation.
+- Done when: Known samples survive editing/history/project/re-import; refused edits preserve work.
+- Verification: 45 focused units, two browser flows and sequential verify (546 units; 14 Rust checks), browser (163), journeys (11), strict visuals (3) passed. HISTORY and `output/cubic-authoring-20261014/receipt.json` retain details. Cubic rotation cuts between keys remain unsupported.
 
 ## Retarget assistance and original asset workflow
 
@@ -38,8 +38,8 @@ Backlog status: retarget assistance (`ff43a13`) and cubic review/cleanup (`040fe
 
 | Order | Outcome | Done when |
 | --- | --- | --- |
-| 1 | ZIP bundle intake — complete locally | Existing import paths accept bounded safe archives with model/resource selection, explicit choice among multiple models, cancellation and desktop/web tests. ZIP remains a container; format limits stay unchanged. |
-| 2 | Export presets and queues | Deterministic sequential processing has cancellation, per-item results, safe destinations and retry without repeating completed items. |
+| 1 | ZIP bundle intake — published `da98cba` | Complete; local directory compatibility/progress review fixes are recorded in HISTORY. ZIP remains a container. |
+| 2 | Export presets and queues — complete | Captured explicit formats, bounded ordered saves, cancellation/results and retry without repeated successes pass the frontend gate. |
 | 3 | Original assets and animation packs | Finish CAT-TRIPO-001 in Blender, repair anatomy/tail/topology, verify pose/deformation and rights, author original Idle/Walk/Run/Sit, retain editable source and distribute a self-contained GLB. Borrowed Mesh2Motion media stays excluded. |
 | 4 | Complete Rust solver migration | Every current option passes TypeScript-reference/native/WASM parity before replacing the worker solver. |
 | 5 | Animal-chain assistance | Reviewed suggestions for existing quadruped, wing and tail rigs pass independent first-party fixtures; ambiguous cases require explicit mappings. |
@@ -153,4 +153,4 @@ bounded noncombat fixture.
 - Verification: Sequentially run `verify`, `test:e2e -NoGenEye`, `test:journey`, `test:visual-strict`, `desktop-smoke`, and `package:windows`; then run `verify` and `package:windows` again after the version bump. Actual Windows OS-dialog checks remain separate from native IPC mocks.
 
 ---
-AI-edited: 2026-10-15T03:01:19-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded authorized ZIP intake publication scope
+AI-edited: 2026-10-15T10:01:50-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue batch for guarded publication

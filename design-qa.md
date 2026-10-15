@@ -1,5 +1,9 @@
 # Modern UI Design QA — v0.2 productization complete
 
+## Export presets and queues
+
+Export keeps two native disclosures: Export queue and Format details. The queue holds one preset selector and named Add icon; filename/clip options are secondary. It shows one running/retry action and item outcomes. Cancel stays reachable over the viewport when Tools is closed. Modern uses existing flat surfaces and brass focus; Original's diagnostics retain their layout. Review of eight captures covers the six established sizes, DPR 1/1.25/2 and coarse pointer. Controls fit, touch targets reach 44px, keyboard/Escape returns focus, and the viewport remains the main working surface. At 390px the existing drawer overlays it and closes with Escape. No visual baseline updates are intended. HISTORY owns final gate results; reviewed captures stay in ignored `output/export-queue-20261015/reviewed/`.
+
 ## ZIP intake dialog
 
 Open/drop keeps the existing editor composition. The temporary archive surface has a filename, progress/Cancel or one model selector and Open model; it uses flat theme tokens and no permanent new buttons. Six reviewed captures cover 1920x1080, 1440x900 at DPR 1.25, 1280x800, 1024x768, 800x900 at DPR 2 and 390x844 at DPR 2 with coarse pointers. Keyboard wrapping, explicit choice, Escape/focus return, overflow and 44px touch targets pass. These empty-scene captures establish picker layout, not model rendering. Existing strict references are unchanged.
@@ -77,4 +81,4 @@ The curated overview now shows the model with the tools closed. Modern's empty s
 `source/frontend/tests/modern-shell.spec.ts` owns command visibility, one-drawer behavior, coarse-pointer target size, and DPR backing dimensions. `source/frontend/tests/visual.spec.ts` owns responsive shell, viewport controls, Modern/Original geometry, and strict screenshot evidence. `docs/dev/review.md` records suite outcomes; `docs/dev/HISTORY.md` records the final evidence entry.
 
 ---
-AI-edited: 2026-10-15T01:48:27-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified ZIP intake and lifecycle boundaries
+AI-edited: 2026-10-15T04:46:35-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue evidence and preserved ZIP ownership

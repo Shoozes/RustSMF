@@ -1,4 +1,4 @@
-import { workspaceLocator, workspaceControl, expectLoadDetails, selectWorkspace, clickSecondaryCommand, revealSecondaryCommands, showAnimateTimeline, showModernPanel } from './helpers/modern-shell';
+import { workspaceLocator, workspaceControl, expectLoadDetails, selectWorkspace, clickSecondaryCommand, revealSecondaryCommands, showAnimateTimeline, showModernPanel, showExportDetails } from './helpers/modern-shell';
 
 import { test, expect } from '@playwright/test';
 import { PNG } from 'pngjs';
@@ -165,7 +165,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await exportBtn.click();
       await expect(page.getByTestId('status-text')).toContainText(/Exported \.fbx/i, { timeout: 5000 });
 
-      await selectWorkspace(page, 'export');
+      await showExportDetails(page);
       const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
       await expect(diagnosticsPanel).toHaveAttribute('data-smf-can-export', 'false');
       await expect(page.getByTestId('export-smf-btn')).toBeDisabled();
@@ -188,7 +188,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expectRenderedScreenshot(page.getByTestId('three-canvas'));
       expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
 
-      await selectWorkspace(page, 'export');
+      await showExportDetails(page);
       await expect(page.getByTestId('texture-export-policy-panel')).toBeVisible();
       await expect(page.getByTestId('smf-material-texture-row')).toHaveCount(1);
       await selectWorkspace(page, 'view');
@@ -462,7 +462,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(page.getByTestId('rig-bone-count')).toContainText('2');
       await expect(inspector).toContainText(/Selected\s*FixtureSpine/i);
 
-      await selectWorkspace(page, 'export');
+      await showExportDetails(page);
       const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
       await expect(diagnosticsPanel).toBeVisible();
       await expect(diagnosticsPanel).toHaveAttribute('data-smf-can-export', 'true');
@@ -522,7 +522,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       await expect(canvas).toHaveAttribute('data-shader-enabled', 'true');
       await expect(canvas).toHaveAttribute('data-model-opacity', '0.35');
 
-      await selectWorkspace(page, 'export');
+      await showExportDetails(page);
       const policyPanel = page.getByTestId('texture-export-policy-panel');
       await expect(policyPanel).toBeVisible();
       await expect(policyPanel.getByTestId('texture-export-policy-row')).toHaveCount(4);
@@ -593,7 +593,7 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       // Visual smoke for static render
       await expectRenderedScreenshot(page.getByTestId('viewport-container'));
 
-      await selectWorkspace(page, 'export');
+      await showExportDetails(page);
       const diagnosticsPanel = page.getByTestId('smf-diagnostics-panel');
       await expect(diagnosticsPanel).toHaveAttribute('data-smf-can-export', 'false');
       await expect(diagnosticsPanel).toContainText(/SMF diagnostics: blocked/i);

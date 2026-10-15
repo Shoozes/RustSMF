@@ -109,6 +109,12 @@ export async function showAnimateTimeline(page: Page): Promise<void> {
   await expect(page.getByTestId('timeline')).toBeVisible();
 }
 
+export async function showExportDetails(page: Page): Promise<void> {
+  await selectWorkspace(page, 'export');
+  const details = page.getByTestId('export-format-details');
+  if (await details.count() && await details.getAttribute('open') === null) await details.locator('summary').first().click();
+}
+
 export async function applyTransferPreview(page: Page): Promise<void> {
   const preview = await workspaceControl(page, 'retarget-apply');
   await expect(preview).toBeVisible({ timeout: 15000 });

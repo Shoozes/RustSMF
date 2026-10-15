@@ -15,6 +15,8 @@ feature is newer than the published 0.2.1 installer.
 
 - Stored/deflated entries, UTF-8 names, empty directories, comments and data
   descriptors. Native raw-deflate streaming runs in a lazy browser/WebView worker.
+- Empty directory markers may omit host attributes. Conflicting directory/file
+  attributes and special files remain refused; progress counts ordinary files.
 - At most 64 entries including directories, 256 MiB input and expanded aggregate,
   256 MiB per model, 64 MiB per other file. Empty deflated directories have a
   separate 64 KiB compressed bound.
@@ -48,8 +50,8 @@ There are no additional permanent toolbar or drawer controls.
 
 ## Proof owners
 
-`modelArchive.test.ts` checks hostile/valid records, sizes, CRC, paths and stream
-cancellation. `modelArchiveClient.test.ts` checks private buffers, native buffer
+`modelArchive.test.ts` checks hostile/valid records, optional directory attributes,
+file progress, sizes, CRC, paths and stream cancellation. `modelArchiveClient.test.ts` checks private buffers, native buffer
 handoff, release, timeout/failure and stale completion. `archive-intake.spec.ts`
 uses the actual browser worker, all six model extensions, generated sidecars,
 explicit choice, sampled skin/animation continuity, project reopen, preserved
@@ -64,4 +66,4 @@ this batch has no new installed Windows or OS-dialog acceptance claim.
 
 ---
 AI-created: 2026-10-15T01:25:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs
-AI-edited: 2026-10-15T01:48:27-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified ZIP intake and lifecycle boundaries
+AI-edited: 2026-10-15T03:32:39-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded ZIP review fixes and next export queue scope

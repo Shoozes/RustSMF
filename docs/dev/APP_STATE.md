@@ -2,9 +2,15 @@
 
 Last reviewed: 2026-10-15
 
+## Export presets and queues on current source
+
+Export > Tools > Export queue captures the current authored model with an explicit GLB/FBX/DAE/SMF preset. Options holds filename and clip inclusion. Eight items and 128 MiB of owned inputs are allowed. One foreground save owner serializes validated outputs with recovery; successful items are excluded from retry. Cancel stops preparation/pending work and waits for issued native saves. Browser results report download issuance. Replacement cancels pending captures; Retry retains their original inputs. [EXPORT_QUEUE.md](EXPORT_QUEUE.md) owns lifecycle, limits and evidence. Final sequential verification passes: 588 frontend units, 14 Rust checks, 192 browser tests, 11 journeys and 3 strict visuals. Version/installer remain unchanged; installed Windows queue acceptance is separate.
+
 ## ZIP intake on current source
 
-Open and viewport drop accept one ZIP containing supported models and relative resources. One model loads directly; several require a compact explicit choice. A cancelable worker validates paths, entries, CRC and observed expansion. Cancel, malformed input and stale reads preserve editable work. Native reads retain Rust's selected-path authority; both platforms share expansion. [ZIP_INTAKE.md](ZIP_INTAKE.md) owns limits and lifecycle details. The final local gate passed verify (563 frontend units plus repository/Rust checks), 179 browser checks, 11 journeys and 3 strict visuals. This feature does not change the published installer.
+Open and viewport drop accept one ZIP containing supported models and relative resources. One model loads directly; several require a compact explicit choice. A cancelable worker validates paths, entries, CRC and observed expansion. Cancel, malformed input and stale reads preserve editable work. Native reads retain Rust's selected-path authority; both platforms share expansion. [ZIP_INTAKE.md](ZIP_INTAKE.md) owns limits/lifecycle; HISTORY binds gates to source. The published installer still needs manual extraction.
+
+ZIP intake was introduced in `da98cba`. Current source accepts omitted directory attributes and corrects file progress; conflicting/special entries remain refused. The export queue batch includes these reviewed ZIP fixes. HISTORY owns proof.
 
 ## Retarget assistance on current source
 
@@ -347,4 +353,4 @@ limits without partial output. [TRANSITION_BAKE.md](TRANSITION_BAKE.md) owns the
 input contract, bounds, vendoring requirements, and native/browser WASM proof.
 
 ---
-AI-edited: 2026-10-15T01:48:27-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified ZIP intake and lifecycle boundaries
+AI-edited: 2026-10-15T10:01:50-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue batch for guarded publication

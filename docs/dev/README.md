@@ -26,6 +26,7 @@ Use the canonical launcher for close-safe sessions. Direct `npm run dev` and `np
 - `HUMANOID_POSE_REVIEW.md`: calibrated angular-review schema, CLI and diagnostic limits; candidate progress stays in HISTORY/TODO.
 - `POSE_CONTACT.md`: versioned Rust support-pose correction API, calibration/sign convention, and verbatim vendoring boundary.
 - `RETARGET_ASSISTANCE.md`: shared mapping/preflight API, background jobs, private preview, build tooling and proof boundaries.
+- `EXPORT_QUEUE.md`: captured presets, session limits, ordered saves, cancellation and retry evidence.
 - `ASSET_PROVENANCE.md`: borrowed references, AI drafts, distribution eligibility and original replacement ownership.
 - `../../summary_bank.json`: context groups for features, subsystems, and issue clusters.
 - `../../source/frontend/tests/README.md`: frontend test policy and Playwright coverage map.
@@ -44,3 +45,6 @@ Use the canonical launcher for close-safe sessions. Direct `npm run dev` and `np
 Avoid copying the same completed-work narrative into multiple docs. Link to the durable owner instead. Canonical verification commands and launch instructions are centralized in APP_STATE.md "Primary commands" / "Verification" (other surfaces link or summarize to reduce duplication of lists).
 
 Exact discovered test counts belong in dated verification evidence, not repeated current-state prose. Gated backlog tasks must identify the missing external evidence or interactive lane and define completion conditions. Completed-work narratives and proof move to `HISTORY.md`; the selected release's measurable outcome criteria may remain in `TODO.md` as an explicitly completed closeout record.
+
+---
+AI-edited: 2026-10-15T04:46:35-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue evidence and preserved ZIP ownership

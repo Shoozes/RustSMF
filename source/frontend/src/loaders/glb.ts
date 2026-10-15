@@ -37,6 +37,10 @@ function collectSkeletonBones(root: THREE.Object3D): THREE.Bone[] {
 // Loader scene envelopes are not authored nodes. Never infer ownership from names.
 const importedSceneRoots = new WeakSet<THREE.Object3D>();
 
+export function copyImportedSceneOwnership(source: THREE.Object3D, copy: THREE.Object3D): void {
+  if (importedSceneRoots.has(source)) importedSceneRoots.add(copy);
+}
+
 export async function loadGLB(urlOrBuffer: string | ArrayBuffer | ModelResourceBundle): Promise<LoadedModel> {
   const isBundle = typeof urlOrBuffer === 'object' && !(urlOrBuffer instanceof ArrayBuffer);
   const bundle = isBundle ? urlOrBuffer as ModelResourceBundle : null;

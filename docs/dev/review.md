@@ -6,6 +6,21 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
+## Export queue follow-through — 2026-10-15
+
+The accepted TODO outcome was absent from the published source; the preceding ZIP directory fixes remain in place. The implementation now captures independent inputs, processes explicit presets through the existing save owner, retains incomplete captures and releases successes. Review distinguishes canceled preparation from issued saves and browser issuance from disk completion. A first-party DAE round-trip reproduced unnamed joints: missing `sid` is repaired and checked structurally and through sampled re-import. A nested capture could also restore preview materials while an async save still read them; reproduced failures now pass with reference-counted source readers scoped to each material registration. The focused set passes 32 units, 13 browser cases and eight reviewed layout/DPR lanes; the corrected candidate passes the final sequential gate (588 units; 14 Rust checks; 192/11/3 browser/journey/strict cases). HISTORY and the compact receipt bind its source and owned cleanup. [EXPORT_QUEUE.md](EXPORT_QUEUE.md) owns boundaries. Installer, version and private assets are outside this batch.
+
+## Published ZIP review and recheck — 2026-10-15
+
+Reviewed clean main `da98cba4de00f17594fdbb3219382fb4d716cad8`, tree `0bb91d6c031064fcdab52505bd63c93704948d2b`, before editing. The publication receipt binds all 1,274 staged blobs and the 447 implementation inputs to the passing 563-unit/179-browser/11-journey/3-strict gate. Read-only context/project validators passed. Coverage includes archive records/bounds/CRC, worker ownership, native/browser selection, replacement/recovery, resource loaders, dialog focus, and the existing single-flight export/save boundary. This is RustSMF-owned work.
+
+- Verified closed: prior dialog focus, native queued-read timeout, private buffer ownership and private-asset exclusions retain their source and bound regressions.
+- New, repaired locally: the independent fflate writer emits empty directory markers with no DOS attributes; its reader succeeds while RustSMF refused the archive. Omitted attributes are now accepted, while conflicting directory/file types, special entries and nonempty directories retain their guards.
+- New, repaired locally: directory records inflated the file-progress denominator. One file plus one directory reported `1 / 2`; progress now finishes at `1 / 1`. Regression coverage uses absent attributes, Unix directory metadata and mixed directory/file records, including the real browser worker with sidecars.
+- Unverified acceptance: native ZIP evidence remains mocked IPC. The issued bounded native read still cannot abort; cancellation ignores its result. Existing installed-Windows and release evidence keeps its original source identity.
+
+The cleanup passed 28 focused units, all 16 ZIP browser checks and `verify` (564 frontend units plus repository/Rust checks). HISTORY and `output/zip-review-20261015/receipt.json` bind source/results. No UI structure, Original baseline or public format changes. TODO selects export presets/queues with owned input snapshots, sequential save authority, truthful cancellation/results, safe destinations and retry without duplicate successful writes. Browser download issuance cannot prove a filesystem save. Keep conversion/validation with existing owners and controls disclosed in Export; asset distribution and solver migration remain later outcomes.
+
 ## ZIP intake implementation follow-through
 
 The prior cleanup/cubic findings are published as `040feb3`. The next accepted donor outcome, ZIP intake, now uses bounded worker expansion and the existing load/replacement paths. Focused checks cover all supported model formats, nested resources, explicit choice, cancel/failure preservation, project/export continuity and mocked native reads. Integration review identified a temporary-dialog focus defect (repaired), redundant native buffer copying (removed by explicit ownership handoff), and native reads that cannot be aborted. Issued native reads remain bounded and serialized; cancellation ignores their late results. A simulated native timeout reproduced an obsolete queued read starting after retry (three reads instead of two); terminal cleanup now aborts queued requests, and its ordinary-UI regression passes. See ZIP_INTAKE.md for exact support boundaries and HISTORY for the final gate. Export presets/queues are next; borrowed references and drafts remain private.
@@ -118,4 +133,4 @@ still contain the removed scaffolding. No selected implementation defect remains
 open; TODO records the completed local acceptance and separate distribution scope.
 
 ---
-AI-edited: 2026-10-15T01:48:27-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified ZIP intake and lifecycle boundaries
+AI-edited: 2026-10-15T04:46:35-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue evidence and preserved ZIP ownership

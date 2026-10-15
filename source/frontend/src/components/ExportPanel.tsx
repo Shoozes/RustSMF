@@ -2,8 +2,11 @@ import type { SmfDiagnosticReport, SmfRoundtripReport } from '../loaders';
 import { LEGACY_SHELF_DECISIONS, getTextureExportPolicies } from '../utils/materialPolicy';
 import { findDuplicateTextureGroups, type TextureSummary } from '../utils/textureCompat';
 import type { GeometryDiagnosticsReport } from '../utils/geometryDiagnostics';
+import ExportQueuePanel, { type ExportQueueControls } from './ExportQueuePanel';
 
 interface ExportPanelProps {
+  queue: ExportQueueControls;
+  quiet?: boolean;
   sourceFormat: string;
   hasSkeleton: boolean;
   editorMode?: string;
@@ -21,7 +24,13 @@ interface ExportPanelProps {
   onSaveSmfDiagnosticReport: () => void;
 }
 
+function FormatDetails({ quiet, children }: { quiet: boolean; children: ReactNode }) {
+  return quiet ? <details className="export-format-details" data-testid="export-format-details"><summary>Format details</summary>{children}</details> : <>{children}</>;
+}
+
 export default function ExportPanel({
+  queue,
+  quiet = false,
   sourceFormat,
   hasSkeleton,
   editorMode = 'export',
@@ -60,6 +69,8 @@ export default function ExportPanel({
   return (
     <div className="inspector" data-testid="export-workspace-panel" data-editor-mode={editorMode}>
       <div className="panel-title">Export Workspace</div>
+      <ExportQueuePanel {...queue} />
+      <FormatDetails quiet={quiet}>
       <div className="text-xs text-slate-300">
         Export path is explicit by source and compatibility requirements.
       </div>
@@ -308,6 +319,8 @@ export default function ExportPanel({
           </div>
         )}
       </div>
+      </FormatDetails>
     </div>
   );
 }
+import type { ReactNode } from 'react';

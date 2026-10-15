@@ -1,4 +1,4 @@
-import { workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand } from './helpers/modern-shell';
+import { workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showExportDetails } from './helpers/modern-shell';
 
 import { test, expect } from '@playwright/test';
 import { SAMPLE_OBJ, SAMPLE_SMF, getBrowserErrors, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
@@ -83,7 +83,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('rig-prepare-static-panel')).toHaveCount(0);
       await expect(page.getByTestId('editor-undo-btn')).toBeEnabled();
 
-      await selectWorkspace(page, 'export');
+      await showExportDetails(page);
       const diagnostics = page.getByTestId('smf-diagnostics-panel');
       await expect(diagnostics).toHaveAttribute('data-smf-can-export', 'true');
       await expect(page.getByTestId('export-smf-btn')).toBeEnabled();
@@ -100,7 +100,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('rig-bone-count')).toHaveText('0');
       await expect(page.getByTestId('rig-skinned-mesh-count')).toHaveText('0');
       await expect(page.getByTestId('rig-prepare-static-panel')).toBeVisible();
-      await selectWorkspace(page, 'export');
+      await showExportDetails(page);
       await expect(diagnostics).toHaveAttribute('data-smf-can-export', 'false');
       await expect(diagnostics).toContainText('SMF_NO_SKINNED_SKELETON');
       await expect(page.getByTestId('export-smf-btn')).toBeDisabled();
@@ -158,7 +158,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await (await workspaceControl(page, 'transform-x-btn')).click();
       await selectWorkspace(page, 'animate');
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
-      await selectWorkspace(page, 'export');
+      await showExportDetails(page);
       await page.getByTestId('smf-roundtrip-check-btn').click();
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 15000 });
 
@@ -291,7 +291,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Redid IK pose/i);
       await expect(page.getByTestId('pose-edit-state')).toContainText('Pose edit dirty: true');
 
-      await selectWorkspace(page, 'export');
+      await showExportDetails(page);
       await page.getByTestId('smf-roundtrip-check-btn').click();
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 5000 });
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-status', 'passed');
@@ -348,7 +348,7 @@ test.describe('RustSMF rig flow (Chromium)', () => {
       await expect(page.getByTestId('status-text')).toContainText(/Redid viewport animation keyframe for FixtureTip/i);
       await expect(page.getByTestId('animation-edit-state')).toContainText('Animation edit dirty: true');
 
-      await selectWorkspace(page, 'export');
+      await showExportDetails(page);
       await expect(canvas).toHaveAttribute('data-transform-attached', 'false');
       await page.getByTestId('smf-roundtrip-check-btn').click();
       await expect(page.getByTestId('smf-roundtrip-result')).toHaveAttribute('data-smf-roundtrip-ok', 'true', { timeout: 15000 });
