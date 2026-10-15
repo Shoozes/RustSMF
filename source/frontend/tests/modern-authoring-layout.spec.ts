@@ -1,5 +1,6 @@
 import { workspaceControl, selectWorkspace, showModernPanel, showSkinAdvanced } from './helpers/modern-shell';
 import { test, expect } from '@playwright/test';
+import { captureReview } from './helpers/review-capture';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { selectBone, watchJourneyErrors } from './helpers/product-journey';
 
@@ -32,7 +33,7 @@ for (const [width, height] of [[1920, 1080], [1440, 900], [1280, 800], [1024, 76
       await checkPanel();
       const rename = await workspaceControl(page, 'rig-rename-btn');
       expect((await rename.boundingBox())!.height).toBeGreaterThanOrEqual(32);
-      await page.screenshot({ path: testInfo.outputPath(`modern-rig-${width}x${height}.png`) });
+      await captureReview(page, testInfo, `modern-rig-${width}x${height}.png`);
       await selectWorkspace(page, 'animate');
       await showModernPanel(page, 'properties');
       await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();
@@ -42,7 +43,7 @@ for (const [width, height] of [[1920, 1080], [1440, 900], [1280, 800], [1024, 76
       await expect(page.getByTestId('retarget-profile-source')).toBeDisabled();
       await checkPanel();
       await expect(page.getByTestId('animate-workspace-panel')).toHaveCSS('max-height', 'none');
-      await page.screenshot({ path: testInfo.outputPath(`modern-profile-error-${width}x${height}.png`) });
+      await captureReview(page, testInfo, `modern-profile-error-${width}x${height}.png`);
       await selectWorkspace(page, 'skin');
       await expect(page.getByTestId('modern-support-panel')).toHaveCount(0);
       await expect(page.getByTestId('modern-skin-tool-paint')).toBeVisible();
@@ -52,7 +53,7 @@ for (const [width, height] of [[1920, 1080], [1440, 900], [1280, 800], [1024, 76
       await (await workspaceControl(page, 'skin-paint-pose-warning')).scrollIntoViewIfNeeded();
       await expect(page.getByTestId('skin-paint-pose-warning')).toBeInViewport();
       await checkPanel();
-      await page.screenshot({ path: testInfo.outputPath(`modern-skin-${width}x${height}.png`) });
+      await captureReview(page, testInfo, `modern-skin-${width}x${height}.png`);
       await page.getByTestId('modern-panel-close').click();
       await expect(page.getByTestId('modern-support-panel')).toHaveCount(0);
       await expect(page.getByTestId('modern-skin-advanced')).toBeFocused();

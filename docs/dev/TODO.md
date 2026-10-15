@@ -2,14 +2,24 @@
 
 Last reviewed: 2026-10-14
 
-Backlog status: the retarget assistance first pass is complete locally. Ordered followups below are queued, starting with ZIP bundle intake. Earlier completed outcomes remain closed.
+Backlog status: the retarget assistance first pass is published as `ff43a13`. Review cleanup and cubic authoring integrity are verified locally. Next: ZIP bundle intake, followed by the remaining ordered donor outcomes. Earlier completed outcomes remain closed.
+
+## Cubic clip authoring integrity
+
+- What: Preserve imported glTF cubic-spline motion through direct Trim and Retime, and inspect their shared key-sampling consumers.
+- Why: The review reproduced changed motion in the existing authoring helpers. A `.5–1.5s` trim begins at X `.5` instead of `.59375`; stretching `2s` to `4s` changes midpoint X from `1.25` to `1.5`. This repair precedes new intake features.
+- Where: `source/frontend/src/utils/animationEdits.ts`, `animationAuthoringController.ts`, their unit/browser consumers, and the first-party `tests/helpers/cubic-retarget-fixture.ts`. Use `feature__animation_authoring`; Transfer's serialization/interpolation owner is routed by `feature__retarget_assistance`.
+- When: Completed locally on 2026-10-14 after the review cleanup, focused repair and the sequential frontend gate.
+- How: Reproduce through ordinary controls and check tangent timing, boundary samples and affected channel readers. Preserve unedited channels, locks, one history transaction, undo/redo and public project/export formats. Reject an unsupported edit before mutation with an actionable explanation rather than silently changing motion. Keep custom rigs, asset distribution and the Rust solver port outside this repair.
+- Done when: Independent known samples survive supported raw-cubic edits, history, project reopen and parsed GLB re-import; unsupported cases preserve editable work and explain the refusal. Existing linear/step editing and frontend gates remain green, with current docs/routes and owned cleanup.
+- Verification: Both original mismatches were reproduced and repaired. Focused units (45) and two ordinary browser flows prove independent motion, atomic refusal, history and project/GLB continuity. Sequential verify (546 units; 14 Rust checks), browser (163, no retries), journeys (11) and strict visuals (3) pass on unchanged implementation inputs. HISTORY and `output/cubic-authoring-20261014/receipt.json` bind source, results, retained evidence and cleanup. Cubic rotation cuts between keys remain explicitly unsupported; existing-key cuts and Retime preserve motion.
 
 ## Retarget assistance and original asset workflow
 
 - What: Complete one image-guided Tripo trial and a reusable global asset skill, then add shared Rust mapping/preflight and cancelable worker transfers with private preview and one undoable Apply.
 - Why: Carry useful naming and review assistance into RustSMF without adding custom rig creation, rig replacement, automatic skinning or a crowded frontend.
 - Where: `source/retarget-core`, Tauri commands, frontend job/snapshot/worker/preview owners, Animate Transfer, public WASM setup, focused tests and `RETARGET_ASSISTANCE.md` / `ASSET_PROVENANCE.md`.
-- When: Completed locally on 2026-10-14 on main, source base `fc48c76`. App version, installer and public release remain unchanged.
+- When: Completed on 2026-10-14 from source base `fc48c76`, then published to main as `ff43a13`. App version, installer and public release remain unchanged.
 - How: Keep explicit maps authoritative, ambiguous/numeric rigs unresolved without review, preserve the full existing TypeScript solver in a worker, capture owned rest inputs and reject stale results. Keep media private and generation bounded to one image/one model at 100 credits.
 - Done when: All four naming families and native/browser-WASM parity pass; advanced worker baking matches the reference; preview/cancel/discard/apply/history/project/export continuity pass through ordinary controls; six-size/DPI/input review and sequential verify, browser, journey, strict visual, runtime-proof and desktop-smoke gates pass on the final candidate; docs/routes and owned cleanup are complete.
 - Verification: Final sequential verify (528 units; 14 Rust checks), browser suite (160), journeys (11), strict visuals (3), native/actual-WASM parity (17 cases) and desktop smoke (release build; 18 IPC checks) passed. Six-size/DPI/input review, skill validation, source identity and owned cleanup are recorded in HISTORY and `output/retarget-assistance-20261014/`. The cat remains a private repair draft; its Blender/rights acceptance belongs to followup 3.
@@ -133,4 +143,4 @@ bounded noncombat fixture.
 - Verification: Sequentially run `verify`, `test:e2e -NoGenEye`, `test:journey`, `test:visual-strict`, `desktop-smoke`, and `package:windows`; then run `verify` and `package:windows` again after the version bump. Actual Windows OS-dialog checks remain separate from native IPC mocks.
 
 ---
-AI-edited: 2026-10-14T21:08:43-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded completed retarget gate and draft limitations
+AI-edited: 2026-10-14T23:02:55-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified cubic authoring completion and next outcome

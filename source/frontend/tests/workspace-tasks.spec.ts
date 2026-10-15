@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { captureReview } from './helpers/review-capture';
 import { selectWorkspace, showModernPanel, workspaceControl } from './helpers/modern-shell';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 import { watchJourneyErrors } from './helpers/product-journey';
@@ -177,7 +178,7 @@ for (const width of [1440, 390]) {
     await expect(page.getByTestId('modern-skin-state')).toBeInViewport();
     await expect(page.getByTestId('modern-skin-radius')).toHaveCount(0);
     await expect(page.getByTestId('modern-skin-strength')).toHaveCount(0);
-    await page.screenshot({ path: testInfo.outputPath(`skin-scene-unsaved-${width}.png`) });
+    await captureReview(page, testInfo, `skin-scene-unsaved-${width}.png`);
     await page.getByTestId('modern-panel-properties').click();
     await expect(page.getByTestId('modern-skin-state')).toHaveCount(0);
     await expect(page.getByTestId('skin-advanced-panel').getByText('Unsaved weights', { exact: true })).toBeVisible();

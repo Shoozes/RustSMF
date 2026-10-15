@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { captureReview } from './helpers/review-capture';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { readFileSync } from 'node:fs';
@@ -46,7 +47,7 @@ for (const [width, height] of sizes) {
       await expect(canvas).toHaveAttribute('data-rig-opacity', '0');
       await expectRenderedScreenshot(canvas);
       await expect(page.getByTestId('modern-support-panel')).toHaveCount(0);
-      await page.screenshot({ path: testInfo.outputPath(`preview-model-${width}x${height}.png`) });
+      await captureReview(page, testInfo, `preview-model-${width}x${height}.png`);
       const more = page.getByTestId('modern-more-menu-button');
       await more.click();
       await page.getByTestId('help-open').click();
@@ -62,7 +63,7 @@ for (const [width, height] of sizes) {
       expect(await help.evaluate(element => element.scrollWidth <= element.clientWidth + 1)).toBe(true);
       await page.keyboard.press('Tab');
       expect(await page.evaluate(() => document.querySelector('[data-testid="help-dialog"]')?.contains(document.activeElement))).toBe(true);
-      await page.screenshot({ path: testInfo.outputPath(`preview-help-${width}x${height}.png`) });
+      await captureReview(page, testInfo, `preview-help-${width}x${height}.png`);
       await page.keyboard.press('Escape');
       await expect(help).toBeHidden();
       await expect(more).toBeFocused();

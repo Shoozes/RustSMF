@@ -9,6 +9,7 @@ import { constrainHeadChain, parseClipJointConstraints, type HeadJointConstraint
 import {auditPoseRanges,parsePoseRangeProfile,poseRangeSummary,type PoseRangeProfile,type PoseRangeReport} from './poseRanges';
 import {retargetSourceFrameTime,validateRetargetVisualTiming,type RetargetVisualTiming} from './retargetTiming';
 import { applyTargetReferenceScales, prepareScaleTransfer, type BoneScaleTransfer } from './retargetScale';
+import { createTrackInterpolant } from './animationTrackInterpolation';
 import {
   alignNaturalAnatomicalFrame,
   calibratedNaturalBend,
@@ -334,11 +335,7 @@ function sampledTracksForClip(
       track,
       bone,
       property,
-      interpolant: track.getInterpolation() === THREE.InterpolateDiscrete
-        ? track.InterpolantFactoryMethodDiscrete()
-        : track.getInterpolation() === THREE.InterpolateSmooth
-          ? track.InterpolantFactoryMethodSmooth()
-          : track.InterpolantFactoryMethodLinear(),
+      interpolant: createTrackInterpolant(track),
     });
   }
   return { sampled, discarded, hierarchyOnly };

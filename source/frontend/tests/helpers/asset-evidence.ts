@@ -121,8 +121,25 @@ export function sampleTrack(track: TrackEvidence, time: number): number[] {
     const mid = Math.floor((i + upper) / 2);
     if (track.times[mid] <= time) i = mid; else upper = mid;
   }
-  const a = track.values.slice(i * size, (i + 1) * size);
+  const cubic = track.interpolation === 'CUBICSPLINE';
+  const stride = cubic ? size * 3 : size;
+  const offset = i * stride + (cubic ? size : 0);
+  const a = track.values.slice(offset, offset + size);
+  if (time <= track.times[0]) return a;
   if (i + 1 === track.times.length || track.interpolation === 'STEP') return a;
+  if (cubic) {
+    const span = track.times[i + 1] - track.times[i];
+    const t = (time - track.times[i]) / span, s = 1 - t;
+    // Independently inspect Hermite data as equivalent cubic Bezier control points.
+    const values = a.map((v, j) => {
+      const end = track.values[offset + stride + j];
+      const control1 = v + track.values[offset + size + j] * span / 3;
+      const control2 = end - track.values[offset + stride - size + j] * span / 3;
+      return s*s*s*v + 3*s*s*t*control1 + 3*s*t*t*control2 + t*t*t*end;
+    });
+    if (size === 4) { const norm = Math.hypot(...values); return values.map(v => v / norm); }
+    return values;
+  }
   if (track.interpolation !== 'LINEAR') throw new Error(`Unsupported evidence interpolation: ${track.interpolation}`);
   const b = track.values.slice((i + 1) * size, (i + 2) * size);
   const alpha = Math.max(0, (time - track.times[i]) / (track.times[i + 1] - track.times[i]));

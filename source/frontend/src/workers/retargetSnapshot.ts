@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import type { SkeletonSnapshotV1, AnalysisClipV1 } from './retargetAnalysisTypes';
 import type { AnimationRetargetOptions } from '../utils/animationRetarget';
+import { trackInterpolation, restoreTrackInterpolation, type TrackInterpolation } from '../utils/animationTrackInterpolation';
 
 export interface ClipSnapshot {
   name: string;
   duration: number;
   blendMode: THREE.AnimationBlendMode;
-  tracks: Array<{ name: string; type: string; interpolation: THREE.InterpolationModes;
+  tracks: Array<{ name: string; type: string; interpolation: TrackInterpolation;
     times: Float32Array; values: Float32Array | string[] | boolean[] }>;
 }
 export type BakeOptions = Omit<AnimationRetargetOptions, 'sourceReferenceClip' | 'targetReferenceClip' | 'endpointTargetClips'> & {
@@ -82,7 +83,7 @@ export function snapshotClip(clip: THREE.AnimationClip): ClipSnapshot {
   return { name: clip.name, duration: clip.duration, blendMode: clip.blendMode, tracks: clip.tracks.map(track => {
     size += track.times.length + track.values.length;
     if (size > 16_000_000) throw new Error('Transfer clip exceeds 16 million values.');
-    return { name: track.name, type: track.ValueTypeName, interpolation: track.getInterpolation() ?? THREE.InterpolateLinear,
+    return { name: track.name, type: track.ValueTypeName, interpolation: trackInterpolation(track),
       times: new Float32Array(track.times), values: Array.isArray(track.values) ? [...track.values] : new Float32Array(track.values) };
   }) };
 }
@@ -93,7 +94,10 @@ export function restoreClip(clip: ClipSnapshot): THREE.AnimationClip {
   };
   return new THREE.AnimationClip(clip.name, clip.duration, clip.tracks.map(track => {
     const Track = constructors[track.type]; if (!Track) throw new Error(`Unsupported transfer track type ${track.type}.`);
-    return new Track(track.name, track.times, track.values, track.interpolation);
+    const restored = new Track(track.name, track.times, track.values,
+      track.interpolation === 'gltf-cubic-spline' ? THREE.InterpolateLinear : track.interpolation);
+    restoreTrackInterpolation(restored, track.interpolation);
+    return restored;
   }), clip.blendMode);
 }
 export function clipMetadata(clip: THREE.AnimationClip): AnalysisClipV1 {

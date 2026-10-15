@@ -4,11 +4,13 @@
 
 `retarget-transfer.spec.ts` exercises actual browser WASM analysis and module-worker baking through ordinary file selection and named controls. It checks canonical project/export preservation during private playback/seek/speed changes, reviewed explicit-map export, mapping correction, discard, apply/history, cancellation during analysis/baking, stale completion, leaving Animate with retained drafts, and actionable WASM failure with continued editing. `native.spec.ts` separately covers mocked preflight/cancel IPC and actual worker baking without a browser WASM request; it is not native Rust execution or OS-dialog evidence.
 
-`src/workers/retargetJobClient.test.ts` owns preparation/analysis/bake cancellation, revision correlation, replacement/disposal, timeouts, invalid responses, startup/post/runtime errors and native cancellation/late-result rejection. `retargetSnapshot.test.ts` guards owned rest/helper transforms, interpolation, copied buffers and private preview resource disposal. Existing animation, endpoint, twist, constraint and scale fixtures run through `retargetParity.ts` as well as the unchanged reference solver, comparing tracks/reports within `1e-6`.
+`src/workers/retargetJobClient.test.ts` owns preparation/analysis/bake cancellation, revision correlation, replacement/disposal, timeouts, invalid responses, startup/post/runtime errors and native cancellation/late-result rejection. `retargetSnapshot.test.ts` guards owned rest/helper transforms, standard interpolation, copied buffers and private preview resource disposal. `retargetCubicSpline.test.ts` decodes a first-party glTF with nonzero Hermite tangents, checks independent known position/rotation/scale values, preserves reference clips and rejects unknown/malformed custom interpolation. The browser cubic-source case verifies those values through actual workers, Apply/history and project reopen. Existing animation, endpoint, twist, constraint and scale fixtures run through `retargetParity.ts` as well as the reference solver, comparing tracks/reports within `1e-6`.
 
 `run.ps1 -Task retarget:runtime-proof` rebuilds the shared core and compares native Rust with actual Chromium WASM across 17 first-party cases for all naming families, fingers, ambiguity, helpers, overrides, opaque rigs, proportions, reference frames and unmapped channels. Mappings/diagnostic structures are exact; numeric fields use `1e-6` relative/absolute tolerance. The retarget continuity journey previews/discards without changing saved work, then applies once and independently inspects sampled exported motion through undo/redo, project reopen and GLB re-import. Final candidate results belong in HISTORY.
 
 ## Modern task navigation
+
+Raw cubic authoring is guarded by `src/utils/animationEdits.test.ts` and `animationAuthoringController.test.ts`: independently derived position/scale curves, tangent time units, normalized rotations, decimal key bounds, held endpoints, sub-frame timing, locks, unchanged buffers/channels and atomic refusals. Two `animation.spec.ts` flows use ordinary file chooser, pointer and Enter actions to verify Trim/Retime, a refused rotation cut with dirty work, single-step history, project reopen, continued editing and GLB export/re-import. `helpers/asset-evidence.ts` independently reads accessors and evaluates cubic data as Bezier control points; fixture polynomials provide a separate numerical oracle.
 
 `helpers/modern-shell.ts` follows authoring controls through their visible task tab and native disclosure before acting. It uses pointer/keyboard controls, never editor-state setters or CSS visibility overrides. Existing semantic assertions remain in their feature/journey owners. Model, Rig, Skin and Animate keep inactive task content mounted so drafts survive tab changes. The six-size authoring lane owns selected controls, invalid profiles, Live Skin warnings, overflow and drawer focus return.
 
@@ -31,6 +33,12 @@ Skin paint and cancellation use shared viewport probes in `helpers/viewport-inte
 Run `verify` and browser/preview gates sequentially in one checkout. Both build
 the same production output; a concurrent rebuild can replace assets while the
 browser requests them, causing startup 404s before any app assertions run.
+
+## Routine report retention
+
+Browser-only runs, journeys and strict checks default to the list reporter plus one bounded `summary.json` in the configured test output directory. The compact reporter preserves native status, outcome/final-result counts, retries, skipped/unrun tests, global errors and up to eight bounded failure details with artifact paths; omitted counts stay explicit. It emits at most 64 KiB. `src/test/playwrightReporter.test.ts` exercises actual passing/flaky/expected-failure/skipped runs, failures and discovery errors, plus byte bounds and default configuration.
+
+HTML is an explicit diagnostic option: `npm run test:e2e -- --reporter=html,list`. Set `RUSTSMF_CAPTURE_UI_REVIEW=1` for successful layout/Help/profile captures; they use the current test's output directory instead of overwriting a previous evidence batch. The capture helper's unit checks cover default suppression and explicit owner/framing. Failure screenshots/video/traces, decoded-pixel checks, required strict references and hand-wave evidence retain their owning contracts. GenEye's `--reporter=json` manifests retain their existing native JSON transport contract. No existing referenced evidence is retired by changing these defaults.
 
 ## Verification Gates
 
@@ -201,4 +209,4 @@ When adding or moving a test:
 4. Update `docs/dev/PITFALL_LEDGER.md` only for a durable recurring failure mode.
 
 ---
-AI-edited: 2026-10-14T20:59:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded final mapping and lifecycle proof contracts
+AI-edited: 2026-10-14T22:50:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=documented cubic authoring fidelity and safe refusal

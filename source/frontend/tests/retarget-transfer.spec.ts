@@ -1,8 +1,11 @@
 import {test,expect,type Page} from '@playwright/test';
 import {createSkinnedGlbFixtureInput,createSkinnedGltfFixtureInputWithOptions} from './helpers/skinned-glb-fixture';
 import {selectWorkspace,workspaceControl,applyTransferPreview,clickEditorHistory,showModernPanel} from './helpers/modern-shell';
-import {exportEvidence,pauseJourney,downloadBytes,watchJourneyErrors} from './helpers/product-journey';
-import {expectAssetContinuity,expectMotion} from './helpers/asset-evidence';
+import {exportEvidence,pauseJourney,downloadBytes,reopenProject,watchJourneyErrors} from './helpers/product-journey';
+import {expectAssetContinuity,expectMotion,expectNumbersClose,sampleTrack} from './helpers/asset-evidence';
+import {createCubicRetargetFixtureInput} from './helpers/cubic-retarget-fixture';
+import {Quaternion} from 'three';
+import {captureReview} from './helpers/review-capture';
 
 async function openTarget(page:Page){
   await page.goto('/');await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
@@ -47,6 +50,35 @@ test('real WASM/worker preview preserves canonical project/export, supports corr
   const applied=await exportEvidence(page);expect(applied.clips.map(clip=>clip.name)).toEqual(['FixtureBend','Source Motion']);expectMotion(applied.clips[1]);
   await clickEditorHistory(page,'undo');expectAssetContinuity(await exportEvidence(page),before);
   await clickEditorHistory(page,'redo');expectAssetContinuity(await exportEvidence(page),applied);assertErrors();
+});
+
+test('cubic glTF source retains known translation, rotation and scale through preview, Apply and project reopen',async({page})=>{
+  const assertErrors=watchJourneyErrors(page);await openTarget(page);
+  const before=await exportEvidence(page);
+  const profile={$schema:'rustsmf.retarget-profile.v1',retarget:{
+    manualMap:{FixtureRoot:'FixtureRoot',FixtureTip:'FixtureTip'},sampleRateHz:4,
+    applyUpCorrection:false,alignMappedBoneDirections:false,scaleRootMotion:false,
+    sourceReferencePose:'clip',sourceReferenceClip:'Cubic Motion',targetReferenceClip:'FixtureBend',
+    clipScaleTransfer:{'Cubic Motion':[{sourceBone:'FixtureTip',targetBone:'FixtureTip',axes:['x','y','z'],strength:[1,1,1]}]},
+  }};
+  await (await workspaceControl(page,'retarget-profile-json')).fill(JSON.stringify(profile));
+  const chooser=page.waitForEvent('filechooser');
+  await page.getByRole('button',{name:'Retarget with profile',exact:true}).click();
+  await (await chooser).setFiles(await createCubicRetargetFixtureInput());
+  await expect(page.getByTestId('retarget-apply')).toBeVisible({timeout:15000});
+  expectAssetContinuity(await exportEvidence(page),before);
+  await applyTransferPreview(page);
+  const applied=await exportEvidence(page),clip=applied.clips.find(item=>item.name==='Cubic Motion')!;
+  expect(clip.duration).toBe(2);expectMotion(clip);
+  const at=(bone:string,path:string)=>sampleTrack(clip.tracks.find(track=>track.bone===bone && track.path===path)!,1);
+  expectNumbersClose(at('FixtureRoot','translation'),[1.25,0,0]);
+  expectNumbersClose(at('FixtureTip','scale'),[1.3125,1,1]);
+  const rotation=new Quaternion(0,0,Math.SQRT1_2/2+.15,(1+Math.SQRT1_2)/2).normalize().toArray();
+  expectNumbersClose(at('FixtureTip','rotation'),rotation);
+  await clickEditorHistory(page,'undo');expectAssetContinuity(await exportEvidence(page),before);
+  await clickEditorHistory(page,'redo');expectAssetContinuity(await exportEvidence(page),applied);
+  await reopenProject(page,await downloadBytes(page,'save-project-btn'));await pauseJourney(page);
+  expectAssetContinuity(await exportEvidence(page),applied);assertErrors();
 });
 
 for(const phase of ['analysis','bake'] as const)test(`cancel during ${phase} terminates the worker and rejects stale completion`,async({page})=>{
@@ -127,7 +159,7 @@ test('opaque numeric rigs require review and explicit mappings before preview an
 for(const [width,height,dpr] of [[1920,1080,1],[1440,900,1.25],[1280,800,1],[1024,768,1],[800,900,1],[390,844,2]]){
   test.describe(`Transfer review ${width}x${height} DPR${dpr}`,()=>{
     test.use({viewport:{width,height},deviceScaleFactor:dpr,hasTouch:width===390});
-    test('compact review, mapping, Escape and backing size remain reachable',async({page})=>{
+    test('compact review, mapping, Escape and backing size remain reachable',async({page},testInfo)=>{
       const assertErrors=watchJourneyErrors(page);await openTarget(page);await chooseSource(page);
       await expect(page.getByTestId('retarget-apply')).toBeVisible({timeout:15000});
       const canvas=page.getByTestId('three-canvas');
@@ -144,7 +176,7 @@ for(const [width,height,dpr] of [[1920,1080,1],[1440,900,1.25],[1280,800,1],[102
       const primary=page.getByTestId('retarget-apply');await primary.focus();await expect(primary).toBeFocused();await page.keyboard.press('Tab');
       await expect(page.getByTestId('retarget-discard')).toBeFocused();
       if(width===390)expect((await primary.boundingBox())!.height).toBeGreaterThanOrEqual(44);
-      await page.screenshot({path:`../../output/retarget-assistance-20261014/captures/transfer-${width}x${height}-dpr${dpr}.png`});
+      await captureReview(page,testInfo,`transfer-${width}x${height}-dpr${dpr}.png`);
       const details=page.getByTestId('retarget-mapping-details');await details.locator(':scope > summary').click();
       await page.getByRole('combobox',{name:'Source naming convention',exact:true}).selectOption('mixamo');
       await expect(page.getByTestId('retarget-apply')).toHaveCount(0);

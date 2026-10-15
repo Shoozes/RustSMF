@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createTrackInterpolant, trackSampleSize } from './animationTrackInterpolation';
 
 export type ScaleAxis = 'x' | 'y' | 'z';
 
@@ -57,14 +58,6 @@ function scaleTrack(clip: THREE.AnimationClip, bone: string): THREE.KeyframeTrac
   return matches[0];
 }
 
-function interpolant(track: THREE.KeyframeTrack): THREE.Interpolant {
-  return track.getInterpolation() === THREE.InterpolateDiscrete
-    ? track.InterpolantFactoryMethodDiscrete()
-    : track.getInterpolation() === THREE.InterpolateSmooth
-      ? track.InterpolantFactoryMethodSmooth()
-      : track.InterpolantFactoryMethodLinear();
-}
-
 export function applyTargetReferenceScales(
   clip: THREE.AnimationClip,
   target: THREE.Skeleton,
@@ -74,10 +67,10 @@ export function applyTargetReferenceScales(
   for (const name of targetBoneNames) {
     const track = scaleTrack(clip, name);
     if (!track) continue;
-    if (track.getValueSize() !== 3) throw new Error(`Target reference clip has an invalid scale track for ${name}.`);
+    if (trackSampleSize(track) !== 3) throw new Error(`Target reference clip has an invalid scale track for ${name}.`);
     const bone = bones.get(name);
     if (!bone) throw new Error(`Target reference scale bone ${name} is missing.`);
-    bone.scale.fromArray(interpolant(track).evaluate(0));
+    bone.scale.fromArray(createTrackInterpolant(track).evaluate(0));
   }
 }
 
@@ -99,15 +92,15 @@ export function prepareScaleTransfer(
       throw new Error(`Scale transfer requires mapped source ${spec.sourceBone} and target bone ${spec.targetBone}.`);
     }
     const track = scaleTrack(clip, spec.sourceBone);
-    if (!track || track.getValueSize() !== 3) throw new Error(`Scale transfer source ${spec.sourceBone} has no vector scale track in ${clip.name}.`);
+    if (!track || trackSampleSize(track) !== 3) throw new Error(`Scale transfer source ${spec.sourceBone} has no vector scale track in ${clip.name}.`);
     const referenceTrack = sourceReferenceClip && scaleTrack(sourceReferenceClip, spec.sourceBone);
     const neutral = referenceTrack
-      ? Array.from(interpolant(referenceTrack).evaluate(0) as ArrayLike<number>)
+      ? Array.from(createTrackInterpolant(referenceTrack).evaluate(0) as ArrayLike<number>)
       : sourceBone.scale.toArray();
     if ([...neutral, ...targetScale.toArray()].some(value => !Number.isFinite(value) || value <= 0)) {
       throw new Error(`Scale transfer ${spec.sourceBone} has a non-positive reference scale.`);
     }
-    return { spec, track, interpolant: interpolant(track), neutral, targetScale: targetScale.toArray() };
+    return { spec, track, interpolant: createTrackInterpolant(track), neutral, targetScale: targetScale.toArray() };
   });
   return {
     tracks: prepared.map(item => item.track),

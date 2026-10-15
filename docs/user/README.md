@@ -26,7 +26,7 @@ Skin's unsaved-weight and export-block notices also stay visible when Tools swit
 
 Space activates a focused button; playback Space and viewport R/S/T shortcuts work outside text fields and controls that handle those keys.
 
-The published 0.2.1 installer retains the earlier drawer layout; these menu changes are currently local source work.
+The published 0.2.1 installer retains the earlier drawer layout; the task menus are available in source builds from main.
 
 ### Authoring and formats
 
@@ -108,6 +108,8 @@ For GLB movesets with authored bone growth, `rig.retarget.clipScaleTransfer` is 
 
 ## Format Limits
 
+- Current source preserves glTF cubic motion through Retime and vector/scale Trim. For cubic rotations, choose Trim bounds at existing rotation keys or in held endpoint regions; cuts between rotation keys are refused with guidance to use Retime. Custom/smooth interpolation cannot be trimmed faithfully. These source changes do not replace the published installer.
+
 - GLB/GLTF is the preferred modern format for materials, textures, static meshes, morphs, object tracks, and scale animation. Binary `.glb` and self-contained `.gltf` are supported; selected relative `.bin` and image sidecars are also resolved through the bounded multi-file picker/drop contract, while remote, traversal, missing, ambiguous, or over-budget resources fail closed.
 - SMF is preserved for compatibility. The current SMF export path does not encode scale edits, materials, morphs, or multiple skeletons.
 - Imported SMF submodel names and hierarchy order remain source-owned; the current high-fidelity SMF exporter does not rewrite them from scene-object authoring state.
@@ -120,3 +122,6 @@ For developer state, backlog, and verification results, see `docs/dev/APP_STATE.
 ## Preview an animation transfer
 
 On current source builds, open a skinned target and choose Animate > Tools > Transfer. Choose source animation files (with any required sidecars), review the private preview, then Apply to keep it. Discard leaves saved clips unchanged; Apply is one Undo step. Mapping details holds naming presets, explicit corrections, diagnostics and portable profile import/export. Numeric rigs need reviewed explicit maps. Close Tools to see more of the preview; leaving Animate discards pending transfer work. The published 0.2.1 installer keeps its separately recorded feature set.
+
+---
+AI-edited: 2026-10-14T22:50:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=documented cubic authoring fidelity and safe refusal

@@ -12,6 +12,7 @@ import { cloneImportedSmf } from '../loaders/smfData';
 import { findEffectiveBoneParentIndex } from '../loaders/smfRig';
 import { MIN_ANIMATION_DURATION, normalizeAnimationDuration } from './animationCreation';
 import type { AnimationEditScope } from './animationScope';
+import { createTrackInterpolant, trackInterpolation, trackSampleSize } from './animationTrackInterpolation';
 
 export type AnimationInterpolation = 'linear' | 'step' | 'quadratic';
 export type AnimationSnapStep = 0 | 0.01 | 0.05 | 0.1 | 0.25 | 0.5;
@@ -51,7 +52,7 @@ export type AnimationTrimKeyPolicy = 'retain-keys-and-sampled-boundaries';
 
 export const ANIMATION_TRIM_KEY_POLICY: AnimationTrimKeyPolicy = 'retain-keys-and-sampled-boundaries';
 
-export type AnimationTrimFailureReason = 'invalid-range' | 'locked-bone-range';
+export type AnimationTrimFailureReason = 'invalid-range' | 'locked-bone-range' | 'cubic-rotation-boundary' | 'unsupported-interpolation';
 
 export type AnimationTrimResult =
   | {
@@ -64,6 +65,7 @@ export type AnimationTrimResult =
       ok: false;
       reason: AnimationTrimFailureReason;
       boneName?: string;
+      trackName?: string;
     };
 
 export interface AnimationEditState {
@@ -466,7 +468,7 @@ const hasTrackKeyOutsideRange = (
   startTime: number,
   endTime: number,
 ): boolean => Array.from(track.times).some((time) => (
-  !Number.isFinite(time) || time < startTime - TIME_EPSILON || time > endTime + TIME_EPSILON
+  !Number.isFinite(time) || time < startTime || time > endTime
 ));
 
 const normalizeTrimBounds = (
@@ -476,21 +478,35 @@ const normalizeTrimBounds = (
 ): { startTime: number; endTime: number } | null => {
   const duration = getAnimationClipTimelineDuration(clip);
   if (!Number.isFinite(startTime) || !Number.isFinite(endTime) || duration < TIME_EPSILON) return null;
-  const start = normalizeTime(Math.min(duration, Math.max(0, startTime)));
-  const end = normalizeTime(Math.min(duration, Math.max(0, endTime)));
+  const start = Math.fround(Math.min(duration, Math.max(0, startTime)));
+  const end = Math.fround(Math.min(duration, Math.max(0, endTime)));
   if (end <= start || end - start < MIN_ANIMATION_DURATION - TIME_EPSILON) return null;
   return { startTime: start, endTime: end };
 };
 
 const sampleTrackAt = (track: THREE.KeyframeTrack, time: number): number[] => {
-  const valueSize = track.getValueSize();
-  const result = new Float32Array(valueSize);
-  const interpolant = track.getInterpolation() === THREE.InterpolateDiscrete
-    ? track.InterpolantFactoryMethodDiscrete(result)
-    : track.getInterpolation() === THREE.InterpolateSmooth
-      ? track.InterpolantFactoryMethodSmooth(result)
-      : track.InterpolantFactoryMethodLinear(result);
-  return Array.from(interpolant.evaluate(time) as ArrayLike<number>);
+  return Array.from(createTrackInterpolant(track).evaluate(time) as ArrayLike<number>).slice(0, trackSampleSize(track));
+};
+
+const cubicBoundaryValues = (track: THREE.KeyframeTrack, time: number): number[] => {
+  const size = trackSampleSize(track);
+  const values = sampleTrackAt(track, time);
+  const tangent = Array<number>(size).fill(0);
+  let upper = 0;
+  while (upper < track.times.length && track.times[upper] <= time) upper += 1;
+  if (upper > 0 && upper < track.times.length) {
+    const span = track.times[upper] - track.times[upper - 1];
+    const t = (time - track.times[upper - 1]) / span, t2 = t * t;
+    const left = (upper - 1) * size * 3, right = upper * size * 3;
+    for (let i = 0; i < size; i++) {
+      // The derivative remains in units per second after subdividing a Hermite segment.
+      tangent[i] = (6*t2 - 6*t) / span * track.values[left + size + i]
+        + (3*t2 - 4*t + 1) * track.values[left + 2*size + i]
+        + (-6*t2 + 6*t) / span * track.values[right + size + i]
+        + (3*t2 - 2*t) * track.values[right + i];
+    }
+  }
+  return [...tangent, ...values, ...tangent];
 };
 
 const trimTrackToRange = (
@@ -499,18 +515,22 @@ const trimTrackToRange = (
   endTime: number,
 ): THREE.KeyframeTrack => {
   const valueSize = track.getValueSize();
+  const cubic = trackInterpolation(track) === 'gltf-cubic-spline';
   const entries = Array.from(track.times)
     .map((time, index) => ({ time, values: Array.from(track.values.slice(index * valueSize, (index + 1) * valueSize)) }))
-    .filter((entry) => Number.isFinite(entry.time) && entry.time >= startTime - TIME_EPSILON && entry.time <= endTime + TIME_EPSILON)
-    .map((entry) => ({
-      time: normalizeTime(Math.max(0, entry.time - startTime)),
-      values: entry.values,
-    }));
+    .filter((entry) => Number.isFinite(entry.time) && entry.time >= startTime && entry.time <= endTime);
+
+  if (cubic) {
+    const size = trackSampleSize(track);
+    for (const entry of entries) {
+      if (entry.time === track.times[0]) entry.values.fill(0, 0, size);
+      if (entry.time === track.times[track.times.length - 1]) entry.values.fill(0, 2*size, 3*size);
+    }
+  }
 
   const addBoundary = (sourceTime: number): void => {
-    const targetTime = normalizeTime(sourceTime - startTime);
-    if (entries.some((entry) => sameNumber(entry.time, targetTime))) return;
-    entries.push({ time: targetTime, values: sampleTrackAt(track, sourceTime) });
+    if (entries.some((entry) => entry.time === sourceTime)) return;
+    entries.push({ time: sourceTime, values: cubic ? cubicBoundaryValues(track, sourceTime) : sampleTrackAt(track, sourceTime) });
   };
 
   addBoundary(startTime);
@@ -518,7 +538,7 @@ const trimTrackToRange = (
   entries.sort((left, right) => left.time - right.time);
 
   const trimmed = track.clone();
-  trimmed.times = Float32Array.from(entries.map((entry) => entry.time));
+  trimmed.times = Float32Array.from(entries.map((entry) => entry.time - startTime));
   trimmed.values = Float32Array.from(entries.flatMap((entry) => entry.values));
   return trimmed;
 };
@@ -545,12 +565,28 @@ export const trimAnimationClip = (
     };
   }
 
+  for (const track of clip.tracks) {
+    let interpolation;
+    try { interpolation = trackInterpolation(track); }
+    catch { return { ok: false, reason: 'unsupported-interpolation', trackName: track.name }; }
+    if (interpolation === THREE.InterpolateSmooth) {
+      return { ok: false, reason: 'unsupported-interpolation', trackName: track.name };
+    }
+    if (interpolation === 'gltf-cubic-spline' && track.ValueTypeName === 'quaternion'
+      && [bounds.startTime, bounds.endTime].some(time => time > track.times[0]
+        && time < track.times[track.times.length - 1] && !track.times.includes(time))) {
+      // Normalizing an inserted quaternion vertex changes the underlying cubic polynomial.
+      return { ok: false, reason: 'cubic-rotation-boundary', trackName: track.name };
+    }
+  }
+
   return {
     ok: true,
     clip: new THREE.AnimationClip(
       clip.name,
       bounds.endTime - bounds.startTime,
       clip.tracks.map((track) => trimTrackToRange(track, bounds.startTime, bounds.endTime)),
+      clip.blendMode,
     ),
     ...bounds,
   };
@@ -599,11 +635,21 @@ export const retimeAnimationClip = (
     : getAnimationClipTimelineDuration(clip);
   const scale = sourceDuration > TIME_EPSILON ? normalizedTarget / sourceDuration : 1;
   const tracks = clip.tracks.map((track) => {
+    const interpolation = trackInterpolation(track);
     const retimed = track.clone();
-    retimed.times = Float32Array.from(track.times, (time) => scaleAnimationTime(time, scale, normalizedTarget));
+    retimed.times = Float32Array.from(track.times, (time) => time * scale);
+    if (interpolation === 'gltf-cubic-spline') {
+      const size = trackSampleSize(track);
+      for (let offset = 0; offset < retimed.values.length; offset += size * 3) {
+        for (let i = 0; i < size; i++) {
+          retimed.values[offset + i] /= scale;
+          retimed.values[offset + 2*size + i] /= scale;
+        }
+      }
+    }
     return retimed;
   });
-  return new THREE.AnimationClip(clip.name, normalizedTarget, tracks);
+  return new THREE.AnimationClip(clip.name, normalizedTarget, tracks, clip.blendMode);
 };
 
 export const retimeAnimationEditState = (
@@ -1056,58 +1102,6 @@ export const moveAnimationKeyframes = (
   return next;
 };
 
-const sampleTrackComponent = (
-  values: ArrayLike<number>,
-  times: ArrayLike<number>,
-  t: number,
-  stride: number,
-  component: number,
-): number => {
-  const n = times.length;
-  if (n === 0) return 0;
-  if (t <= times[0]) return values[component];
-  if (t >= times[n - 1]) return values[(n - 1) * stride + component];
-
-  let i = 0;
-  while (i < n - 1 && times[i + 1] < t) i += 1;
-  const span = times[i + 1] - times[i];
-  const alpha = span > 0 ? (t - times[i]) / span : 0;
-  return values[i * stride + component] * (1 - alpha) + values[(i + 1) * stride + component] * alpha;
-};
-
-const sampleQuaternionTrack = (
-  track: THREE.KeyframeTrack,
-  time: number,
-): [number, number, number, number] => {
-  const times = track.times;
-  const values = track.values;
-  if (times.length === 0) return [0, 0, 0, 1];
-  if (time <= times[0]) return [values[0], values[1], values[2], values[3]];
-  if (time >= times[times.length - 1]) {
-    const offset = (times.length - 1) * 4;
-    return [values[offset], values[offset + 1], values[offset + 2], values[offset + 3]];
-  }
-
-  let i = 0;
-  while (i < times.length - 1 && times[i + 1] < time) i += 1;
-  const span = times[i + 1] - times[i];
-  const alpha = span > 0 ? (time - times[i]) / span : 0;
-  const qa = new THREE.Quaternion(
-    values[i * 4],
-    values[i * 4 + 1],
-    values[i * 4 + 2],
-    values[i * 4 + 3],
-  );
-  const qb = new THREE.Quaternion(
-    values[(i + 1) * 4],
-    values[(i + 1) * 4 + 1],
-    values[(i + 1) * 4 + 2],
-    values[(i + 1) * 4 + 3],
-  );
-  qa.slerp(qb, alpha).normalize();
-  return [qa.x, qa.y, qa.z, qa.w];
-};
-
 const findBoneTrack = (
   clip: THREE.AnimationClip,
   boneName: string,
@@ -1126,15 +1120,11 @@ export const sampleClipBoneKeyframe = (
   const quatTrack = findBoneTrack(clip, boneName, 'quaternion');
   if (!posTrack && !quatTrack && !fallback) return null;
 
-  const position: [number, number, number] = posTrack
-    ? [
-      sampleTrackComponent(posTrack.values, posTrack.times, time, 3, 0),
-      sampleTrackComponent(posTrack.values, posTrack.times, time, 3, 1),
-      sampleTrackComponent(posTrack.values, posTrack.times, time, 3, 2),
-    ]
+  const position = posTrack
+    ? sampleTrackAt(posTrack, time) as [number, number, number]
     : fallback?.position ?? [0, 0, 0];
   const quaternion = quatTrack
-    ? sampleQuaternionTrack(quatTrack, time)
+    ? sampleTrackAt(quatTrack, time) as [number, number, number, number]
     : fallback?.quaternion ?? [0, 0, 0, 1];
 
   return {
@@ -1244,7 +1234,7 @@ export const applyAnimationEditsToClips = (
       tracks.push(...makeTracksForBone(boneName, merged));
     }
 
-    return new THREE.AnimationClip(clip.name, duration, tracks);
+    return new THREE.AnimationClip(clip.name, duration, tracks, clip.blendMode);
   });
 };
 

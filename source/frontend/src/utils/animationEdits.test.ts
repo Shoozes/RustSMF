@@ -30,6 +30,7 @@ import {
   renameAnimationEditClip,
   retimeAnimationClip,
   retimeAnimationEditState,
+  sampleClipBoneKeyframe,
   sameAnimationEditState,
   setAnimationClipLockedBones,
   setAnimationClipLoop,
@@ -44,6 +45,129 @@ import {
   upsertAnimationKeyframes,
 } from './animationEdits';
 import type { ImportedSmf } from '../loaders/smf';
+import { loadGLB } from '../loaders/glb';
+import { disposeThreeObject } from './threeDisposal';
+import { createTrackInterpolant, restoreTrackInterpolation, trackInterpolation } from './animationTrackInterpolation';
+import { createCubicRetargetFixtureInput } from '../../tests/helpers/cubic-retarget-fixture';
+
+const closeSamples = (actual: ArrayLike<number>, expected: number[]): void => {
+  assert.equal(actual.length, expected.length);
+  expected.forEach((value, i) => assert.ok(Math.abs(actual[i] - value) < 2e-6, `${actual[i]} != ${value}`));
+};
+
+const positionX = (time: number): number => time + .5*time*time - .25*time*time*time;
+const scaleX = (time: number): number => 1 + time/4 + time*time/8 - time*time*time/16;
+
+test('raw cubic vector and scale trimming subdivides curves without altering source buffers', async () => {
+  const fixture = await createCubicRetargetFixtureInput({ linearRotation: true });
+  const model = await loadGLB(fixture.buffer.buffer.slice(fixture.buffer.byteOffset, fixture.buffer.byteOffset + fixture.buffer.byteLength) as ArrayBuffer);
+  try {
+    const clip = model.clips[0], original = clip.tracks.map(track => Array.from(track.values));
+    clip.blendMode = THREE.AdditiveAnimationBlendMode;
+    const result = trimAnimationClip(clip, .5, 1.5);
+    assert.ok(result.ok);
+    assert.equal(result.clip.blendMode, THREE.AdditiveAnimationBlendMode);
+    for (const time of [0, .125, .25, .5, .75, 1]) {
+      closeSamples(createTrackInterpolant(result.clip.tracks.find(t => t.name.endsWith('.position'))!).evaluate(time), [positionX(time + .5), 0, 0]);
+      closeSamples(createTrackInterpolant(result.clip.tracks.find(t => t.name.endsWith('.scale'))!).evaluate(time), [scaleX(time + .5), 1, 1]);
+    }
+    const track = result.clip.tracks.find(t => t.name.endsWith('.position'))!;
+    assert.equal(trackInterpolation(track), 'gltf-cubic-spline');
+    assert.deepEqual(Array.from(track.times), [0, 1]);
+    closeSamples(track.values, [1.3125,0,0, .59375,0,0, 1.3125,0,0, .8125,0,0, 1.78125,0,0, .8125,0,0]);
+    assert.deepEqual(clip.tracks.map(t => Array.from(t.values)), original);
+    assert.deepEqual(trimAnimationClip(clip, .5, 1.5, ['FixtureRoot']), { ok: false, reason: 'locked-bone-range', boneName: 'FixtureRoot' });
+  } finally { disposeThreeObject(model.root); }
+});
+
+test('raw cubic retiming rescales derivatives for vectors, rotations and scale in both directions', async () => {
+  const fixture = await createCubicRetargetFixtureInput();
+  const model = await loadGLB(fixture.buffer.buffer.slice(fixture.buffer.byteOffset, fixture.buffer.byteOffset + fixture.buffer.byteLength) as ArrayBuffer);
+  try {
+    const source = model.clips[0], original = source.tracks.map(track => Array.from(track.values));
+    for (const duration of [4, .5]) {
+      const retimed = retimeAnimationClip(source, 2, duration), factor = duration / 2;
+      for (const time of [0, .5, 1, 1.5, 2]) {
+        closeSamples(createTrackInterpolant(retimed.tracks.find(t => t.name.endsWith('.position'))!).evaluate(time * factor), [positionX(time),0,0]);
+        closeSamples(createTrackInterpolant(retimed.tracks.find(t => t.name.endsWith('.scale'))!).evaluate(time * factor), [scaleX(time),1,1]);
+      }
+      const rotation = new THREE.Quaternion(0,0,Math.SQRT1_2/2 + .15,(1 + Math.SQRT1_2)/2).normalize().toArray();
+      closeSamples(createTrackInterpolant(retimed.tracks.find(t => t.name.endsWith('.quaternion'))!).evaluate(duration/2), rotation);
+      assert.equal(retimed.tracks[0].values[6], source.tracks[0].values[6] / factor);
+    }
+    assert.deepEqual(source.tracks.map(t => Array.from(t.values)), original);
+  } finally { disposeThreeObject(model.root); }
+});
+
+test('cubic rotations reject inserted trim boundaries but preserve cuts at existing keys', () => {
+  const track = new THREE.QuaternionKeyframeTrack('Root.quaternion', [0,1,2], [
+    0,0,0,0, 0,0,0,1, 0,0,.3,0,
+    0,0,.2,0, 0,0,Math.SQRT1_2,Math.SQRT1_2, 0,0,.1,0,
+    0,0,0,0, 0,0,1,0, 0,0,0,0,
+  ]);
+  restoreTrackInterpolation(track, 'gltf-cubic-spline');
+  const clip = new THREE.AnimationClip('Turn', 2, [track]), values = Array.from(track.values);
+  assert.deepEqual(trimAnimationClip(clip,.5,1.5), {ok:false,reason:'cubic-rotation-boundary',trackName:track.name});
+  const result = trimAnimationClip(clip,1,2);
+  assert.ok(result.ok);
+  closeSamples(createTrackInterpolant(result.clip.tracks[0]).evaluate(.5), new THREE.Quaternion(0,0,(Math.SQRT1_2 + 1)/2 + .0125,Math.SQRT1_2/2).normalize().toArray());
+  assert.deepEqual(Array.from(track.values), values);
+});
+
+test('cubic trimming preserves held endpoints and distinct tangents across retained keys', () => {
+  const track = new THREE.NumberKeyframeTrack('Mesh.morphTargetInfluences[0]', [.5,1,1.5], [9,1,1, 2,2,3, 0,3,9]);
+  restoreTrackInterpolation(track, 'gltf-cubic-spline');
+  const clip = new THREE.AnimationClip('Weight', 2, [track]);
+  const result = trimAnimationClip(clip,0,2);
+  assert.ok(result.ok);
+  const trimmed = result.clip.tracks[0];
+  for (const [time, value] of [[0,1],[.25,1],[.5,1],[.75,1.4375],[1,2],[1.25,2.6875],[1.5,3],[1.75,3],[2,3]]) {
+    closeSamples(createTrackInterpolant(trimmed).evaluate(time), [value]);
+  }
+  const cut = trimAnimationClip(clip,.75,1.25);
+  assert.ok(cut.ok);
+  for (const time of [0,.1,.25,.4,.5]) closeSamples(createTrackInterpolant(cut.clip.tracks[0]).evaluate(time), Array.from(createTrackInterpolant(track).evaluate(time + .75) as ArrayLike<number>));
+});
+
+test('raw retime retains imported sub-frame timing precision', () => {
+  const track = new THREE.VectorKeyframeTrack('Root.position', [0,.123456,2], [0,0,0,1,0,0,2,0,0]);
+  const retimed = retimeAnimationClip(new THREE.AnimationClip('Fine',2,[track]),2,4);
+  assert.equal(retimed.tracks[0].times[1], Math.fround(track.times[1]*2));
+});
+
+test('cubic trim recognizes decimal rotation-key bounds at stored Float32 precision', () => {
+  const values = [0,0,0,0, 0,0,0,1, 0,0,.1,0];
+  const track = new THREE.QuaternionKeyframeTrack('Root.quaternion',[.1,.2,.3],[...values,...values,...values]);
+  restoreTrackInterpolation(track,'gltf-cubic-spline');
+  const result = trimAnimationClip(new THREE.AnimationClip('Decimal',.3,[track]),.1,.2);
+  assert.ok(result.ok);
+  assert.equal(result.clip.tracks[0].times[0],0);
+  closeSamples(createTrackInterpolant(result.clip.tracks[0]).evaluate(0),[0,0,0,1]);
+});
+
+test('shared key sampling respects cubic triplets, discrete rotations and unedited channels', async () => {
+  const fixture = await createCubicRetargetFixtureInput();
+  const model = await loadGLB(fixture.buffer.buffer.slice(fixture.buffer.byteOffset, fixture.buffer.byteOffset + fixture.buffer.byteLength) as ArrayBuffer);
+  try {
+    const clip = model.clips[0], key = sampleClipBoneKeyframe(clip,'FixtureRoot',.5)!;
+    closeSamples(key.position, [.59375,0,0]);
+    const tip = sampleClipBoneKeyframe(clip,'FixtureTip',1)!;
+    closeSamples(tip.quaternion, new THREE.Quaternion(0,0,Math.SQRT1_2/2+.15,(1+Math.SQRT1_2)/2).normalize().toArray());
+    const state = upsertAnimationKeyframe(makeAnimationEditState(),clip.name,'FixtureTip',tip);
+    const edited = applyAnimationEditsToClips([clip],state)[0];
+    for (const name of ['FixtureRoot.position','FixtureTip.scale']) {
+      const before = clip.tracks.find(t => t.name === name)!, after = edited.tracks.find(t => t.name === name)!;
+      assert.equal(trackInterpolation(after),'gltf-cubic-spline');
+      assert.deepEqual(Array.from(after.values), Array.from(before.values));
+    }
+    const discrete = new THREE.AnimationClip('Step',1,[
+      new THREE.VectorKeyframeTrack('Root.position',[0,1],[0,0,0,2,0,0],THREE.InterpolateDiscrete),
+      new THREE.QuaternionKeyframeTrack('Root.quaternion',[0,1],[0,0,0,1,0,0,1,0],THREE.InterpolateDiscrete),
+    ]);
+    closeSamples(sampleClipBoneKeyframe(discrete,'Root',.5)!.position,[0,0,0]);
+    closeSamples(sampleClipBoneKeyframe(discrete,'Root',.5)!.quaternion,[0,0,0,1]);
+  } finally { disposeThreeObject(model.root); }
+});
 
 test('animation interpolation guard rejects untrusted values', () => {
   assert.equal(isAnimationInterpolation('linear'), true);

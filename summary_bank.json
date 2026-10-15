@@ -24,7 +24,7 @@
   "groups": {
     "docs__orientation": {
       "description": "Lean current-state orientation. Use a focused feature or subsystem group before reading broader source.",
-      "max_kb": 80,
+      "max_kb": 84,
       "paths": [
         "docs/dev/APP_STATE.md",
         "docs/dev/TODO.md"
@@ -33,7 +33,7 @@
         "TODO owns executable work and completion conditions.",
         "APP_STATE owns shipped behavior; review.md is opened only for integrity-pass evidence.",
         "README launch/format entry remains in issue__verification_current_head and is read directly during task intake; orientation retains current state and the work queue.",
-        "Measured orientation is 78.6 KiB after retarget completion and its ordered asset queue; its two authority docs remain bounded at 80 KiB under the unchanged 256 KiB generation ceiling."
+        "APP_STATE and TODO remain bounded at 84 KiB, including the current integrity recheck and prioritized authoring defect. The generation ceiling remains 256 KiB."
       ]
     },
     "workflow__context_bank": {
@@ -191,7 +191,7 @@
     },
     "feature__rig_retargeting": {
       "description": "Explicit humanoid rig mapping, sampled clip transfer, and normalized rig-proportion diagnostics. Natural-motion solving has its own focused route.",
-      "max_kb": 200,
+      "max_kb": 204,
       "paths": [
         "source/frontend/src/utils/rigMapping.ts",
         "source/frontend/src/utils/rigMapping.test.ts",
@@ -199,6 +199,7 @@
         "source/frontend/src/utils/rigCompatibility.test.ts",
         "source/frontend/src/utils/animationRetarget.ts",
         "source/frontend/src/utils/animationRetarget.test.ts",
+        "source/frontend/src/utils/animationTrackInterpolation.ts",
         "source/frontend/src/utils/retargetScale.ts",
         "source/frontend/src/utils/retargetScale.test.ts",
         "source/frontend/src/workers/retargetParity.ts"
@@ -554,7 +555,7 @@
     },
     "feature__animation_authoring": {
       "description": "Timeline interaction, workspace-aware playback, pose-based clip creation, Bone/Branch/Full Rig key authoring, clip management, metadata, history, and browser ownership.",
-      "max_kb": 216,
+      "max_kb": 240,
       "paths": [
         "source/frontend/src/components/AnimatePanel.tsx",
         "source/frontend/src/components/Timeline.tsx",
@@ -575,10 +576,13 @@
         "source/frontend/src/utils/workspacePlayback.ts",
         "source/frontend/src/utils/workspacePlayback.test.ts",
         "source/frontend/tests/helpers/timeline-interactions.ts",
-        "source/frontend/tests/animation.spec.ts"
+        "source/frontend/tests/animation.spec.ts",
+        "source/frontend/src/utils/animationTrackInterpolation.ts",
+        "source/frontend/tests/helpers/cubic-retarget-fixture.ts"
       ],
       "notes": [
         "useLoadModel remains the load/export integration owner; animation authoring actions are delegated to the tested controller contract.",
+        "Cubic Retime scales tangents; Trim subdivides vector/scale curves. Rotation cuts require existing keys/held regions. Refusals preserve work; animation.spec.ts checks project/GLB motion independently.",
         "New clips capture the load-time rest pose or current local bone pose, emit position/quaternion keys for named skeleton bones, and use one animation-workspace history transaction even when the source clip list is empty.",
         "Quadratic interpolation is preserved as SMF metadata and previews linearly in Three.js.",
         "Scoped key operations resolve a selected hierarchy, commit one history transaction, union timeline markers, and validate the clipboard's source scope, skeleton fingerprint, and target bone names before mutation.",
@@ -675,7 +679,7 @@
     },
     "tests__quality": {
       "description": "Verification contract, test inventory, shared browser fixtures, lint/type gates, and production-boundary checks.",
-      "max_kb": 114,
+      "max_kb": 128,
       "paths": [
         "source/frontend/package.json",
         "source/frontend/playwright.config.ts",
@@ -693,6 +697,10 @@
         "source/frontend/src/vite-env.d.ts",
         "source/frontend/tests/fixtures/invalid-model.gml",
         "source/frontend/scripts/run-unit-tests.mjs",
+        "source/frontend/scripts/compact-playwright-reporter.ts",
+        "source/frontend/src/test/playwrightReporter.test.ts",
+        "source/frontend/src/test/reviewCapture.test.ts",
+        "source/frontend/tests/helpers/review-capture.ts",
         "source/frontend/scripts/check-entry-chunks.mjs",
         "source/frontend/scripts/check-eslint-coverage.mjs",
         "source/frontend/scripts/check-production-any.mjs",
@@ -869,7 +877,7 @@
       "description": "Archived compatibility route for the former combined browser authoring/format pack.",
       "archived": true,
       "archive_note": "Use feature__rig_ik_pose, feature__skin_authoring, feature__animation_authoring, feature__fbx_support, and feature__theme_system.",
-      "max_kb": 164,
+      "max_kb": 170,
       "paths": [
         "source/frontend/tests/animation.spec.ts",
         "source/frontend/tests/export-formats.spec.ts",
@@ -1122,6 +1130,9 @@
         "source/frontend/src/workers/retargetProtocol.ts",
         "source/frontend/src/workers/retargetSnapshot.ts",
         "source/frontend/src/workers/retargetSnapshot.test.ts",
+        "source/frontend/src/workers/retargetCubicSpline.test.ts",
+        "source/frontend/src/utils/animationTrackInterpolation.ts",
+        "source/frontend/tests/helpers/cubic-retarget-fixture.ts",
         "source/frontend/src/workers/retargetBakeRuntime.ts",
         "source/frontend/src/workers/retargetWorker.ts",
         "source/frontend/src/utils/retargetPreview.ts",

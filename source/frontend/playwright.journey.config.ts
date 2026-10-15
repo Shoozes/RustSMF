@@ -9,7 +9,7 @@ export default defineConfig({
   retries: 0,
   workers: 1,
   outputDir: 'test-results/product-journeys',
-  reporter: [['list']],
+  reporter: baseConfig.reporter,
   use: {
     ...baseConfig.use,
     screenshot: 'off',

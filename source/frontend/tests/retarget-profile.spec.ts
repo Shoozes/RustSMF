@@ -4,6 +4,8 @@ import { createSkinnedGlbFixtureInput, createSkinnedGlbFixtureInputWithOptions, 
 import { parseRetargetProfile } from '../src/utils/retargetProfile';
 import { readFile } from 'node:fs/promises';
 
+import { captureReview } from './helpers/review-capture';
+
 test('authored contact patches survive browser profile import/export and invalid ownership disables application',async({page})=>{
   await page.goto('/');
   await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
@@ -24,7 +26,7 @@ test('authored contact patches survive browser profile import/export and invalid
   await expect(page.getByTestId('retarget-profile-source')).toBeDisabled();
 });
 
-test('saved profile import, strict errors, export and retarget are visible and undoable', async ({ page }) => {
+test('saved profile import, strict errors, export and retarget are visible and undoable', async ({ page }, testInfo) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/');
@@ -46,7 +48,7 @@ test('saved profile import, strict errors, export and retarget are visible and u
   await editor.fill('{ "bad": true }');
   await expect(panel.getByRole('alert')).toBeVisible();
   await expect(page.getByTestId('retarget-profile-source')).toBeDisabled();
-  await page.screenshot({ path: '../../output/playwright/retarget-profile-error.png' });
+  await captureReview(page, testInfo, 'retarget-profile-error.png');
   await editor.fill(valid);
   await expect(panel.getByRole('alert')).toHaveCount(0);
   const downloadPromise = page.waitForEvent('download');
@@ -59,11 +61,11 @@ test('saved profile import, strict errors, export and retarget are visible and u
   await applyTransferPreview(page);
   await expect(page.getByTestId('status-text')).toContainText('using the saved profile', { timeout: 15000 });
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Source Motion');
-  await page.screenshot({ path: '../../output/playwright/retarget-profile-applied.png' });
+  await captureReview(page, testInfo, 'retarget-profile-applied.png');
   await (await workspaceControl(page, 'retarget-profile-controls')).locator('summary').click();
   await page.setViewportSize({ width: 900, height: 700 });
   await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
-  await page.screenshot({ path: '../../output/playwright/retarget-profile-closed-narrow.png' });
+  await captureReview(page, testInfo, 'retarget-profile-closed-narrow.png');
   await clickEditorHistory(page,'undo');
   await showModernPanel(page, 'properties');
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
@@ -183,7 +185,7 @@ test('explicit replacement rejects collisions and remains undoable', async ({ pa
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('FixtureBend');
 });
 
-test('saved body ranges reject before replacement or report actionable frame warnings', async ({page})=>{
+test('saved body ranges reject before replacement or report actionable frame warnings', async ({page},testInfo)=>{
   await page.goto('/');
   await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
   await expect(page.getByTestId('status-text')).not.toContainText('Loading',{timeout:15000});
@@ -209,5 +211,5 @@ test('saved body ranges reject before replacement or report actionable frame war
   await expect(page.getByTestId('retarget-bake-notes')).toContainText('FixtureTip');
   await applyTransferPreview(page);
   await expect(page.getByTestId('animation-clip-name-input')).toHaveValue('Source Motion');
-  await page.screenshot({path:'../../output/playwright/retarget-body-ranges.png'});
+  await captureReview(page,testInfo,'retarget-body-ranges.png');
 });

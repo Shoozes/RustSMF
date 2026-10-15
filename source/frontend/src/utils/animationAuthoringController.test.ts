@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as THREE from 'three';
 import { makeAnimationEditState } from './animationEdits';
+import { createTrackInterpolant, restoreTrackInterpolation } from './animationTrackInterpolation';
 import {
   createAnimationAuthoringController,
   type AnimationAuthoringControllerOptions,
@@ -252,6 +253,51 @@ describe('animation authoring controller', () => {
     assert.equal(fixture.animationEditStateRef.current.durationByClip.Idle, 0.5);
     assert.equal(fixture.history.length, 1);
     assert.match(fixture.statuses.at(-1) ?? '', /Trimmed animation clip Idle to 0\.50s/i);
+  });
+
+  it('refuses an unsupported cubic rotation cut atomically and remains editable through retime', () => {
+    const fixture = makeControllerFixture();
+    const track = new THREE.QuaternionKeyframeTrack('Tip.quaternion',[0,2],[
+      0,0,0,0, 0,0,0,1, 0,0,.6,0,
+      0,0,0,0, 0,0,Math.SQRT1_2,Math.SQRT1_2, 0,0,0,0,
+    ]);
+    restoreTrackInterpolation(track,'gltf-cubic-spline');
+    const clip = new THREE.AnimationClip('Idle',2,[track]);
+    fixture.baseClipsRef.current = [clip];
+    fixture.playbackRef.current.duration = 2;
+    const state = fixture.animationEditStateRef.current;
+
+    fixture.controller.changeAnimationClipTrim(.5,1.5);
+    assert.equal(fixture.baseClipsRef.current[0],clip);
+    assert.equal(fixture.animationEditStateRef.current,state);
+    assert.equal(fixture.playbackRef.current.currentTime,.25);
+    assert.equal(fixture.history.length,0);
+    assert.match(fixture.statuses.at(-1) ?? '',/Choose bounds at existing rotation keys, or use Retime/);
+
+    fixture.controller.changeAnimationClipRetime(4);
+    assert.equal(fixture.history.length,1);
+    assert.equal(fixture.playbackRef.current.currentTime,.5);
+    const actual = createTrackInterpolant(fixture.baseClipsRef.current[0].tracks[0]).evaluate(2);
+    const expected = new THREE.Quaternion(0,0,Math.SQRT1_2/2+.15,(1+Math.SQRT1_2)/2).normalize().toArray();
+    expected.forEach((v,i) => assert.ok(Math.abs(actual[i]-v)<1e-6));
+  });
+
+  it('reports custom timing interpolation refusals before history or dirty-state mutation', () => {
+    const fixture = makeControllerFixture();
+    const track = new THREE.VectorKeyframeTrack('Tip.position',[0,1],[0,0,0,1,0,0]);
+    (track as THREE.KeyframeTrack & { createInterpolant(): THREE.Interpolant }).createInterpolant = () => track.InterpolantFactoryMethodLinear();
+    const clip = new THREE.AnimationClip('Idle',1,[track]);
+    fixture.baseClipsRef.current = [clip];
+    const state = fixture.animationEditStateRef.current;
+    fixture.controller.changeAnimationClipRetime(2);
+    assert.match(fixture.statuses.at(-1) ?? '',/Cannot retime.*custom interpolation/);
+    fixture.controller.changeAnimationClipTrim(.25,.75);
+    assert.match(fixture.statuses.at(-1) ?? '',/Cannot trim Tip.position faithfully/);
+    assert.equal(fixture.history.length,0);
+    assert.equal(fixture.baseClipsRef.current[0],clip);
+    assert.equal(fixture.animationEditStateRef.current,state);
+    fixture.controller.changeAnimationClipLoop(false);
+    assert.equal(fixture.history.length,1);
   });
 
   it('locks a selected bone as one edit and rejects subsequent key authoring', () => {

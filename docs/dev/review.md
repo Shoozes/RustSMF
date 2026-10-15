@@ -1,14 +1,35 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-10-11
+Last reviewed: 2026-10-14
 
 Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Modern task drawers
+## Retarget assistance integrity review
 
-### Current review and recheck
+Read-only review and recheck began on clean local main `ff43a13fa73d43c011ea33f7e5c39745776a8f76`, with an empty index. Summary Bank and project-integrity validators passed before cleanup. The published batch's isolated gate receipt identifies the same source; it does not establish correctness of later local edits.
+
+Summary Bank routed the mapping core, transfer lifecycle, profiles, load/editor integration, viewport and verification owners. Source sampling covered native cancellation/bounds, copied worker inputs, interpolation/reference clips, private preview/apply/history, load/recovery boundaries, keyboard/task controls, manifests and public instructions. Actual dependency source and a first-party generated glTF established the custom-interpolation behavior. This is single-repository work; donor references and the Tripo draft remain private.
+
+### Recheck classification
+
+- Verified closed: earlier Skin/Scene unsaved visibility, task/draft/picker guards, native Space/text keys, recovery refusal, single-model selection and native payload checks retain their implementation and durable regressions. The previous source-bound gate is reusable only for its unchanged inputs.
+- New, repaired in this cleanup: Transfer snapshots replaced glTF CUBICSPLINE with linear interpolation. The legacy source/reference sampler made the same mistake, so worker/reference parity alone could pass. A decoded translation sampled `[3.5, 2, 3]` before copying and nine different values afterward. Known-value tests now cover real glTF tangent triplets, quaternion normalization, scale, reference options and actual browser worker/project/export continuity.
+- New, repaired in this cleanup: routine browser runs recreated HTML and successful review images, including captures written into an earlier evidence batch. Compact summaries now preserve native results and bounded failure details; HTML and passing UI captures are explicit options. Strict visual/pixel assertions and required hand-wave media retain their contracts.
+- Repaired in follow-on work: raw-cubic Trim now preserves vector/scale boundaries and derivatives; Retime scales all cubic tangents inversely with time. Known `.5–1.5s` start X `.59375` and retimed midpoint X `1.25` pass. Cubic rotation cuts between keys are refused before mutation; existing-key cuts and Retime retain motion. Shared key sampling now honors cubic and step interpolation. Ordinary browser flows prove history and project/GLB continuity; HISTORY owns the final gate.
+
+### Cleanup and next pass
+
+Cleanup keeps the reviewed transfer and authoring contracts, version, flat Modern theme and Original references. A shared interpolation owner reconstructs cubic worker tracks and lets source/reference/scale sampling use the actual track factory. Unknown custom interpolation fails visibly. Disposable reporter checks cover native retries, skips, expected failures, failures and discovery errors; capture checks cover default suppression and explicit current-run ownership. HISTORY owns final command results and source identity.
+
+The final candidate passed verify (537 frontend units across 100 files; 14 Rust checks), browser (161), journeys (11) and strict visuals (3), with all 445 recorded source/runner inputs unchanged across checks. Full discovery caught incompatible TypeScript declaration syntax before browser execution; the adapter now uses compatible typed access. A subsequent browser run had one initial `ERR_NETWORK_CHANGED` navigation failure; its case passed twice after network recheck, then the complete suite passed with retries disabled. Both earlier attempts remain in the compact receipt. Original references are unchanged. No new installed-Windows or asset-distribution acceptance is claimed.
+
+The follow-on cubic authoring gate passed sequential verify (546 units; 14 Rust checks), browser (163, no retries), journeys (11) and strict visuals (3), with 443 implementation inputs unchanged. Unsupported rotation cuts preserve dirty work and history, while supported edits survive project reopen and parsed GLB re-import. Next: ZIP bundle intake, followed by TODO's ordered donor outcomes. Custom rig creation, asset distribution, installer replacement and publication remain outside this repair. Keep independent numerical expectations; parity alone can conceal shared sampler mistakes.
+
+## Earlier Modern task-drawer review
+
+### 2026-10-11 review and recheck
 
 The 2026-10-11 review used local main `1831bc92fcff182bedc46c71e5f5f3b1ae1ea4cd` plus the existing 42 modified/untracked files. All 42 matched the prior closeout receipt; all 35 changed frontend inputs matched the four passing command receipts. Summary Bank and project-integrity validators passed read-only. The staged index was empty and strict references were unchanged.
 
@@ -74,7 +95,7 @@ frontend gates passed on the same runtime/test inputs. Exact working inputs are 
 `output/review-cleanup-20261011/` and in HISTORY. No size-only refactor or measured
 performance claim was justified.
 
-## Acceptance limits and next boundary
+## Earlier installed-candidate acceptance limits
 
 The existing public Windows preview retains its original installed-app acceptance,
 recovery restoration and owned-installation cleanup record. The local fixes now
@@ -91,3 +112,6 @@ other-platform certification and arbitrary third-party asset acceptance remain
 outside this pass. Historical Git commits and the preserved preview source tag
 still contain the removed scaffolding. No selected implementation defect remains
 open; TODO records the completed local acceptance and separate distribution scope.
+
+---
+AI-edited: 2026-10-14T23:02:55-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified cubic authoring completion and next outcome

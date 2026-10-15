@@ -2,6 +2,10 @@
 
 ## Retarget review — 2026-10-14
 
+The integrity cleanup changes interpolation and routine evidence retention, with no layout/style changes. Existing reviewed six-size/DPI captures remain source-specific evidence for the unchanged controls; current strict results belong in HISTORY. Successful UI captures now require `RUSTSMF_CAPTURE_UI_REVIEW=1` and use the current test output owner. Required strict comparisons and hand-wave captures remain enabled.
+
+The follow-on cubic authoring repair keeps the same controls and flat theme. Unsupported rotation cuts report existing-key/Retime guidance before mutation. Ordinary chooser, pointer and keyboard paths prove history and continued editing. All three current strict checks passed without baseline updates, including Original.
+
 Current source keeps Animate > Transfer as one source action, compact progress/Cancel, and a private preview with Apply/Discard. Convention overrides, mapping rows, technical diagnostics and profile JSON live under Mapping details. Other workspaces and the flat graphite/off-white/brass palette retain their hierarchy. Pending work stays cancelable when Tools is closed; leaving Animate clears it. Preview uses the existing compact playback controls without the canonical authoring lane. Six reviewed sizes (1920×1080, 1440×900, 1280×800, 1024×768, 800×900 and 390×844), DPR 1/1.25/2, coarse targets, overflow, Escape and focus return passed. At narrow widths Tools overlays the model; closing it retains preview for viewing. All three strict checks passed with every committed reference unchanged. HISTORY binds the final source and captures; the public installer is unchanged.
 
 ## Task drawers — 2026-10-11
@@ -69,4 +73,4 @@ The curated overview now shows the model with the tools closed. Modern's empty s
 `source/frontend/tests/modern-shell.spec.ts` owns command visibility, one-drawer behavior, coarse-pointer target size, and DPR backing dimensions. `source/frontend/tests/visual.spec.ts` owns responsive shell, viewport controls, Modern/Original geometry, and strict screenshot evidence. `docs/dev/review.md` records suite outcomes; `docs/dev/HISTORY.md` records the final evidence entry.
 
 ---
-AI-edited: 2026-10-14T21:08:43-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded completed retarget gate and draft limitations
+AI-edited: 2026-10-14T23:02:55-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified cubic authoring completion and next outcome

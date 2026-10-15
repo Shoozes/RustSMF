@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import { expect, test } from '@playwright/test';
+import { captureReview } from '../helpers/review-capture';
 import {
   getBrowserErrors,
   SAMPLE_SMF,
@@ -25,9 +26,8 @@ test('product journey opens and inspects SMF, exports GLB, and reimports it', as
   await pauseJourney(page);
   await showModernPanel(page, 'scene');
   await expect(page.getByTestId('outliner')).toContainText(/Scene Root|SMF_Node|Mesh/i);
-  const overviewPath = testInfo.outputPath('modern-overview.png');
-  await page.screenshot({ path: overviewPath });
-  await testInfo.attach('rustsmf-modern-overview.png', { path: overviewPath, contentType: 'image/png' });
+  const overviewPath = await captureReview(page, testInfo, 'modern-overview.png');
+  if (overviewPath) await testInfo.attach('rustsmf-modern-overview.png', { path: overviewPath, contentType: 'image/png' });
   await showModernPanel(page, 'properties');
   await expect(page.getByTestId('inspector')).toContainText(/Bones \(\d+\)|Selected bone|No bone selected/i);
 

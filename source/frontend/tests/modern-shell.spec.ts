@@ -1,5 +1,6 @@
 import { workspaceControl, selectWorkspace, showModernPanel } from './helpers/modern-shell';
 import { expect, test, type Page } from '@playwright/test';
+import { captureReview } from './helpers/review-capture';
 import { SAMPLE_SMF, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import { createSkinnedGlbFixtureInput } from './helpers/skinned-glb-fixture';
 
@@ -122,7 +123,7 @@ test.describe('Calm Modern shell', () => {
     await loadSample(page);
     await expect(page.getByTestId('modern-support-panel')).toHaveCount(0);
     await pausePlaybackIfRunning(page);
-    await page.screenshot({ path: testInfo.outputPath('modern-model-overview.png') });
+    await captureReview(page, testInfo, 'modern-model-overview.png');
     for (const mode of MODES) {
       await selectWorkspace(page, mode);
       await expect(page.getByTestId(`mode-tab-${mode}`)).toHaveAttribute('aria-selected', 'true');
@@ -132,7 +133,7 @@ test.describe('Calm Modern shell', () => {
         await expect(page.getByTestId('modern-skin-advanced')).toBeVisible();
         await expect(page.locator('.modern-skin-rail button')).toHaveCount(4);
         await expect(page.getByTestId('modern-skin-float').locator('button')).toHaveCount(0);
-        await page.screenshot({ path: testInfo.outputPath('modern-skin-quiet.png') });
+        await captureReview(page, testInfo, 'modern-skin-quiet.png');
         await expect(page.getByTestId('timeline')).toHaveCount(0);
       } else if (mode === 'view') {
         await expect(page.getByTestId('modern-support-panel')).toBeVisible();
@@ -198,10 +199,7 @@ test.describe('Calm Modern shell', () => {
         expect(Math.abs(dimensions.backingWidth - dimensions.cssWidth * dpr)).toBeLessThanOrEqual(1);
         expect(Math.abs(dimensions.backingHeight - dimensions.cssHeight * dpr)).toBeLessThanOrEqual(1);
         if (dpr === 1.25) {
-          await page.screenshot({
-            path: testInfo.outputPath('modern-shell-scaled-desktop-dpr-1.25.png'),
-            fullPage: true,
-          });
+          await captureReview(page, testInfo, 'modern-shell-scaled-desktop-dpr-1.25.png', true);
         }
       } finally {
         await context.close();

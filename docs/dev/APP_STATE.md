@@ -8,7 +8,11 @@ Animate > Transfer now uses shared Rust API v1 for mapping/preflight (native Tau
 
 The complete existing TypeScript clip solver runs in a dedicated worker on both platforms. Source selection prepares a private preview; Apply commits once through animation history. Cancel/discard, input revisions, leaving Animate and disposal reject stale results. Closing Tools may retain preview. Project saves and exports continue to use canonical clips during preview; undo/redo and continued editing retain their owners. Public setup/dev/build generate locally pinned WASM bindings. Runtime failures are visible without synchronous fallback.
 
-`RETARGET_ASSISTANCE.md` owns API, job and proof boundaries; TODO owns ordered followups. Final sequential verify, browser (160), journeys (11), strict visuals (3), native/actual-WASM parity (17 cases) and desktop smoke passed; HISTORY binds the implementation inputs and reviewed captures. The one image-guided black-cat trial and borrowed pose reference are registered in `ASSET_PROVENANCE.md`; raw media and model drafts stay ignored and ineligible for public distribution pending rights/asset acceptance. No custom rig creation, rig replacement or automatic skinning is added. App version, release and installer remain unchanged; installed Windows evidence retains its earlier source identity.
+Transfer copies and raw-clip Retime preserve glTF cubic-spline motion, including rotation and scale. Trim subdivides vector/scale curves using boundary values and derivatives. Cubic rotation trims require existing rotation-key bounds or held endpoint regions; inserting a normalized quaternion key could change motion, so that case is refused before mutation with guidance to use existing keys or Retime. Custom/smooth trim interpolation is also refused. Shared key sampling honors the actual cubic/step/linear factory. History, project reopen and parsed GLB re-import have independent known-motion checks.
+
+The current cubic authoring candidate passed sequential verify (546 frontend units; 14 Rust checks), browser (163, no retries), journeys (11) and strict visuals (3) on unchanged implementation inputs. Routine output is compact JSON; HTML and successful UI captures are opt-in. Required visual/pixel and hand-wave checks remain enabled. HISTORY owns source identity, final results and the earlier review's separate proof.
+
+`RETARGET_ASSISTANCE.md` owns API, job and proof boundaries; TODO owns ordered followups. The published `ff43a13` gate passed verify, browser (160), journeys (11), strict visuals (3), native/actual-WASM parity (17 cases) and desktop smoke; HISTORY binds that source and reviewed captures. The one image-guided black-cat trial and borrowed pose reference are registered in `ASSET_PROVENANCE.md`; raw media and model drafts stay ignored and ineligible for public distribution pending rights/asset acceptance. No custom rig creation, rig replacement or automatic skinning is added. App version, release and installer remain unchanged; installed Windows evidence retains its earlier source identity.
 
 ## 0.2.1 Windows preview
 
@@ -339,4 +343,4 @@ limits without partial output. [TRANSITION_BAKE.md](TRANSITION_BAKE.md) owns the
 input contract, bounds, vendoring requirements, and native/browser WASM proof.
 
 ---
-AI-edited: 2026-10-14T21:08:43-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded completed retarget gate and draft limitations
+AI-edited: 2026-10-14T23:02:55-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified cubic authoring completion and next outcome

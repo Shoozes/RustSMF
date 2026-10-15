@@ -777,10 +777,16 @@ export function createAnimationAuthoringController(
         return;
       }
 
+      let nextBaseClips: THREE.AnimationClip[];
+      try {
+        nextBaseClips = clips.map((candidate, index) => (
+          index === clipIndex ? retimeAnimationClip(candidate, currentDuration, targetDuration) : candidate.clone()
+        ));
+      } catch {
+        setStatus('Cannot retime this clip’s custom interpolation. Use a supported linear, step or glTF cubic-spline clip.');
+        return;
+      }
       const before = captureAnimationWorkspaceSnapshot();
-      const nextBaseClips = clips.map((candidate, index) => (
-        index === clipIndex ? retimeAnimationClip(candidate, currentDuration, targetDuration) : candidate.clone()
-      ));
       const nextAnimationState = retimeAnimationEditState(
         animationEditStateRef.current,
         context.clipName,
@@ -820,6 +826,10 @@ export function createAnimationAuthoringController(
       if (!result.ok) {
         if (result.reason === 'locked-bone-range') {
           setStatus(`Trimming would rewrite locked bone ${result.boneName ?? 'channel'}; unlock it first.`);
+        } else if (result.reason === 'cubic-rotation-boundary') {
+          setStatus(`Cannot trim between cubic rotation keys on ${result.trackName}. Choose bounds at existing rotation keys, or use Retime.`);
+        } else if (result.reason === 'unsupported-interpolation') {
+          setStatus(`Cannot trim ${result.trackName} faithfully with its interpolation. Use Retime, or a linear, step or glTF cubic-spline clip.`);
         } else {
           setStatus('Animation trim requires finite bounds at least 0.01s apart within the clip.');
         }

@@ -10,6 +10,8 @@ Snapshots include helper ancestry and owned local rest transforms captured befor
 
 The complete existing TypeScript clip solver runs in a worker on both platforms. It retains advanced profiles, reference clips, helper motion, interpolation, timing, contacts, twist, scale and endpoint options. Its CLI/reference implementation remains available; the full Rust solver port is a later outcome. Project/profile/CLI job/export formats and app version remain unchanged.
 
+Source and reference sampling uses each track's actual interpolator. Worker snapshots preserve glTF CUBICSPLINE tangent triplets and reconstruct Hermite interpolation, including quaternion normalization and opt-in scale transfer. Unknown custom interpolation fails visibly instead of silently becoming linear. Known-value generated-fixture checks supplement worker/reference parity, which alone cannot detect a shared sampling mistake.
+
 This is the selected first donor pass, not a claim that every missing donor feature has been ported. Desktop Rust is bundled into the application; the web runner executes WASM locally and needs no native service. Rust is required to build the source, not to run the built web app. ZIP intake, export queues, the complete Rust solver and animal-chain assistance retain their ordered followup boundaries. Custom rig creation remains excluded.
 
 ## Job and preview lifecycle
@@ -32,10 +34,10 @@ pwsh -File run.ps1 -Task verify
 pwsh -File run.ps1 -Task retarget:runtime-proof
 ```
 
-The runtime proof rebuilds native and WASM artifacts and compares 17 first-party fixture cases in Chromium: mappings and diagnostic structures exactly, numeric fields within `1e-6` relative/absolute tolerance. Existing advanced solver fixtures also run through serialized worker baking, including contacts, twist, timing, scale and endpoint constraints. `retarget-transfer.spec.ts` owns real browser worker/WASM lifecycle and canonical preview preservation; `retarget-continuity.journey.spec.ts` owns project/export motion continuity. Tauri IPC mocks and native Rust command tests are distinct from actual installed OS-dialog observations.
+The runtime proof rebuilds native and WASM artifacts and compares 17 first-party fixture cases in Chromium: mappings and diagnostic structures exactly, numeric fields within `1e-6` relative/absolute tolerance. Existing advanced solver fixtures also run through serialized worker baking, including contacts, twist, timing, scale and endpoint constraints. `retargetCubicSpline.test.ts` checks actual glTF decoding, known curve values, copied buffers, references and worker parity. `retarget-transfer.spec.ts` owns real browser worker/WASM lifecycle, canonical preview preservation and independently sampled cubic-source export/project continuity; `retarget-continuity.journey.spec.ts` owns the broader profile journey. Tauri IPC mocks and native Rust command tests are distinct from actual installed OS-dialog observations.
 
 HISTORY owns the final candidate's commands/results. TODO owns ordered followups; asset references and drafts are registered separately in [ASSET_PROVENANCE.md](ASSET_PROVENANCE.md).
 
 ---
 AI-created: 2026-10-14T20:38:18-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs
-AI-edited: 2026-10-14T21:16:02-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=clarified donor scope and web runtime boundary
+AI-edited: 2026-10-14T22:05:56-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=documented cubic interpolation and independent known-value proof

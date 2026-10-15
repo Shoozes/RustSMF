@@ -1,4 +1,5 @@
 import { workspaceLocator, workspaceControl, selectWorkspace, showModernPanel } from './helpers/modern-shell';
+import { captureReview } from './helpers/review-capture';
 
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import {
@@ -196,10 +197,7 @@ test.describe('RustSMF visual confirmations', () => {
       await expect(page.getByTestId('status-text')).toHaveCSS('white-space', 'nowrap');
 
       await expectNoHorizontalOverflow(page);
-      await page.screenshot({
-        path: testInfo.outputPath(`modern-shell-${viewport.name}.png`),
-        fullPage: true,
-      });
+      await captureReview(page, testInfo, `modern-shell-${viewport.name}.png`, true);
       // Empty-shell captures establish layout; loaded-scene checks require canvas pixels.
       await expectNoCriticalBrowserErrors(page);
     });
@@ -293,7 +291,7 @@ test.describe('RustSMF visual confirmations', () => {
 
     await expectNoHorizontalOverflow(page);
     await expectRenderedScreenshot(appShell, 5000, { strict: true, name: 'original-smf-theme' });
-    await page.screenshot({ path: testInfo.outputPath('original-smf-theme.png'), fullPage: true });
+    await captureReview(page, testInfo, 'original-smf-theme.png', true);
     await expectNoCriticalBrowserErrors(page);
 
     await page.reload();
@@ -303,7 +301,7 @@ test.describe('RustSMF visual confirmations', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByTestId('viewport-container')).toBeVisible();
     await expectNoHorizontalOverflow(page);
-    await page.screenshot({ path: testInfo.outputPath('original-smf-theme-narrow.png'), fullPage: true });
+    await captureReview(page, testInfo, 'original-smf-theme-narrow.png', true);
     await expectNoCriticalBrowserErrors(page);
   });
 
@@ -351,7 +349,7 @@ test.describe('RustSMF visual confirmations', () => {
     expect(await dragRigIkTarget(page)).toBe(true);
     await expect(page.getByTestId('rig-ik-result')).toBeVisible();
     await expectRenderedScreenshot(page.getByTestId('viewport-container'), 3000);
-    await page.screenshot({ path: testInfo.outputPath('ik-pose-tool.png'), fullPage: true });
+    await captureReview(page, testInfo, 'ik-pose-tool.png', true);
     await expectNoHorizontalOverflow(page);
     await expectNoCriticalBrowserErrors(page);
   });

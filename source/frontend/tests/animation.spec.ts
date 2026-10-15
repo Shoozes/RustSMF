@@ -1,6 +1,6 @@
 import { applyTransferPreview, clickEditorHistory, workspaceLocator, workspaceControl, selectWorkspace, clickSecondaryCommand, showAnimateTimeline, showModernPanel } from './helpers/modern-shell';
 
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 import { SAMPLE_SMF, pausePlaybackIfRunning, setupBrowserDiagnostics } from './helpers/smoke-helpers';
 import {
   createSkinnedGlbFixtureInput,
@@ -9,6 +9,50 @@ import {
 import { escapeRegex } from './helpers/format-assertions';
 import { clickPickableBoneInViewport, setViewportLayout } from './helpers/viewport-interactions';
 import { setRangeValue, clickTimelineLaneAt, dragSelectedTimelineMarkerTo } from './helpers/timeline-interactions';
+import { createCubicRetargetFixtureInput } from './helpers/cubic-retarget-fixture';
+import { downloadBytes, exportEvidence, pauseJourney, reopenProject, watchJourneyErrors } from './helpers/product-journey';
+import { expectAssetContinuity, expectNumbersClose, readAssetEvidence, sampleTrack, type AssetEvidence } from './helpers/asset-evidence';
+
+async function openCubicAsset(page: Page, linearRotation = false): Promise<void> {
+  await page.goto('/');
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByTestId('open-model-btn').click();
+  await (await chooser).setFiles(await createCubicRetargetFixtureInput({ linearRotation }));
+  await expect(page.getByTestId('status-text')).toContainText('Loaded:', { timeout: 15000 });
+  await pauseJourney(page);
+}
+
+function expectCubicMotion(asset: AssetEvidence, sourceStart: number, timeScale: number, duration: number): void {
+  expect(asset.clips).toHaveLength(1);
+  const clip = asset.clips[0];
+  expect(clip.duration).toBeCloseTo(duration, 6);
+  const position = clip.tracks.find(t => t.bone === 'FixtureRoot' && t.path === 'translation')!;
+  const scale = clip.tracks.find(t => t.bone === 'FixtureTip' && t.path === 'scale')!;
+  expect(position.interpolation).toBe('CUBICSPLINE');
+  expect(scale.interpolation).toBe('CUBICSPLINE');
+  expect(position.values).toHaveLength(position.times.length * 9);
+  for (const fraction of [0,.125,.25,.5,.75,1]) {
+    const time = duration * fraction, sourceTime = sourceStart + time / timeScale;
+    // Independently derived fixture polynomials, rather than the application's sampler.
+    expectNumbersClose(sampleTrack(position,time),[sourceTime + .5*sourceTime**2 - .25*sourceTime**3,0,0],2e-6);
+    expectNumbersClose(sampleTrack(scale,time),[1 + sourceTime/4 + sourceTime**2/8 - sourceTime**3/16,1,1],2e-6);
+  }
+}
+
+async function reimportCubicExport(page: Page): Promise<AssetEvidence> {
+  const bytes = await downloadBytes(page,'export-glb-btn',true);
+  const drawer = page.getByTestId('modern-support-panel');
+  if (await drawer.isVisible()) await page.getByRole('button',{name:'Close supporting panel',exact:true}).click();
+  const chooser = page.waitForEvent('filechooser');
+  await page.getByTestId('open-model-btn').click();
+  await (await chooser).setFiles({ name:'edited-cubic.glb',mimeType:'model/gltf-binary',buffer:bytes });
+  await expect.poll(async () => await page.getByTestId('replacement-dialog').isVisible()
+    || (await page.getByTestId('status-text').textContent() ?? '').includes('Loaded: edited-cubic.glb')).toBe(true);
+  if (await page.getByTestId('replacement-dialog').isVisible()) await page.getByTestId('confirm-model-replacement').click();
+  await expect(page.getByTestId('status-text')).toContainText('Loaded: edited-cubic.glb',{timeout:15000});
+  await pauseJourney(page);
+  return readAssetEvidence(await downloadBytes(page,'export-glb-btn',true));
+}
 
 // Browser integration coverage is split by feature ownership.
 // Native IPC and filesystem coverage lives in native.spec.ts and Rust tests.
@@ -16,6 +60,88 @@ import { setRangeValue, clickTimelineLaneAt, dragSelectedTimelineMarkerTo } from
 test.describe('RustSMF animation flow (Chromium)', () => {
   test.beforeEach(async ({ page }) => {
     setupBrowserDiagnostics(page);
+  });
+
+  test('raw cubic trim and retime retain motion through history, project reopen and GLB re-import', async ({page}) => {
+    const assertErrors = watchJourneyErrors(page);
+    await openCubicAsset(page,true);
+    const original = await exportEvidence(page);
+    expect(original.joints).toEqual(['FixtureRoot','FixtureTip']);
+    expect(original.primitives[0].attributes.POSITION).toHaveLength(12);
+    expect(original.primitives[0].attributes.WEIGHTS_0).toHaveLength(16);
+    expectCubicMotion(original,0,1,2);
+
+    await (await workspaceControl(page,'animation-trim-start-input')).fill('0.5');
+    await (await workspaceControl(page,'animation-trim-end-input')).fill('1.5');
+    await (await workspaceControl(page,'animation-trim-btn')).click();
+    await expect(page.getByTestId('status-text')).toContainText('Trimmed animation clip Cubic Motion to 1.00s');
+    const trimmed = await exportEvidence(page);
+    expectCubicMotion(trimmed,.5,1,1);
+    expectAssetContinuity({...trimmed,clips:original.clips},original);
+    await clickEditorHistory(page,'undo');
+    expectAssetContinuity(await exportEvidence(page),original);
+    await clickEditorHistory(page,'redo');
+    expectAssetContinuity(await exportEvidence(page),trimmed);
+
+    await (await workspaceControl(page,'animation-retime-input')).fill('2');
+    await expect(page.getByTestId('status-text')).toContainText('Retimed animation clip Cubic Motion from 1.00s to 2.00s');
+    const retimed = await exportEvidence(page);
+    expectCubicMotion(retimed,.5,2,2);
+    await clickEditorHistory(page,'undo');
+    expectAssetContinuity(await exportEvidence(page),trimmed);
+    await clickEditorHistory(page,'redo');
+    expectAssetContinuity(await exportEvidence(page),retimed);
+    await reopenProject(page,await downloadBytes(page,'save-project-btn'));
+    await pauseJourney(page);
+    expectAssetContinuity(await exportEvidence(page),retimed);
+    const reimported = await reimportCubicExport(page);
+    expectCubicMotion(reimported,.5,2,2);
+    expectAssetContinuity(reimported,retimed);
+    await (await workspaceControl(page,'animation-clip-name-input')).fill('Continued cubic edit');
+    await page.getByTestId('animation-clip-name-input').press('Enter');
+    await expect(page.getByTestId('status-text')).toContainText('Continued cubic edit');
+    expect((await exportEvidence(page)).clips[0].name).toBe('Continued cubic edit');
+    assertErrors();
+  });
+
+  test('cubic rotation trim refusal preserves dirty work and one undoable retime with project/export continuity', async ({page}) => {
+    const assertErrors = watchJourneyErrors(page);
+    await openCubicAsset(page);
+    const original = await exportEvidence(page);
+    await (await workspaceControl(page,'animation-clip-name-input')).fill('Keep cubic');
+    await page.getByTestId('animation-clip-name-input').press('Enter');
+    await expect(page.getByTestId('status-text')).toContainText('Keep cubic');
+    const renamed = await exportEvidence(page);
+    await (await workspaceControl(page,'animation-trim-start-input')).fill('0.5');
+    await (await workspaceControl(page,'animation-trim-end-input')).fill('1.5');
+    await (await workspaceControl(page,'animation-trim-btn')).click();
+    await expect(page.getByTestId('status-text')).toContainText('Choose bounds at existing rotation keys, or use Retime');
+    expectAssetContinuity(await exportEvidence(page),renamed);
+    await clickEditorHistory(page,'undo');
+    expectAssetContinuity(await exportEvidence(page),original);
+    await clickEditorHistory(page,'redo');
+    await (await workspaceControl(page,'animation-retime-input')).fill('4');
+    await expect(page.getByTestId('status-text')).toContainText('Retimed animation clip Keep cubic from 2.00s to 4.00s');
+    const retimed = await exportEvidence(page);
+    const check = (asset: AssetEvidence) => {
+      expectCubicMotion(asset,0,2,4);
+      const rotation = asset.clips[0].tracks.find(t => t.path === 'rotation')!;
+      expect(rotation.interpolation).toBe('CUBICSPLINE');
+      const z = Math.SQRT1_2/2 + .15, w = (1+Math.SQRT1_2)/2, norm = Math.hypot(z,w);
+      expectNumbersClose(sampleTrack(rotation,2),[0,0,z/norm,w/norm],2e-6);
+    };
+    check(retimed);
+    await clickEditorHistory(page,'undo');
+    expectAssetContinuity(await exportEvidence(page),renamed);
+    await clickEditorHistory(page,'redo');
+    expectAssetContinuity(await exportEvidence(page),retimed);
+    await reopenProject(page,await downloadBytes(page,'save-project-btn'));
+    await pauseJourney(page);
+    check(await exportEvidence(page));
+    const reimported = await reimportCubicExport(page);
+    check(reimported);
+    expectAssetContinuity(reimported,retimed);
+    assertErrors();
   });
 
   test('timeline lane click scrubs and double-click inserts selected-bone keyframes', async ({ page }) => {
