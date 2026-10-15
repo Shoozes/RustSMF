@@ -38,6 +38,10 @@ try {
     throw new Error(`modelWorker asset exceeds 512 KiB (${workerBytes} bytes)`);
   }
   const retargetWorkers = readdirSync(join(dist, 'assets')).filter(name => /^retargetWorker-[^.]+\.js$/.test(name));
+  const archiveWorkers = readdirSync(join(dist, 'assets')).filter(name => /^modelArchive\.worker-[^.]+\.js$/.test(name));
+  if (archiveWorkers.length !== 1 || html.includes(archiveWorkers[0]) || statSync(join(dist, 'assets', archiveWorkers[0])).size > 64 * 1024) {
+    throw new Error('expected one lazy ZIP worker below 64 KiB');
+  }
   const retargetWasm = readdirSync(join(dist, 'assets')).filter(name => /^retarget_core_bg-[^.]+\.wasm$/.test(name));
   if (retargetWorkers.length !== 1 || retargetWasm.length !== 1) throw new Error('expected one lazy retarget worker and one Rust WASM module');
   for (const asset of [...retargetWorkers, ...retargetWasm]) {

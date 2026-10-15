@@ -42,4 +42,6 @@ The root examples/rustsmf-demo.glb is generated solely from project-owned boxes,
 
 ## Browser sidecar rendering case
 
+ZIP tests construct in-memory archives with Three.js's vendored fflate writer, reusing project-authored model generators and a freshly encoded two-by-two PNG. The unknown-provenance image and private donor/Tripo assets are not included. No generated ZIP or model is committed.
+
 The external GLTF browser rendering case creates a non-collinear Float32 triangle, UVs and an encoded two-by-two PNG in memory. It reuses the authored scene structure while leaving the fixed nine-byte mesh.bin file and its native IPC/hash contract untouched. That byte-only fixture is not accepted as visible geometry proof.

@@ -1,5 +1,9 @@
 # Modern UI Design QA — v0.2 productization complete
 
+## ZIP intake dialog
+
+Open/drop keeps the existing editor composition. The temporary archive surface has a filename, progress/Cancel or one model selector and Open model; it uses flat theme tokens and no permanent new buttons. Six reviewed captures cover 1920x1080, 1440x900 at DPR 1.25, 1280x800, 1024x768, 800x900 at DPR 2 and 390x844 at DPR 2 with coarse pointers. Keyboard wrapping, explicit choice, Escape/focus return, overflow and 44px touch targets pass. These empty-scene captures establish picker layout, not model rendering. Existing strict references are unchanged.
+
 ## Retarget review — 2026-10-14
 
 The integrity cleanup changes interpolation and routine evidence retention, with no layout/style changes. Existing reviewed six-size/DPI captures remain source-specific evidence for the unchanged controls; current strict results belong in HISTORY. Successful UI captures now require `RUSTSMF_CAPTURE_UI_REVIEW=1` and use the current test output owner. Required strict comparisons and hand-wave captures remain enabled.
@@ -73,4 +77,4 @@ The curated overview now shows the model with the tools closed. Modern's empty s
 `source/frontend/tests/modern-shell.spec.ts` owns command visibility, one-drawer behavior, coarse-pointer target size, and DPR backing dimensions. `source/frontend/tests/visual.spec.ts` owns responsive shell, viewport controls, Modern/Original geometry, and strict screenshot evidence. `docs/dev/review.md` records suite outcomes; `docs/dev/HISTORY.md` records the final evidence entry.
 
 ---
-AI-edited: 2026-10-14T23:02:55-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified cubic authoring completion and next outcome
+AI-edited: 2026-10-15T01:48:27-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified ZIP intake and lifecycle boundaries

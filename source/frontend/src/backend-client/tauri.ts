@@ -11,7 +11,8 @@ import {
   ModelInputSizeError,
   detectModelFormat,
   MAX_MODEL_INPUT_BYTES,
-  SUPPORTED_MODEL_RESOURCE_ACCEPT,
+  SUPPORTED_MODEL_INTAKE_ACCEPT,
+  isModelArchive,
 } from '../utils/modelFormat'
 import {
   createModelResourceBundle,
@@ -29,6 +30,8 @@ export interface OpenFileEntry {
 }
 
 export interface OpenResult {
+  archiveFile?: File // deferred to the cancelable archive worker
+  archive?: boolean // require selected resources even for a lone archive member
   path?: string
   name?: string
   data?: Uint8Array // browser-read bytes or test/native-injected bytes
@@ -62,6 +65,10 @@ export async function openFile(): Promise<OpenResult | null> {
       const selected = await invokeCommand<string | string[] | null>('open_file')
       if (!selected) return null
       if (Array.isArray(selected)) {
+        if (selected.some(isModelArchive)) {
+          if (selected.length !== 1) return { error: 'Select one ZIP by itself; its model and resources are read together.' }
+          return { path: selected[0], name: selected[0].split(/[\\/]/).pop() }
+        }
         const modelCount = selected.filter((path) => detectModelFormat(path) !== '').length
         if (modelCount > 1) {
           return { error: 'Select exactly one supported model file; the remaining selected files are treated as sidecars.' }
@@ -92,7 +99,7 @@ export async function openFile(): Promise<OpenResult | null> {
   return new Promise((resolve) => {
     const input = document.createElement('input')
     input.type = 'file'
-    input.accept = SUPPORTED_MODEL_RESOURCE_ACCEPT
+    input.accept = SUPPORTED_MODEL_INTAKE_ACCEPT
     input.style.display = 'none'
     input.multiple = true
 
@@ -159,6 +166,11 @@ export async function openFile(): Promise<OpenResult | null> {
 
 export async function readBrowserModelFiles(files: readonly File[]): Promise<OpenResult> {
   const selected = [...files]
+  if (selected.some(file => isModelArchive(file.name))) {
+    if (selected.length !== 1) return { error: 'Select one ZIP by itself; its model and resources are read together.' }
+    assertModelFileSize(selected[0])
+    return { name: selected[0].name, archiveFile: selected[0] }
+  }
   const modelFiles = selected.filter((file) => detectModelFormat(file.name) !== '')
   if (modelFiles.length !== 1) {
     return {

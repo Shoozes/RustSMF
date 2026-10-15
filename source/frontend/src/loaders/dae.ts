@@ -49,10 +49,11 @@ export function ensureDaeGeometryNormals(geometry: THREE.BufferGeometry): boolea
 
 export async function loadDAE(
   urlOrBuffer: string | ArrayBuffer | ModelResourceBundle,
+  options: { strictResources?: boolean } = {},
 ): Promise<DaeLoadedModel> {
   const isBundle = typeof urlOrBuffer === 'object' && !(urlOrBuffer instanceof ArrayBuffer);
   const bundle = isBundle ? urlOrBuffer as ModelResourceBundle : null;
-  const registry = bundle && bundle.files.length > 1 ? createResourceUrlRegistry(bundle) : null;
+  const registry = bundle && (bundle.files.length > 1 || options.strictResources) ? createResourceUrlRegistry(bundle) : null;
   const manager = new THREE.LoadingManager();
   if (registry) manager.setURLModifier((url) => registry.resolve(url));
   const loader = new ColladaLoader(manager);

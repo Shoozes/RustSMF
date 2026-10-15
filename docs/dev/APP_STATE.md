@@ -1,6 +1,10 @@
 # RustSMF App State
 
-Last reviewed: 2026-10-14
+Last reviewed: 2026-10-15
+
+## ZIP intake on current source
+
+Open and viewport drop accept one ZIP containing supported models and relative resources. One model loads directly; several require a compact explicit choice. A cancelable worker validates paths, entries, CRC and observed expansion. Cancel, malformed input and stale reads preserve editable work. Native reads retain Rust's selected-path authority; both platforms share expansion. [ZIP_INTAKE.md](ZIP_INTAKE.md) owns limits and lifecycle details. The final local gate passed verify (563 frontend units plus repository/Rust checks), 179 browser checks, 11 journeys and 3 strict visuals. This feature does not change the published installer.
 
 ## Retarget assistance on current source
 
@@ -10,7 +14,7 @@ The complete existing TypeScript clip solver runs in a dedicated worker on both 
 
 Transfer copies and raw-clip Retime preserve glTF cubic-spline motion, including rotation and scale. Trim subdivides vector/scale curves using boundary values and derivatives. Cubic rotation trims require existing rotation-key bounds or held endpoint regions; inserting a normalized quaternion key could change motion, so that case is refused before mutation with guidance to use existing keys or Retime. Custom/smooth trim interpolation is also refused. Shared key sampling honors the actual cubic/step/linear factory. History, project reopen and parsed GLB re-import have independent known-motion checks.
 
-The current cubic authoring candidate passed sequential verify (546 frontend units; 14 Rust checks), browser (163, no retries), journeys (11) and strict visuals (3) on unchanged implementation inputs. Routine output is compact JSON; HTML and successful UI captures are opt-in. Required visual/pixel and hand-wave checks remain enabled. HISTORY owns source identity, final results and the earlier review's separate proof.
+The published cubic authoring batch at `040feb3` passed sequential verify (546 frontend units; 14 Rust checks), browser (163, no retries), journeys (11) and strict visuals (3) on unchanged implementation inputs. Routine output is compact JSON; HTML and successful UI captures are opt-in. Required visual/pixel and hand-wave checks remain enabled. HISTORY owns source identity, final results and the earlier review's separate proof.
 
 `RETARGET_ASSISTANCE.md` owns API, job and proof boundaries; TODO owns ordered followups. The published `ff43a13` gate passed verify, browser (160), journeys (11), strict visuals (3), native/actual-WASM parity (17 cases) and desktop smoke; HISTORY binds that source and reviewed captures. The one image-guided black-cat trial and borrowed pose reference are registered in `ASSET_PROVENANCE.md`; raw media and model drafts stay ignored and ineligible for public distribution pending rights/asset acceptance. No custom rig creation, rig replacement or automatic skinning is added. App version, release and installer remain unchanged; installed Windows evidence retains its earlier source identity.
 
@@ -26,7 +30,7 @@ Render smoke checks decode actual canvas pixels and exclude overlapping HTML con
 
 Project-owned source is MIT licensed, with locked dependency notices and separately documented fixture provenance. The installed license/notices and sample matched their source hashes. The public [0.2.1 preview](https://github.com/Shoozes/RustSMF/releases/tag/v0.2.1-preview) remains bound to source `05a32fe` and its identified installer. Preview verification and platform acceptance are tracked in TODO, HISTORY and the preview notes; real Windows UI observations remain distinct from browser tests and mocked IPC. The preview is unsigned; other-platform certification remains unverified.
 
-Source after the published preview reports recovery autosave refusal with a Save Project action, clears that warning only after a current successful autosave, and preserves unrelated errors. Native Open rejects selections without exactly one model before asking to replace dirty work; native bundle replies require one validated byte payload per selected file. Load errors give a portable model/sidecar hint. These frontend fixes retain the existing formats and app version; the released installer keeps its original acceptance record.
+Source after the published preview reports recovery autosave refusal with a Save Project action, clears that warning only after a current successful autosave, and preserves unrelated errors. Native Open requires one model with sidecars or one ZIP by itself before asking to replace dirty work; native bundle replies require one validated byte payload per selected file. Load errors give a portable model/sidecar hint. These frontend fixes retain the existing formats and app version; the released installer keeps its original acceptance record.
 
 The prior integrity batch, published as `1831bc9`, passed desktop smoke, packaging and ten installed Windows UI/cleanup checks on 2026-10-11. HISTORY binds its source/installer and exact recovery restoration. The newer task drawers have a separate frontend gate; these menus have no new installed-Windows acceptance claim.
 
@@ -256,7 +260,7 @@ The latest review links the dated command results and any observed limitations i
   on roundtrip even when topology, joint names, transforms and skin stay intact.
   Exact metadata-name identity is not guaranteed for ambiguous source names.
 
-- Collada (`.dae`) is a supported single-file model input and export through the Three.js ColladaLoader plus the RustSMF DAE serializer. ZIP archives remain unsupported containers and must be extracted before selection. DAE round-trip validation covers visual-scene mesh counts, skin-controller presence, hierarchy and matrix animation clips; imports compute missing vertex normals so no-normal Collada meshes remain renderable. External texture files are resolved only from a selected bundle on import; the loader keeps those temporary URLs alive until image loads settle (bounded to two seconds), removes and reports unavailable maps, and avoids passing empty textures into project autosave. External texture files are not embedded on DAE export, so GLB remains the texture-fidelity path. Animation-only input still cannot prove source skin deformation. The 2026-09-20 supplied pair matched on Y-up/0.01m units, 28 animation channels and 76 timing samples; the with-skin file loaded as 33 bones, one 2.50s clip and 3,726 vertices, and its start/mid/end single plus quad review found no observed leg/torso deformation failure or self-clipping. This is source acceptance for RustSMF inspection only, not caller-owned game or retarget acceptance.
+- Collada (`.dae`) is a supported single-file model input and export through the Three.js ColladaLoader plus the RustSMF DAE serializer. Current source accepts bounded ZIP bundles through Open/drop; ZIP_INTAKE.md owns their limits. DAE round-trip validation covers visual-scene mesh counts, skin-controller presence, hierarchy and matrix animation clips; imports compute missing vertex normals so no-normal Collada meshes remain renderable. External texture files are resolved only from a selected bundle on import; the loader keeps those temporary URLs alive until image loads settle (bounded to two seconds), removes and reports unavailable maps, and avoids passing empty textures into project autosave. External texture files are not embedded on DAE export, so GLB remains the texture-fidelity path. Animation-only input still cannot prove source skin deformation. The 2026-09-20 supplied pair matched on Y-up/0.01m units, 28 animation channels and 76 timing samples; the with-skin file loaded as 33 bones, one 2.50s clip and 3,726 vertices, and its start/mid/end single plus quad review found no observed leg/torso deformation failure or self-clipping. This is source acceptance for RustSMF inspection only, not caller-owned game or retarget acceptance.
 
 - SMF has no scale channel in the current dual-quaternion path. Scale edits block SMF export rather than being dropped.
 - Animate's `quadratic` setting is explicitly metadata-only in the current runtime: SMF preserves the selected interpolation metadata while the live Three.js preview uses linear tracks. The Animate control labels this boundary so it cannot be mistaken for quadratic playback.
@@ -343,4 +347,4 @@ limits without partial output. [TRANSITION_BAKE.md](TRANSITION_BAKE.md) owns the
 input contract, bounds, vendoring requirements, and native/browser WASM proof.
 
 ---
-AI-edited: 2026-10-14T23:02:55-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified cubic authoring completion and next outcome
+AI-edited: 2026-10-15T01:48:27-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified ZIP intake and lifecycle boundaries

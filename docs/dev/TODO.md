@@ -1,8 +1,18 @@
 # RustSMF TODO
 
-Last reviewed: 2026-10-14
+Last reviewed: 2026-10-15
 
-Backlog status: the retarget assistance first pass is published as `ff43a13`. Review cleanup and cubic authoring integrity are verified locally. Next: ZIP bundle intake, followed by the remaining ordered donor outcomes. Earlier completed outcomes remain closed.
+Backlog status: retarget assistance (`ff43a13`) and cubic review/cleanup (`040feb3`) are published. ZIP intake is complete; HISTORY owns its guarded publication. Next: export presets and queues. Earlier outcomes stay closed.
+
+## ZIP bundle intake
+
+- What: Open bounded model/resource ZIPs through existing browser and desktop import paths.
+- Why: Support generated asset bundles without manual extraction or permanent frontend controls.
+- Where: Archive parser/worker/client, load orchestration, Tauri adapter, temporary model picker, focused tests and `ZIP_INTAKE.md`.
+- When: Completed locally on 2026-10-15 from clean main `040feb3`; selected for authorized main publication.
+- How: Validate records, paths, CRC and observed expansion; retain resource paths; require explicit model choice; cancel/dispose jobs and ignore late native reads. Reuse replacement/recovery and format contracts.
+- Done when: Safe stored/deflated archives work in browser and mocked native paths; model formats, sidecars, choice, cancel/failure preservation and project/export continuity pass. Six-size/DPI/input checks, sequential verify/browser/journey/strict gates, docs/routes and owned cleanup complete. No asset distribution or installer change.
+- Verification: 27 focused units and 16 ZIP browser cases pass, including a reproduced/repaired queued native-read timeout. Final sequential verify (563 frontend units plus repository/Rust checks), browser (179, no retries), journeys (11) and strict visuals (3) pass on unchanged implementation inputs. Six reviewed captures, source identity, compact results and owned cleanup are bound in HISTORY and `output/zip-intake-20261015/receipt.json`. Native IPC remains mocked; the issued native read cannot be aborted, and late bytes are ignored.
 
 ## Cubic clip authoring integrity
 
@@ -28,7 +38,7 @@ Backlog status: the retarget assistance first pass is published as `ff43a13`. Re
 
 | Order | Outcome | Done when |
 | --- | --- | --- |
-| 1 | ZIP bundle intake | Existing import paths accept bounded safe archives with model/resource selection, explicit choice among multiple models, cancellation and desktop/web tests. ZIP remains a container; format limits stay unchanged. |
+| 1 | ZIP bundle intake — complete locally | Existing import paths accept bounded safe archives with model/resource selection, explicit choice among multiple models, cancellation and desktop/web tests. ZIP remains a container; format limits stay unchanged. |
 | 2 | Export presets and queues | Deterministic sequential processing has cancellation, per-item results, safe destinations and retry without repeating completed items. |
 | 3 | Original assets and animation packs | Finish CAT-TRIPO-001 in Blender, repair anatomy/tail/topology, verify pose/deformation and rights, author original Idle/Walk/Run/Sit, retain editable source and distribute a self-contained GLB. Borrowed Mesh2Motion media stays excluded. |
 | 4 | Complete Rust solver migration | Every current option passes TypeScript-reference/native/WASM parity before replacing the worker solver. |
@@ -143,4 +153,4 @@ bounded noncombat fixture.
 - Verification: Sequentially run `verify`, `test:e2e -NoGenEye`, `test:journey`, `test:visual-strict`, `desktop-smoke`, and `package:windows`; then run `verify` and `package:windows` again after the version bump. Actual Windows OS-dialog checks remain separate from native IPC mocks.
 
 ---
-AI-edited: 2026-10-14T23:02:55-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified cubic authoring completion and next outcome
+AI-edited: 2026-10-15T03:01:19-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded authorized ZIP intake publication scope

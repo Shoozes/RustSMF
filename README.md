@@ -45,6 +45,10 @@ Supported geometry, skeletons and clips have automated round-trip coverage. GLB 
 
 See the [user guide](docs/user/README.md) and [current format limits](docs/dev/APP_STATE.md#current-limits).
 
+Current source builds can also open a ZIP containing these models and their
+resources. Choose one model if several are included. The downloadable 0.2.1
+preview still requires extracting ZIPs first.
+
 ## Run from source
 
 Clone or unpack the source, then open PowerShell 7 in the repository root. Install the declared Node range (`^22.13.0 || >=24`), Rust and the [Tauri Windows prerequisites](https://v2.tauri.app/start/prerequisites/):

@@ -51,9 +51,15 @@ The published 0.2.1 installer retains the earlier drawer layout; the task menus 
 
 ## Mixamo source files
 
-Collada (`.dae`) is supported as a single-file model input and export. ZIP archives
-are not model inputs; extract them first and select the DAE plus any referenced
-sidecars as one bundle. The loader validates the visual scene, skin data and
+Collada (`.dae`) is supported as a single-file model input and export. Current
+source builds also open ZIP bundles: use Open or drop one ZIP, then choose a model
+if several are present. Relative resources load with it. Cancel or Escape keeps
+your current work. The published 0.2.1 installer still requires manual extraction.
+Stored/deflated ZIPs are limited to 64 entries, 256 MiB input/expanded total,
+256 MiB per model and 64 MiB per sidecar. Encrypted, nested, ZIP64 and unsafe archives are refused;
+extract those with a trusted archive tool and select the model/resources together.
+ZIP intake is available through Open/drop; Transfer and Append still take model
+files. The DAE loader validates the visual scene, skin data and
 animation channels, then waits for selected texture images before mounting. If
 a sidecar cannot load, it reports the missing map and keeps the geometry
 available with its material color. DAE export writes a self-contained geometry,
@@ -124,4 +130,4 @@ For developer state, backlog, and verification results, see `docs/dev/APP_STATE.
 On current source builds, open a skinned target and choose Animate > Tools > Transfer. Choose source animation files (with any required sidecars), review the private preview, then Apply to keep it. Discard leaves saved clips unchanged; Apply is one Undo step. Mapping details holds naming presets, explicit corrections, diagnostics and portable profile import/export. Numeric rigs need reviewed explicit maps. Close Tools to see more of the preview; leaving Animate discards pending transfer work. The published 0.2.1 installer keeps its separately recorded feature set.
 
 ---
-AI-edited: 2026-10-14T22:50:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=documented cubic authoring fidelity and safe refusal
+AI-edited: 2026-10-15T01:48:27-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified ZIP intake and lifecycle boundaries

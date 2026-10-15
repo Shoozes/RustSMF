@@ -12,6 +12,11 @@ export const MODEL_FORMAT_EXTENSIONS: Record<ModelSourceFormat, readonly string[
 export const SUPPORTED_MODEL_EXTENSIONS = Object.values(MODEL_FORMAT_EXTENSIONS).flat();
 export const SUPPORTED_MODEL_ACCEPT = SUPPORTED_MODEL_EXTENSIONS.join(',');
 export const SUPPORTED_MODEL_RESOURCE_ACCEPT = `${SUPPORTED_MODEL_ACCEPT},.bin,.mtl,.png,.jpg,.jpeg,.webp,.ktx2`;
+export const SUPPORTED_MODEL_INTAKE_ACCEPT = `${SUPPORTED_MODEL_RESOURCE_ACCEPT},.zip`;
+
+export function isModelArchive(name: string | null | undefined): boolean {
+  return getModelExtension(name) === '.zip';
+}
 
 // Keep browser and native model ingestion within the same allocation envelope.
 // SMF has the same binary boundary; GLB/FBX/OBJ loaders also need a guard before

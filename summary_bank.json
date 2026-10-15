@@ -38,7 +38,7 @@
     },
     "workflow__context_bank": {
       "description": "Portable public context routing, validation, and generation entry points.",
-      "max_kb": 104,
+      "max_kb": 108,
       "paths": [
         "summary_bank.json",
         "scripts/context-bank-lib.mjs",
@@ -57,7 +57,7 @@
     },
     "workflow__project_integrity": {
       "description": "Project-doc and release integrity contracts: TODO and Pitfall Ledger shape, exact Guard targets, palette scope, synchronized app versions, imports, and Rust module declarations.",
-      "max_kb": 112,
+      "max_kb": 114,
       "paths": [
         ".gitattributes",
         "scripts/project-integrity-lib.mjs",
@@ -115,7 +115,7 @@
     },
     "feature__theme_system": {
       "description": "Persisted themes, Modern model viewer with task drawers, Original presentation, responsive behavior and visual evidence.",
-      "max_kb": 236,
+      "max_kb": 238,
       "paths": [
         "source/frontend/src/theme.ts",
         "source/frontend/src/theme.test.ts",
@@ -1176,6 +1176,33 @@
       ],
       "notes": [
         "The reusable tripo-asset-workflow skill is global and contains no media. Raw Mesh2Motion references, generated images and Tripo drafts stay ignored; TODO owns Blender finishing and original animation-pack outcomes."
+      ]
+    },
+    "feature__zip_intake": {
+      "description": "Bounded ZIP model/resource intake, worker lifecycle and temporary explicit model choice.",
+      "max_kb": 112,
+      "paths": [
+        "source/frontend/src/utils/modelArchive.ts",
+        "source/frontend/src/utils/modelArchive.test.ts",
+        "source/frontend/src/utils/modelFormat.ts",
+        "source/frontend/src/utils/modelFormat.test.ts",
+        "source/frontend/src/utils/modelResourceBundle.ts",
+        "source/frontend/src/workers/modelArchiveClient.ts",
+        "source/frontend/src/workers/modelArchiveClient.test.ts",
+        "source/frontend/src/workers/modelArchive.worker.ts",
+        "source/frontend/src/hooks/useModelArchive.ts",
+        "source/frontend/src/components/ModelArchiveDialog.tsx",
+        "source/frontend/src/backend-client/tauri.ts",
+        "source/frontend/tests/archive-intake.spec.ts",
+        "source/frontend/tests/helpers/archive-fixture.ts",
+        "source/frontend/scripts/check-entry-chunks.mjs",
+        "docs/dev/ZIP_INTAKE.md",
+        "source/frontend/src/styles/modelArchive.css"
+      ],
+      "notes": [
+        "Open/drop only. ZIP is a container; project/profile/export formats and Transfer/Append selection remain unchanged.",
+        "subsystem__load_editor_orchestration owns useLoadModel replacement and stale-scene commit guards; issue__external_model_resources owns loader-specific resource contracts.",
+        "Native authority stays in the existing Rust read commands. Issued native reads finish bounded and serialized; canceled results are ignored. Fresh native archive buffers transfer ownership."
       ]
     }
   },

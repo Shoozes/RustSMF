@@ -6,6 +6,9 @@ import {
   MAX_MODEL_INPUT_BYTES,
   ModelInputSizeError,
   SUPPORTED_MODEL_ACCEPT,
+  SUPPORTED_MODEL_INTAKE_ACCEPT,
+  SUPPORTED_MODEL_RESOURCE_ACCEPT,
+  isModelArchive,
   detectModelFormat,
   getModelExtension,
   isSupportedModelFormat,
@@ -46,6 +49,9 @@ describe('modelFormat', () => {
     }
     assert.equal(SUPPORTED_MODEL_ACCEPT.split(',').includes('.dae'), true);
     assert.equal(SUPPORTED_MODEL_ACCEPT.split(',').includes('.zip'), false);
+    assert.equal(SUPPORTED_MODEL_RESOURCE_ACCEPT.split(',').includes('.zip'), false);
+    assert.equal(SUPPORTED_MODEL_INTAKE_ACCEPT.split(',').includes('.zip'), true);
+    assert.equal(isModelArchive('bundle.ZIP'), true);
   });
 
   it('keeps accept and label strings aligned with supported formats', () => {

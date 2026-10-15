@@ -81,6 +81,7 @@ keyboard, and file-selection paths without forced clicks or editor-state setters
 | Supported capability | Positive evidence | Protection, history, or continuity evidence |
 | --- | --- | --- |
 | Browser Open: SMF, GLB, GLTF, FBX, DAE, OBJ | `format-dispatch.spec.ts`: six Open/default-export/re-import cases, independent geometry/bone/clip/motion checks | `lifecycle.spec.ts`: selected read failures and latest-intent success/error races |
+| ZIP bundle intake | `archive-intake.spec.ts`: all formats, nested sidecars, explicit choice, parsed geometry/weights/motion and project continuity through the real worker | Parser/client units: unsafe records/paths, CRC/size bounds, cancel/timeout/stale results; browser: preserved edits, mocked native read cancel/retry and six-size keyboard/touch checks |
 | Native Open/read/save boundaries | `native.spec.ts`: native open/read/export and bounded GLTF bundle | Multiple-model/no-model rejection before reads, short/extra payload rejection, preserved edits/history/retry, native cancel, malformed bytes, delayed picker/read and write serialization |
 | Drag/drop loading | `lifecycle.spec.ts`: latest async load wins between file input and drop | Stale read errors and dirty replacement cases in that suite |
 | Selected FBX/GLTF sidecars and ready textures | `journeys/format-roundtrip.journey.spec.ts`: decoded embedded PNG, named bones and animated FBX round trip | `journeys/failure-preserves-work.journey.spec.ts`: missing buffer cancel/discard retains semantic asset and continued edits |
@@ -209,4 +210,4 @@ When adding or moving a test:
 4. Update `docs/dev/PITFALL_LEDGER.md` only for a durable recurring failure mode.
 
 ---
-AI-edited: 2026-10-14T22:50:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=documented cubic authoring fidelity and safe refusal
+AI-edited: 2026-10-15T01:48:27-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified ZIP intake and lifecycle boundaries

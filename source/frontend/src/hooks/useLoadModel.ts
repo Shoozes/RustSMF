@@ -40,6 +40,8 @@ import {
   type StaticMeshSkinPreparationHistorySnapshot,
 } from './editorSnapshots';
 import { useSmfCodecTask } from './useSmfCodecTask';
+import { useModelArchive } from './useModelArchive';
+import { ArchiveCancelledError } from '../workers/modelArchiveClient';
 import type {
   BoneTransformEditEvent,
   RigIkEditEvent,
@@ -335,6 +337,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   const playback = usePlaybackSlice();
   const pendingReplacementRef = useRef<{ label: string; start: () => Promise<void> } | null>(null);
   const [pendingReplacement, setPendingReplacement] = useState<string | null>(null);
+  const { activity: archiveActivity, prepare: prepareArchive, cancel: cancelArchive, choose: chooseArchiveModel } = useModelArchive();
   const playbackRef = useRef(playback);
   const cancelRetargetRef = useRef<() => void>(() => {});
   const transferPlaybackRef=useRef<()=>boolean>(()=>false);
@@ -559,12 +562,13 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
   }, []);
 
   const beginLoadRequest = useCallback(() => {
+    cancelArchive();
     cancelRetargetRef.current();
     exportSeqGuardRef.current.next();
     const loadSeq = loadSeqGuardRef.current.next();
     cancelActiveSmfCodec();
     return loadSeq;
-  }, [cancelActiveSmfCodec]);
+  }, [cancelActiveSmfCodec, cancelArchive]);
 
   const beginModelOperation = useCallback(() => {
     const sequence = beginLoadRequest();
@@ -1045,6 +1049,8 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
 
     try {
       let loaded: LoadedModelResult;
+      res = await prepareArchive(res, async path => (await getTauriClient()).readBinaryFile(path));
+      if (!isCurrentLoad()) return;
       let importedSmf: ImportedSmf | null = null;
       let smfCodecExecution: SmfCodecExecution | null = null;
       let resourceBundle: ModelResourceBundle | null = null;
@@ -1116,10 +1122,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         loaded = buildSmfScene(importedSmf);
       } else if (detectedLoadFormat === 'fbx') {
         const urlOrBuf: string | ArrayBuffer | ModelResourceBundle = resourceBundle || (data ? bytesToArrayBuffer(data) : (res.path || ''));
-        loaded = await loadFBX(urlOrBuf);
+        loaded = await loadFBX(urlOrBuf, { strictResources: res.archive });
       } else if (detectedLoadFormat === 'dae') {
         const urlOrBuf: string | ArrayBuffer | ModelResourceBundle = resourceBundle || (data ? bytesToArrayBuffer(data) : (res.path || ''));
-        loaded = await loadDAE(urlOrBuf);
+        loaded = await loadDAE(urlOrBuf, { strictResources: res.archive });
       } else if (detectedLoadFormat === 'obj') {
         const urlOrBuf: string | ArrayBuffer | ModelResourceBundle = resourceBundle || (data ? bytesToArrayBuffer(data) : (res.path || ''));
         loaded = await loadOBJ(urlOrBuf);
@@ -1235,6 +1241,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     } catch (e: unknown) {
       if (!isCurrentLoad()) return;
       if (e instanceof SmfCodecCancelledError) return;
+      if (e instanceof ArchiveCancelledError) {
+        ui.setStatus('ZIP import canceled; current work is unchanged.');
+        return;
+      }
       const msg = errorMessage(e);
       if (!msg.startsWith('Unsupported model format.')) {
         console.error(e);
@@ -1245,7 +1255,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     } finally {
       if (isCurrentLoad()) ui.setIsLoading(false);
     }
-  }, [ui, model, playbackRef, clearLoadedModel, commitSkinEditState, importSmfInWorker]);
+  }, [ui, model, playbackRef, clearLoadedModel, commitSkinEditState, importSmfInWorker, prepareArchive]);
 
   const handleOpen = useCallback(async () => {
     if (ui.isLoading) return;
@@ -3541,6 +3551,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     handleSaveProject,
     handleAutosaveProject,
     pendingReplacement,
+    archiveActivity,
+    cancelArchive,
+    chooseArchiveModel,
     cancelPendingReplacement,
     confirmPendingReplacement,
     handleExport,

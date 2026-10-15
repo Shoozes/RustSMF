@@ -7,6 +7,7 @@ import Outliner from './components/Outliner'
 import Inspector from './components/Inspector'
 import Toolbar from './components/Toolbar'
 import HelpDialog from './components/HelpDialog'
+import ModelArchiveDialog from './components/ModelArchiveDialog'
 import { modernStatus } from './utils/modernStatus'
 import ViewportControls, { type ViewportControlsProps } from './components/ViewportControls'
 import { ListBullets, SlidersHorizontal, X } from '@phosphor-icons/react'
@@ -163,6 +164,9 @@ export default function App() {
     handleSaveProject,
     handleAutosaveProject,
     pendingReplacement,
+    archiveActivity,
+    cancelArchive,
+    chooseArchiveModel,
     cancelPendingReplacement,
     confirmPendingReplacement,
     handleExport,
@@ -1351,6 +1355,7 @@ export default function App() {
 
       {theme.shellVariant === 'modern' && <HelpDialog open={helpOpen} status={ui.status}
         onDismiss={() => setHelpOpen(false)} onClosed={() => helpTriggerRef.current?.focus()} />}
+      {archiveActivity && <ModelArchiveDialog activity={archiveActivity} onCancel={cancelArchive} onChoose={chooseArchiveModel} />}
 
       {/* Simple pure error banner (no extra deps) - always in DOM even when not shown (for e2e), hidden via style when no error */}
       <div

@@ -1,10 +1,14 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-10-14
+Last reviewed: 2026-10-15
 
 Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
+
+## ZIP intake implementation follow-through
+
+The prior cleanup/cubic findings are published as `040feb3`. The next accepted donor outcome, ZIP intake, now uses bounded worker expansion and the existing load/replacement paths. Focused checks cover all supported model formats, nested resources, explicit choice, cancel/failure preservation, project/export continuity and mocked native reads. Integration review identified a temporary-dialog focus defect (repaired), redundant native buffer copying (removed by explicit ownership handoff), and native reads that cannot be aborted. Issued native reads remain bounded and serialized; cancellation ignores their late results. A simulated native timeout reproduced an obsolete queued read starting after retry (three reads instead of two); terminal cleanup now aborts queued requests, and its ordinary-UI regression passes. See ZIP_INTAKE.md for exact support boundaries and HISTORY for the final gate. Export presets/queues are next; borrowed references and drafts remain private.
 
 ## Retarget assistance integrity review
 
@@ -25,7 +29,7 @@ Cleanup keeps the reviewed transfer and authoring contracts, version, flat Moder
 
 The final candidate passed verify (537 frontend units across 100 files; 14 Rust checks), browser (161), journeys (11) and strict visuals (3), with all 445 recorded source/runner inputs unchanged across checks. Full discovery caught incompatible TypeScript declaration syntax before browser execution; the adapter now uses compatible typed access. A subsequent browser run had one initial `ERR_NETWORK_CHANGED` navigation failure; its case passed twice after network recheck, then the complete suite passed with retries disabled. Both earlier attempts remain in the compact receipt. Original references are unchanged. No new installed-Windows or asset-distribution acceptance is claimed.
 
-The follow-on cubic authoring gate passed sequential verify (546 units; 14 Rust checks), browser (163, no retries), journeys (11) and strict visuals (3), with 443 implementation inputs unchanged. Unsupported rotation cuts preserve dirty work and history, while supported edits survive project reopen and parsed GLB re-import. Next: ZIP bundle intake, followed by TODO's ordered donor outcomes. Custom rig creation, asset distribution, installer replacement and publication remain outside this repair. Keep independent numerical expectations; parity alone can conceal shared sampler mistakes.
+The follow-on cubic authoring gate passed sequential verify (546 units; 14 Rust checks), browser (163, no retries), journeys (11) and strict visuals (3), with 443 implementation inputs unchanged. Unsupported rotation cuts preserve dirty work and history, while supported edits survive project reopen and parsed GLB re-import. ZIP intake follows through above; export presets/queues are next. Custom rig creation, asset distribution, installer replacement and publication remain outside this repair. Keep independent numerical expectations; parity alone can conceal shared sampler mistakes.
 
 ## Earlier Modern task-drawer review
 
@@ -114,4 +118,4 @@ still contain the removed scaffolding. No selected implementation defect remains
 open; TODO records the completed local acceptance and separate distribution scope.
 
 ---
-AI-edited: 2026-10-14T23:02:55-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified cubic authoring completion and next outcome
+AI-edited: 2026-10-15T01:48:27-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified ZIP intake and lifecycle boundaries

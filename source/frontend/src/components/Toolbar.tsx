@@ -16,7 +16,7 @@ import {
   type AppThemeDefinition,
   type AppThemeId,
 } from '../theme';
-import { SUPPORTED_MODEL_RESOURCE_ACCEPT } from '../utils/modelFormat';
+import { SUPPORTED_MODEL_INTAKE_ACCEPT } from '../utils/modelFormat';
 import ViewportControls, { type ViewportControlsProps } from './ViewportControls';
 
 interface ToolbarProps extends Omit<ViewportControlsProps, 'variant'> {
@@ -316,7 +316,7 @@ const Toolbar: React.FC<ToolbarProps> = (props) => (
       type="file"
       data-testid="model-file-input"
       style={{ display: 'none' }}
-      accept={SUPPORTED_MODEL_RESOURCE_ACCEPT}
+      accept={SUPPORTED_MODEL_INTAKE_ACCEPT}
       multiple
       onChange={props.onFileChange}
     />
