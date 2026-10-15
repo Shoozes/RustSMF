@@ -19,6 +19,10 @@ RustSMF is a local editor for SMF, GLB/GLTF, FBX, DAE/Collada and OBJ models, ri
 
 Drag to orbit, right-drag to pan and scroll to zoom. The sample has five bones, three materials and two two-second clips, with no external files to find. See the [user guide](docs/user/README.md) for other models and editing controls.
 
+Want another sample? [Sable, our original black cat](examples/black-cat/README.md),
+includes Idle, Walk, Run and Sit, plus its editable Blender source. It is a
+separate source sample; the Windows preview download still includes Signal Robot.
+
 <details>
 <summary>Windows requirements and download verification</summary>
 
@@ -69,4 +73,6 @@ After setup, build the NSIS installer with `pwsh -NoProfile -File .\run.ps1 -Tas
 
 ## License
 
-Project-owned code and the Signal Robot sample are [MIT licensed](LICENSE), copyright 2026 Shoozes. Third-party code, fixtures and reference assets retain their own terms. [Third-party notices](THIRD_PARTY_NOTICES.md) and [fixture provenance](source/frontend/tests/fixtures/PROVENANCE.md) describe that boundary; unidentified assets receive no new reuse grant.
+Project-owned code and the Signal Robot and Sable samples are [MIT licensed](LICENSE), copyright 2026 Shoozes. Third-party code, fixtures and reference assets retain their own terms. [Third-party notices](THIRD_PARTY_NOTICES.md) and [fixture provenance](source/frontend/tests/fixtures/PROVENANCE.md) describe that boundary; unidentified assets receive no new reuse grant.
+
+AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes

@@ -436,7 +436,7 @@ test('headless user journey creates and previews a hand-wave animation', async (
   ]);
 
   const context = await browser.newContext({
-    baseURL: 'http://localhost:5173',
+    baseURL: testInfo.project.use.baseURL,
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 1.25,
     recordVideo: {

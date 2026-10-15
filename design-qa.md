@@ -1,8 +1,14 @@
 # Modern UI Design QA — v0.2 productization complete
 
+## Original Sable sample
+
+No controls, styles or layouts change. Subdued studio lights and asset-local roughness/specular settings retain a charcoal coat with readable eyes and silhouette. Fixed native front/left/right/back views cover rest, Walk/Run lift and mid/held Sit. Desktop/narrow browser captures supplement independent skin checks at every key/midpoint. A 1K atlas retains actual browser recovery. Original references remain fixed; HISTORY binds the gate. Viewport repeat differs from pack loop declarations.
+
 ## Export presets and queues
 
 Export keeps two native disclosures: Export queue and Format details. The queue holds one preset selector and named Add icon; filename/clip options are secondary. It shows one running/retry action and item outcomes. Cancel stays reachable over the viewport when Tools is closed. Modern uses existing flat surfaces and brass focus; Original's diagnostics retain their layout. Review of eight captures covers the six established sizes, DPR 1/1.25/2 and coarse pointer. Controls fit, touch targets reach 44px, keyboard/Escape returns focus, and the viewport remains the main working surface. At 390px the existing drawer overlays it and closes with Escape. No visual baseline updates are intended. HISTORY owns final gate results; reviewed captures stay in ignored `output/export-queue-20261015/reviewed/`.
+
+The published-batch integrity cleanup changes snapshot ownership/accounting and defers display changes until source-material readers finish. It adds no controls or layout changes. Existing reviewed composition captures remain applicable; current strict checks and semantic instance/export evidence belong to HISTORY. Original references remain fixed.
 
 ## ZIP intake dialog
 
@@ -10,9 +16,7 @@ Open/drop keeps the existing editor composition. The temporary archive surface h
 
 ## Retarget review — 2026-10-14
 
-The integrity cleanup changes interpolation and routine evidence retention, with no layout/style changes. Existing reviewed six-size/DPI captures remain source-specific evidence for the unchanged controls; current strict results belong in HISTORY. Successful UI captures now require `RUSTSMF_CAPTURE_UI_REVIEW=1` and use the current test output owner. Required strict comparisons and hand-wave captures remain enabled.
-
-The follow-on cubic authoring repair keeps the same controls and flat theme. Unsupported rotation cuts report existing-key/Retime guidance before mutation. Ordinary chooser, pointer and keyboard paths prove history and continued editing. All three current strict checks passed without baseline updates, including Original.
+Interpolation/cubic authoring kept the controls and flat theme; refused cuts retain existing-key/Retime guidance. Ordinary actions prove history/editability. HISTORY binds prior captures and gates; strict Original references remain fixed.
 
 Current source keeps Animate > Transfer as one source action, compact progress/Cancel, and a private preview with Apply/Discard. Convention overrides, mapping rows, technical diagnostics and profile JSON live under Mapping details. Other workspaces and the flat graphite/off-white/brass palette retain their hierarchy. Pending work stays cancelable when Tools is closed; leaving Animate clears it. Preview uses the existing compact playback controls without the canonical authoring lane. Six reviewed sizes (1920×1080, 1440×900, 1280×800, 1024×768, 800×900 and 390×844), DPR 1/1.25/2, coarse targets, overflow, Escape and focus return passed. At narrow widths Tools overlays the model; closing it retains preview for viewing. All three strict checks passed with every committed reference unchanged. HISTORY binds the final source and captures; the public installer is unchanged.
 
@@ -22,9 +26,7 @@ The user selected mockup 2, Task tabs, after three image-generated options based
 
 Common actions use existing Phosphor symbols with accessible names and native tooltips. Arrow keys, Home and End navigate task tabs. Secondary pose steps, constraints, clip timing/order and brush settings use disclosures. New animation opens from its icon; tab switching keeps unfinished fields mounted. The Skin brush card appears when Tools is closed, avoiding duplicate sliders. Warnings and unsaved work remain visible. Original takes the existing unwrapped markup path; its stylesheet and committed reference are unchanged.
 
-The final frontend gate passed verify, 139 browser checks, 11 journeys and three strict visuals. All committed strict references remain unchanged. Reviewed task/responsive/touch captures and keyboard/DPR observations are bound to the source receipt in HISTORY. These source changes do not replace the published Windows preview.
-
-The subsequent integrity recheck reproduced hidden Skin state in Scene. The notice now sits above the drawer switcher, including at 390 px, with no duplicate brush sliders. Both repaired captures were reviewed. `workspace-tasks.spec.ts` makes tab keys, focus, draft continuity, keyboard picker cancellation and 44 px touch targets durable guards. The final gate passed verify (520 units), 144 browser checks, 11 journeys and three strict visuals; references are unchanged. HISTORY owns command/source evidence.
+The integrity recheck moved the hidden Skin notice above the drawer switcher, including at 390 px, without duplicating brush sliders. `workspace-tasks.spec.ts` guards task keys/focus, drafts, picker cancellation and 44 px targets. Reviewed captures, sequential gates and unchanged Original references are bound in HISTORY; source work does not replace the public installer.
 
 ## 0.2.1 preview polish
 
@@ -81,4 +83,6 @@ The curated overview now shows the model with the tools closed. Modern's empty s
 `source/frontend/tests/modern-shell.spec.ts` owns command visibility, one-drawer behavior, coarse-pointer target size, and DPR backing dimensions. `source/frontend/tests/visual.spec.ts` owns responsive shell, viewport controls, Modern/Original geometry, and strict screenshot evidence. `docs/dev/review.md` records suite outcomes; `docs/dev/HISTORY.md` records the final evidence entry.
 
 ---
-AI-edited: 2026-10-15T04:46:35-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue evidence and preserved ZIP ownership
+AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
+
+AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes

@@ -1,0 +1,132 @@
+{
+  "schema": "rustsmf.original-asset.v1",
+  "id": "SAMPLE-SABLE-001",
+  "name": "Sable",
+  "license": "MIT",
+  "copyright": "2026 Shoozes",
+  "source": "Original image-guided design; Tripo Pro mesh/texture repaired in Blender; original rig and authored keys",
+  "provenance": {
+    "image": "CAT-IMAGE-002",
+    "draft": "CAT-TRIPO-002",
+    "generated": "2026-10-15",
+    "entitlement": "Pro observed for this generation",
+    "rights": "Tripo Terms 5.2.2 paid-user output rights; distributed by Shoozes under MIT",
+    "terms": "https://www.tripo3d.ai/terms",
+    "reference": "REF-FOX-001 pose/framing only; no borrowed model, rig, texture or motion included"
+  },
+  "generator": {
+    "path": "build_black_cat.py",
+    "sha256": "ddea3910a2f001e6e3d5bba34123ef9daec80dc4fb196df0a0ae3552938c7d44"
+  },
+  "blender": "5.2.1 LTS",
+  "fps": 30,
+  "units": "meters",
+  "authoring_unit_meters": 0.3,
+  "blender_front": "-Y",
+  "gltf_up": "+Y",
+  "gltf_front": "+Z",
+  "joints": [
+    "Root",
+    "Pelvis",
+    "Spine",
+    "Neck",
+    "Head",
+    "Tail01",
+    "Tail02",
+    "Tail03",
+    "Tail04",
+    "Tail05",
+    "ForeUpper_L",
+    "ForeLower_L",
+    "ForePaw_L",
+    "HindUpper_L",
+    "HindLower_L",
+    "HindFoot_L",
+    "HindPaw_L",
+    "ForeUpper_R",
+    "ForeLower_R",
+    "ForePaw_R",
+    "HindUpper_R",
+    "HindLower_R",
+    "HindFoot_R",
+    "HindPaw_R"
+  ],
+  "clips": [
+    {
+      "name": "Idle",
+      "duration": 3.0,
+      "loop": true,
+      "in_place": true
+    },
+    {
+      "name": "Walk",
+      "duration": 1.2,
+      "loop": true,
+      "in_place": true
+    },
+    {
+      "name": "Run",
+      "duration": 0.8,
+      "loop": true,
+      "in_place": true
+    },
+    {
+      "name": "Sit",
+      "duration": 2.0,
+      "loop": false,
+      "in_place": true
+    }
+  ],
+  "topology": {
+    "main_connected_body": {
+      "vertices": 4249,
+      "triangles": 8498,
+      "components": 1,
+      "boundary_edges": 0,
+      "non_manifold_edges": 0
+    },
+    "welded_main_body": {
+      "vertices": 4249,
+      "triangles": 8498,
+      "components": 1,
+      "boundary_edges": 0,
+      "non_manifold_edges": 0
+    },
+    "complete_mesh": {
+      "vertices": 4721,
+      "triangles": 9434,
+      "components": 3,
+      "boundary_edges": 0,
+      "non_manifold_edges": 0
+    },
+    "intentional_components": "Two closed eye surfaces attached to Head; body, paws, ears and tail form one component."
+  },
+  "locomotion": {
+    "Walk": {
+      "forward": "+Z",
+      "nominal_meters_per_cycle": 0.1272727272727273
+    },
+    "Run": {
+      "forward": "+Z",
+      "nominal_meters_per_cycle": 0.3375
+    },
+    "Sit": {
+      "hold_from_seconds": 1.6,
+      "loop": false
+    }
+  },
+  "materials": [
+    "Sable coat"
+  ],
+  "uv": "Original UV atlas preserved through patch repair; one embedded 1024x1024 PNG, packed in Blender to fit browser recovery",
+  "files": {
+    "sable.blend": {
+      "bytes": 1917615,
+      "sha256": "f95dd4464bb9c22dcc78e6149588e0130f390299a31f40e669e95ba8eb77ef77"
+    },
+    "sable.glb": {
+      "bytes": 1805456,
+      "sha256": "d3d5ad87506fe90c7eaf22e3a767924c4c7d6239cff51648361d88f2ad2d1f49"
+    }
+  }
+}

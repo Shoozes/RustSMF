@@ -142,11 +142,11 @@ test('archive chooser stays compact with keyboard and touch across viewport/DPI 
     [1920,1080,1,false], [1440,900,1.25,false], [1280,800,1,false],
     [1024,768,1,false], [800,900,2,false], [390,844,2,true],
   ] as const) {
-    const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: dpr, hasTouch: touch });
+    const context = await browser.newContext({ baseURL: info.project.use.baseURL, viewport: { width, height }, deviceScaleFactor: dpr, hasTouch: touch });
     try {
       const page = await context.newPage();
       const errors = watchJourneyErrors(page);
-      await page.goto('http://localhost:5173');
+      await page.goto('/');
       await open(page, input);
       const dialog = page.getByTestId('archive-dialog');
       const choice = dialog.getByLabel('Model', { exact: true });

@@ -2,9 +2,13 @@
 
 Last reviewed: 2026-10-15
 
+## Original Sable sample and motion pack
+
+Sable in `examples/black-cat/` is an original image-guided Tripo Pro cat repaired in Blender, with 24 original joints/keys, Idle/Walk/Run/Sit and a packed 1K atlas. Independent guards cover full loop transforms/skin, every key/midpoint, actual recovery and project/GLB continuity. Run reserves 0.3 mm paw clearance; rebuilding uses a separate destination. The [guide](../../examples/black-cat/README.md) owns usage/limits; the [register](ASSET_PROVENANCE.md) owns rights and HISTORY owns evidence. Drafts/references stay private. Signal Robot, installer and app controls remain unchanged.
+
 ## Export presets and queues on current source
 
-Export > Tools > Export queue captures the current authored model with an explicit GLB/FBX/DAE/SMF preset. Options holds filename and clip inclusion. Eight items and 128 MiB of owned inputs are allowed. One foreground save owner serializes validated outputs with recovery; successful items are excluded from retry. Cancel stops preparation/pending work and waits for issued native saves. Browser results report download issuance. Replacement cancels pending captures; Retry retains their original inputs. [EXPORT_QUEUE.md](EXPORT_QUEUE.md) owns lifecycle, limits and evidence. Final sequential verification passes: 588 frontend units, 14 Rust checks, 192 browser tests, 11 journeys and 3 strict visuals. Version/installer remain unchanged; installed Windows queue acceptance is separate.
+Export > Tools > Export queue captures the current authored model with an explicit GLB/FBX/DAE/SMF preset. Options holds filename and clip inclusion. Eight items and 128 MiB of estimated owned inputs are allowed. The estimate follows independent track/attribute copies, texture backing buffers and instance data, while preserving actual interleaved sharing. Geometry metadata and instance morph pixels are private. One foreground save owner serializes validated outputs with recovery; successful items are excluded from retry. Cancel stops preparation/pending work and waits for issued native saves. Browser results report download issuance. Replacement cancels pending captures; Retry retains their original inputs. Display changes made during source-material reads apply after the last reader, preserving export inputs. [EXPORT_QUEUE.md](EXPORT_QUEUE.md) owns lifecycle and limits; HISTORY binds verification to source. Version/installer remain unchanged; installed Windows queue acceptance is separate.
 
 ## ZIP intake on current source
 
@@ -353,4 +357,6 @@ limits without partial output. [TRANSITION_BAKE.md](TRANSITION_BAKE.md) owns the
 input contract, bounds, vendoring requirements, and native/browser WASM proof.
 
 ---
-AI-edited: 2026-10-15T10:01:50-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue batch for guarded publication
+AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
+
+AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes

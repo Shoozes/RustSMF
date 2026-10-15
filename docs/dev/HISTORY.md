@@ -2,6 +2,75 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-15 — Sable animation guards and final polish
+
+Completed the accepted local polish pass on main `0c7ab1d7aaea8b843f29b632ec74e7e4a125d54f`, preserving the existing 28-file working state and all five owner queue/snapshot/material source/test hashes. Read-only recheck matched the preceding 474-input gate, 28 working-file hashes and 14 required media. Its proof remains attached to its original source; the receipt's `polish` section owns this pass.
+
+An in-memory terminal-tail rotation produced a 2.18 mm surface seam while joint origins still matched. Full normalized rotation, scale and independently skinned loop assertions now reject terminal rotation/scale and interior-key mutations. Dense sampling reproduced Run's 0.134 mm floor penetration; a Run-only 0.3 mm paw reserve repairs it without changing root/stride/timing. All 424 baked-key/midpoint samples retain the 0.1 mm floor tolerance; Run's minimum is +0.166 mm. Recovery/project/queued-GLB continuity now compares those times, raw positions and the specular material as well as existing UVs, texture pixels, influences and hierarchy.
+
+Subdued Blender studio lights and asset-local roughness/specular settings preserve the charcoal coat and amber eyes. Reviewed evidence includes 20 registered orthographic rest/gait/Sit views, five beauty views, and ordinary desktop/narrow browser captures. A fresh alternate-output rebuild passes independent structural/decoded-texture/raw-skin/dense-motion comparisons; its GLB is also byte-identical to the polished asset. Blender files need not match bytes. Native audit confirms 24 joints, four retained actions, neutral opening, normalized weights, packed 1K PNG and no external dependencies. The guide leads with a safe separate output folder and distinguishes current source exports from the older installer.
+
+Review also found the example profile selected Sit and replaced authored clips while dropping scale/non-root translations. It now creates non-destructive `Sable_Transfer_*` loop clips, excludes Sit and states its mapping-example limits. Lossless preservation uses all-clip GLB export. User-confirmed ownership of `guy.glb` is recorded; no exact matching file was found in the checkout, so its bytes remain unbound.
+
+The first final verify rejected combined TODO field labels despite passing frontend/Rust checks; required fields were restored. A focused profile check rejected an empty optional replacement list; omitting it uses the existing non-replacing contract. A prematurely started gate was stopped by matching owned PID/birth/executable and is not acceptance evidence. The corrected final gate passed sequentially on 474 unchanged implementation inputs, raw aggregate SHA-256 `f4881108bc610ee9b89efad52cce1b8e443bcc751e1db5a64c1b1d5d0808fe6f`:
+
+- `pwsh -NoProfile -File run.ps1 -Task verify`: exit 0; 602 frontend units, 14 Rust verification checks, lint/type/build/project/context gates.
+- `pwsh -NoProfile -File run.ps1 -Task test:e2e -NoGenEye`: exit 0; 196 passed, no retries/skips/unexpected errors.
+- `pwsh -NoProfile -File run.ps1 -Task test:journey -NoGenEye`: exit 0; 12 sequential journeys passed.
+- `pwsh -NoProfile -File run.ps1 -Task test:visual-strict`: exit 0; 3 passed without baseline updates. Original remains `e5ee611a6b1b3fced0c152eacf42d4797fa084ab4f621476075297581a111846`.
+
+Runtime: PowerShell 7.6.6, Node v26.5.0, Blender 5.2.1 LTS. Sable GLB: 1,805,456 bytes, SHA-256 `d3d5ad87506fe90c7eaf22e3a767924c4c7d6239cff51648361d88f2ad2d1f49`. Editable Blender source: SHA-256 `3e04572681b39020c55990561e5097a6bcdc5f15e2456b49d4a95c4bdfc43cdb`.
+
+`output/original-assets-20261015/receipt.json` retains compact source/command results, rebuild comparison, media references and owned resource cleanup. Prior media, recovery, borrowed references and private drafts remain protected. Disposable duplicate rebuild outputs are retired after comparison; no shared caches or user browser are removed. TODO selects complete Rust solver migration next. New-pose/game-contact and installed-Windows acceptance remain separate; no stage, commit, push, installer, release or version change.
+
+Publication closeout includes the explicitly authorized export cleanup. Git normalizes text, so the hashed Sable recipe is pinned to LF and its manifest uses canonical SHA-256 `ddea3910a2f001e6e3d5bba34123ef9daec80dc4fb196df0a0ae3552938c7d44`; a regression requires both LF bytes and the exact attribute. A portable save disables automatic repacking, uses the raw image-path setter and retains canonical packed paths without relative remapping; this removes missing-sidecar warnings. Canonical Blender SHA-256 is `f95dd4464bb9c22dcc78e6149588e0130f390299a31f40e669e95ba8eb77ef77`. GLB geometry/texture/animation bytes are unchanged. Exact staged-tree materialization, isolated public-source gate results, the separate ten-test private-helper lane, confirmed remote commit and cleanup are retained in `output/original-assets-20261015/publish/receipt.json`. Private helpers are absent from the public snapshot; its nine private-only skips are distinct from maintainer proof. No installer/release replacement belongs to source publication.
+
+An unrelated project started a wildcard listener on 5173 during isolated verification; it was left running. Browser readiness/navigation/preview now share explicit IPv4 loopback and validated `RUSTSMF_PLAYWRIGHT_PORT` (default 5173). Archive and hand-wave contexts inherit that endpoint. Three unit cases guard defaults, bounds and invalid/injected text; publication proof uses port 53173. A fresh snapshot also needs the documented ignored WASM generation before project-integrity checks; the initial missing-generated-module failure is retained separately from the corrected gate.
+
+AI-edited: 2026-10-15T19:18:00Z | agent=Codex/root | model=unknown | effort=unknown | task=sable-polish | change=recorded animation repairs, rebuild, presentation and final gate
+
+## 2026-10-15 — Sable original asset and animation pack
+
+Implemented the selected asset outcome on local main from `0c7ab1d7aaea8b843f29b632ec74e7e4a125d54f`, preserving the initial 14-file owner state. The five queue/snapshot/material code and test files remain byte-identical to intake. No application controls, backend behavior, versions, installer or release assets changed.
+
+The procedural cat passed technical checks but was visually rejected; that candidate is superseded. An original image edit followed the borrowed fox's actual near-profile stance/framing while retaining feline anatomy. One new Tripo Smart Mesh P2.0 model used 100 existing credits and texture refinement used 20 (2555 to 2435); no purchase, subscription change, online rig or borrowed motion was used. Pro entitlement observed for this generation and the applicable paid-output terms are recorded in ASSET_PROVENANCE and the private receipt. CAT-TRIPO-001 remains uncleared; all raw drafts, images and borrowed media stay ignored/private.
+
+The finished MIT pack in `examples/black-cat/` contains editable Blender 5.2.1 source, a self-contained GLB, original 24-joint rig/normalized weights, explicit same-rig profile and original Idle/Walk/Run/Sit keys. Local mouth/sole repairs and final triangulation checks leave a closed 4249-vertex/8498-triangle body, with two separate closed eye surfaces. The complete mesh has 4721 vertices/9434 triangles. The Blender source retains four actions, packed texture and no linked libraries; rebuilding reads that finished scene, not a private draft.
+
+Review corrected lifted front paws/seated deformation and two shared diagonals exposed only after export triangulation. The 2K lossless atlas exceeded real browser recovery quota despite successful playback/export; a 1K atlas reduces the GLB to 1,805,332 bytes. The journey now requires actual recovery writes before and after continued editing, plus independently parsed project/queue/re-import geometry, UVs, decoded atlas pixels, raw influences and sampled motion. Test assumptions about PNG alignment and renamed parent groups were corrected without relaxing image or continuity checks. New orientation prose was shortened to retain the 84 KiB context cap.
+
+Final sequential PowerShell 7.6.6 / Node v26.5.0 gate passed on 474 unchanged implementation inputs, raw aggregate SHA-256 `2923bc90f8fcfb612afbe2b2fb75902b687caf101fd61f326562f38198f14527`. The receipt records the path/hash algorithm and changed inputs. All commands exited 0:
+
+- `pwsh -NoProfile -File run.ps1 -Task verify`: 601 frontend units, 14 Rust verification checks and repository/lint/type/build/context gates.
+- `pwsh -NoProfile -File run.ps1 -Task test:e2e -NoGenEye`: 194 passed.
+- `pwsh -NoProfile -File run.ps1 -Task test:journey -NoGenEye`: 12 sequential journeys passed, including Sable recovery/continuity.
+- `pwsh -NoProfile -File run.ps1 -Task test:visual-strict`: 3 passed without baseline updates. Original SHA-256 remains `e5ee611a6b1b3fced0c152eacf42d4797fa084ab4f621476075297581a111846`.
+
+Sable GLB SHA-256 is `ec062eca6db065d84c09c25fee314a6559aca48846ca887eb4cfbd00b0df8d9b`; Blender source SHA-256 is `26a7a6e5f24c76fb62df958376296466b6ea35836c838ae3c3e22b9ed06a4323`. Registered native rest/mid/held-Sit views and clip captures, floor/paw samples, editable-source audit and ordinary browser captures supplement the six asset units. The global `tripo-asset-workflow` skill now records the observed export, topology, transform, texture, persistence and visual-acceptance pitfalls; its validator passes.
+
+`output/original-assets-20261015/receipt.json` owns compact command/source results, required-media references, private provenance and resource dispositions. Signal Robot remains the installed quickstart; native Windows application checks and game contact/new-pose suitability are not claimed. Viewport repeat differs from pack loop declarations, and editor-only settings/history are not project state. TODO selects complete Rust solver migration next. Work remains local/uncommitted; no stage, commit or push belongs to this batch.
+
+AI-edited: 2026-10-15T18:36:42Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=recorded revised asset, observed defects and final source-bound gate
+
+## 2026-10-15 — Published export queue review and cleanup
+
+Reviewed clean local main `0c7ab1d7aaea8b843f29b632ec74e7e4a125d54f`, tree `21122820a14b64338bf0e1e2ca74291cf3aa87b8`, before editing. The published receipt binds its isolated source and gate; the index was empty. Coverage followed Summary Bank through queue/snapshot/preparation, source-material display, save/recovery, format readers, tests and asset provenance. DAE naming, sequential destinations, cancellation/retry, reader registration lifetime and ZIP directory fixes retain their guards.
+
+Six new regressions reproduced before their repairs: three array/image allocation undercounts, a display update replacing source materials during overlapping readers, omitted instance matrices, and shared instance morph pixels. Snapshot accounting now follows actual clone sites and backing allocations while retaining private interleaved sharing. Captures also own geometry metadata and instance morph resources; disposal leaves canonical resources intact. The last source reader applies the newest display settings. The focused ownership set passed 35 units; a new ordinary file/queue/re-import check independently parses first-party instance translations. No controls, styles, project/profile formats or version changed.
+
+The first full verification attempt passed all 595 frontend units and Rust checks but caught a `Source<unknown>` type mismatch in the new DataTexture path. Type-preserving structured copying fixed it; focused compilation passed. The complete final gate then ran sequentially on 454 unchanged implementation inputs, normalized SHA-256 `397038433008367a8d11beacabb208ad3f18774c134473d16ae7bc78c2b3eef0`, with PowerShell 7.6.6 and Node v26.5.0. All commands exited 0:
+
+- `pwsh -NoProfile -File run.ps1 -Task verify`: 595 frontend units, 14 Rust verification checks and repository/lint/type/build/context gates.
+- `pwsh -NoProfile -File run.ps1 -Task test:e2e -NoGenEye`: 193 passed, no retries, skips or unexpected errors.
+- `pwsh -NoProfile -File run.ps1 -Task test:journey -NoGenEye`: 11 passed sequentially.
+- `pwsh -NoProfile -File run.ps1 -Task test:visual-strict`: 3 passed without reference updates; Original bytes unchanged.
+
+TODO now selects original asset intake/rights, Blender anatomy/material/topology repair, original rig/weights and Idle/Walk/Run/Sit, then editable-source/self-contained-GLB acceptance. Completed duplicate records route to HISTORY; retained v0.2 criteria remain. The context bank fits its unchanged limits at 82.8 KiB default across 53 groups. APP_STATE, QA, export/test contracts, review and provenance are current. Signal Robot remains the public sample; CAT-TRIPO-001 and borrowed references remain private and ineligible for distribution pending acceptance. Installed Windows queue checks remain separate from mocked IPC.
+
+`output/export-queue-review-20261015/receipt.json` consolidates source, failures, commands, required-media references and owned cleanup. All 14 current journey media, 14 published queue media, 14 published ZIP media and eight prior UI captures were hash-verified. Owned runners and port 5173 released; scratch was removed, with compact results and required proof retained. Work stays local and uncommitted; no asset/recovery data, installer, release or publication changes.
+
+AI-edited: 2026-10-15T11:53:54-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=recorded export recheck source, repairs and final proof
+
 ## 2026-10-15 — Export presets and queues
 
 Implemented the selected TODO outcome on local main from `da98cba4de00f17594fdbb3219382fb4d716cad8`, preserving the initial nine-file ZIP review state. Export > Tools > Export queue captures explicit GLB/FBX/DAE/SMF presets, filename and clip inclusion. Eight rows/128 MiB of owned inputs and the existing 256 MiB result limit bound the session. Sequential validation and destinations share the foreground save owner with latest trailing recovery. Pending/preparation cancellation suppresses writes; issued native saves settle honestly. Successful saves/download requests never repeat on retry. Modern keeps options and format diagnostics disclosed; Original's diagnostic layout and strict references remain intact.

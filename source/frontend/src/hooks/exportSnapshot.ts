@@ -22,16 +22,28 @@ function snapshotBytes(root: THREE.Object3D | null, clips: THREE.AnimationClip[]
     bytes += count;
     if (!Number.isSafeInteger(bytes) || bytes > limit) throw new Error('Queue captures exceed 128 MiB. Remove items before adding another.');
   };
-  const countData = (value: unknown): void => {
+  const countData = (value: unknown, ancestors = new Set<object>()): void => {
     if (value === null || value === undefined) return;
     if (typeof value === 'string') { add(value.length * 2); return; }
     if (typeof value !== 'object') { add(8); return; }
-    if (visited.has(value)) return;
-    visited.add(value);
+    if (ancestors.has(value)) return;
     if (ArrayBuffer.isView(value)) { add(value.byteLength); return; }
     if (value instanceof ArrayBuffer) { add(value.byteLength); return; }
-    if (Array.isArray(value)) { add(value.length * 8); value.forEach(countData); return; }
-    for (const [key, item] of Object.entries(value)) { add(key.length * 2); countData(item); }
+    // Independent clone sites copy aliases again; only break recursive cycles.
+    ancestors.add(value);
+    try {
+      if (Array.isArray(value)) { add(value.length * 8); value.forEach(item => countData(item, ancestors)); return; }
+      for (const [key, item] of Object.entries(value)) { add(key.length * 2); countData(item, ancestors); }
+    } finally { ancestors.delete(value); }
+  };
+  const countTexture = (texture: THREE.Texture) => {
+    add(512); countData(texture.userData);
+    const image = texture.image as { width?: number; height?: number; data?: ArrayBufferView } | undefined;
+    if (image?.data) {
+      countData(image);
+      // structuredClone retains a typed view's complete backing allocation.
+      if (ArrayBuffer.isView(image.data)) add(image.data.buffer.byteLength - image.data.byteLength);
+    } else if (image) add((image.width ?? 0) * (image.height ?? 0) * 4);
   };
   if (smf) countData(smf);
   clips.forEach(clip => {
@@ -43,19 +55,28 @@ function snapshotBytes(root: THREE.Object3D | null, clips: THREE.AnimationClip[]
     if (!(node instanceof THREE.Mesh)) return;
     const geometry = node.geometry;
     if (!visited.has(geometry)) {
-      visited.add(geometry); add(512);
+      visited.add(geometry); add(512); countData(geometry.userData); countData(geometry.groups);
       const attributes = [...Object.values(geometry.attributes), ...Object.values(geometry.morphAttributes).flat(), geometry.index];
-      for (const attribute of attributes) if (attribute) countData(attribute instanceof THREE.InterleavedBufferAttribute ? attribute.data.array : attribute.array);
+      const interleaved = new Set<ArrayBufferLike>();
+      for (const attribute of attributes) if (attribute) {
+        if (attribute instanceof THREE.InterleavedBufferAttribute) {
+          const array = attribute.data.array;
+          if (!interleaved.has(array.buffer)) { interleaved.add(array.buffer); add(array.byteLength); }
+        } else add(attribute.array.byteLength);
+      }
+    }
+    countData(node.morphTargetInfluences); countData(node.morphTargetDictionary);
+    if (node instanceof THREE.InstancedMesh) {
+      countData(node.instanceMatrix.array);
+      if (node.instanceColor) countData(node.instanceColor.array);
+      if (node.morphTexture) countTexture(node.morphTexture);
     }
     const materials = Array.isArray(node.material) ? node.material : [node.material];
     for (const material of materials) {
       if (visited.has(material)) continue;
       visited.add(material); add(2048); countData(material.userData);
       for (const value of Object.values(material)) if (value instanceof THREE.Texture && !visited.has(value)) {
-        visited.add(value); add(512);
-        const image = value.image as { width?: number; height?: number; data?: ArrayBufferView } | undefined;
-        if (image?.data) countData(image.data);
-        else if (image) add((image.width ?? 0) * (image.height ?? 0) * 4);
+        visited.add(value); countTexture(value);
       }
     }
     if (node instanceof THREE.SkinnedMesh) add(node.skeleton.bones.length * 256);
@@ -100,6 +121,11 @@ export function captureExportSnapshot(input: SmfExportCandidateInput, preset: Re
       disposed = true; resources.forEach(resource => resource.dispose());
       canvases.forEach(canvas => { canvas.width = 0; canvas.height = 0; });
     };
+    const ownImage = (source: unknown) => {
+      const image = copyTextureImage(source);
+      if (typeof HTMLCanvasElement !== 'undefined' && image instanceof HTMLCanvasElement) canvases.push(image);
+      return image;
+    };
     try {
       const root = clone(input.root!) as THREE.Group;
       const geometries = new Map<THREE.BufferGeometry, THREE.BufferGeometry>();
@@ -113,10 +139,8 @@ export function captureExportSnapshot(input: SmfExportCandidateInput, preset: Re
           let texture = textures.get(value);
           if (!texture) {
             texture = value.clone(); resources.add(texture);
-            const image = copyTextureImage(value.image);
-            texture.source = new THREE.Source(image);
+            texture.source = new THREE.Source(ownImage(value.image));
             texture.needsUpdate = true; textures.set(value, texture);
-            if (typeof HTMLCanvasElement !== 'undefined' && image instanceof HTMLCanvasElement) canvases.push(image);
           }
           Reflect.set(result, key, texture);
         }
@@ -127,10 +151,18 @@ export function captureExportSnapshot(input: SmfExportCandidateInput, preset: Re
         let geometry = geometries.get(node.geometry);
         if (!geometry) {
           const owned: THREE.BufferGeometry = node.geometry.clone();
+          owned.userData = structuredClone(node.geometry.userData);
           geometries.set(node.geometry, owned); resources.add(owned); geometry = owned;
         }
         node.geometry = geometry;
         node.material = Array.isArray(node.material) ? node.material.map(copyMaterial) : copyMaterial(node.material);
+        if (node instanceof THREE.InstancedMesh) {
+          resources.add(node);
+          if (node.morphTexture) {
+            node.morphTexture.source = new THREE.Source(structuredClone(node.morphTexture.image));
+            node.morphTexture.needsUpdate = true;
+          }
+        }
         if (node instanceof THREE.SkinnedMesh) {
           resources.add(node.skeleton);
           if (node.skeleton.bones.some(bone => !bone)) throw new Error('Skeleton has bones outside the model. Export this model directly or repair its hierarchy.');

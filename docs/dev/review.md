@@ -6,9 +6,40 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Export queue follow-through — 2026-10-15
+## Sable review and final polish — 2026-10-15
 
-The accepted TODO outcome was absent from the published source; the preceding ZIP directory fixes remain in place. The implementation now captures independent inputs, processes explicit presets through the existing save owner, retains incomplete captures and releases successes. Review distinguishes canceled preparation from issued saves and browser issuance from disk completion. A first-party DAE round-trip reproduced unnamed joints: missing `sid` is repaired and checked structurally and through sampled re-import. A nested capture could also restore preview materials while an async save still read them; reproduced failures now pass with reference-counted source readers scoped to each material registration. The focused set passes 32 units, 13 browser cases and eight reviewed layout/DPR lanes; the corrected candidate passes the final sequential gate (588 units; 14 Rust checks; 192/11/3 browser/journey/strict cases). HISTORY and the compact receipt bind its source and owned cleanup. [EXPORT_QUEUE.md](EXPORT_QUEUE.md) owns boundaries. Installer, version and private assets are outside this batch.
+Read-only recheck matched all 474 implementation inputs, 28 changed files and 14 required media to the prior receipt. Original references and five owner queue/snapshot/material files retain their hashes. Six initial asset units passed. No active research-inbox notes remain beyond its routing README.
+
+- Verified closed: source-bound asset playback/recovery/continuity and earlier ZIP/queue fixes retain their implementation and proof.
+- New, repaired: position-only loop checks missed a terminal tail rotation changing the skin by 2.18 mm. Full normalized rotations, scale and skin now close the seam; deliberate terminal rotation/scale and interior-key mutations fail.
+- New, repaired: dense sampling found Run's 0.134 mm inter-key floor dip. A Run-only 0.3 mm paw reserve retains root/stride/timing; all 424 baked-key/midpoint samples meet the unchanged 0.1 mm tolerance.
+- New, repaired: the example profile selected Sit and replaced authored clips despite dropping scale/non-root translation. It now excludes Sit, uses new clip names and documents its mapping-example limits; lossless pack continuity uses GLB.
+- Verified locally: alternate-output Blender rebuild preserves parsed topology, positions, UVs, decoded texture, named influences and dense motion. Registered native and desktop/narrow browser views are reviewed. The final sequential gate passes 602 frontend units / 14 Rust checks / 196 browser / 12 journeys / 3 strict on unchanged implementation inputs; HISTORY and the receipt's `polish` section bind proof.
+- Unverified: new poses/game contact and installed Windows behavior remain separate. User confirms ownership of `guy.glb`; no matching file exists in this checkout, so its exact bytes remain unbound. Raw drafts and borrowed media stay private.
+
+This bounded polish outcome is complete locally; complete Rust solver migration remains next. No application UI, Original baseline, version, installer or publication changes belong to it.
+
+## Original asset implementation follow-through — 2026-10-15
+
+Sable replaces the visually rejected procedural candidate with an original image-guided Tripo Pro design, local topology repairs, original rig/weights and four authored clips. The generation has its own paid-output evidence; borrowed references, raw drafts and the uncleared older output remain private. Editable Blender source and a self-contained GLB are in `examples/black-cat/`.
+
+Review caught seated deformation, triangulation defects and browser recovery refusal with the 2K PNG. Fitted poses/weights, closed exported triangles and a compact 1K atlas resolve them. Ordinary playback, actual stored recovery, project continuation, decoded texture pixels and independent skin/motion roundtrips pass. The final sequential gate is 601 frontend units / 14 Rust checks / 194 browser / 12 journeys / 3 strict checks. HISTORY owns source and retained evidence. Original references and owner queue fixes are unchanged. These are stylized demonstration clips; new poses/game contact and installed Windows acceptance remain separate. TODO selects complete Rust solver migration next; publication is not part of this asset batch.
+
+## Published export queue review and recheck — 2026-10-15
+
+Review began read-only on clean main `0c7ab1d7aaea8b843f29b632ec74e7e4a125d54f`, tree `21122820a14b64338bf0e1e2ca74291cf3aa87b8`, with an empty index. The publication receipt binds all 1,282 candidate blobs to its sequential gate. Summary Bank routed the queue/snapshot/preparation owners, save/recovery orchestration, material display/export consumers, format readers, tests and asset provenance. The subsequent Cleanup phase is local and authorized; no publication or asset distribution belongs to it.
+
+- Verified closed: DAE joint names, shared-material reader lifetimes, sequential save/recovery ownership, cancellation/retry and ZIP directory fixes retain their implementation and bound regressions. Existing UI captures cover the unchanged drawer and controls.
+- New, repaired: display updates reapplied opacity/maps/sampler preview while export readers were active. A controlled overlapping-reader regression failed; the latest display settings now wait for the last reader and then restore correctly.
+- New, repaired: the estimate deduplicated shared inputs although Three.js cloned track/attribute arrays independently, and structured texture copying retained a whole backing buffer. Small bounded fixtures reproduced all three undercounts before repair. Interleaved geometry still shares its private allocation; this remains an estimate, not a heap/peak-memory claim.
+- New, repaired in the same snapshot boundary: instance matrices were omitted from the estimate and morph pixels remained shared with the live model. Regressions reproduced both; captures now own/release instance morph data and geometry metadata. An ordinary file-selection/queue/re-import flow independently parses generated instance translations.
+- Unverified acceptance: installed Windows queue dialogs remain separate from mocked IPC. CAT-TRIPO-001 is a private draft without distribution eligibility; no rights clearance or animation-pack acceptance is inferred from application tests.
+
+The next selected outcome is the executable original-assets pass in TODO: identify/clear the input, finish anatomy/materials/topology in Blender, author the original rig/weights and Idle/Walk/Run/Sit, then accept editable source and a self-contained GLB with independent motion/deformation evidence. Borrowed reference media remains private. HISTORY and `output/export-queue-review-20261015/receipt.json` own this cleanup's exact commands/source/results and resource dispositions.
+
+## Earlier export queue implementation follow-through
+
+The accepted TODO outcome was implemented and published as `0c7ab1d`, including the preceding ZIP directory fixes. Captures process explicit presets through the existing save owner, retain incomplete inputs and release successes. Review distinguishes canceled preparation from issued saves and browser issuance from disk completion. A first-party DAE round-trip reproduced unnamed joints: missing `sid` is repaired and checked structurally and through sampled re-import. A nested capture could also restore preview materials while an async save still read them; reproduced failures pass with reference-counted source readers scoped to each material registration. That published candidate passed 32 focused units, 13 browser cases and eight reviewed layout/DPR lanes, then the sequential gate (588 units; 14 Rust checks; 192/11/3 browser/journey/strict cases). HISTORY and its publication receipt bind source and cleanup. [EXPORT_QUEUE.md](EXPORT_QUEUE.md) owns boundaries. Installer, version and private assets are outside this batch.
 
 ## Published ZIP review and recheck — 2026-10-15
 
@@ -133,4 +164,4 @@ still contain the removed scaffolding. No selected implementation defect remains
 open; TODO records the completed local acceptance and separate distribution scope.
 
 ---
-AI-edited: 2026-10-15T04:46:35-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue evidence and preserved ZIP ownership
+AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance

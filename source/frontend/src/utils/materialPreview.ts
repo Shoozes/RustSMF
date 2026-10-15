@@ -230,7 +230,7 @@ export function updateMaterialPreview(
   const entry = roots.get(root);
   if (!entry) return;
   entry.preview = { ...entry.preview, ...preview };
-  applyPreviewState(entry);
+  if (!sourceReaders.has(entry)) applyPreviewState(entry);
 }
 
 export function unregisterMaterialPreviewRoot(root: THREE.Object3D): void {

@@ -148,6 +148,37 @@ test('queued GLB captures decoded textures and materials independently of the li
   expectMotion(captured.clips[0]); errors();
 });
 
+test('queued GLB preserves independently generated instance transforms through re-import', async ({ page }) => {
+  const values = new Float32Array([-0.25,0,0, 0.25,0,0, 0,1,0, 0,0,1, 0,0,1, 0,0,1, -1,0,0, 1,0,0]);
+  const data = Buffer.from(values.buffer);
+  const document = {
+    asset: { version: '2.0' }, extensionsUsed: ['EXT_mesh_gpu_instancing'], extensionsRequired: ['EXT_mesh_gpu_instancing'],
+    scene: 0, scenes: [{ nodes: [0] }],
+    nodes: [{ name: 'OriginalInstances', mesh: 0, extensions: { EXT_mesh_gpu_instancing: { attributes: { TRANSLATION: 2 } } } }],
+    meshes: [{ primitives: [{ attributes: { POSITION: 0, NORMAL: 1 } }] }],
+    buffers: [{ byteLength: data.length, uri: `data:application/octet-stream;base64,${data.toString('base64')}` }],
+    bufferViews: [{ buffer: 0, byteOffset: 0, byteLength: 36 }, { buffer: 0, byteOffset: 36, byteLength: 36 }, { buffer: 0, byteOffset: 72, byteLength: 24 }],
+    accessors: [
+      { bufferView: 0, componentType: 5126, count: 3, type: 'VEC3', min: [-0.25,0,0], max: [0.25,1,0] },
+      { bufferView: 1, componentType: 5126, count: 3, type: 'VEC3' }, { bufferView: 2, componentType: 5126, count: 2, type: 'VEC3' },
+    ],
+  };
+  const errors = watchJourneyErrors(page); await page.goto('/');
+  await open(page, { name: 'generated-instances.gltf', mimeType: 'model/gltf+json', buffer: Buffer.from(JSON.stringify(document)) });
+  await add(page, 'glb', 'instances');
+  const pending = page.waitForEvent('download'); await page.getByTestId('export-queue-run').click(); const captured = await bytes(await pending);
+  const json = JSON.parse(captured.toString('utf8', 20, 20 + captured.readUInt32LE(12)));
+  const node = json.nodes.find((value: { name?: string }) => value.name === 'OriginalInstances');
+  const accessor = json.accessors[node.extensions.EXT_mesh_gpu_instancing.attributes.TRANSLATION];
+  const view = json.bufferViews[accessor.bufferView];
+  expect(accessor.componentType).toBe(5126); expect(accessor.type).toBe('VEC3'); expect(accessor.count).toBe(2);
+  const offset = 20 + captured.readUInt32LE(12) + 8 + (view.byteOffset ?? 0) + (accessor.byteOffset ?? 0);
+  const translations = Array.from({ length: 6 }, (_, index) => captured.readFloatLE(offset + Math.floor(index / 3) * (view.byteStride ?? 12) + index % 3 * 4));
+  expectNumbersClose(translations, [-1,0,0, 1,0,0], 1e-6);
+  await open(page, { name: 'instances.glb', mimeType: 'model/gltf-binary', buffer: captured });
+  await renameSubmodel(page, 'EditableInstances'); errors();
+});
+
 test('queued SMF preserves the imported-data path and copied geometry after source replacement', async ({ page }) => {
   const errors = watchJourneyErrors(page); const input = createSmfStressFixtureInput(36);
   await page.goto('/'); await open(page,input); await add(page,'smf','imported'); await open(page,SAMPLE_OBJ); await queuePanel(page);

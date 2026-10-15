@@ -1,0 +1,46 @@
+{
+  "$schema": "rustsmf.retarget-profile.v1",
+  "targetClipNames": {},
+  "retarget": {
+    "manualMap": {
+      "Root": "Root",
+      "Pelvis": "Pelvis",
+      "Spine": "Spine",
+      "Neck": "Neck",
+      "Head": "Head",
+      "Tail01": "Tail01",
+      "Tail02": "Tail02",
+      "Tail03": "Tail03",
+      "Tail04": "Tail04",
+      "Tail05": "Tail05",
+      "ForeUpper_L": "ForeUpper_L",
+      "ForeLower_L": "ForeLower_L",
+      "ForePaw_L": "ForePaw_L",
+      "HindUpper_L": "HindUpper_L",
+      "HindLower_L": "HindLower_L",
+      "HindFoot_L": "HindFoot_L",
+      "HindPaw_L": "HindPaw_L",
+      "ForeUpper_R": "ForeUpper_R",
+      "ForeLower_R": "ForeLower_R",
+      "ForePaw_R": "ForePaw_R",
+      "HindUpper_R": "HindUpper_R",
+      "HindLower_R": "HindLower_R",
+      "HindFoot_R": "HindFoot_R",
+      "HindPaw_R": "HindPaw_R"
+    },
+    "clips": [
+      "Idle",
+      "Walk",
+      "Run"
+    ],
+    "clipNames": {
+      "Idle": "Sable_Transfer_Idle",
+      "Walk": "Sable_Transfer_Walk",
+      "Run": "Sable_Transfer_Run"
+    },
+    "sampleRateHz": 30,
+    "applyUpCorrection": false,
+    "alignMappedBoneDirections": false,
+    "scaleRootMotion": false
+  }
+}

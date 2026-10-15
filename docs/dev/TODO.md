@@ -2,67 +2,67 @@
 
 Last reviewed: 2026-10-15
 
-Backlog status: Export presets/queues are complete; original assets and animation packs are next. The reviewed ZIP directory fixes are preserved in this source batch. HISTORY owns completed proof.
+Backlog status: Sable animation guards and polish are complete. Export presets/queues are published as `0c7ab1d`; their verified cleanup accompanies Sable source publication. Complete Rust solver migration is next.
+
+## Sable final polish — complete
+
+- What: Sable animation guards, floor repair, presentation and safe rebuild.
+- Why: Close position-only loop proof and Run's 0.134 mm inter-key dip.
+- Where: Sable recipe and asset/browser guards.
+- When: Completed locally 2026-10-15; before Rust solver migration.
+- How: Check rotations, scale, skin and all keys/midpoints; retain the 0.1 mm floor tolerance.
+- Done when: Mutation controls, separate rebuild, dense project/export motion and registered/native plus desktop/narrow reviews pass; final verify/browser/journey/strict gates bind one candidate. Preserve owner fixes, Original, private media and owned cleanup. HISTORY owns proof; no publication/version/package work.
+- Verification: Sequential gates pass: 602 frontend units / 14 Rust checks / 196 browser / 12 journeys / 3 strict. HISTORY binds source and cleanup.
+
+## Original assets and animation packs
+
+- What: Sable GLB, editable Blender master and Idle/Walk/Run/Sit pack.
+- Why: Redistributable original demonstration media.
+- Where: `examples/black-cat/`, provenance and asset/browser guards; `feature__original_sable_asset`, `workflow__sable_rebuild`.
+- How: Paid-output CAT-TRIPO-002 replaces the rejected procedural design; drafts/references stay private.
+- When: Initial local acceptance 2026-10-15; polish above follows. Signal Robot remains the installer sample.
+- Done when: Four paws/connected tail, closed topology, normalized skin, 24 explicit joints, axes/units, known clip timing/motion/loop/hold and decoded texture survive playback, recovery, project and parsed GLB continuity. Preserve Original and owner fixes; no app rig/skin feature.
+- Verification: HISTORY binds the initial 601-unit/14-Rust/194-browser/12-journey/3-strict gate and later polish evidence. The sample guide owns limitations.
+
+## Complete Rust solver migration — next
+
+- What: Move the complete current clip solver into shared Rust after parity, retaining the existing TypeScript worker as reference until acceptance.
+- Why: Share mapping and motion execution across native desktop and browser WASM without duplicating behavior or expanding the UI.
+- Where: `source/retarget-core`, existing retarget workers/snapshots and advanced profile fixtures; routes `subsystem__retarget_core`, `feature__retarget_assistance`, `feature__rig_retargeting` and `subsystem__natural_motion`.
+- When: Next selected outcome after Sable acceptance; this asset pass does not begin the migration.
+- How: Inventory current options and own a bounded portable request/result contract first. Port complete vertical slices with reference comparisons for helper ancestry/rest/reference poses, interpolation, timing, root/scale transfer, contacts, twist and endpoint constraints. Keep copied buffers, private preview, Apply/history, progress/cancellation/timeouts and stale/disposal contracts. Custom rig creation/replacement and auto-skinning remain excluded.
+- Done when: Every current supported option passes independent known-value checks and TypeScript-reference/native/actual-browser-WASM parity before Rust replaces production baking. Mapping/diagnostic structures match exactly; numeric tolerance is declared and justified. Cancellation in preparation/analysis/baking, worker/native failure, timeout, replacement/disposal and late completion preserve editable canonical work. Existing projects/profiles/CLI jobs/exports remain compatible; no synchronous fallback or second solver UI.
+- Verification: Extend existing advanced-profile fixtures instead of replacing them. Prove real native Rust and real browser WASM separately from mocked IPC; run the existing sequential frontend gate and retarget runtime proof on one final candidate. Retain compact source-bound evidence, review unchanged Original references and release owned resources.
+
+### Ordered followups
+
+| Order | Outcome | Completion boundary |
+| --- | --- | --- |
+| 1 | ZIP bundle intake — published `da98cba` | Complete; reviewed directory/progress fixes and container limits remain intact. |
+| 2 | Export presets and queues — published `0c7ab1d` | Complete; local reviewed snapshot/material-reader fixes remain preserved. HISTORY owns their proof. |
+| 3 | Original assets and animation packs | Complete; source-bound proof in HISTORY. Borrowed references and raw drafts stay private. |
+| 4 | Complete Rust solver migration — next | Every current option passes reference/native/WASM parity before replacing worker baking. |
+| 5 | Animal-chain assistance | Reviewed suggestions for existing quadruped, wing and tail rigs pass independent first-party fixtures; ambiguity requires explicit maps. No new rig creation. |
 
 ## Export presets and queues
 
 - What: Explicit GLB/FBX/DAE/SMF presets and a bounded session queue of captured authored models.
 - Why: Avoid repeated setup and repeated successful writes.
 - Where: [EXPORT_QUEUE.md](EXPORT_QUEUE.md), queue/snapshot/preparation owners, Export drawer and existing save owner; route `feature__export_queue`.
-- When: Complete on 2026-10-15; guarded main publication is recorded by the publication receipt. Installer unchanged.
+- When: Published on 2026-10-15 as `0c7ab1d`; subsequent integrity cleanup is recorded in HISTORY. Installer unchanged.
 - How: Capture owned inputs/options at Add; serialize validation and destinations with latest trailing recovery. Keep source-aware Export, explicit refusal and truthful download/native results. Modern details stay disclosed.
 - Done when: Count/byte bounds, order, cancellation, destination cancel, failure/retry, stale/disposal and source ownership preserve editable work; completed items never repeat; parsed geometry, influences and sampled motion pass through ordinary UI paths.
-- Verification: 588 frontend units and 14 Rust checks; 192 browser tests, 11 journeys and 3 strict visuals pass sequentially on the final candidate. The focused set passes 32 units and 13 browser cases; eight reviewed captures cover six sizes, DPR and coarse/focus checks. Original references and initial ZIP fixes are unchanged. HISTORY and `output/export-queue-20261015/receipt.json` bind source/results. Installed Windows queue checks remain a future packaging lane.
+- Verification: The published candidate passed 588 frontend units, 14 Rust checks and sequential 192/11/3 browser/journey/strict gates. HISTORY and `output/export-queue-20261015/publish/receipt.json` bind that source; the subsequent integrity recheck has its own HISTORY entry and receipt. Original references and ZIP fixes remain unchanged. Installed Windows queue checks remain a future packaging lane.
 
-## Cubic clip authoring integrity
+## Completed frontend source work
 
-- What: Preserve raw glTF cubic motion through Trim/Retime and shared sampling.
-- Why: Reproduced boundary and tangent-timing errors changed motion.
-- Where: Animation edit/controller owners and first-party cubic fixtures; `feature__animation_authoring`.
-- When: Complete, published as `040feb3`.
-- How: Preserve channels, locks, atomic history, project and export contracts; refuse unsupported cuts before mutation.
-- Done when: Known samples survive editing/history/project/re-import; refused edits preserve work.
-- Verification: 45 focused units, two browser flows and sequential verify (546 units; 14 Rust checks), browser (163), journeys (11), strict visuals (3) passed. HISTORY and `output/cubic-authoring-20261014/receipt.json` retain details. Cubic rotation cuts between keys remain unsupported.
-
-## Retarget assistance and original asset workflow
-
-- What: Complete one image-guided Tripo trial and a reusable global asset skill, then add shared Rust mapping/preflight and cancelable worker transfers with private preview and one undoable Apply.
-- Why: Carry useful naming and review assistance into RustSMF without adding custom rig creation, rig replacement, automatic skinning or a crowded frontend.
-- Where: `source/retarget-core`, Tauri commands, frontend job/snapshot/worker/preview owners, Animate Transfer, public WASM setup, focused tests and `RETARGET_ASSISTANCE.md` / `ASSET_PROVENANCE.md`.
-- When: Completed on 2026-10-14 from source base `fc48c76`, then published to main as `ff43a13`. App version, installer and public release remain unchanged.
-- How: Keep explicit maps authoritative, ambiguous/numeric rigs unresolved without review, preserve the full existing TypeScript solver in a worker, capture owned rest inputs and reject stale results. Keep media private and generation bounded to one image/one model at 100 credits.
-- Done when: All four naming families and native/browser-WASM parity pass; advanced worker baking matches the reference; preview/cancel/discard/apply/history/project/export continuity pass through ordinary controls; six-size/DPI/input review and sequential verify, browser, journey, strict visual, runtime-proof and desktop-smoke gates pass on the final candidate; docs/routes and owned cleanup are complete.
-- Verification: Final sequential verify (528 units; 14 Rust checks), browser suite (160), journeys (11), strict visuals (3), native/actual-WASM parity (17 cases) and desktop smoke (release build; 18 IPC checks) passed. Six-size/DPI/input review, skill validation, source identity and owned cleanup are recorded in HISTORY and `output/retarget-assistance-20261014/`. The cat remains a private repair draft; its Blender/rights acceptance belongs to followup 3.
-
-### Ordered followups
-
-| Order | Outcome | Done when |
-| --- | --- | --- |
-| 1 | ZIP bundle intake — published `da98cba` | Complete; local directory compatibility/progress review fixes are recorded in HISTORY. ZIP remains a container. |
-| 2 | Export presets and queues — complete | Captured explicit formats, bounded ordered saves, cancellation/results and retry without repeated successes pass the frontend gate. |
-| 3 | Original assets and animation packs | Finish CAT-TRIPO-001 in Blender, repair anatomy/tail/topology, verify pose/deformation and rights, author original Idle/Walk/Run/Sit, retain editable source and distribute a self-contained GLB. Borrowed Mesh2Motion media stays excluded. |
-| 4 | Complete Rust solver migration | Every current option passes TypeScript-reference/native/WASM parity before replacing the worker solver. |
-| 5 | Animal-chain assistance | Reviewed suggestions for existing quadruped, wing and tail rigs pass independent first-party fixtures; ambiguous cases require explicit mappings. |
-
-## Task-drawer integrity recheck
-
-- What: Keep Skin state visible in Scene and make task-tab observations durable regressions.
-- Why: The review found hidden unsaved weights when Skin switched to Scene, plus task/draft/picker proof kept only in ignored probes.
-- Where: Shared Modern Skin state, drawer integration, workspace-task browser checks and their routes.
-- When: Completed locally on 2026-10-11 after read-only review/recheck of `1831bc9` plus the existing 42-file batch, focused repair and the final frontend gate.
-- How: Place Skin state inside Scene, keep duplicate brush sliders hidden, and use ordinary tabs, keys and file selection. Preserve Original, formats, recovery data and existing work.
-- Done when: Skin state stays visible at 1440 and 390 px; tabs, drafts, picker cancellation, focus and touch have repository tests; focused controls retain native Space/text keys and viewer shortcuts still work; four frontend gates, docs/routes and owned cleanup pass.
-- Verification: Final isolated verify (520 units), browser suite (146), journeys (11) and strict visuals (3) passed. Keyboard fixes passed 24 repeated cases and 21 neighboring checks. The 46-file candidate, 39 frontend inputs, command results and cleanup are bound in `output/menu-publish-20261011/`. Original references and the public installer retain their identities; HISTORY owns final results.
-
-## Modern task drawers
-
-- What: Implement the selected Task tabs mockup for the busy Model, Rig, Skin and Animate menus.
-- Why: Reduce always-visible text and buttons while keeping authoring actions discoverable.
-- Where: Shared workspace tasks/actions, Modern drawer integration, four authoring panels, profile controls and their browser/journey paths.
-- When: Completed locally on 2026-10-11 after the user's option 2 selection, responsive review and final frontend gate.
-- How: Use three short labeled tabs per workspace, named icon tooltips, keyboard navigation and disclosed secondary controls. Keep drafts mounted across tabs, errors/unsaved work visible, and one drawer. Preserve Original and public formats.
-- Done when: Ordinary UI paths reach all relocated actions; tab/draft/focus and six-size/DPI/touch review pass; existing frontend gates and Original strict reference pass; docs/routes and owned cleanup are current.
-- Verification: Sequential verify (517 units), browser suite (139), journeys (11) and strict visuals (3) passed. Reviewed captures, source hashes and owned cleanup are in `output/menu-polish-20261011/` and HISTORY. Publication/packaging remain separate.
+- What: Retarget assistance, cubic clip integrity and Modern task-drawer/keyboard/state cleanup.
+- Why: Keep completed outcomes routed without duplicating dated evidence.
+- Where: [HISTORY.md](HISTORY.md), [review.md](review.md), retarget/animation/workspace context groups.
+- When: Completed and published during 2026-10-11 through 2026-10-14; retarget assistance is `ff43a13`, cubic authoring `040feb3`.
+- How: Preserve explicit maps, private worker previews, interpolation/history contracts and quiet reachable controls. Followup asset/solver work stays in the ordered outcomes above.
+- Done when: Closed; accepted source-specific criteria and limitations remain recorded in HISTORY.
+- Verification: HISTORY owns exact source identities, commands, counts, captures, installed-versus-mocked evidence and cleanup receipts.
 
 ## Local Windows candidate acceptance
 
@@ -153,4 +153,6 @@ bounded noncombat fixture.
 - Verification: Sequentially run `verify`, `test:e2e -NoGenEye`, `test:journey`, `test:visual-strict`, `desktop-smoke`, and `package:windows`; then run `verify` and `package:windows` again after the version bump. Actual Windows OS-dialog checks remain separate from native IPC mocks.
 
 ---
-AI-edited: 2026-10-15T10:01:50-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue batch for guarded publication
+AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
+
+AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes

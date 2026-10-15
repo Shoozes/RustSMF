@@ -33,7 +33,7 @@
         "TODO owns executable work and completion conditions.",
         "APP_STATE owns shipped behavior; review.md is opened only for integrity-pass evidence.",
         "README launch/format entry remains in issue__verification_current_head and is read directly during task intake; orientation retains current state and the work queue.",
-        "APP_STATE and TODO stay within 84 KiB, including ZIP cleanup and export queue state. The generation ceiling remains 256 KiB."
+        "APP_STATE/TODO fit 84 KiB; use focused routes for asset details. Generation cap: 256 KiB."
       ]
     },
     "workflow__context_bank": {
@@ -761,8 +761,8 @@
         "source/frontend/tests/helpers/product-journey.ts"
       ],
       "notes": [
-        "The targeted hand-wave command retains one recorded 1440x900 DPR 1.25 journey; test:journey runs all eleven stories sequentially with one worker.",
-        "workflow__product_continuity_journeys owns core format/project/replacement stories; workflow__frontend_authoring_journeys owns five additional editing stories. tests__quality owns the feature evidence matrix.",
+        "The targeted hand-wave command retains one recorded 1440x900 DPR 1.25 story; test:journey runs twelve stories sequentially.",
+        "Product-continuity and frontend-authoring routes own core/editing stories; feature__original_sable_asset owns Sable. tests__quality owns the matrix.",
         "All generated video, screenshots, traces and decoded exports remain ignored runtime evidence."
       ]
     },
@@ -949,13 +949,15 @@
         "source/frontend/package.json",
         "source/frontend/playwright.config.ts",
         "source/frontend/scripts/start-vite-dev.mjs",
-        "source/src-tauri/tauri.conf.json"
+        "source/src-tauri/tauri.conf.json",
+        "source/frontend/scripts/browser-test-endpoint.ts",
+        "source/frontend/src/test/browserTestEndpoint.test.ts"
       ],
       "notes": [
-        "The launcher prefers the npm CLI bundled beside the active Node executable before falling back to PATH.",
-        "Playwright owns one build-and-preview server; independent test commands must not compete for port 5173.",
-        "Cleanup recognizes the exact normalized script argument of this checkout's Vite, Tauri CLI, or managed wrapper; ports, unrelated command arguments, and other checkouts do not confer ownership.",
-        "Dev exit cleanup runs only for dev tasks, including menu selections; Vite resolves through the installed package so workspace hoisting remains supported."
+        "Launcher prefers the active Node's bundled npm CLI before PATH.",
+        "Playwright owns its preview; RUSTSMF_PLAYWRIGHT_PORT selects a validated loopback port (default 5173).",
+        "Cleanup matches this checkout's normalized Vite/Tauri/wrapper script; ports and names never grant ownership.",
+        "Dev cleanup stays scoped to dev tasks; workspace-hoisted Vite resolves through its installed package."
       ]
     },
     "workflow__old_editor_reference": {
@@ -1168,7 +1170,7 @@
       ]
     },
     "workflow__original_asset_workflow": {
-      "description": "Borrowed-reference and AI draft provenance, distribution eligibility and original sample replacement boundaries.",
+      "description": "Reference/draft provenance, rights and original sample ownership.",
       "max_kb": 24,
       "paths": [
         "docs/dev/ASSET_PROVENANCE.md",
@@ -1176,7 +1178,7 @@
         "examples/README.md"
       ],
       "notes": [
-        "The reusable tripo-asset-workflow skill is global and contains no media. Raw Mesh2Motion references, generated images and Tripo drafts stay ignored; TODO owns Blender finishing and original animation-pack outcomes."
+        "Borrowed/uncleared media stays private. ASSET_PROVENANCE owns rights; feature__original_sable_asset owns source/proof."
       ]
     },
     "feature__zip_intake": {
@@ -1225,7 +1227,32 @@
         "useLoadModel and App integration remain in subsystem__load_editor_orchestration and feature__theme_system.",
         "Captures own source materials, images, skin, hierarchy and clips; eight rows / 128 MiB inputs; results use the existing 256 MiB save bound.",
         "The foreground save owner reserves the queue and retains latest trailing autosave; pending/preparation cancellation cannot revoke issued native saves.",
-        "Explicit formats never fall back; completed native saves and browser download issuance are excluded from retry. Browser/mock IPC is separate from installed Windows evidence."
+        "Explicit formats never fall back; completed native saves and browser download issuance are excluded from retry. Browser/mock IPC is separate from installed Windows evidence.",
+        "Snapshot estimates follow actual private track/attribute/image/instance copies; interleaved sharing is retained. Material display changes wait for active source readers."
+      ]
+    },
+    "feature__original_sable_asset": {
+      "description": "Sable asset contract, presentation and independent dense skin/motion guards.",
+      "max_kb": 48,
+      "paths": [
+        "examples/black-cat/README.md",
+        "examples/black-cat/asset.json",
+        "examples/black-cat/sable.retarget-profile.json",
+        "source/frontend/src/utils/blackCatAsset.test.ts",
+        "source/frontend/tests/helpers/black-cat-evidence.ts",
+        "source/frontend/tests/black-cat.spec.ts",
+        "source/frontend/tests/journeys/black-cat-continuity.journey.spec.ts"
+      ],
+      "notes": [
+        "workflow__sable_rebuild owns the recipe; the shared guide binds rebuild and acceptance."
+      ]
+    },
+    "workflow__sable_rebuild": {
+      "description": "Sable Blender rebuild and registered deformation review.",
+      "max_kb": 36,
+      "paths": [
+        "examples/black-cat/README.md",
+        "examples/black-cat/build_black_cat.py"
       ]
     }
   },

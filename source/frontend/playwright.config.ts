@@ -1,6 +1,9 @@
 import { defineConfig, devices } from '@playwright/test';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
+import { browserTestEndpoint } from './scripts/browser-test-endpoint';
+
+const endpoint = browserTestEndpoint(process.env.RUSTSMF_PLAYWRIGHT_PORT);
 
 const quoteShellArgument = (value: string): string => (
   process.platform === 'win32'
@@ -47,7 +50,7 @@ export default defineConfig({
     ['list']
   ],
   use: {
-    baseURL: 'http://localhost:5173',
+    baseURL: endpoint.baseURL,
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -62,8 +65,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `${npmCommand} run build && ${npmCommand} run preview -- --host 127.0.0.1 --port 5173 --strictPort`,
-    url: 'http://localhost:5173',
+    command: `${npmCommand} run build && ${npmCommand} run preview -- --host 127.0.0.1 --port ${endpoint.port} --strictPort`,
+    url: endpoint.baseURL,
     reuseExistingServer: false,
     stdout: 'ignore',
     stderr: 'pipe',

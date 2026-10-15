@@ -13,6 +13,7 @@ function fixture() {
   const base = new THREE.Bone(); base.name = 'Base';
   const tip = new THREE.Bone(); tip.name = 'Tip'; tip.position.y = 1; base.add(tip); root.add(base);
   const geometry = new THREE.BufferGeometry();
+  geometry.userData = { tag: 'geometry-captured' };
   geometry.setAttribute('position', new THREE.Float32BufferAttribute([0,0,0, 1,0,0, 0,1,0], 3));
   geometry.setAttribute('normal', new THREE.Float32BufferAttribute([0,0,1, 0,0,1, 0,0,1], 3));
   geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute([0,1,0,0, 0,1,0,0, 0,1,0,0], 4));
@@ -33,11 +34,13 @@ test('captures geometry, raw influences, bones, transforms, metadata, clips and 
   f.tip.position.y = 8; f.mesh.skeleton.boneInverses[0].elements[0] = 9;
   (f.texture.image as { data: Uint8Array }).data[0] = 200; f.clips[0].tracks[0].values[4] = 99;
   f.root.userData.metadata.tag = 'changed';
+  f.geometry.userData.tag = 'geometry-changed';
   assert.equal(mesh.geometry.attributes.position.getX(0), 0); assert.equal(mesh.geometry.attributes.skinWeight.getX(0), 0.25);
   assert.equal(capture.root!.getObjectByName('Tip')!.position.y, 1);
   assert.equal(mesh.skeleton.boneInverses[0].elements[0], 1);
   assert.equal(((mesh.material as THREE.MeshStandardMaterial).map!.image as { data: Uint8Array }).data[0], 30);
   assert.equal(capture.clips[0].tracks[0].values[4], 2); assert.equal(capture.root!.userData.metadata.tag, 'captured');
+  assert.equal(mesh.geometry.userData.tag, 'geometry-captured');
   let liveDisposed = 0, copyDisposed = 0;
   f.geometry.addEventListener('dispose', () => liveDisposed++); mesh.geometry.addEventListener('dispose', () => copyDisposed++);
   capture.dispose(); capture.dispose(); assert.equal(liveDisposed, 0); assert.equal(copyDisposed, 1);
@@ -53,6 +56,66 @@ test('captures source materials and restores viewport previews synchronously', (
 test('bounds before allocating scene copies and restores preview even on failure', () => {
   const f = fixture(); registerMaterialPreviewRoot(f.root); updateMaterialPreview(f.root, { modelOpacity: 0.2 });
   assert.throws(() => captureExportSnapshot(f.input, preset, 1), /128 MiB/); assert.equal(f.material.opacity, 0.8 * 0.2);
+});
+
+test('bounds each private track copy even when source tracks share key arrays', () => {
+  const f = fixture(); const times = new Float32Array(1024), values = new Float32Array(3072);
+  const base = new THREE.VectorKeyframeTrack('Base.position', times, values);
+  f.input.clips = [new THREE.AnimationClip('Shared', 1, [base])];
+  const first = captureExportSnapshot(f.input, preset, 1000000); const limit = first.bytes + 1024; first.dispose();
+  const tip = new THREE.VectorKeyframeTrack('Tip.position', times, values);
+  assert.equal(base.times, tip.times); assert.equal(base.values, tip.values);
+  f.input.clips[0].tracks.push(tip);
+  assert.throws(() => { const capture = captureExportSnapshot(f.input, preset, limit); capture.dispose(); }, /128 MiB/);
+});
+
+test('bounds separate geometry attribute copies of one source array', () => {
+  const f = fixture(); const shared = new Float32Array(3072);
+  f.geometry.setAttribute('position', new THREE.BufferAttribute(shared, 3)); f.geometry.deleteAttribute('normal');
+  const first = captureExportSnapshot(f.input, preset, 1000000); const limit = first.bytes + 1024; first.dispose();
+  f.geometry.setAttribute('normal', new THREE.BufferAttribute(shared, 3));
+  assert.throws(() => { const capture = captureExportSnapshot(f.input, preset, limit); capture.dispose(); }, /128 MiB/);
+});
+
+test('bounds the whole backing buffer copied by structured texture image cloning', () => {
+  const f = fixture();
+  const first = captureExportSnapshot(f.input, preset, 1000000); const limit = first.bytes + 1024; first.dispose();
+  const image = f.texture.image as { data: Uint8Array };
+  image.data = new Uint8Array(new ArrayBuffer(32768), 1024, 4);
+  assert.throws(() => { const capture = captureExportSnapshot(f.input, preset, limit); capture.dispose(); }, /128 MiB/);
+});
+
+test('interleaved attributes retain their private shared allocation without double counting', () => {
+  const f = fixture(); const data = new THREE.InterleavedBuffer(new Float32Array(6144), 6);
+  f.geometry.setAttribute('position', new THREE.InterleavedBufferAttribute(data, 3, 0)); f.geometry.deleteAttribute('normal');
+  const first = captureExportSnapshot(f.input, preset, 1000000); const limit = first.bytes + 1024; first.dispose();
+  f.geometry.setAttribute('normal', new THREE.InterleavedBufferAttribute(data, 3, 3));
+  const capture = captureExportSnapshot(f.input, preset, limit);
+  const mesh = capture.root!.getObjectByName('Triangle') as THREE.Mesh;
+  const position = mesh.geometry.attributes.position as THREE.InterleavedBufferAttribute;
+  const normal = mesh.geometry.attributes.normal as THREE.InterleavedBufferAttribute;
+  assert.equal(position.data, normal.data); assert.notEqual(position.data.array.buffer, data.array.buffer); capture.dispose();
+});
+
+test('bounds instance matrix copies before allocating the scene capture', () => {
+  const f = fixture(); const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial(), 1); f.root.add(mesh);
+  const first = captureExportSnapshot(f.input, preset, 1000000); const limit = first.bytes + 1024; first.dispose();
+  mesh.instanceMatrix = new THREE.InstancedBufferAttribute(new Float32Array(16384), 16); mesh.count = 1024;
+  assert.throws(() => { const capture = captureExportSnapshot(f.input, preset, limit); capture.dispose(); }, /128 MiB/);
+});
+
+test('instance morph pixels are owned and released without changing the live texture', () => {
+  const f = fixture(); const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(), new THREE.MeshStandardMaterial(), 1); mesh.name = 'Instances';
+  const texture = new THREE.DataTexture(new Float32Array([1, 0, 0, 0]), 4, 1, THREE.RedFormat, THREE.FloatType); mesh.morphTexture = texture; f.root.add(mesh);
+  let sourceDisposals = 0, ownedDisposals = 0; texture.addEventListener('dispose', () => sourceDisposals++);
+  const capture = captureExportSnapshot(f.input, preset, 1000000);
+  const copy = capture.root!.getObjectByName('Instances') as THREE.InstancedMesh;
+  copy.morphTexture!.addEventListener('dispose', () => ownedDisposals++);
+  try {
+    (texture.image as { data: Float32Array }).data[0] = 9;
+    assert.equal((copy.morphTexture!.image as { data: Float32Array }).data[0], 1);
+  } finally { capture.dispose(); capture.dispose(); }
+  assert.equal(sourceDisposals, 0); assert.equal(ownedDisposals, 1);
 });
 test('mesh and rig preset captures no clips without mutating canonical animation', () => {
   const f = fixture(); const capture = captureExportSnapshot(f.input, { ...preset, includeAnimation: false }, 1000000);

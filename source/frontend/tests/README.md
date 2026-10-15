@@ -1,8 +1,22 @@
 # Frontend Test Contract
 
+`RUSTSMF_PLAYWRIGHT_PORT=53173` avoids occupied 5173; keep gates sequential.
+
+## Original Sable asset pack
+
+`blackCatAsset.test.ts` checks hashes/maps, topology, raw skin, known motion,
+full loop transforms/skin and held Sit. Terminal/interior mutations must fail;
+floor uses every key/midpoint. `black-cat.spec.ts` checks ordinary playback and
+desktop/narrow pixels. The Sable journey checks geometry, materials, decoded atlas,
+influences and motion at 424 times through recovery/project/queued-GLB continuity.
+Blender rebuild and registered views supplement proof. The sample guide owns
+playback/state limits; private media is excluded.
+
 ## Export queue
 
 `export-queue.spec.ts` covers four explicit presets through ordinary chooser, pointer and keyboard paths. Independent GLB accessors prove geometry, raw influences, hierarchy and known motion after each format's re-import. FBX and DAE also receive structural checks; SMF expects generated joint names and byte-weight quantization. Decoded PNG pixels and source materials prove texture capture. Other cases cover owned captures after edits/replacement, mesh-only options, safe names, imported SMF fidelity, preparation cancellation, retry without repeated successes, mocked destination cancel/write failure, issued saves, recovery serialization and cancellation while waiting for recovery. Six viewport sizes, DPR 1/1.25/2, coarse targets, overflow, Escape and focus return cover the disclosed controls.
+
+A generated `EXT_mesh_gpu_instancing` input independently checks instance translations through queue export/re-import. Snapshot units distinguish repeated private track/attribute copies from interleaved sharing, include texture backing/instance allocations and prove private geometry metadata/morph pixels with owned disposal. Material-reader units defer display changes until the final reader and then restore the latest settings.
 
 `src/utils/exportQueue.test.ts` proves bounded order, cancellation, failure/retry, stale results and disposal. `src/hooks/exportSnapshot.test.ts` proves copied authoring state, source-material restoration and cleanup. `src/utils/materialPreview.test.ts` covers nested/overlapping source readers and material registration replacement during a save. `src/loaders/dae.test.ts` guards joint `sid` output; the browser round-trip verifies named animated joints. Actual native dialogs and installed-app queue acceptance remain separate. [EXPORT_QUEUE.md](../../../docs/dev/EXPORT_QUEUE.md) owns the user and lifecycle contract; HISTORY owns final results.
 
@@ -50,7 +64,7 @@ HTML is an explicit diagnostic option: `npm run test:e2e -- --reporter=html,list
 
 - `pwsh -File run.ps1 -Task verify`: context-bank validation/tests, fail-closed ESLint coverage, lint, app and test typechecks, production `any` guard, production build, chunk checks, frontend units, and Rust fmt/clippy/tests/check.
 - `pwsh -File run.ps1 -Task test:e2e`: Playwright through the checked `geneye-playwright.json` argv manifest with deterministic GenEye artifact review; add `-NoGenEye` for the independent browser-only lane.
-- `pwsh -NoProfile -File .\run.ps1 -Task test:journey -NoGenEye`: runs eleven stories sequentially through `playwright.journey.config.ts`: the retained hand-wave and four core product journeys, a malformed project/recovery story, and five authoring-continuity journeys for profiles, Rig, IK/animation, Skin, and Model/materials. The hand-wave capture is written under ignored `output/playwright/hand-wave-journey/`; raw results use ignored `test-results/product-journeys/`.
+- `pwsh -NoProfile -File .\run.ps1 -Task test:journey -NoGenEye`: runs twelve stories sequentially through `playwright.journey.config.ts`: the retained hand-wave and four core product journeys, a malformed project/recovery story, five authoring-continuity journeys for profiles, Rig, IK/animation, Skin, and Model/materials, and the original Sable project/queue story. The hand-wave capture is written under ignored `output/playwright/hand-wave-journey/`; raw results use ignored `test-results/product-journeys/`.
 - `npm.cmd run test:journey:hand-wave`: targeted hand-wave run for focused repair work.
 - `pwsh -File run.ps1 -Task desktop-smoke`: unbundled Tauri build, Rust native tests, and the native IPC browser suite.
 - `pwsh -File run.ps1 -Task retarget:runtime-proof`: native/real-browser-WASM mapping and diagnostics parity, with an ignored compact receipt.
@@ -92,6 +106,7 @@ keyboard, and file-selection paths without forced clicks or editor-state setters
 | Drag/drop loading | `lifecycle.spec.ts`: latest async load wins between file input and drop | Stale read errors and dirty replacement cases in that suite |
 | Selected FBX/GLTF sidecars and ready textures | `journeys/format-roundtrip.journey.spec.ts`: decoded embedded PNG, named bones and animated FBX round trip | `journeys/failure-preserves-work.journey.spec.ts`: missing buffer cancel/discard retains semantic asset and continued edits |
 | OBJ/MTL, DAE resources, PNG/JPEG bounds | `export-formats.spec.ts` sidecar cases; `src/utils/modelResourceBundle.test.ts`, `src/utils/materialRepair.test.ts`, `src/utils/imagePayload.test.ts` | Missing/ambiguous/unsafe URI, signature, dimension, aggregate decoded-memory and cleanup cases in those owners |
+| Original Sable model/animation pack | `black-cat.spec.ts`: ordinary Open, four clips and moving decoded model pixels | `blackCatAsset.test.ts`: independent topology/raw skin/known motion; Sable journey: project/queue/re-import and continued history |
 | Project save/open and new edits | `journeys/project-continuity.journey.spec.ts`: decoded envelope/GLB, rename/reopen/edit/undo/redo | Malformed project and dirty cancel/discard in `journeys/failure-preserves-work.journey.spec.ts` |
 | Serialized selection, clip, time, speed and rig metadata | `project-recovery.spec.ts`: restored explicit state, semantic saved motion and subsequent edits | Recovery cancel retains dirty root; discard restores project; new history remains usable |
 | Recovery generations and corrupt storage | `project-recovery.spec.ts`: IPC recovery, save and single write ownership | Browser quota refusal is visible, keeps prior recovery bytes and live edits, permits independently decoded manual save, and retries when storage returns; malformed recovery journey and `src/utils/projectCodec.test.ts` envelope bounds |
@@ -216,4 +231,6 @@ When adding or moving a test:
 4. Update `docs/dev/PITFALL_LEDGER.md` only for a durable recurring failure mode.
 
 ---
-AI-edited: 2026-10-15T04:46:35-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue evidence and preserved ZIP ownership
+AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
+
+AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes

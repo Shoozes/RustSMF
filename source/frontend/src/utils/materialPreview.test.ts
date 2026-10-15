@@ -25,6 +25,24 @@ function makeFixture() {
 }
 
 describe('material preview isolation', () => {
+  it('defers display changes until the last export reader exits and restores the latest preview', async () => {
+    const { root, material, texture } = makeFixture(); registerMaterialPreviewRoot(root);
+    let finishFirst!: () => void, finishLast!: () => void;
+    const first = withSourceMaterialState(root, () => new Promise<void>(resolve => { finishFirst = resolve; }));
+    const last = withSourceMaterialState(root, () => new Promise<void>(resolve => { finishLast = resolve; }));
+    try {
+      updateMaterialPreview(root, { textureEnabled: false, modelOpacity: 0.25, repeatTextures: true, textureFilter: 'linear' });
+      assert.equal(material.map, texture); assert.equal(material.opacity, 0.8);
+      assert.equal(texture.wrapS, THREE.ClampToEdgeWrapping); assert.equal(texture.magFilter, THREE.NearestFilter);
+      finishFirst(); await first;
+      updateMaterialPreview(root, { modelOpacity: 0.5 });
+      assert.equal(material.map, texture); assert.equal(material.opacity, 0.8);
+    } finally { finishFirst(); finishLast(); await Promise.all([first, last]); }
+    assert.equal(material.map, null); assert.equal(material.opacity, 0.4);
+    assert.equal(texture.wrapS, THREE.RepeatWrapping); assert.equal(texture.magFilter, THREE.LinearFilter);
+    unregisterMaterialPreviewRoot(root);
+  });
+
   it('keeps source materials exposed when a queue capture nests inside an async save', async () => {
     const { root, material, texture } = makeFixture(); registerMaterialPreviewRoot(root);
     updateMaterialPreview(root, { textureEnabled: false, modelOpacity: 0.2 });

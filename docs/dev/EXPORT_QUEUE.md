@@ -12,6 +12,8 @@ The queue belongs to this editor session; it is not saved in projects. Up to eig
 
 `exportQueue.ts` owns ordering, per-item results, cancellation, retry and lifetime. `exportSnapshot.ts` makes private scene/skin/material/image/clip copies or a private SMF candidate. `exportPreparation.ts` invokes existing encoders and round-trip validators. `useLoadModel.ts` connects them to the foreground save owner and latest trailing autosave. Capturing does not mutate history, dirty state or recovery.
 
+The estimate counts arrays at their actual clone sites: shared source track/attribute arrays can produce several private copies, interleaved geometry retains its private sharing, and structured texture copies include the backing allocation. Instance matrices/colors/morph pixels and geometry metadata participate in ownership and cleanup. This is a retained-input estimate, not a process heap or peak encoder-memory measurement. Display settings changed during active source-material reads are retained and applied after the final reader exits.
+
 Cancel stops pending items and aborts SMF worker preparation. Non-abortable encoders must settle before their private resources are released; their canceled results cannot issue a save. Model/resource replacement cancels queued work and invalidates active preparation. Retry incomplete uses the retained captures; remove and add again to capture new edits. Disposal suppresses late notifications and releases active resources after the operation settles.
 
 Desktop destinations use the existing native save dialog for each item. Canceling a destination pauses the remaining queue. An already issued native dialog/write cannot be revoked; Cancel waits for its actual success, cancellation or failure, then stops. Browser results say **Download issued**, meaning the browser received a download request. Check the browser download list for completion or blocking; issuance does not prove a filesystem save. Retry includes failed/canceled items and never repeats successful writes or issued downloads.
@@ -19,9 +21,9 @@ Desktop destinations use the existing native save dialog for each item. Cancelin
 ## Evidence
 
 - `src/utils/exportQueue.test.ts`: order, limits, copied presets, retry, destination cancellation, stale completion, disposal and issued-save results.
-- `src/hooks/exportSnapshot.test.ts`: owned geometry, influences, bones/inverses, clips, metadata, source material restoration, textures, bounds and explicit refusal.
-- `src/utils/materialPreview.test.ts`: nested captures, overlapping saves and replaced material registrations retain source state until their own final reader exits.
-- `tests/export-queue.spec.ts`: ordinary chooser/pointer/keyboard controls, every preset, independent GLB accessor and sampled-motion checks after re-import, raw FBX/DAE structure, imported SMF fidelity, material/image captures, replacement, preparation cancellation, mocked native failures/retry/recovery and six-size/DPR/coarse/focus checks.
+- `src/hooks/exportSnapshot.test.ts`: owned geometry, influences, bones/inverses, clips, metadata, source materials, textures, clone-allocation bounds, interleaving and instance morph cleanup.
+- `src/utils/materialPreview.test.ts`: nested captures, overlapping saves, concurrent display changes and replaced registrations retain source state until their own final reader exits.
+- `tests/export-queue.spec.ts`: ordinary chooser/pointer/keyboard controls, every preset, independent GLB accessor/instance-transform and sampled-motion checks after re-import, raw FBX/DAE structure, imported SMF fidelity, material/image captures, replacement, preparation cancellation, mocked native failures/retry/recovery and six-size/DPR/coarse/focus checks.
 
 Browser downloads and mocked Tauri IPC are the acceptance lanes for this source pass. Installed Windows dialogs and a packaged queue build remain untested. HISTORY and the ignored compact receipt own exact source, final commands, results and reviewed captures. No version, release, installer or asset-distribution change belongs to this pass.
 
@@ -29,4 +31,4 @@ Browser downloads and mocked Tauri IPC are the acceptance lanes for this source 
 AI-created: 2026-10-15T04:24:55-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs
 
 ---
-AI-edited: 2026-10-15T04:46:35-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue evidence and preserved ZIP ownership
+AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance

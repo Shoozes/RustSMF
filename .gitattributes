@@ -1,3 +1,5 @@
 source/frontend/tests/fixtures/external-gltf/mesh.bin -text
 # Preserve upstream notice bytes, including their line endings and trailing spaces.
 /THIRD_PARTY_LICENSES.txt -text whitespace=-trailing-space
+# The Sable manifest binds the recipe's exact bytes across platforms.
+/examples/black-cat/build_black_cat.py text eol=lf
