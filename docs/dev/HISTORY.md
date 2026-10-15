@@ -2,6 +2,14 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-15 — Backup dummy names and preserved textures
+
+Selected the user-owned GuyGame backup as the new private showcase source. Its complete 38-node parent/role layout matches the existing SMF fixture. A names-only derivative applies the 24 established deform aliases from `boneAliases.ts` and descriptive names for all 14 helper markers. Independent reparse compares every other JSON field and the full binary payload exactly: original JPEG textures, UVs, geometry, skin, inverse binds, transforms, hierarchy and all twelve animation clips remain unchanged. No rig is replaced, no clips are retargeted, and the backup file is untouched. ASSET_PROVENANCE binds source and derivative identities.
+
+An ordinary browser Open loads 38 bones and twelve correctly named clips without warnings/errors. One lightweight capture against the existing build shows Walk at 0.27 seconds with upright face/scalp and original clothing textures; Tools and helpers are hidden. The README overview is replaced with that actual capture. This establishes the pictured source and clip inventory, not exhaustive playback or export acceptance. `output/playwright/dummy-showcase/receipt.json`, under `backupRename`, owns the mapping, byte-preservation evidence, capture and local checks. The owned tab and identity-checked preview process exit, releasing port 53174. All GLBs, earlier variants, Tripo drafts and borrowed references remain ignored/private. No app code, fixture, strict baseline, installer or version changes. Subsequent authorized publication verifies the exact three-file staged candidate in an isolated public-source copy; `backupRename.publication` binds checks, base/tree, confirmed remote commit and owned scratch cleanup. The unchanged runtime retains its prior gate evidence.
+
+AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=backup-dummy
+
 ## 2026-10-15 — Test dummy showcase
 
 After sampler publication `7297e0e`, replaced the README overview with an actual Modern capture of the user-selected local named-bone dummy. The caption distinguishes the shown reference from the Signal Robot download still included with 0.2.1. The selected file has 25 named bones, ten clips and six embedded textures; two clip names are still generic. Asset identity and the private retention boundary are recorded in ASSET_PROVENANCE.
