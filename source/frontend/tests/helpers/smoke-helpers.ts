@@ -299,6 +299,11 @@ export async function installTauriMock(page: Page, init: TauriMockInit): Promise
             return state.retargetResult;
           case 'cancel_retarget_preflight_v1':
             return true;
+          case 'retarget_bake_v1': {
+            const bake=Reflect.get(window,'__rustsmfNativeBakeMock') as ((input:string)=>Promise<unknown>)|undefined;
+            if(!bake)throw new Error('mock native bake was not configured');
+            return {jobId:args?.jobId,revision:args?.revision,value:await bake(args?.input as string)};
+          }
           case 'open_file':
             if (typeof state.openDelayMs === 'number' && state.openDelayMs > 0) {
               await new Promise((resolve) => setTimeout(resolve, state.openDelayMs));

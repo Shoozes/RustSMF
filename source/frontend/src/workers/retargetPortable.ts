@@ -20,7 +20,7 @@ export interface PortableClipJobV1 {
   targetReferenceClip: PortableClipV1 | null;
   endpointTargetClips: PortableClipV1[];
 }
-/** Experimental wire format, separate from public project/profile/job formats. */
+/** Internal API v1 wire format, separate from public project/profile/job formats. */
 export interface PortableBakeRequestV1 {
   apiVersion: 1;
   operation: 'sample' | 'bake';

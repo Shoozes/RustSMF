@@ -146,6 +146,10 @@ async function main() {
   assert.ok(advanced.negatives.some(c => c.name === 'natural-aggregate-anchor-limit'), 'missing aggregate contact-storage regression')
   const advancedInputs = [...advanced.positives.map(c => JSON.stringify(c.input)), ...advanced.negatives.map(c => JSON.stringify(c.request))]
   const nativeAdvanced = JSON.parse(run('cargo', ['run', '--locked', '--release', '--manifest-path', crateManifest, '--target-dir', resolve(root, 'output/retarget-core/cargo-target'), '--example', 'bake_receipt', '--', '--advanced'], { input: JSON.stringify(advancedInputs) }))
+  const productionCoreInputs = baking.positives.map(c => JSON.stringify(c.input))
+  const nativeProductionCore = JSON.parse(run('cargo', ['run', '--locked', '--release', '--manifest-path', crateManifest, '--target-dir', resolve(root, 'output/retarget-core/cargo-target'), '--example', 'bake_receipt', '--', '--advanced'], {input: JSON.stringify(productionCoreInputs)}))
+  nativeProductionCore.forEach((value, i) => compare({...value, stage:'core-bake', capabilities:['core-bake-v1'], clips:value.clips.map(c => ({clip:c.clip,
+    report:Object.fromEntries(Object.entries(c.report).filter(([key]) => baking.coreReports.includes(key)))}))}, baking.positives[i].expected, `production.core-native.${baking.positives[i].name}`))
   assert.equal(nativeAdvanced.length, advancedInputs.length)
   advanced.positives.forEach((c, i) => compare(nativeAdvanced[i], c.expected, `advanced.${c.name}.typescript-native`))
   advanced.negatives.forEach((c, i) => {
@@ -202,18 +206,24 @@ async function main() {
     page.on('pageerror', (error) => errors.push(error.message))
     await page.goto(`http://127.0.0.1:${address.port}/`)
     assert.equal(await page.evaluate(async () => (await import('/mime-probe.mjs')).ready), true)
-    const productionResults = await page.evaluate(async ({cases, sampleInputs, bakeInputs}) => {
+    const productionResults = await page.evaluate(async ({cases, sampleInputs, bakeInputs, fullInputs}) => {
       const module = await import('/production/retarget_core.mjs')
       await module.default('/production/retarget_core_bg.wasm')
       return {advancedExport: typeof module.bake_advanced_json_v1 !== 'undefined',
         preflight: cases.map(({input}) => JSON.parse(module.analyze_json_v1(JSON.stringify(input)))),
         sampler: sampleInputs.map(input => JSON.parse(module.sample_json_v1(input))),
-        baking: bakeInputs.map(input => JSON.parse(module.bake_json_v1(input)))}
-    }, {cases: native.cases.map(({input}) => ({input})), sampleInputs: samplerInputs, bakeInputs})
-    assert.equal(productionResults.advancedExport, false)
+        baking: bakeInputs.map(input => JSON.parse(module.bake_json_v1(input))),
+        fullBakes:fullInputs.map(input => JSON.parse(module.bake_with_progress_json_v1(input, () => {}))),
+        callbackFailure:JSON.parse(module.bake_with_progress_json_v1(fullInputs[0], () => {throw new Error('closed channel')}))}
+    }, {cases: native.cases.map(({input}) => ({input})), sampleInputs: samplerInputs, bakeInputs, fullInputs:[...advancedInputs,...productionCoreInputs]})
+    assert.equal(productionResults.advancedExport, true)
     compare(productionResults.preflight, native.cases.map(c => c.result), 'production.preflight')
     compare(productionResults.sampler, nativeSampler, 'production.sampler')
     compare(productionResults.baking, nativeBakes, 'production.core-bake')
+    compare(productionResults.fullBakes, [...nativeAdvanced,...nativeProductionCore], 'production.complete-bake')
+    assert.equal(productionResults.callbackFailure.error.code, 'BAKE_CANCELLED')
+    assert.deepEqual(productionResults.callbackFailure.clips, [])
+    assert.ok(readFileSync(join(production.generated, 'retarget_core_bg.wasm')).byteLength <= 1024 * 1024, 'production WASM exceeds unchanged 1 MiB guard')
     const wasmResults = await page.evaluate(async (cases) => {
       const module = await import('/retarget_core.js')
       await module.default('/retarget_core_bg.wasm')
@@ -298,11 +308,12 @@ async function main() {
       native: { command: 'cargo run --locked --release --example retarget_receipt', fixtureCount: native.cases.length, resultSha256: hash(Buffer.from(JSON.stringify(native.cases.map(({ result }) => result)))) },
       browserWasm: { browser: 'Chromium', features: built.provenance.features, wasmSha256: built.provenance.generatedWasmSha256, glueSha256: built.provenance.glueSha256 },
       productionWasm: {features: production.provenance.features, wasmSha256: production.provenance.generatedWasmSha256,
-        bytes: readFileSync(join(production.generated, 'retarget_core_bg.wasm')).byteLength, preflightSamplerCoreParity: true, advancedExport: false},
+        bytes: readFileSync(join(production.generated, 'retarget_core_bg.wasm')).byteLength, preflightSamplerCoreParity: true, advancedExport: true,
+        completeBakeParity:true, coreOptionsThroughAdvanced:productionCoreInputs.length, progressCallbackFailureAtomic:true},
       staticRoutes: {mjsHttp: 'passed', mjsBrowserImport: 'passed', unknown: '404 application/octet-stream nosniff'},
       comparison: { casesCompared: native.cases.length, toleranceRelativeAbsolute: tolerance, mappingsExact: true, diagnosticsExact: true, numericFieldsWithinTolerance: true },
       cases: allDiagnostics,
-      advancedBake: { stage: 'advanced-bake', productionCutover: false, positiveCases: advanced.positives.length, refusalCases: advanced.negatives.length,
+      advancedBake: { stage: 'advanced-bake', productionCutover: true, positiveCases: advanced.positives.length, refusalCases: advanced.negatives.length,
         options: advanced.advancedOptions, reports: advanced.advancedReports, nativeRust: true, actualBrowserWasm: true, typescriptReference: true,
         actualBakedTracksAndReports: true, borrowedInputCancellation: true, workerCancellation: advancedWorker, toleranceRelativeAbsolute: tolerance,
         resultSha256: hash(Buffer.from(JSON.stringify(nativeAdvanced))), cases: [...advanced.positives.map(c => ({name: c.name, status: 'baked'})), ...advanced.negatives.map(c => ({name: c.name, code: c.code}))] },

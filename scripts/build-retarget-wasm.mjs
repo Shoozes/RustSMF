@@ -6,11 +6,13 @@ import { fileURLToPath } from 'node:url'
 
 const root = resolve(fileURLToPath(new URL('../', import.meta.url)))
 const manifest = resolve(root, 'source/retarget-core/Cargo.toml')
-const lockfile = resolve(root, 'source/src-tauri/Cargo.lock')
+const lockfile = resolve(root, 'source/retarget-core/Cargo.lock')
 const outputRoot = resolve(root, 'output/retarget-core')
 const toolRoot = resolve(root, 'output/toolchains/retarget-wasm')
 const productionGenerated = resolve(root, 'source/frontend/src/generated/retarget-core')
 const version = '0.2.126'
+const optimizerVersion = '132.0.0'
+const optimizer = resolve(root, 'source/node_modules/binaryen/bin/wasm-opt')
 const targetDir = join(outputRoot, 'cargo-target')
 const wasmArtifact = join(targetDir, 'wasm32-unknown-unknown', 'release', 'rustsmf_retarget_core.wasm')
 const bindgen = join(toolRoot, 'bin', process.platform === 'win32' ? 'wasm-bindgen.exe' : 'wasm-bindgen')
@@ -56,7 +58,7 @@ export function buildRetargetWasm({ installTools = process.argv.includes('--inst
   ensureTool(installTools)
   const sourceHash = treeHash(resolve(root, 'source/retarget-core'))
   const lockHash = sha256(lockfile)
-  run('cargo', ['build', '--locked', '--release', '--target', 'wasm32-unknown-unknown', '--manifest-path', manifest, '--target-dir', targetDir, ...(advanced ? ['--features', 'advanced-bake'] : [])])
+  run('cargo', ['build', '--locked', '--release', '--target', 'wasm32-unknown-unknown', '--manifest-path', manifest, '--target-dir', targetDir, '--features', 'advanced-bake'])
   if (!existsSync(wasmArtifact)) throw new Error(`Cargo did not produce the expected retarget-core WASM artifact: ${wasmArtifact}`)
   for (const name of ['retarget_core.js', 'retarget_core.d.ts', 'retarget_core_bg.wasm', 'retarget_core_bg.wasm.d.ts', '.build-info.json']) {
     const path = resolve(generated, name)
@@ -64,20 +66,32 @@ export function buildRetargetWasm({ installTools = process.argv.includes('--inst
     rmSync(path, { force: true })
   }
   run(bindgen, [wasmArtifact, '--target', 'web', '--out-dir', generated, '--out-name', 'retarget_core'])
+  // wasm-bindgen declares raw externref ABI slots as any; consumers must narrow unknown.
+  for (const name of ['retarget_core.d.ts', 'retarget_core_bg.wasm.d.ts']) {
+    const path = resolve(generated, name)
+    writeFileSync(path, readFileSync(path, 'utf8').replace(/\bany\b/g, 'unknown'))
+  }
   const wasmCopy = resolve(generated, 'retarget_core_bg.wasm')
   const glue = resolve(generated, 'retarget_core.js')
   if (!existsSync(wasmCopy) || !existsSync(glue)) throw new Error('wasm-bindgen did not produce the expected web-target glue and module.')
+  if (!existsSync(optimizer) || JSON.parse(readFileSync(resolve(root, 'source/node_modules/binaryen/package.json'), 'utf8')).version !== optimizerVersion) {
+    throw new Error(`Pinned Binaryen ${optimizerVersion} is missing. Run the public setup command.`)
+  }
+  run(process.execPath, [optimizer, wasmCopy, '-Oz', '--converge', '-o', wasmCopy])
   const provenance = {
     schema: 'rustsmf.retarget-core-wasm-build.v1',
     apiVersion: 1,
     crateVersion: '0.1.0',
     wasmBindgenVersion: version,
-    features: advanced ? ['advanced-bake'] : [],
+    optimizerVersion,
+    optimizerFlags: ['-Oz', '--converge'],
+    features: ['advanced-bake'],
     sourceTreeSha256: sourceHash,
     lockfileSha256: lockHash,
     cargoArtifactSha256: sha256(wasmArtifact),
     generatedWasmSha256: sha256(wasmCopy),
     glueSha256: sha256(glue),
+    declarationsSha256: ['retarget_core.d.ts', 'retarget_core_bg.wasm.d.ts'].map(name => sha256(resolve(generated, name))),
   }
   writeFileSync(resolve(generated, '.build-info.json'), `${JSON.stringify(provenance, null, 2)}\n`)
   return { provenance, wasmArtifact, generated }

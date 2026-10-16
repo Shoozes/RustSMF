@@ -4,12 +4,19 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc, Mutex,
 };
-use tauri::{command, State, Window};
+use tauri::{command, ipc::Channel, State, Window};
 
 #[derive(Default)]
 pub struct RetargetPreflightJobs(Mutex<HashMap<String, (u64, Arc<AtomicBool>)>>);
 
 impl RetargetPreflightJobs {
+    pub fn cancel_window(&self, window: &str) {
+        if let Ok(mut jobs) = self.0.lock() {
+            if let Some((_, token)) = jobs.remove(window) {
+                token.store(true, Ordering::Release);
+            }
+        }
+    }
     fn begin(&self, window: &str, job_id: u64) -> Result<Arc<AtomicBool>, String> {
         let mut jobs = self
             .0
@@ -56,6 +63,80 @@ impl RetargetPreflightJobs {
             Ok(false)
         }
     }
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BakeProgress {
+    job_id: u64,
+    revision: u64,
+    completed: usize,
+    total: usize,
+}
+
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BakeResult {
+    job_id: u64,
+    revision: u64,
+    value: rustsmf_retarget_core::baker::BakeResponseV1,
+}
+
+#[command]
+pub async fn retarget_bake_v1(
+    window: Window,
+    jobs: State<'_, RetargetPreflightJobs>,
+    job_id: u64,
+    revision: u64,
+    input: String,
+    progress: Channel<BakeProgress>,
+) -> Result<BakeResult, String> {
+    if input.len() > rustsmf_retarget_core::sampler::MAX_JSON_BYTES {
+        return Err("RETARGET_INPUT_INVALID: portable JSON exceeds 16 MiB".into());
+    }
+    let label = window.label().to_owned();
+    let cancellation = jobs.begin(&label, job_id)?;
+    let task_cancellation = Arc::clone(&cancellation);
+    let result = tauri::async_runtime::spawn_blocking(move || {
+        let request = serde_json::from_str::<rustsmf_retarget_core::sampler::BakeRequestV1>(&input)
+            .map_err(|_| "RETARGET_INPUT_INVALID: invalid portable bake request".to_string())?;
+        let started = std::time::Instant::now();
+        let value = rustsmf_retarget_core::baker::advanced_bake_progress(
+            &request,
+            &|| {
+                task_cancellation.load(Ordering::Acquire)
+                    || started.elapsed() >= std::time::Duration::from_secs(120)
+            },
+            &|completed, total| {
+                if progress
+                    .send(BakeProgress {
+                        job_id,
+                        revision,
+                        completed,
+                        total,
+                    })
+                    .is_err()
+                {
+                    task_cancellation.store(true, Ordering::Release);
+                }
+            },
+        );
+        Ok::<_, String>(value)
+    })
+    .await;
+    let current = jobs.finish(&label, job_id, &cancellation)?;
+    if !current {
+        return Err("RETARGET_JOB_SUPERSEDED: a newer transfer replaced this job".into());
+    }
+    if cancellation.load(Ordering::Acquire) {
+        return Err("RETARGET_JOB_CANCELLED: bake was cancelled".into());
+    }
+    let value = result.map_err(|e| format!("Retarget bake worker failed: {e}"))??;
+    Ok(BakeResult {
+        job_id,
+        revision,
+        value,
+    })
 }
 
 #[command]
@@ -126,5 +207,18 @@ mod tests {
         assert!(!jobs.finish("main", 4, &old).unwrap());
         assert!(jobs.cancel("main", 4).unwrap());
         assert!(current.load(Ordering::Acquire));
+    }
+
+    #[test]
+    fn window_jobs_are_isolated_and_window_destruction_cancels_only_its_job() {
+        let jobs = RetargetPreflightJobs::default();
+        let first = jobs.begin("main", 7).unwrap();
+        let second = jobs.begin("editor-two", 7).unwrap();
+        jobs.cancel_window("main");
+        assert!(first.load(Ordering::Acquire));
+        assert!(!second.load(Ordering::Acquire));
+        assert!(!jobs.finish("main", 7, &first).unwrap());
+        assert!(jobs.finish("editor-two", 7, &second).unwrap());
+        assert!(jobs.0.lock().unwrap().is_empty());
     }
 }

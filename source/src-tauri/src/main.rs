@@ -754,8 +754,17 @@ fn main() {
             discover_project_recovery,
             read_project_recovery,
             retarget::retarget_preflight_v1,
-            retarget::cancel_retarget_preflight_v1
+            retarget::cancel_retarget_preflight_v1,
+            retarget::retarget_bake_v1
         ])
+        .on_window_event(|window, event| {
+            if matches!(event, tauri::WindowEvent::Destroyed) {
+                use tauri::Manager;
+                window
+                    .state::<retarget::RetargetPreflightJobs>()
+                    .cancel_window(window.label());
+            }
+        })
         .run(tauri::generate_context!());
 
     if let Err(error) = result {

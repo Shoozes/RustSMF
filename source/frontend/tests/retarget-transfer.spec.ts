@@ -85,7 +85,7 @@ for(const phase of ['analysis','bake'] as const)test(`cancel during ${phase} ter
   const assertErrors=watchJourneyErrors(page);await openTarget(page);
   let release!:()=>void,seen!:()=>void;
   const blocked=new Promise<void>(resolve=>{release=resolve;}),requested=new Promise<void>(resolve=>{seen=resolve;});
-  const pattern=phase==='analysis'?'**/assets/retarget_core_bg-*.wasm':'**/assets/retargetBakeRuntime-*.js';
+  const pattern=phase==='analysis'?'**/assets/retarget_core_bg-*.wasm':'**/assets/retargetRustRuntime-*.js';
   await page.route(pattern,async route=>{seen();await blocked;await route.continue().catch(()=>{});});
   await chooseSource(page);await requested;
   await expect(page.getByTestId('retarget-transfer')).toHaveAttribute('data-phase',phase);

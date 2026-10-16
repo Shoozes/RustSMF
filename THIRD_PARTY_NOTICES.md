@@ -73,6 +73,12 @@ indexed in `THIRD_PARTY_LICENSES.txt`.
 | --- | --- | --- | --- |
 | `bumpalo` | 3.20.3 | MIT OR Apache-2.0 | WASM |
 | `cfg-if` | 1.0.5 | MIT OR Apache-2.0 | WASM |
+| `futures-core` | 0.3.34 | MIT OR Apache-2.0 | WASM |
+| `futures-task` | 0.3.34 | MIT OR Apache-2.0 | WASM |
+| `futures-util` | 0.3.34 | MIT OR Apache-2.0 | WASM |
+| `js-sys` | 0.3.103 | MIT OR Apache-2.0 | WASM |
+| `pin-project-lite` | 0.2.17 | Apache-2.0 OR MIT | WASM |
+| `slab` | 0.4.12 | MIT | WASM |
 | `itoa` | 1.0.18 | MIT OR Apache-2.0 | Native and WASM |
 | `libm` | 0.2.16 | MIT | Native and WASM |
 | `memchr` | 2.8.3 | Unlicense OR MIT | Native and WASM |
@@ -335,3 +341,8 @@ listed in `THIRD_PARTY_LICENSES.txt`. The repository's current Windows bundle co
 ensure these files are actually installed alongside the application; the
 dependency metadata and license files themselves do not guarantee bundle
 delivery.
+
+Build-only Binaryen 132.0.0 (Apache-2.0) optimizes the WASM artifact; its tool
+is not bundled. npm lock integrity pins its archive.
+
+AI-edited: 2026-10-16T00:58:15-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=added checksum-verified WASM dependency notices

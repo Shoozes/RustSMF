@@ -768,9 +768,6 @@ pub(crate) fn finish(
                 }
             }
         }
-        if !issues.is_empty() && p.policy == "reject" {
-            return Err(invalid("poseRanges.reject"));
-        }
         let clip = job
             .options
             .get("clipName")
@@ -782,6 +779,23 @@ pub(crate) fn finish(
             } else {
                 &job.clip.name
             });
+        if let Some(first) = issues.first().filter(|_| p.policy == "reject") {
+            return Err(sampler::error(
+                "ADVANCED_INPUT_INVALID",
+                "poseRanges.reject",
+                &format!(
+                    "{}: {} body-range flags; {} {} {:.1}° at frame {} (range {} to {}°)",
+                    clip,
+                    issues.len(),
+                    first["bone"].as_str().unwrap_or(""),
+                    first["component"].as_str().unwrap_or(""),
+                    first["worstDegrees"].as_f64().unwrap_or(0.),
+                    first["worstFrame"],
+                    first["limits"][0],
+                    first["limits"][1]
+                ),
+            ));
+        }
         report.insert("poseRanges".into(),json!({"profile":p.id,"clip":clip,"status":if issues.is_empty(){"within-profile"}else{"review-required"},"sampleCount":samples,"checkedJoints":p.joints.len(),"issues":issues}));
     }
     Ok(report)
@@ -815,4 +829,37 @@ pub fn bake_advanced_json_v1(input: &str) -> String {
 #[wasm_bindgen::prelude::wasm_bindgen(js_name=bake_advanced_json_v1)]
 pub fn wasm_bake_advanced_json_v1(input: &str) -> String {
     bake_advanced_json_v1(input)
+}
+
+#[cfg(all(target_arch = "wasm32", feature = "advanced-bake"))]
+#[wasm_bindgen::prelude::wasm_bindgen(js_name=bake_with_progress_json_v1)]
+pub fn wasm_bake_with_progress_json_v1(input: &str, progress: &js_sys::Function) -> String {
+    use std::cell::Cell;
+    let failed = Cell::new(false);
+    let result = if input.len() > sampler::MAX_JSON_BYTES {
+        Err(sampler::error(
+            "BAKE_INPUT_LIMIT",
+            "$",
+            "Portable JSON exceeds 16 MiB.",
+        ))
+    } else {
+        serde_json::from_str::<BakeRequestV1>(input)
+            .map_err(|_| invalid("$"))
+            .map(|request| {
+                crate::baker::advanced_bake_progress(&request, &|| failed.get(), &|done, total| {
+                    if progress
+                        .call2(
+                            &wasm_bindgen::JsValue::NULL,
+                            &wasm_bindgen::JsValue::from_f64(done as f64),
+                            &wasm_bindgen::JsValue::from_f64(total as f64),
+                        )
+                        .is_err()
+                    {
+                        failed.set(true);
+                    }
+                })
+            })
+    };
+    serde_json::to_string(&result.unwrap_or_else(crate::baker::advanced_error))
+        .expect("validated advanced output")
 }

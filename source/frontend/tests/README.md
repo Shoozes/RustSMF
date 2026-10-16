@@ -17,42 +17,36 @@ A generated `EXT_mesh_gpu_instancing` input independently checks instance transl
 
 `src/utils/exportQueue.test.ts` proves bounded order, cancellation, failure/retry, stale results and disposal. `src/hooks/exportSnapshot.test.ts` proves copied authoring state, source-material restoration and cleanup. `src/utils/materialPreview.test.ts` covers nested/overlapping source readers and material registration replacement during a save. `src/loaders/dae.test.ts` guards joint `sid` output; the browser round-trip verifies named animated joints. Actual native dialogs and installed-app queue acceptance remain separate. [EXPORT_QUEUE.md](../../../docs/dev/EXPORT_QUEUE.md) owns the user and lifecycle contract; HISTORY owns final results.
 
-## Portable sampler
+## Rust retarget production and comparison APIs
 
-`retargetPortable.test.ts` / `retargetInventory.test.ts` guard copied data and
-all solver fields. Runtime proof adds 14 sampler cases, 20 refusals and WASM
-cancellation. [Contract and native guards](../../../docs/dev/RETARGET_SAMPLER.md).
+`retarget:runtime-proof` compares native Rust and actual Chromium WASM against
+retained TypeScript at 1e-6: 17 mapping, 14 sampler/20 refusal, 29 core/40 refusal,
+and 33 advanced/30 refusal cases. Generated fixtures cover all options/reports;
+independent anchors check cubic curves, planted soles, fixed lengths and endpoint
+positions. Native guards cover atomic cancellation, progress, reuse and resource
+bounds. [Contract](../../../docs/dev/RETARGET_ADVANCED_BAKE.md).
 
-## Experimental Rust core baking
+`retarget-runtime.spec.ts` executes the actual production worker across all 62
+positive core/advanced fixtures, comparing copied typed buffers, full reports,
+identity and completed-clip progress. `retargetRustRuntime.test.ts` checks packet
+ownership, bone-name map keys and malformed replies. `retargetJobClient.test.ts`
+covers preparation,
+analysis/bake cancellation, deadlines, stale/replaced/disposed jobs, runtime faults,
+invalid progress and released native channels. No synchronous fallback exists.
 
-`retargetCoreBake.test.ts` and generated `retarget-bake-fixtures.ts` cover all
-19 core options and 26 reports, bidirectional adapter metadata ownership and independent motion
-anchors. `retarget:runtime-proof` compares actual tracks/reports against the
-TypeScript solver, native Rust and Chromium WASM with exact structure/order and
-1e-6 numeric tolerance. Native tests cover validation/bake cancellation and
-atomic bounded errors; real WASM workers prove termination and replacement.
-[Core contract](../../../docs/dev/RETARGET_CORE_BAKE.md) owns the boundary.
-Production remains TypeScript; the core-only API still refuses advanced features.
+`retarget-transfer.spec.ts` uses ordinary source selection and controls for real
+WASM preview, corrections, discard, Apply/history, project/export continuity,
+known cubic motion, cancellation and continued editing. Six sizes, fractional
+DPI, DPR 1/1.25/2, coarse targets and Escape/focus cover unchanged controls.
+`retarget-continuity.journey.spec.ts` independently parses sampled exported motion
+through profile, preview, undo/redo, project reopen and re-import. Snapshot/cubic
+units preserve authored rest/helper transforms, references and canonical buffers.
 
-## Experimental advanced Rust baking
-
-The separate [advanced contract](../../../docs/dev/RETARGET_ADVANCED_BAKE.md)
-owns all nine advanced options/eight reports and their bounds. Generated
-`retarget-advanced-fixtures.ts` / `retarget-natural-fixtures.ts` cover actual
-tracks/reports, allowed combinations and explicit refusals. Runtime proof checks
-native Rust and real Chromium WASM against TypeScript at 1e-6; the focused
-`retargetAdvancedBake.test.ts` independently checks planted soles, fixed lengths,
-torso movement and endpoint positions. Native guards add cancellation, ownership,
-reuse, option depth/value budgets and atomic failures. Aggregate contact storage
-counts repeated patches; native units check its limit and overflow. Production stays unchanged.
-
-## Retarget assistance
-
-`retarget-transfer.spec.ts` exercises actual browser WASM analysis and module-worker baking through ordinary file selection and named controls. It checks canonical project/export preservation during private playback/seek/speed changes, reviewed explicit-map export, mapping correction, discard, apply/history, cancellation during analysis/baking, stale completion, leaving Animate with retained drafts, and actionable WASM failure with continued editing. `native.spec.ts` separately covers mocked preflight/cancel IPC and actual worker baking without a browser WASM request; it is not native Rust execution or OS-dialog evidence.
-
-`src/workers/retargetJobClient.test.ts` owns preparation/analysis/bake cancellation, revision correlation, replacement/disposal, timeouts, invalid responses, startup/post/runtime errors and native cancellation/late-result rejection. `retargetSnapshot.test.ts` guards owned rest/helper transforms, standard interpolation, copied buffers and private preview resource disposal. `retargetCubicSpline.test.ts` decodes a first-party glTF with nonzero Hermite tangents, checks independent known position/rotation/scale values, preserves reference clips and rejects unknown/malformed custom interpolation. The browser cubic-source case verifies those values through actual workers, Apply/history and project reopen. Existing animation, endpoint, twist, constraint and scale fixtures run through `retargetParity.ts` as well as the reference solver, comparing tracks/reports within `1e-6`.
-
-`run.ps1 -Task retarget:runtime-proof` rebuilds the shared core and compares native Rust with actual Chromium WASM across 17 first-party cases for all naming families, fingers, ambiguity, helpers, overrides, opaque rigs, proportions, reference frames and unmapped channels. Mappings/diagnostic structures are exact; numeric fields use `1e-6` relative/absolute tolerance. The retarget continuity journey previews/discards without changing saved work, then applies once and independently inspects sampled exported motion through undo/redo, project reopen and GLB re-import. Final candidate results belong in HISTORY.
+`native.spec.ts` mocks preflight/bake IPC and cancellation, asserting desktop
+baking requests neither a solver worker nor WASM. Its solver reply is a test-only
+TypeScript reference. Actual Rust execution and installed Windows observations
+remain separate; desktop smoke includes the compiled native command boundary.
+Final source-bound command results belong in HISTORY and the compact receipt.
 
 ## Modern task navigation
 
@@ -262,3 +256,5 @@ AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown 
 AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
 
 AI-edited: 2026-10-15T21:46:26-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=bounded contact storage and ordered production integration
+
+AI-edited: 2026-10-16T00:52:52-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=aligned production execution and proof ownership

@@ -1,8 +1,8 @@
 # RustSMF TODO
 
-Last reviewed: 2026-10-15
+Last reviewed: 2026-10-16
 
-Backlog status: advanced motion published at `8c231cb`; production integration is next. Production remains TypeScript. Protected fixes/assets remain intact. HISTORY owns proof.
+Backlog status: production integration is complete locally. Animal-chain assistance is next; protected fixes/assets remain intact. HISTORY owns proof.
 
 ## Rust solver migration: core baking — complete
 
@@ -24,17 +24,17 @@ Backlog status: advanced motion published at `8c231cb`; production integration i
 - Done when: Closed experimentally: all 9 options/8 reports, exact structures/1e-6 numbers, independent motion/contact/endpoints, ownership, cancellation and atomic bounds; the linked contract retains restrictions.
 - Verification: Isolated publication gate passed: 615 frontend/28 Rust units, 196 browser, 12 journeys, 3 strict visuals; native/actual-WASM 33 advanced cases/30 refusals. HISTORY owns source-bound evidence.
 
-## Rust solver migration: production integration — next
+## Rust solver migration: production integration — complete locally
 
 - What: Route desktop baking to shared native Rust and web baking to WASM in the existing worker.
 - Why: Experimental parity does not establish production execution or lifecycle safety.
 - Where: Route `workflow__retarget_production_integration`: job client/worker, portable adapters, Tauri commands, build and delivery guards. Solver implementation stays in its experimental routes.
-- When: Next authorized implementation pass; delivery proof precedes cutover.
-- How: First prove lazy advanced-WASM delivery within the unchanged 1 MiB guard (current module 1372288 bytes); no renaming/budget bypass. Then validate/reconstruct typed clips/reports, route desktop through native commands and web through its worker. Preserve copied inputs, per-editor/window job ownership, revision correlation, progress, 120-second limits and preview/Apply/history. No synchronous fallback or extra UI.
-- Done when: All options/reports retain parity on both production paths. Preparation/analysis/bake cancellation, timeout, malformed result/progress, stale/replacement/disposal and continued editing pass. Project/export continuity and Original stay intact. Keep the TypeScript reference for comparison; Sable does not establish general animal compatibility.
-- Verification: Sequential `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, `test:visual-strict`, `retarget:runtime-proof`, then `desktop-smoke`. Distinguish native Rust, actual browser WASM and mocked IPC; bind source, commands and compact evidence.
+- When: Accepted on 2026-10-16; selected for guarded publication.
+- How: Pinned Binaryen optimization fits the complete lazy module inside the unchanged 1 MiB guard. Native Tauri and worker WASM share typed clip/report validation, copied inputs, job/revision correlation, progress, cancellation and 120-second limits. Private preview/Apply/history retain their owners; no synchronous fallback or extra UI.
+- Done when: Closed locally: complete native/worker-WASM parity, typed ownership, cancellation/deadlines, malformed/stale replies, replacement/disposal and continued editing pass. Project/export continuity and Original are preserved; TypeScript remains the reference.
+- Verification: All six sequential gates pass on one source: verify, browser, journeys, strict visuals, runtime proof and desktop smoke. HISTORY and the existing compact receipt retain exact commands, counts and source identity. Native Rust, real WASM and mocked IPC remain distinct.
 
-Stop condition: if delivery cannot meet the guard, report the measured constraint before changing that contract. Rust baking stays experimental until production acceptance passes.
+The complete lazy WASM is 903831 bytes under the unchanged 1 MiB guard. Installed Windows retarget interaction and general animal compatibility remain separate acceptance.
 
 Custom rig creation/replacement, automatic skinning, application versions, installer/release replacement and publication are outside these implementation slices. Separate commit/push authorization is required.
 
@@ -45,8 +45,8 @@ Custom rig creation/replacement, automatic skinning, application versions, insta
 | 1 | ZIP bundle intake — published `da98cba` | Complete; reviewed directory/progress fixes remain intact. |
 | 2 | Export presets and queues — published `0c7ab1d`, cleanup `2343b08` | Complete; owned snapshot/material-reader guards and source-specific proof remain in HISTORY. Installed Windows queue acceptance is separate. |
 | 3 | Original Sable assets and animation pack — published `2343b08` | Complete; the sample guide owns limits and rebuilding. Drafts and borrowed references remain private. |
-| 4 | Complete Rust solver migration | Contract/sampler `7297e0e`, core `354542e`, advanced `8c231cb` published; production integration next. |
-| 5 | Animal-chain assistance | Later: reviewed existing quadruped, wing and tail suggestions with independent first-party fixtures; ambiguity requires explicit maps. No new rig creation. |
+| 4 | Complete Rust solver migration | Contract/sampler, core and advanced passes are published; production integration is complete; the paired closeout selects this batch for main. |
+| 5 | Animal-chain assistance — next | Next authorized pass: reviewed existing quadruped, wing and tail suggestions with independent first-party fixtures; ambiguity requires explicit maps. No new rig creation. |
 
 ## Completed frontend source work
 
@@ -156,3 +156,6 @@ AI-edited: 2026-10-15T16:07:12-04:00 | agent=Codex/root | model=unknown | effort
 AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=synced publication and bounded core baking
 
 AI-edited: 2026-10-15T22:16:39-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=rechecked publication and bounded production integration
+
+
+AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits

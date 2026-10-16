@@ -1,21 +1,33 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-10-15
+Last reviewed: 2026-10-16
 
 Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Published advanced-motion review — 2026-10-15
+## Production integration review — 2026-10-16
 
-Clean main and live origin match `8c231cbf91e1d4d037abd98f188d72ebe509f60c`, tree `43c80da8e701f1b380f52847b9e0272908460002`. All 29 working hashes, 14 retained media, runtime receipt and protected identities match publication. Coverage: advanced/natural/endpoint contracts and prior guards, delivery builds, portable packets, job client/worker and native command boundaries.
+Reviewed base is `4475c9e`; paired closeout selects this integration batch for main. The six
+final gates share 495 implementation inputs at SHA-256
+`ef240a202db11a26695ebcb25b5cc0e8025105041a92f2bda3f2fb4bf572c6d5`.
+HISTORY and `advanced-motion-receipt.json`'s `productionIntegration` own proof.
 
-- Verified closed: nine options/eight reports and aggregate contact storage have published native/actual-WASM parity. All five isolated publication gates passed; proof stays attached to that source.
-- New, repaired locally: `verify` checked generated imports before creating WASM bindings. It now generates first and stops on failure. Worker progress accepted NaN/infinity/fractions; a failing regression proves the gap, then strict integer/range checks reject it before UI callbacks and release the worker.
-- Still open: production integration. Rust baking remains experimental; TODO orders delivery within the 1 MiB guard, typed native/worker adapters, then lifecycle/project/export acceptance.
-- Unverified: production Rust bake lifecycle, new installed-Windows baking and general animal compatibility. The earlier 44 MB unlinked snapshot remains ignored after automatic deletion review rejected cleanup; no new attempt is made here.
+- Verified closed: complete native Rust and worker-WASM baking, typed clip/report
+  reconstruction, owned inputs, progress, cancellation/deadlines, stale replies,
+  replacement/disposal, private preview/Apply/history and project/export continuity.
+- Newly repaired: pinned optimization meets the unchanged 1 MiB guard; generated
+  externref types use unknown. Errors retain endpoint names and flagged frames;
+  correction-map bone names remain data without prototype mutation.
+- Verified: all six sequential gates pass; strict Original bytes, showcase/private
+  GLB identities and Sable/ZIP/export changes remain intact. No controls change.
+- Unverified: installed Windows retarget interaction and general animal-chain
+  compatibility. Mocked IPC is not native UI evidence; animal assistance stays next.
+- Cleanup limitation: automatic approval review blocked trial-cache/scratch deletion.
+  Their exact owned paths remain in the ignored receipt; owned processes release.
 
-HISTORY and the advanced receipt own fresh cleanup proof. Sable/ZIP/export, UI, Original, recovery and private assets are preserved. This pass stays local, without publication.
+Earlier `8c231cb`/`4475c9e` publication and cleanup proof remains source-bound in
+HISTORY. Prior referenced media, recovery and private assets stay protected.
 
 ### Earlier backup showcase recheck
 
@@ -186,3 +198,5 @@ open; TODO records the completed local acceptance and separate distribution scop
 AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
 
 AI-edited: 2026-10-15T22:16:39-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=rechecked publication and bounded production integration
+
+AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits

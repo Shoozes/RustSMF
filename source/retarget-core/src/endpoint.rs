@@ -237,7 +237,14 @@ pub(crate) fn bake(
             .filter(|c| c.name == p.target_clip)
             .collect();
         if matches.len() != 1 {
-            return Err(invalid("endpointEnvelope.targetClip"));
+            return Err(crate::sampler::error(
+                "ADVANCED_INPUT_INVALID",
+                "endpointEnvelope.targetClip",
+                &format!(
+                    "Missing or ambiguous target endpoint clip {}.",
+                    p.target_clip
+                ),
+            ));
         }
         let mut pose =
             crate::natural::pose_at(matches[0], t, &tr, p.target_frame as f64 / 60., cancel)?;

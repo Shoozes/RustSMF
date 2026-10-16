@@ -8,15 +8,15 @@ Animate > Transfer prepares a source, reviews mapping and previews privately bef
 
 Snapshots include helper ancestry and owned local rest transforms captured before playback. Rig-history edits refresh that rest ownership. Skin inverse-bind matrices are not substituted for authored rest transforms. Preflight reports missing/duplicate names, override conflicts, unmapped channels, reference-frame issues and normalized mapped-segment proportions. A reviewed map still cannot guarantee skin deformation or anatomical equivalence.
 
-The complete existing TypeScript clip solver runs in a worker on both platforms. It retains advanced profiles, reference clips, helper motion, interpolation, timing, contacts, twist, scale and endpoint options. Its CLI/reference implementation remains available. The experimental [portable sampler](RETARGET_SAMPLER.md) adds native/WASM TRS parity; complete Rust baking remains later and has no production cutover. Project/profile/CLI job/export formats and app version remain unchanged.
+The complete Rust solver bakes through a native Tauri command on desktop and lazy WASM in the browser worker. Advanced profiles, references, helper motion, interpolation, timing, contacts, twist, scale and endpoints retain TypeScript-reference parity. [Production integration](RETARGET_ADVANCED_BAKE.md) owns delivery and typed boundaries; the TypeScript solver remains for CLI/comparison, without runtime fallback. Public formats and app version are unchanged.
 
 Source and reference sampling uses each track's actual interpolator. Worker snapshots preserve glTF CUBICSPLINE tangent triplets and reconstruct Hermite interpolation, including quaternion normalization and opt-in scale transfer. Unknown custom interpolation fails visibly instead of silently becoming linear. Known-value generated-fixture checks supplement worker/reference parity, which alone cannot detect a shared sampling mistake.
 
-This is the selected first donor pass, not a claim that every missing donor feature has been ported. Desktop Rust is bundled into the application; the web runner executes WASM locally and needs no native service. Rust is required to build the source, not to run the built web app. ZIP intake, export queues, the complete Rust solver and animal-chain assistance retain their ordered followup boundaries. Custom rig creation remains excluded.
+This is the selected first donor pass, not a claim that every missing donor feature has been ported. Desktop Rust is bundled into the application; the web runner executes WASM locally and needs no native service. Rust is required to build the source, not to run the built web app. TODO records the completed ZIP, export-queue and Rust-solver passes, with reviewed animal-chain assistance next. Custom rig creation remains excluded.
 
 ## Job and preview lifecycle
 
-One client owns one active transfer per editor. Preparation, analysis and baking are correlated with job identity and the captured authoring revision. Each phase has a 120-second limit. Cancel, replacement, leaving Animate and disposal reject stale results and terminate browser workers; native analysis checks a cooperative cancellation flag. Runtime failures are visible and have no synchronous fallback.
+One client owns one active transfer per editor. Preparation, analysis and baking are correlated with job identity and the captured authoring revision. Each phase has a 120-second limit. Cancel, replacement, leaving Animate and disposal reject stale results and terminate browser workers; native analysis and baking use cooperative cancellation. Native progress channels are released on every exit; destroyed windows cancel their jobs. Runtime failures are visible and have no synchronous fallback.
 
 Skeletons, tracks and reference clips are copied into private worker objects. Canonical buffers are retained. Snapshot limits are 2048 bones, 4096 nodes and 256 selected clips, with 16 million values per serialized clip and a 16-million-value output estimate per bake. Rust validates its independent API bounds and finite transforms.
 
@@ -26,7 +26,7 @@ Apply validates the captured input identity and replacement locks, then uses one
 
 ## Builds and proof
 
-Source setup requires Rust's `wasm32-unknown-unknown` target (`rustup target add wasm32-unknown-unknown`). Public setup installs matching project-local `wasm-bindgen-cli` 0.2.126 under ignored `output/toolchains/retarget-wasm`. Runtime bindings are pinned to the same version. Dev, typecheck and production build generate ignored web-target glue/WASM; no global generator install is needed. Missing tooling explains how to run setup.
+Source setup requires Rust's `wasm32-unknown-unknown` target (`rustup target add wasm32-unknown-unknown`). Public setup installs matching project-local `wasm-bindgen-cli` 0.2.126 under ignored `output/toolchains/retarget-wasm`. Runtime bindings are pinned to the same version; locally installed Binaryen 132.0.0 optimizes the complete module within the unchanged 1 MiB guard. Dev, typecheck and production build generate ignored web-target glue/WASM; no global generator install is needed. Missing tooling explains how to run setup.
 
 ```powershell
 pwsh -File run.ps1 -Task setup
@@ -41,3 +41,6 @@ HISTORY owns the final candidate's commands/results. TODO owns ordered followups
 ---
 AI-created: 2026-10-14T20:38:18-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs
 AI-edited: 2026-10-14T22:05:56-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=documented cubic interpolation and independent known-value proof
+
+
+AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits

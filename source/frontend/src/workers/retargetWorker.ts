@@ -17,8 +17,12 @@ scope.onmessage = async (event: MessageEvent<unknown>) => {
       const value = JSON.parse(analyze_json_v1(JSON.stringify(request.input)));
       post({...identity, type:'analysis', value});
     } else if (request.phase === 'bake') {
-      const { bakeRetarget } = await import('./retargetBakeRuntime');
-      const value = bakeRetarget(request.input, (completed,total) => post({...identity,type:'progress',completed,total}));
+      const [{default:init, bake_with_progress_json_v1}, {rustBakeRequest, restoreRustBake}] = await Promise.all([
+        import('../generated/retarget-core/retarget_core.js'), import('./retargetRustRuntime')]);
+      const portable = rustBakeRequest(request.input);
+      await init();
+      const value = restoreRustBake(JSON.parse(bake_with_progress_json_v1(JSON.stringify(portable),
+        (completed:number,total:number) => post({...identity,type:'progress',completed,total}))), portable);
       post({...identity,type:'bake',value}, clipTransferables(value.clips));
     } else throw new Error('Unknown retarget phase.');
   } catch (cause) {

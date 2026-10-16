@@ -1,9 +1,12 @@
 # Modern UI Design QA — v0.2 productization complete
 
-## Portable Rust sampler
+## Rust production integration
 
-No UI/style changes. Production Transfer keeps its worker; existing captures
-remain applicable. HISTORY binds final strict and Original reference checks.
+No controls, styles or layouts change. Transfer keeps private preview and its
+existing review/Apply flow; baking now uses native Rust or worker WASM. Six-size
+Transfer checks cover DPR 1/1.25/2, coarse targets, Escape and focus return.
+All six source-bound gates pass. HISTORY binds strict results and the unchanged
+Original reference; no baseline updates are accepted in this pass.
 
 ## Original Sable sample
 
@@ -91,3 +94,6 @@ The curated overview now shows the model with the tools closed. Modern's empty s
 AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
 
 AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
+
+
+AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits

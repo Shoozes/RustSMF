@@ -38,5 +38,8 @@
   "engines": {
     "node": "^22.13.0 || >=24"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "binaryen": "132.0.0"
+  }
 }

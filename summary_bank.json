@@ -47,9 +47,9 @@
         "scripts/context-bank.test.mjs"
       ],
       "notes": [
-        "Node.js 22+; exact files/globs only. Reject bare directories, symlink ancestors and Windows drive-relative escapes.",
-        "Generation normalizes CRLF for text rendering/budgets only; never truncate files, rewrite source/binary evidence or write when --out - is requested.",
-        "Runtime/configured exclusions apply to scans, globs, paths and trees. Public entry: node scripts/generate-context.mjs --group <group> --out -. Private helper/agent folders stay excluded."
+        "Node.js 22+; exact files/globs. Reject bare directories, symlink ancestors and drive-relative escapes.",
+        "CRLF normalization affects rendered budgets only. Never truncate or rewrite inputs; --out - is read-only.",
+        "Exclusions govern scans, paths and trees. Public entry: node scripts/generate-context.mjs --group <group> --out -."
       ]
     },
     "workflow__project_integrity": {
@@ -112,7 +112,7 @@
     },
     "feature__theme_system": {
       "description": "Persisted themes, Modern model viewer with task drawers, Original presentation, responsive behavior and visual evidence.",
-      "max_kb": 242,
+      "max_kb": 244,
       "paths": [
         "source/frontend/src/theme.ts",
         "source/frontend/src/theme.test.ts",
@@ -648,7 +648,7 @@
     },
     "subsystem__tauri_bridge": {
       "description": "Tauri command adapters, native file dialogs, authorized bounded reads, staged serialized writes, recovery ownership, and native smoke coverage.",
-      "max_kb": 104,
+      "max_kb": 108,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/backend-client/lazyClient.ts",
@@ -665,14 +665,8 @@
         "source/src-tauri/capabilities/default.json"
       ],
       "notes": [
-        "Rust owns native open/save dialogs; reads require a canonical path previously selected by the native dialog, saves do not accept a frontend path, and all blocking file work is capped at 256 MiB.",
-        "Native reads open the authorized canonical file once, reject non-regular paths, and reject a stream that grows beyond the same 256 MiB cap after metadata inspection.",
-        "The frontend passes a Uint8Array byte view to save_file_binary rather than constructing an explicit Array.from number array; typed IPC remains bounded by the same native limit.",
-        "Native Open requires exactly one supported model before reading or replacing authoring state. Native read responses are untrusted: binaryPayload.ts requires one payload per selected file and accepts only ArrayBuffer, Uint8Array, or arrays of integer bytes from 0 through 255 so coercion cannot wrap malformed values.",
-        "Rust owns dialog invocation through its pinned tauri-plugin-dialog dependency; the frontend has no unused dialog-plugin package.",
-        "The native CSP permits local blob fetches and the WebView2 IPC hostname. Foreground saves await active autosave before opening their destination dialog. All native writes share one async serialization owner, stage and sync complete payloads before replacement, and restore the previous destination when installation fails.",
-        "Project recovery discovery and reads accept only the owned target plus .bak1 and .bak2 regular files; arbitrary app-data siblings fail before filesystem access.",
-        "The lazy native-client loader shares one in-flight adapter construction and clears rejected imports for retry; direct unit tests cover overlap identity and recovery after failure."
+        "Native dialogs grant canonical bounded read authority; staged writes and allowlisted recovery stay Rust-owned. Retarget delivery: workflow__retarget_production_integration.",
+        "lazyClient tests import/retry ownership; binaryPayload tests untrusted IPC. native.spec uses mocks; installed Windows observations remain separate."
       ]
     },
     "tests__quality": {
@@ -1026,7 +1020,7 @@
       "notes": [
         "Canonical v1.rs is vendored verbatim where consumers cannot snapshot the RustSMF path crate; it uses existing libm 0.2.16.",
         "Input is parent-first uniform-scale local TRS and one/two calibrated direct chains with independent limb subtrees; output is corrected full TRS, aligned joint orientations, and bounded diagnostics.",
-        "Calibrate the hip bend plane as pole × upper-axis and knee plane normal with the positive (hip-to-knee) × (knee-to-ankle) sign. No contact schedule or root travel is owned here.",
+        "Calibrate the hip bend plane as pole \u00d7 upper-axis and knee plane normal with the positive (hip-to-knee) \u00d7 (knee-to-ankle) sign. No contact schedule or root travel is owned here.",
         "Native/WASM parity covered four fixtures and 548 exact numeric outputs; source npm run verify:rust is the shared compile-only gate and npm run transition:runtime-proof rebuilds and receipts the native/browser-WASM transition artifacts."
       ]
     },
@@ -1265,7 +1259,7 @@
     },
     "workflow__retarget_core_bake": {
       "description": "Experimental shared Rust core baking, typed portable result and reference/native/browser-WASM parity; no production cutover.",
-      "max_kb": 128,
+      "max_kb": 132,
       "paths": [
         "source/retarget-core/src/bake*.rs",
         "source/retarget-core/examples/bake_receipt.rs",
@@ -1284,7 +1278,7 @@
     },
     "workflow__retarget_advanced_bake": {
       "description": "Experimental advanced bake contract, ordered local passes, orchestration and TypeScript/native/browser-WASM parity; no production cutover.",
-      "max_kb": 176,
+      "max_kb": 184,
       "paths": [
         "source/retarget-core/src/advanced*.rs",
         "source/retarget-core/src/baker.rs",
@@ -1303,7 +1297,7 @@
       ],
       "notes": [
         "Core/math overlap is intentional; natural/endpoint modules have subsystem__rust_* routes.",
-        "Require 9 options/8 reports, real tracks, exact structure and 1e-6 TS/native/WASM parity; production stays TypeScript."
+        "Require 9 options/8 reports, real tracks, exact structure and 1e-6 TS/native/WASM parity; production: workflow__retarget_production_integration."
       ]
     },
     "subsystem__rust_natural_motion": {
@@ -1338,6 +1332,9 @@
       "paths": [
         "source/frontend/src/workers/retargetJobClient*",
         "source/frontend/src/workers/retargetPortable*",
+        "source/frontend/src/workers/retargetRustRuntime*",
+        "source/frontend/scripts/retarget-production-fixtures.ts",
+        "source/frontend/tests/retarget-runtime.spec.ts",
         "source/frontend/src/workers/retargetWorker.ts",
         "source/frontend/src/workers/retargetBakeRuntime.ts",
         "source/frontend/src/workers/retargetProtocol.ts",

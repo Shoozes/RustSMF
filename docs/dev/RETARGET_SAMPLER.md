@@ -5,9 +5,9 @@
 `source/retarget-core/src/sampler.rs` exposes `BakeRequestV1` and a separate
 `SampleResponseV1`. `sample_v1` is the native borrowed-input API;
 `sample_json_v1` is the native/WASM JSON entry point. Existing mapping API v1,
-projects, profiles, CLI jobs and exports are unchanged. Production clip baking
-still runs through `retargetBakeRuntime.ts`; this experimental API has no UI or
-Tauri command and does not emit baked clips or animation reports.
+projects, profiles, CLI jobs and exports are unchanged. This sampler-only API
+has no UI and emits no baked clips. Production uses the [complete baking entry](RETARGET_ADVANCED_BAKE.md);
+`retargetBakeRuntime.ts` retains the TypeScript comparison implementation.
 
 Success identifies `stage: sampler`, `capabilities: [sample-trs-v1]` and
 `status: sampled`. `operation: bake` and every nonempty `options` object return
@@ -105,3 +105,4 @@ references and private raw asset boundaries remain preserved.
 
 ---
 AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-sampler
+AI-edited: 2026-10-16T00:52:52-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=clarified sampler and production ownership

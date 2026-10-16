@@ -2,6 +2,59 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-16 — Rust retarget production integration accepted locally
+
+On local main `4475c9ea3e1fa1b32eb08f8a78a1552efd98dfb4`, desktop baking now
+uses native shared Rust and web baking uses its lazy WASM inside the existing
+worker. TypeScript remains the CLI/parity reference; no synchronous fallback,
+controls, public formats, versions, installer replacement or publication change.
+Typed reconstruction validates capabilities, complete atomic clips, bindings,
+finite keys/buffers and reports. Job/revision progress, native window ownership,
+120-second limits, cancellation, stale/replaced/disposed work and private
+preview/Apply/history retain their owners.
+
+Pinned Binaryen 132.0.0 optimization after wasm-bindgen 0.2.126 reduces the complete
+production module to 903831 bytes, SHA-256
+`9419b3d34c2a043137836ee26b6eed76a21bc6cbc6fa99b63ae5b9c0f4cc0020`, inside
+the unchanged 1 MiB lazy-asset guard. Generated externref declarations narrow any
+to unknown; the strict typing guard stays enabled. Crate archives/checksums bind
+new WASM notices. Reproduced browser errors now identify missing endpoint clips
+and pose-range bones/frames. A failing adapter regression also proved valid
+constructor/prototype/__proto__ bone-name keys were refused; owned JSON cloning
+now preserves them without prototype mutation.
+
+All six commands exited 0 sequentially on the same 495 implementation inputs,
+SHA-256 `ef240a202db11a26695ebcb25b5cc0e8025105041a92f2bda3f2fb4bf572c6d5`:
+`pwsh -NoProfile -File run.ps1 -Task verify` (624 frontend units, 30 core Rust
+units, all 14 Rust steps); `test:e2e -NoGenEye` (197); `test:journey -NoGenEye`
+(12); `test:visual-strict` (3); `retarget:runtime-proof`; `desktop-smoke` (release
+build, 14 native tests, 18 IPC checks). Each task uses that same launcher prefix.
+Browser lanes have no retries, skips or unexpected/global errors. Runtime proof
+compares native Rust, actual Chromium WASM and TypeScript at the unchanged 1e-6
+relative/absolute tolerance: 17 mapping, 14 sampler/20 refusal, 29 core/40 refusal
+and 33 advanced/30 refusal cases. The production advanced entry additionally
+covers all 29 core positives and atomic progress-callback failure; the actual
+production worker independently checks all 62 positive core/advanced cases.
+
+`output/retarget-runtime-proof/advanced-motion-receipt.json`'s
+`productionIntegration` retains commands, runtimes, source/changed hashes,
+required media and resolved/superseded attempts. Later edits only close docs.
+Six-size/DPR/coarse-pointer/keyboard checks and strict visuals preserve the quiet
+UI and Original baseline. Existing Sable/ZIP/export fixes, showcase, private GLB,
+Tripo drafts, borrowed references, recovery and older required media are preserved.
+Native Rust execution, browser WASM, mocked IPC and installed Windows observations
+remain distinct; no new installed-app acceptance or general animal compatibility
+is claimed. TODO leaves animal-chain assistance next.
+
+Owned processes/ports release. Automatic approval review rejected scoped cleanup
+of the 108557891-byte optimizer trial cache and duplicate scratch WASM; the receipt
+also names one interrupted helper-test scratch directory. These ignored/disposable
+paths remain for owner cleanup; no alternative deletion bypass is attempted.
+Previously protected evidence/scratch is retained. Paired closeout authorizes this
+batch alone for main through the staged guarded helper; its isolated-candidate
+gate, exact tree, commit and remote confirmation belong in the same receipt.
+This source entry records pre-publication acceptance, not a release or installer.
+
 ## 2026-10-15 — Published advanced-motion recheck and integration handoff
 
 Clean main and live origin match `8c231cbf91e1d4d037abd98f188d72ebe509f60c`, tree `43c80da8e701f1b380f52847b9e0272908460002`. All 29 publication working hashes, 14 retained journey media, runtime receipt and protected identities match. Prior native/actual-WASM parity and the five isolated gates retain their original source. The published bootstrap failure is identified: import integrity ran before ignored bindings were generated, although later npm checks created them.
@@ -2664,3 +2717,5 @@ Recorded the recipient-limited permission and both SHA-256 pins in
 `POSE_CONTACT.md`. This does not grant a general crate license. Preserve the
 `Shoozes/RustSMF` source attribution and carry the selected `libm 0.2.16`
 license/notice. No receiving checkout was changed and nothing was published.
+
+AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits

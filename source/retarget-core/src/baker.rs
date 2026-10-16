@@ -1,4 +1,4 @@
-//! Experimental core baking. Production continues to use the TypeScript worker.
+//! Core comparison API and shared execution for complete production baking.
 use crate::bake_math::*;
 use crate::sampler::{
     self, BakeRequestV1, Checked, ClipJobV1, ClipV1, SampleErrorV1, TrackV1, TransformV1,
@@ -1085,6 +1085,7 @@ fn execute(
     r: &BakeRequestV1,
     cancel: &impl Fn() -> bool,
     _advanced: bool,
+    progress: &impl Fn(usize, usize),
 ) -> Checked<Vec<BakedClipV1>> {
     #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
     let advanced = _advanced;
@@ -1178,6 +1179,7 @@ fn execute(
         .collect::<Checked<_>>()?;
     let mut clips = Vec::new();
     let mut budget: usize = 0;
+    progress(0, r.clips.len());
     for (job, (o, a)) in r.clips.iter().zip(&options) {
         #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
         if let Some(envelope) = a.as_ref().and_then(|a| a.endpoint.as_ref()) {
@@ -1198,6 +1200,7 @@ fn execute(
                 ));
             }
             clips.push(baked);
+            progress(clips.len(), r.clips.len());
             continue;
         }
         clips.push(bake_job(
@@ -1209,16 +1212,25 @@ fn execute(
             &mut budget,
             a.as_ref(),
         )?);
+        progress(clips.len(), r.clips.len());
     }
     checkpoint(cancel)?;
     Ok(clips)
 }
 pub fn bake_v1(request: &BakeRequestV1, cancelled: impl Fn() -> bool) -> BakeResponseV1 {
-    response(execute(request, &cancelled, false))
+    response(execute(request, &cancelled, false, &|_, _| {}))
 }
 #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
 pub(crate) fn advanced_bake(r: &BakeRequestV1, cancel: &impl Fn() -> bool) -> BakeResponseV1 {
-    let mut out = response(execute(r, cancel, true));
+    advanced_bake_progress(r, cancel, &|_, _| {})
+}
+#[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+pub fn advanced_bake_progress(
+    r: &BakeRequestV1,
+    cancel: &impl Fn() -> bool,
+    progress: &impl Fn(usize, usize),
+) -> BakeResponseV1 {
+    let mut out = response(execute(r, cancel, true, progress));
     out.stage = "advanced-bake".into();
     out.capabilities = vec!["core-bake-v1".into(), "advanced-bake-v1".into()];
     out
@@ -1258,7 +1270,7 @@ pub fn bake_json_v1(input: &str) -> String {
     } else {
         serde_json::from_str::<BakeRequestV1>(input)
             .map_err(|_| invalid("$"))
-            .and_then(|r| execute(&r, &|| false, false))
+            .and_then(|r| execute(&r, &|| false, false, &|_, _| {}))
     };
     serde_json::to_string(&response(result)).expect("validated bake output")
 }

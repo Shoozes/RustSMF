@@ -3,9 +3,9 @@
 `baker::bake_v1` borrows a portable request and accepts a cooperative cancellation
 callback. `bake_json_v1` is the bounded native/WASM JSON entry point. Success is
 `stage: core-bake`, `capabilities: [core-bake-v1]`, `status: baked`, with ordered
-target clips and typed `CoreBakeReportV1` reports. This is an experimental API;
-the application's TypeScript production worker remains active. No new controls,
-Tauri commands, public profile/project/job formats or versions are introduced.
+target clips and typed `CoreBakeReportV1` reports. This core-only comparison API
+still refuses advanced options. Production uses the [complete advanced entry](RETARGET_ADVANCED_BAKE.md)
+through native Rust or browser WASM; public formats and controls are unchanged.
 
 ## Contract and supported behavior
 
@@ -77,3 +77,4 @@ experimental report; this core-only API retains its capability/refusal contract.
 AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-core-bake
 
 AI-edited: 2026-10-15T20:58:42-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=code | change=implemented advanced parity and isolated experimental WASM payload
+AI-edited: 2026-10-16T00:52:52-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=routed production to complete baking

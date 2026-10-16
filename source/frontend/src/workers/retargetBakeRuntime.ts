@@ -2,7 +2,7 @@ import { retargetAnimationClip } from '../utils/animationRetarget';
 import { restoreClip, restoreOptions, restoreSkeleton, snapshotClip } from './retargetSnapshot';
 import type { BakeInput, BakeOutput } from './retargetProtocol';
 
-/** The existing solver runs unchanged against private worker objects. */
+/** Retained TypeScript reference for parity and CLI consumers; never a production fallback. */
 export function bakeRetarget(input: BakeInput, progress: (completed:number,total:number)=>void): BakeOutput {
   if (!input.clips.length || input.clips.length > 256) throw new Error('Transfer needs 1–256 selected clips.');
   let outputValues=0;

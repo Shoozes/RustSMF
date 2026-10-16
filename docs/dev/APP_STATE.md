@@ -20,18 +20,20 @@ ZIP intake was introduced in `da98cba`. Current source accepts omitted directory
 
 Animate > Transfer now uses shared Rust API v1 for mapping/preflight (native Tauri on desktop, actual WASM in a browser worker). Mixamo, UE4 mannequin, Unity humanoid and Rigify deform naming include side/chain context and fingers. Explicit maps remain authoritative; ambiguity and numeric rigs require review. Mapping details holds overrides, diagnostics, profile drafts and portable export of the reviewed explicit map.
 
-Production baking stays in its TypeScript worker. Experimental [sampling](RETARGET_SAMPLER.md), [core baking](RETARGET_CORE_BAKE.md) and [advanced motion](RETARGET_ADVANCED_BAKE.md) have distinct APIs; advanced native/actual-WASM parity is accepted locally; production integration is next in TODO. Core-only baking still refuses advanced options. Source selection prepares a private preview; Apply commits once through animation history. Cancel/discard, input revisions, leaving Animate and disposal reject stale results. Closing Tools may retain preview. Project saves and exports use canonical clips during preview; undo/redo and continued editing retain their owners. Public setup/dev/build generate pinned WASM bindings. Runtime failures remain visible without synchronous fallback.
+Production baking now uses shared native Rust on desktop and lazy WASM in the browser worker. [Integration](RETARGET_ADVANCED_BAKE.md) owns typed replies, correlated progress, cooperative native cancellation, worker termination and 120-second limits. TypeScript remains a CLI/test reference without runtime fallback. Sampler/core-only APIs retain their distinct capabilities; core-only baking refuses advanced options. Source selection prepares a private preview; Apply commits once through animation history. Cancel/discard, input revisions, leaving Animate and disposal reject stale results. Closing Tools may retain preview. Project saves and exports use canonical clips during preview; undo/redo and continued editing retain their owners. Public setup/dev/build generate pinned WASM bindings. Runtime failures remain visible without synchronous fallback.
 
 Advanced Rust contact capture separately caps aggregate cached point samples,
-including every repeated patch, before allocation. The full advanced WASM stays
-experimental; production delivery must retain the existing size guard.
+including every repeated patch, before allocation. The complete production WASM retains
+the 1 MiB size guard through pinned local Binaryen optimization.
 
-Advanced motion is published at `8c231cb`. Worker progress rejects nonintegral,
-nonfinite or invalid counts; verification generates bindings before import checks.
+Worker progress is integral and bounded; verification generates bindings first.
+All six production-integration gates pass on the source identified in HISTORY.
+Actual installed-Windows retarget interaction and general animal compatibility
+remain separate; Sable alone establishes neither.
 
 Transfer copies and raw-clip Retime preserve glTF cubic-spline motion, including rotation and scale. Trim subdivides vector/scale curves using boundary values and derivatives. Cubic rotation trims require existing rotation-key bounds or held endpoint regions; inserting a normalized quaternion key could change motion, so that case is refused before mutation with guidance to use existing keys or Retime. Custom/smooth trim interpolation is also refused. Shared key sampling honors the actual cubic/step/linear factory. History, project reopen and parsed GLB re-import have independent known-motion checks.
 
-The published cubic authoring batch at `040feb3` passed sequential verify (546 frontend units; 14 Rust checks), browser (163, no retries), journeys (11) and strict visuals (3) on unchanged implementation inputs. Routine output is compact JSON; HTML and successful UI captures are opt-in. Required visual/pixel and hand-wave checks remain enabled. HISTORY owns source identity, final results and the earlier review's separate proof.
+HISTORY retains source-bound cubic authoring proof at `040feb3`. Routine output is compact JSON; required visual/pixel and hand-wave evidence remains enabled.
 
 `RETARGET_ASSISTANCE.md` owns API, job and proof boundaries; TODO owns ordered followups. The published `ff43a13` gate passed verify, browser (160), journeys (11), strict visuals (3), native/actual-WASM parity (17 cases) and desktop smoke; HISTORY binds that source and reviewed captures. Sable is the accepted original asset pack; `ASSET_PROVENANCE.md` distinguishes its generation-specific rights from withheld raw drafts and borrowed references. Those private inputs are excluded from public samples. No custom rig creation, rig replacement or automatic skinning is added. App version, release and installer remain unchanged; installed Windows evidence retains its earlier source identity.
 
@@ -371,3 +373,6 @@ AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=
 AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=recorded published sampler state
 
 AI-edited: 2026-10-15T22:16:39-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=rechecked publication and bounded production integration
+
+
+AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits

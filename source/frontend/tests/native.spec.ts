@@ -19,6 +19,8 @@ import { createSkinnedGlbFixtureInput, createSkinnedGltfFixtureInputWithOptions 
 
 import { cancelPaintOnMeshInViewport } from './helpers/viewport-interactions';
 import { renameSubmodel, watchJourneyErrors } from './helpers/product-journey';
+import {productionInput} from '../scripts/retarget-production-fixtures';
+import {advancedReference} from '../scripts/retarget-advanced-fixtures';
 
 function readSampleBytes(samplePath: string | null): number[] {
   if (!samplePath) return [];
@@ -676,7 +678,8 @@ test.describe('RustSMF Tauri IPC mock coverage', () => {
   });
 });
 
-test('native retarget IPC mock correlates cancellation and keeps clip baking in a worker', async ({page}) => {
+test('native retarget IPC mock correlates cancellation and routes baking to native without workers or WASM', async ({page}) => {
+  await page.exposeFunction('__rustsmfNativeBakeMock',(input:string)=>advancedReference(productionInput(JSON.parse(input))));
   const mapping={ok:true,map:{FixtureRoot:'FixtureRoot',FixtureTip:'FixtureTip'},decisions:[
     {source:'FixtureRoot',target:'FixtureRoot',method:'manual',confidence:1},
     {source:'FixtureTip',target:'FixtureTip',method:'manual',confidence:1},
@@ -684,7 +687,7 @@ test('native retarget IPC mock correlates cancellation and keeps clip baking in 
   await installTauriMock(page,{openPath:'unused.glb',savePath:'unused.glb',sampleBytes:[],retargetDelayMs:1000,
     retargetResult:{apiVersion:1,status:'ready',mapping,diagnostics:[],proportions:null}});
   const assertErrors=watchJourneyErrors(page),wasmRequests:string[]=[],workerRequests:string[]=[];
-  page.on('request',request=>{if(request.url().endsWith('.wasm'))wasmRequests.push(request.url());if(request.url().includes('retargetBakeRuntime-'))workerRequests.push(request.url());});
+  page.on('request',request=>{if(request.url().endsWith('.wasm'))wasmRequests.push(request.url());if(request.url().includes('retargetWorker-'))workerRequests.push(request.url());});
   await page.goto('/');await page.getByTestId('model-file-input').setInputFiles(await createSkinnedGlbFixtureInput());
   await expect(page.getByTestId('status-text')).toContainText('Loaded:',{timeout:15000});await selectWorkspace(page,'animate');
   const source=await createSkinnedGltfFixtureInputWithOptions({clipName:'Source Motion'});
@@ -699,5 +702,7 @@ test('native retarget IPC mock correlates cancellation and keeps clip baking in 
   await updateTauriMock(page,{retargetDelayMs:0});
   await (await workspaceControl(page,'animation-retarget-clips')).locator('input').setInputFiles(source);await applyTransferPreview(page);
   snapshot=await getTauriMockSnapshot(page);expect(snapshot.calls.filter(call=>call.cmd==='retarget_preflight_v1')).toHaveLength(2);
-  expect(wasmRequests).toEqual([]);expect(workerRequests.length).toBeGreaterThan(0);assertErrors();
+  expect(snapshot.calls.filter(call=>call.cmd==='retarget_bake_v1')).toHaveLength(1);
+  expect(await page.evaluate(()=> (Reflect.get(Reflect.get(window,'__TAURI_INTERNALS__'),'callbacks') as Map<number,unknown>).size)).toBe(0);
+  expect(wasmRequests).toEqual([]);expect(workerRequests).toEqual([]);assertErrors();
 });

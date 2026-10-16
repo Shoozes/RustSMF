@@ -2,6 +2,60 @@ use crate::{advanced::*, baker_tests::request};
 use serde_json::json;
 use std::cell::Cell;
 #[test]
+fn production_refusals_identify_missing_clip_and_flagged_bone_frames() {
+    let mut r = request();
+    r.clips[0].options.insert("sampleRateHz".into(), json!(60));
+    r.clips[0]
+        .options
+        .insert("interpolation".into(), json!("step"));
+    let pose = json!({"targetClip":"Missing","targetFrame":0,"spanFrames":4,"rootOffset":[0,0,0]});
+    r.clips[0]
+        .options
+        .insert("endpointEnvelope".into(), json!({"entry":pose,"exit":pose}));
+    let out = bake_advanced_v1(&r, || false);
+    assert!(out.clips.is_empty());
+    assert_eq!(
+        out.error.unwrap().message,
+        "Missing or ambiguous target endpoint clip Missing."
+    );
+    r.clips[0].options.remove("endpointEnvelope");
+    r.clips[0].clip.tracks.push(serde_json::from_value(json!({"node":0,"name":"Root.quaternion","boneChannel":true,"property":"quaternion","interpolation":"linear","times":[0,1],"values":[0,0,0,1,0.70710677,0,0,0.70710677]})).unwrap());
+    r.clips[0].options.insert("poseRanges".into(), json!({"schema":"rustsmf.pose-ranges.v1","id":"message","policy":"reject","joints":[{"bone":"Root","referenceRotation":[0,0,0,1],"twistAxis":[0,1,0],"bendAxis":[1,0,0],"flexionDegrees":[-1,1],"lateralDegrees":[-1,1],"twistDegrees":[-1,1],"maximumSwingDegrees":1}]}));
+    let out = bake_advanced_v1(&r, || false);
+    assert!(out.clips.is_empty());
+    let error = out.error.unwrap();
+    assert_eq!(error.path, "poseRanges.reject");
+    for detail in ["Known:", "body-range flags", "Root", "at frame", "range -1"] {
+        assert!(error.message.contains(detail), "{}", error.message);
+    }
+}
+#[test]
+fn production_progress_reports_completed_clips_and_cancellation_is_atomic() {
+    use std::cell::RefCell;
+    let mut request = request();
+    request.clips.push(request.clips[0].clone());
+    let before = serde_json::to_string(&request).unwrap();
+    let progress = RefCell::new(Vec::new());
+    let cancelled = Cell::new(false);
+    let out =
+        crate::baker::advanced_bake_progress(&request, &|| cancelled.get(), &|done, total| {
+            progress.borrow_mut().push((done, total));
+            if done == 1 {
+                cancelled.set(true);
+            }
+        });
+    assert_eq!(*progress.borrow(), vec![(0, 2), (1, 2)]);
+    assert_eq!(out.error.unwrap().code, "BAKE_CANCELLED");
+    assert!(out.clips.is_empty());
+    progress.borrow_mut().clear();
+    let out = crate::baker::advanced_bake_progress(&request, &|| false, &|done, total| {
+        progress.borrow_mut().push((done, total))
+    });
+    assert_eq!(*progress.borrow(), vec![(0, 2), (1, 2), (2, 2)]);
+    assert_eq!(out.status, "baked");
+    assert_eq!(serde_json::to_string(&request).unwrap(), before);
+}
+#[test]
 fn portable_rest_rotations_preserve_json_float64_bits() {
     let parsed: [f64; 4] = serde_json::from_str(
         "[0.05884121484451565,-0.1556700560912141,0.08729348111089756,0.982183482465329]",

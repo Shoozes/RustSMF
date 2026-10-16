@@ -22,6 +22,7 @@ interface ClientOptions {
   invoke?:<T>(command:string,args:Record<string,unknown>)=>Promise<T>;
   timeoutMs?:number;
   onProgress?:(progress:TransferProgress)=>void;
+  progressChannel?:(receive:(value:unknown)=>void)=>Promise<{channel:unknown;dispose:()=>void}>;
 }
 let nextJobId=0;
 const timeoutDefault=120_000;
@@ -100,7 +101,7 @@ export function createRetargetJobClient(options:ClientOptions={}) {
         if(id.phase!==request.phase){reject(new Error('Retarget worker returned the wrong phase.'));return;}
         if(id.type==='progress'){
           const count=response.completed,total=response.total;
-          if(typeof count!=='number' || typeof total!=='number' || !Number.isSafeInteger(count) || !Number.isSafeInteger(total) || count<0 || count<completed || count>total || total<=0){reject(new Error('Retarget worker returned invalid progress.'));return;}
+          if(typeof count!=='number' || typeof total!=='number' || !Number.isSafeInteger(count) || !Number.isSafeInteger(total) || count<0 || count<completed || count>total || total!==(request.phase==='bake'?request.input.clips.length:1) || total<=0){reject(new Error('Retarget worker returned invalid progress.'));return;}
           completed=count;options.onProgress?.({phase:request.phase,completed:count,total});return;
         }
         if(id.type==='error'){reject(new Error(`Transfer ${request.phase} failed: ${String(response.message)}`));return;}
@@ -126,7 +127,43 @@ export function createRetargetJobClient(options:ClientOptions={}) {
   }
   async function bake(job:RetargetJob,input:BakeInput):Promise<BakeOutput> {
     assertCurrent(job);options.onProgress?.({phase:'bake',completed:0,total:input.clips.length});
-    return worker(job,{jobId:job.jobId,revision:job.revision,phase:'bake',input},validateBake);
+    if(!native)return worker(job,{jobId:job.jobId,revision:job.revision,phase:'bake',input},validateBake);
+    let finished=false,closed=false,channel:{channel:unknown;dispose:()=>void}|undefined;
+    return bounded(job,'bake',async()=>{
+      const {rustBakeRequest,restoreRustBake}=await import('./retargetRustRuntime');
+      assertCurrent(job);
+      const request=rustBakeRequest(input);
+      return new Promise<BakeOutput>((resolve,reject)=>{
+        let completed=-1,invalidProgress=false;
+        const refuseProgress=()=>{invalidProgress=true;reject(new Error('Retarget native command returned invalid progress.'));};
+        const receive=(value:unknown)=>{
+          if(closed || !current(job))return;
+          if(!value || typeof value!=='object'){refuseProgress();return;}
+          const p=value as Record<string,unknown>;
+          if(!Number.isSafeInteger(p.jobId) || !Number.isSafeInteger(p.revision)){refuseProgress();return;}
+          if(p.jobId!==job.jobId || p.revision!==job.revision)return;
+          if(!Number.isSafeInteger(p.completed) || !Number.isSafeInteger(p.total) || (p.completed as number)<0 || (p.completed as number)<completed || (p.completed as number)>(p.total as number) || p.total!==input.clips.length){refuseProgress();return;}
+          completed=p.completed as number;options.onProgress?.({phase:'bake',completed,total:p.total as number});
+        };
+        const setup=options.progressChannel??(async(receive:(value:unknown)=>void)=>{
+          const {retargetProgressChannel}=await import('../backend-client/tauri');return retargetProgressChannel(receive);
+        });
+        void setup(receive).then(async value=>{
+          channel=value;
+          if(closed){channel.dispose();return;}
+          assertCurrent(job);
+          const raw=await invoke<unknown>('retarget_bake_v1',{jobId:job.jobId,revision:job.revision,input:JSON.stringify(request),progress:channel.channel});
+          if(invalidProgress)return;
+          assertCurrent(job);
+          const response=raw as {jobId?:unknown;revision?:unknown;value?:unknown};
+          if(!response || response.jobId!==job.jobId || response.revision!==job.revision)throw new Error('Retarget native command returned a stale result.');
+          const result=restoreRustBake(response.value,request);finished=true;resolve(result);
+        }).catch(reject);
+      });
+    },()=>{
+      closed=true;channel?.dispose();
+      if(!finished)void invoke('cancel_retarget_preflight_v1',{jobId:job.jobId}).catch(()=>{});
+    });
   }
   return {start,preparation,analyze,bake,cancel,isCurrent:current,dispose:()=>{cancel();disposed=true;}};
 }

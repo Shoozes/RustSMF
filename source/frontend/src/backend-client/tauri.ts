@@ -2,7 +2,7 @@
 // Native dialogs and filesystem authority stay in Rust; browser input/downloads
 // remain DOM-owned and never accept arbitrary native paths.
 
-import { invoke } from '@tauri-apps/api/core'
+import { Channel, invoke } from '@tauri-apps/api/core'
 import { bytesToArrayBuffer } from '../loaders'
 import { normalizeBinaryBundlePayload, normalizeBinaryPayload } from './binaryPayload'
 import {
@@ -22,6 +22,15 @@ import {
 } from '../utils/modelResourceBundle'
 import { PROJECT_EXTENSION } from '../utils/projectCodec'
 import type { ProjectState } from '../utils/projectCodec'
+
+export function retargetProgressChannel(receive: (value: unknown) => void) {
+  const channel = new Channel<unknown>(receive)
+  return {channel, dispose: () => {
+    channel.onmessage = () => {}
+    const internals = Reflect.get(window, '__TAURI_INTERNALS__') as {unregisterCallback: (id: number) => void}
+    internals.unregisterCallback(channel.id)
+  }}
+}
 
 export interface OpenFileEntry {
   path?: string
