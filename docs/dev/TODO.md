@@ -2,7 +2,7 @@
 
 Last reviewed: 2026-10-16
 
-Backlog status: production integration is complete locally. Animal-chain assistance is next; protected fixes/assets remain intact. HISTORY owns proof.
+Backlog status: production integration is published at `719d69b`. Animal-chain assistance is next; protected fixes/assets remain intact. HISTORY owns proof.
 
 ## Rust solver migration: core baking — complete
 
@@ -24,12 +24,12 @@ Backlog status: production integration is complete locally. Animal-chain assista
 - Done when: Closed experimentally: all 9 options/8 reports, exact structures/1e-6 numbers, independent motion/contact/endpoints, ownership, cancellation and atomic bounds; the linked contract retains restrictions.
 - Verification: Isolated publication gate passed: 615 frontend/28 Rust units, 196 browser, 12 journeys, 3 strict visuals; native/actual-WASM 33 advanced cases/30 refusals. HISTORY owns source-bound evidence.
 
-## Rust solver migration: production integration — complete locally
+## Rust solver migration: production integration — complete
 
 - What: Route desktop baking to shared native Rust and web baking to WASM in the existing worker.
 - Why: Experimental parity does not establish production execution or lifecycle safety.
 - Where: Route `workflow__retarget_production_integration`: job client/worker, portable adapters, Tauri commands, build and delivery guards. Solver implementation stays in its experimental routes.
-- When: Accepted on 2026-10-16; selected for guarded publication.
+- When: Published on 2026-10-16 at `719d69b`.
 - How: Pinned Binaryen optimization fits the complete lazy module inside the unchanged 1 MiB guard. Native Tauri and worker WASM share typed clip/report validation, copied inputs, job/revision correlation, progress, cancellation and 120-second limits. Private preview/Apply/history retain their owners; no synchronous fallback or extra UI.
 - Done when: Closed locally: complete native/worker-WASM parity, typed ownership, cancellation/deadlines, malformed/stale replies, replacement/disposal and continued editing pass. Project/export continuity and Original are preserved; TypeScript remains the reference.
 - Verification: All six sequential gates pass on one source: verify, browser, journeys, strict visuals, runtime proof and desktop smoke. HISTORY and the existing compact receipt retain exact commands, counts and source identity. Native Rust, real WASM and mocked IPC remain distinct.
@@ -44,7 +44,7 @@ Custom rig creation/replacement, automatic skinning, application versions, insta
 | --- | --- | --- |
 | 1 | ZIP bundle intake — published `da98cba` | Complete; reviewed directory/progress fixes remain intact. |
 | 2 | Export presets and queues — published `0c7ab1d`, cleanup `2343b08` | Complete; owned snapshot/material-reader guards and source-specific proof remain in HISTORY. Installed Windows queue acceptance is separate. |
-| 3 | Original Sable assets and animation pack — published `2343b08` | Complete; the sample guide owns limits and rebuilding. Drafts and borrowed references remain private. |
+| 3 | Original Sable assets and animation pack — published `2343b08` | Complete; sample usage and optional authoring have separate guides. Drafts/references stay private. |
 | 4 | Complete Rust solver migration | Contract/sampler, core and advanced passes are published; production integration is complete; the paired closeout selects this batch for main. |
 | 5 | Animal-chain assistance — next | Next authorized pass: reviewed existing quadruped, wing and tail suggestions with independent first-party fixtures; ambiguity requires explicit maps. No new rig creation. |
 
@@ -158,4 +158,4 @@ AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task
 AI-edited: 2026-10-15T22:16:39-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=rechecked publication and bounded production integration
 
 
-AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits
+AI-edited: 2026-10-16T16:22:54.735Z | agent=Codex/root | model=unknown | effort=unknown | task=standalone-guidance | change=routed optional sample authoring separately from app usage

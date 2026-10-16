@@ -7,7 +7,8 @@
 `blackCatAsset.test.ts` checks hashes, topology/skin, dense loop/floor motion
 and mutation controls. Browser/journey checks cover playback, recovery, project
 and queued GLB, including texture/influences and 424 motion times. The sample
-guide owns rebuilding/limits; private media stays excluded.
+guide owns usage/limits; [authoring notes](../../../docs/dev/SABLE_AUTHORING.md)
+own optional rebuilding. Private media stays excluded.
 
 ## Export queue
 
@@ -257,4 +258,4 @@ AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=
 
 AI-edited: 2026-10-15T21:46:26-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=bounded contact storage and ordered production integration
 
-AI-edited: 2026-10-16T00:52:52-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=aligned production execution and proof ownership
+AI-edited: 2026-10-16T16:22:54.735Z | agent=Codex/root | model=unknown | effort=unknown | task=standalone-guidance | change=routed optional sample authoring separately from app usage

@@ -35,15 +35,15 @@ export default function HelpDialog({ open, status, onDismiss, onClosed }: HelpDi
       </header>
       <p className="preview-help-version">{version} preview · MIT</p>
       <dl>
-        <dt>Open and inspect</dt><dd>Drop a model or use Open. Select related sidecars together. Drag to orbit; right-drag to pan; scroll to zoom.</dd>
-        <dt>Edit</dt><dd>Choose Model, Rig, Skin or Animate. Tools opens the current workspace’s controls. Undo and Redo preserve your editing order.</dd>
-        <dt>Save Project</dt><dd>Save your model, clips, rig metadata and selection/playback state as an .rsproj file. Open Project continues that work.</dd>
-        <dt>Export</dt><dd>Write a model for another tool. The main action uses the source format; More offers explicit GLB, FBX, DAE and SMF choices.</dd>
-        <dt>Format limits</dt><dd>SMF cannot store scale animation. DAE export keeps external textures external. GLB is the self-contained texture path. Unsupported features are reported before export.</dd>
+        <dt>Open</dt><dd>Open or drop a model. Select related files together. Drag to orbit; right-drag to pan; scroll to zoom.</dd>
+        <dt>Edit</dt><dd>Choose a workspace, then open Tools. Use Undo or Redo to revise edits.</dd>
+        <dt>Save Project</dt><dd>Save your work as .rsproj. Use Open Project to continue.</dd>
+        <dt>Export</dt><dd>Use Export for the source format, or More for GLB, FBX, DAE and SMF.</dd>
+        <dt>Format limits</dt><dd>GLB embeds textures. DAE keeps texture files separate. SMF cannot store scale animation. Unsupported exports show an error.</dd>
       </dl>
       <p className="preview-help-shortcuts"><kbd>Ctrl Z</kbd> Undo · <kbd>Ctrl Y</kbd> Redo · <kbd>Esc</kbd> Close</p>
       <details data-testid="help-status-details"><summary>Last action details</summary><p>{status}</p></details>
-      <p className="preview-help-license">Project-owned code: MIT, copyright 2026 Shoozes. Third-party code and assets retain their own terms; see the included notices.</p>
+      <p className="preview-help-license">Project code: MIT, copyright 2026 Shoozes. Third-party terms are in the included notices.</p>
     </dialog>
   );
 }

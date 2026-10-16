@@ -30,7 +30,7 @@ export default function ExportQueuePanel({ state, error, disabled, enqueue, run,
         <label><input type="checkbox" data-testid="export-queue-animation" checked={includeAnimation} disabled={disabled || state.running} onChange={event => setIncludeAnimation(event.target.checked)} />Include all clips</label>
       </details>
       {error && <div role="alert" className="export-queue-error" data-testid="export-queue-error">{error}</div>}
-      {state.items.length === 0 ? <p className="export-queue-note">Add a capture of the current model. Queue stays in this session.</p> : <>
+      {state.items.length === 0 ? <p className="export-queue-note">Add the current model. Queue lasts this session.</p> : <>
         <ol className="export-queue-items" aria-label="Queued exports">
           {state.items.map(item => <li key={item.id} data-testid="export-queue-item" data-status={item.status}>
             <div><span className="export-queue-filename" title={item.filename}>{item.filename}</span><span className="export-queue-result">{labels[item.status]}{!item.preset.includeAnimation && ' · no clips'}</span>
@@ -44,7 +44,7 @@ export default function ExportQueuePanel({ state, error, disabled, enqueue, run,
             : incomplete ? <button type="button" data-testid="export-queue-retry" disabled={disabled} onClick={() => { retry(); run(); }}>Retry incomplete</button> : null}
           {!state.running && <button type="button" data-testid="export-queue-clear" onClick={clear}>Clear</button>}
         </div>
-        <p className="export-queue-note">{(state.bytes / 1048576).toFixed(1)} / 128 MiB · {state.items.length} / {MAX_EXPORT_QUEUE_ITEMS} items. Downloads are issued to your browser; check its download list.</p>
+        <p className="export-queue-note">{(state.bytes / 1048576).toFixed(1)} / 128 MiB · {state.items.length} / {MAX_EXPORT_QUEUE_ITEMS} items. Browser exports: check Downloads.</p>
       </>}
     </div>
   </details>;

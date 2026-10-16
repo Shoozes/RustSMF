@@ -2,6 +2,33 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-16 — Standalone guidance, concise copy and Sable motion
+
+Base: published main `719d69b931f5658574d1ccd04eff12d0a9e000dd`.
+README, Help, quickstarts and Modern hints use short action-first wording.
+Optional sample authoring and batch-job details have separate developer guides;
+front-facing instructions have no external-editor requirement or references.
+Technical provenance remains accurate. Existing workflow limits stay visible.
+
+Three silent 640×480 VP9 WebMs show Walk, Run and Sit, each 2.4 seconds. A small
+GIF preview links to the WebMs. These are fixed-camera RustSMF canvas captures
+of the distributed Sable GLB, with crop/labels/encoding only. Independent decoding
+found 665/903/1899 moving model pixels respectively, excluding the labels. Public
+media total 628967 bytes. Desktop/narrow Help and Escape/focus were reviewed.
+
+The isolated sequential gate passed `verify` (624 frontend units, 14 Rust
+verification steps), `test:e2e -NoGenEye` (197), `test:journey -NoGenEye` (12)
+and `test:visual-strict` (3), using `pwsh -NoProfile -File run.ps1 -Task`.
+The ten private publish-helper safety tests also passed. The first verification
+found the shortened README had lost its required overview/format labels; a short
+replacement passed the focused 20 checks and the complete rerun. No gate was waived.
+`output/playwright/guidance-publish-receipt.json` owns the exact staged candidate,
+commands, source/media hashes, publication and resource disposition. Only this
+History evidence is finalized after the gate, with separate document validation.
+Production Rust/WASM, Sable, ZIP/export implementation and Original
+references remain unchanged. Private assets/recovery and prior proof stay local.
+No release, installer or version change belongs to this batch.
+
 ## 2026-10-16 — Rust retarget production integration accepted locally
 
 On local main `4475c9ea3e1fa1b32eb08f8a78a1552efd98dfb4`, desktop baking now

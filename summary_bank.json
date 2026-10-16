@@ -255,6 +255,7 @@
       "description": "Versioned local job parsing, bounded input, validation, immutable generation publication, and machine-readable evidence.",
       "max_kb": 216,
       "paths": [
+        "docs/dev/GAME_READY_CLI.md",
         "source/frontend/scripts/game-ready-cli.ts",
         "source/frontend/scripts/game-ready-producer.ts",
         "source/frontend/scripts/node-three-runtime.ts",
@@ -1236,14 +1237,15 @@
         "source/frontend/tests/journeys/black-cat-continuity.journey.spec.ts"
       ],
       "notes": [
-        "workflow__sable_rebuild owns the recipe; the shared guide binds rebuild and acceptance."
+        "workflow__sable_rebuild owns optional authoring; the sample guide owns usage and limits."
       ]
     },
     "workflow__sable_rebuild": {
-      "description": "Sable Blender rebuild and registered deformation review.",
+      "description": "Optional Sable source rebuild and registered deformation review.",
       "max_kb": 36,
       "paths": [
         "examples/black-cat/README.md",
+        "docs/dev/SABLE_AUTHORING.md",
         "examples/black-cat/build_black_cat.py"
       ]
     },

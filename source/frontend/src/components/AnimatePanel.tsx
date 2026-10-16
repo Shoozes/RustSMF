@@ -411,7 +411,9 @@ export default function AnimatePanel({
       <div className="animate-keyframe-tools" data-testid="animate-keyframe-tools">
         <TaskDetails label="Keying help">
         <div className="animate-workflow-hint" data-testid="animation-workflow-hint">
-          Select a bone and pose it, scrub to a time, then Insert. For a multi-joint gesture, select its root and use Branch to key the whole chain together. Use Update to replace selected keys.
+          {task
+            ? 'Select a bone, pose it, scrub, then Insert. Branch keys the whole chain; Update replaces selected keys.'
+            : 'Select a bone and pose it, scrub to a time, then Insert. For a multi-joint gesture, select its root and use Branch to key the whole chain together. Use Update to replace selected keys.'}
         </div>
         </TaskDetails>
         <label className="animate-scope-selector">

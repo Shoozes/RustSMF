@@ -2,10 +2,8 @@
 
 ## Sable black cat
 
-[Sable](black-cat/README.md) is an original stylized black cat with Idle, Walk,
-Run and Sit clips, an editable Blender scene, a reproducible generator and a
-self-contained GLB. Its compact texture is embedded and packed in the Blender source. The source
-sample supplements the Signal Robot included in the 0.2.1 Windows preview.
+[Sable](black-cat/README.md): a cat with Idle, Walk, Run and Sit. One GLB includes
+the model, texture and clips.
 
 ## Signal Robot
 
@@ -16,14 +14,24 @@ sample supplements the Signal Robot included in the 0.2.1 Windows preview.
 - 240 indexed vertices and three named materials: Ceramic, Graphite and Brass.
 - No textures, third-party models or external resource files.
 
-Open the GLB with RustSMF, choose Animate and use Tools to choose a clip. The same file is installed under the application's `examples` directory.
+Open the GLB. Choose **Animate → Tools**, select **Wave**, then **Play**.
+The Windows preview includes this sample under `examples`.
 
-To regenerate it from the repository root:
+<details>
+<summary>Regenerate the sample</summary>
+
+From the repository root:
 
 ```powershell
 npm.cmd --prefix source/frontend run demo:generate
 ```
 
-The generator uses the pinned Three.js exporter. Unit checks verify its authored hierarchy, normalized influences and actual Wave movement; browser checks independently decode the distributed GLB and verify visible model pixels with helpers disabled.
+The generator uses the pinned Three.js exporter.
 
+</details>
+
+<!--
 AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
+AI-edited: 2026-10-16T16:21:33.101Z | agent=Codex/root | model=unknown | effort=unknown | task=standalone-product-guidance | change=kept user workflows self-contained and routed optional sample authoring to developer notes
+AI-edited: 2026-10-16T16:31:34.044Z | agent=Codex/root | model=unknown | effort=unknown | task=concise-user-copy | change=shortened instructions and kept metadata out of rendered guidance
+-->

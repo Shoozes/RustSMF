@@ -10,10 +10,13 @@ The preview includes the project-generated Signal Robot GLB and MIT licensing fo
 
 ## Install and try
 
-1. Download [the Windows x64 installer](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe), install it and launch **RustSMF** from Start or its shortcut. The source-code ZIP and tar.gz are for building the app yourself.
-2. Download [Signal Robot](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb), click **Open** (the folder icon), and select the downloaded `rustsmf-demo.glb`.
-3. Choose **Animate**, open **Tools**, select **Wave** or **Turn**, and press **Play** in the bottom timeline.
-4. **Save Project** creates an editable `.rsproj`; **Export** writes a model for another tool. This sample exports as GLB. Use **More > Help** while offline.
+1. [Download the installer](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe), install it, then launch **RustSMF**.
+2. Download [Signal Robot](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb). **Open** `rustsmf-demo.glb`.
+3. Choose **Animate**, open **Tools**, select **Wave**, then **Play**.
+4. Use **Save Project** to keep edits. Use **Export** to write a GLB.
+
+**More → Help** works offline. Download the `.exe` to install; source archives
+are for building the app.
 
 This unsigned preview was checked on Windows 11 Home x64. WebView2 is required; its installer bootstrapper may need internet access. [SHA256SUMS.txt](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/SHA256SUMS.txt) identifies the expected download hashes. The installed application also includes the sample under `examples` and third-party notices under `licenses`.
 
@@ -50,3 +53,7 @@ Compact observations, independent asset assertions and useful compositor capture
 ## Limits
 
 This preview accepts the supported bounded workflows documented in the user guide. It does not certify arbitrary third-party assets, every FBX producer, other operating systems or game-specific acceptance. Existing SMF scale, DAE texture and ambiguous-name restrictions remain in effect.
+
+<!--
+AI-edited: 2026-10-16T16:31:34.045Z | agent=Codex/root | model=unknown | effort=unknown | task=concise-user-copy | change=shortened instructions and kept metadata out of rendered guidance
+-->
