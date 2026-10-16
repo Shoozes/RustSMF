@@ -20,8 +20,13 @@ A generated `EXT_mesh_gpu_instancing` input independently checks instance transl
 
 ## Rust retarget production and comparison APIs
 
+Animal-chain fixtures add independent expected mappings/refusals for fore/hind,
+tail and wing anatomy to native/actual-WASM parity. The animal continuity journey
+checks reviewed explicit maps, correction, preview/history, project and queued
+GLB motion/influences with generated geometry. [Contract](../../../docs/dev/ANIMAL_CHAINS.md).
+
 `retarget:runtime-proof` compares native Rust and actual Chromium WASM against
-retained TypeScript at 1e-6: 17 mapping, 14 sampler/20 refusal, 29 core/40 refusal,
+retained TypeScript at 1e-6: 41 mapping, 14 sampler/20 refusal, 29 core/40 refusal,
 and 33 advanced/30 refusal cases. Generated fixtures cover all options/reports;
 independent anchors check cubic curves, planted soles, fixed lengths and endpoint
 positions. Native guards cover atomic cancellation, progress, reuse and resource
@@ -259,3 +264,5 @@ AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=
 AI-edited: 2026-10-15T21:46:26-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=bounded contact storage and ordered production integration
 
 AI-edited: 2026-10-16T16:22:54.735Z | agent=Codex/root | model=unknown | effort=unknown | task=standalone-guidance | change=routed optional sample authoring separately from app usage
+
+AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=routed reviewed animal-chain behavior and evidence

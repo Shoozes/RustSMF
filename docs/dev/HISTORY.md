@@ -2,6 +2,77 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-16 — Animal-chain assistance accepted locally
+
+Base `e8cd39036170c51aa22524494442d95b2adc4d59` plus the preceding uncommitted
+guidance cleanup. Shared Rust preflight adds reviewed fore/hind, tail and wing
+correspondence through named anatomy, side and deform ancestry. Explicit maps
+win; ambiguous, branched, unequal, conflicting and overflowing segments cannot
+fall through to humanoid/normalized/fuzzy matching. Quadrupeds no longer infer
+up from hips/head. No new controls, rig creation or solver replacement.
+
+Twenty-four first-party cases have independent expected maps/refusals and
+mutation controls. The ordinary animal journey checks all paired families,
+correction/profile roundtrip, canonical preview/discard, Apply, undo/redo,
+project reopen and queued GLB re-import. Parsed 30-degree motion and raw skin
+influences survive. Six widths fit; desktop/narrow views are reviewed.
+
+The final sequential `pwsh -NoProfile -File run.ps1 -Task` gate passed:
+verify (624 frontend units, 32 retarget-core units, 14 Rust verification steps),
+test:e2e -NoGenEye (197), test:journey -NoGenEye (13), test:visual-strict (3),
+retarget:runtime-proof (41 preflight, 14 sampler/20 refusal, 29 core/40 refusal,
+33 advanced/30 refusal), desktop-smoke (release build, 14 native boundary units,
+18 mocked IPC cases). All share 500 Git-clean implementation inputs, SHA-256
+`ab388944d9776e560dc0d9999e5c0b587d7d3522ec3622bb8b72dec8e834c1cd`.
+An earlier verify passed before the final overflow/fixture review; it remains
+superseded in the receipt. No acceptance gate was waived.
+
+The complete lazy WASM is 919363 bytes, below the unchanged 1 MiB guard. An Idle
+WebM joins the unchanged Walk/Run/Sit files; the combined GIF shows all four.
+Actual playback/decoded model pixels establish motion; no private input is used.
+Sable source, Original reference, private dummy and required earlier media
+retain their hashes. The existing guidance receipt's `animalChain` section
+owns source/media identities, attempts, captures, cleanup and disk disposition.
+Installed Windows interaction and arbitrary animal quality remain unverified;
+no publication, version or installer change belongs to this local batch.
+
+After the gate, the requested disk cleanup used Cargo's offline dev-profile
+clean for only the Tauri and retarget-core target directories. Dry runs, path/
+reparse checks and process ownership preceded deletion. Cargo removed 13437
+generated files (8.8 GiB logical); immediate C: free-space measurements rose
+by 8354258944 bytes (7.78 GiB). Release/proof binaries, dependencies, source,
+required media, recovery and private assets remain. D: was not modified.
+The same receipt holds before/after measurements; implementation inputs remain
+unchanged, and final document/context validation passed separately.
+
+AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=recorded final source-bound implementation proof
+
+## 2026-10-16 — Published guidance and Sable preview recheck
+
+Read-only intake found clean local/live main `e8cd39036170c51aa22524494442d95b2adc4d59`.
+All 495 published implementation inputs matched the previous receipt; 21 bound
+media/protected hashes matched, including four public previews, 14 required
+journey files, the overview, Original and private dummy. Existing captures and
+decoded-motion evidence remain attached to that source; no media was regenerated.
+
+Local cleanup corrects lone FBX/DAE missing-texture warnings and source-aware
+export wording, including GLB defaults and default-only fallback. Help has a
+six-size browser assertion. Two stale Summary Bank notes now identify native
+Rust/worker WASM production. TODO selects reviewed animal-chain suggestions with
+independent fixtures, parity, explicit-map review and preview/history continuity.
+Repeated closed-out notes were condensed to preserve existing context budgets.
+
+Focused Chromium Help/render/export checks passed 25/25 without retries, skips
+or unexpected errors; seven Sable units passed, including dense floor/loop and
+mutation guards. Test typecheck, context/project validation and their 30
+regressions passed. The browser build passed; no full release gate or new Windows
+acceptance is claimed. `guidance-publish-receipt.json`'s separate `guidanceReview`
+section owns commands, final local input identities and resource disposition.
+The owned browser/server exited; private assets, recovery and prior evidence
+remain protected. No commit/push, animal implementation or asset change occurred.
+
+AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=rechecked published guidance and recorded local proof
+
 ## 2026-10-16 — Standalone guidance, concise copy and Sable motion
 
 Base: published main `719d69b931f5658574d1ccd04eff12d0a9e000dd`.

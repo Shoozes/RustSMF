@@ -58,7 +58,7 @@ Viewport R/S/T shortcuts stay inactive while typing.
 
 - **Save Project:** keep the model, clips, rig metadata and selection/playback in `.rsproj`.
 - **Open Project:** continue editing. Undo history and editor preferences are not restored.
-- **Export:** use the source format. **More** offers explicit GLB, FBX, DAE and SMF.
+- **Export:** keep SMF, FBX or DAE sources in that format; other sources export as GLB. **More** selects a format.
 - **Recover:** restore available autosaved work from **More**.
 
 Source builds also offer **Export → Tools → Export queue**:
@@ -69,6 +69,9 @@ Source builds also offer **Export → Tools → Export queue**:
 
 Cancel stops pending work. Retry skips completed items. Browser results mean
 the download was issued; check your Downloads folder. The 0.2.1 preview has no queue.
+
+Default FBX/DAE export can fall back to GLB with a warning. Explicit format
+actions and queue presets report failures without switching formats.
 
 ## Mixamo source files
 
@@ -113,8 +116,9 @@ during preview uses your unchanged clips. Review motion on each target rig.
 | DAE | External textures stay separate. Use GLB to embed them. |
 | OBJ | Geometry and selected MTL/textures. No source rig or animation. |
 
-Missing, ambiguous, remote or unsafe resources are rejected. Unsupported
-structures show an error before export.
+Missing required sidecars, ambiguous selections and unsafe resource paths are
+rejected. Lone FBX/DAE files can load without unavailable textures and show a
+warning. Unsupported structures show an error before export.
 
 For cubic rotation clips, trim at existing rotation keys or retarget to baked
 keys first. New unsupported intervals are rejected without changing the clip.
@@ -130,4 +134,5 @@ For scripted batch jobs, see the [CLI reference](../dev/GAME_READY_CLI.md).
 AI-edited: 2026-10-15T01:48:27-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified ZIP intake and lifecycle boundaries
 AI-edited: 2026-10-16T16:21:33.101Z | agent=Codex/root | model=unknown | effort=unknown | task=standalone-product-guidance | change=kept user workflows self-contained and routed optional sample authoring to developer notes
 AI-edited: 2026-10-16T16:29:06.896Z | agent=Codex/root | model=unknown | effort=unknown | task=concise-user-copy | change=shortened task instructions and moved CLI reference
+AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=clarified texture warnings and source-aware export defaults
 -->

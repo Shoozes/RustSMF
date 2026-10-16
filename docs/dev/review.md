@@ -6,36 +6,50 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Production integration review — 2026-10-16
+## Animal-chain assistance — 2026-10-16
 
-Reviewed base is `4475c9e`; paired closeout selects this integration batch for main. The six
-final gates share 495 implementation inputs at SHA-256
-`ef240a202db11a26695ebcb25b5cc0e8025105041a92f2bda3f2fb4bf572c6d5`.
-HISTORY and `advanced-motion-receipt.json`'s `productionIntegration` own proof.
+Local main remains based on `e8cd390` with the prior guidance cleanup intact.
+Shared preflight now resolves named quadruped, tail and wing chains using side,
+roles and helper-aware ancestry. Conflicts, ambiguous segments, numeric overflow
+and unequal chains stay explicit; normalized/fuzzy fallthrough is excluded.
+Quadrupeds do not use a hip/head up-axis heuristic. Existing Transfer controls,
+preview/history and profile formats are retained.
 
-- Verified closed: complete native Rust and worker-WASM baking, typed clip/report
-  reconstruction, owned inputs, progress, cancellation/deadlines, stale replies,
-  replacement/disposal, private preview/Apply/history and project/export continuity.
-- Newly repaired: pinned optimization meets the unchanged 1 MiB guard; generated
-  externref types use unknown. Errors retain endpoint names and flagged frames;
-  correction-map bone names remain data without prototype mutation.
-- Verified: all six sequential gates pass; strict Original bytes, showcase/private
-  GLB identities and Sable/ZIP/export changes remain intact. No controls change.
-- Unverified: installed Windows retarget interaction and general animal-chain
-  compatibility. Mocked IPC is not native UI evidence; animal assistance stays next.
-- Cleanup limitation: automatic approval review blocked trial-cache/scratch deletion.
-  Their exact owned paths remain in the ignored receipt; owned processes release.
+- Verified closed: 24 independent animal fixture cases and mutation controls;
+  41 total native/real-WASM preflight cases agree. Ordinary review/profile,
+  project and queued-GLB continuity preserves known motion and influences.
+- Verified: all six gates pass on 500 stable inputs; HISTORY binds source/results.
+  Six widths retain the drawer. Original, Sable, ZIP/export and private inputs
+  remain protected. Four short Sable previews are available.
+- Unverified: arbitrary animal deformation and installed Windows interaction;
+  suggestions require review and explicit corrections where unresolved.
 
-Earlier `8c231cb`/`4475c9e` publication and cleanup proof remains source-bound in
-HISTORY. Prior referenced media, recovery and private assets stay protected.
+The earlier guidance cleanup corrected texture-warning/export wording and stale
+TypeScript-production routes. Its source-bound recheck remains in HISTORY and
+`guidance-publish-receipt.json`; the separate `animalChain` section owns this
+implementation. Publication, versions, installers and rig creation remain excluded.
+
+## Earlier production integration review — 2026-10-16
+
+Reviewed base `4475c9e` was published at `719d69b`. All six gates passed on 495
+inputs, SHA-256 `ef240a202db11a26695ebcb25b5cc0e8025105041a92f2bda3f2fb4bf572c6d5`.
+Native Rust/worker-WASM baking, ownership, cancellation and preview/history closed.
+HISTORY and
+`advanced-motion-receipt.json`'s `productionIntegration` own full proof and the
+automatic-review scratch-deletion limitation. Installed Windows retarget and
+general animal compatibility remain unverified. Prior media/recovery stay protected.
 
 ### Earlier backup showcase recheck
 
-At `b2fc740`, the three showcase blobs, private asset hashes and overview matched. Only 38 joint names changed; textures, binary payload and twelve clips remained intact. README distinguishes the private dummy from Signal Robot. The earlier receipt remains `output/playwright/dummy-showcase/receipt.json` under `backupRename.review`; its sampler/core handoff is superseded above.
+The `b2fc740` recheck preserved textures, binary data and twelve clips while
+renaming 38 joints. HISTORY and the dummy receipt's `backupRename.review` retain
+proof; its sampler/core handoff is superseded.
 
 ## Earlier published Sable review — 2026-10-15
 
-The `2343b08` review verified 34 blobs, 46 media and 30 focused tests. Loop/floor guards, profile and portable rebuild remain closed. HISTORY's published Sable recheck and `output/original-assets-20261015/review-receipt.json` retain the full evidence. Earlier dummy/sampler handoff status is superseded above; new poses/game contact and installed Windows acceptance remain separate.
+The `2343b08` recheck closed Sable loop/floor, profile and rebuild findings.
+HISTORY and `output/original-assets-20261015/review-receipt.json` retain its
+34-blob/46-media/30-test proof. New poses and installed acceptance remain separate.
 
 ## Earlier Sable review and final polish — 2026-10-15
 
@@ -200,3 +214,4 @@ AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown 
 AI-edited: 2026-10-15T22:16:39-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=rechecked publication and bounded production integration
 
 AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits
+AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=rechecked published guidance and previews and recorded scoped repairs

@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 pub mod advanced;
 #[cfg(all(test, any(not(target_arch = "wasm32"), feature = "advanced-bake")))]
 mod advanced_tests;
+mod animal;
+#[cfg(test)]
+mod animal_tests;
 mod bake_math;
 pub mod baker;
 #[cfg(test)]
@@ -908,6 +911,18 @@ pub fn analyze_v1(
         });
         mapped.insert(s.clone());
     }
+    let animal_source = animal::collect(&input.source);
+    let animal_target = animal::collect(&input.target);
+    animal::suggest(
+        input,
+        &animal_source,
+        &animal_target,
+        &mut decisions,
+        &mut mapped,
+        &mut occupied,
+        &mut ds,
+        &mut is_cancelled,
+    )?;
     for s in &source {
         if side_ambiguous(&s.name) && !mapped.contains(&s.name) {
             ds.push(diagnostic(
@@ -935,7 +950,7 @@ pub fn analyze_v1(
     }
     let mut roles: HashMap<String, Vec<&SkeletonNodeSnapshotV1>> = HashMap::new();
     for t in &target {
-        if !side_ambiguous(&t.name) {
+        if !side_ambiguous(&t.name) && !animal_target.names.contains(&t.name) {
             if let Some(r) = role(&t.name, input.target_convention) {
                 roles.entry(r).or_default().push(t);
             }
@@ -944,6 +959,7 @@ pub fn analyze_v1(
     for s in &source {
         cancelled(&mut is_cancelled)?;
         if mapped.contains(&s.name)
+            || animal_source.names.contains(&s.name)
             || opaque(&s.name)
             || is_helper_name(&s.name)
             || side_ambiguous(&s.name)
@@ -985,6 +1001,7 @@ pub fn analyze_v1(
     for s in &source {
         cancelled(&mut is_cancelled)?;
         if mapped.contains(&s.name)
+            || animal_source.names.contains(&s.name)
             || opaque(&s.name)
             || is_helper_name(&s.name)
             || side_ambiguous(&s.name)
@@ -996,6 +1013,7 @@ pub fn analyze_v1(
             .iter()
             .filter(|t| {
                 !is_helper_name(&t.name)
+                    && !animal_target.names.contains(&t.name)
                     && !side_ambiguous(&t.name)
                     && !occupied.contains(&t.name)
                     && normalized(&t.name) == key
@@ -1026,6 +1044,7 @@ pub fn analyze_v1(
         for s in &source {
             cancelled(&mut is_cancelled)?;
             if mapped.contains(&s.name)
+                || animal_source.names.contains(&s.name)
                 || opaque(&s.name)
                 || is_helper_name(&s.name)
                 || side_ambiguous(&s.name)
@@ -1038,6 +1057,7 @@ pub fn analyze_v1(
                 .iter()
                 .filter(|t| {
                     !is_helper_name(&t.name)
+                        && !animal_target.names.contains(&t.name)
                         && !side_ambiguous(&t.name)
                         && !occupied.contains(&t.name)
                 })
@@ -1132,8 +1152,14 @@ pub fn analyze_v1(
             }
         }
     }
-    let su = mapped_axis(&source, &map, false, false);
-    let tu = mapped_axis(&target, &map, true, false);
+    let quadruped = animal_source.quadruped || animal_target.quadruped;
+    // Hip-to-head is a biped heuristic, not a quadruped up axis.
+    let su = (!quadruped)
+        .then(|| mapped_axis(&source, &map, false, false))
+        .flatten();
+    let tu = (!quadruped)
+        .then(|| mapped_axis(&target, &map, true, false))
+        .flatten();
     let sl = mapped_axis(&source, &map, false, true);
     let tl = mapped_axis(&target, &map, true, true);
     let correction = su.zip(tu).and_then(|(a, b)| quat_between(a, b));

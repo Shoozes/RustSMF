@@ -1,5 +1,15 @@
 # Modern UI Design QA — v0.2 productization complete
 
+## Animal-chain assistance
+
+Existing Transfer controls are unchanged. The compact summary keeps Apply/Discard
+visible; mapping corrections and detailed warnings stay disclosed. Ordinary
+browser actions fit all six sizes; desktop/narrow mapping captures are reviewed.
+The full browser suite retains fractional DPI, DPR 1/1.25/2, coarse targets,
+keyboard and Escape/focus coverage. Three strict checks pass without baseline
+updates. Sable's Idle/Walk/Run/Sit previews use actual playback; global viewport
+lighting and the asset are unchanged. HISTORY binds source and results.
+
 ## Rust production integration
 
 No controls, styles or layouts change. Transfer keeps private preview and its
@@ -97,3 +107,5 @@ AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=
 
 
 AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits
+
+AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=recorded quiet mapping and playback review

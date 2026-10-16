@@ -1021,7 +1021,7 @@
       "notes": [
         "Canonical v1.rs is vendored verbatim where consumers cannot snapshot the RustSMF path crate; it uses existing libm 0.2.16.",
         "Input is parent-first uniform-scale local TRS and one/two calibrated direct chains with independent limb subtrees; output is corrected full TRS, aligned joint orientations, and bounded diagnostics.",
-        "Calibrate the hip bend plane as pole \u00d7 upper-axis and knee plane normal with the positive (hip-to-knee) \u00d7 (knee-to-ankle) sign. No contact schedule or root travel is owned here.",
+        "Calibrate the hip bend plane as pole × upper-axis and knee plane normal with the positive (hip-to-knee) × (knee-to-ankle) sign. No contact schedule or root travel is owned here.",
         "Native/WASM parity covered four fixtures and 548 exact numeric outputs; source npm run verify:rust is the shared compile-only gate and npm run transition:runtime-proof rebuilds and receipts the native/browser-WASM transition artifacts."
       ]
     },
@@ -1159,7 +1159,7 @@
       ],
       "notes": [
         "Explicit maps win; opaque/ambiguous rigs need review. Native/WASM parity uses exact structures and 1e-6 numbers.",
-        "Experimental bake implementation and tests are owned by workflow__retarget_core_bake; production baking remains TypeScript."
+        "Core baking implementation/tests retain workflow__retarget_core_bake; workflow__retarget_production_integration owns native Rust and worker-WASM production delivery. TypeScript remains the comparison/CLI reference."
       ]
     },
     "workflow__original_asset_workflow": {
@@ -1274,7 +1274,7 @@
       ],
       "notes": [
         "All 19 core options / 26 core report fields require actual baked tracks/reports and exact structure with 1e-6 numeric native/actual-WASM/TypeScript parity.",
-        "Sample-v1 and production TypeScript behavior remain separate; reject advanced or unknown features atomically. First-party generated fixtures only; private raw assets stay excluded.",
+        "Sample-v1 and core-only comparison APIs remain separate from complete advanced production baking; reject advanced or unknown features in core-only requests atomically. First-party generated fixtures only; private raw assets stay excluded.",
         "Base portable/inventory AST guards: workflow__retarget_sampler."
       ]
     },
@@ -1345,6 +1345,22 @@
         "scripts/build-retarget-wasm.mjs",
         "source/frontend/scripts/check-entry-chunks.mjs",
         "docs/dev/RETARGET_ADVANCED_BAKE.md"
+      ]
+    },
+    "feature__animal_chain_assistance": {
+      "description": "Reviewed existing quadruped, tail and wing chain correspondence; native/WASM and ordinary-user continuity.",
+      "max_kb": 80,
+      "paths": [
+        "source/retarget-core/src/animal.rs",
+        "source/retarget-core/src/animal_tests.rs",
+        "source/retarget-core/examples/support/animal_fixtures.rs",
+        "source/frontend/tests/helpers/animal-retarget-fixture.ts",
+        "source/frontend/tests/journeys/animal-chain-continuity.journey.spec.ts",
+        "docs/dev/ANIMAL_CHAINS.md"
+      ],
+      "notes": [
+        "subsystem__retarget_core owns analyze_v1 integration, native receipt and runtime-proof runner. feature__retarget_assistance owns review/lifecycle; feature__retarget_profiles owns explicit profile fields.",
+        "Generated first-party fixtures only. Explicit maps win; unresolved animal chains cannot fall through to humanoid/normalized/fuzzy matching. No rig creation or new solver."
       ]
     }
   },

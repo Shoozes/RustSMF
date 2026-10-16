@@ -4,6 +4,8 @@ use rustsmf_retarget_core::{
 };
 use serde::Serialize;
 use std::collections::BTreeMap;
+#[path = "support/animal_fixtures.rs"]
+mod animal_fixtures;
 
 #[derive(Serialize)]
 struct Case {
@@ -217,8 +219,20 @@ fn cases() -> Vec<Case> {
 }
 
 fn main() {
+    let mut all = cases();
+    for (name, input, expected, code) in animal_fixtures::animal_cases() {
+        let c = case(name, input);
+        assert_eq!(c.result.mapping.map, expected, "{name}");
+        if let Some(code) = code {
+            assert!(
+                c.result.diagnostics.iter().any(|d| d.code == code),
+                "{name}"
+            );
+        }
+        all.push(c);
+    }
     println!(
         "{}",
-        serde_json::to_string(&serde_json::json!({"cases": cases()})).expect("fixtures serialize")
+        serde_json::to_string(&serde_json::json!({"cases": all})).expect("fixtures serialize")
     );
 }

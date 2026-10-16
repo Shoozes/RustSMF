@@ -55,6 +55,7 @@ for (const [width, height] of sizes) {
       await expect(help).toBeVisible();
       await expect(help).toContainText('0.2.1 preview');
       await expect(help).toContainText('Save Project');
+      await expect(help).toContainText('Export keeps SMF, FBX or DAE sources in that format; otherwise GLB.');
       await expect(help).toContainText('MIT');
       await expect(page.getByTestId('modern-more-menu-panel')).toBeHidden();
       await help.getByTestId('help-status-details').locator('summary').click();

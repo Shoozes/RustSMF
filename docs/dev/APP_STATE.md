@@ -18,6 +18,11 @@ ZIP intake was introduced in `da98cba`. Current source accepts omitted directory
 
 ## Retarget assistance on current source
 
+Existing quadruped limbs, ordered tails and paired wings receive reviewed
+shared-core suggestions in Mapping details. Ambiguous chains remain explicit;
+quadrupeds do not infer an up axis from hips/head. [ANIMAL_CHAINS.md](ANIMAL_CHAINS.md)
+owns correspondence, parity and limits. No rig creation or new solver is added.
+
 Animate > Transfer now uses shared Rust API v1 for mapping/preflight (native Tauri on desktop, actual WASM in a browser worker). Mixamo, UE4 mannequin, Unity humanoid and Rigify deform naming include side/chain context and fingers. Explicit maps remain authoritative; ambiguity and numeric rigs require review. Mapping details holds overrides, diagnostics, profile drafts and portable export of the reviewed explicit map.
 
 Production baking now uses shared native Rust on desktop and lazy WASM in the browser worker. [Integration](RETARGET_ADVANCED_BAKE.md) owns typed replies, correlated progress, cooperative native cancellation, worker termination and 120-second limits. TypeScript remains a CLI/test reference without runtime fallback. Sampler/core-only APIs retain their distinct capabilities; core-only baking refuses advanced options. Source selection prepares a private preview; Apply commits once through animation history. Cancel/discard, input revisions, leaving Animate and disposal reject stale results. Closing Tools may retain preview. Project saves and exports use canonical clips during preview; undo/redo and continued editing retain their owners. Public setup/dev/build generate pinned WASM bindings. Runtime failures remain visible without synchronous fallback.
@@ -376,3 +381,5 @@ AI-edited: 2026-10-15T22:16:39-04:00 | agent=Codex/root | model=unknown | effort
 
 
 AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits
+
+AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=routed reviewed animal-chain behavior and evidence

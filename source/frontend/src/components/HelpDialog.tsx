@@ -38,7 +38,7 @@ export default function HelpDialog({ open, status, onDismiss, onClosed }: HelpDi
         <dt>Open</dt><dd>Open or drop a model. Select related files together. Drag to orbit; right-drag to pan; scroll to zoom.</dd>
         <dt>Edit</dt><dd>Choose a workspace, then open Tools. Use Undo or Redo to revise edits.</dd>
         <dt>Save Project</dt><dd>Save your work as .rsproj. Use Open Project to continue.</dd>
-        <dt>Export</dt><dd>Use Export for the source format, or More for GLB, FBX, DAE and SMF.</dd>
+        <dt>Export</dt><dd>Export keeps SMF, FBX or DAE sources in that format; otherwise GLB. More selects a format.</dd>
         <dt>Format limits</dt><dd>GLB embeds textures. DAE keeps texture files separate. SMF cannot store scale animation. Unsupported exports show an error.</dd>
       </dl>
       <p className="preview-help-shortcuts"><kbd>Ctrl Z</kbd> Undo · <kbd>Ctrl Y</kbd> Redo · <kbd>Esc</kbd> Close</p>

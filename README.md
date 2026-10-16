@@ -25,9 +25,9 @@ Try [Sable, our original black cat](examples/black-cat/README.md), a self-contai
 GLB with Idle, Walk, Run and Sit. The Windows preview download still includes
 Signal Robot.
 
-[![Sable playing Walk, Run and Sit](docs/images/sable-motion.gif)](docs/images/sable-walk.webm)
+[![Sable playing Idle, Walk, Run and Sit](docs/images/sable-motion.gif)](docs/images/sable-idle.webm)
 
-WebM · [Walk](docs/images/sable-walk.webm) · [Run](docs/images/sable-run.webm) · [Sit](docs/images/sable-sit.webm) · 2.4 seconds each.
+WebM · [Idle](docs/images/sable-idle.webm) · [Walk](docs/images/sable-walk.webm) · [Run](docs/images/sable-run.webm) · [Sit](docs/images/sable-sit.webm) · 2.4 seconds each.
 
 <details>
 <summary>Windows requirements and download verification</summary>
@@ -57,7 +57,8 @@ Compare the `Hash` value with the installer entry in `SHA256SUMS.txt`. The relea
 - **SMF:** cannot store scale animation.
 - **DAE:** keeps external texture files separate.
 
-Missing resources and unsupported structures show an error.
+Missing required resources show an error. Lone FBX/DAE files can load without
+unavailable textures and show a warning.
 
 See the [user guide](docs/user/README.md) and [current format limits](docs/dev/APP_STATE.md#current-limits).
 
@@ -90,4 +91,6 @@ Project-owned code and the Signal Robot and Sable samples are [MIT licensed](LIC
 AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=dummy-showcase | change=updated overview and preview caption
 AI-edited: 2026-10-16T16:21:33.101Z | agent=Codex/root | model=unknown | effort=unknown | task=standalone-product-guidance | change=kept user workflows self-contained and routed optional sample authoring to developer notes
 AI-edited: 2026-10-16T16:31:34.044Z | agent=Codex/root | model=unknown | effort=unknown | task=concise-user-copy | change=shortened instructions and kept metadata out of rendered guidance
+AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=distinguished missing sidecars from lone-file texture warnings
+AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=showed all four Sable clips
 -->

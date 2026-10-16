@@ -30,6 +30,15 @@ const requiredCases = [
   'proportion_mismatch',
   'invalid_reference_frame',
   'unmapped_clip_track',
+  'animal_quadruped_fore_aliases', 'animal_hind_aliases', 'animal_ordered_tail',
+  'animal_paired_wing_aliases', 'animal_wrong_side', 'animal_fore_hind_conflict',
+  'animal_side_conflict', 'animal_segment_role_conflict', 'animal_reversed_tail',
+  'animal_numeric_requires_map', 'animal_unequal_chain', 'animal_branched_chain',
+  'animal_duplicate_segment', 'animal_helper_ancestry', 'animal_nonbone_ancestry',
+  'animal_invalid_rest', 'animal_authoritative_override', 'animal_differing_proportions',
+  'animal_all_paired_chains', 'animal_inherited_limb_context', 'animal_missing_interior_tail',
+  'animal_cross_limb_ancestry', 'animal_ambiguous_segment_name',
+  'animal_segment_number_overflow',
 ]
 
 function run(command, args, options = {}) {

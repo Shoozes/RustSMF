@@ -4,6 +4,10 @@ Independent MIT Rust library, version 0.1.0, API v1. Performs pure skeleton mapp
 
 `analyze_v1` accepts bounded source/target snapshots, explicit overrides, convention selections and clip metadata, with a cooperative cancellation callback. It returns a resolved map, ambiguity/errors and normalized proportions. `analyze_json_v1` exposes the same API for WASM. Serde field names are camelCase.
 
+[Animal chains](../../docs/dev/ANIMAL_CHAINS.md) add reviewed fore/hind, tail and
+wing correspondence through named roles and deform ancestry. Explicit maps win;
+ambiguous chains remain unresolved. Quadrupeds do not infer a hip/head up axis.
+
 Mixamo, UE4 mannequin, Unity humanoid and Rigify deform naming include side/chain context and fingers. Helpers are distinguished from deform bones, explicit maps win and opaque rigs require reviewed mappings. Equal bone counts do not imply compatible rigs.
 
 The app integrates native Tauri analysis and browser WASM workers. Build with the repository's `retarget:wasm` command; setup installs matching local wasm-bindgen tooling. See [the integration contract](../../docs/dev/RETARGET_ASSISTANCE.md) and run `run.ps1 -Task retarget:runtime-proof` for native/actual-Chromium parity.

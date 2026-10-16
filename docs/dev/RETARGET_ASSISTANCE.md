@@ -8,11 +8,15 @@ Animate > Transfer prepares a source, reviews mapping and previews privately bef
 
 Snapshots include helper ancestry and owned local rest transforms captured before playback. Rig-history edits refresh that rest ownership. Skin inverse-bind matrices are not substituted for authored rest transforms. Preflight reports missing/duplicate names, override conflicts, unmapped channels, reference-frame issues and normalized mapped-segment proportions. A reviewed map still cannot guarantee skin deformation or anatomical equivalence.
 
+[Animal-chain assistance](ANIMAL_CHAINS.md) adds reviewed fore/hind, wing and tail
+correspondence using named roles and deform ancestry. Ambiguous/unequal chains
+stay explicit; quadrupeds do not assume a hip/head up axis. No new controls or rig creation.
+
 The complete Rust solver bakes through a native Tauri command on desktop and lazy WASM in the browser worker. Advanced profiles, references, helper motion, interpolation, timing, contacts, twist, scale and endpoints retain TypeScript-reference parity. [Production integration](RETARGET_ADVANCED_BAKE.md) owns delivery and typed boundaries; the TypeScript solver remains for CLI/comparison, without runtime fallback. Public formats and app version are unchanged.
 
 Source and reference sampling uses each track's actual interpolator. Worker snapshots preserve glTF CUBICSPLINE tangent triplets and reconstruct Hermite interpolation, including quaternion normalization and opt-in scale transfer. Unknown custom interpolation fails visibly instead of silently becoming linear. Known-value generated-fixture checks supplement worker/reference parity, which alone cannot detect a shared sampling mistake.
 
-This is the selected first donor pass, not a claim that every missing donor feature has been ported. Desktop Rust is bundled into the application; the web runner executes WASM locally and needs no native service. Rust is required to build the source, not to run the built web app. TODO records the completed ZIP, export-queue and Rust-solver passes, with reviewed animal-chain assistance next. Custom rig creation remains excluded.
+Desktop Rust is bundled into the application; the web runner executes WASM locally and needs no native service. Rust is required to build source, not to run the built web app. TODO records the selected outcomes; not every donor feature is claimed. Custom rig creation remains excluded.
 
 ## Job and preview lifecycle
 
@@ -34,7 +38,7 @@ pwsh -File run.ps1 -Task verify
 pwsh -File run.ps1 -Task retarget:runtime-proof
 ```
 
-The runtime proof rebuilds native and WASM artifacts and compares 17 first-party fixture cases in Chromium: mappings and diagnostic structures exactly, numeric fields within `1e-6` relative/absolute tolerance. Existing advanced solver fixtures also run through serialized worker baking, including contacts, twist, timing, scale and endpoint constraints. `retargetCubicSpline.test.ts` checks actual glTF decoding, known curve values, copied buffers, references and worker parity. `retarget-transfer.spec.ts` owns real browser worker/WASM lifecycle, canonical preview preservation and independently sampled cubic-source export/project continuity; `retarget-continuity.journey.spec.ts` owns the broader profile journey. Tauri IPC mocks and native Rust command tests are distinct from actual installed OS-dialog observations.
+The runtime proof rebuilds native and WASM artifacts and compares 41 first-party fixture cases in Chromium: mappings and diagnostic structures exactly, numeric fields within `1e-6` relative/absolute tolerance. Existing advanced solver fixtures also run through serialized worker baking, including contacts, twist, timing, scale and endpoint constraints. `retargetCubicSpline.test.ts` checks actual glTF decoding, known curve values, copied buffers, references and worker parity. `retarget-transfer.spec.ts` owns real browser worker/WASM lifecycle, canonical preview preservation and independently sampled cubic-source export/project continuity; `retarget-continuity.journey.spec.ts` owns the broader profile journey. Tauri IPC mocks and native Rust command tests are distinct from actual installed OS-dialog observations.
 
 HISTORY owns the final candidate's commands/results. TODO owns ordered followups; asset references and drafts are registered separately in [ASSET_PROVENANCE.md](ASSET_PROVENANCE.md).
 
@@ -44,3 +48,5 @@ AI-edited: 2026-10-14T22:05:56-04:00 | agent=Codex/root | model=unknown | effort
 
 
 AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits
+
+AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=routed reviewed animal-chain behavior and evidence

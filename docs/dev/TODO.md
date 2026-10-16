@@ -2,27 +2,17 @@
 
 Last reviewed: 2026-10-16
 
-Backlog status: production integration is published at `719d69b`. Animal-chain assistance is next; protected fixes/assets remain intact. HISTORY owns proof.
+Backlog status: production integration is published at `719d69b`; guidance/Sable previews at `e8cd390`. Animal-chain assistance is complete locally. HISTORY owns proof.
 
-## Rust solver migration: core baking — complete
+## Rust solver migration: comparison passes — complete
 
-- What: Closed: all 19 core options and 26 reports have experimental Rust baking.
-- Why: Establish core parity before advanced motion or production cutover.
-- Where: [RETARGET_CORE_BAKE.md](RETARGET_CORE_BAKE.md), route `workflow__retarget_core_bake`.
-- When: Published and rechecked on 2026-10-15.
-- How: Owned mapping metadata, borrowed inputs, typed results, native cancellation, real worker termination/replacement and atomic output bounds.
-- Done when: Closed; independent anchors and TypeScript/native/actual-WASM parity pass 29 bakes and 40 refusals.
-- Verification: HISTORY retains publication/recheck proof, ownership mutation control and independent anchors.
-
-## Rust solver migration: advanced motion — published
-
-- What: Port 9 advanced options/8 reports behind an experimental capability; retain TypeScript production.
-- Why: Core parity alone cannot replace the existing complete solver.
-- Where: [RETARGET_ADVANCED_BAKE.md](RETARGET_ADVANCED_BAKE.md), route `workflow__retarget_advanced_bake`.
-- When: Published and rechecked at `8c231cb` on 2026-10-15.
-- How: Follow `animationRetarget.ts` ordering/combinations/refusals; reuse independent fixtures and core guards.
-- Done when: Closed experimentally: all 9 options/8 reports, exact structures/1e-6 numbers, independent motion/contact/endpoints, ownership, cancellation and atomic bounds; the linked contract retains restrictions.
-- Verification: Isolated publication gate passed: 615 frontend/28 Rust units, 196 browser, 12 journeys, 3 strict visuals; native/actual-WASM 33 advanced cases/30 refusals. HISTORY owns source-bound evidence.
+- What: Portable contract/sampler, core baking and advanced motion are published.
+- Why: Establish independent parity before production integration.
+- Where: [Core contract](RETARGET_CORE_BAKE.md), [advanced contract](RETARGET_ADVANCED_BAKE.md) and their focused routes.
+- When: Completed and rechecked on 2026-10-15.
+- How: Preserve bounded owned inputs, typed results, cancellation and independent anchors.
+- Done when: Closed; core-only APIs retain their refusals. Complete advanced baking now serves production below.
+- Verification: HISTORY retains exact native/actual-WASM/TypeScript parity, refusal and publication evidence.
 
 ## Rust solver migration: production integration — complete
 
@@ -30,13 +20,12 @@ Backlog status: production integration is published at `719d69b`. Animal-chain a
 - Why: Experimental parity does not establish production execution or lifecycle safety.
 - Where: Route `workflow__retarget_production_integration`: job client/worker, portable adapters, Tauri commands, build and delivery guards. Solver implementation stays in its experimental routes.
 - When: Published on 2026-10-16 at `719d69b`.
-- How: Pinned Binaryen optimization fits the complete lazy module inside the unchanged 1 MiB guard. Native Tauri and worker WASM share typed clip/report validation, copied inputs, job/revision correlation, progress, cancellation and 120-second limits. Private preview/Apply/history retain their owners; no synchronous fallback or extra UI.
-- Done when: Closed locally: complete native/worker-WASM parity, typed ownership, cancellation/deadlines, malformed/stale replies, replacement/disposal and continued editing pass. Project/export continuity and Original are preserved; TypeScript remains the reference.
-- Verification: All six sequential gates pass on one source: verify, browser, journeys, strict visuals, runtime proof and desktop smoke. HISTORY and the existing compact receipt retain exact commands, counts and source identity. Native Rust, real WASM and mocked IPC remain distinct.
+- How: Lazy optimized WASM, typed owned results and correlated cancelable jobs retain existing preview/history; no synchronous fallback or extra UI.
+- Done when: Closed; parity, lifecycle, project/export continuity and Original pass. TypeScript remains the CLI/test reference.
+- Verification: All six sequential gates pass on the source bound in HISTORY and its receipt; native Rust, real WASM and mocked IPC remain distinct.
 
-The complete lazy WASM is 903831 bytes under the unchanged 1 MiB guard. Installed Windows retarget interaction and general animal compatibility remain separate acceptance.
-
-Custom rig creation/replacement, automatic skinning, application versions, installer/release replacement and publication are outside these implementation slices. Separate commit/push authorization is required.
+The 919363-byte lazy WASM meets the 1 MiB guard. Installed Windows retarget and
+general animal compatibility remain separate acceptance.
 
 ### Ordered product followups
 
@@ -45,8 +34,21 @@ Custom rig creation/replacement, automatic skinning, application versions, insta
 | 1 | ZIP bundle intake — published `da98cba` | Complete; reviewed directory/progress fixes remain intact. |
 | 2 | Export presets and queues — published `0c7ab1d`, cleanup `2343b08` | Complete; owned snapshot/material-reader guards and source-specific proof remain in HISTORY. Installed Windows queue acceptance is separate. |
 | 3 | Original Sable assets and animation pack — published `2343b08` | Complete; sample usage and optional authoring have separate guides. Drafts/references stay private. |
-| 4 | Complete Rust solver migration | Contract/sampler, core and advanced passes are published; production integration is complete; the paired closeout selects this batch for main. |
-| 5 | Animal-chain assistance — next | Next authorized pass: reviewed existing quadruped, wing and tail suggestions with independent first-party fixtures; ambiguity requires explicit maps. No new rig creation. |
+| 4 | Complete Rust solver migration — published `719d69b` | Contract/sampler, core, advanced and production integration are complete. |
+| 5 | Animal-chain assistance — complete locally | Reviewed suggestions for existing quadruped, wing and tail rigs; bounded acceptance below. |
+
+## Animal-chain assistance — complete locally
+
+- What: Reviewed suggestions for existing quadruped limbs, tails and paired wings; implement in that order.
+- Why: Humanoid roles and similar names alone cannot establish animal anatomy.
+- Where: [ANIMAL_CHAINS.md](ANIMAL_CHAINS.md), route `feature__animal_chain_assistance`, shared preflight and existing Transfer/profile owners.
+- When: Completed locally on 2026-10-16; publication is separately scoped.
+- How: Named anatomy, side and helper-aware deform ancestry; explicit maps win. Ambiguity and unequal chains stay unresolved. Reuse Mapping details, preview and history; preserve humanoid behavior/API/profile compatibility.
+- Done when: The contract's independent fixtures, negative controls, native/actual-WASM parity, ordinary review/profile/project/queued-GLB motion and influence continuity, lifecycle and layout checks pass. No arbitrary animal compatibility is inferred.
+- Verification: Focused checks, then sequential verify, browser, journeys, strict visuals, retarget:runtime-proof and desktop-smoke on one final candidate; exact results belong in HISTORY.
+
+No custom rig creation/replacement, automatic skinning, animal IK, donor asset
+distribution, versions, installer or publication. Private inputs stay private.
 
 ## Completed frontend source work
 
@@ -90,7 +92,7 @@ public installer keeps its accepted source/package identity.
 - When: Completed on 2026-10-11 after the six automated gates, actual installed Windows UI checks, recovery restoration and owned cleanup; the separately authorized preview is public at `v0.2.1-preview`, source `05a32fe`. Browser/mocked IPC and real UI observations remain separate.
 - How: Preserve the flat Modern theme and Original strict baseline, decode actual canvas pixels with HTML chrome excluded, disclose technical success details, bundle notices/sample and verify the 0.2.1 candidate locally. Preserve existing recovery generations for the attended test.
 - Done when: All six sequential gates pass on the final candidate; all six Modern sizes and DPI/input lanes are reviewed; Original remains unchanged; the actual installed app passes the attended checklist; original recovery data and task-owned resource disposition are verified; docs and routes contain accurate evidence.
-- Verification: `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, `test:visual-strict`, `desktop-smoke`, `package:windows`, plus the observed installed-app checklist in `docs/user/PREVIEW_0_2_1.md`. Published installer/source identity, notes and checksums remain in the preview record. Public main excludes private scaffolding; optional maintainer publication uses the ignored guarded helper.
+- Verification: Six automated gates and installed-app acceptance are recorded in HISTORY and `docs/user/PREVIEW_0_2_1.md`, bound to the original preview package.
 
 ## Frontend coverage and Modern polish
 
@@ -98,9 +100,9 @@ public installer keeps its accepted source/package identity.
 - Why: Establish semantic and persistence evidence beyond status messages and isolated controls.
 - Where: Frontend domain specs, `tests/journeys/`, independent asset-evidence helpers, Modern styles, Inspector/Rig metadata integration, and current verification docs/routes.
 - When: Completed 2026-10-08 after the final source gate and responsive review; the four completed v0.2 outcomes below remain closed.
-- How: Use ordinary browser actions and independent exported-content assertions, fix reproduced defects, and simplify Modern within flat Lumen Alloy: one compact icon strip, a workspace chooser, tools closed by default, four Skin tool icons, two sliders and short contextual text. This follows the user's 2026-10-08 request to reduce text/buttons and replaces the previous two-row composition. Preserve Original and public project/profile formats.
+- How: Ordinary browser actions and independent export assertions preserve formats/Original; Modern uses a compact strip, workspace chooser, closed Tools and contextual Skin controls.
 - Done when: Every supported feature row has passing positive and applicable failure/history/persistence evidence; eleven stories across ten journey files, verify, normal browser tests, and strict visuals pass on the final candidate; the required six sizes and DPI/input lanes are reviewed; Original baselines remain unchanged; docs/routes and owned-process cleanup are current.
-- Verification: Sequential `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, and `test:visual-strict`. Browser and mocked IPC are the acceptance lanes; real OS dialogs, packaging and version changes are excluded. Separately authorized publication binds and verifies the staged candidate through `.tools/gitpush.ps1 -StagedOnly`.
+- Verification: The four sequential frontend gates and exact published candidate are recorded in HISTORY. Browser/mocked IPC evidence remains distinct from installed Windows checks.
 
 Fighter-specific acceptance remains caller-owned. Codec, rig, and export work
 stay closed unless one of these journeys exposes a reproducible defect with a
@@ -159,3 +161,6 @@ AI-edited: 2026-10-15T22:16:39-04:00 | agent=Codex/root | model=unknown | effort
 
 
 AI-edited: 2026-10-16T16:22:54.735Z | agent=Codex/root | model=unknown | effort=unknown | task=standalone-guidance | change=routed optional sample authoring separately from app usage
+AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=bounded animal-chain assistance and condensed closed outcomes
+
+AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=routed reviewed animal-chain behavior and evidence
