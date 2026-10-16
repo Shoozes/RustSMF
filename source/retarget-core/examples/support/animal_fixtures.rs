@@ -176,6 +176,32 @@ pub fn animal_cases() -> Vec<AnimalCase> {
     helper.source.nodes[i].is_bone = false;
     helper.source.bones.retain(|&n| n != i);
     cases.push(("animal_nonbone_ancestry", helper, expected, None));
+    for (name, source_side, boundary) in [
+        ("animal_unrecognized_source_deform", true, "joint99"),
+        ("animal_unrecognized_target_deform", false, "joint99"),
+        ("animal_spine_source_deform", true, "Spine"),
+        ("animal_spine_target_deform", false, "Spine"),
+        ("animal_limb_source_deform", true, "ForeUpper_L"),
+        ("animal_limb_target_deform", false, "ForeUpper_L"),
+    ] {
+        let mut input = animal_input(&[&tail], &[&other_tail]);
+        let rig = if source_side {
+            &mut input.source
+        } else {
+            &mut input.target
+        };
+        let i = rig.nodes.len();
+        rig.nodes
+            .push(animal_node(boundary, Some(2), [1., 0.9, 0.]));
+        rig.nodes[3].parent = Some(i);
+        rig.bones.push(i);
+        cases.push((
+            name,
+            input,
+            body_map(),
+            Some("RIG_MAP_ANIMAL_CHAIN_UNRESOLVED"),
+        ));
+    }
     let mut invalid = animal_input(&[&tail], &[&other_tail]);
     invalid.target.nodes[3].quaternion = [0.; 4];
     cases.push((

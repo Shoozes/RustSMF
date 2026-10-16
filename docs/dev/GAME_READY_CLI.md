@@ -38,5 +38,6 @@ Retarget options cover reference clips, target rotation preservation, relative/a
 
 For GLB movesets with authored bone growth, `rig.retarget.clipScaleTransfer` is an opt-in map from source clip names to selected bone transfers. Each entry names a mapped `sourceBone`, a target skeleton `targetBone`, three source `axes` in target x/y/z order, and three `strength` values from 0 to 1. The target's neutral local scale (from the target reference clip at time zero when it keys that bone, otherwise from skeleton rest) is multiplied by the selected source scale delta relative to the source reference pose; unlisted clips retain their original behavior. For example, `{"attack":[{"sourceBone":"SourceForearm","targetBone":"TargetHand","axes":["x","x","x"],"strength":[0.4,0.4,0.4]}]}` grows a fist without lengthening its forearm. Missing tracks, unknown bones and source ratios outside 0.25–4 fail; configured scale is not silently dropped. Scale transfer is separate from root-motion translation scaling and currently cannot share a clip with endpoint envelopes or pose recovery. Review actual skin deformation, contact and hitboxes after export; a numerically valid scale track is not visual approval. SMF export still cannot encode scale animation.
 
-
-AI-edited: 2026-10-16T16:29:06.896Z | agent=Codex/root | model=unknown | effort=unknown | task=concise-user-copy | change=shortened task instructions and moved CLI reference
+<!--
+AI-edited: 2026-10-16T16:29:06.896Z | agent=Codex/root | task=concise-user-copy | change=shortened task instructions and moved CLI reference
+-->

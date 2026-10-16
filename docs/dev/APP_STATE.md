@@ -1,10 +1,37 @@
 # RustSMF App State
 
-Last reviewed: 2026-10-15
+Last reviewed: 2026-10-16
+
+## Editing and interchange reliability
+
+A shared accepted-edit branch invalidates editor, Skin and Outliner redo together.
+History cursors move only after restoration succeeds. Skin restores validate every
+vertex against the captured skeleton identity and ordered bones before writing.
+The empty animation workspace is valid: no clip, stopped playback and zero time.
+
+Queued clips remap captured UUID targets without changing live names or track
+suffixes. OBJ/DAE selected resources settle before replacement commits; errors and
+timeouts retain editable work. OBJ releases unused materials after preparation;
+failure cleanup disposes used and unused textures exactly once. DAE exports one named linear TRS clip and solid
+single materials; textures, multiple clips and unsupported channels are refused
+with GLB guidance. The writer and queue share this policy.
+
+Transfer allows 1-512 bones per skeleton and 4096 hierarchy nodes. Unnamed helper
+ancestors use private transport identities; ambiguous bound names remain refused.
+A zero-duration reference pose must contain one key at time zero per channel;
+moving clips still need positive duration. Semantic bone names and public formats
+are unchanged. Native and actual-WASM evidence stays distinct from installed UI
+acceptance. HISTORY and the reliability receipt own candidate-specific results.
+
 
 ## Original Sable sample and motion pack
 
-Sable in `examples/black-cat/` is an original image-guided Tripo Pro cat repaired in Blender, with 24 original joints/keys, Idle/Walk/Run/Sit and a packed 1K atlas. Independent guards cover full loop transforms/skin, every key/midpoint, actual recovery and project/GLB continuity. Run reserves 0.3 mm paw clearance; rebuilding uses a separate destination. The [guide](../../examples/black-cat/README.md) owns usage/limits; the [register](ASSET_PROVENANCE.md) owns rights and HISTORY owns evidence. Drafts/references stay private. Sable and the reviewed export cleanup are published in `2343b08`; Signal Robot remains the installer sample. App controls are unchanged.
+Sable is the original 24-joint cat with Idle/Walk/Run/Sit and a packed 1K atlas.
+Dense loop/floor, project/recovery/export and alternate-output rebuild guards
+belong to the [guide](../../examples/black-cat/README.md),
+[authoring notes](SABLE_AUTHORING.md), provenance register and HISTORY.
+Run retains 0.3 mm paw clearance. Sable/export cleanup shipped in `2343b08`;
+Signal Robot remains the older installer sample. Drafts/references stay private.
 
 ## Export presets and queues on current source
 
@@ -20,7 +47,8 @@ ZIP intake was introduced in `da98cba`. Current source accepts omitted directory
 
 Existing quadruped limbs, ordered tails and paired wings receive reviewed
 shared-core suggestions in Mapping details. Ambiguous chains remain explicit;
-quadrupeds do not infer an up axis from hips/head. [ANIMAL_CHAINS.md](ANIMAL_CHAINS.md)
+unknown deform intermediates cannot be skipped as helpers. Quadrupeds do not
+infer an up axis from hips/head. [ANIMAL_CHAINS.md](ANIMAL_CHAINS.md)
 owns correspondence, parity and limits. No rig creation or new solver is added.
 
 Animate > Transfer now uses shared Rust API v1 for mapping/preflight (native Tauri on desktop, actual WASM in a browser worker). Mixamo, UE4 mannequin, Unity humanoid and Rigify deform naming include side/chain context and fingers. Explicit maps remain authoritative; ambiguity and numeric rigs require review. Mapping details holds overrides, diagnostics, profile drafts and portable export of the reviewed explicit map.
@@ -40,7 +68,11 @@ Transfer copies and raw-clip Retime preserve glTF cubic-spline motion, including
 
 HISTORY retains source-bound cubic authoring proof at `040feb3`. Routine output is compact JSON; required visual/pixel and hand-wave evidence remains enabled.
 
-`RETARGET_ASSISTANCE.md` owns API, job and proof boundaries; TODO owns ordered followups. The published `ff43a13` gate passed verify, browser (160), journeys (11), strict visuals (3), native/actual-WASM parity (17 cases) and desktop smoke; HISTORY binds that source and reviewed captures. Sable is the accepted original asset pack; `ASSET_PROVENANCE.md` distinguishes its generation-specific rights from withheld raw drafts and borrowed references. Those private inputs are excluded from public samples. No custom rig creation, rig replacement or automatic skinning is added. App version, release and installer remain unchanged; installed Windows evidence retains its earlier source identity.
+[RETARGET_ASSISTANCE.md](RETARGET_ASSISTANCE.md) owns API/jobs; TODO owns work.
+HISTORY retains source-specific gates and earlier installed evidence. Sable's
+rights-cleared pack is separate from private drafts/references in
+ASSET_PROVENANCE. No rig creation/replacement or automatic skinning is added.
+Version, release and installer identity remain unchanged.
 
 ## 0.2.1 Windows preview
 
@@ -120,7 +152,7 @@ and fidelity limits are unchanged; dated final proof belongs in `HISTORY.md`.
 - Skin weight preview uses a non-destructive Three.js vertex-color heat map for the selected bone and restores the original color attribute plus each material's prior `vertexColors` mode when disabled. The legacy four-slot shader and paint-transport references remain documented in `docs/dev/old_editor_source_map.md`; exact legacy texture modulation is not required for the current export-safe display path.
 - Diagnostics and display: Export/Model diagnostics report finite per-mesh vertex, normal, tangent, UV, material, submodel, and world-handedness state plus WebGL shader capability notes. Rest-pose ghost, current-to-rest trails, and onion-skin overlays are viewport-owned disposable helpers; toggling them never changes source geometry, animation data, or export bytes.
 - Animate: clip creation, rename/duplicate/delete/reorder, bounded duration set/extension, retime, finite trim with sampled boundary keys, loop/sample metadata, playback, scrub, Bone/Branch/Full Rig key insert/update/delete/move/copy/paste, marker drag, snap, interpolation metadata, locked-bone state, and undo/redo update the runtime clips and supported SMF export candidate. Named-bone FBX/DAE/GLB/GLTF clips can be retargeted through canonical/alias mapping and appended in one undoable transaction. A collapsed saved-profile surface also imports a complete v2 game-ready job or portable `rustsmf.retarget-profile.v1` document, validates and edits its JSON, exports through the existing save boundary, and reapplies explicit maps and clip options through the same retarget core. Standalone profiles never retain or open a source-model path; source files are selected when applying them, and the app-owned draft survives Animate-panel unmounts. Opaque numeric rigs otherwise fail closed rather than guessing. The shared retargeter samples unmapped helper ancestors into mapped world motion, transfers rest-relative limb direction changes, can use scoped absolute source directions for action peaks whose source and target idle limbs differ, anchor source/target reference clips, preserve target terminal or explicitly listed rotations across incompatible local axes, and apply a bounded trusted-peak recovery envelope. Optional natural-motion conditioning distributes torso motion by target segment length, solves target-length two-bone legs, locks calibrated sole points during declared contact frames, applies receiving-root travel, and bounds proportion-sensitive swing directions and minimum knee bend per named clip; contact weight fades those limits out at planted feet. Fixed-rate output retains float32 source-frame evaluation while clamping a partial terminal sample to the clip duration. Rig compatibility reports normalized mapped-segment ratios because correct side/axis mapping does not make different bone lengths, rest frames, or skin weights motion-equivalent. Editable duration fields use stable up-to-three-decimal display formatting, so floating-point representation noise is not shown without changing stored duration precision or edit semantics. Scope operations resolve from the selected hierarchy, use one animation-edit history transaction, union their timeline markers, and reject clipboard fingerprints or target scopes that do not match without mutation. Trim retains source keys in the inclusive range and samples both boundaries; authored keys are shifted by the trim start. Locked channels are immutable: scoped key edits, viewport keying, retime, and trim fail closed when they would rewrite a locked track, while lock/unlock itself is one history transaction. New clips can be created from the canonical load-time rest pose or the current local bone pose, including models that load with zero source clips; creation is one animation-workspace history transaction and emits position/quaternion keys for every named skeleton bone. New animation creation fails closed when the skeleton is missing, unnamed, or has duplicate bone names rather than emitting ambiguous tracks. The mixer clock remains imperative in the viewport; the parent timeline publishes a bounded 50 ms display cadence and flushes immediately for scrub/clip/pause commands.
-- App-level Undo/Redo selects the newest editor, Skin, or Outliner transaction by shared chronology rather than the currently visible workspace.
+- App-level Undo/Redo uses shared chronology across editor, Skin and Outliner. Accepted forward edits invalidate every redo branch; rejected restores preserve their cursors.
 - Editor history is capped at 100 entries and 64 MiB across undo/redo; skin history is capped at 50 entries and 32 MiB per direction. When an oldest entry is evicted, the status surface explains the bounded-history decision while the current edit remains applied.
 - Workspace, layout, and camera-mode changes preserve the mounted model, selection, paused time, dirty state, export status, and exclusive Select/Endpoint/IK ownership.
 
@@ -370,16 +402,6 @@ the existing solver and rejecting invalid source knees or exceeded correction
 limits without partial output. [TRANSITION_BAKE.md](TRANSITION_BAKE.md) owns the
 input contract, bounds, vendoring requirements, and native/browser WASM proof.
 
----
-AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
-
-AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
-
-AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=recorded published sampler state
-
-AI-edited: 2026-10-15T22:16:39-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=rechecked publication and bounded production integration
-
-
-AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits
-
-AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=routed reviewed animal-chain behavior and evidence
+<!--
+AI-edited: 2026-10-16 | agent=Codex/root | task=reliability-review | change=recorded single-disposal OBJ failure cleanup
+-->

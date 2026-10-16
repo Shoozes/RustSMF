@@ -22,18 +22,7 @@ Upstream reference: [Mesh2Motion source at the reviewed revision](https://github
 
 The procedural fallback passed technical checks but was visually rejected by the user. It is superseded and retained privately. The revised Sable preserves the desired near-profile stance and feline silhouette. Blender closes mouth/sole defects and triangulation artifacts, preserves the UV atlas, fits 24 joints, normalizes weights and authors four clips. No raw Tripo file is a public build dependency: the finished Blender scene owns editable geometry and its packed PNG. [The sample guide](../../examples/black-cat/README.md) owns exported axes, timing and loop declarations; [SABLE_AUTHORING.md](SABLE_AUTHORING.md) owns source rebuilding. Rights and technical acceptance remain separate.
 
----
-AI-created: 2026-10-14T20:38:18-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs
-AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
-
-AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
-
-AI-edited: 2026-10-15T16:07:12-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=routed completed Sable acceptance to History and the sample guide
-
-AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=dummy-showcase | change=bound the selected private GLB screenshot reference and separated existing SMF evidence
-
-AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=backup-dummy | change=bound the backup-derived name repair while preserving textures and all twelve clips
-
-AI-edited: 2026-10-16T16:21:33.101Z | agent=Codex/root | model=unknown | effort=unknown | task=standalone-product-guidance | change=kept user workflows self-contained and routed optional sample authoring to developer notes
-
-AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=routed reviewed animal-chain behavior and evidence
+<!--
+AI-created: 2026-10-14T20:38:18-04:00 | agent=Codex/root | task=docs
+AI-edited: 2026-10-16 | agent=Codex/root | task=animal-chain-assistance | change=routed reviewed animal-chain behavior and evidence
+-->

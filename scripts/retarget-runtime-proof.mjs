@@ -39,6 +39,8 @@ const requiredCases = [
   'animal_all_paired_chains', 'animal_inherited_limb_context', 'animal_missing_interior_tail',
   'animal_cross_limb_ancestry', 'animal_ambiguous_segment_name',
   'animal_segment_number_overflow',
+  'animal_unrecognized_source_deform', 'animal_unrecognized_target_deform',
+  'animal_spine_source_deform', 'animal_spine_target_deform', 'animal_limb_source_deform', 'animal_limb_target_deform',
 ]
 
 function run(command, args, options = {}) {
@@ -91,6 +93,7 @@ async function main() {
   const native = JSON.parse(nativeLine)
   assert.ok(Array.isArray(native.cases) && native.cases.length >= 10, 'first-party parity fixture set is unexpectedly small')
   assert.equal(new Set(native.cases.map(({ name }) => name)).size, native.cases.length, 'fixture case names must be unique')
+  assert.equal(native.refusals.length, 2, 'native source and target bone limit refusals');
   const caseByName = new Map(native.cases.map((value) => [value.name, value]))
   for (const name of requiredCases) assert.ok(caseByName.has(name), `missing first-party fixture: ${name}`)
   for (const [name, code] of [
@@ -224,9 +227,9 @@ async function main() {
         baking: bakeInputs.map(input => JSON.parse(module.bake_json_v1(input))),
         fullBakes:fullInputs.map(input => JSON.parse(module.bake_with_progress_json_v1(input, () => {}))),
         callbackFailure:JSON.parse(module.bake_with_progress_json_v1(fullInputs[0], () => {throw new Error('closed channel')}))}
-    }, {cases: native.cases.map(({input}) => ({input})), sampleInputs: samplerInputs, bakeInputs, fullInputs:[...advancedInputs,...productionCoreInputs]})
+    }, {cases: [...native.cases, ...native.refusals].map(({input}) => ({input})), sampleInputs: samplerInputs, bakeInputs, fullInputs:[...advancedInputs,...productionCoreInputs]})
     assert.equal(productionResults.advancedExport, true)
-    compare(productionResults.preflight, native.cases.map(c => c.result), 'production.preflight')
+    compare(productionResults.preflight, [...native.cases, ...native.refusals].map(c => c.result), 'production.preflight')
     compare(productionResults.sampler, nativeSampler, 'production.sampler')
     compare(productionResults.baking, nativeBakes, 'production.core-bake')
     compare(productionResults.fullBakes, [...nativeAdvanced,...nativeProductionCore], 'production.complete-bake')
@@ -314,7 +317,7 @@ async function main() {
       schema: 'rustsmf.retarget-runtime-proof.v1',
       status: 'passed',
       apiVersion: 1,
-      native: { command: 'cargo run --locked --release --example retarget_receipt', fixtureCount: native.cases.length, resultSha256: hash(Buffer.from(JSON.stringify(native.cases.map(({ result }) => result)))) },
+      native: { command: 'cargo run --locked --release --example retarget_receipt', fixtureCount: native.cases.length, refusalCount: native.refusals.length, resultSha256: hash(Buffer.from(JSON.stringify(native.cases.map(({ result }) => result)))) },
       browserWasm: { browser: 'Chromium', features: built.provenance.features, wasmSha256: built.provenance.generatedWasmSha256, glueSha256: built.provenance.glueSha256 },
       productionWasm: {features: production.provenance.features, wasmSha256: production.provenance.generatedWasmSha256,
         bytes: readFileSync(join(production.generated, 'retarget_core_bg.wasm')).byteLength, preflightSamplerCoreParity: true, advancedExport: true,

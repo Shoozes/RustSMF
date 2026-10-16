@@ -95,7 +95,7 @@ HISTORY and `output/retarget-runtime-proof/advanced-motion-receipt.json` own
 candidate-specific commands and acceptance. Private GLBs, raw Tripo drafts and
 borrowed references are excluded from fixtures and public samples.
 
----
-AI-created: 2026-10-15T20:33:56-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=code
-AI-edited: 2026-10-15T21:46:26-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=bounded contact storage and ordered production integration
-AI-edited: 2026-10-16T00:52:52-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=specified native and lazy WASM production boundaries
+<!--
+AI-created: 2026-10-15T20:33:56-04:00 | agent=Codex/root | task=code
+AI-edited: 2026-10-16T00:52:52-04:00 | agent=Codex/root | task=production-integration | change=specified native and lazy WASM production boundaries
+-->

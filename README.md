@@ -55,7 +55,7 @@ Compare the `Hash` value with the installer entry in `SHA256SUMS.txt`. The relea
 
 - **GLB:** includes textures in one file. Duplicate node names may change to keep animation bindings clear.
 - **SMF:** cannot store scale animation.
-- **DAE:** keeps external texture files separate.
+- **DAE export:** one clip, linear transforms and one solid material per mesh. Use GLB for textures or multiple clips.
 
 Missing required resources show an error. Lone FBX/DAE files can load without
 unavailable textures and show a warning.
@@ -88,9 +88,5 @@ After setup, build the NSIS installer with `pwsh -NoProfile -File .\run.ps1 -Tas
 Project-owned code and the Signal Robot and Sable samples are [MIT licensed](LICENSE), copyright 2026 Shoozes. Third-party code, fixtures and reference assets retain their own terms. [Third-party notices](THIRD_PARTY_NOTICES.md) and [fixture provenance](source/frontend/tests/fixtures/PROVENANCE.md) describe that boundary; unidentified assets receive no new reuse grant.
 
 <!--
-AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=dummy-showcase | change=updated overview and preview caption
-AI-edited: 2026-10-16T16:21:33.101Z | agent=Codex/root | model=unknown | effort=unknown | task=standalone-product-guidance | change=kept user workflows self-contained and routed optional sample authoring to developer notes
-AI-edited: 2026-10-16T16:31:34.044Z | agent=Codex/root | model=unknown | effort=unknown | task=concise-user-copy | change=shortened instructions and kept metadata out of rendered guidance
-AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=distinguished missing sidecars from lone-file texture warnings
-AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=showed all four Sable clips
+AI-edited: 2026-10-16 | agent=Codex/root | task=animal-chain-assistance | change=showed all four Sable clips
 -->

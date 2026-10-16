@@ -46,5 +46,6 @@ Avoid copying the same completed-work narrative into multiple docs. Link to the 
 
 Exact discovered test counts belong in dated verification evidence, not repeated current-state prose. Gated backlog tasks must identify the missing external evidence or interactive lane and define completion conditions. Completed-work narratives and proof move to `HISTORY.md`; the selected release's measurable outcome criteria may remain in `TODO.md` as an explicitly completed closeout record.
 
----
-AI-edited: 2026-10-15T04:46:35-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=closed export queue evidence and preserved ZIP ownership
+<!--
+AI-edited: 2026-10-15T04:46:35-04:00 | agent=Codex/root | task=docs | change=closed export queue evidence and preserved ZIP ownership
+-->

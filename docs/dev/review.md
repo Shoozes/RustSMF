@@ -6,28 +6,54 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Animal-chain assistance — 2026-10-16
+## Supplied reliability review of 7244351 - implementation recheck
 
-Local main remains based on `e8cd390` with the prior guidance cleanup intact.
-Shared preflight now resolves named quadruped, tail and wing chains using side,
-roles and helper-aware ancestry. Conflicts, ambiguous segments, numeric overflow
-and unequal chains stay explicit; normalized/fuzzy fallthrough is excluded.
-Quadrupeds do not use a hip/head up-axis heuristic. Existing Transfer controls,
-preview/history and profile formats are retained.
+Before cleanup: 507 inputs matched the seven-gate receipt; seven findings closed.
+A preparation-failure regression exposed double disposal of unused OBJ textures;
+release now follows preparation. HISTORY keeps this proof separate from prior gates.
 
-- Verified closed: 24 independent animal fixture cases and mutation controls;
-  41 total native/real-WASM preflight cases agree. Ordinary review/profile,
-  project and queued-GLB continuity preserves known motion and influences.
-- Verified: all six gates pass on 500 stable inputs; HISTORY binds source/results.
-  Six widths retain the drawer. Original, Sable, ZIP/export and private inputs
-  remain protected. Four short Sable previews are available.
-- Unverified: arbitrary animal deformation and installed Windows interaction;
-  suggestions require review and explicit corrections where unresolved.
+Accepted all seven findings as one ordered reliability outcome: history first,
+then resource/export fidelity, retarget boundaries and integrated acceptance.
 
-The earlier guidance cleanup corrected texture-warning/export wording and stale
-TypeScript-production routes. Its source-bound recheck remains in HISTORY and
-`guidance-publish-receipt.json`; the separate `animalChain` section owns this
-implementation. Publication, versions, installers and rig creation remain excluded.
+- Repaired locally: shared redo invalidation, atomic skeleton-bound skin restore,
+  zero-clip history, captured UUID bindings, delayed OBJ/DAE readiness, explicit
+  DAE fidelity policy and retarget helper/reference/size contracts.
+- Preserved: conservative animal ancestry, ZIP intake, export snapshot ownership,
+  Sable, Original references and private asset exclusions.
+- Verified in source: all seven final candidate gates pass; detailed results are recorded in HISTORY
+  and `Compact_Evidence/RustSMF/runs/reliability-20261016/summary.json`.
+- Pending: installed Transfer/queue/recovery continuation. Matched install, Open cancel and playback were observed; WebView source selection was blocked. Session closed: nine processes exited, three recovery generations restored exactly, test install/registration removed. Arrange attended selection next.
+  Earlier installed ZIP/sidecar/GLB observations retain their original identity.
+
+Both Windows sessions restored recovery and removed their test installations.
+Automatic approval review refused deletion of their inactive WebView profiles;
+they remain private (latest: 76,674,781 bytes). TODO retains attended acceptance.
+Source-bound package/media proof is preserved; no bulk deletion was attempted.
+
+
+## Published animal-chain review — 2026-10-16
+
+Reviewed clean main `7244351`; live origin matches. All 500 implementation inputs
+match the published six-gate proof. Shared native/worker-WASM preflight, existing
+Transfer/profile/history consumers, independent fixtures and the ordinary journey
+were inspected. This is a RustSMF-owned cleanup, with no publication or packaging.
+
+- Verified closed: explicit authority, helper/non-bone ancestry, side/role/count
+  refusals, overflow, quadruped orientation and known-motion continuity retain
+  their source-bound proof. Original, four Sable previews and private inputs match.
+- New, repaired: an unidentified `joint99` deform bone between tail members
+  was skipped as a helper, permitting a false chain match. The independent map
+  assertion failed. Traversal now stops at non-helper deform intermediates;
+  source/target refusals join the existing positive helper cases. Focused native,
+  actual-WASM and journey rechecks are recorded separately in HISTORY.
+- Genuinely unverified: installed Windows Transfer/ZIP/queue interactions and
+  arbitrary animal deformation. Neither mocked IPC nor Sable closes those claims.
+
+That review selected attended current-source Windows acceptance; the supplied
+reliability findings now take priority before a repaired installed candidate. The existing
+`guidance-publish-receipt.json` retains separate `animalChain` publication and
+`animalChainReview` cleanup records. Earlier gate evidence stays bound to its
+original source; private assets, recovery and previously blocked scratch remain.
 
 ## Earlier production integration review — 2026-10-16
 
@@ -66,9 +92,10 @@ This bounded polish outcome is complete locally; complete Rust solver migration 
 
 ## Original asset implementation follow-through — 2026-10-15
 
-Sable replaces the visually rejected procedural candidate with an original image-guided Tripo Pro design, local topology repairs, original rig/weights and four authored clips. The generation has its own paid-output evidence; borrowed references, raw drafts and the uncleared older output remain private. Editable Blender source and a self-contained GLB are in `examples/black-cat/`.
-
-Review caught seated deformation, triangulation defects and browser recovery refusal with the 2K PNG. Fitted poses/weights, closed exported triangles and a compact 1K atlas resolve them. Ordinary playback, actual stored recovery, project continuation, decoded texture pixels and independent skin/motion roundtrips pass. The final sequential gate is 601 frontend units / 14 Rust checks / 194 browser / 12 journeys / 3 strict checks. HISTORY owns source and retained evidence. Original references and owner queue fixes are unchanged. These are stylized demonstration clips; new poses/game contact and installed Windows acceptance remain separate. TODO selects complete Rust solver migration next; publication is not part of this asset batch.
+The original Sable pack is published at `2343b08`. HISTORY retains anatomy,
+topology, recovery, parsed motion/skin and source-bound gate evidence; the
+provenance register owns generation-specific distribution rights. Drafts and
+borrowed inputs stay private. New poses and game contact remain separate.
 
 ## Published export queue review and recheck — 2026-10-15
 
@@ -208,10 +235,6 @@ outside this pass. Historical Git commits and the preserved preview source tag
 still contain the removed scaffolding. No selected implementation defect remains
 open; TODO records the completed local acceptance and separate distribution scope.
 
----
-AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
-
-AI-edited: 2026-10-15T22:16:39-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=rechecked publication and bounded production integration
-
-AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits
-AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=rechecked published guidance and previews and recorded scoped repairs
+<!--
+AI-edited: 2026-10-16 | agent=Codex/root | task=reliability-review | change=classified source repairs and native acceptance gap
+-->

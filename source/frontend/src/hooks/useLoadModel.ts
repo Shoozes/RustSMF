@@ -126,9 +126,11 @@ import {
   type SkinVertexDiagnostic,
 } from '../utils/skinDiagnostics';
 import {
+  clearEditorRedo,
+  createAuthoringHistoryBranch,
+  type AuthoringHistoryBranch,
   makeEditorHistory,
-  popRedo,
-  popUndo,
+  restoreEditorHistory,
   pushEditorHistory,
   type EditorHistoryEntry,
   type EditorHistoryState,
@@ -211,6 +213,7 @@ interface KeyboardEditorHistoryHandlers {
 interface UseLoadModelOptions {
   allocateHistoryOrder?: () => number;
   externalDirtyRef?: { current: boolean };
+  historyBranch?: AuthoringHistoryBranch;
 }
 
 const getTauriClient = createLazyClientLoader<TauriClient>(() => import('../backend-client/tauri').then((clientMod) => ({
@@ -652,6 +655,15 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     setEditorRedoOrder(editorHistoryRef.current.redo.at(-1)?.redoOrder ?? 0);
   }, []);
 
+  const localHistoryBranch = useMemo(createAuthoringHistoryBranch, []);
+  const historyBranch = options.historyBranch ?? localHistoryBranch;
+  useEffect(() => historyBranch.subscribe(() => {
+    editorHistoryRef.current = clearEditorRedo(editorHistoryRef.current);
+    skinRedoStackRef.current = [];
+    refreshEditorHistoryAvailability();
+    refreshSkinHistoryAvailability();
+  }), [historyBranch, refreshEditorHistoryAvailability, refreshSkinHistoryAvailability]);
+
   const clearEditorHistory = useCallback(() => {
     editorHistoryRef.current = makeEditorHistory();
     activePoseTransformHistoryRef.current = null;
@@ -728,17 +740,16 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     const skeleton = model.skeleton;
     if (!skeleton) return false;
 
-    let restored = 0;
-    for (const [boneName, saved] of Object.entries(snapshot.bones)) {
-      const bone = findBoneByName(skeleton, boneName);
-      if (!bone) continue;
+    const targets = Object.entries(snapshot.bones).map(([name, saved]) => ({ bone: findBoneByName(skeleton, name), saved }));
+    if (targets.length === 0 || targets.some(target => !target.bone)) return false;
+    for (const { bone, saved } of targets) {
+      if (!bone) return false;
 
       bone.position.fromArray(saved.position);
       bone.quaternion.fromArray(saved.quaternion);
       bone.scale.fromArray(saved.scale);
       bone.updateMatrix();
       bone.updateMatrixWorld(true);
-      restored += 1;
     }
 
     model.root?.updateMatrixWorld(true);
@@ -753,7 +764,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         : '',
     });
 
-    return restored > 0;
+    return true;
   }, [commitSkinEditState, model.root, model.skeleton, ui]);
 
   const applyRigSnapshot = useCallback((snapshot: RigHistorySnapshot): boolean => {
@@ -828,25 +839,25 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     const editedClips = applyAnimationEditsToClips(nextBaseClips, snapshot.animationEditState);
     const activeClipName = getCurrentClipKey(editedClips, snapshot.currentClipName);
     const activeClip = editedClips.find((clip, index) => getClipKey(clip, index) === activeClipName) ?? editedClips[0];
-    if (!activeClip) return false;
-
-    const nextTime = Math.max(0, Math.min(snapshot.currentTime, activeClip.duration || 0));
+    const nextTime = activeClip ? Math.max(0, Math.min(snapshot.currentTime, activeClip.duration || 0)) : 0;
     baseClipsRef.current = nextBaseClips;
     commitAnimationEditState(snapshot.animationEditState);
-    playbackRef.current.setCurrentClipName(activeClipName);
-    playbackRef.current.setDuration(activeClip.duration);
+    playbackRef.current.setCurrentClipName(activeClip ? activeClipName : '');
+    playbackRef.current.setDuration(activeClip?.duration ?? 0);
     playbackRef.current.setCurrentTime(nextTime);
+    if (!activeClip) playbackRef.current.setIsPlaying(false);
     return true;
   }, [commitAnimationEditState, playbackRef]);
 
   const pushEditorHistoryEntry = useCallback((entry: EditorHistoryEntry<EditorHistorySnapshot>) => {
     const previousEvictions = editorHistoryRef.current.evictionCount;
     editorHistoryRef.current = pushEditorHistory(editorHistoryRef.current, entry);
+    historyBranch.acceptEdit();
     if (editorHistoryRef.current.evictionCount > previousEvictions) {
       ui.setStatus('Editor history budget reached; the oldest undo entries were evicted.');
     }
     refreshEditorHistoryAvailability();
-  }, [refreshEditorHistoryAvailability, ui]);
+  }, [historyBranch, refreshEditorHistoryAvailability, ui]);
 
   const pushPoseHistory = useCallback((
     label: string,
@@ -934,89 +945,35 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     return true;
   }, [allocateHistoryOrder, pushEditorHistoryEntry]);
 
-  const undoEditorHistory = useCallback(() => {
-    const result = popUndo(editorHistoryRef.current, allocateHistoryOrder());
+  const moveEditorHistory = useCallback((direction: 'undo' | 'redo') => {
+    const result = restoreEditorHistory(editorHistoryRef.current, direction, (entry, snapshot) => {
+      if (entry.domain === 'pose' && snapshot.kind === 'pose') {
+        if (!applyPoseSnapshot(snapshot.value)) return false;
+        rigIkLastResultRef.current = null;
+        setRigIkLastResult(null);
+        return true;
+      }
+      if (entry.domain === 'animation' && snapshot.kind === 'animation') {
+        commitAnimationEditState(snapshot.value);
+        return true;
+      }
+      if (entry.domain === 'animation' && snapshot.kind === 'animation-workspace') {
+        return applyAnimationWorkspaceSnapshot(snapshot.value);
+      }
+      if (entry.domain === 'rig' && snapshot.kind === 'rig') return applyRigSnapshot(snapshot.value);
+      if (entry.domain === 'rig' && snapshot.kind === 'static-skin-preparation') {
+        return applyStaticMeshSkinPreparationSnapshot(snapshot.value);
+      }
+      return false;
+    }, allocateHistoryOrder());
+    if (!result.entry) { ui.setStatus(`No editor ${direction} available.`); return; }
+    if (!result.applied) { ui.setStatus(`${direction === 'undo' ? 'Undo' : 'Redo'} skipped: ${result.entry.label} target is unavailable.`); return; }
     editorHistoryRef.current = result.state;
     refreshEditorHistoryAvailability();
-
-    if (!result.entry) {
-      ui.setStatus('No editor undo available.');
-      return;
-    }
-
-    if (result.entry.domain === 'pose' && result.entry.before.kind === 'pose') {
-      if (!applyPoseSnapshot(result.entry.before.value)) {
-        ui.setStatus(`Undo skipped: ${result.entry.label} target bone is missing.`);
-        return;
-      }
-      rigIkLastResultRef.current = null;
-      setRigIkLastResult(null);
-    } else if (result.entry.domain === 'animation' && result.entry.before.kind === 'animation') {
-      commitAnimationEditState(result.entry.before.value);
-    } else if (result.entry.domain === 'animation' && result.entry.before.kind === 'animation-workspace') {
-      if (!applyAnimationWorkspaceSnapshot(result.entry.before.value)) {
-        ui.setStatus(`Undo skipped: ${result.entry.label} animation clip target is missing.`);
-        return;
-      }
-    } else if (result.entry.domain === 'rig' && result.entry.before.kind === 'rig') {
-      if (!applyRigSnapshot(result.entry.before.value)) {
-        ui.setStatus(`Undo skipped: ${result.entry.label} rig target is missing.`);
-        return;
-      }
-    } else if (result.entry.domain === 'rig' && result.entry.before.kind === 'static-skin-preparation') {
-      if (!applyStaticMeshSkinPreparationSnapshot(result.entry.before.value)) {
-        ui.setStatus(`Undo skipped: ${result.entry.label} model target is missing.`);
-        return;
-      }
-    } else {
-      ui.setStatus(`Undo skipped: ${result.entry.domain} history payload is invalid.`);
-      return;
-    }
-
-    ui.setStatus(`Undid ${result.entry.label}.`);
+    ui.setStatus(`${direction === 'undo' ? 'Undid' : 'Redid'} ${result.entry.label}.`);
   }, [allocateHistoryOrder, applyAnimationWorkspaceSnapshot, applyPoseSnapshot, applyRigSnapshot, applyStaticMeshSkinPreparationSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
-
-  const redoEditorHistory = useCallback(() => {
-    const result = popRedo(editorHistoryRef.current, allocateHistoryOrder());
-    editorHistoryRef.current = result.state;
-    refreshEditorHistoryAvailability();
-
-    if (!result.entry) {
-      ui.setStatus('No editor redo available.');
-      return;
-    }
-
-    if (result.entry.domain === 'pose' && result.entry.after.kind === 'pose') {
-      if (!applyPoseSnapshot(result.entry.after.value)) {
-        ui.setStatus(`Redo skipped: ${result.entry.label} target bone is missing.`);
-        return;
-      }
-      rigIkLastResultRef.current = null;
-      setRigIkLastResult(null);
-    } else if (result.entry.domain === 'animation' && result.entry.after.kind === 'animation') {
-      commitAnimationEditState(result.entry.after.value);
-    } else if (result.entry.domain === 'animation' && result.entry.after.kind === 'animation-workspace') {
-      if (!applyAnimationWorkspaceSnapshot(result.entry.after.value)) {
-        ui.setStatus(`Redo skipped: ${result.entry.label} animation clip target is missing.`);
-        return;
-      }
-    } else if (result.entry.domain === 'rig' && result.entry.after.kind === 'rig') {
-      if (!applyRigSnapshot(result.entry.after.value)) {
-        ui.setStatus(`Redo skipped: ${result.entry.label} rig target is missing.`);
-        return;
-      }
-    } else if (result.entry.domain === 'rig' && result.entry.after.kind === 'static-skin-preparation') {
-      if (!applyStaticMeshSkinPreparationSnapshot(result.entry.after.value)) {
-        ui.setStatus(`Redo skipped: ${result.entry.label} model target is missing.`);
-        return;
-      }
-    } else {
-      ui.setStatus(`Redo skipped: ${result.entry.domain} history payload is invalid.`);
-      return;
-    }
-
-    ui.setStatus(`Redid ${result.entry.label}.`);
-  }, [allocateHistoryOrder, applyAnimationWorkspaceSnapshot, applyPoseSnapshot, applyRigSnapshot, applyStaticMeshSkinPreparationSnapshot, commitAnimationEditState, refreshEditorHistoryAvailability, ui]);
+  const undoEditorHistory = useCallback(() => moveEditorHistory('undo'), [moveEditorHistory]);
+  const redoEditorHistory = useCallback(() => moveEditorHistory('redo'), [moveEditorHistory]);
 
   const clearLoadedModel = useCallback(() => {
     lastSmfDataRef.current = null;
@@ -3161,9 +3118,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     };
 
     appendSkinHistory('undo', entry);
-    skinRedoStackRef.current = [];
+    historyBranch.acceptEdit();
     refreshSkinHistoryAvailability();
-  }, [allocateHistoryOrder, appendSkinHistory, model.root, refreshSkinHistoryAvailability]);
+  }, [allocateHistoryOrder, appendSkinHistory, historyBranch, model.root, refreshSkinHistoryAvailability]);
 
   const undoSkinPaint = useCallback(() => {
     if (activeSkinStrokeRef.current) {
@@ -3263,11 +3220,11 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
       order: allocateHistoryOrder(),
     };
     appendSkinHistory('undo', entry);
-    skinRedoStackRef.current = [];
+    historyBranch.acceptEdit();
     model.skeleton?.update();
     refreshSkinHistoryAvailability();
     return changed;
-  }, [allocateHistoryOrder, appendSkinHistory, commitSkinEditState, model.root, model.skeleton, refreshSkinHistoryAvailability, ui]);
+  }, [allocateHistoryOrder, appendSkinHistory, commitSkinEditState, historyBranch, model.root, model.skeleton, refreshSkinHistoryAvailability, ui]);
 
   const normalizeSkinWeights = useCallback(() => {
     if (activeSkinStrokeRef.current) {

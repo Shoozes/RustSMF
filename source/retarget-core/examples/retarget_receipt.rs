@@ -1,5 +1,5 @@
 use rustsmf_retarget_core::{
-    analyze_v1, AnalysisInputV1, AnalysisResultV1, ClipSnapshotV1, ConventionV1,
+    analyze_json_v1, analyze_v1, AnalysisInputV1, AnalysisResultV1, ClipSnapshotV1, ConventionV1,
     SkeletonNodeSnapshotV1, SkeletonSnapshotV1, TrackSnapshotV1,
 };
 use serde::Serialize;
@@ -197,7 +197,21 @@ fn cases() -> Vec<Case> {
         tracks: vec![track("tail.position", "tail", "position")],
     });
 
+    let mut unnamed = input(&["hips", "head"], &["hips", "head"]);
+    for rig in [&mut unnamed.source, &mut unnamed.target] {
+        rig.nodes.push(node("", Some(0), false, [0., 0., 0.]));
+        rig.nodes[1].parent = Some(2);
+    }
+    let names: Vec<String> = (0..512).map(|i| format!("deform_{i}")).collect();
+    let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+    let mut boundary = input(&refs, &refs);
+    boundary.manual_map = names
+        .iter()
+        .map(|name| (name.clone(), name.clone()))
+        .collect();
     vec![
+        case("unnamed_nonbone_ancestors", unnamed),
+        case("bone_limit_512", boundary),
         case("mixamo_to_unity_with_clip_and_helper_track", mixamo_unity),
         case("ue4_to_rigify", ue4_rigify),
         case("unity_to_mixamo", unity_mixamo),
@@ -231,8 +245,18 @@ fn main() {
         }
         all.push(c);
     }
+    let refusals: Vec<_> = [true, false].into_iter().map(|source| {
+        let mut value = input(&["hips"], &["hips"]);
+        let names: Vec<String> = (0..513).map(|i| format!("deform_{i}")).collect();
+        let refs: Vec<&str> = names.iter().map(String::as_str).collect();
+        if source {value.source = rig(&refs);} else {value.target = rig(&refs);}
+        let result: serde_json::Value = serde_json::from_str(&analyze_json_v1(&serde_json::to_string(&value).unwrap())).unwrap();
+        assert!(result.get("error").is_some(), "513 bones must be refused");
+        serde_json::json!({"name": if source {"source_bone_limit_513"} else {"target_bone_limit_513"}, "input": value, "result": result})
+    }).collect();
     println!(
         "{}",
-        serde_json::to_string(&serde_json::json!({"cases": all})).expect("fixtures serialize")
+        serde_json::to_string(&serde_json::json!({"cases": all, "refusals": refusals}))
+            .expect("fixtures serialize")
     );
 }

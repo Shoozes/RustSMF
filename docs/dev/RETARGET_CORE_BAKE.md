@@ -43,7 +43,7 @@ Shared malformed-TRS errors retain `SAMPLER_*` codes; core errors use
 `BAKE_OUTPUT_LIMIT`, `BAKE_NUMERIC_ERROR` and `BAKE_CANCELLED`.
 
 The sample-v1 operation and refusal behavior remain compatible. Its bounds also
-apply here: 16 MiB JSON, 4096 nodes/2048 bones per skeleton, 256 jobs, 32768 tracks
+apply here: 16 MiB JSON, 4096 nodes/512 bones per skeleton, 256 jobs, 32768 tracks
 per clip, and 16 million input scalars. Baking additionally bounds each schedule
 at 20000 samples and the aggregate output at 16 million scalars before allocation.
 Labels are bounded, target allowlists at 2048 entries, and scale specs at 16.
@@ -67,14 +67,16 @@ Adapter units mutate both authoring and captured mapping metadata; an isolated
 aliasing mutant must fail. Known translation/quaternion anchors remain explicit.
 HISTORY and the compact ignored runtime receipt own source-bound gate results.
 
-Advanced motion parity and production integration remain separate TODO outcomes.
+Advanced motion parity and production integration are complete; installed Windows
+interaction remains separately qualified. Unnamed helper nodes use private transport
+identity. Zero-duration source/target reference clips contain one key at zero;
+main moving clips require positive duration.
 The private dummy, Tripo drafts and borrowed references are not test fixtures.
 
 The separate [advanced entry](RETARGET_ADVANCED_BAKE.md) adds the complete
 experimental report; this core-only API retains its capability/refusal contract.
 
----
-AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-core-bake
-
-AI-edited: 2026-10-15T20:58:42-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=code | change=implemented advanced parity and isolated experimental WASM payload
-AI-edited: 2026-10-16T00:52:52-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=routed production to complete baking
+<!--
+AI-created: 2026-10-15 | agent=Codex/root | task=retarget-core-bake
+AI-edited: 2026-10-16T00:52:52-04:00 | agent=Codex/root | task=production-integration | change=routed production to complete baking
+-->

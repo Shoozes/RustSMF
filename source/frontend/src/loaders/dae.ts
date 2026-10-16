@@ -5,6 +5,8 @@ import { disposeThreeObject } from '../utils/threeDisposal';
 import { isThreeBone, isThreeMesh, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
 import { createResourceUrlRegistry, type ModelResourceBundle } from '../utils/modelResourceBundle';
 import { withSourceMaterialState } from '../utils/materialPreview';
+import { createModelResourceLifecycle } from '../utils/modelResourceLifecycle';
+import { trackInterpolation } from '../utils/animationTrackInterpolation';
 import {
   collectMaterialTextures,
   MODEL_TEXTURE_IMAGE_WAIT_MS,
@@ -55,19 +57,20 @@ export async function loadDAE(
   const bundle = isBundle ? urlOrBuffer as ModelResourceBundle : null;
   const registry = bundle && (bundle.files.length > 1 || options.strictResources) ? createResourceUrlRegistry(bundle) : null;
   const manager = new THREE.LoadingManager();
+  const lifecycle = createModelResourceLifecycle(manager, 'DAE');
   if (registry) manager.setURLModifier((url) => registry.resolve(url));
   const loader = new ColladaLoader(manager);
   let root: THREE.Group | null = null;
   try {
-    const collada = typeof urlOrBuffer === 'string'
-      ? await loader.loadAsync(urlOrBuffer)
-      : loader.parse(
-        new TextDecoder().decode(bundle ? bundle.primary.data : new Uint8Array(urlOrBuffer as ArrayBuffer)),
-        bundle ? resourceBasePath(bundle.primary.name) : '',
-      );
+    const text = typeof urlOrBuffer === 'string'
+      ? await new THREE.FileLoader(manager).loadAsync(urlOrBuffer)
+      : new TextDecoder().decode(bundle ? bundle.primary.data : new Uint8Array(urlOrBuffer as ArrayBuffer));
+    if (typeof text !== 'string') throw new Error('Collada source must contain XML text.');
+    const collada = loader.parse(text, bundle ? resourceBasePath(bundle.primary.name) : typeof urlOrBuffer === 'string' ? resourceBasePath(urlOrBuffer) : '');
     if (!collada?.scene) throw new Error('Collada file did not contain a visual scene.');
     root = collada.scene as unknown as THREE.Group;
     root.name = 'DAE_Root';
+    await lifecycle.wait(!!registry);
     const textures = collectMaterialTextures(root, DAE_TEXTURE_SLOTS);
     await waitForTextureImages(textures, MODEL_TEXTURE_IMAGE_WAIT_MS);
     const { removed: removedTextureMaps } = removeUnavailableMaterialTextures(root, DAE_TEXTURE_SLOTS);
@@ -90,6 +93,10 @@ export async function loadDAE(
       }
     });
     const clips = (collada.scene as THREE.Scene & { animations?: THREE.AnimationClip[] }).animations ?? [];
+    // The pinned Collada reader uses clip IDs as names. Retain the authored label.
+    const clipNames = new Map([...new DOMParser().parseFromString(text, 'application/xml').getElementsByTagName('animation_clip')]
+      .map(element => [element.getAttribute('id'), element.getAttribute('name')]));
+    for (const clip of clips) clip.name = clipNames.get(clip.name) || clip.name;
     const skeleton = skinnedMeshes[0]?.skeleton;
     const notes: string[] = [];
     if (meshCount === 0) notes.push('No mesh geometry was found in the Collada file.');
@@ -111,6 +118,7 @@ export async function loadDAE(
     if (root) disposeThreeObject(root);
     throw error;
   } finally {
+    lifecycle.dispose();
     registry?.dispose();
   }
 }
@@ -250,15 +258,37 @@ function animationBlocks(root: THREE.Group, clips: THREE.AnimationClip[], ids: M
   }).join('');
 }
 
+export function assertDaeExportFidelity(root: THREE.Object3D, clips: readonly THREE.AnimationClip[]): void {
+  if (clips.length > 1) throw new Error('DAE supports one clip per export. Use GLB for multiple clips.');
+  root.traverse(object => {
+    if (!isThreeMesh(object)) return;
+    const materials = Array.isArray(object.material) ? object.material : [object.material];
+    if (materials.length > 1) throw new Error('DAE supports one solid material per mesh. Use GLB for material groups.');
+    if (materials.some(material => Object.values(material).some(value => value instanceof THREE.Texture))) {
+      throw new Error('DAE texture export is unsupported. Use GLB to keep textures.');
+    }
+  });
+  for (const clip of clips) for (const track of clip.tracks) {
+    const binding = THREE.PropertyBinding.parseTrackName(track.name);
+    if (binding.objectName || binding.propertyIndex !== undefined
+      || !['position', 'quaternion', 'scale'].includes(binding.propertyName)
+      || trackInterpolation(track) !== THREE.InterpolateLinear) {
+      throw new Error('DAE supports linear transform animation. Use GLB to keep this animation.');
+    }
+    if (!THREE.PropertyBinding.findNode(root, binding.nodeName)) throw new Error('DAE animation target is missing. Repair the clip before exporting.');
+  }
+}
+
 export async function exportDAE(root: THREE.Group, clips: THREE.AnimationClip[] = []): Promise<Uint8Array> {
   return withSourceMaterialState(root, async () => {
+    assertDaeExportFidelity(root, clips);
     const used = new Set<string>(); const ids = new Map<THREE.Object3D, string>(); const geometryIds = new Map<THREE.Object3D, string>(); const controllerIds = new Map<THREE.Object3D, string>(); const materialIds = new Map<THREE.Object3D, string>();
     const meshes: THREE.Mesh[] = []; const skinnedMeshes: THREE.SkinnedMesh[] = []; const materials = new Map<string, { material: string; effect: string }>();
     root.traverse((object) => { ids.set(object, idFor('node', object.name || object.uuid, used)); if (isThreeMesh(object)) { meshes.push(object); geometryIds.set(object, idFor('geom', object.uuid, used)); const materialId = idFor('mat', (Array.isArray(object.material) ? object.material[0] : object.material)?.name || object.uuid, used); materialIds.set(object, materialId); if (!materials.has(materialId)) materials.set(materialId, materialBlocks(materialId, object.material)); if (isThreeSkinnedMesh(object)) { skinnedMeshes.push(object); controllerIds.set(object, idFor('ctrl', object.uuid, used)); } } });
     const rootBone = skinnedMeshes[0]?.skeleton.bones.find((bone) => !bone.parent || !isThreeBone(bone.parent));
     const geometries = meshes.map((mesh) => geometryBlock(mesh, geometryIds.get(mesh)!, materialIds.get(mesh)!)).join('');
     const controllers = skinnedMeshes.map((mesh) => controllerBlock(mesh, controllerIds.get(mesh)!, geometryIds.get(mesh)!, ids)).join('');
-    const dae = `<?xml version="1.0" encoding="utf-8"?><COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1"><asset><contributor><authoring_tool>RustSMF</authoring_tool></contributor><unit name="meter" meter="1"/><up_axis>Y_UP</up_axis></asset><library_effects>${[...materials.values()].map((value) => value.effect).join('')}</library_effects><library_materials>${[...materials.values()].map((value) => value.material).join('')}</library_materials><library_geometries>${geometries}</library_geometries><library_controllers>${controllers}</library_controllers><library_animations>${animationBlocks(root, clips, ids)}</library_animations><library_visual_scenes><visual_scene id="scene" name="RustSMF">${visualNode(root, ids, geometryIds, controllerIds, materialIds, rootBone ? ids.get(rootBone) : undefined)}</visual_scene></library_visual_scenes><scene><instance_visual_scene url="#scene"/></scene></COLLADA>`;
+    const dae = `<?xml version="1.0" encoding="utf-8"?><COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1"><asset><contributor><authoring_tool>RustSMF</authoring_tool></contributor><unit name="meter" meter="1"/><up_axis>Y_UP</up_axis></asset><library_effects>${[...materials.values()].map((value) => value.effect).join('')}</library_effects><library_materials>${[...materials.values()].map((value) => value.material).join('')}</library_materials><library_geometries>${geometries}</library_geometries><library_controllers>${controllers}</library_controllers><library_animations>${animationBlocks(root, clips, ids)}</library_animations><library_animation_clips>${clips.map((clip, index) => `<animation_clip id="clip-${index}" name="${xmlEscape(clip.name)}" start="0" end="${number(clip.duration)}">${[...new Set(clip.tracks.map(track => THREE.PropertyBinding.findNode(root, THREE.PropertyBinding.parseTrackName(track.name).nodeName) as THREE.Object3D))].map(node => `<instance_animation url="#dae-anim-${index}-${ids.get(node)}"/>`).join('')}</animation_clip>`).join('')}</library_animation_clips><library_visual_scenes><visual_scene id="scene" name="RustSMF">${visualNode(root, ids, geometryIds, controllerIds, materialIds, rootBone ? ids.get(rootBone) : undefined)}</visual_scene></library_visual_scenes><scene><instance_visual_scene url="#scene"/></scene></COLLADA>`;
     return new TextEncoder().encode(dae);
   });
 }
@@ -270,7 +300,10 @@ export async function validateExportedDAE(bytes: Uint8Array, sourceRoot: THREE.G
   try {
     const expectedMeshes: THREE.Object3D[] = []; sourceRoot.traverse((object) => { if (isThreeMesh(object)) expectedMeshes.push(object); });
     if (loaded.summary.meshCount !== expectedMeshes.length) throw new Error(`DAE roundtrip validation failed: mesh count changed from ${expectedMeshes.length} to ${loaded.summary.meshCount}.`);
-    if (sourceClips.length > 0 && loaded.clips.length === 0) throw new Error('DAE roundtrip validation failed: animation clips were dropped.');
+    if (loaded.clips.length !== sourceClips.length || sourceClips.some((clip, index) => loaded.clips[index].name !== clip.name
+      || Math.abs(loaded.clips[index].duration - clip.duration) > 1e-5)) {
+      throw new Error('DAE roundtrip validation failed: clip names, count or timing changed.');
+    }
     return loaded.summary;
   } finally { loaded.mixer.stopAllAction(); disposeThreeObject(loaded.root); }
 }

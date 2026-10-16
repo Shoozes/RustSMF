@@ -53,4 +53,6 @@ browser and product journey check ordinary Open/playback, project continuation
 and independently sampled queued GLB roundtrip. See the
 [test inventory](../../source/frontend/tests/README.md).
 
-AI-edited: 2026-10-16T16:21:33.101Z | agent=Codex/root | model=unknown | effort=unknown | task=standalone-product-guidance | change=kept user workflows self-contained and routed optional sample authoring to developer notes
+<!--
+AI-edited: 2026-10-16T16:21:33.101Z | agent=Codex/root | task=standalone-product-guidance | change=kept user workflows self-contained and routed optional sample authoring to developer notes
+-->

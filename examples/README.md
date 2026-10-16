@@ -31,7 +31,5 @@ The generator uses the pinned Three.js exporter.
 </details>
 
 <!--
-AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
-AI-edited: 2026-10-16T16:21:33.101Z | agent=Codex/root | model=unknown | effort=unknown | task=standalone-product-guidance | change=kept user workflows self-contained and routed optional sample authoring to developer notes
-AI-edited: 2026-10-16T16:31:34.044Z | agent=Codex/root | model=unknown | effort=unknown | task=concise-user-copy | change=shortened instructions and kept metadata out of rendered guidance
+AI-edited: 2026-10-16T16:31:34.044Z | agent=Codex/root | task=concise-user-copy | change=shortened instructions and kept metadata out of rendered guidance
 -->

@@ -26,6 +26,38 @@ export interface EditorHistoryState<TSnapshot> {
 
 export const EDITOR_HISTORY_BYTE_LIMIT = 64 * 1024 * 1024;
 
+export function createAuthoringHistoryBranch() {
+  const listeners = new Set<() => void>();
+  return {
+    subscribe(invalidateRedo: () => void): () => void {
+      listeners.add(invalidateRedo);
+      return () => { listeners.delete(invalidateRedo); };
+    },
+    // Call only for accepted forward edits, never when allocating undo order.
+    acceptEdit(): void {
+      for (const invalidateRedo of listeners) invalidateRedo();
+    },
+  };
+}
+
+export type AuthoringHistoryBranch = ReturnType<typeof createAuthoringHistoryBranch>;
+
+export function clearEditorRedo<TSnapshot>(state: EditorHistoryState<TSnapshot>): EditorHistoryState<TSnapshot> {
+  if (state.redo.length === 0) return state;
+  return { ...state, redo: [], bytesUsed: sumEntryBytes(state.undo) };
+}
+
+export function restoreEditorHistory<TSnapshot>(
+  state: EditorHistoryState<TSnapshot>,
+  direction: 'undo' | 'redo',
+  restore: (entry: EditorHistoryEntry<TSnapshot>, snapshot: TSnapshot) => boolean,
+  order?: number,
+) {
+  const candidate = direction === 'undo' ? popUndo(state, order) : popRedo(state, order);
+  const applied = !!candidate.entry && restore(candidate.entry, direction === 'undo' ? candidate.entry.before : candidate.entry.after);
+  return { entry: candidate.entry, state: applied ? candidate.state : state, applied };
+}
+
 export interface HistoryChronologyCandidate<TDomain extends string> {
   domain: TDomain;
   available: boolean;

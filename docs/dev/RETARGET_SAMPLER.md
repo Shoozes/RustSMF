@@ -22,15 +22,18 @@ and smooth quaternion interpolation are refused explicitly.
 - `apiVersion: 1`, `operation: sample`, source and target skeletons, explicit
   source-to-target mapping, clip jobs and requested `sampleTimes`.
 - Skeleton nodes retain topologically ordered helper ancestry and owned local
-  rest TRS. Bone indices retain skeleton order. Names must be unique; bindings
-  resolve to explicit node indices. Supplied world metadata is validated, but
+  rest TRS. Bone indices retain skeleton order. Bone names must be unique. Unnamed or
+  repeated helper names use private transport identities; bound channels must
+  resolve unambiguously to explicit node indices. Supplied world metadata is validated, but
   matrices are recomputed from local rest data.
 - Each clip has name, duration, normal blend mode (2500), and transform tracks:
   node index, position/quaternion/scale, interpolation, float32 times and values.
   Arrays are copied before serialization; canonical buffers are not transferred.
 - Source/target reference clips and endpoint target clips have explicit owning
   skeletons. They are independently sampled, without applying reference-pose or
-  endpoint corrections. Bake options remain separate for later migration.
+  endpoint corrections. A zero-duration source/target reference has one key at zero per channel;
+  moving and endpoint clips retain positive duration. Bake options remain
+  separate from the sampler-only API.
 
 Times are seconds; positions preserve authoring units and axes. No unit or
 reference-frame conversion is implied. Values and keys enter Rust as float32;
@@ -52,7 +55,7 @@ rest data remain unchanged. The retained Three.js notice covers the port.
 | Boundary | Limit |
 | --- | --- |
 | UTF-8 JSON entry point | 16 MiB before decoding |
-| Each skeleton | 4096 nodes, 2048 unique valid bone indices |
+| Each skeleton | 4096 nodes, 512 unique valid bone indices |
 | Clip jobs / endpoint clips per job | 256 / 256 |
 | Tracks per clip | 32768 |
 | Total track times and values, including references | 16 million scalars |
@@ -103,6 +106,7 @@ Advanced motion and production integration remain ordered in TODO.
 HISTORY owns final commands/source evidence. Sable, ZIP/export guards, Original
 references and private raw asset boundaries remain preserved.
 
----
-AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-sampler
-AI-edited: 2026-10-16T00:52:52-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=clarified sampler and production ownership
+<!--
+AI-created: 2026-10-15 | agent=Codex/root | task=retarget-sampler
+AI-edited: 2026-10-16T00:52:52-04:00 | agent=Codex/root | task=production-integration | change=clarified sampler and production ownership
+-->

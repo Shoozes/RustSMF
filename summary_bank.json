@@ -38,7 +38,7 @@
     },
     "workflow__context_bank": {
       "description": "Portable public context routing, validation, and generation entry points.",
-      "max_kb": 112,
+      "max_kb": 114,
       "paths": [
         "summary_bank.json",
         "scripts/context-bank-lib.mjs",
@@ -313,7 +313,7 @@
     },
     "feature__model_outliner_authoring": {
       "description": "Guarded non-SMF Outliner metadata, static structural/surface authoring, and bounded global history.",
-      "max_kb": 146,
+      "max_kb": 150,
       "paths": [
         "source/frontend/src/App.tsx",
         "source/frontend/src/components/Outliner.tsx",
@@ -592,7 +592,7 @@
     },
     "feature__skin_authoring": {
       "description": "Skin paint and regional smoothing, Modern direct-paint chrome, brush indexing, auto-weight algorithms, history, exportability, and browser ownership.",
-      "max_kb": 154,
+      "max_kb": 158,
       "paths": [
         "source/frontend/src/components/SkinPanel.tsx",
         "source/frontend/src/components/ModernSkinWorkspace.tsx",
@@ -838,17 +838,22 @@
         "source/frontend/src/utils/textureImageReadiness.ts",
         "source/frontend/src/utils/textureImageReadiness.test.ts",
         "source/frontend/src/test/externalGltfFixture.test.ts",
-        "source/frontend/tests/export-formats.spec.ts",
         "source/frontend/tests/helpers/external-fbx-fixture.ts",
         "source/frontend/tests/fixtures/external-gltf/scene.gltf",
         "source/frontend/tests/fixtures/external-gltf/mesh.bin",
         "source/frontend/tests/fixtures/external-gltf/texture.png",
-        "source/src-tauri/src/main.rs"
+        "source/src-tauri/src/main.rs",
+        "source/frontend/src/utils/modelResourceLifecycle.ts",
+        "source/frontend/src/utils/modelResourceLifecycle.test.ts",
+        "source/frontend/src/loaders/obj.test.ts",
+        "source/frontend/tests/interchange-reliability.spec.ts",
+        "source/frontend/tests/helpers/interchange-fixtures.ts"
       ],
       "notes": [
         "Browser and native open paths normalize one primary plus selected relative sidecars into a bounded bundle; GLTFLoader, FBXLoader, and OBJLoader resolve only authorized local names.",
         "Traversal, remote/data, duplicate/case-ambiguous, per-file/aggregate size, missing-resource, stale-load, and object-URL cleanup guards are implemented and tested. Texture loaders retain bundle URLs until image loads settle, remove failed maps before renderer/export work, and cap waits at two seconds.",
-        "FBX resolves only texture paths referenced by the file; unrelated selected maps are not guessed into material slots. OBJ supports one MTL bundle with relative textures; multiple material libraries and unsafe or unresolved resources fail closed while geometry-only OBJ remains supported."
+        "FBX resolves only texture paths referenced by the file; unrelated selected maps are not guessed into material slots. OBJ supports one MTL bundle with relative textures; multiple material libraries and unsafe or unresolved resources fail closed while geometry-only OBJ remains supported.",
+        "Focused delayed-resource/browser regressions replace the broad format suite here; export-formats.spec.ts remains with export and quality owners."
       ]
     },
     "issue__smf_resource_contract": {
@@ -886,7 +891,7 @@
     },
     "subsystem__load_editor_orchestration": {
       "description": "Load/export intent ownership, editor snapshots, candidate construction, and stable cross-component event contracts.",
-      "max_kb": 192,
+      "max_kb": 196,
       "paths": [
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/hooks/smfExportCandidate.ts",
@@ -901,12 +906,14 @@
         "source/frontend/src/store/index.ts",
         "source/frontend/src/store/index.test.ts",
         "source/frontend/src/store/README.md",
-        "source/frontend/src/types/viewportEditorEvents.ts"
+        "source/frontend/src/types/viewportEditorEvents.ts",
+        "source/frontend/tests/history-integrity.spec.ts"
       ],
       "notes": [
         "useLoadModel keeps its public return contract while pure snapshots and export candidates own focused policy; the codec-task lifecycle is routed through subsystem__export_pipeline.",
         "Renderer and requestAnimationFrame ownership remain in ThreeViewport; mount listeners and TransformControls have explicit dispose owners.",
-        "Replacement decisions are centralized before byte materialization, async static append verifies current-root ownership before scene mutation, and editor history is capped at 100 entries/64 MiB with eviction status."
+        "Replacement decisions are centralized before byte materialization, async static append verifies current-root ownership before scene mutation, and editor history is capped at 100 entries/64 MiB with eviction status.",
+        "Accepted forward edits invalidate all redo domains; failed restores retain the cursor and skin restores bind to skeleton identity/order."
       ]
     },
     "feature__humanoid_pose_review": {
@@ -1132,11 +1139,13 @@
         "source/frontend/src/utils/retargetPreview.ts",
         "source/frontend/tests/retarget-transfer.spec.ts",
         "docs/dev/RETARGET_ASSISTANCE.md",
-        "source/frontend/src/components/Timeline.tsx"
+        "source/frontend/src/components/Timeline.tsx",
+        "source/frontend/tests/retarget-contract.spec.ts"
       ],
       "notes": [
         "useLoadModel and App integration retain subsystem__load_editor_orchestration; rendering integration retains subsystem__viewport_editor. Public profiles retain feature__retarget_profiles.",
-        "subsystem__retarget_core owns shared native/WASM mapping and build tooling; the complete TypeScript solver remains in feature__rig_retargeting. Browser workers have no synchronous fallback. Preview resources and canonical editor resources have separate lifetimes."
+        "subsystem__retarget_core owns shared native/WASM mapping and build tooling; the complete TypeScript solver remains in feature__rig_retargeting. Browser workers have no synchronous fallback. Preview resources and canonical editor resources have separate lifetimes.",
+        "Private node identities preserve unnamed helper ancestry; 1-512 bones, one-key zero-duration reference clips and positive-duration motion share native/WASM bounds."
       ]
     },
     "subsystem__retarget_core": {
@@ -1221,7 +1230,8 @@
         "Captures own source materials, images, skin, hierarchy and clips; eight rows / 128 MiB inputs; results use the existing 256 MiB save bound.",
         "The foreground save owner reserves the queue and retains latest trailing autosave; pending/preparation cancellation cannot revoke issued native saves.",
         "Explicit formats never fall back; completed native saves and browser download issuance are excluded from retry. Browser/mock IPC is separate from installed Windows evidence.",
-        "Snapshot estimates follow actual private track/attribute/image/instance copies; interleaved sharing is retained. Material display changes wait for active source readers."
+        "Snapshot estimates follow actual private track/attribute/image/instance copies; interleaved sharing is retained. Material display changes wait for active source readers.",
+        "UUID-addressed channels remap to captured nodes; interchange-reliability.spec.ts in issue__external_model_resources owns delayed resources and captured known motion. DAE fidelity refusals share the direct export policy."
       ]
     },
     "feature__original_sable_asset": {

@@ -136,16 +136,15 @@ fn skeleton(
     cancel: &impl Fn() -> bool,
     strict_world: bool,
 ) -> Checked<()> {
-    if s.nodes.is_empty() || s.nodes.len() > MAX_NODES || s.bones.is_empty() || s.bones.len() > 2048
+    if s.nodes.is_empty() || s.nodes.len() > MAX_NODES || s.bones.is_empty() || s.bones.len() > 512
     {
         return Err(invalid(path));
     }
     let mut names = HashSet::new();
     for (i, node) in s.nodes.iter().enumerate() {
         checkpoint(cancel)?;
-        if node.name.is_empty()
-            || node.name.len() > 1024
-            || !names.insert(&node.name)
+        if node.name.len() > 1024
+            || (node.is_bone && (node.name.is_empty() || !names.insert(&node.name)))
             || node.parent.is_some_and(|p| p >= i)
             || !bounded(&node.position, 1e12)
             || !quaternion(&node.quaternion)
@@ -176,9 +175,11 @@ fn clip(
     path: &str,
     cancel: &impl Fn() -> bool,
 ) -> Checked<()> {
+    let reference = path == "sourceReferenceClip" || path == "targetReferenceClip";
     if clip.name.len() > 1024
         || !clip.duration.is_finite()
-        || clip.duration <= 0.0
+        || clip.duration < 0.0
+        || (clip.duration == 0.0 && !reference)
         || clip.duration > 1e9
         || clip.tracks.len() > 32768
     {
@@ -223,6 +224,7 @@ fn clip(
             || t.node >= s.nodes.len()
             || !channels.insert((t.node, &t.property))
             || t.times.is_empty()
+            || (clip.duration == 0.0 && (t.times.len() != 1 || t.times[0] != 0.0))
             || t.values.len() != t.times.len() * size * if cubic { 3 } else { 1 }
             || t.times
                 .iter()

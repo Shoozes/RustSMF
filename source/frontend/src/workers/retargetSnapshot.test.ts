@@ -39,3 +39,14 @@ test('preview uses private bones, mixer and materials; releasing it retains live
   assert.equal(materialDisposed,false);assert.equal(geometryDisposed,false);assert.equal(root.children.includes(mesh),true);
   mesh.skeleton.dispose();geometry.dispose();material.dispose();
 });
+
+test('snapshot keeps unnamed helper identity and enforces the production bone limit', () => {
+  const helper = new THREE.Group(), bone = new THREE.Bone(); bone.name = 'Root'; helper.add(bone); helper.updateMatrixWorld(true);
+  const rig = new THREE.Skeleton([bone]); const snapshot = snapshotSkeleton(rig, 'current');
+  assert.equal(snapshot.nodes[0].name, ''); assert.equal(snapshot.nodes[0].id, helper.uuid);
+  const restored = restoreSkeleton(snapshot); assert.equal(restored.bones[0].parent!.uuid, helper.uuid);
+  const bones = Array.from({length: 513}, (_, i) => {const b = new THREE.Bone(); b.name = `Joint_${i}`; return b;});
+  const edge = new THREE.Skeleton(bones.slice(0, 512)); assert.equal(snapshotSkeleton(edge, 'current').bones.length, 512);
+  const oversized = new THREE.Skeleton(bones); assert.throws(() => snapshotSkeleton(oversized), /512 bones.*513/);
+  [rig, restored, edge, oversized].forEach(s => s.dispose());
+});

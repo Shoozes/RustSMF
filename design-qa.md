@@ -1,5 +1,12 @@
 # Modern UI Design QA — v0.2 productization complete
 
+## Editing and interchange reliability
+
+No controls, theme or layout change. Short errors explain unsupported DAE
+exports and over-limit Transfer rigs. Existing six-size, DPR/fractional/coarse,
+keyboard and Escape/focus checks remain acceptance lanes. HISTORY binds the
+final strict result; no baseline updates are intended. Original stays fixed.
+
 ## Animal-chain assistance
 
 Existing Transfer controls are unchanged. The compact summary keeps Apply/Discard
@@ -9,6 +16,9 @@ The full browser suite retains fractional DPI, DPR 1/1.25/2, coarse targets,
 keyboard and Escape/focus coverage. Three strict checks pass without baseline
 updates. Sable's Idle/Walk/Run/Sit previews use actual playback; global viewport
 lighting and the asset are unchanged. HISTORY binds source and results.
+
+The published `7244351` visuals remain the reference for the local chain-boundary
+repair. The ordinary six-size journey passes; no controls/styles or media change.
 
 ## Rust production integration
 
@@ -100,12 +110,6 @@ The curated overview now shows the model with the tools closed. Modern's empty s
 
 `source/frontend/tests/modern-shell.spec.ts` owns command visibility, one-drawer behavior, coarse-pointer target size, and DPR backing dimensions. `source/frontend/tests/visual.spec.ts` owns responsive shell, viewport controls, Modern/Original geometry, and strict screenshot evidence. `docs/dev/review.md` records suite outcomes; `docs/dev/HISTORY.md` records the final evidence entry.
 
----
-AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
-
-AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
-
-
-AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits
-
-AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=recorded quiet mapping and playback review
+<!--
+AI-edited: 2026-10-16 | agent=Codex/root | task=animal-chain-review | change=kept published visual evidence separate from the local boundary recheck
+-->

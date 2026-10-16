@@ -17,6 +17,7 @@ export interface SkinEditState {
 
 export interface SkinVertexSnapshot {
   meshId: string;
+  binding: { skeletonId: string; boneOrder: readonly string[] };
   vertexIndex: number;
   vertex: VertexSkinWeights;
 }
@@ -58,6 +59,9 @@ function estimateSkinEditStateBytes(state: SkinEditState): number {
 }
 
 export function estimateSkinEditHistoryEntryBytes(entry: SkinEditHistoryEntry): number {
+  const bindings = new Set([...entry.before, ...entry.after].map(snapshot => snapshot.binding));
+  const bindingBytes = [...bindings].reduce((total, binding) => total + 64 + binding.skeletonId.length * 2
+    + binding.boneOrder.reduce((bytes, id) => bytes + 16 + id.length * 2, 0), 0);
   const snapshotBytes = [...entry.before, ...entry.after].reduce(
     (total, snapshot) => total + 96 + snapshot.meshId.length * 2,
     0,
@@ -66,7 +70,8 @@ export function estimateSkinEditHistoryEntryBytes(entry: SkinEditHistoryEntry): 
     256,
     estimateSkinEditStateBytes(entry.beforeState)
       + estimateSkinEditStateBytes(entry.afterState)
-      + snapshotBytes,
+      + snapshotBytes
+      + bindingBytes,
   );
 }
 
@@ -404,6 +409,17 @@ function setVertexBoneWeightAtExactTarget(
   return { vertex: next, slot };
 }
 
+const skinBindingIdentities = new WeakMap<THREE.Skeleton, SkinVertexSnapshot['binding']>();
+
+function captureSkinBinding(skeleton: THREE.Skeleton): SkinVertexSnapshot['binding'] {
+  const previous = skinBindingIdentities.get(skeleton);
+  if (previous && previous.boneOrder.length === skeleton.bones.length
+    && previous.boneOrder.every((id, index) => skeleton.bones[index].uuid === id)) return previous;
+  const binding = { skeletonId: skeleton.uuid, boneOrder: skeleton.bones.map(bone => bone.uuid) };
+  skinBindingIdentities.set(skeleton, binding);
+  return binding;
+}
+
 export function captureSkinVertexSnapshot(
   mesh: THREE.SkinnedMesh,
   vertexIndex: number,
@@ -414,6 +430,7 @@ export function captureSkinVertexSnapshot(
   if (!vertex) return null;
   return {
     meshId: mesh.uuid,
+    binding: captureSkinBinding(mesh.skeleton),
     vertexIndex,
     vertex: cloneVertex(vertex),
   };
@@ -789,15 +806,28 @@ export function restoreSkinVertexSnapshots(
     }
   });
 
-  let restored = 0;
+  const seen = new Set<string>();
+  // Validate every target before writing any weights or moving a history cursor.
   for (const snapshot of snapshots) {
     const mesh = meshById.get(snapshot.meshId);
-    if (!mesh) continue;
-    if (writeSkinnedMeshVertexWeights(mesh, snapshot.vertexIndex, snapshot.vertex)) {
-      restored += 1;
-    }
+    const attributes = mesh && getSkinAttributes(mesh.geometry);
+    const key = getSkinVertexSnapshotKey(snapshot.meshId, snapshot.vertexIndex);
+    if (!mesh || !attributes || !snapshot.binding || seen.has(key)
+      || !Number.isInteger(snapshot.vertexIndex) || snapshot.vertexIndex < 0
+      || !readVertexSkinWeights(attributes, snapshot.vertexIndex)
+      || snapshot.binding.skeletonId !== mesh.skeleton.uuid
+      || snapshot.binding.boneOrder.length !== mesh.skeleton.bones.length
+      || snapshot.binding.boneOrder.some((id, index) => mesh.skeleton.bones[index].uuid !== id)
+      || snapshot.vertex.indices.length !== 4 || snapshot.vertex.weights.length !== 4
+      || snapshot.vertex.indices.some((index, slot) => !Number.isInteger(index) || index < 0
+        || index > 65535 || (snapshot.vertex.weights[slot] > 0 && index >= mesh.skeleton.bones.length))
+      || snapshot.vertex.weights.some(weight => !Number.isFinite(weight) || weight < 0)) return 0;
+    seen.add(key);
   }
-  return restored;
+  for (const snapshot of snapshots) {
+    writeSkinnedMeshVertexWeights(meshById.get(snapshot.meshId)!, snapshot.vertexIndex, snapshot.vertex);
+  }
+  return snapshots.length;
 }
 
 export function writeVertexSkinWeights(

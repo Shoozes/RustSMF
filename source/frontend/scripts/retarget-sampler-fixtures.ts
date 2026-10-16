@@ -70,7 +70,13 @@ export function samplerFixtures() {
   refs.clips[0].endpointTargetClips = [structuredClone(step.clips[0].clip)];
   const single = request([new THREE.VectorKeyframeTrack('Root.position', [0], [7,8,9])]);
   const irregular = request([vector('Root.position', [0,0,0, 2,0,0, 1,0,0, 3,0,0], THREE.InterpolateSmooth, [0,.25,1,2])]);
-  const positives = Object.entries({ linear, smooth, step, cubic, constant, antipodal, slerp, small, float32, helper, references: refs, single, irregular });
+  const zeroPose = (clip: typeof linear.clips[0]['clip']) => ({...structuredClone(clip), duration: 0,
+    tracks: clip.tracks.map(t => ({...t, times: [0], values: t.values.slice(0, t.property === 'quaternion' ? 4 : 3)}))});
+  const zeroSource = structuredClone(linear); zeroSource.clips[0].sourceReferenceClip = zeroPose(linear.clips[0].clip);
+  const zeroTarget = structuredClone(linear); zeroTarget.clips[0].targetReferenceClip = zeroPose(linear.clips[0].clip);
+  const zeroBoth = structuredClone(zeroSource); zeroBoth.clips[0].targetReferenceClip = zeroPose(linear.clips[0].clip);
+  const unnamedHelpers = structuredClone(helper); unnamedHelpers.source.nodes[0].name = ''; unnamedHelpers.target.nodes[0].name = '';
+  const positives = Object.entries({zeroSource, zeroTarget, zeroBoth, unnamedHelpers, linear, smooth, step, cubic, constant, antipodal, slerp, small, float32, helper, references: refs, single, irregular });
   assert.equal(referenceSample(cubic).clips[0].samples.find(s => s.time === .5)!.pose.local[1].position[0], .59375);
   assert.equal(referenceSample(smooth).clips[0].samples.find(s => s.time === .5)!.pose.local[1].position[0], 1.25);
   assert.deepEqual(referenceSample(linear).clips[0].samples.find(s => s.time === 0)!.pose.worldMatrices[2].slice(12,15).map(v => Math.round(v)), [2,5,-1]);
@@ -81,6 +87,10 @@ export function samplerFixtures() {
   bad('unsupported-bake', r => { r.operation = 'bake'; }, 'SAMPLER_UNSUPPORTED_FEATURE');
   bad('unsupported-options', r => { r.clips[0].options = { scaleRootMotion: false }; }, 'SAMPLER_UNSUPPORTED_FEATURE');
   bad('unknown-option', r => { r.clips[0].options = { future: true }; }, 'SAMPLER_UNSUPPORTED_FEATURE');
+  bad('zero-moving-duration', r => {r.clips[0].clip.duration = 0;});
+  bad('zero-reference-multiple-keys', r => {r.clips[0].sourceReferenceClip = structuredClone(r.clips[0].clip); r.clips[0].sourceReferenceClip.duration = 0;});
+  bad('too-many-source-bones', r => {r.source.bones = Array(513).fill(1);});
+  bad('too-many-target-bones', r => {r.target.bones = Array(513).fill(1);});
   bad('version', r => { r.apiVersion = 2 as 1; });
   bad('cyclic-parent', r => { r.source.nodes[0].parent = 2; });
   bad('duplicate-name', r => { r.source.nodes[1].name = r.source.nodes[0].name; });

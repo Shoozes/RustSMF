@@ -4,7 +4,7 @@
 
 Choose Export, open Tools, then expand **Export queue**. Select GLB Runtime, FBX DCC, DAE Collada or SMF Legacy and use Add to capture the current authored model. Options holds a filename and Include all clips. Export queued processes captures in order. Modern keeps diagnostics and compatibility reports under **Format details**. The existing toolbar Export remains source-aware and keeps its existing fallback policy.
 
-Each queued item retains its selected format and captured geometry, hierarchy, rig data, raw influences, source materials, textures and clips. Later editing does not change that capture. Queued SMF uses imported SMF data when available. An unsupported explicit format is refused with its reason; no queue item changes format automatically. Presets reuse existing encoders and fidelity limits: GLB is the broadest path; FBX/DAE material and animation limits and SMF generated bone names, byte weights and scale restrictions still apply.
+Each queued item retains its selected format and captured geometry, hierarchy, rig data, raw influences, source materials, textures and clips. UUID-addressed tracks bind to captured nodes. Later editing does not change that capture. Queued SMF uses imported SMF data when available. An unsupported explicit format is refused with its reason; no queue item changes format automatically. DAE accepts one named linear TRS clip and one solid material per mesh; texture/multi-clip loss is refused before capture. Presets reuse existing encoders and fidelity limits: GLB is the broadest path; FBX/DAE material and animation limits and SMF generated bone names, byte weights and scale restrictions still apply.
 
 The queue belongs to this editor session; it is not saved in projects. Up to eight items and 128 MiB of estimated owned captures are allowed. Encoded results also respect the existing 256 MiB save limit. The estimate counts arrays, decoded image copies and scene metadata before cloning. Remove or Clear releases retained captures. Finished items retain only their small result rows.
 
@@ -27,8 +27,7 @@ Desktop destinations use the existing native save dialog for each item. Cancelin
 
 Browser downloads and mocked Tauri IPC are the acceptance lanes for this source pass. Installed Windows dialogs and a packaged queue build remain untested. HISTORY and the ignored compact receipt own exact source, final commands, results and reviewed captures. No version, release, installer or asset-distribution change belongs to this pass.
 
----
-AI-created: 2026-10-15T04:24:55-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs
-
----
-AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
+<!--
+AI-created: 2026-10-15T04:24:55-04:00 | agent=Codex/root | task=docs
+AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
+-->

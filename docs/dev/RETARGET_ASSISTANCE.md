@@ -22,7 +22,7 @@ Desktop Rust is bundled into the application; the web runner executes WASM local
 
 One client owns one active transfer per editor. Preparation, analysis and baking are correlated with job identity and the captured authoring revision. Each phase has a 120-second limit. Cancel, replacement, leaving Animate and disposal reject stale results and terminate browser workers; native analysis and baking use cooperative cancellation. Native progress channels are released on every exit; destroyed windows cancel their jobs. Runtime failures are visible and have no synchronous fallback.
 
-Skeletons, tracks and reference clips are copied into private worker objects. Canonical buffers are retained. Snapshot limits are 2048 bones, 4096 nodes and 256 selected clips, with 16 million values per serialized clip and a 16-million-value output estimate per bake. Rust validates its independent API bounds and finite transforms.
+Skeletons, tracks and reference clips are copied into private worker objects. Canonical buffers are retained. Unnamed helpers use private identities; ambiguous bound names remain refused. One-frame source/target reference poses may have zero duration. Snapshot limits are 512 bones, 4096 nodes and 256 selected clips, with 16 million values per serialized clip and a 16-million-value output estimate per bake. Rust validates its independent API bounds and finite transforms.
 
 Preview uses cloned bones, materials and a separate mixer. The existing timeline controls private preview playback, duration, seeking and speed; its authoring lane is hidden until Apply. Rendering hides the canonical root only during the synchronous draw call, restoring it before any save/export event can observe it. Preview does not replace canonical clips, dirty state, playback selection/time/speed or history. Multiple generated clips can be selected for preview. Closing Tools can retain preview; leaving Animate discards it and keeps the profile draft.
 
@@ -38,15 +38,11 @@ pwsh -File run.ps1 -Task verify
 pwsh -File run.ps1 -Task retarget:runtime-proof
 ```
 
-The runtime proof rebuilds native and WASM artifacts and compares 41 first-party fixture cases in Chromium: mappings and diagnostic structures exactly, numeric fields within `1e-6` relative/absolute tolerance. Existing advanced solver fixtures also run through serialized worker baking, including contacts, twist, timing, scale and endpoint constraints. `retargetCubicSpline.test.ts` checks actual glTF decoding, known curve values, copied buffers, references and worker parity. `retarget-transfer.spec.ts` owns real browser worker/WASM lifecycle, canonical preview preservation and independently sampled cubic-source export/project continuity; `retarget-continuity.journey.spec.ts` owns the broader profile journey. Tauri IPC mocks and native Rust command tests are distinct from actual installed OS-dialog observations.
+The runtime proof rebuilds native and WASM artifacts and compares 49 first-party preflight cases and two size refusals in Chromium: mappings and diagnostic structures exactly, numeric fields within `1e-6` relative/absolute tolerance. Existing advanced solver fixtures also run through serialized worker baking, including contacts, twist, timing, scale and endpoint constraints. `retargetCubicSpline.test.ts` checks actual glTF decoding, known curve values, copied buffers, references and worker parity. `retarget-transfer.spec.ts` owns real browser worker/WASM lifecycle, canonical preview preservation and independently sampled cubic-source export/project continuity; `retarget-continuity.journey.spec.ts` owns the broader profile journey. Tauri IPC mocks and native Rust command tests are distinct from actual installed OS-dialog observations.
 
 HISTORY owns the final candidate's commands/results. TODO owns ordered followups; asset references and drafts are registered separately in [ASSET_PROVENANCE.md](ASSET_PROVENANCE.md).
 
----
-AI-created: 2026-10-14T20:38:18-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs
-AI-edited: 2026-10-14T22:05:56-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=documented cubic interpolation and independent known-value proof
-
-
-AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits
-
-AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=routed reviewed animal-chain behavior and evidence
+<!--
+AI-created: 2026-10-14T20:38:18-04:00 | agent=Codex/root | task=docs
+AI-edited: 2026-10-16 | agent=Codex/root | task=animal-chain-assistance | change=routed reviewed animal-chain behavior and evidence
+-->

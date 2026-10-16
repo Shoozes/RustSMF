@@ -64,6 +64,7 @@ HISTORY and `output/zip-intake-20261015/receipt.json` own observed commands,
 source identity and retained captures. Native adapter tests use mocked IPC;
 this batch has no new installed Windows or OS-dialog acceptance claim.
 
----
-AI-created: 2026-10-15T01:25:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs
-AI-edited: 2026-10-15T03:32:39-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded ZIP review fixes and next export queue scope
+<!--
+AI-created: 2026-10-15T01:25:30-04:00 | agent=Codex/root | task=docs
+AI-edited: 2026-10-15T03:32:39-04:00 | agent=Codex/root | task=docs | change=recorded ZIP review fixes and next export queue scope
+-->

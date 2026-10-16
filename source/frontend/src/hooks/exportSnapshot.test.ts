@@ -27,6 +27,30 @@ function fixture() {
   return { input, root, mesh, geometry, material, texture, tip, clips };
 }
 const preset = { format: 'glb', includeAnimation: true } as const;
+
+test('capture rewrites the node address without altering an indexed property suffix', () => {
+  const f = fixture(); f.mesh.morphTargetInfluences = [0];
+  f.input.clips = [new THREE.AnimationClip('Indexed', 1, [new THREE.NumberKeyframeTrack(`${f.mesh.uuid}.morphTargetInfluences[0]`, [0, 1], [0, 1])])];
+  const captured = captureExportSnapshot(f.input, preset, 1_000_000);
+  try {
+    const mesh = captured.root!.getObjectByName('Triangle')!;
+    assert.equal(captured.clips[0].tracks[0].name, `${mesh.uuid}.morphTargetInfluences[0]`);
+    assert.notEqual(mesh.uuid, f.mesh.uuid);
+  } finally { captured.dispose(); }
+});
+
+test('UUID remapping preserves identical text in a path prefix and named property index', () => {
+  const f = fixture(); f.mesh.morphTargetInfluences = [0];
+  f.mesh.morphTargetDictionary = { [f.mesh.uuid]: 0 };
+  const suffix = `.morphTargetInfluences[${f.mesh.uuid}]`;
+  f.input.clips = [new THREE.AnimationClip('Indexed alias', 1, [new THREE.NumberKeyframeTrack(`${f.mesh.uuid}/${f.mesh.uuid}${suffix}`, [0, 1], [0, 1])])];
+  const captured = captureExportSnapshot(f.input, preset, 1_000_000);
+  try {
+    const mesh = captured.root!.getObjectByName('Triangle')!;
+    assert.equal(captured.clips[0].tracks[0].name, `${f.mesh.uuid}/${mesh.uuid}${suffix}`);
+    assert.equal(f.input.clips[0].tracks[0].name, `${f.mesh.uuid}/${f.mesh.uuid}${suffix}`);
+  } finally { captured.dispose(); }
+});
 test('captures geometry, raw influences, bones, transforms, metadata, clips and texture bytes independently', () => {
   const f = fixture(); const capture = captureExportSnapshot(f.input, preset, 1000000);
   const mesh = capture.root!.getObjectByName('Triangle') as THREE.SkinnedMesh;
@@ -138,4 +162,28 @@ test('preparation checks cancellation before export and produces validated owned
   await assert.rejects(prepareQueuedExport(capture, preset, controller.signal, () => true), /canceled/);
   const bytes = await prepareQueuedExport(capture, preset, new AbortController().signal, () => true);
   assert.equal(new TextDecoder().decode(bytes.subarray(0,4)), 'glTF'); capture.dispose();
+});
+
+test('captured UUID animation bindings retain property syntax, interpolation and owned motion', async () => {
+  installFileReaderTestPolyfill();
+  const f = fixture(); f.material.map = null; f.tip.name = '';
+  f.clips[0].tracks[0].name = `${f.tip.uuid}.position`;
+  f.clips[0].tracks[0].setInterpolation(THREE.InterpolateDiscrete);
+  const capture = captureExportSnapshot(f.input, preset, 1000000);
+  try {
+    const target = THREE.PropertyBinding.findNode(capture.root!, THREE.PropertyBinding.parseTrackName(capture.clips[0].tracks[0].name).nodeName);
+    assert.ok(target instanceof THREE.Object3D, 'cloned binding resolves inside the captured hierarchy');
+    assert.notEqual(target, f.tip);
+    assert.equal(capture.clips[0].tracks[0].getInterpolation(), THREE.InterpolateDiscrete);
+    assert.equal(f.clips[0].tracks[0].name, `${f.tip.uuid}.position`);
+    f.tip.position.y = 99; f.clips[0].tracks[0].values[4] = 88; f.root.remove(f.tip);
+    const mixer = new THREE.AnimationMixer(capture.root!);
+    const action = mixer.clipAction(capture.clips[0]); action.setLoop(THREE.LoopOnce, 1); action.clampWhenFinished = true; action.play();
+    for (const [time, expected] of [[0, 1], [.5, 1], [1, 2]]) { mixer.setTime(time); assert.equal(target.position.y, expected); }
+    mixer.stopAllAction(); mixer.uncacheRoot(capture.root!);
+    const cancelled = new AbortController(); cancelled.abort();
+    await assert.rejects(prepareQueuedExport(capture, preset, cancelled.signal, () => true), /canceled/);
+    const bytes = await prepareQueuedExport(capture, preset, new AbortController().signal, () => true);
+    assert.equal(new TextDecoder().decode(bytes.subarray(0, 4)), 'glTF');
+  } finally { capture.dispose(); }
 });

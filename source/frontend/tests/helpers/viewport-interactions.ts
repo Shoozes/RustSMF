@@ -282,7 +282,7 @@ export const paintOnMeshInViewport = async (
       await page.mouse.up({ button: 'left' });
       if (options?.requireDirty) {
         try {
-          await expect(page.getByTestId('skin-dirty-state')).toContainText('Skin edit dirty: true', { timeout: 300 });
+          await expect(page.locator('[data-testid="skin-dirty-state"], [data-testid="modern-skin-float"] [data-dirty="true"]').first()).toContainText(/Skin edit dirty: true|Unsaved weights/, { timeout: 300 });
         } catch {
           continue;
         }

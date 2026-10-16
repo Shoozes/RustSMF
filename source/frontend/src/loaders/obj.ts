@@ -4,6 +4,8 @@ import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader.js';
 import { isThreeMesh, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
 import { ensureGeometryAttributes } from './geometryAttributes';
 import { bytesToArrayBuffer } from './smfBinary';
+import { createModelResourceLifecycle } from '../utils/modelResourceLifecycle';
+import { disposeThreeObject } from '../utils/threeDisposal';
 import {
   createResourceUrlRegistry,
   normalizeResourceName,
@@ -32,11 +34,13 @@ export async function loadOBJ(urlOrBuffer: string | ArrayBuffer | ModelResourceB
   const bundle = isBundle ? urlOrBuffer as ModelResourceBundle : null;
   const registry = bundle ? createResourceUrlRegistry(bundle) : null;
   const manager = new THREE.LoadingManager();
+  const lifecycle = createModelResourceLifecycle(manager, 'OBJ');
   if (registry) manager.setURLModifier((url) => registry.resolve(url));
   const loader = new OBJLoader(manager);
+  let obj: THREE.Group | null = null;
+  let creator: ReturnType<MTLLoader['parse']> | null = null;
 
   try {
-    let obj: THREE.Group;
     if (typeof urlOrBuffer === 'string') {
       obj = await loader.loadAsync(urlOrBuffer);
     } else {
@@ -53,15 +57,14 @@ export async function loadOBJ(urlOrBuffer: string | ArrayBuffer | ModelResourceB
           const mtl = resolveModelResource(bundle, mtlName);
           if (!mtl) throw new Error(`OBJ material library "${materialRefs[0]}" is embedded and cannot be loaded.`);
           const mtlLoader = new MTLLoader(manager);
-          const creator = mtlLoader.parse(new TextDecoder().decode(bytesToArrayBuffer(mtl.data)), resourceBasePath(mtl.name));
+          creator = mtlLoader.parse(new TextDecoder().decode(bytesToArrayBuffer(mtl.data)), resourceBasePath(mtl.name));
           creator.preload();
-          await waitForManager(manager);
           loader.setMaterials(creator);
         }
       }
       obj = loader.parse(text);
-      if (bundle) await waitForManager(manager);
     }
+    await lifecycle.wait();
 
     const root = obj;
     root.name = 'OBJ_Root';
@@ -86,6 +89,7 @@ export async function loadOBJ(urlOrBuffer: string | ArrayBuffer | ModelResourceB
     }
 
     const mixer = new THREE.AnimationMixer(root);
+    releaseUnusedMaterials(creator, materialResources(root));
 
     return {
       root,
@@ -94,9 +98,31 @@ export async function loadOBJ(urlOrBuffer: string | ArrayBuffer | ModelResourceB
       clips: allClips,
       mixer,
     };
+  } catch (error) {
+    const used = materialResources(obj);
+    if (obj) disposeThreeObject(obj);
+    releaseUnusedMaterials(creator, used);
+    throw error;
   } finally {
+    lifecycle.dispose();
     registry?.dispose();
   }
+}
+
+function materialResources(obj: THREE.Group | null): Set<THREE.Material | THREE.Texture> {
+  const used = new Set<THREE.Material | THREE.Texture>();
+  obj?.traverse(node => {if (isThreeMesh(node)) for (const material of Array.isArray(node.material) ? node.material : [node.material]) {
+    used.add(material); for (const value of Object.values(material)) if (value instanceof THREE.Texture) used.add(value);
+  }});
+  return used;
+}
+function releaseUnusedMaterials(creator: ReturnType<MTLLoader['parse']> | null, used: Set<THREE.Material | THREE.Texture>): void {
+  const resources = new Set<THREE.Material | THREE.Texture>();
+  for (const material of Object.values(creator?.materials ?? {})) {
+    resources.add(material);
+    for (const value of Object.values(material)) if (value instanceof THREE.Texture) resources.add(value);
+  }
+  resources.forEach(resource => {if (!used.has(resource)) resource.dispose();});
 }
 
 function readMaterialLibraryReferences(text: string): string[] {
@@ -116,18 +142,6 @@ function resourceBasePath(name: string): string {
 function resolveRelativeResourceName(primaryName: string, reference: string): string {
   const base = resourceBasePath(primaryName);
   return normalizeResourceName(`${base}${reference}`);
-}
-
-function waitForManager(manager: THREE.LoadingManager): Promise<void> {
-  return new Promise((resolve, reject) => {
-    let started = false;
-    manager.onStart = () => { started = true; };
-    manager.onLoad = () => resolve();
-    manager.onError = (url) => reject(new Error(`OBJ sidecar resource failed to load: ${url}`));
-    queueMicrotask(() => {
-      if (!started) resolve();
-    });
-  });
 }
 
 // No OBJ export (limited per project scope; fallback to GLB/SMF for export).

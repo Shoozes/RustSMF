@@ -52,6 +52,8 @@ import { resolveAnimationScope } from './utils/animationScope'
 import { validateRig } from './utils/rigValidation'
 import { collectRigDeformBoneNames, collectRigHierarchyBones } from './utils/rigHierarchy'
 import {
+  clearEditorRedo,
+  createAuthoringHistoryBranch,
   makeEditorHistory,
   popRedo,
   popUndo,
@@ -131,6 +133,7 @@ const WORKSPACE_BY_MODE: Record<EditorMode, WorkspaceProfile> = {
 export default function App() {
   const [retargetProfileState, setRetargetProfileState] = useState({ draft: '', saved: '' });
   const historyOrderRef = useRef(0);
+  const historyBranch = useMemo(createAuthoringHistoryBranch, []);
   const hadModelRef = useRef(false);
   const outlinerHistoryRef = useRef<EditorHistoryState<ModelOutlinerSnapshot>>(makeEditorHistory());
   const outlinerHistoryIdRef = useRef(0);
@@ -346,7 +349,7 @@ export default function App() {
     changeAnimationClipRetime,
     changeAnimationClipTrim,
     toggleAnimationBoneLock,
-  } = useLoadModel({ allocateHistoryOrder, externalDirtyRef: outlinerDirtyRef });
+  } = useLoadModel({ allocateHistoryOrder, externalDirtyRef: outlinerDirtyRef, historyBranch });
 
   const workspace = WORKSPACE_BY_MODE[editorMode];
   const boneTransformOwner: BoneTransformOwner =
@@ -446,6 +449,15 @@ export default function App() {
       if (!object.parent) disposeThreeObject(object);
     }
   }, []);
+  useEffect(() => historyBranch.subscribe(() => {
+    const history = outlinerHistoryRef.current;
+    const retained = new Set(history.undo.flatMap(entry => [entry.before, entry.after])
+      .map(snapshot => snapshot.structuralOperation?.object));
+    outlinerHistoryRef.current = clearEditorRedo(history);
+    releaseDetachedOutlinerHistoryObjects(history.redo.flatMap(entry => [entry.before, entry.after])
+      .filter(snapshot => !retained.has(snapshot.structuralOperation?.object)));
+    refreshOutlinerHistoryAvailability();
+  }), [historyBranch, refreshOutlinerHistoryAvailability, releaseDetachedOutlinerHistoryObjects]);
   const captureOutlinerSnapshot = useCallback((
     orderedParentIds: Iterable<string> = [],
     selectedIds: Iterable<string> = selectedOutlinerIds,
@@ -502,15 +514,16 @@ export default function App() {
         }),
     );
     outlinerHistoryRef.current = nextHistory;
+    historyBranch.acceptEdit();
     refreshOutlinerHistoryAvailability();
     return true;
-  }, [allocateHistoryOrder, refreshOutlinerHistoryAvailability, releaseDetachedOutlinerHistoryObjects]);
+  }, [allocateHistoryOrder, historyBranch, refreshOutlinerHistoryAvailability, releaseDetachedOutlinerHistoryObjects]);
   const undoOutlinerHistory = useCallback((): boolean => {
     const result = popUndo(outlinerHistoryRef.current, allocateHistoryOrder());
     if (!result.entry) return false;
 
-    outlinerHistoryRef.current = result.state;
     const changed = applyOutlinerSnapshot(result.entry.before);
+    outlinerHistoryRef.current = result.state;
     refreshOutlinerHistoryAvailability();
     ui.setStatus(`Undid ${result.entry.label}${changed > 0 ? ` (${changed} object change${changed === 1 ? '' : 's'})` : ''}.`);
     return true;
@@ -519,8 +532,8 @@ export default function App() {
     const result = popRedo(outlinerHistoryRef.current, allocateHistoryOrder());
     if (!result.entry) return false;
 
-    outlinerHistoryRef.current = result.state;
     const changed = applyOutlinerSnapshot(result.entry.after);
+    outlinerHistoryRef.current = result.state;
     refreshOutlinerHistoryAvailability();
     ui.setStatus(`Redid ${result.entry.label}${changed > 0 ? ` (${changed} object change${changed === 1 ? '' : 's'})` : ''}.`);
     return true;

@@ -11,6 +11,11 @@ interface TestFilePayload {
 }
 
 export interface SkinnedGlbFixtureOptions {
+  unnamedHelpers?: boolean;
+  withReferencePose?: boolean;
+  boneCount?: number;
+  withoutAnimation?: boolean;
+  rootOnlyWeights?: boolean;
   withTexture?: boolean;
   nonPowerOfTwoTexture?: boolean;
   withMultiMaterial?: boolean;
@@ -141,7 +146,7 @@ function makeTextureMaterial(
 
 function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THREE.Group; clips: THREE.AnimationClip[] } {
   const root = new THREE.Group();
-  root.name = 'GeneratedSkinnedFixtureRoot';
+  root.name = options.unnamedHelpers ? '' : 'GeneratedSkinnedFixtureRoot';
   const rootScale = options.rootScale ?? 1;
   if (!Number.isFinite(rootScale) || rootScale <= 0) {
     throw new Error('Skinned GLB fixture rootScale must be finite and greater than zero');
@@ -158,7 +163,11 @@ function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THR
   rootBone.add(tipBone);
   const headBone = options.withHeadChain ? new THREE.Bone() : undefined;
   if (headBone) { headBone.name = 'FixtureHead'; headBone.position.y = .5; tipBone.add(headBone); }
-  root.add(rootBone);
+  if (options.unnamedHelpers) { const helper = new THREE.Group(); helper.add(rootBone); root.add(helper); }
+  else root.add(rootBone);
+  const extraBones = Array.from({length: Math.max(0, (options.boneCount ?? (headBone ? 3 : 2)) - (headBone ? 3 : 2))}, (_, i) => {
+    const bone = new THREE.Bone(); bone.name = `FixtureExtra${i}`; bone.position.y = 0.01; rootBone.add(bone); return bone;
+  });
 
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute('position', new THREE.Float32BufferAttribute([
@@ -191,6 +200,7 @@ function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THR
     1, 0, 0, 0,
     1, 0, 0, 0,
   ], 4));
+  if (options.rootOnlyWeights) geometry.getAttribute('skinIndex').array.fill(0);
   geometry.setIndex([0, 1, 2, 0, 2, 3]);
 
   const textureWidth = options.asymmetricTexture ? 32 : options.nonPowerOfTwoTexture ? 3 : 4;
@@ -205,7 +215,7 @@ function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THR
   if (options.duplicateTextureMaterials) material.name = 'FixtureSharedTextureMaterial';
   const mesh = new THREE.SkinnedMesh(geometry, material);
   mesh.name = 'FixtureSkinnedMesh';
-  mesh.bind(new THREE.Skeleton([rootBone, tipBone, ...(headBone ? [headBone] : [])]));
+  mesh.bind(new THREE.Skeleton([rootBone, tipBone, ...(headBone ? [headBone] : []), ...extraBones]));
 
   if (options.duplicateTextureMaterials) {
     if (geometry.getIndex()) {
@@ -262,11 +272,18 @@ function createFixtureScene(options: SkinnedGlbFixtureOptions = {}): { root: THR
     clip.tracks[0] = new THREE.QuaternionKeyframeTrack('FixtureTip.quaternion', [0, clipDuration / 2, clipDuration], [...rotation(0), ...rotation(100), ...rotation(0)]);
     clip.tracks.push(new THREE.QuaternionKeyframeTrack('FixtureHead.quaternion', [0, clipDuration / 2, clipDuration], [...rotation(0), ...rotation(-60), ...rotation(0)]));
   }
-  return { root, clips: [clip] };
+  const reference = new THREE.AnimationClip('Neutral', 0, [
+    new THREE.QuaternionKeyframeTrack('FixtureTip.quaternion', [0], [0, 0, 0, 1]),
+    new THREE.VectorKeyframeTrack('FixtureRoot.position', [0], [0, 0, 0]),
+  ]);
+  return { root, clips: options.withoutAnimation ? [] : [clip, ...(options.withReferencePose ? [reference] : [])] };
 }
 
 function getFixtureKey(options: SkinnedGlbFixtureOptions): string {
   return [
+    `bones-${options.boneCount ?? 2}`, `helpers-${options.unnamedHelpers ?? false}`, `reference-${options.withReferencePose ?? false}`,
+    options.withoutAnimation ? 'no-animation' : 'animated',
+    options.rootOnlyWeights ? 'root-weights' : 'split-weights',
     options.withTexture ? 'textured' : 'solid',
     options.nonPowerOfTwoTexture ? 'npot' : 'pot',
     options.withMultiMaterial ? 'multi' : 'single',

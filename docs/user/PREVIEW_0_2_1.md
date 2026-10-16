@@ -55,5 +55,5 @@ Compact observations, independent asset assertions and useful compositor capture
 This preview accepts the supported bounded workflows documented in the user guide. It does not certify arbitrary third-party assets, every FBX producer, other operating systems or game-specific acceptance. Existing SMF scale, DAE texture and ambiguous-name restrictions remain in effect.
 
 <!--
-AI-edited: 2026-10-16T16:31:34.045Z | agent=Codex/root | model=unknown | effort=unknown | task=concise-user-copy | change=shortened instructions and kept metadata out of rendered guidance
+AI-edited: 2026-10-16T16:31:34.045Z | agent=Codex/root | task=concise-user-copy | change=shortened instructions and kept metadata out of rendered guidance
 -->

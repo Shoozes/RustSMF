@@ -345,4 +345,6 @@ delivery.
 Build-only Binaryen 132.0.0 (Apache-2.0) optimizes the WASM artifact; its tool
 is not bundled. npm lock integrity pins its archive.
 
-AI-edited: 2026-10-16T00:58:15-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=added checksum-verified WASM dependency notices
+<!--
+AI-edited: 2026-10-16T00:58:15-04:00 | agent=Codex/root | task=production-integration | change=added checksum-verified WASM dependency notices
+-->

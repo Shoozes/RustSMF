@@ -154,8 +154,8 @@ fn ordered<'a>(rig: &SkeletonSnapshotV1, members: &'a [Member]) -> Option<Vec<&'
             if indices.contains(&i) {
                 return Some(i);
             }
-            // Skip helpers, but never cross another anatomical chain.
-            if rig.bones.contains(&i) && member(rig, i).is_some() {
+            // Only helpers may bridge deform members; unknown bones need review.
+            if rig.bones.contains(&i) && !is_helper_name(&rig.nodes[i].name) {
                 return None;
             }
             cursor = rig.nodes[i].parent;

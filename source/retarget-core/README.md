@@ -32,9 +32,7 @@ enable `advanced-bake` and pin Binaryen 132.0.0 optimization after wasm-bindgen
 
 The crate's `LICENSE` covers project-owned code. Carry the exact dependency notices from the repository's `THIRD_PARTY_NOTICES.md` and `THIRD_PARTY_LICENSES.txt` with distributions containing their code or generated WASM glue. Dependency and generator versions are pinned together.
 
----
-AI-created: 2026-10-14T20:38:18-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs
-AI-edited: 2026-10-14T20:38:18-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded retarget and asset workflow ownership
-AI-edited: 2026-10-15T20:58:42-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=code | change=implemented advanced parity and isolated experimental WASM payload
-
-AI-edited: 2026-10-16T00:52:52-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=aligned production execution and proof ownership
+<!--
+AI-created: 2026-10-14T20:38:18-04:00 | agent=Codex/root | task=docs
+AI-edited: 2026-10-16T00:52:52-04:00 | agent=Codex/root | task=production-integration | change=aligned production execution and proof ownership
+-->

@@ -7,7 +7,7 @@ import { disposeThreeObject } from '../utils/threeDisposal';
 import { mergeRetargetClips, profileClipOptions, type RetargetProfile } from '../utils/retargetProfile';
 import { poseRangeSummary } from '../utils/poseRanges';
 import { createRetargetJobClient, RetargetCancelledError, type RetargetJob, type TransferProgress } from '../workers/retargetJobClient';
-import { clipMetadata, rememberRetargetRest, restoreClip, snapshotClip, snapshotOptions, snapshotSkeleton } from '../workers/retargetSnapshot';
+import { assertTransferBoneCount, clipMetadata, rememberRetargetRest, restoreClip, snapshotClip, snapshotOptions, snapshotSkeleton } from '../workers/retargetSnapshot';
 import type { AnalysisResultV1, ConventionV1, SkeletonSnapshotV1 } from '../workers/retargetAnalysisTypes';
 import type { AnimationWorkspaceHistorySnapshot } from './editorSnapshots';
 import type { TauriClient } from '../backend-client/tauri';
@@ -107,6 +107,7 @@ export function useRetargetTransfer(options:Options) {
     setState(review);
     try{
       const data=await client.preparation(job,async()=>{
+        assertTransferBoneCount(skeleton.bones.length);
         const result=await (await latest.current.getClient()).readBrowserModelFiles(files);
         if(!valid(job))throw new RetargetCancelledError();
         if(result.error)throw new Error(result.error);

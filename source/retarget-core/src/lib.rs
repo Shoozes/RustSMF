@@ -211,7 +211,7 @@ fn validate_skeleton(
     for (i, node) in s.nodes.iter().enumerate() {
         cancelled(check_cancelled)?;
         if node.name.len() > 1024
-            || node.name.trim().is_empty()
+            || (node.is_bone && node.name.trim().is_empty())
             || !finite(&node.position)
             || !within(&node.position, MAX_POSITION_COMPONENT)
             || !finite(&node.quaternion)

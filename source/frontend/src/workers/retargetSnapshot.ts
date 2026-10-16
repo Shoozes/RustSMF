@@ -15,6 +15,12 @@ export type BakeOptions = Omit<AnimationRetargetOptions, 'sourceReferenceClip' |
 };
 
 const ownedRest = new WeakMap<THREE.Skeleton, Map<THREE.Object3D, THREE.Matrix4>>();
+export const MAX_TRANSFER_BONES = 512;
+export function assertTransferBoneCount(count: number): void {
+  if (!Number.isInteger(count) || count < 1 || count > MAX_TRANSFER_BONES) {
+    throw new Error(`Transfer supports 1–${MAX_TRANSFER_BONES} bones; this rig has ${count}.`);
+  }
+}
 
 /** Capture authored local rest transforms before playback, including helper ancestry. */
 export function rememberRetargetRest(skeleton: THREE.Skeleton): void {
@@ -30,7 +36,7 @@ export function rememberRetargetRest(skeleton: THREE.Skeleton): void {
 
 /** Copy the complete helper ancestry; never pose or detach the live editor skeleton. */
 export function snapshotSkeleton(skeleton: THREE.Skeleton, rest:'bind'|'current'='bind'): SkeletonSnapshotV1 {
-  if (!skeleton.bones.length || skeleton.bones.length > 2048) throw new Error('Transfer needs 1–2048 bones.');
+  assertTransferBoneCount(skeleton.bones.length);
   const nodes: THREE.Object3D[] = [], indices = new Map<THREE.Object3D, number>();
   const add = (node: THREE.Object3D): number => {
     const prior = indices.get(node); if (prior !== undefined) return prior;
@@ -51,16 +57,18 @@ export function snapshotSkeleton(skeleton: THREE.Skeleton, rest:'bind'|'current'
     local.decompose(position, quaternion, scale);
     const worldPosition = new THREE.Vector3(), worldQuaternion = new THREE.Quaternion();
     world.decompose(worldPosition, worldQuaternion, new THREE.Vector3());
-    return { name: node.name, parent, isBone: node instanceof THREE.Bone,
+    return { id: node.uuid, name: node.name, parent, isBone: node instanceof THREE.Bone,
       position: position.toArray(), quaternion: quaternion.toArray(), scale: scale.toArray(),
       worldPosition: worldPosition.toArray(), worldQuaternion: worldQuaternion.toArray() };
   }) };
 }
 
 export function restoreSkeleton(snapshot: SkeletonSnapshotV1): THREE.Skeleton {
-  if (snapshot.nodes.length > 4096 || snapshot.bones.length > 2048) throw new Error('Transfer skeleton exceeds limits.');
+  assertTransferBoneCount(snapshot.bones.length);
+  if (snapshot.nodes.length > 4096) throw new Error('Transfer skeleton exceeds 4096 nodes.');
   const nodes = snapshot.nodes.map(item => {
     const node = item.isBone ? new THREE.Bone() : new THREE.Group();
+    if (item.id) node.uuid = item.id;
     node.name = item.name; node.position.fromArray(item.position); node.quaternion.fromArray(item.quaternion); node.scale.fromArray(item.scale);
     return node;
   });

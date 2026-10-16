@@ -26,11 +26,29 @@ test('portable adapter refuses ambiguous bindings, unsupported types, nonfinite 
   original.clips[0].clip.tracks[0].name='Missing.position';assert.throws(()=>portableBakeRequest(original,[0]),/Unsupported portable transform/);
   original.clips[0].clip.tracks[0].name='Root.position';original.clips[0].clip.tracks[0].values=new Float32Array([NaN]);
   assert.throws(()=>portableBakeRequest(original,[0]),/finite numbers/);original.source.nodes.push(original.source.nodes[0]);
-  assert.throws(()=>portableBakeRequest(original,[0]),/uniquely named/);
+  assert.throws(()=>portableBakeRequest(original,[0]),/uniquely identified/);
 });
 test('sampler fixtures establish independent Hermite, smooth and transformed-helper anchors',()=>{
-  const fixtures=samplerFixtures();assert.equal(fixtures.positives.length,13);assert.ok(fixtures.negatives.length>=19);
+  const fixtures=samplerFixtures();assert.equal(fixtures.positives.length,17);assert.ok(fixtures.negatives.length>=19);
   assert.ok(fixtures.positives.every(c=>c.expected.status==='sampled'));
 });
 
 test('portable decoded glTF retains known cubic position and scale values',async()=>{await decodedSamplerFixture();});
+
+test('unnamed and duplicate helpers use private identity; ambiguous semantic channels fail', () => {
+  const original = input();
+  const helper = {...structuredClone(original.source.nodes[0]), name: '', id: 'private-helper', isBone: false};
+  original.source.nodes.push(helper, {...helper, id: 'other-helper'});
+  original.clips[0].clip.tracks[0].name = 'private-helper.position';
+  assert.equal(portableBakeRequest(original, [0]).clips[0].clip.tracks[0].node, 1);
+  original.source.nodes[1].name = 'Shared'; original.source.nodes[2].name = 'Shared';
+  original.clips[0].clip.tracks[0].name = 'Shared.position';
+  assert.throws(() => portableBakeRequest(original, [0]), /missing or ambiguous/);
+});
+
+test('both portable skeleton boundaries reject 513 bones before runtime dispatch', () => {
+  for (const side of ['source', 'target'] as const) {
+    const original = input(); original[side].bones = Array(513).fill(0);
+    assert.throws(() => portableBakeRequest(original, [0]), /512 bones.*513/);
+  }
+});

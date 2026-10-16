@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
 import { copyImportedSceneOwnership } from '../loaders/glb';
+import { assertDaeExportFidelity } from '../loaders/dae';
 import { cloneImportedSmf } from '../loaders/smfData';
 import type { ImportedSmf } from '../loaders';
 import { withSourceMaterialStateSync } from '../utils/materialPreview';
@@ -112,6 +113,7 @@ export function captureExportSnapshot(input: SmfExportCandidateInput, preset: Re
       return { bytes, root: null, clips: [], smf: cloneImportedSmf(selected), dispose() {} };
     }
     const clips = preset.includeAnimation ? input.clips : [];
+    if (preset.format === 'dae') assertDaeExportFidelity(input.root!, clips);
     const bytes = snapshotBytes(input.root, clips, null, limit);
     const resources = new Set<{ dispose(): void }>();
     const canvases: HTMLCanvasElement[] = [];
@@ -128,6 +130,25 @@ export function captureExportSnapshot(input: SmfExportCandidateInput, preset: Re
     };
     try {
       const root = clone(input.root!) as THREE.Group;
+      const sourceNodes: THREE.Object3D[] = [], capturedNodes: THREE.Object3D[] = [];
+      input.root!.traverse(node => sourceNodes.push(node));
+      root.traverse(node => capturedNodes.push(node));
+      if (sourceNodes.length !== capturedNodes.length) throw new Error('Export capture hierarchy changed. Try again.');
+      const capturedByUuid = new Map(sourceNodes.map((node, index) => [node.uuid, capturedNodes[index]]));
+      const capturedClips = cloneAnimationClips(clips);
+      for (const clip of capturedClips) for (const track of clip.tracks) {
+        const binding = THREE.PropertyBinding.parseTrackName(track.name);
+        const captured = binding.nodeName && capturedByUuid.get(binding.nodeName);
+        if (!captured) continue;
+        // Rewrite only the resolved node address, retaining the property/index suffix.
+        const indexed = (name: string | undefined, index: string | undefined) => name === undefined ? '' : `.${name}${index === undefined ? '' : `[${index}]`}`;
+        const suffix = indexed(binding.objectName, binding.objectIndex) + indexed(binding.propertyName, binding.propertyIndex);
+        const start = track.name.length - suffix.length - binding.nodeName!.length;
+        if (start < 0 || track.name.slice(start, start + binding.nodeName!.length) !== binding.nodeName) {
+          throw new Error('Export capture cannot resolve an animation address. Repair the clip before exporting.');
+        }
+        track.name = track.name.slice(0, start) + captured.uuid + track.name.slice(start + binding.nodeName!.length);
+      }
       const geometries = new Map<THREE.BufferGeometry, THREE.BufferGeometry>();
       const materials = new Map<THREE.Material, THREE.Material>();
       const textures = new Map<THREE.Texture, THREE.Texture>();
@@ -170,7 +191,7 @@ export function captureExportSnapshot(input: SmfExportCandidateInput, preset: Re
         }
       });
       copyImportedSceneOwnership(input.root!, root);
-      return { bytes, root, clips: cloneAnimationClips(clips), smf: null, dispose };
+      return { bytes, root, clips: capturedClips, smf: null, dispose };
     } catch (error) { dispose(); throw error; }
   };
   return withSourceMaterialStateSync(input.root, capture);

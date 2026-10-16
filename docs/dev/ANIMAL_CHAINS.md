@@ -24,7 +24,9 @@ of at least two members. Segment roles must agree and advance toward the end;
 numbered segments must be consecutive in ancestry order. Equal chain lengths
 are necessary, never sufficient. Rest segments need nonzero lengths and valid
 rotations/scales. Helper bones retain motion through the existing sampler but
-are not direct automatic targets. Normalized/fuzzy matching cannot rescue a
+are not direct automatic targets. Unrecognized deform bones interrupt a chain;
+they cannot be skipped as helpers. Non-bone ancestors may bridge named members.
+Normalized/fuzzy matching cannot rescue a
 refused animal chain or pair one with a humanoid limb.
 
 Explicit mappings remain authoritative, including unusual reviewed choices.
@@ -41,7 +43,8 @@ use hip-to-head as an automatic up axis; review coordinates and reference poses.
 diagnostic requirements to native units and the runtime proof. Fixtures cover
 all paired families, inherited context, helper/non-bone ancestry, aliases,
 side/front-hind conflicts, missing/duplicate/reversed tails, explicit overrides,
-numeric names, invalid rests and different proportions. Mutation controls must
+numeric names, unknown/Spine/unrelated-limb source/target deform boundaries, invalid rests
+and different proportions. Mutation controls must
 detect altered anatomical endpoint ordering. The runtime command compares native
 and actual browser WASM mappings/codes exactly and numbers at 1e-6 tolerance.
 
@@ -62,4 +65,7 @@ explicit maps; no chain resampling, custom rig creation/replacement, automatic
 skinning or animal IK is added. Sable alone proves no cross-animal compatibility.
 Private models, drafts and borrowed references are not test inputs or samples.
 
-AI-created: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance
+<!--
+AI-created: 2026-10-16 | agent=Codex/root | task=animal-chain-assistance
+AI-edited: 2026-10-16 | agent=Codex/root | task=animal-chain-review | change=required explicit review for unknown deform intermediates
+-->

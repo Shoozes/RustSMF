@@ -1,4 +1,4 @@
-//! Experimental advanced solving; the production editor remains on TypeScript.
+//! Shared advanced solving for production native Rust and worker-WASM execution.
 use crate::bake_math::*;
 use crate::sampler::{self, BakeRequestV1, Checked, ClipJobV1, TransformV1};
 use crate::SkeletonSnapshotV1;

@@ -50,7 +50,7 @@ function makeSkinnedMesh(): THREE.SkinnedMesh {
   const child = new THREE.Bone();
   child.position.set(0, 1, 0);
   root.add(child);
-  mesh.bind(new THREE.Skeleton([root, child]));
+  mesh.bind(new THREE.Skeleton([root, child, new THREE.Bone(), new THREE.Bone()]));
   return mesh;
 }
 
@@ -124,11 +124,13 @@ describe('skinWeights', () => {
   it('indexes skin snapshots by mesh and vertex without scanning the full list', () => {
     const first = {
       meshId: 'mesh-a',
+      binding: { skeletonId: 'skeleton-a', boneOrder: [] },
       vertexIndex: 3,
       vertex: { indices: [0, 1, 2, 3] as [number, number, number, number], weights: [1, 0, 0, 0] as [number, number, number, number] },
     };
     const second = {
       meshId: 'mesh-b',
+      binding: { skeletonId: 'skeleton-b', boneOrder: [] },
       vertexIndex: 3,
       vertex: { indices: [2, 3, 4, 5] as [number, number, number, number], weights: [0.25, 0.25, 0.25, 0.25] as [number, number, number, number] },
     };
@@ -531,6 +533,7 @@ describe('skinWeights', () => {
   it('bounds skin history by bytes while retaining the newest edit', () => {
     const snapshot = {
       meshId: 'mesh-1',
+      binding: { skeletonId: 'skeleton-1', boneOrder: [] },
       vertexIndex: 0,
       vertex: {
         indices: [0, 1, 2, 3] as [number, number, number, number],
@@ -544,12 +547,12 @@ describe('skinWeights', () => {
       after: [{ ...snapshot, vertexIndex: marker }],
     });
 
-    const first = appendSkinHistoryEntry([], makeEntry(1), 10, 700);
-    const second = appendSkinHistoryEntry(first.entries, makeEntry(2), 10, 700);
+    const first = appendSkinHistoryEntry([], makeEntry(1), 10, 850);
+    const second = appendSkinHistoryEntry(first.entries, makeEntry(2), 10, 850);
 
     assert.equal(second.accepted, true);
     assert.deepEqual(second.entries.map((entry) => entry.after[0]?.vertexIndex), [2]);
-    assert.ok(second.bytesUsed <= 700);
+    assert.ok(second.bytesUsed <= 850);
     assert.equal(second.evictions, 1);
   });
 
@@ -565,5 +568,36 @@ describe('skinWeights', () => {
     assert.ok(snapshot);
     assert.deepEqual(snapshot.vertex, next);
     assert.equal(writeSkinnedMeshVertexWeights(mesh, 99, next), false);
+  });
+
+  it('rejects deleted, reordered, or replaced skeletons before restoring weights', () => {
+    for (const change of ['delete', 'reorder', 'replace'] as const) {
+      const mesh = makeAutoskinMesh();
+      const snapshot = captureSkinVertexSnapshot(mesh, 0)!;
+      const root = new THREE.Group();
+      root.add(mesh);
+      writeSkinnedMeshVertexWeights(mesh, 0, { indices: [1, 0, 0, 0], weights: [1, 0, 0, 0] });
+      if (change === 'delete') mesh.skeleton.bones.pop();
+      if (change === 'reorder') mesh.skeleton.bones.reverse();
+      if (change === 'replace') mesh.skeleton = new THREE.Skeleton([...mesh.skeleton.bones]);
+      const unchanged = captureSkinVertexSnapshot(mesh, 0)!.vertex;
+      assert.equal(restoreSkinVertexSnapshots(root, [snapshot]), 0, change);
+      assert.deepEqual(captureSkinVertexSnapshot(mesh, 0)!.vertex, unchanged, change);
+    }
+  });
+
+  it('validates the whole skin restore before writing its first vertex', () => {
+    const mesh = makeAutoskinMesh();
+    const root = new THREE.Group();
+    root.add(mesh);
+    const snapshots = [captureSkinVertexSnapshot(mesh, 0)!, captureSkinVertexSnapshot(mesh, 1)!];
+    writeSkinnedMeshVertexWeights(mesh, 0, { indices: [1, 0, 0, 0], weights: [1, 0, 0, 0] });
+    const unchanged = captureSkinVertexSnapshot(mesh, 0)!.vertex;
+    snapshots[1].vertex.indices[0] = 2;
+    assert.equal(restoreSkinVertexSnapshots(root, snapshots), 0);
+    assert.deepEqual(captureSkinVertexSnapshot(mesh, 0)!.vertex, unchanged);
+    snapshots[1].vertex.indices[0] = 0;
+    assert.equal(restoreSkinVertexSnapshots(root, snapshots), 2);
+    assert.deepEqual(captureSkinVertexSnapshot(mesh, 0)!.vertex, snapshots[0].vertex);
   });
 });

@@ -81,6 +81,16 @@ export function coreBakeFixtures() {
   (sourceReference.tracks[0].values as Float32Array).set(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), .2).toArray(), 0);
   const targetReference = new THREE.AnimationClip('TargetNeutral', 1, [rotation('TBridge.quaternion', .3), vector('TBridge.position', [0, 2, .2], [0, 2, .2]), vector('TArm.scale', [1.5, 1, 2], [1.5, 1, 2])]);
   (targetReference.tracks[0].values as Float32Array).set(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), .3).toArray(), 0);
+  const oneFrame = (clip: THREE.AnimationClip) => new THREE.AnimationClip(clip.name, 0, clip.tracks.map(track => {
+    const copy = track.clone(); copy.times = copy.times.slice(0, 1); copy.values = copy.values.slice(0, track.getValueSize()); return copy;
+  }));
+  add('zero-source-reference', {sourceReferencePose: 'clip', sourceReferenceClip: oneFrame(sourceReference)});
+  add('zero-target-reference', {targetReferenceClip: oneFrame(targetReference)});
+  add('zero-both-references', {sourceReferencePose: 'clip', sourceReferenceClip: oneFrame(sourceReference), targetReferenceClip: oneFrame(targetReference)});
+  add('unnamed-helper-uuid', {}, input => {
+    for (const side of [input.source, input.target]) side.nodes[0].name = '';
+    input.clips[0].clip.tracks.find(t => t.name === 'SGroup.position')!.name = `${input.source.nodes[0].id}.position`;
+  });
   add('references', {sourceReferencePose: 'clip', sourceReferenceClip: sourceReference, targetReferenceClip: targetReference});
   add('preserved-rotations', {preserveTargetLeafRotations: true, preserveTargetRotations: ['TArm']});
   const scaleTransfer = [{sourceBone: 'SArm', targetBone: 'TArm', axes: ['y', 'x', 'z'] as ['y', 'x', 'z'], strength: [.5, 1, 0] as [number, number, number]}];

@@ -76,7 +76,7 @@ actions and queue presets report failures without switching formats.
 ## Mixamo source files
 
 Open DAE, FBX or GLB/GLTF with their related texture and buffer files. Select
-those files together. DAE keeps external textures separate; use GLB for one file.
+those files together. Use GLB to export textures in one file.
 
 Source builds can open one model ZIP. Choose a model if prompted. Cancel or
 Escape keeps current work. Extract ZIPs first in the 0.2.1 preview. Transfer and
@@ -113,7 +113,7 @@ during preview uses your unchanged clips. Review motion on each target rig.
 | SMF | No scale edits/animation, materials, morphs or multiple skeletons. Source submodel names/order stay unchanged. |
 | GLB/GLTF | GLB embeds textures. GLTF needs selected relative buffers/images. Duplicate names may change to preserve animation bindings. |
 | FBX | Select referenced texture files together. Other exporters and receiving apps may differ. |
-| DAE | External textures stay separate. Use GLB to embed them. |
+| DAE export | One clip, linear transforms and one solid material per mesh. Use GLB for textures or multiple clips. |
 | OBJ | Geometry and selected MTL/textures. No source rig or animation. |
 
 Missing required sidecars, ambiguous selections and unsafe resource paths are
@@ -131,8 +131,5 @@ Animated exports require valid position/rotation/scale transforms.
 For scripted batch jobs, see the [CLI reference](../dev/GAME_READY_CLI.md).
 
 <!--
-AI-edited: 2026-10-15T01:48:27-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded verified ZIP intake and lifecycle boundaries
-AI-edited: 2026-10-16T16:21:33.101Z | agent=Codex/root | model=unknown | effort=unknown | task=standalone-product-guidance | change=kept user workflows self-contained and routed optional sample authoring to developer notes
-AI-edited: 2026-10-16T16:29:06.896Z | agent=Codex/root | model=unknown | effort=unknown | task=concise-user-copy | change=shortened task instructions and moved CLI reference
-AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=clarified texture warnings and source-aware export defaults
+AI-edited: 2026-10-16 | agent=Codex/root | task=review-cleanup | change=clarified texture warnings and source-aware export defaults
 -->

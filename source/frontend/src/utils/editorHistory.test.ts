@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import {
+  clearEditorRedo,
+  createAuthoringHistoryBranch,
+  restoreEditorHistory,
   makeEditorHistory,
   popRedo,
   popUndo,
@@ -22,6 +25,38 @@ function entry(id: string, before: number, after: number): EditorHistoryEntry<Sn
 }
 
 describe('editorHistory', () => {
+  it('keeps the exact cursor and entries when restore rejects or throws', () => {
+    const initial = pushEditorHistory(makeEditorHistory<Snapshot>(), entry('one', 0, 1));
+    const rejected = restoreEditorHistory(initial, 'undo', () => false, 2);
+    assert.equal(rejected.applied, false);
+    assert.equal(rejected.state, initial);
+    assert.equal(initial.undo.length, 1);
+    assert.equal(initial.redo.length, 0);
+    assert.throws(() => restoreEditorHistory(initial, 'undo', () => { throw Error('invalid target'); }), /invalid target/);
+    assert.equal(initial.undo.length, 1);
+    let restored = -1;
+    const undone = restoreEditorHistory(initial, 'undo', (_, snapshot) => { restored = Number(snapshot.value); return true; }, 2);
+    assert.equal(restored, 0);
+    assert.equal(undone.state.redo.length, 1);
+    assert.equal(restoreEditorHistory(undone.state, 'redo', () => false, 3).state, undone.state);
+    const redone = restoreEditorHistory(undone.state, 'redo', (_, snapshot) => { restored = Number(snapshot.value); return true; }, 3);
+    assert.equal(restored, 1);
+    assert.equal(redone.state.undo.length, 1);
+    assert.equal(redone.state.redo.length, 0);
+  });
+  it('invalidates every registered redo branch only for accepted forward edits', () => {
+    const branch = createAuthoringHistoryBranch();
+    const states = ['rig', 'skin', 'outliner'].map(id => popUndo(pushEditorHistory(makeEditorHistory<Snapshot>(), entry(id, 0, 1))).state);
+    const release = states.map((_, index) => branch.subscribe(() => { states[index] = clearEditorRedo(states[index]); }));
+    assert.deepEqual(states.map(state => state.redo.length), [1, 1, 1]);
+    branch.acceptEdit();
+    assert.deepEqual(states.map(state => state.redo.length), [0, 0, 0]);
+    assert.ok(states.every(state => state.bytesUsed === 0));
+    release.forEach(unsubscribe => unsubscribe());
+    states[0] = popUndo(pushEditorHistory(makeEditorHistory<Snapshot>(), entry('later', 0, 1))).state;
+    branch.acceptEdit();
+    assert.equal(states[0].redo.length, 1);
+  });
   it('selects the newest available history domain with a stable fallback', () => {
     const candidates = [
       { domain: 'editor' as const, available: true, order: 4 },

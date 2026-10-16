@@ -2,6 +2,8 @@ export type ApiVersionV1 = 1;
 export type ConventionV1 = 'auto' | 'mixamo' | 'ue4' | 'unity' | 'rigify';
 
 export interface SkeletonNodeSnapshotV1 {
+  /** Private transport identity; semantic names remain unchanged. */
+  id?: string;
   name: string;
   parent: number | null;
   isBone: boolean;

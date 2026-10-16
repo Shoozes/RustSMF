@@ -3,6 +3,7 @@ import type { SkeletonSnapshotV1, AnalysisResultV1 } from './retargetAnalysisTyp
 import type { AnimationRetargetReport } from '../utils/animationRetarget';
 import type { BakeInput } from './retargetProtocol';
 import type { ClipSnapshot } from './retargetSnapshot';
+import { assertTransferBoneCount } from './retargetSnapshot';
 export interface PortableTrackV1 {
   name?: string;
   boneChannel?: boolean;
@@ -62,8 +63,11 @@ export function portableBakeRequest(input: BakeInput, sampleTimes: readonly numb
   if (!input.clips.length || input.clips.length > 256 || !sampleTimes.length || sampleTimes.length > 20_000
     || sampleTimes.some(time => !Number.isFinite(time) || Math.abs(time) > 1e9)) throw new Error('Invalid portable clip/sample count or time.');
   for (const skeleton of [input.source, input.target]) {
-    if (!skeleton.nodes.length || skeleton.nodes.length > 4096 || !skeleton.bones.length || skeleton.bones.length > 2048
-      || new Set(skeleton.nodes.map(node => node.name)).size !== skeleton.nodes.length) throw new Error('Portable skeleton requires bounded, uniquely named nodes.');
+    assertTransferBoneCount(skeleton.bones.length);
+    const identities = skeleton.nodes.flatMap(node => node.id === undefined ? [] : [node.id]);
+    if (!skeleton.nodes.length || skeleton.nodes.length > 4096
+      || identities.some(id => typeof id !== 'string' || !id || id.length > 1024)
+      || new Set(identities).size !== identities.length) throw new Error('Portable skeleton requires bounded, uniquely identified nodes.');
   }
   let values = 0;
   const copyClip = (clip: ClipSnapshot, skeleton: SkeletonSnapshotV1): PortableClipV1 => {
@@ -74,10 +78,13 @@ export function portableBakeRequest(input: BakeInput, sampleTimes: readonly numb
       const binding = THREE.PropertyBinding.parseTrackName(track.name);
       if (binding.objectName && binding.objectName !== 'bones' || binding.propertyIndex !== undefined) throw new Error(`Unsupported portable track binding ${track.name}.`);
       const name = binding.objectName === 'bones' ? binding.objectIndex : binding.nodeName;
-      const node = skeleton.nodes.findIndex(candidate => candidate.name === name);
+      const candidates = skeleton.nodes.flatMap((candidate, index) => (
+        (binding.objectName === 'bones' ? skeleton.bones.includes(index) && candidate.name === name
+          : candidate.id === name || candidate.name === name) ? [index] : []));
+      const node = candidates.length === 1 ? candidates[0] : -1;
       const property = binding.propertyName;
       if (node < 0 || !['position', 'quaternion', 'scale'].includes(property)
-        || track.type !== (property === 'quaternion' ? 'quaternion' : 'vector') || !(track.values instanceof Float32Array)) throw new Error(`Unsupported portable transform track ${track.name}.`);
+        || track.type !== (property === 'quaternion' ? 'quaternion' : 'vector') || !(track.values instanceof Float32Array)) throw new Error(`Unsupported portable transform track ${track.name}: target is missing or ambiguous, or its channel type is unsupported.`);
       const interpolation = track.interpolation === 'gltf-cubic-spline' ? track.interpolation
         : ({ [THREE.InterpolateDiscrete]: 'step', [THREE.InterpolateLinear]: 'linear', [THREE.InterpolateSmooth]: 'smooth' } as const)[track.interpolation];
       if (!interpolation || property === 'quaternion' && interpolation === 'smooth') throw new Error(`Unsupported portable interpolation on ${track.name}.`);

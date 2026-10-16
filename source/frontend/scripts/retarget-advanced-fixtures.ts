@@ -45,6 +45,9 @@ export function advancedFixtures() {
   const positives: Array<{name: string; input: ReturnType<typeof portableBakeRequest>; expected: ReturnType<typeof advancedReference>}> = [];
   const add = (name: string, options: AnimationRetargetOptions) => {const input = fixture(options); positives.push({name, input: portableBakeRequest(input, [0], 'bake'), expected: advancedReference(input)});};
   add('defaults', {});
+  const staticPose = new THREE.AnimationClip('Neutral', 0, [new THREE.QuaternionKeyframeTrack('neck.quaternion', [0], [0, 0, 0, 1])]);
+  add('zero-source-target-reference', {sourceReferencePose: 'clip', sourceReferenceClip: staticPose, targetReferenceClip: staticPose,
+    forearmTwist: [{forearm: 'arm', hand: 'hand', share: .5}], interpolation: 'step'});
   add('curl', {targetChainCurls: [{palmBone: 'hand', bones: ['finger', 'tip'], palmNormal: [0, 0, 1], degrees: [30, 20]}]});
   add('recovery', {poseRecovery: {peakFrame: 20, holdThroughFrame: 30, returnByFrame: 50}});
   const correction = {from: [0, 0, 0, 1] as [number, number, number, number], to: new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), .2).toArray()};

@@ -2,6 +2,118 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+
+## 2026-10-16 - Reliability recheck and owned cleanup
+
+Read-only review matched all 507 implementation inputs to the prior seven-gate
+source `89b60bab6fb79327a254cc1487365f9a304e7be2e7ca8d719d0bf6d8e9bb9e8e`.
+The seven supplied findings remain verified closed for that source. Inspection
+covered history/skin consumers, captured bindings, resource loaders, portable
+retarget boundaries, animal ancestry and their behavioral tests.
+
+A new injected geometry-preparation failure reproduced two disposals of an unused
+OBJ texture. Unused-material release now follows successful preparation; failure
+cleanup releases used and unused textures once and preserves the original error.
+The negative control failed before repair; 70 focused units pass afterward.
+Final source: 507 inputs, SHA-256
+`f384ac60c21b86fd7d682b8c4f207cf34ac9b73cbcaac33f3e3e3bc4fbafc47c`.
+`pwsh -NoProfile -File run.ps1 -Task verify` passes 641 frontend units and all
+14 Rust verification steps. An earlier attempt passed units/Rust but failed
+documentation budgets; shortening the notes restored the existing route limits.
+No route ownership changed. Nine sequential `interchange-reliability.spec.ts`
+browser cases pass on the same final source, covering delayed OBJ/DAE resources,
+editable failures and independently sampled direct/queued roundtrips. The other
+broad gates were not rerun for this delta; their earlier source identity remains.
+
+All 20 required new media/captures, 14 restored fixed-path media and three strict
+reference images retain their bytes. The nine owned native process identities
+exited; `native.ps1 -Action Restore` and an independent metadata check confirm
+all three original recovery generations exactly. The owned silent uninstaller
+exited zero; test installation and registration are absent. Automatic approval
+review refused deletion of the inactive WebView profile as blocked by policy;
+76,674,781 logical bytes remain private. The earlier refused profile was untouched.
+
+The existing compact reliability receipt retains this delta and original gate/
+package identities. Installed Transfer/queue/recovery continuation remains
+unverified; TODO selects an attended final-source Windows pass. No publication,
+version, UI, Sable, ZIP/export contract or private-asset change belongs to cleanup.
+
+## 2026-10-16 - Editing and interchange reliability accepted in source
+
+Base main `7244351` plus 28 inherited dirty paths. The supplied seven findings
+were implemented in priority order: shared redo invalidation and atomic skin/
+history restores; zero-clip undo; structurally remapped captured UUID channels;
+settled OBJ/DAE resources; explicit DAE fidelity refusals and named clips; private
+retarget node identities, one-frame reference poses and consistent 512-bone
+bounds. Animal ancestry stops at unknown, Spine and unrelated deform boundaries.
+The final review also repaired a repeated-UUID prefix/index substitution case.
+
+All seven sequential gates pass on 507 Git-clean implementation inputs, SHA-256
+`89b60bab6fb79327a254cc1487365f9a304e7be2e7ca8d719d0bf6d8e9bb9e8e`:
+`verify` (640 frontend units; 14 Rust verification steps), `test:e2e -NoGenEye`
+(211), `test:journey -NoGenEye` (13), `test:visual-strict` (3),
+`retarget:runtime-proof`, `desktop-smoke` (14 native boundary tests, 18 IPC mocks)
+and `package:windows`. Runtime parity covers 49 preflight cases plus two size
+refusals, 18 sampler/24 refusal, 33 core/40 refusal and 34 advanced/30 refusal
+cases, with exact structure/codes and numeric tolerance 1e-6.
+
+Six final Transfer captures were reviewed across the existing viewport/DPI
+matrix. Original references are unchanged. Fourteen new required journey media
+are retained; earlier fixed-path bytes and modification times were restored.
+The compact `Compact_Evidence/RustSMF/runs/reliability-20261016/summary.json`
+owns commands, source identities, attempts, captures and resource disposition.
+The local unsigned installer SHA-256 is
+`6b252063fa501b40a4c074b2096726c1e65f1762ed2a628ea24fcc366487f0b9`.
+Version and public preview remain unchanged.
+
+Installed acceptance remains partial: the executable and five bundled resources
+match; real Open cancellation and generated 23-bone model/playback are observed.
+The Windows controller twice refused the WebView-owned source-picker Open button;
+operator action is requested with the generated path filled in. Native Transfer,
+queue/project/recovery continuation is not inferred from browser mocks. The owned
+session remains identified under ignored `output/reliability-20261016/` pending
+that action; its three original recovery generations are isolated safely and must
+be restored before session cleanup. The earlier Windows session restored all
+three generations and removed its installation/processes; automatic approval
+review rejected deletion of its inactive WebView profile, which remains private.
+
+Existing footer cleanup omits unavailable model/effort fields and preserves known
+attribution. New routes remain focused (62 groups; 83.7 KiB default). Sable,
+ZIP/export fixes, original/private assets and owner work are preserved. Work is
+local on main; no commit, push, version change or release publication.
+
+## 2026-10-16 — Published animal-chain review and local cleanup
+
+Clean main/live origin `7244351c7ff8bd4e5c5b8b7d0f58b4b03d7d80d4` matched the
+published 500-input six-gate proof below. Review inspected shared preflight,
+Transfer/profile consumers, independent fixtures, the ordinary journey and media.
+
+A new `joint99` deform intermediate reproduced a false tail correspondence:
+the independent expected body-only map failed before repair. Traversal now skips
+only helpers/non-bone ancestors, leaving unknown deform segments explicit.
+Source/target regressions join the helper positives and authoritative-map cases;
+26 independent animal fixtures now feed 43 native/actual-browser-WASM cases.
+
+Focused proof: `cargo test --locked --release --manifest-path
+source/retarget-core/Cargo.toml --target-dir output/retarget-core/cargo-target
+--lib` passed 32 units. `run.ps1 -Task retarget:runtime-proof` passed 43 preflight,
+14 sampler/20 refusal, 29 core/40 refusal and 33 advanced/30 refusal cases, with
+exact structures and numbers within 1e-6. The targeted animal continuity journey
+passed ordinary preview/correction/discard/Apply/history/project/queued GLB checks,
+independent motion/skin assertions and six viewport sizes. Rust formatting,
+context/project validators and their 30 regressions pass. No new full six-gate or
+installed-Windows acceptance is inferred. The published gate keeps its source.
+
+The final focused runtime/journey source has 500 Git-clean inputs, SHA-256
+`da9a44b31d9c5dac88af90565934f60894cc717ba3bd1edb6eb4221d967761eb`.
+`guidance-publish-receipt.json`'s `animalChainReview` owns attempts, source/media
+identities and cleanup. Earlier fixture whitespace was finalized by rustfmt;
+the final runtime proof is recorded separately. Existing Summary Bank routes
+cover the unchanged owners. Completed prose was condensed to retain their caps.
+TODO selects attended current-source Windows Transfer/ZIP/queue acceptance next.
+ZIP/export behavior, four Sable previews, Original and private inputs remain;
+no version, installer, rig creation, publication or private-asset distribution.
+
 ## 2026-10-16 — Animal-chain assistance accepted locally
 
 Base `e8cd39036170c51aa22524494442d95b2adc4d59` plus the preceding uncommitted
@@ -45,7 +157,7 @@ required media, recovery and private assets remain. D: was not modified.
 The same receipt holds before/after measurements; implementation inputs remain
 unchanged, and final document/context validation passed separately.
 
-AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=animal-chain-assistance | change=recorded final source-bound implementation proof
+<!-- AI-edited: 2026-10-16 | agent=Codex/root | task=animal-chain-assistance | change=recorded final source-bound implementation proof -->
 
 ## 2026-10-16 — Published guidance and Sable preview recheck
 
@@ -71,7 +183,7 @@ section owns commands, final local input identities and resource disposition.
 The owned browser/server exited; private assets, recovery and prior evidence
 remain protected. No commit/push, animal implementation or asset change occurred.
 
-AI-edited: 2026-10-16 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=rechecked published guidance and recorded local proof
+<!-- AI-edited: 2026-10-16 | agent=Codex/root | task=review-cleanup | change=rechecked published guidance and recorded local proof -->
 
 ## 2026-10-16 — Standalone guidance, concise copy and Sable motion
 
@@ -231,7 +343,7 @@ On PowerShell 7.6.6 / Node v26.5.0, these public commands ran sequentially again
 
 The subsequent authorized publication verifies an isolated copy of the exact index through the same sequential gate. The existing core-bake receipt's `publication` record binds the reviewed base/tree, fresh results, confirmed remote main commit and owned snapshot cleanup. Private-helper checks run separately in the maintainer checkout; the public snapshot records their explicit skips.
 
-AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-core-bake
+<!-- AI-created: 2026-10-15 | agent=Codex/root | task=retarget-core-bake -->
 
 ## 2026-10-15 — Published backup showcase recheck and core-bake handoff
 
@@ -243,7 +355,7 @@ Cleanup reconciles stale publication/asset statuses and retires duplicated histo
 
 `output/playwright/dummy-showcase/receipt.json` under `backupRename.review` retains this local candidate, fresh checks and resource disposition. No new captures, compilers or persistent processes were launched. Referenced media, recovery, the private GLBs, Tripo drafts and borrowed references are preserved. No commit or push is requested by this review.
 
-AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup
+<!-- AI-created: 2026-10-15 | agent=Codex/root | task=review-cleanup -->
 
 ## 2026-10-15 — Backup dummy names and preserved textures
 
@@ -251,7 +363,7 @@ Selected the user-owned GuyGame backup as the new private showcase source. Its c
 
 An ordinary browser Open loads 38 bones and twelve correctly named clips without warnings/errors. One lightweight capture against the existing build shows Walk at 0.27 seconds with upright face/scalp and original clothing textures; Tools and helpers are hidden. The README overview is replaced with that actual capture. This establishes the pictured source and clip inventory, not exhaustive playback or export acceptance. `output/playwright/dummy-showcase/receipt.json`, under `backupRename`, owns the mapping, byte-preservation evidence, capture and local checks. The owned tab and identity-checked preview process exit, releasing port 53174. All GLBs, earlier variants, Tripo drafts and borrowed references remain ignored/private. No app code, fixture, strict baseline, installer or version changes. Subsequent authorized publication verifies the exact three-file staged candidate in an isolated public-source copy; `backupRename.publication` binds checks, base/tree, confirmed remote commit and owned scratch cleanup. The unchanged runtime retains its prior gate evidence.
 
-AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=backup-dummy
+<!-- AI-created: 2026-10-15 | agent=Codex/root | task=backup-dummy -->
 
 ## 2026-10-15 — Test dummy showcase
 
@@ -263,7 +375,7 @@ The user spotted an upside-down face before publication. A private derivative fl
 
 `output/playwright/dummy-showcase/receipt.json` retains the screenshot/source identities, observed checks and resource disposition. No production code, fixture, strict baseline, installer, release download or application version changed. No new build or inference was launched for the capture. The subsequent authorized publication checks an isolated copy of the four-file staged candidate; its `publication` record binds checks, destination, confirmed commit and owned scratch cleanup. Source and corrected GLBs, Tripo drafts and borrowed references remain private.
 
-AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=dummy-showcase
+<!-- AI-created: 2026-10-15 | agent=Codex/root | task=dummy-showcase -->
 
 ## 2026-10-15 — Portable retarget contract and Rust sampler
 
@@ -283,7 +395,7 @@ Final PowerShell/Node commands ran sequentially on 396 unchanged implementation/
 
 Focused checks passed 11 tests before the added default regression; that two-test inventory lane also passed. Context/project validators and their 29 tests pass. Early receipt entries distinguish a producer path/console-encoding error, repaired Unicode transcoding, tight route-budget checks and the superseded inventory candidate from final acceptance. No acceptance threshold or context budget was raised. Retained proof is consolidated in `output/retarget-runtime-proof/sampler-pass-receipt.json`; the public runtime command keeps its own compact `receipt.json`. Earlier Sable publication/media keep their original identities. TODO selects experimental core baking, then advanced motion and complete production parity; raw drafts/borrowed references remain private. No commit or push belongs to this local pass. The subsequent explicitly authorized publication includes the preceding review/docs cleanup, repairs four remaining TODO dash transcodes, and verifies the exact staged tree in an isolated public-source snapshot. `output/retarget-runtime-proof/publish/receipt.json` owns that candidate, its final commands, confirmed remote commit and owned cleanup; private helper checks remain separate from public-snapshot skips.
 
-AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-sampler
+<!-- AI-created: 2026-10-15 | agent=Codex/root | task=retarget-sampler -->
 
 ## 2026-10-15 — Published Sable recheck and migration handoff
 
@@ -295,7 +407,7 @@ Fresh `node --import tsx --test src/utils/blackCatAsset.test.ts src/test/browser
 
 Cleanup reconciles stale publication/rights status and retires completed Sable/export TODO entries to this history. The next bounded migration slice is a versioned portable bake contract and independently checked Rust sampler, then core baking, advanced motion and production cutover after complete parity. No runtime, asset, UI, baseline, version, installer or public format changed. Existing context routes remain accurate. `output/original-assets-20261015/review-receipt.json` owns fresh command results, final documentation hashes and retained-proof references. No processes were launched that require continued ownership, no protected data or media was removed, and no commit/push was requested by this review.
 
-AI-edited: 2026-10-15T16:07:12-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=recorded published Sable recheck and bounded Rust migration handoff
+<!-- AI-edited: 2026-10-15T16:07:12-04:00 | agent=Codex/root | task=review-cleanup | change=recorded published Sable recheck and bounded Rust migration handoff -->
 
 ## 2026-10-15 — Sable animation guards and final polish
 
@@ -322,7 +434,7 @@ Publication closeout includes the explicitly authorized export cleanup. Git norm
 
 An unrelated project started a wildcard listener on 5173 during isolated verification; it was left running. Browser readiness/navigation/preview now share explicit IPv4 loopback and validated `RUSTSMF_PLAYWRIGHT_PORT` (default 5173). Archive and hand-wave contexts inherit that endpoint. Three unit cases guard defaults, bounds and invalid/injected text; publication proof uses port 53173. A fresh snapshot also needs the documented ignored WASM generation before project-integrity checks; the initial missing-generated-module failure is retained separately from the corrected gate.
 
-AI-edited: 2026-10-15T19:18:00Z | agent=Codex/root | model=unknown | effort=unknown | task=sable-polish | change=recorded animation repairs, rebuild, presentation and final gate
+<!-- AI-edited: 2026-10-15T19:18:00Z | agent=Codex/root | task=sable-polish | change=recorded animation repairs, rebuild, presentation and final gate -->
 
 ## 2026-10-15 — Sable original asset and animation pack
 
@@ -345,7 +457,7 @@ Sable GLB SHA-256 is `ec062eca6db065d84c09c25fee314a6559aca48846ca887eb4cfbd00b0
 
 `output/original-assets-20261015/receipt.json` owns compact command/source results, required-media references, private provenance and resource dispositions. Signal Robot remains the installed quickstart; native Windows application checks and game contact/new-pose suitability are not claimed. Viewport repeat differs from pack loop declarations, and editor-only settings/history are not project state. TODO selects complete Rust solver migration next. Work remains local/uncommitted; no stage, commit or push belongs to this batch.
 
-AI-edited: 2026-10-15T18:36:42Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=recorded revised asset, observed defects and final source-bound gate
+<!-- AI-edited: 2026-10-15T18:36:42Z | agent=Codex/root | task=original-assets | change=recorded revised asset, observed defects and final source-bound gate -->
 
 ## 2026-10-15 — Published export queue review and cleanup
 
@@ -364,7 +476,7 @@ TODO now selects original asset intake/rights, Blender anatomy/material/topology
 
 `output/export-queue-review-20261015/receipt.json` consolidates source, failures, commands, required-media references and owned cleanup. All 14 current journey media, 14 published queue media, 14 published ZIP media and eight prior UI captures were hash-verified. Owned runners and port 5173 released; scratch was removed, with compact results and required proof retained. Work stays local and uncommitted; no asset/recovery data, installer, release or publication changes.
 
-AI-edited: 2026-10-15T11:53:54-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=recorded export recheck source, repairs and final proof
+<!-- AI-edited: 2026-10-15T11:53:54-04:00 | agent=Codex/root | task=review-cleanup | change=recorded export recheck source, repairs and final proof -->
 
 ## 2026-10-15 — Export presets and queues
 
@@ -2816,4 +2928,8 @@ Recorded the recipient-limited permission and both SHA-256 pins in
 `Shoozes/RustSMF` source attribution and carry the selected `libm 0.2.16`
 license/notice. No receiving checkout was changed and nothing was published.
 
-AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits
+<!-- AI-edited: 2026-10-16T01:32:30-04:00 | agent=Codex/root | task=production-integration | change=closed source-bound production acceptance and recorded cleanup limits -->
+
+<!-- AI-edited: 2026-10-16 | agent=Codex/root | task=animal-chain-review | change=recorded reproduced deform-boundary repair and source-specific focused proof -->
+
+<!-- AI-edited: 2026-10-16 | agent=Codex/root | task=reliability-review | change=recorded OBJ failure regression, final checks and exact native cleanup -->
