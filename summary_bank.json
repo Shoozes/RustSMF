@@ -1273,8 +1273,8 @@
       "paths": [
         "source/retarget-core/src/bake*.rs",
         "source/retarget-core/examples/bake_receipt.rs",
-        "source/frontend/src/workers/retargetPortable*",
-        "source/frontend/src/workers/retargetInventory*",
+        "source/frontend/src/workers/retargetPortable.ts",
+        "source/frontend/src/workers/retargetInventory.ts",
         "source/frontend/src/workers/retargetCoreBake.test.ts",
         "source/frontend/scripts/retarget-bake-*.ts",
         "scripts/retarget-runtime-proof.mjs",
@@ -1282,7 +1282,58 @@
       ],
       "notes": [
         "All 19 core options / 26 core report fields require actual baked tracks/reports and exact structure with 1e-6 numeric native/actual-WASM/TypeScript parity.",
-        "Sample-v1 and production TypeScript behavior remain separate; reject advanced or unknown features atomically. First-party generated fixtures only; private raw assets stay excluded."
+        "Sample-v1 and production TypeScript behavior remain separate; reject advanced or unknown features atomically. First-party generated fixtures only; private raw assets stay excluded.",
+        "Base portable/inventory AST guards: workflow__retarget_sampler."
+      ]
+    },
+    "workflow__retarget_advanced_bake": {
+      "description": "Experimental advanced bake contract, ordered local passes, orchestration and TypeScript/native/browser-WASM parity; no production cutover.",
+      "max_kb": 176,
+      "paths": [
+        "source/retarget-core/src/advanced*.rs",
+        "source/retarget-core/src/baker.rs",
+        "source/retarget-core/src/bake_math.rs",
+        "source/retarget-core/examples/bake_receipt.rs",
+        "source/frontend/src/workers/retargetAdvancedBake.test.ts",
+        "source/frontend/src/workers/retargetPortable.ts",
+        "source/frontend/src/workers/retargetInventory.ts",
+        "source/frontend/scripts/retarget-advanced-*.ts",
+        "source/frontend/scripts/retarget-natural-fixtures.ts",
+        "scripts/retarget-runtime-proof.mjs",
+        "docs/dev/RETARGET_ADVANCED_BAKE.md",
+        "source/retarget-core/Cargo.toml",
+        "scripts/build-retarget-wasm.mjs",
+        "source/frontend/scripts/check-entry-chunks.mjs"
+      ],
+      "notes": [
+        "Shared core/math ownership is intentional; natural and endpoint modules have separate subsystem__rust_* routes.",
+        "Require 9 options/8 reports, actual tracks, exact structure and 1e-6 TypeScript/native/WASM parity; production stays TypeScript."
+      ]
+    },
+    "subsystem__rust_natural_motion": {
+      "description": "Shared Rust natural torso/leg/contact/pelvis/swing solving and generated motion fixtures.",
+      "max_kb": 80,
+      "paths": [
+        "source/retarget-core/src/natural.rs",
+        "source/frontend/scripts/retarget-natural-fixtures.ts",
+        "source/frontend/src/workers/retargetAdvancedBake.test.ts",
+        "docs/dev/RETARGET_ADVANCED_BAKE.md"
+      ],
+      "notes": [
+        "Reference math: subsystem__natural_motion; integration: workflow__retarget_advanced_bake."
+      ]
+    },
+    "subsystem__rust_endpoint_envelopes": {
+      "description": "Shared Rust endpoint blending, identity rebake and final residual proof with retained TypeScript fixtures.",
+      "max_kb": 64,
+      "paths": [
+        "source/retarget-core/src/endpoint.rs",
+        "source/frontend/src/utils/endpointEnvelope.ts",
+        "source/frontend/src/utils/endpointEnvelope.test.ts",
+        "docs/dev/RETARGET_ADVANCED_BAKE.md"
+      ],
+      "notes": [
+        "Reference overlap: subsystem__endpoint_envelopes; integration: workflow__retarget_advanced_bake."
       ]
     }
   },

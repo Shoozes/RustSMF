@@ -2,33 +2,39 @@
 
 Last reviewed: 2026-10-15
 
-Backlog status: experimental core baking is complete; advanced motion is next. Production remains TypeScript. Sable/ZIP/export and private asset boundaries remain intact. HISTORY owns source-bound proof and the publication receipt route.
+Backlog status: core baking published at `354542e`; advanced motion is complete locally. Production integration is next; production remains TypeScript. Protected fixes/assets remain intact. HISTORY owns proof.
 
 ## Rust solver migration: core baking — complete
 
 - What: Closed: all 19 core options and 26 reports have experimental Rust baking.
 - Why: Establish core parity before advanced motion or production cutover.
 - Where: [RETARGET_CORE_BAKE.md](RETARGET_CORE_BAKE.md), route `workflow__retarget_core_bake`.
-- When: Completed on 2026-10-15.
+- When: Published and rechecked on 2026-10-15.
 - How: Owned mapping metadata, borrowed inputs, typed results, native cancellation, real worker termination/replacement and atomic output bounds.
 - Done when: Closed; independent anchors and TypeScript/native/actual-WASM parity pass 29 bakes and 40 refusals.
-- Verification: Full gate passed. HISTORY and the compact receipt record exact source, commands, isolated strict graphics failure and clean default rerun.
+- Verification: Published gate retained; recheck matched 21 blobs and 14 media. Direct adapter ownership checks, 52 focused frontend tests and 23 Rust tests pass. HISTORY owns exact evidence and prior diagnostics.
 
-## Rust solver migration: advanced motion — next
+## Rust solver migration: advanced motion — complete locally
 
-- What: Port the inventory's 9 advanced options and 8 advanced report fields behind an explicit experimental capability. Keep production baking in TypeScript.
+- What: Port 9 advanced options/8 reports behind an experimental capability; retain TypeScript production.
 - Why: Core parity alone cannot replace the existing complete solver.
-- Where: Shared Rust bake modules, portable contract, inventory, retained TypeScript solver/domain fixtures and runtime proof; start with `workflow__retarget_core_bake` and the focused natural-motion/endpoint/profile routes.
-- When: Next after this completed core pass; production integration follows complete advanced parity.
-- How: Preserve the retained solver's actual ordering and adapters for torso/leg/contact/pelvis/swing motion, curls, recovery, local corrections, ranges, head constraints, twist and endpoint envelopes. Reuse independent fixtures and core regressions; extend capability/refusal checks without silently dropping options.
-- Done when: Every advanced option/report and supported combination matches TypeScript/native/actual-WASM, with exact track/report structures and 1e-6 numeric tolerance. Prove sampled motion/contact/endpoint values independently, cancellation, input ownership, bounded output and atomic failures. Preserve all core/Sable/ZIP/export/Original guards. No custom rig creation/replacement, auto-skinning, new UI or synchronous fallback.
-- Verification: Focused domain and native tests, then sequential `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, `test:visual-strict` and `retarget:runtime-proof` on one final implementation candidate. Count preflight/sampler/core/advanced cases separately; require actual baked tracks/reports. Retain compact proof; keep private dummy, borrowed and Tripo media out of public fixtures.
+- Where: [RETARGET_ADVANCED_BAKE.md](RETARGET_ADVANCED_BAKE.md), route `workflow__retarget_advanced_bake`.
+- When: Accepted locally on 2026-10-15; publication is separate.
+- How: Follow `animationRetarget.ts` ordering/combinations/refusals; reuse independent fixtures and core guards.
+- Done when: Every advanced option/report and supported combination matches TypeScript/native/actual-WASM: exact structures, 1e-6 numeric tolerance, independent motion/contact/endpoints, cancellation, owned inputs, bounds and atomic failure. Preserve core/Sable/ZIP/export/Original guards; no new UI or synchronous fallback.
+- Verification: Original five-gate acceptance remains source-bound; review adds aggregate contact-storage refusal (33 cases/30 refusals). HISTORY and the compact receipt own fresh commands and hashes.
 
-### Remaining migration order
+## Rust solver migration: production integration — next
 
-1. **Core baking:** complete above; no production cutover.
-2. **Advanced motion:** port natural torso/leg/contact/pelvis/swing behavior, target curls, local corrections, recovery, pose ranges, head constraints, twist and endpoint envelopes, including their ordering and combinations. Reuse their existing known-value tests; Sable is an additional quadruped fixture, not evidence of general animal compatibility.
-3. **Production integration:** only after every supported option passes, route desktop baking to shared native Rust and web baking to WASM in the existing worker. Preserve lazy loading, private preview/Apply/history, copied buffers, job/revision correlation, progress, 120-second phase limits, cancellation during all phases, stale/replacement/disposal rejection and continued editing after failures. No synchronous fallback or second solver UI. Prove project/export continuity, the complete sequential gate above and `desktop-smoke`; distinguish native execution, actual browser WASM and mocked IPC.
+- What: Route desktop baking to shared native Rust and web baking to WASM in the existing worker.
+- Why: Experimental parity does not establish production execution or lifecycle safety.
+- Where: `retargetJobClient.ts`, `retargetWorker.ts`, `retargetBakeRuntime.ts`, Tauri `retarget.rs`, portable adapters and advanced contract/routes.
+- When: Next authorized implementation pass, after reviewing this local advanced batch.
+- How: Preserve lazy loading, preview/Apply/history, copied buffers, job/revision correlation, progress and 120-second phase limits. Keep quiet UI and the production WASM size guard; resolve the full-runtime delivery budget before cutover. No synchronous fallback or second solver UI.
+- Done when: All options/reports retain parity; preparation/analysis/baking cancellation, timeout, stale/replacement/disposal rejection and continued editing pass. Project/export continuity remains intact; Sable supplements independent fixtures without claiming general animal compatibility.
+- Verification: Sequential `verify`, `test:e2e -NoGenEye`, `test:journey -NoGenEye`, `test:visual-strict`, `retarget:runtime-proof`, then `desktop-smoke`. Distinguish native Rust, actual browser WASM and mocked IPC; bind source, commands and compact evidence.
+
+Order: first resolve lazy advanced-WASM delivery (reviewed artifact 1372288 bytes exceeds the unchanged 1 MiB guard); then wire native and worker adapters with typed results and owned cancellation; finally prove lifecycle/project/export continuity before cutover. Retain the TypeScript reference for parity. Advanced Rust is experimental until this outcome passes.
 
 Custom rig creation/replacement, automatic skinning, application versions, installer/release replacement and publication are outside these implementation slices. Separate commit/push authorization is required.
 
@@ -39,7 +45,7 @@ Custom rig creation/replacement, automatic skinning, application versions, insta
 | 1 | ZIP bundle intake — published `da98cba` | Complete; reviewed directory/progress fixes remain intact. |
 | 2 | Export presets and queues — published `0c7ab1d`, cleanup `2343b08` | Complete; owned snapshot/material-reader guards and source-specific proof remain in HISTORY. Installed Windows queue acceptance is separate. |
 | 3 | Original Sable assets and animation pack — published `2343b08` | Complete; the sample guide owns limits and rebuilding. Drafts and borrowed references remain private. |
-| 4 | Complete Rust solver migration | Contract/sampler published `7297e0e`; experimental core baking complete; advanced motion next, then production integration. All supported options require reference/native/WASM parity before cutover. |
+| 4 | Complete Rust solver migration | Contract/sampler published `7297e0e`, core `354542e`; advanced motion accepted locally, production integration next. |
 | 5 | Animal-chain assistance | Later: reviewed existing quadruped, wing and tail suggestions with independent first-party fixtures; ambiguity requires explicit maps. No new rig creation. |
 
 ## Completed frontend source work
@@ -149,4 +155,4 @@ AI-edited: 2026-10-15T16:07:12-04:00 | agent=Codex/root | model=unknown | effort
 
 AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=synced publication and bounded core baking
 
-AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-core-bake | change=recorded core acceptance and remaining order
+AI-edited: 2026-10-15T21:49:50-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=bounded contact storage and ordered production integration

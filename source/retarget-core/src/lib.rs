@@ -1,8 +1,16 @@
 use serde::{Deserialize, Serialize};
+#[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+pub mod advanced;
+#[cfg(all(test, any(not(target_arch = "wasm32"), feature = "advanced-bake")))]
+mod advanced_tests;
 mod bake_math;
 pub mod baker;
 #[cfg(test)]
 mod baker_tests;
+#[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+mod endpoint;
+#[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+mod natural;
 pub mod sampler;
 use std::collections::{BTreeMap, HashMap, HashSet};
 

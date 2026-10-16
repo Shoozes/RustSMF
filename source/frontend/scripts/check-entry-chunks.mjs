@@ -48,6 +48,10 @@ try {
     if (html.includes(asset)) throw new Error(`retarget runtime asset is eagerly loaded: ${asset}`);
     if (statSync(join(dist, 'assets', asset)).size > 1024 * 1024) throw new Error(`retarget runtime asset exceeds 1 MiB: ${asset}`);
   }
+  const wasmExports = WebAssembly.Module.exports(new WebAssembly.Module(readFileSync(join(dist, 'assets', retargetWasm[0]))));
+  if (wasmExports.some(entry => entry.name === 'bake_advanced_json_v1')) {
+    throw new Error('experimental advanced baking must stay out of the production analysis/core WASM build until cutover');
+  }
 
   console.log(
     `Entry chunk check passed (three-vendor split; Tauri bridge lazy; ${workerAssets[0]} lazy, ${workerBytes} bytes).`,

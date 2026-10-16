@@ -6,18 +6,20 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Published backup showcase review and recheck — 2026-10-15
+## Local advanced-motion review and cleanup — 2026-10-15
 
-Reviewed clean main and live origin at `b2fc740f8938aa757dec43304c0427595211e2ce`, tree `3d36f71c6b3025e1a911a369465fef0ad86ab0c4`. All three blobs, working/private asset hashes and the overview match the receipt. Coverage: public guidance, provenance/name repair, portable request/inventory, Rust sampler refusal and TypeScript bake boundary. This bounded delta review reuses unchanged runtime proof at its original source.
+Reviewed main `354542e` plus the 29-file unpublished candidate. All final working hashes, 14 required media, protected identities and the native/WASM receipt matched acceptance. Coverage: portable capture, local/natural/endpoint solving, bounds/cancellation, parity, build gating and production/native consumers.
 
-- Verified closed: only 38 joint names change in the backup derivative. All other JSON and the full binary payload match; six JPEGs decode and all twelve named clips remain. The 24 deform/14 helper mapping retains the complete fixture parent/role layout. The screenshot is the reviewed 1280x720 backup capture. Earlier UV variants remain private and are superseded for the showcase.
-- Verified closed: README distinguishes the pictured private dummy from the downloadable Signal Robot. No private/generated paths are tracked. Sable, ZIP/export source and Original references are unchanged.
-- Verified closed: contract/sampler publication `7297e0e` retains its complete gate and actual native/WASM proof. Fresh portable/inventory/alias checks pass 8/8; context/project validator tests pass 29/29. Production baking still calls the retained TypeScript solver; Rust sample mode explicitly refuses baking/options.
-- New, repaired in Cleanup: TODO still called the published sampler local. Status now identifies publication, and the selected next pass binds the inventory's 19 core options and 26 core report fields.
-- Next-pass prerequisite: `portableBakeRequest` copies only `mapping.map`; the retained solver also uses decisions/canonical roles, validation diagnostics and frame-correction quaternions. TODO requires this bake metadata and a distinct experimental result before core solving. This is a planned baking dependency, not a defect in the sample-only API.
-- Unverified: the showcase proves source/clip inventory and one pictured pose, not exhaustive playback/export, arbitrary-rig compatibility or installed Windows behavior. Advanced motion remains unimplemented; core baking now has separate local proof in RETARGET_CORE_BAKE.md. Private GLBs, Tripo drafts and borrowed references receive no public asset-pack grant.
+- Verified closed: experimental nine-option/eight-report parity; production still uses TypeScript. Prior five-gate proof retains its original source.
+- New, repaired: a 287602-byte profile captured 253952 contact-point samples while passing the 372 bone-sample check. Capture now caps total cached points at 200000 before allocation; boundary/overflow units and a native/WASM refusal guard it. HISTORY owns fresh results.
+- Still open: production integration. The full advanced WASM measures 1372288 bytes, above the unchanged 1 MiB production limit. TODO orders delivery, adapters/cancellation, then continuity/cutover.
+- Unverified: production Rust bake lifecycle, new installed-Windows baking and general animal compatibility.
 
-This review originally changed records/TODO only. The subsequent core baking implementation, acceptance and authorized publication are routed in HISTORY and RETARGET_CORE_BAKE.md; production, UI, assets and release remain unchanged. The earlier review receipt remains `output/playwright/dummy-showcase/receipt.json` under `backupRename.review`.
+Earlier published-core review at `354542e` verified 21 blobs/14 media and repaired an adapter-ownership test with a failing shallow-alias mutant and known motion anchors (52 focused frontend/23 Rust tests). Its original receipt and HISTORY remain authoritative. This cleanup preserves those changes, Sable/ZIP/export, UI, recovery data and private assets; no publication.
+
+### Earlier backup showcase recheck
+
+At `b2fc740`, the three showcase blobs, private asset hashes and overview matched. Only 38 joint names changed; textures, binary payload and twelve clips remained intact. README distinguishes the private dummy from Signal Robot. The earlier receipt remains `output/playwright/dummy-showcase/receipt.json` under `backupRename.review`; its sampler/core handoff is superseded above.
 
 ## Earlier published Sable review — 2026-10-15
 
@@ -183,4 +185,4 @@ open; TODO records the completed local acceptance and separate distribution scop
 ---
 AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
 
-AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-core-bake | change=linked completed core acceptance
+AI-edited: 2026-10-15T21:49:50-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=bounded contact storage and ordered production integration

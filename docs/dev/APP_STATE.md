@@ -20,7 +20,11 @@ ZIP intake was introduced in `da98cba`. Current source accepts omitted directory
 
 Animate > Transfer now uses shared Rust API v1 for mapping/preflight (native Tauri on desktop, actual WASM in a browser worker). Mixamo, UE4 mannequin, Unity humanoid and Rigify deform naming include side/chain context and fingers. Explicit maps remain authoritative; ambiguity and numeric rigs require review. Mapping details holds overrides, diagnostics, profile drafts and portable export of the reviewed explicit map.
 
-Production baking stays in its TypeScript worker; [experimental Rust sampling](RETARGET_SAMPLER.md) and [core baking](RETARGET_CORE_BAKE.md) have distinct APIs. Core tracks/reports match native/WASM/TypeScript; advanced options are refused. Source selection prepares a private preview; Apply commits once through animation history. Cancel/discard, input revisions, leaving Animate and disposal reject stale results. Closing Tools may retain preview. Project saves and exports continue to use canonical clips during preview; undo/redo and continued editing retain their owners. Public setup/dev/build generate locally pinned WASM bindings. Runtime failures are visible without synchronous fallback.
+Production baking stays in its TypeScript worker. Experimental [sampling](RETARGET_SAMPLER.md), [core baking](RETARGET_CORE_BAKE.md) and [advanced motion](RETARGET_ADVANCED_BAKE.md) have distinct APIs; advanced native/actual-WASM parity is accepted locally; production integration is next in TODO. Core-only baking still refuses advanced options. Source selection prepares a private preview; Apply commits once through animation history. Cancel/discard, input revisions, leaving Animate and disposal reject stale results. Closing Tools may retain preview. Project saves and exports use canonical clips during preview; undo/redo and continued editing retain their owners. Public setup/dev/build generate pinned WASM bindings. Runtime failures remain visible without synchronous fallback.
+
+Advanced Rust contact capture separately caps aggregate cached point samples,
+including every repeated patch, before allocation. The full advanced WASM stays
+experimental; production delivery must retain the existing size guard.
 
 Transfer copies and raw-clip Retime preserve glTF cubic-spline motion, including rotation and scale. Trim subdivides vector/scale curves using boundary values and derivatives. Cubic rotation trims require existing rotation-key bounds or held endpoint regions; inserting a normalized quaternion key could change motion, so that case is refused before mutation with guidance to use existing keys or Retime. Custom/smooth trim interpolation is also refused. Shared key sampling honors the actual cubic/step/linear factory. History, project reopen and parsed GLB re-import have independent known-motion checks.
 
@@ -363,4 +367,4 @@ AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=
 
 AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=recorded published sampler state
 
-AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-core-bake | change=recorded experimental core capability
+AI-edited: 2026-10-15T21:46:26-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=bounded contact storage and ordered production integration

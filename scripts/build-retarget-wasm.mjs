@@ -9,7 +9,7 @@ const manifest = resolve(root, 'source/retarget-core/Cargo.toml')
 const lockfile = resolve(root, 'source/src-tauri/Cargo.lock')
 const outputRoot = resolve(root, 'output/retarget-core')
 const toolRoot = resolve(root, 'output/toolchains/retarget-wasm')
-const generated = resolve(root, 'source/frontend/src/generated/retarget-core')
+const productionGenerated = resolve(root, 'source/frontend/src/generated/retarget-core')
 const version = '0.2.126'
 const targetDir = join(outputRoot, 'cargo-target')
 const wasmArtifact = join(targetDir, 'wasm32-unknown-unknown', 'release', 'rustsmf_retarget_core.wasm')
@@ -49,13 +49,14 @@ function ensureTool(install) {
   if (!actual.includes(version)) throw new Error(`Expected wasm-bindgen ${version} under output/toolchains/retarget-wasm; found '${actual}'.`)
 }
 
-export function buildRetargetWasm({ installTools = process.argv.includes('--install-tools') } = {}) {
+export function buildRetargetWasm({ installTools = process.argv.includes('--install-tools'), advanced = process.argv.includes('--advanced') } = {}) {
+  const generated = advanced ? join(outputRoot, 'advanced-generated') : productionGenerated
   mkdirSync(outputRoot, { recursive: true })
   mkdirSync(generated, { recursive: true })
   ensureTool(installTools)
   const sourceHash = treeHash(resolve(root, 'source/retarget-core'))
   const lockHash = sha256(lockfile)
-  run('cargo', ['build', '--locked', '--release', '--target', 'wasm32-unknown-unknown', '--manifest-path', manifest, '--target-dir', targetDir])
+  run('cargo', ['build', '--locked', '--release', '--target', 'wasm32-unknown-unknown', '--manifest-path', manifest, '--target-dir', targetDir, ...(advanced ? ['--features', 'advanced-bake'] : [])])
   if (!existsSync(wasmArtifact)) throw new Error(`Cargo did not produce the expected retarget-core WASM artifact: ${wasmArtifact}`)
   for (const name of ['retarget_core.js', 'retarget_core.d.ts', 'retarget_core_bg.wasm', 'retarget_core_bg.wasm.d.ts', '.build-info.json']) {
     const path = resolve(generated, name)
@@ -71,6 +72,7 @@ export function buildRetargetWasm({ installTools = process.argv.includes('--inst
     apiVersion: 1,
     crateVersion: '0.1.0',
     wasmBindgenVersion: version,
+    features: advanced ? ['advanced-bake'] : [],
     sourceTreeSha256: sourceHash,
     lockfileSha256: lockHash,
     cargoArtifactSha256: sha256(wasmArtifact),

@@ -32,14 +32,62 @@ pub fn norm(q: Q) -> Q {
     if n == 0. {
         ID
     } else {
-        q.map(|v| v / n)
+        let inverse = 1. / n;
+        q.map(|v| v * inverse)
     }
+}
+#[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+pub fn axis_angle(axis: V, angle: f64) -> Q {
+    let s = libm::sin(angle / 2.);
+    [axis[0] * s, axis[1] * s, axis[2] * s, libm::cos(angle / 2.)]
+}
+#[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+pub fn slerp(a: Q, mut b: Q, t: f64) -> Q {
+    if t == 0. {
+        return a;
+    }
+    if t == 1. {
+        return b;
+    }
+    let mut cosine: f64 = a.iter().zip(b).map(|(a, b)| a * b).sum();
+    if cosine < 0. {
+        b = b.map(|v| -v);
+        cosine = -cosine;
+    }
+    if cosine >= 1. {
+        return a;
+    }
+    let sin_sq = 1. - cosine * cosine;
+    if sin_sq <= f64::EPSILON {
+        return norm(std::array::from_fn(|i| (1. - t) * a[i] + t * b[i]));
+    }
+    let sine = libm::sqrt(sin_sq);
+    let angle = libm::atan2(sine, cosine);
+    let x = libm::sin((1. - t) * angle) / sine;
+    let y = libm::sin(t * angle) / sine;
+    std::array::from_fn(|i| a[i] * x + b[i] * y)
+}
+#[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+pub fn angle(a: Q, b: Q) -> f64 {
+    2. * libm::acos(
+        a.iter()
+            .zip(b)
+            .map(|(a, b)| a * b)
+            .sum::<f64>()
+            .clamp(-1., 1.)
+            .abs(),
+    )
 }
 pub fn inv(q: Q) -> Q {
     [-q[0], -q[1], -q[2], q[3]]
 }
 pub fn mul(a: Q, b: Q) -> Q {
-    crate::qmul(a, b)
+    [
+        a[0] * b[3] + a[3] * b[0] + a[1] * b[2] - a[2] * b[1],
+        a[1] * b[3] + a[3] * b[1] + a[2] * b[0] - a[0] * b[2],
+        a[2] * b[3] + a[3] * b[2] + a[0] * b[1] - a[1] * b[0],
+        a[3] * b[3] - a[0] * b[0] - a[1] * b[1] - a[2] * b[2],
+    ]
 }
 pub fn rotate(q: Q, v: V) -> V {
     crate::rotate(q, v)
@@ -84,7 +132,7 @@ pub fn decompose_q(mut m: M) -> Q {
             n = -n;
         }
         for row in 0..3 {
-            m[col * 4 + row] /= n;
+            m[col * 4 + row] *= 1. / n;
         }
     }
     rotation(m)
@@ -105,6 +153,45 @@ pub fn inverse_point(m: M, v: V) -> V {
         ((d * h - e * g) * x + (b * g - a * h) * y + (a * e - b * d) * z) / det,
     ]
 }
+#[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+pub fn inverse_affine(m: M) -> M {
+    let (n11, n21, n31, n12, n22, n32, n13, n23, n33, n14, n24, n34) = (
+        m[0], m[1], m[2], m[4], m[5], m[6], m[8], m[9], m[10], m[12], m[13], m[14],
+    );
+    let t11 = -n23 * n32 + n22 * n33;
+    let t12 = n13 * n32 - n12 * n33;
+    let t13 = -n13 * n22 + n12 * n23;
+    let t14 =
+        n14 * n23 * n32 - n13 * n24 * n32 - n14 * n22 * n33 + n12 * n24 * n33 + n13 * n22 * n34
+            - n12 * n23 * n34;
+    let det = n11 * t11 + n21 * t12 + n31 * t13;
+    if det == 0. {
+        return [0.; 16];
+    }
+    let d = 1. / det;
+    [
+        t11 * d,
+        (n23 * n31 - n21 * n33) * d,
+        (-n22 * n31 + n21 * n32) * d,
+        0.,
+        t12 * d,
+        (-n13 * n31 + n11 * n33) * d,
+        (n12 * n31 - n11 * n32) * d,
+        0.,
+        t13 * d,
+        (n13 * n21 - n11 * n23) * d,
+        (-n12 * n21 + n11 * n22) * d,
+        0.,
+        t14 * d,
+        (n13 * n24 * n31 - n14 * n23 * n31 + n14 * n21 * n33 - n11 * n24 * n33 - n13 * n21 * n34
+            + n11 * n23 * n34)
+            * d,
+        (n14 * n22 * n31 - n12 * n24 * n31 - n14 * n21 * n32 + n11 * n24 * n32 + n12 * n21 * n34
+            - n11 * n22 * n34)
+            * d,
+        1.,
+    ]
+}
 pub fn worlds(s: &crate::SkeletonSnapshotV1, local: &[TransformV1]) -> Vec<M> {
     let mut out = Vec::with_capacity(local.len());
     for (i, t) in local.iter().enumerate() {
@@ -112,4 +199,39 @@ pub fn worlds(s: &crate::SkeletonSnapshotV1, local: &[TransformV1]) -> Vec<M> {
         out.push(s.nodes[i].parent.map_or(m, |p| multiply(&out[p], &m)));
     }
     out
+}
+pub fn sample(t: &crate::sampler::TrackV1, time: f64) -> Vec<f64> {
+    if t.property != "quaternion" || t.interpolation != "linear" {
+        return crate::sampler::track(t, time);
+    }
+    let upper = t.times.partition_point(|v| *v as f64 <= time);
+    if upper == 0 || upper == t.times.len() {
+        let i = upper.saturating_sub(1).min(t.times.len() - 1);
+        return t.values[i * 4..i * 4 + 4]
+            .iter()
+            .map(|v| *v as f64)
+            .collect();
+    }
+    let lo = upper - 1;
+    let a: Q = std::array::from_fn(|i| t.values[lo * 4 + i] as f64);
+    let mut b: Q = std::array::from_fn(|i| t.values[upper * 4 + i] as f64);
+    let p = (time - t.times[lo] as f64) / (t.times[upper] as f64 - t.times[lo] as f64);
+    let mut dot: f64 = a.iter().zip(b).map(|(a, b)| a * b).sum();
+    if a == b || p == 0. {
+        return a.to_vec();
+    }
+    if dot < 0. {
+        dot = -dot;
+        b = b.map(|v| -v);
+    }
+    let q = if dot < 0.9995 {
+        let theta = libm::acos(dot);
+        let sine = libm::sin(theta);
+        let s = libm::sin((1. - p) * theta) / sine;
+        let p = libm::sin(p * theta) / sine;
+        std::array::from_fn(|i| a[i] * s + b[i] * p)
+    } else {
+        norm(std::array::from_fn(|i| a[i] * (1. - p) + b[i] * p))
+    };
+    q.map(|v| (v as f32) as f64).to_vec()
 }

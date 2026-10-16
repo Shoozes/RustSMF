@@ -21,9 +21,17 @@ results contain actual target tracks and typed reports. Advanced/unknown options
 are refused atomically. Production remains in the TypeScript worker until all
 advanced parity and integration criteria pass.
 
+`advanced::bake_advanced_v1` and native/WASM `bake_advanced_json_v1` expose
+[experimental advanced baking](../../docs/dev/RETARGET_ADVANCED_BAKE.md), with
+complete reports, owned calibration and cancelable natural/contact/endpoint
+solving. This entry remains separate from core baking and production integration.
+Enable Cargo feature `advanced-bake` for its WASM export; runtime proof builds
+that variant separately. Production setup/build keep the smaller analysis/core
+module and its existing 1 MiB budget.
+
 The crate's `LICENSE` covers project-owned code. Carry the exact dependency notices from the repository's `THIRD_PARTY_NOTICES.md` and `THIRD_PARTY_LICENSES.txt` with distributions containing their code or generated WASM glue. Dependency and generator versions are pinned together.
 
 ---
 AI-created: 2026-10-14T20:38:18-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs
 AI-edited: 2026-10-14T20:38:18-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=docs | change=recorded retarget and asset workflow ownership
-AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-core-bake | change=described experimental baking
+AI-edited: 2026-10-15T20:58:42-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=code | change=implemented advanced parity and isolated experimental WASM payload

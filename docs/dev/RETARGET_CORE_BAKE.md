@@ -63,10 +63,17 @@ rotation and scale anchors, source/target references, float32 boundaries, cubic
 quaternions, nonuniform helpers and invalid/unsupported mixed batches. Separate
 preflight and sampler counts remain visible. Rust tests cover borrowed input
 immutability, cancellation during validation/baking, atomic errors and bounds.
+Adapter units mutate both authoring and captured mapping metadata; an isolated
+aliasing mutant must fail. Known translation/quaternion anchors remain explicit.
 HISTORY and the compact ignored runtime receipt own source-bound gate results.
 
 Advanced motion parity and production integration remain separate TODO outcomes.
 The private dummy, Tripo drafts and borrowed references are not test fixtures.
 
+The separate [advanced entry](RETARGET_ADVANCED_BAKE.md) adds the complete
+experimental report; this core-only API retains its capability/refusal contract.
+
 ---
 AI-created: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-core-bake
+
+AI-edited: 2026-10-15T20:58:42-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=code | change=implemented advanced parity and isolated experimental WASM payload

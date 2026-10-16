@@ -2,7 +2,7 @@ use crate::baker::*;
 use crate::sampler::BakeRequestV1;
 use serde_json::json;
 use std::cell::Cell;
-fn request() -> BakeRequestV1 {
+pub(crate) fn request() -> BakeRequestV1 {
     let node = |name: &str, parent: Option<usize>, y: f64| json!({"name":name,"parent":parent,"isBone":true,"position":[0,y,0],"quaternion":[0,0,0,1],"scale":[1,1,1],"worldPosition":[0,y,0],"worldQuaternion":[0,0,0,1]});
     serde_json::from_value(json!({"apiVersion":1,"operation":"bake",
       "source":{"nodes":[node("Root",None,0.),node("Tip",Some(0),1.)],"bones":[0,1]},

@@ -40,6 +40,11 @@ export interface PortableBakeResponseV1 {
   clips: Array<{ clip: PortableClipV1; report: Omit<AnimationRetargetReport,
     'forearmTwist' | 'endpointEnvelope' | 'jointConstraints' | 'targetChainCurls' | 'naturalMotion' | 'poseRanges' | 'localReferenceCorrections' | 'poseRecovery'> }>;
 }
+export interface PortableAdvancedBakeResponseV1 extends Omit<PortableBakeResponseV1, 'stage' | 'capabilities' | 'clips'> {
+  stage: 'advanced-bake';
+  capabilities: ['core-bake-v1', 'advanced-bake-v1'];
+  clips: Array<{clip: PortableClipV1; report: AnimationRetargetReport}>;
+}
 export interface PortablePoseV1 {
   local: Array<{ position: number[]; quaternion: number[]; scale: number[] }>;
   worldMatrices: number[][];

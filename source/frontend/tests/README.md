@@ -26,13 +26,25 @@ cancellation. [Contract and native guards](../../../docs/dev/RETARGET_SAMPLER.md
 ## Experimental Rust core baking
 
 `retargetCoreBake.test.ts` and generated `retarget-bake-fixtures.ts` cover all
-19 core options and 26 reports, copied mapping metadata and independent motion
+19 core options and 26 reports, bidirectional adapter metadata ownership and independent motion
 anchors. `retarget:runtime-proof` compares actual tracks/reports against the
 TypeScript solver, native Rust and Chromium WASM with exact structure/order and
 1e-6 numeric tolerance. Native tests cover validation/bake cancellation and
 atomic bounded errors; real WASM workers prove termination and replacement.
 [Core contract](../../../docs/dev/RETARGET_CORE_BAKE.md) owns the boundary.
-Production baking remains TypeScript; advanced Rust baking remains refused.
+Production remains TypeScript; the core-only API still refuses advanced features.
+
+## Experimental advanced Rust baking
+
+The separate [advanced contract](../../../docs/dev/RETARGET_ADVANCED_BAKE.md)
+owns all nine advanced options/eight reports and their bounds. Generated
+`retarget-advanced-fixtures.ts` / `retarget-natural-fixtures.ts` cover actual
+tracks/reports, allowed combinations and explicit refusals. Runtime proof checks
+native Rust and real Chromium WASM against TypeScript at 1e-6; the focused
+`retargetAdvancedBake.test.ts` independently checks planted soles, fixed lengths,
+torso movement and endpoint positions. Native guards add cancellation, ownership,
+reuse, option depth/value budgets and atomic failures. Aggregate contact storage
+counts repeated patches; native units check its limit and overflow. Production stays unchanged.
 
 ## Retarget assistance
 
@@ -249,4 +261,4 @@ AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown 
 
 AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=unknown | task=original-assets | change=added original Sable pack and acceptance routes
 
-AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=retarget-core-bake | change=routed experimental bake proof
+AI-edited: 2026-10-15T21:46:26-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=bounded contact storage and ordered production integration

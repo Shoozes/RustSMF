@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { createServer } from 'node:http'
-import { readFileSync, mkdirSync, writeFileSync } from 'node:fs'
+import { readFileSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { join, resolve } from 'node:path'
@@ -76,7 +76,8 @@ function diagnosticShape(value) {
 
 async function main() {
   mkdirSync(output, { recursive: true })
-  const built = buildRetargetWasm()
+  const production = buildRetargetWasm()
+  const built = buildRetargetWasm({ advanced: true })
   const nativeLine = run('cargo', ['run', '--locked', '--release', '--manifest-path', crateManifest, '--target-dir', resolve(root, 'output/retarget-core/cargo-target'), '--example', 'retarget_receipt'])
   const native = JSON.parse(nativeLine)
   assert.ok(Array.isArray(native.cases) && native.cases.length >= 10, 'first-party parity fixture set is unexpectedly small')
@@ -138,37 +139,81 @@ async function main() {
     assert.equal(result.error.code, c.code, c.name)
     assert.deepEqual(result.clips, [], `${c.name}: atomic batch`)
   })
+  const advanced = JSON.parse(run(process.execPath, ['--import', 'tsx', 'scripts/retarget-advanced-proof.ts'], { cwd: resolve(root, 'source/frontend') }))
+  assert.equal(advanced.advancedOptions.length, 9)
+  assert.equal(advanced.advancedReports.length, 8)
+  assert.ok(advanced.positives.length >= 33 && advanced.negatives.length >= 30, 'advanced corpus unexpectedly small')
+  assert.ok(advanced.negatives.some(c => c.name === 'natural-aggregate-anchor-limit'), 'missing aggregate contact-storage regression')
+  const advancedInputs = [...advanced.positives.map(c => JSON.stringify(c.input)), ...advanced.negatives.map(c => JSON.stringify(c.request))]
+  const nativeAdvanced = JSON.parse(run('cargo', ['run', '--locked', '--release', '--manifest-path', crateManifest, '--target-dir', resolve(root, 'output/retarget-core/cargo-target'), '--example', 'bake_receipt', '--', '--advanced'], { input: JSON.stringify(advancedInputs) }))
+  assert.equal(nativeAdvanced.length, advancedInputs.length)
+  advanced.positives.forEach((c, i) => compare(nativeAdvanced[i], c.expected, `advanced.${c.name}.typescript-native`))
+  advanced.negatives.forEach((c, i) => {
+    const result = nativeAdvanced[advanced.positives.length + i]
+    assert.equal(result.status, 'error', c.name)
+    assert.equal(result.error.code, c.code, c.name)
+    assert.deepEqual(result.clips, [], `${c.name}: atomic advanced batch`)
+  })
   const { chromium } = createRequire(resolve(root, 'source/frontend/package.json'))('playwright')
   let browser
+  const probe = join(output, `mime-probe-${process.pid}.mjs`)
+  writeFileSync(probe, 'export const ready = true;\n', {flag: 'wx'})
+  const routes = new Map([
+    ['/retarget_core.js', [join(built.generated, 'retarget_core.js'), 'application/javascript; charset=utf-8']],
+    ['/retarget_core.mjs', [join(built.generated, 'retarget_core.js'), 'application/javascript; charset=utf-8']],
+    ['/retarget_core_bg.wasm', [join(built.generated, 'retarget_core_bg.wasm'), 'application/wasm']],
+    ['/production/retarget_core.js', [join(production.generated, 'retarget_core.js'), 'application/javascript; charset=utf-8']],
+    ['/production/retarget_core.mjs', [join(production.generated, 'retarget_core.js'), 'application/javascript; charset=utf-8']],
+    ['/production/retarget_core_bg.wasm', [join(production.generated, 'retarget_core_bg.wasm'), 'application/wasm']],
+    ['/mime-probe.mjs', [probe, 'application/javascript; charset=utf-8']],
+  ])
   const server = createServer((request, response) => {
     const path = new URL(request.url ?? '/', 'http://127.0.0.1').pathname
+    response.setHeader('x-content-type-options', 'nosniff')
     if (path === '/') {
       response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
       response.end('<!doctype html><meta charset="utf-8"><title>Retarget WASM proof</title>')
       return
     }
-    if (path === '/retarget_core.js') {
-      response.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-store' })
-      response.end(readFileSync(join(built.generated, 'retarget_core.js')))
+    const route = routes.get(path)
+    if (route) {
+      response.writeHead(200, { 'content-type': route[1], 'cache-control': 'no-store' })
+      response.end(readFileSync(route[0]))
       return
     }
-    if (path === '/retarget_core_bg.wasm') {
-      response.writeHead(200, { 'content-type': 'application/wasm', 'cache-control': 'no-store' })
-      response.end(readFileSync(join(built.generated, 'retarget_core_bg.wasm')))
-      return
-    }
-    response.writeHead(404)
+    response.writeHead(404, {'content-type': 'application/octet-stream'})
     response.end('Not found')
   })
   try {
     await new Promise((resolveListen, reject) => server.listen(0, '127.0.0.1', (error) => error ? reject(error) : resolveListen()))
     const address = server.address()
     assert.ok(address && typeof address === 'object')
+    const origin = `http://127.0.0.1:${address.port}`
+    const probeResponse = await fetch(`${origin}/mime-probe.mjs`)
+    assert.equal(probeResponse.status, 200)
+    assert.match(probeResponse.headers.get('content-type'), /^application\/javascript;/)
+    const unknownResponse = await fetch(`${origin}/unknown.mjs`)
+    assert.equal(unknownResponse.status, 404)
+    assert.equal(unknownResponse.headers.get('content-type'), 'application/octet-stream')
+    assert.equal(unknownResponse.headers.get('x-content-type-options'), 'nosniff')
     browser = await chromium.launch({ headless: true })
     const page = await browser.newPage()
     const errors = []
     page.on('pageerror', (error) => errors.push(error.message))
     await page.goto(`http://127.0.0.1:${address.port}/`)
+    assert.equal(await page.evaluate(async () => (await import('/mime-probe.mjs')).ready), true)
+    const productionResults = await page.evaluate(async ({cases, sampleInputs, bakeInputs}) => {
+      const module = await import('/production/retarget_core.mjs')
+      await module.default('/production/retarget_core_bg.wasm')
+      return {advancedExport: typeof module.bake_advanced_json_v1 !== 'undefined',
+        preflight: cases.map(({input}) => JSON.parse(module.analyze_json_v1(JSON.stringify(input)))),
+        sampler: sampleInputs.map(input => JSON.parse(module.sample_json_v1(input))),
+        baking: bakeInputs.map(input => JSON.parse(module.bake_json_v1(input)))}
+    }, {cases: native.cases.map(({input}) => ({input})), sampleInputs: samplerInputs, bakeInputs})
+    assert.equal(productionResults.advancedExport, false)
+    compare(productionResults.preflight, native.cases.map(c => c.result), 'production.preflight')
+    compare(productionResults.sampler, nativeSampler, 'production.sampler')
+    compare(productionResults.baking, nativeBakes, 'production.core-bake')
     const wasmResults = await page.evaluate(async (cases) => {
       const module = await import('/retarget_core.js')
       await module.default('/retarget_core_bg.wasm')
@@ -195,6 +240,12 @@ async function main() {
     }, bakeInputs)
     compare(wasmBakes, nativeBakes, 'core-bake.native-wasm')
     baking.positives.forEach((c, i) => compare(wasmBakes[i], c.expected, `bake.${c.name}.typescript-wasm`))
+    const wasmAdvanced = await page.evaluate(async inputs => {
+      const module = await import('/retarget_core.js')
+      return inputs.map(input => JSON.parse(module.bake_advanced_json_v1(input)))
+    }, advancedInputs)
+    compare(wasmAdvanced, nativeAdvanced, 'advanced.native-wasm')
+    advanced.positives.forEach((c, i) => compare(wasmAdvanced[i], c.expected, `advanced.${c.name}.typescript-wasm`))
     const workerProof = async (input, entry, status) => page.evaluate(async ({input, entry, status}) => {
       const code = `import init, { ${entry} as execute } from '${location.origin}/retarget_core.js';
         await init('${location.origin}/retarget_core_bg.wasm');
@@ -211,7 +262,7 @@ async function main() {
           if(event.data.phase === 'ready') {
             const request = structuredClone(input);
             if(cancel) {
-              if(entry === 'bake_json_v1') { request.clips = Array.from({length:100}, () => structuredClone(request.clips[0])); request.clips.forEach(c => c.options.sampleRateHz=240); }
+              if(entry.startsWith('bake_')) { request.clips = Array.from({length:100}, () => structuredClone(request.clips[0])); request.clips.forEach(c => c.options.sampleRateHz=240); }
               else request.sampleTimes = Array(20000).fill(.5);
             }
             worker.postMessage(JSON.stringify(request));
@@ -232,6 +283,8 @@ async function main() {
     assert.deepEqual(samplerWorker, { cancelled: 'terminated', replacement: 'sampled' })
     const bakeWorker = await workerProof(baking.positives[0].input, 'bake_json_v1', 'baked')
     assert.deepEqual(bakeWorker, { cancelled: 'terminated', replacement: 'baked' })
+    const advancedWorker = await workerProof(advanced.positives.find(c => c.name === 'twist').input, 'bake_advanced_json_v1', 'baked')
+    assert.deepEqual(advancedWorker, { cancelled: 'terminated', replacement: 'baked' })
     assert.deepEqual(errors, [])
     const allDiagnostics = native.cases.map(({ name }, index) => ({
       name,
@@ -243,9 +296,16 @@ async function main() {
       status: 'passed',
       apiVersion: 1,
       native: { command: 'cargo run --locked --release --example retarget_receipt', fixtureCount: native.cases.length, resultSha256: hash(Buffer.from(JSON.stringify(native.cases.map(({ result }) => result)))) },
-      browserWasm: { browser: 'Chromium', wasmSha256: built.provenance.generatedWasmSha256, glueSha256: built.provenance.glueSha256 },
+      browserWasm: { browser: 'Chromium', features: built.provenance.features, wasmSha256: built.provenance.generatedWasmSha256, glueSha256: built.provenance.glueSha256 },
+      productionWasm: {features: production.provenance.features, wasmSha256: production.provenance.generatedWasmSha256,
+        bytes: readFileSync(join(production.generated, 'retarget_core_bg.wasm')).byteLength, preflightSamplerCoreParity: true, advancedExport: false},
+      staticRoutes: {mjsHttp: 'passed', mjsBrowserImport: 'passed', unknown: '404 application/octet-stream nosniff'},
       comparison: { casesCompared: native.cases.length, toleranceRelativeAbsolute: tolerance, mappingsExact: true, diagnosticsExact: true, numericFieldsWithinTolerance: true },
       cases: allDiagnostics,
+      advancedBake: { stage: 'advanced-bake', productionCutover: false, positiveCases: advanced.positives.length, refusalCases: advanced.negatives.length,
+        options: advanced.advancedOptions, reports: advanced.advancedReports, nativeRust: true, actualBrowserWasm: true, typescriptReference: true,
+        actualBakedTracksAndReports: true, borrowedInputCancellation: true, workerCancellation: advancedWorker, toleranceRelativeAbsolute: tolerance,
+        resultSha256: hash(Buffer.from(JSON.stringify(nativeAdvanced))), cases: [...advanced.positives.map(c => ({name: c.name, status: 'baked'})), ...advanced.negatives.map(c => ({name: c.name, code: c.code}))] },
       sampler: { stage: 'sampler', fullBake: false, positiveCases: sampler.positives.length, refusalCases: sampler.negatives.length,
         nativeRust: true, actualBrowserWasm: true, threeReference: true, knownValueAnchors: true, workerCancellation: samplerWorker, toleranceRelativeAbsolute: tolerance,
         resultSha256: hash(Buffer.from(JSON.stringify(nativeSampler))),
@@ -258,12 +318,14 @@ async function main() {
       unexpectedBrowserErrors: errors,
     }
     writeFileSync(join(output, 'receipt.json'), `${JSON.stringify(receipt, null, 2)}\n`)
-    console.log(`Retarget native/WASM proof passed: ${native.cases.length} preflight, ${sampler.positives.length} sampler / ${sampler.negatives.length} refusals, ${baking.positives.length} core bakes / ${baking.negatives.length} refusals; exact structure and numbers within ${tolerance}.`)
+    console.log(`Retarget native/WASM proof passed: ${native.cases.length} preflight, ${sampler.positives.length} sampler / ${sampler.negatives.length} refusals, ${baking.positives.length} core bakes / ${baking.negatives.length} refusals, ${advanced.positives.length} advanced / ${advanced.negatives.length} refusals; exact structure and numbers within ${tolerance}.`)
   } finally {
     try {
       if (browser) await browser.close()
     } finally {
-      if (server.listening) await new Promise((resolveClose) => server.close(() => resolveClose()))
+      try {
+        if (server.listening) await new Promise((resolveClose) => server.close(() => resolveClose()))
+      } finally { unlinkSync(probe) }
     }
   }
 }

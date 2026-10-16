@@ -6,9 +6,21 @@ use crate::sampler::{
 use crate::{MapDecisionV1, SkeletonSnapshotV1};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 const LIMIT: usize = 16_000_000;
+#[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+use crate::advanced::AdvancedOptions;
+#[cfg(all(target_arch = "wasm32", not(feature = "advanced-bake")))]
+type AdvancedOptions = ();
+#[cfg(all(target_arch = "wasm32", not(feature = "advanced-bake")))]
+struct NaturalFrame {
+    rotations: HashMap<usize, Q>,
+    foot_corrections: HashMap<usize, Q>,
+    descendant_rotations: HashMap<usize, Q>,
+    root: V,
+    root_authored: bool,
+}
 fn invalid(path: &str) -> SampleErrorV1 {
     sampler::error(
         "BAKE_INPUT_INVALID",
@@ -84,8 +96,10 @@ pub struct BakedClipV1 {
     pub report: CoreBakeReportV1,
 }
 #[derive(Clone, Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[serde(rename_all = "camelCase")]
 pub struct CoreBakeReportV1 {
+    #[serde(default, flatten)]
+    pub advanced: BTreeMap<String, Value>,
     pub source_clip: String,
     pub target_clip: String,
     pub duration: f64,
@@ -193,7 +207,7 @@ fn evaluate(
         if !s.bones.contains(&t.node) || t.bone_channel == Some(false) {
             continue;
         }
-        let v = sampler::track(t, time);
+        let v = sample(t, time);
         match t.property.as_str() {
             "position" => local[t.node].position.copy_from_slice(&v),
             "quaternion" => local[t.node].quaternion = norm(v.try_into().unwrap()),
@@ -214,6 +228,9 @@ fn name(t: &TrackV1, s: &SkeletonSnapshotV1) -> String {
         .unwrap_or_else(|| format!("{}.{}", s.nodes[t.node].name, t.property))
 }
 fn options(job: &ClipJobV1) -> Checked<Options> {
+    option_fields(&job.options, !job.endpoint_target_clips.is_empty())
+}
+fn option_fields(fields: &BTreeMap<String, Value>, endpoint_clips: bool) -> Checked<Options> {
     let core = [
         "clipName",
         "applyUpCorrection",
@@ -233,17 +250,14 @@ fn options(job: &ClipJobV1) -> Checked<Options> {
         "preserveTargetRotations",
         "scaleTransfer",
     ];
-    if job.options.keys().any(|k| !core.contains(&k.as_str()))
-        || !job.endpoint_target_clips.is_empty()
-    {
+    if fields.keys().any(|k| !core.contains(&k.as_str())) || endpoint_clips {
         return Err(unsupported("options"));
     }
     // Explicit null is not an omitted option at this strict experimental boundary.
-    if job.options.values().any(Value::is_null) {
+    if fields.values().any(Value::is_null) {
         return Err(invalid("options"));
     }
-    let options: Options =
-        serde_json::from_value(json!(job.options)).map_err(|_| invalid("options"))?;
+    let options: Options = serde_json::from_value(json!(fields)).map_err(|_| invalid("options"))?;
     if options.clip_name.as_ref().is_some_and(|v| v.len() > 1024)
         || options
             .extract_root_motion_bone
@@ -413,8 +427,11 @@ fn bake_job(
     pairs: &[Pair],
     cancel: &impl Fn() -> bool,
     budget: &mut usize,
+    _advanced: Option<&AdvancedOptions>,
 ) -> Checked<BakedClipV1> {
     checkpoint(cancel)?;
+    #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+    let advanced = _advanced;
     let (s, t, c) = (&r.source, &r.target, &job.clip);
     let sr = rest(s);
     let sw = worlds(s, &sr);
@@ -452,6 +469,13 @@ fn bake_job(
         evaluate(&mut tr, reference, t, 0., &target_scale, cancel)?;
     }
     let tw = worlds(t, &tr);
+    #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+    let curls = advanced
+        .map(|a| crate::advanced::curls(a, r, &tr, &tw))
+        .transpose()?
+        .unwrap_or_default();
+    #[cfg(all(target_arch = "wasm32", not(feature = "advanced-bake")))]
+    let curls: HashMap<usize, Q> = HashMap::new();
     let q_sources: HashSet<_> = c
         .tracks
         .iter()
@@ -744,22 +768,84 @@ fn bake_job(
     if !["linear", "step"].contains(&interpolation) {
         return Err(invalid("interpolation"));
     }
-    let mut q_values: Vec<(usize, Vec<f32>)> = vec![];
-    let mut p_values: Vec<(usize, Vec<f32>)> = vec![];
+    let mut q_values: Vec<(usize, Vec<f64>)> = vec![];
+    let mut p_values: Vec<(usize, Vec<f64>)> = vec![];
     let mut scale_values = vec![vec![]; scales.len()];
     let mut max_displacement: f64 = 0.;
-    fn push(values: &mut Vec<(usize, Vec<f32>)>, node: usize, v: &[f64]) {
+    #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+    let context = crate::advanced::BakeContext {
+        request: r,
+        job,
+        target_rest: &tr,
+        target_world: &tw,
+        source_reference: &reference_world,
+        samples: times.len(),
+        root: root.map(|p| p.target),
+        curls: &curls,
+        preserved: &preserved,
+        animated: &world_animated,
+    };
+    #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+    let mut natural = advanced
+        .map(|a| crate::advanced::natural(a, &context, cancel))
+        .transpose()?
+        .flatten();
+    fn push(values: &mut Vec<(usize, Vec<f64>)>, node: usize, v: &[f64]) {
         if let Some((_, dest)) = values.iter_mut().find(|(i, _)| *i == node) {
-            dest.extend(v.iter().map(|x| *x as f32));
+            dest.extend_from_slice(v);
         } else {
-            values.push((node, v.iter().map(|x| *x as f32).collect()));
+            values.push((node, v.to_vec()));
         }
     }
-    for time in &evaluation {
+    #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+    let frames = evaluation.iter().enumerate();
+    #[cfg(all(target_arch = "wasm32", not(feature = "advanced-bake")))]
+    let frames = evaluation.iter().map(|time| ((), time));
+    for (_frame_index, time) in frames {
         checkpoint(cancel)?;
         let mut animated = sr.clone();
         evaluate(&mut animated, c, s, *time, &HashSet::new(), cancel)?;
         let aw = worlds(s, &animated);
+        #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+        let mut root_world = root.map_or([0.; 3], |p| point(tw[p.target]));
+        #[cfg(all(target_arch = "wasm32", not(feature = "advanced-bake")))]
+        let root_world;
+        let mut root_local = None;
+        if let Some(p) = root.filter(|_| root_position) {
+            let mut delta = sub(point(aw[p.source]), point(reference_world[p.source]));
+            if let Some(extract) = extraction {
+                let travel = sub(point(aw[extract]), point(reference_world[extract]));
+                max_displacement = max_displacement.max(length(travel));
+                delta = sub(delta, travel);
+            }
+            root_world = add(
+                point(tw[p.target]),
+                scale(rotate(correction, delta), root_scale),
+            );
+            root_local = Some(
+                t.nodes[p.target]
+                    .parent
+                    .map_or(root_world, |parent| inverse_point(tw[parent], root_world)),
+            );
+        }
+        #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+        let natural_frame = natural
+            .as_mut()
+            .map(|n| n.frame(&context, &aw, correction, _frame_index, root_world, cancel))
+            .transpose()?;
+        #[cfg(all(target_arch = "wasm32", not(feature = "advanced-bake")))]
+        let natural_frame: Option<NaturalFrame> = None;
+        if let Some(n) = &natural_frame {
+            if n.root_authored || root_local.is_some() {
+                if let Some(p) = root {
+                    root_local = Some(
+                        t.nodes[p.target]
+                            .parent
+                            .map_or(n.root, |parent| inverse_point(tw[parent], n.root)),
+                    );
+                }
+            }
+        }
         let mut desired = HashMap::<usize, Q>::new();
         for i in &order {
             checkpoint(cancel)?;
@@ -771,7 +857,19 @@ fn bake_job(
                     .copied()
                     .unwrap_or_else(|| decompose_q(tw[p]))
             });
-            let mut world = if let Some(pq) = pq.filter(|_| preserved.contains(&t.nodes[i].name)) {
+            let override_world = natural_frame
+                .as_ref()
+                .and_then(|n| n.rotations.get(&i))
+                .copied();
+            let swing = natural_frame
+                .as_ref()
+                .and_then(|n| n.descendant_rotations.get(&i))
+                .copied();
+            let mut world = if let Some(local) = swing.filter(|_| pq.is_some()) {
+                norm(mul(pq.unwrap(), local))
+            } else if let Some(world) = override_world {
+                world
+            } else if let Some(pq) = pq.filter(|_| preserved.contains(&t.nodes[i].name)) {
                 norm(mul(pq, tr[i].quaternion))
             } else if let Some(p) = p.filter(|p| world_animated.contains(&p.source)) {
                 let delta = norm(mul(
@@ -803,43 +901,53 @@ fn bake_job(
                         world = norm(mul(between(current, desired), world));
                     }
                 }
+                if let Some(n) = &natural_frame {
+                    let mut ancestor = parent(t, i);
+                    while let Some(p) = ancestor {
+                        if let Some(q) = n.foot_corrections.get(&p) {
+                            world = norm(mul(*q, world));
+                            break;
+                        }
+                        ancestor = parent(t, p);
+                    }
+                }
                 world
             } else if let Some(pq) = pq {
-                norm(mul(pq, tr[i].quaternion))
+                norm(mul(
+                    pq,
+                    curls.get(&i).map_or(tr[i].quaternion, |offset| {
+                        norm(mul(tr[i].quaternion, *offset))
+                    }),
+                ))
             } else {
-                decompose_q(tw[i])
+                curls.get(&i).map_or_else(
+                    || decompose_q(tw[i]),
+                    |offset| norm(mul(decompose_q(tw[i]), *offset)),
+                )
             };
             if world.iter().any(|v| !v.is_finite()) {
                 return Err(invalid("pose.quaternion"));
             }
             desired.insert(i, world);
-            if intermediate.contains(&i) && target_q.contains(&i) {
-                push(&mut q_values, i, &tr[i].quaternion);
+            if override_world.is_none()
+                && (curls.contains_key(&i) || (intermediate.contains(&i) && target_q.contains(&i)))
+            {
+                let local = curls.get(&i).map_or(tr[i].quaternion, |offset| {
+                    norm(mul(tr[i].quaternion, *offset))
+                });
+                push(&mut q_values, i, &local);
             }
             if intermediate.contains(&i) && target_p.contains(&i) {
                 push(&mut p_values, i, &tr[i].position);
             }
-            if p.is_some_and(|p| world_animated.contains(&p.source)) {
+            if override_world.is_some() || p.is_some_and(|p| world_animated.contains(&p.source)) {
                 let parent_q =
                     pq.unwrap_or_else(|| t.nodes[i].parent.map_or(ID, |p| rotation(tw[p])));
                 world = norm(mul(inv(parent_q), world));
                 push(&mut q_values, i, &world);
             }
         }
-        if let Some(p) = root.filter(|_| root_position) {
-            let mut delta = sub(point(aw[p.source]), point(reference_world[p.source]));
-            if let Some(extract) = extraction {
-                let travel = sub(point(aw[extract]), point(reference_world[extract]));
-                max_displacement = max_displacement.max(length(travel));
-                delta = sub(delta, travel);
-            }
-            let position = add(
-                point(tw[p.target]),
-                scale(rotate(correction, delta), root_scale),
-            );
-            let local = t.nodes[p.target]
-                .parent
-                .map_or(position, |parent| inverse_point(tw[parent], position));
+        if let (Some(p), Some(local)) = (root, root_local) {
             push(&mut p_values, p.target, &local);
         }
         for (index, (spec, ti, ch, neutral)) in scales.iter().enumerate() {
@@ -859,6 +967,17 @@ fn bake_job(
             }
         }
     }
+    #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+    let mut advanced_report = advanced
+        .map(|a| crate::advanced::finish(a, &context, &mut q_values, &mut p_values, cancel))
+        .transpose()?
+        .unwrap_or_default();
+    #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+    if let Some(n) = &natural {
+        advanced_report.insert("naturalMotion".into(), n.report(&tw));
+    }
+    #[cfg(all(target_arch = "wasm32", not(feature = "advanced-bake")))]
+    let advanced_report = BTreeMap::new();
     let mut tracks = Vec::new();
     for (property, values) in [("quaternion", &q_values), ("position", &p_values)] {
         for (i, values) in values {
@@ -869,7 +988,7 @@ fn bake_job(
                 property: property.into(),
                 interpolation: interpolation.into(),
                 times: times.iter().map(|v| *v as f32).collect(),
-                values: values.clone(),
+                values: values.iter().map(|v| *v as f32).collect(),
             });
         }
     }
@@ -949,6 +1068,9 @@ fn bake_job(
         timing["sourceDuration"] = json!(c.duration);
         report["visualTiming"] = timing;
     }
+    let mut report: CoreBakeReportV1 =
+        serde_json::from_value(report).map_err(|_| invalid("output.report"))?;
+    report.advanced = advanced_report;
     Ok(BakedClipV1 {
         clip: ClipV1 {
             name: clip_name.into(),
@@ -956,10 +1078,16 @@ fn bake_job(
             blend_mode: 2500,
             tracks,
         },
-        report: serde_json::from_value(report).map_err(|_| invalid("output.report"))?,
+        report,
     })
 }
-fn execute(r: &BakeRequestV1, cancel: &impl Fn() -> bool) -> Checked<Vec<BakedClipV1>> {
+fn execute(
+    r: &BakeRequestV1,
+    cancel: &impl Fn() -> bool,
+    _advanced: bool,
+) -> Checked<Vec<BakedClipV1>> {
+    #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+    let advanced = _advanced;
     checkpoint(cancel)?;
     sampler::validate(r, cancel, false).map_err(|e| {
         if e.code == "SAMPLER_CANCELLED" {
@@ -1025,17 +1153,82 @@ fn execute(r: &BakeRequestV1, cancel: &impl Fn() -> bool) -> Checked<Vec<BakedCl
         });
     }
     // Validate every job's capability before solving any job. No mixed partial batch.
-    let options: Vec<_> = r.clips.iter().map(options).collect::<Checked<_>>()?;
+    #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+    if advanced {
+        crate::advanced::validate_options(r, cancel)?;
+    }
+    #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+    let options: Vec<_> = r
+        .clips
+        .iter()
+        .map(|job| {
+            if advanced {
+                let (core, a) = crate::advanced::split(job)?;
+                Ok((option_fields(&core, false)?, Some(a)))
+            } else {
+                Ok((options(job)?, None))
+            }
+        })
+        .collect::<Checked<_>>()?;
+    #[cfg(all(target_arch = "wasm32", not(feature = "advanced-bake")))]
+    let options: Vec<(Options, Option<AdvancedOptions>)> = r
+        .clips
+        .iter()
+        .map(|job| Ok((options(job)?, None)))
+        .collect::<Checked<_>>()?;
     let mut clips = Vec::new();
-    let mut budget = 0;
-    for (job, o) in r.clips.iter().zip(&options) {
-        clips.push(bake_job(r, job, o, &pairs, cancel, &mut budget)?);
+    let mut budget: usize = 0;
+    for (job, (o, a)) in r.clips.iter().zip(&options) {
+        #[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+        if let Some(envelope) = a.as_ref().and_then(|a| a.endpoint.as_ref()) {
+            let baked = crate::endpoint::bake(r, job, envelope, cancel)?;
+            budget = budget.saturating_add(
+                baked
+                    .clip
+                    .tracks
+                    .iter()
+                    .map(|c| c.times.len() + c.values.len())
+                    .sum::<usize>(),
+            );
+            if budget > LIMIT {
+                return Err(sampler::error(
+                    "BAKE_OUTPUT_LIMIT",
+                    "clips",
+                    "Baked output exceeds 16 million scalars.",
+                ));
+            }
+            clips.push(baked);
+            continue;
+        }
+        clips.push(bake_job(
+            r,
+            job,
+            o,
+            &pairs,
+            cancel,
+            &mut budget,
+            a.as_ref(),
+        )?);
     }
     checkpoint(cancel)?;
     Ok(clips)
 }
 pub fn bake_v1(request: &BakeRequestV1, cancelled: impl Fn() -> bool) -> BakeResponseV1 {
-    response(execute(request, &cancelled))
+    response(execute(request, &cancelled, false))
+}
+#[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+pub(crate) fn advanced_bake(r: &BakeRequestV1, cancel: &impl Fn() -> bool) -> BakeResponseV1 {
+    let mut out = response(execute(r, cancel, true));
+    out.stage = "advanced-bake".into();
+    out.capabilities = vec!["core-bake-v1".into(), "advanced-bake-v1".into()];
+    out
+}
+#[cfg(any(not(target_arch = "wasm32"), feature = "advanced-bake"))]
+pub(crate) fn advanced_error(e: SampleErrorV1) -> BakeResponseV1 {
+    let mut out = response(Err(e));
+    out.stage = "advanced-bake".into();
+    out.capabilities = vec!["core-bake-v1".into(), "advanced-bake-v1".into()];
+    out
 }
 fn response(result: Checked<Vec<BakedClipV1>>) -> BakeResponseV1 {
     let mut out = BakeResponseV1 {
@@ -1065,7 +1258,7 @@ pub fn bake_json_v1(input: &str) -> String {
     } else {
         serde_json::from_str::<BakeRequestV1>(input)
             .map_err(|_| invalid("$"))
-            .and_then(|r| execute(&r, &|| false))
+            .and_then(|r| execute(&r, &|| false, false))
     };
     serde_json::to_string(&response(result)).expect("validated bake output")
 }

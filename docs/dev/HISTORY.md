@@ -2,6 +2,52 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-15 — Advanced motion review and bounded cleanup
+
+Rechecked main `354542e` plus the unpublished 29-file advanced candidate. Every recorded final working hash, 14 media, protected asset/baseline identity and the prior native/WASM receipt matched. Reviewed portable ownership, advanced/natural/endpoint math, allocation/cancellation paths, comparator/build guards and the production worker/Tauri consumers. The earlier five-gate proof remains attached to its original candidate.
+
+A new native reproduction accepted a 287602-byte profile with 512 repeated 16-point patches over 31 frames: 253952 cached contact-point samples, while the bone-sample guard counted only 372. Capture now applies a separate aggregate 200000-point limit before allocating offset/patch arrays. Exact-limit, cumulative patch, articulated-point and saturating-overflow units pass; the generated portable refusal checks native Rust and actual browser WASM without changing TypeScript behavior. The existing positive patch case remains in parity coverage.
+
+Fresh focused proof: 28 Rust units, the advanced frontend corpus unit, test typecheck and focused ESLint pass. Sequential `pwsh -NoProfile -File run.ps1 -Task verify` and `pwsh -NoProfile -File run.ps1 -Task retarget:runtime-proof` exit 0 with unchanged source after each command: 615 frontend units, 28 retarget-core tests, all 14 Rust verification steps; 17 preflight, 14 sampler/20 refusals, 29 core/40 refusals and 33 advanced/30 refusals. The exact failing input now returns `ADVANCED_INPUT_INVALID` at `naturalMotion.anchor.limit` with no clips. Native/actual-WASM structures match exactly at 1e-6 numeric tolerance.
+
+This fresh candidate binds 1322 canonical inputs at SHA-256 `b084ccaf01ec4af2ff5ea530a49367d5b29c228fff77afdc763b509aa4c06d77`. `output/retarget-runtime-proof/advanced-motion-receipt.json` under `review` retains fresh commands, source/final documentation hashes, protection checks and owned cleanup. The separate compact `advanced-review-runtime.json` has SHA-256 `af86b5898c7692d637855ddce55d91bbabd4c184a2cd35f818d72495fd723ea2`. Earlier gate/runtime/media proof remains intact. Browser/journey/strict suites were not rerun for this experimental-only guard; prior proof remains source-bound, and the production WASM hash remains unchanged at 785005 bytes. Only completion documentation follows fresh verification.
+
+TODO orders production delivery before adapters/cancellation and final continuity/cutover: the reviewed full advanced WASM is 1372288 bytes, above the unchanged 1 MiB production guard. Production remains TypeScript. No UI, public format, Sable/ZIP/export, version, installation, recovery data or private asset changed; no commit/push belongs to this pass.
+
+The subsequent authorized closeout/publication uses an isolated copy of the exact
+staged public source and the full sequential advanced-motion gate. The existing
+advanced receipt's `publication` record binds base/tree, final command results,
+required media, private-asset protection, guarded-helper outcome and confirmed
+remote main commit. Maintainer-only helper checks run in the original checkout;
+the public copy explicitly skips those unavailable private checks. Production
+integration and installer/release changes remain outside this saved batch.
+
+## 2026-10-15 — Experimental advanced Rust motion — complete locally
+
+Work starts on main at `354542e65d0f27f7969a9806c23dc54eb1c715ac`, retaining all seven review-cleanup files. The separate native/WASM advanced entry implements the nine advanced options/eight reports, including local pass ordering, calibrated head constraints, natural/contact/pelvis/swing solving and endpoint identity rebaking. Production remains TypeScript; UI, public formats, versions, installer and publication are unchanged.
+
+Focused proof covers 33 positive advanced cases and 29 refusals against retained TypeScript, including active knee articulation in both calibrated-bend branches, independent planted soles, segment lengths, torso motion and endpoint positions. Initial parity exposed near-zero head diagnostic sensitivity; matching Three's quaternion operation order and interpolation weights repaired it without changing tolerance. A negative endpoint fixture initially sampled its valid first key; its invalid key is now placed at the actual endpoint. Core and shared refusals keep their own codes. Endpoint aliases now retain direct hierarchical paths while refusing object bindings. A transformed-parent/yaw case exposed near-zero diagnostic drift from JSON float parsing; the already-pinned serde_json now enables float_roundtrip, with a bit-exact rest-rotation regression and matrix-based endpoint conversion. The changed candidate invalidated the subsequent gate after its passing browser command; the final gate restarted on the repaired source.
+
+The first broad verification rejected a 1371069-byte production WASM module against the existing 1 MiB limit. Release optimization alone was insufficient. Native APIs remain available; explicit WASM feature gating keeps advanced code in the separately generated experimental module used by runtime proof. The final production module measures 785005 bytes (SHA-256 `8db1d7d9efd9b270a79f1670713757424d66de86fb37a869b63fa6a5a5e52cc0`); the chunk guard rejects accidental advanced exports and oversized assets. No size limit is raised.
+
+Final sequential acceptance passed on 1322 canonical inputs at SHA-256 `f7d0910be65f49d77bdf6401b1a8f35cc413ce3caa1eef99d91ac020bd43e6fb`, based on `354542e`. PowerShell 7.6.6 / Node v26.5.0 ran these public commands with exit 0 and unchanged source after every command:
+
+- `run.ps1 -Task verify`: 615 frontend units, 27 retarget-core tests and all 14 Rust verification steps.
+- `run.ps1 -Task test:e2e -NoGenEye`: 196 passed.
+- `run.ps1 -Task test:journey -NoGenEye`: 12 passed.
+- `run.ps1 -Task test:visual-strict`: 3 passed; no baseline updates.
+- `run.ps1 -Task retarget:runtime-proof`: 17 preflight, 14 sampler/20 refusals, 29 core/40 refusals, 33 advanced/29 refusals. Exact structure and 1e-6 numeric parity across retained TypeScript, native Rust and actual browser WASM. Both WASM variants, static MIME routes, native cancellation/immutability and browser worker termination/replacement pass.
+
+`output/retarget-runtime-proof/advanced-motion-receipt.json` retains earlier attempts and final source/command/resource records; `advanced-runtime.json` has SHA-256 `72d506a4015d86636f51ba87cf7efb33edcb7c2dc0b16afa2e47221d705305cb`. Required 14 hand-wave media are retained under the same owner. Only completion documentation follows the frozen gate, with final hashes recorded separately. Disposable gate/check helpers are removed after completion; owned gate processes have exited. Sable/ZIP/export, Original references, showcase and private assets remain unchanged. No recovery data, installation, UI, public format, version or publication changed; production integration remains next.
+
+## 2026-10-15 — Published core baking recheck and advanced handoff
+
+Clean main and live origin match `354542e65d0f27f7969a9806c23dc54eb1c715ac`, tree `afc42aec73e9d0dc875e3198b0394e3c1fb65c28`. Recheck matches 21 published blobs/working hashes, 14 media and the native/WASM receipt. Earlier gate evidence retains its original source; no runtime defect was reproduced. Production remains the TypeScript worker, with advanced Rust options explicitly refused.
+
+Cleanup replaces a misleading fixture-clone ownership test with actual bake-adapter capture and bidirectional mutation checks for maps, decisions/roles, diagnostics and frame arrays. An isolated shallow-alias mutant fails the new assertion as required; both scratch files are removed. Known translation/quaternion anchors replace a superficial changed-object assertion. TODO orders advanced contracts/local passes, natural/contact/joint ownership, then endpoint rebaking/combinations, retaining current restrictions and separate production integration.
+
+Fresh local proof: 52 focused frontend tests, 23 Rust tests, test typecheck, focused ESLint, context validation and 29 context/project tests pass. The focused runner initially used the absent frontend-local executable; it succeeds through the existing hoisted pinned runtime. An initial context budget check rejected verbose TODO text; the handoff was shortened without increasing the cap. Exact commands, source hashes and results extend `output/retarget-runtime-proof/core-bake-receipt.json` under `review`. Full browser/journey/visual/native-WASM gates are reused only for unchanged implementation; they were not rerun for these tests/docs. Sable/ZIP/export, Original and private asset identities remain unchanged. No owned processes remain; no commit/push belongs to this local pass.
+
 ## 2026-10-15 — Experimental Rust core baking
 
 Implemented locally on main from `b2fc740f8938aa757dec43304c0427595211e2ce`, preserving the four existing review-document edits. The final gate binds 1313 canonical inputs at SHA-256 `70f3cf994dbd62fb09075356c3d7adda02e0657a28c3db16d9a22d2dc0738935`. Only completion documentation changes follow that gate; the compact receipt binds their final hashes separately.
