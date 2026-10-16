@@ -26,6 +26,9 @@ Advanced Rust contact capture separately caps aggregate cached point samples,
 including every repeated patch, before allocation. The full advanced WASM stays
 experimental; production delivery must retain the existing size guard.
 
+Advanced motion is published at `8c231cb`. Worker progress rejects nonintegral,
+nonfinite or invalid counts; verification generates bindings before import checks.
+
 Transfer copies and raw-clip Retime preserve glTF cubic-spline motion, including rotation and scale. Trim subdivides vector/scale curves using boundary values and derivatives. Cubic rotation trims require existing rotation-key bounds or held endpoint regions; inserting a normalized quaternion key could change motion, so that case is refused before mutation with guidance to use existing keys or Retime. Custom/smooth trim interpolation is also refused. Shared key sampling honors the actual cubic/step/linear factory. History, project reopen and parsed GLB re-import have independent known-motion checks.
 
 The published cubic authoring batch at `040feb3` passed sequential verify (546 frontend units; 14 Rust checks), browser (163, no retries), journeys (11) and strict visuals (3) on unchanged implementation inputs. Routine output is compact JSON; HTML and successful UI captures are opt-in. Required visual/pixel and hand-wave checks remain enabled. HISTORY owns source identity, final results and the earlier review's separate proof.
@@ -367,4 +370,4 @@ AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | model=unknown | effort=
 
 AI-edited: 2026-10-15 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=recorded published sampler state
 
-AI-edited: 2026-10-15T21:46:26-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=bounded contact storage and ordered production integration
+AI-edited: 2026-10-15T22:16:39-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=rechecked publication and bounded production integration

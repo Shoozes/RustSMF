@@ -47,12 +47,9 @@
         "scripts/context-bank.test.mjs"
       ],
       "notes": [
-        "Exact files and explicit globs are the only path contract; bare directories fail.",
-        "Node.js 22 or newer is the canonical runtime.",
-        "Generation never truncates a file or writes when --out - is requested; scans, globs, explicit paths, and trees honor runtime and configured directory exclusions.",
-        "Explicit paths reject symlink ancestors and Windows drive-relative escapes.",
-        "Public generation uses node scripts/generate-context.mjs --group <group> --out -; private local helper/agent folders are excluded from routes and scans.",
-        "Generated text regions normalize CRLF to LF before rendering and budget accounting; source files and binary evidence are never rewritten."
+        "Node.js 22+; exact files/globs only. Reject bare directories, symlink ancestors and Windows drive-relative escapes.",
+        "Generation normalizes CRLF for text rendering/budgets only; never truncate files, rewrite source/binary evidence or write when --out - is requested.",
+        "Runtime/configured exclusions apply to scans, globs, paths and trees. Public entry: node scripts/generate-context.mjs --group <group> --out -. Private helper/agent folders stay excluded."
       ]
     },
     "workflow__project_integrity": {
@@ -809,7 +806,7 @@
       ]
     },
     "issue__verification_current_head": {
-      "description": "Current working-tree verification evidence, authoritative local gates, browser result classification, and cleanup ownership.",
+      "description": "Current source proof, local gates, browser failure classification and owned cleanup.",
       "max_kb": 96,
       "paths": [
         "README.md",
@@ -825,10 +822,9 @@
         "source/frontend/playwright.config.ts"
       ],
       "notes": [
-        "review.md owns the latest assessment; HISTORY.md owns dated command evidence and TODO.md owns forward work. APP_STATE.md supplies broader product contracts only when needed.",
-        "Use the test:e2e:list package script for browser inventory so npm cannot consume Playwright's --list flag and accidentally run the suite.",
-        "Classify browser failures by assertion, launch, and teardown phase; a historical managed-process caveat must never hide a current product assertion failure, and runner-owned ports must be clear after interrupted runs.",
-        "tests__quality owns the full feature evidence matrix; this route keeps command and current-review ownership."
+        "review.md owns assessment, HISTORY dated proof, TODO forward work; load APP_STATE only for wider contracts.",
+        "Use test:e2e:list for inventory; npm can otherwise consume --list and run tests.",
+        "Classify assertion/launch/teardown failures separately; old managed-process caveats never waive current assertions. Clear owned ports after interruption. tests__quality owns the feature evidence matrix."
       ]
     },
     "issue__external_model_resources": {
@@ -1306,8 +1302,8 @@
         "source/frontend/scripts/check-entry-chunks.mjs"
       ],
       "notes": [
-        "Shared core/math ownership is intentional; natural and endpoint modules have separate subsystem__rust_* routes.",
-        "Require 9 options/8 reports, actual tracks, exact structure and 1e-6 TypeScript/native/WASM parity; production stays TypeScript."
+        "Core/math overlap is intentional; natural/endpoint modules have subsystem__rust_* routes.",
+        "Require 9 options/8 reports, real tracks, exact structure and 1e-6 TS/native/WASM parity; production stays TypeScript."
       ]
     },
     "subsystem__rust_natural_motion": {
@@ -1334,6 +1330,22 @@
       ],
       "notes": [
         "Reference overlap: subsystem__endpoint_envelopes; integration: workflow__retarget_advanced_bake."
+      ]
+    },
+    "workflow__retarget_production_integration": {
+      "description": "Production bake delivery/lifecycle; solver: workflow__retarget_advanced_bake; preview: feature__retarget_assistance.",
+      "max_kb": 96,
+      "paths": [
+        "source/frontend/src/workers/retargetJobClient*",
+        "source/frontend/src/workers/retargetPortable*",
+        "source/frontend/src/workers/retargetWorker.ts",
+        "source/frontend/src/workers/retargetBakeRuntime.ts",
+        "source/frontend/src/workers/retargetProtocol.ts",
+        "source/frontend/src/workers/retargetSnapshot.ts",
+        "source/src-tauri/src/retarget.rs",
+        "scripts/build-retarget-wasm.mjs",
+        "source/frontend/scripts/check-entry-chunks.mjs",
+        "docs/dev/RETARGET_ADVANCED_BAKE.md"
       ]
     }
   },

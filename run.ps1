@@ -583,6 +583,9 @@ switch -Exact ($NormalizedTask) {
     "verify" {
         Write-Info "[VERIFY] Lint, build, docs/context, and shared Rust checks..."
         $ok = $true
+        if (-not $NodeExecutable) { Write-Warn "Node.js 22 or newer is required for verification."; exit 1 }
+        & $NodeExecutable scripts/build-retarget-wasm.mjs
+        if ($LASTEXITCODE -ne 0) { Write-Warn "retarget WASM generation failed; run setup to install the pinned tooling."; exit 1 }
         if (-not (Invoke-ProjectIntegrityVerification)) { $ok = $false }
         if (-not (Invoke-ContextBankVerification)) { $ok = $false }
         if (-not (Invoke-GitMainSafetyVerification)) { $ok = $false }

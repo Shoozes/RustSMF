@@ -2,6 +2,20 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-15 — Published advanced-motion recheck and integration handoff
+
+Clean main and live origin match `8c231cbf91e1d4d037abd98f188d72ebe509f60c`, tree `43c80da8e701f1b380f52847b9e0272908460002`. All 29 publication working hashes, 14 retained journey media, runtime receipt and protected identities match. Prior native/actual-WASM parity and the five isolated gates retain their original source. The published bootstrap failure is identified: import integrity ran before ignored bindings were generated, although later npm checks created them.
+
+Local cleanup generates WASM before launcher import checks and fails immediately if generation fails. A launcher contract regression guards order and failure handling. A separate worker regression demonstrates that NaN progress reached callbacks and accepted a later success; safe integral/range checks now reject nonfinite/fractional/invalid counts before callbacks and release workers. Valid progress still completes. Seven focused client tests, test typecheck, focused ESLint and 20 project-integrity tests pass. Fresh `pwsh -NoProfile -File run.ps1 -Task verify` exits 0 (617 frontend units, 28 retarget-core tests and all 14 Rust verification steps); the focused `retarget-transfer.spec.ts` and `native.spec.ts` browser command exits 0 with 32 passed, no retries/skips/global errors. Both commands retain unchanged source over 1322 canonical inputs at SHA-256 `8b77a7bd836fd3fb6157839ad8241459514145fa29321885461c3d28e61c7257`. The existing advanced receipt's `publishedReview` record owns exact commands, final documentation hashes and cleanup. Only completion prose follows fresh proof. Prior full journey/strict/native-WASM proof stays attached to publication; these suites were not rerun. Solver and styling inputs remain unchanged. Mocked native IPC remains separate from actual Rust and installed Windows evidence.
+
+TODO now reflects publication and orders one production-integration outcome: delivery within the existing size guard, typed native/worker routing and ownership, then lifecycle/project/export acceptance. A focused Summary Bank route includes those owners; concise route notes preserve existing budgets. No Rust solver, UI, public format, version, installer, Sable/ZIP/export, recovery or private asset changed. The prior unlinked 44 MB snapshot remains retained after automatic cleanup rejection; no deletion is retried. This review/cleanup is local and does not authorize another commit or push.
+
+The subsequent paired closeout/publication saves these nine reviewed cleanup
+paths after verification of the exact staged source in a disposable public copy.
+Its nested `publishedReview.publication` receipt records commands, base/tree,
+guarded-helper outcome, confirmed remote main commit and owned cleanup. This
+preserves verified progress; production Rust baking remains the next outcome.
+
 ## 2026-10-15 — Advanced motion review and bounded cleanup
 
 Rechecked main `354542e` plus the unpublished 29-file advanced candidate. Every recorded final working hash, 14 media, protected asset/baseline identity and the prior native/WASM receipt matched. Reviewed portable ownership, advanced/natural/endpoint math, allocation/cancellation paths, comparator/build guards and the production worker/Tauri consumers. The earlier five-gate proof remains attached to its original candidate.

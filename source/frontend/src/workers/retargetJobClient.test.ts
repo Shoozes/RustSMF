@@ -51,3 +51,25 @@ test('native cancellation calls the cooperative command and rejects late native 
   client.cancel();await assert.rejects(pending,RetargetCancelledError);complete(result);await tick();
   assert.deepEqual(calls,['retarget_preflight_v1','cancel_retarget_preflight_v1']);assert.equal(client.isCurrent(job),false);client.dispose();
 });
+
+test('invalid worker progress is rejected before callbacks and releases the worker',async()=>{
+  for(const [completed,total] of [[NaN,1],[0,NaN],[Infinity,1],[0,Infinity],[.5,1],[0,1.5],[-1,1],[2,1],[0,0]]){
+    const port=new Port(),progress:Array<{completed:number;total:number}>=[];
+    const client=createRetargetJobClient({native:false,workerFactory:()=>port,onProgress:value=>progress.push(value)});
+    const pending=client.analyze(client.start(1),input);await tick();
+    port.onmessage?.(new MessageEvent('message',{data:{...port.request,type:'progress',completed,total}}));
+    port.respond();
+    await assert.rejects(pending,/invalid progress/);
+    assert.equal(progress.length,1,'invalid counts must not reach the UI callback');
+    assert.equal(port.terminated,true);assert.equal(port.onmessage,null);client.dispose();
+  }
+});
+
+test('valid integral worker progress completes normally',async()=>{
+  const port=new Port(),progress:Array<{completed:number;total:number}>=[];
+  const client=createRetargetJobClient({native:false,workerFactory:()=>port,onProgress:value=>progress.push(value)});
+  const pending=client.analyze(client.start(1),input);await tick();
+  for(const completed of [0,1])port.onmessage?.(new MessageEvent('message',{data:{...port.request,type:'progress',completed,total:1}}));
+  port.respond();assert.deepEqual(await pending,result);
+  assert.deepEqual(progress.map(p=>p.completed),[0,0,1]);assert.equal(port.terminated,true);client.dispose();
+});

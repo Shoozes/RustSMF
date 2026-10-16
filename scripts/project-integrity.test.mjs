@@ -202,6 +202,17 @@ describe('project integrity checks', () => {
     }
   })
 
+  it('generates retarget bindings before verify checks generated imports', () => {
+    const launcher = readFileSync(join(process.cwd(), 'run.ps1'), 'utf8')
+    const verify = /"verify" \{([\s\S]*?)\r?\n    }/.exec(launcher)?.[1] ?? ''
+    const build = verify.indexOf('& $NodeExecutable scripts/build-retarget-wasm.mjs')
+    const integrity = verify.indexOf('Invoke-ProjectIntegrityVerification')
+    assert.ok(build >= 0 && integrity > build, 'generation must precede import integrity')
+    assert.match(verify.slice(build, integrity), /if \(\$LASTEXITCODE -ne 0\)[^\r\n]*exit 1/)
+    const nodeGuard = verify.indexOf('if (-not $NodeExecutable)')
+    assert.ok(nodeGuard >= 0 && nodeGuard < build)
+  })
+
   it('reports malformed durable-doc encoding rather than silently replacing bytes', () => {
     const root = mkdtempSync(join(process.env.TEMP ?? process.cwd(), 'rustsmf-integrity-'))
     temporaryRoots.push(root)

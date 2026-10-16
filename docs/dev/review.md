@@ -6,16 +6,16 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Local advanced-motion review and cleanup — 2026-10-15
+## Published advanced-motion review — 2026-10-15
 
-Reviewed main `354542e` plus the 29-file unpublished candidate. All final working hashes, 14 required media, protected identities and the native/WASM receipt matched acceptance. Coverage: portable capture, local/natural/endpoint solving, bounds/cancellation, parity, build gating and production/native consumers.
+Clean main and live origin match `8c231cbf91e1d4d037abd98f188d72ebe509f60c`, tree `43c80da8e701f1b380f52847b9e0272908460002`. All 29 working hashes, 14 retained media, runtime receipt and protected identities match publication. Coverage: advanced/natural/endpoint contracts and prior guards, delivery builds, portable packets, job client/worker and native command boundaries.
 
-- Verified closed: experimental nine-option/eight-report parity; production still uses TypeScript. Prior five-gate proof retains its original source.
-- New, repaired: a 287602-byte profile captured 253952 contact-point samples while passing the 372 bone-sample check. Capture now caps total cached points at 200000 before allocation; boundary/overflow units and a native/WASM refusal guard it. HISTORY owns fresh results.
-- Still open: production integration. The full advanced WASM measures 1372288 bytes, above the unchanged 1 MiB production limit. TODO orders delivery, adapters/cancellation, then continuity/cutover.
-- Unverified: production Rust bake lifecycle, new installed-Windows baking and general animal compatibility.
+- Verified closed: nine options/eight reports and aggregate contact storage have published native/actual-WASM parity. All five isolated publication gates passed; proof stays attached to that source.
+- New, repaired locally: `verify` checked generated imports before creating WASM bindings. It now generates first and stops on failure. Worker progress accepted NaN/infinity/fractions; a failing regression proves the gap, then strict integer/range checks reject it before UI callbacks and release the worker.
+- Still open: production integration. Rust baking remains experimental; TODO orders delivery within the 1 MiB guard, typed native/worker adapters, then lifecycle/project/export acceptance.
+- Unverified: production Rust bake lifecycle, new installed-Windows baking and general animal compatibility. The earlier 44 MB unlinked snapshot remains ignored after automatic deletion review rejected cleanup; no new attempt is made here.
 
-Earlier published-core review at `354542e` verified 21 blobs/14 media and repaired an adapter-ownership test with a failing shallow-alias mutant and known motion anchors (52 focused frontend/23 Rust tests). Its original receipt and HISTORY remain authoritative. This cleanup preserves those changes, Sable/ZIP/export, UI, recovery data and private assets; no publication.
+HISTORY and the advanced receipt own fresh cleanup proof. Sable/ZIP/export, UI, Original, recovery and private assets are preserved. This pass stays local, without publication.
 
 ### Earlier backup showcase recheck
 
@@ -185,4 +185,4 @@ open; TODO records the completed local acceptance and separate distribution scop
 ---
 AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
 
-AI-edited: 2026-10-15T21:49:50-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=bounded contact storage and ordered production integration
+AI-edited: 2026-10-15T22:16:39-04:00 | agent=Codex/root | model=unknown | effort=unknown | task=review | change=rechecked publication and bounded production integration

@@ -100,7 +100,7 @@ export function createRetargetJobClient(options:ClientOptions={}) {
         if(id.phase!==request.phase){reject(new Error('Retarget worker returned the wrong phase.'));return;}
         if(id.type==='progress'){
           const count=response.completed,total=response.total;
-          if(typeof count!=='number' || typeof total!=='number' || count<completed || count>total || total<=0){reject(new Error('Retarget worker returned invalid progress.'));return;}
+          if(typeof count!=='number' || typeof total!=='number' || !Number.isSafeInteger(count) || !Number.isSafeInteger(total) || count<0 || count<completed || count>total || total<=0){reject(new Error('Retarget worker returned invalid progress.'));return;}
           completed=count;options.onProgress?.({phase:request.phase,completed:count,total});return;
         }
         if(id.type==='error'){reject(new Error(`Transfer ${request.phase} failed: ${String(response.message)}`));return;}
