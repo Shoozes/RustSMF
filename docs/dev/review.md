@@ -6,7 +6,23 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Supplied reliability review of 7244351 - implementation recheck
+## Review, recheck and cleanup — 2026-10-16
+
+Prior findings remain closed on the 507-input recheck. A GLB preparation leak
+was reproduced and repaired. Full verify and 26 affected browser tests pass;
+HISTORY owns source/coverage/proof. Recovery reconciliation and refreshed
+installed API acceptance are complete with verified limitations; TODO retains
+actual native destination-dialog acceptance.
+
+The remaining source gates/package pass. Real installed Rust Transfer,
+discard/Apply/history, cancellation, ZIP choice/resources, queue preparation
+cancel/retry and restart recovery passed through Playwright/CDP. Independently
+parsed native projects retain known motion/influences and texture pixels. Both
+test installs are removed; all three original recovery generations restore
+exactly. Native destination Save/cancel/retry remains unobserved; the operator
+chose no CUA or take over.
+
+## Earlier supplied reliability review of 7244351 - implementation recheck
 
 Before cleanup: 507 inputs matched the seven-gate receipt; seven findings closed.
 A preparation-failure regression exposed double disposal of unused OBJ textures;
@@ -22,12 +38,12 @@ then resource/export fidelity, retarget boundaries and integrated acceptance.
   Sable, Original references and private asset exclusions.
 - Verified in source: all seven final candidate gates pass; detailed results are recorded in HISTORY
   and `Compact_Evidence/RustSMF/runs/reliability-20261016/summary.json`.
-- Pending: installed Transfer/queue/recovery continuation. Matched install, Open cancel and playback were observed; WebView source selection was blocked. Session closed: nine processes exited, three recovery generations restored exactly, test install/registration removed. Arrange attended selection next.
+- At that review: Transfer/queue/recovery continuation was pending after blocked source selection. Nine processes exited, recovery restored exactly and the test install was removed. The API continuation above supersedes that handoff.
   Earlier installed ZIP/sidecar/GLB observations retain their original identity.
 
 Both Windows sessions restored recovery and removed their test installations.
 Automatic approval review refused deletion of their inactive WebView profiles;
-they remain private (latest: 76,674,781 bytes). TODO retains attended acceptance.
+they remain private (latest: 76,674,781 bytes). TODO retains actual dialog acceptance.
 Source-bound package/media proof is preserved; no bulk deletion was attempted.
 
 
@@ -236,5 +252,5 @@ still contain the removed scaffolding. No selected implementation defect remains
 open; TODO records the completed local acceptance and separate distribution scope.
 
 <!--
-AI-edited: 2026-10-16 | agent=Codex/root | task=reliability-review | change=classified source repairs and native acceptance gap
+AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | change=recorded native API acceptance and remaining destination-dialog boundary
 -->

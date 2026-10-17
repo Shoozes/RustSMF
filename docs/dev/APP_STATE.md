@@ -39,6 +39,10 @@ Export > Tools > Export queue captures the current authored model with an explic
 
 ## ZIP intake on current source
 
+GLTF resource and post-parse preparation failures release shared scene resources
+once before rejection. Windows release builds use the
+GUI subsystem; debug builds retain their console.
+
 Open and viewport drop accept one ZIP containing supported models and relative resources. One model loads directly; several require a compact explicit choice. A cancelable worker validates paths, entries, CRC and observed expansion. Cancel, malformed input and stale reads preserve editable work. Native reads retain Rust's selected-path authority; both platforms share expansion. [ZIP_INTAKE.md](ZIP_INTAKE.md) owns limits/lifecycle; HISTORY binds gates to source. The published installer still needs manual extraction.
 
 ZIP intake was introduced in `da98cba`. Current source accepts omitted directory attributes and corrects file progress; conflicting/special entries remain refused. The export queue batch includes these reviewed ZIP fixes. HISTORY owns proof.
@@ -61,8 +65,9 @@ the 1 MiB size guard through pinned local Binaryen optimization.
 
 Worker progress is integral and bounded; verification generates bindings first.
 All six production-integration gates pass on the source identified in HISTORY.
-Actual installed-Windows retarget interaction and general animal compatibility
-remain separate; Sable alone establishes neither.
+Installed real-IPC retarget interaction passed through WebView APIs on the
+candidate in HISTORY. Native picker/destination dialogs and general animal
+compatibility remain separate; Sable alone establishes neither.
 
 Transfer copies and raw-clip Retime preserve glTF cubic-spline motion, including rotation and scale. Trim subdivides vector/scale curves using boundary values and derivatives. Cubic rotation trims require existing rotation-key bounds or held endpoint regions; inserting a normalized quaternion key could change motion, so that case is refused before mutation with guidance to use existing keys or Retime. Custom/smooth trim interpolation is also refused. Shared key sampling honors the actual cubic/step/linear factory. History, project reopen and parsed GLB re-import have independent known-motion checks.
 
@@ -110,7 +115,7 @@ fixture that does not require Fighter Lab metadata or a combat runtime.
 ## Product Contract
 
 Frontend coverage is mapped to executable positive and protection/continuity
-checks in `source/frontend/tests/README.md`. Eleven sequential stories cover
+checks in `source/frontend/tests/README.md`. Sequential stories cover
 the core workflows and profile, Rig, IK/animation, Skin and Model/material
 authoring. Modern supporting controls have larger targets and keyboard bone/
 clip selection; Original retains its visual baseline. Rig history reconciles
@@ -291,7 +296,7 @@ Primary commands from the repository root:
 - `npm audit --omit=optional` from `source`
 - `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test` from `source/src-tauri`
 
-`run.ps1 -Task context` and `run.ps1 -Task verify` also run the project-integrity guard, which checks durable-doc presence, explicit active TODO contracts, portable current-doc references, research-note review status, relative frontend imports/re-exports, Rust module declarations, `PL-001`–`PL-062` Guard file existence, Modern palette ownership, explicitly scoped Original selectors, and frontend/Cargo/Tauri version equality. The Modern CSS palette check applies to UI chrome. Semantic Three.js colors for selection, rig state, and diagnostic overlays remain role-specific render colors and are not palette tokens. The `source` workspace `npm.cmd run verify` owns the application checks, including lint coverage, ESLint, app/test typechecks, the production-`any` guard, the game-ready production dependency guard, production build, entry-chunk guards, frontend units, and Rust fmt/clippy/tests/check. The launcher adds context-bank, project-integrity, dev-process, and main-synchronization checks around that workspace gate. The entry-chunk guard requires the Tauri bridge to remain a dynamic browser import in addition to preserving Three.js and model-worker boundaries. Playwright runs against one production Vite preview server. Optional GenEye wrapping uses project-owned argv manifests and a pinned local CLI entry instead of shell command text; `-NoGenEye` remains the independent browser-only gate. The default browser gate excludes recorded journeys; `test:journey` runs eleven sequential stories across ten journey files, including the retained hand-wave capture. Strict screenshots are opt-in. `desktop-smoke` runs an unbundled Tauri build, all Rust tests, and native IPC browser coverage; actual Windows dialog evidence is recorded separately. `package:windows` builds the NSIS installer and prints its absolute path and SHA-256.
+`run.ps1 -Task context` and `run.ps1 -Task verify` also run the project-integrity guard, which checks durable-doc presence, explicit active TODO contracts, portable current-doc references, research-note review status, relative frontend imports/re-exports, Rust module declarations, `PL-001`–`PL-062` Guard file existence, Modern palette ownership, explicitly scoped Original selectors, and frontend/Cargo/Tauri version equality. The Modern CSS palette check applies to UI chrome. Semantic Three.js colors for selection, rig state, and diagnostic overlays remain role-specific render colors and are not palette tokens. The `source` workspace `npm.cmd run verify` owns the application checks, including lint coverage, ESLint, app/test typechecks, the production-`any` guard, the game-ready production dependency guard, production build, entry-chunk guards, frontend units, and Rust fmt/clippy/tests/check. The launcher adds context-bank, project-integrity, dev-process, and main-synchronization checks around that workspace gate. The entry-chunk guard requires the Tauri bridge to remain a dynamic browser import in addition to preserving Three.js and model-worker boundaries. Playwright runs against one production Vite preview server. Optional GenEye wrapping uses project-owned argv manifests and a pinned local CLI entry instead of shell command text; `-NoGenEye` remains the independent browser-only gate. The default browser gate excludes recorded journeys; `test:journey` runs the recorded continuity stories, including the retained hand-wave capture. Strict screenshots are opt-in. `desktop-smoke` runs an unbundled Tauri build, all Rust tests, and native IPC browser coverage; actual Windows dialog evidence is recorded separately. `package:windows` builds the NSIS installer and prints its absolute path and SHA-256.
 
 When the bundled Playwright Chromium executable is rejected by a managed Windows process boundary, set `RUSTSMF_PLAYWRIGHT_EXECUTABLE` to an approved existing absolute Chrome/Edge executable for that process only. The config validates the path and does not persist or weaken the app sandbox/CSP.
 
@@ -305,7 +310,7 @@ Verification ownership (dated counts and outcomes live in `HISTORY.md`):
 
 - Frontend unit, browser, recorded-journey, fixture, helper, and visual ownership is centralized in `source/frontend/tests/README.md`. `source/frontend/scripts/run-unit-tests.mjs` remains deterministic and forwards focused Node test flags; `npm.cmd run test:e2e:list` is the browser discovery authority.
 - Rust unit tests own native file/dialog/read/write/recovery boundaries. Browser tests own web/Tauri-adapter integration without substituting mocks for the actual Windows acceptance recorded in `HISTORY.md`.
-- Context groups route focused feature, issue and workflow work; archived routes stay out of defaults. The default orientation has a measured 64 KiB budget under the 256 KiB generation ceiling, leaving route sizes and gate outcomes to HISTORY.md rather than duplicating them in current-state prose.
+- Context groups route focused feature, issue and workflow work; archived routes stay out of defaults. Orientation has an 84 KiB budget under the 256 KiB generation ceiling. HISTORY.md owns dated sizes and gate outcomes.
 
 The latest review links the dated command results and any observed limitations in `HISTORY.md`. Browser, recorded-journey, and strict visual commands use the local browser process. If a managed launch reports `spawn EPERM`, record it as a harness failure rather than an app assertion result. Context generation honors configured skip directories for scans, globs, trees, and explicit routes, excludes generated `output/`, and rejects symlink ancestors and drive-relative paths.
 
@@ -403,5 +408,5 @@ limits without partial output. [TRANSITION_BAKE.md](TRANSITION_BAKE.md) owns the
 input contract, bounds, vendoring requirements, and native/browser WASM proof.
 
 <!--
-AI-edited: 2026-10-16 | agent=Codex/root | task=reliability-review | change=recorded single-disposal OBJ failure cleanup
+AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | change=recorded real native API acceptance and exact recovery cleanup
 -->

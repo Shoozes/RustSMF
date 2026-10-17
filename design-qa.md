@@ -1,5 +1,10 @@
 # Modern UI Design QA — v0.2 productization complete
 
+## Current-source Windows acceptance
+
+Queue copy is shorter; Windows releases hide the console. Texture errors preserve
+work. HISTORY owns native results. Themes and baselines stay fixed.
+
 ## Editing and interchange reliability
 
 No controls, theme or layout change. Short errors explain unsupported DAE

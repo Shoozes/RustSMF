@@ -1417,10 +1417,12 @@ Last reviewed: 2026-09-25 (stable PL IDs and Guard references plus v0.2 palette,
 ### Q: What pitfall are we preventing?
 
 **ID:** PL-051
-**Guard:** `source/frontend/src/backend-client/binaryPayload.test.ts`, `source/frontend/tests/native.spec.ts`
+**Guard:** `source/frontend/src/backend-client/binaryPayload.test.ts`, `source/frontend/tests/native.spec.ts`, `source/frontend/src/loaders/glb.test.ts`
 
 
 **What:** Broad TypeScript assertions at external boundaries can make malformed Tauri/DOM/exporter values and Three.js API drift look valid, while recursive cleanup can dispose shared GPU resources repeatedly or omit skeleton-owned textures.
+
+A GLTFLoader success callback can also hide a missing texture or leave parsed scenes allocated after `Geometry preparation failed`. The 2026-10-16 negative control observed zero releases for four shared resources instead of one.
 
 **Why it happened:** Production code accumulated local `as THREE.*`, double assertions, event casts, and unvalidated select/export results as library types evolved. The disposer treated each traversal occurrence as unique even when meshes shared geometry, materials, textures, or one skeleton.
 
@@ -1434,6 +1436,8 @@ Last reviewed: 2026-09-25 (stable PL IDs and Guard references plus v0.2 palette,
 3. `98/100` Validate unknown inputs with named predicates/adapters, use Three r182 public APIs and `instanceof` guards, validate worker messages, require binary exporter output at runtime, and deduplicate disposal by resource identity including skeletons, result: focused and full gates pass.
 
 **Current solution:** The 3rd solution. Shared Three guards own traversal narrowing; Tauri/DOM/settings/export/worker values validate before mutation; export worker inputs are deep-owned before transfer; safe buffer copies avoid `SharedArrayBuffer` assertions; disposal uses a per-subtree identity set for geometry, skeleton, material, and texture resources.
+
+GLB post-parse rejection now uses that adapter across returned scenes without reparenting. Texture/preparation regressions require one release per shared resource and preserve the original error; [source-bound proof](HISTORY.md#2026-10-16---review-recheck-and-glb-preparation-cleanup) retains the failing/passing results. This closes the tested cleanup boundary, not unobserved native dialogs.
 
 **Effectiveness:** `98/100`, durable. Runtime guards fail closed, transfer ownership is explicit, the source scan is executable, and shared-resource ownership has a regression test.
 

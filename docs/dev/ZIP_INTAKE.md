@@ -61,10 +61,13 @@ vendored fflate test utility. ZIPs are generated in memory from existing fixture
 and project-owned generators; borrowed donor assets and Tripo drafts are unused.
 
 HISTORY and `output/zip-intake-20261015/receipt.json` own observed commands,
-source identity and retained captures. Native adapter tests use mocked IPC;
-this batch has no new installed Windows or OS-dialog acceptance claim.
+source identity and retained captures. Native adapter tests use mocked IPC.
+The current-source installed WebView passed DOM-input ZIP choice/Escape,
+missing-texture/malformed refusal and decoded sidecar pixels through a real
+Rust recovery snapshot. HISTORY binds that candidate; native Open selection
+and OS-dialog delivery remain separate.
 
 <!--
 AI-created: 2026-10-15T01:25:30-04:00 | agent=Codex/root | task=docs
-AI-edited: 2026-10-15T03:32:39-04:00 | agent=Codex/root | task=docs | change=recorded ZIP review fixes and next export queue scope
+AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | change=recorded packaged WebView intake and native recovery pixel proof
 -->

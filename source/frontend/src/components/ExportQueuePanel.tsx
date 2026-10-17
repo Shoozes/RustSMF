@@ -44,7 +44,7 @@ export default function ExportQueuePanel({ state, error, disabled, enqueue, run,
             : incomplete ? <button type="button" data-testid="export-queue-retry" disabled={disabled} onClick={() => { retry(); run(); }}>Retry incomplete</button> : null}
           {!state.running && <button type="button" data-testid="export-queue-clear" onClick={clear}>Clear</button>}
         </div>
-        <p className="export-queue-note">{(state.bytes / 1048576).toFixed(1)} / 128 MiB · {state.items.length} / {MAX_EXPORT_QUEUE_ITEMS} items. Browser exports: check Downloads.</p>
+        <p className="export-queue-note">{(state.bytes / 1048576).toFixed(1)} / 128 MiB · {state.items.length} / {MAX_EXPORT_QUEUE_ITEMS} items.</p>
       </>}
     </div>
   </details>;

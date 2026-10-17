@@ -383,7 +383,7 @@
     },
     "subsystem__model_geometry_preparation": {
       "description": "Shared GLB, FBX, DAE, and OBJ geometry-attribute preparation plus loader-safe tangent prerequisites.",
-      "max_kb": 80,
+      "max_kb": 82,
       "paths": [
         "source/frontend/src/loaders/geometryAttributes.ts",
         "source/frontend/src/loaders/geometryAttributes.test.ts",
@@ -802,7 +802,7 @@
     },
     "issue__verification_current_head": {
       "description": "Current source proof, local gates, browser failure classification and owned cleanup.",
-      "max_kb": 96,
+      "max_kb": 98,
       "paths": [
         "README.md",
         "docs/dev/review.md",

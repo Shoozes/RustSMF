@@ -46,7 +46,14 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer | ModelResourceB
   const bundle = isBundle ? urlOrBuffer as ModelResourceBundle : null;
   const registry = bundle ? createResourceUrlRegistry(bundle) : null;
   const manager = new THREE.LoadingManager();
-  if (registry) manager.setURLModifier((url) => registry.resolve(url));
+  let resourceFailure: unknown;
+  if (registry) manager.setURLModifier((url) => {
+    try { return registry.resolve(url); }
+    catch (error) { resourceFailure ??= error; throw error; }
+  });
+  manager.onError = (url) => {
+    resourceFailure ??= new Error(`GLB/GLTF resource failed to load: ${url}`);
+  };
   const loader = new GLTFLoader(manager);
   // Three normalizes even valid float weights, causing drift on animation-only
   // roundtrips. Snapshot source accessors before meshes mutate the shared cache.
@@ -86,8 +93,8 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer | ModelResourceB
     };
   });
 
+  let gltf: GLTF | undefined;
   try {
-    let gltf: GLTF;
     if (typeof urlOrBuffer === 'string') {
       gltf = await loader.loadAsync(urlOrBuffer);
     } else {
@@ -98,6 +105,9 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer | ModelResourceB
       });
     }
 
+    // Three can swallow texture failures and return a scene without its map.
+    // Refuse that partial result before replacing the authored model.
+    if (resourceFailure) throw resourceFailure;
     const scene = gltf.scene || gltf.scenes?.[0];
     if (!scene) throw new Error('No scene in GLB');
     importedSceneRoots.add(scene);
@@ -130,6 +140,14 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer | ModelResourceB
       clips: allClips,
       mixer: new THREE.AnimationMixer(scene),
     };
+  } catch (error) {
+    if (gltf) {
+      const failedScenes = new THREE.Group();
+      // A read-only envelope deduplicates shared resources without reparenting.
+      failedScenes.children = [...new Set([gltf.scene, ...gltf.scenes].filter(Boolean))];
+      disposeThreeObject(failedScenes);
+    }
+    throw error;
   } finally {
     registry?.dispose();
   }
@@ -141,12 +159,7 @@ function resourceBasePath(name: string): string {
 }
 
 
-/**
- * Reusable GLB/GLTF binary export for the current Three scene root + clips.
- * Extracted for modularity and generic non-FBX export paths.
- * Preserves skinned meshes, skeleton, and animation clips via GLTFExporter.
- * No new dependencies. The produced buffer is a valid .glb that roundtrips via loadGLB.
- */
+/** Export the source scene, skin and clips as a self-contained GLB. */
 export async function exportGLB(root: THREE.Group, clips: THREE.AnimationClip[] = []): Promise<Uint8Array> {
   return withSourceMaterialState(root, async () => {
     const { GLTFExporter } = await import('three/examples/jsm/exporters/GLTFExporter.js');

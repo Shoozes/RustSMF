@@ -177,10 +177,11 @@ for (const failure of [
   { name: 'unsafe path', input: () => archiveInput({ '../escape.obj': obj() }), error: /unsafe path.*refused/ },
   { name: 'malformed ZIP', input: () => ({ name: 'broken.zip', mimeType: 'application/zip', buffer: Buffer.from('broken') }), error: /end-of-directory/ },
   { name: 'missing resource', input: () => archiveInput({ 'asset/model.gltf': readFileSync(SAMPLE_EXTERNAL_GLTF) }), error: /mesh.bin.*not found|Failed to load buffer/ },
+  { name: 'missing texture', input: () => archiveInput(Object.fromEntries(Object.entries(sidecars()).filter(([name]) => !name.endsWith('texture.png')))), error: /texture.png.*not found/ },
   { name: 'no model', input: () => archiveInput({ 'README.txt': Buffer.from('no model') }), error: /ZIP contains no supported model/ },
 ]) {
   test(`ZIP ${failure.name} preserves edited work after discard authorization`, async ({ page }) => {
-    const errors = watchJourneyErrors(page, [failure.error, ...(failure.name === 'missing resource' ? [/^THREE.GLTFLoader: Couldn't load texture texture\.png$/] : [])]);
+    const errors = watchJourneyErrors(page, [failure.error, ...(['missing resource', 'missing texture'].includes(failure.name) ? [/^THREE.GLTFLoader: Couldn't load texture texture\.png$/] : [])]);
     const root = await dirtyBase(page);
     await open(page, failure.input());
     await page.getByTestId('confirm-model-replacement').click();

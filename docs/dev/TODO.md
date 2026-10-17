@@ -2,7 +2,7 @@
 
 Last reviewed: 2026-10-16
 
-Backlog status: reliability repairs pass their source-bound seven gates. The review cleanup is complete locally; attended Windows acceptance remains the next pass. Recovery is restored and the test installation is removed. HISTORY owns proof.
+Backlog status: review, recheck, GLB cleanup and installed API acceptance complete locally. Recovery and owned installations are reconciled. Actual native destination-dialog acceptance remains below. HISTORY owns source-bound proof.
 
 ## Editing and interchange reliability — source complete
 
@@ -12,7 +12,7 @@ Backlog status: reliability repairs pass their source-bound seven gates. The rev
 - When: Source accepted locally on 2026-10-16; exact installed acceptance remains separate below.
 - How: (1) Shared redo invalidation and atomic restores, including zero clips. (2) Owned captured track bindings, settled OBJ/DAE resources and explicit DAE fidelity refusals. (3) Private transport identities, zero-duration reference poses, a precise 512-bone production limit and conservative animal ancestry. (4) Integrated proof and current docs.
 - Done when: The supplied positive/negative regressions pass, preserved work remains editable, native/actual-WASM expectations match, complete gates pass on one repaired source and installed checks are recorded separately. Rejected operations preserve scene/cursor state. Keep private media private.
-- Verification: Final candidate passed verify (640 units and 14 Rust checks), 211 browser tests, 13 journeys, three strict checks, native/actual-WASM parity, desktop smoke and packaging. HISTORY binds source and results; installed acceptance follows below.
+- Verification: Original reliability gates passed (640 units, 211 browser, 13 journeys, three strict checks, parity, desktop and packaging). HISTORY binds the repaired candidate's newer proof; installed acceptance follows below.
 
 ## Rust solver migration — complete
 
@@ -47,15 +47,15 @@ Backlog status: reliability repairs pass their source-bound seven gates. The rev
 No custom rig creation/replacement, automatic skinning, animal IK or donor asset
 distribution. General animal compatibility remains unverified. Private inputs stay private.
 
-## Current-source Windows acceptance — next bounded pass
+## Current-source Windows acceptance — API pass verified; dialogs pending
 
-- What: Verify installed Transfer, ZIP intake and export queues on current source.
-- Why: Mocked IPC does not prove installed WebView behavior or OS dialogs; the preview predates these features.
+- What: Close the remaining native file/source selection, project Save/cancel/reopen and queue destination Save/cancel/retry cases.
+- Why: Real installed API checks now prove Transfer, ZIP intake, queue preparation and recovery. Actual OS-dialog destinations remain a separate boundary; the public preview predates these features.
 - Where: Existing launcher and [Transfer](RETARGET_ASSISTANCE.md), [animal](ANIMAL_CHAINS.md), [ZIP](ZIP_INTAKE.md) and [queue](EXPORT_QUEUE.md) contracts. Use generated/public fixtures.
-- When: Earlier matched install: Open cancellation, loading and playback observed; source selection blocked. Session closed, nine processes exited, three recovery generations restored exactly, test install/registration absent. Its package predates the OBJ cleanup.
-- How: Arrange attended WebView file selection before isolating recovery. Keep 0.2.1/release unchanged. Refresh final-source gates/package, identify the executable and use an owned install. Check dialog cancellation, ZIP choice/sidecars, Transfer discard/Apply/history, project reopen and queue roundtrips/cancel/retry. Restore recovery and release owned resources even if blocked.
-- Done when: Attended results prove native Rust execution, known motion/influences, editable work after cancellation, exact recovery restoration and process/install removal. Unobserved cases remain pending.
-- Verification: Six sequential gates from ANIMAL_CHAINS, package:windows, then source-bound attended checks with compact proof. Release replacement, signing, versions and publication need separate scope.
+- When: API/gates/package passed 2026-10-16. Prior/current test installs are removed; three original recovery generations match bytes and metadata after uninstall.
+- How: Use an authorized dialog-capable route preserving Rust's path authority. This API pass uses no CUA or take over. Reuse unchanged proof; isolate/restore recovery and release the owned install. Keep 0.2.1/release unchanged.
+- Done when: Actual selections and project/queue destinations complete and cancel safely; reopened projects and parsed queued output retain motion/influences; retry preserves completed files; original recovery and owned cleanup pass. API proof leaves unobserved dialogs open.
+- Verification: Reuse HISTORY's same-source gates/API proof (643 units, 212 browser, 13 journeys, three strict checks, parity, desktop and packaging); add actual dialog results. Publication remains separately scoped.
 
 ## Completed frontend source work
 
@@ -156,5 +156,5 @@ bounded noncombat fixture.
 - Verification: Sequentially run `verify`, `test:e2e -NoGenEye`, `test:journey`, `test:visual-strict`, `desktop-smoke`, and `package:windows`; then run `verify` and `package:windows` again after the version bump. Actual Windows OS-dialog checks remain separate from native IPC mocks.
 
 <!--
-AI-edited: 2026-10-16 | agent=Codex/root | task=reliability-review | change=closed owned session and bounded attended acceptance
+AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | change=closed recovery reconciliation and API checks; bounded remaining dialog proof
 -->

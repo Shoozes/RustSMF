@@ -5,12 +5,40 @@ import { createSkinnedGlbFixtureInput } from '../../tests/helpers/skinned-glb-fi
 import { disposeThreeObject } from '../utils/threeDisposal';
 import { exportGLB, loadGLB, validateExportedGLB } from './glb';
 import { buildGlbContainer, parseGlbContainer as parseGlb } from '../utils/glbContainer';
+import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { createModelResourceBundle } from '../utils/modelResourceBundle';
 
 function toArrayBuffer(buffer: Buffer): ArrayBuffer {
   return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
 }
 
 describe('GLB recovery export validation', () => {
+  for (const mode of ['texture', 'preparation'] as const) it(`releases shared parsed scenes after ${mode} failure`, async t => {
+    const geometry = new THREE.BoxGeometry(), texture = new THREE.Texture();
+    geometry.deleteAttribute('uv');
+    const material = new THREE.MeshStandardMaterial({ map: texture });
+    const scenes = [new THREE.Group(), new THREE.Group()];
+    const mesh = new THREE.SkinnedMesh(geometry, material), bone = new THREE.Bone();
+    scenes[0].add(bone, mesh); mesh.bind(new THREE.Skeleton([bone]));
+    scenes[1].add(new THREE.Mesh(geometry, material));
+    const disposed = [0, 0, 0, 0];
+    [geometry, material, texture].forEach((resource, index) => resource.addEventListener('dispose', () => disposed[index]++));
+    const releaseSkeleton = mesh.skeleton.dispose.bind(mesh.skeleton);
+    t.mock.method(mesh.skeleton, 'dispose', () => { disposed[3]++; releaseSkeleton(); });
+    const failure = new Error('Geometry preparation failed');
+    if (mode === 'preparation') t.mock.method(geometry, 'setAttribute', () => { throw failure; });
+    t.mock.method(GLTFLoader.prototype, 'parse', function (this: GLTFLoader, _data: ArrayBuffer | string, _path: string, onLoad: (gltf: GLTF) => void) {
+      // Three can catch a texture resolver error and still report success.
+      if (mode === 'texture') try { this.manager.resolveURL('missing.png'); } catch { /* swallowed by Three */ }
+      onLoad({ scene: scenes[0], scenes, animations: [] } as unknown as GLTF);
+    });
+    const bundle = createModelResourceBundle({ name: 'model.gltf', data: new TextEncoder().encode('{}') });
+    await assert.rejects(loadGLB(bundle), mode === 'texture' ? /missing.png.*not found/ : error => error === failure);
+    assert.deepStrictEqual(disposed, [1, 1, 1, 1]);
+    assert.strictEqual(mesh.parent, scenes[0]);
+    assert.strictEqual(scenes[1].children[0].parent, scenes[1]);
+  });
+
   it('preserves authored unit weights across animation-only cycles but repairs malformed weights', async () => {
     const fixture = await createSkinnedGlbFixtureInput();
     for (const malformed of [false, true]) {

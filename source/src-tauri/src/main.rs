@@ -2,6 +2,8 @@
 // RustSMF Tauri entry. Minimal shell for the Three.js frontend.
 // Provides native file dialogs plus binary SMF/GLB I/O commands.
 
+#![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
+
 mod retarget;
 
 use std::collections::HashSet;

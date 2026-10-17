@@ -2,6 +2,144 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-16 - Current-source installed API acceptance and recovery closeout
+
+Complete with verified limitations on local main `279a537`: restored the three
+isolated original recovery generations and removed the prior retained test
+install, then tested a fresh owned candidate. All 507 implementation inputs
+remain SHA-256 `114b2ff12a1153aabf9da5d935d6d20266a12ddbd2a9e987f2a6dbe3f2b2eef6`.
+No implementation input changed during this pass.
+
+Reused exact-source `verify` proof (643 units, 14 Rust verification steps).
+The remaining sequential gates exited 0: `test:e2e -NoGenEye` (212),
+`test:journey` (13), `test:visual-strict` (3), `retarget:runtime-proof`
+(49 preflight, 18 sampler/24 refusals, 33 core/40 refusals, 34 advanced/30
+refusals), desktop smoke's release build/14 native tests/18 IPC mocks, and
+`package:windows`. Runtime: Node 26.5.0, PowerShell 7.6.6, Rust/Cargo 1.98.1.
+Installer SHA-256: `91652a41783dbdd60e50c40bfe3ea15f25dfde42851de0c98c09809db1b2b1ea`.
+Installed executable: `cad9b2e9143004cf84a9a47f85f7c4fcc54ff3fb5ae967bb009846d5f5d74695`;
+all five resources match, GUI subsystem 2. Fourteen new required journey media
+were retained; prior fixed-output bytes and nanosecond mtimes restored exactly.
+
+The operator chose GenEye and APIs/Playwright, with no CUA or take over for the
+continuation. Playwright 1.60.0 attached to the installed WebView2 over process-only
+loopback CDP. Generated fixtures entered DOM inputs. Successful real native
+preflight, bake, correlated cancellation and recovery requests were observed;
+no IPC response was mocked and no retarget WASM loaded. Unselected native reads
+still fail with `NATIVE_PATH_NOT_SELECTED`.
+
+- Transfer preview/discard, Apply, undo/redo and continued editing passed.
+  A DOM observer clicked the real Cancel control as bake preparation mounted;
+  native cancellation succeeded and both clips remained.
+- ZIP choice/Escape, malformed GLB/ZIP and missing-texture refusals preserved
+  the model. A valid textured ZIP's native recovery project independently
+  retained triangle positions and exact decoded 2x2 texture pixels.
+- Two queued captures canceled during preparation and retained their rows through
+  retry, with no native save issued. Actual destination saving remains unobserved.
+- Ordinary Recover read the real Rust-written project, including after a new
+  process. Rename/undo and autosave worked. Independent GLB accessors retained
+  23 joints, raw influences, binds, hierarchy/material and expected rotations
+  at 0/.25/.5/.75/1 seconds before and after restart.
+
+GenEye's initial exact-HWND empty-editor compositor capture was usable. The later
+candidate was minimized/offscreen, leaving native capture unavailable; its window
+API ACL refusal was preserved. Separate Playwright motion screenshots were
+reviewed by the host. Local GenEye feedback/index and docs/context checks pass;
+Tulpa-box was not executed.
+
+Both API trees (seven process identities each) and endpoints released. The
+candidate executable/registration are absent after uninstall. All three original
+recovery generations again match hashes, sizes, attributes and creation/write
+times. Private profiles remain; no refused deletion was retried. The reliability
+receipt's `windowsAcceptanceWork` and `windows-acceptance` evidence retain exact
+argv, source, package/API/semantic checks and cleanup. Native file/source picker
+selection, project Save/cancel/manual reopen and queue destination Save/cancel/
+retry remain in TODO. No commit, push, version or public release changed.
+
+<!-- AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | change=recorded real native API proof, exact cleanup and remaining dialog limits -->
+
+## 2026-10-16 - Review, recheck and GLB preparation cleanup
+
+Read-only review began on main `279a537fb41e87d17af287bc03ea343189119149`
+with 11 inherited modified paths. All 507 implementation inputs matched the
+prior seven-gate source `a28b7baec2eb52e18dd95c38fb9ff3e8e21769a0387e67049b48cf24693c0b47`.
+Coverage included history/Skin restores, captured UUID bindings, OBJ/DAE/GLB
+resource ownership, portable retarget contracts and animal ancestry, ZIP/queue
+consumers, tests and current docs. Prior reliability and missing-texture findings
+remain closed for that source; installed acceptance remains unverified.
+
+A new P2 regression injected failure during GLB geometry preparation. Parsing
+had already allocated shared geometry, material, texture and skeleton resources;
+all four disposal counts were zero instead of one. Cleanup now covers every
+post-parse rejection through one scene envelope, preserving the original error
+and node parents. Texture and preparation failures share the regression fixture.
+The original negative control exited 1; baseline and repaired focused sets passed
+72 and 73 tests. The final nine GLB cases pass. Test callback types were corrected
+after TS7006; an invocation from the repo root could not resolve project-local
+tsx and was corrected to the frontend directory.
+
+Measured context rendering at 256 KiB emitted 82,051 and 98,306 bytes without
+truncation for geometry preparation and current verification. The largest files
+accounted for 27.4% and 30.3%, each routed three times; neither group includes
+generated payloads. After deduplicating the fixture and shortening repeated
+prose, their caps changed from 80 to 82 KiB and 96 to 98 KiB. Paths, defaults and
+the 256 KiB ceiling are unchanged. Context validation and ten regressions pass;
+APP_STATE now records the actual 84 KiB orientation cap and avoids stale journey
+counts.
+
+Final delta proof shares 507 inputs, SHA-256
+`114b2ff12a1153aabf9da5d935d6d20266a12ddbd2a9e987f2a6dbe3f2b2eef6`.
+`pwsh -NoProfile -File run.ps1 -Task verify` exited 0: 643 frontend units,
+14 Rust verification steps, lint, app/test typechecks, build/chunk/dependency
+guards and repository/context checks. From `source/frontend`,
+`node ../node_modules/@playwright/test/cli.js test tests/interchange-reliability.spec.ts tests/archive-intake.spec.ts --workers=1`
+ran with a unique `--output` directory: all 26 cases passed without retries,
+skips or global errors. Node 26.5.0, PowerShell 7.6.6 and Rust/Cargo 1.98.1 were
+used. The existing reliability receipt's `glbPreparationCleanup` owns exact argv,
+attempts, source identity, bounded output and process ownership. Full journeys,
+strict visuals, actual-WASM parity, desktop smoke and packaging were not rerun
+for this delta; earlier evidence keeps its earlier source identity.
+
+Read-only inspection of `output/windows-repaired-20261016/native-receipt.json`
+found all eight recorded processes absent, with the test installation retained.
+Three isolated recovery backups match recorded bytes, hashes, creation/write
+times and attributes. Restoration is unrecorded; backups were not restored or
+removed by this pass. TODO now orders journal/recovery reconciliation before
+renewed current-source packaging and attended Windows acceptance. Earlier gates
+and package remain bound to their earlier source. No installation, recovery,
+profile, private asset, Original reference, Git index or publication was changed.
+
+<!-- AI-edited: 2026-10-16 | agent=Codex/root | task=review-recheck-cleanup | change=recorded bounded GLB repair, source-bound checks and recovery handoff -->
+
+## 2026-10-16 - Windows acceptance discoveries and repaired candidate
+
+At `279a537`, native recovery editing, project Save/cancel/reopen and queue
+Save/cancel/retry passed. Parsed files retain 23 joints, 24 vertices, influences,
+materials and motion at 0/.25/.5/.75/1 seconds. Retry preserves completed bytes/
+mtime. ZIP Escape restores Open focus; malformed GLB preserves the model.
+
+A referenced missing GLTF texture instead loaded a gray replacement. Its new
+browser assertion failed before repair. The loader now rejects swallowed texture
+failures and disposes shared partial-scene resources once. Three focused browser
+checks and eight GLB units pass. Windows release builds now use the GUI subsystem;
+the queue drops browser-only download guidance.
+
+All seven sequential gates pass on 507 inputs, SHA-256
+`a28b7baec2eb52e18dd95c38fb9ff3e8e21769a0387e67049b48cf24693c0b47`:
+verify (642 units, 14 Rust steps), browser (212), journeys (13), strict visuals (3),
+native/actual-WASM parity, desktop smoke (14 native tests, 18 IPC mocks), packaging.
+The first verification attempt passed tests but exceeded two route budgets;
+shorter notes restored their limits. Original references and protected media match.
+
+Repaired installer SHA-256:
+`7bf64b6ea41203ec5d60c6d045d1cfe68797623f5e996f0d2ddc4ef25f0dd9ea`.
+Its installed executable/resources match; GUI subsystem 2 launches without a
+console descendant. Attended Transfer and repaired intake acceptance remain active.
+The reliability receipt keeps separate `windowsContinuation`/`windowsRepair`
+records. Three recovery generations were restored, then isolated for this session.
+Automatic approval review blocked deletion of the inactive 77,797,149-byte profile;
+it stays private without retry. Changes remain local; public preview unchanged.
+
 
 ## 2026-10-16 - Reliability recheck and owned cleanup
 

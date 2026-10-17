@@ -4,11 +4,9 @@
 
 ## Editing and interchange reliability
 
-`history-integrity.spec.ts` uses ordinary painting, bone deletion and global
-history, and verifies raw exported influences and zero-clip restoration.
-`editorHistory.test.ts` checks cross-domain branch invalidation and refused
-cursor transitions; `skinWeights.test.ts` rejects changed identity/order and
-partial restores before writing any vertex.
+`history-integrity.spec.ts` covers ordinary paint/delete/history, raw influences
+and zero clips. `editorHistory.test.ts` guards branching/refused cursor moves;
+`skinWeights.test.ts` rejects identity/order changes and partial restores.
 
 `interchange-reliability.spec.ts` uses actual OBJ/MTL, DAE and GLTF inputs.
 Delayed success/failure/timeout checks verify preserved editable work and decoded
@@ -18,6 +16,8 @@ retry. Named single-clip DAE re-import is independently inspected. DAE units
 exercise direct/queue refusals for textures, multiple clips and non-linear tracks.
 `modelResourceLifecycle.test.ts` checks settlement, timeout and cancellation.
 `obj.test.ts` checks delayed loads and single disposal after preparation failure.
+`glb.test.ts` guards shared cleanup on texture/preparation failure. Archive intake
+checks missing textures preserve editable work alongside valid textured ZIPs.
 
 `retarget-contract.spec.ts`: unnamed helpers, zero-duration references, profile
 Apply/history/project/export continuity and editable source/target 513-bone
@@ -49,8 +49,8 @@ checks reviewed explicit maps, correction, preview/history, project and queued
 GLB motion/influences with generated geometry. [Contract](../../../docs/dev/ANIMAL_CHAINS.md).
 
 `retarget:runtime-proof` compares native Rust and actual Chromium WASM against
-retained TypeScript at 1e-6: 49 mapping plus 2 size refusals, 18 sampler/24 refusal, 33 core/40 refusal,
-and 34 advanced/30 refusal cases. Generated fixtures cover all options/reports;
+retained TypeScript at 1e-6. Generated fixtures cover mapping, sampler, core and
+advanced options/reports and refusals;
 independent anchors check cubic curves, planted soles, fixed lengths and endpoint
 positions. Native guards cover atomic cancellation, progress, reuse and resource
 bounds. [Contract](../../../docs/dev/RETARGET_ADVANCED_BAKE.md).
@@ -280,5 +280,5 @@ When adding or moving a test:
 4. Update `docs/dev/PITFALL_LEDGER.md` only for a durable recurring failure mode.
 
 <!--
-AI-edited: 2026-10-16 | agent=Codex/root | task=reliability-review | change=added OBJ cleanup guard
+AI-edited: 2026-10-16 | agent=Codex/root | task=review-recheck-cleanup | change=added GLB preparation failure ownership guard
 -->

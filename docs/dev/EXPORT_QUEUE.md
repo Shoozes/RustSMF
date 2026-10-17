@@ -25,9 +25,9 @@ Desktop destinations use the existing native save dialog for each item. Cancelin
 - `src/utils/materialPreview.test.ts`: nested captures, overlapping saves, concurrent display changes and replaced registrations retain source state until their own final reader exits.
 - `tests/export-queue.spec.ts`: ordinary chooser/pointer/keyboard controls, every preset, independent GLB accessor/instance-transform and sampled-motion checks after re-import, raw FBX/DAE structure, imported SMF fidelity, material/image captures, replacement, preparation cancellation, mocked native failures/retry/recovery and six-size/DPR/coarse/focus checks.
 
-Browser downloads and mocked Tauri IPC are the acceptance lanes for this source pass. Installed Windows dialogs and a packaged queue build remain untested. HISTORY and the ignored compact receipt own exact source, final commands, results and reviewed captures. No version, release, installer or asset-distribution change belongs to this pass.
+Browser downloads and mocked Tauri IPC retain their source-specific proof. The current-source packaged Windows candidate also passed installed WebView preparation cancellation and retry without issuing a save. Native destination saves/cancel and retry after a completed save remain unobserved. HISTORY and the compact receipt bind each lane to source/package. The public version/release is unchanged.
 
 <!--
 AI-created: 2026-10-15T04:24:55-04:00 | agent=Codex/root | task=docs
-AI-edited: 2026-10-15T11:43:47.1745884-04:00 | agent=Codex/root | task=review-cleanup | change=reviewed export ownership and selected original asset acceptance
+AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | change=distinguished packaged preparation proof from native destination saves
 -->
