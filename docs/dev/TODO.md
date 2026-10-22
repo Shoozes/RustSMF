@@ -29,9 +29,14 @@ Last reviewed: 2026-10-22
   tolerances, with actual authored sole/fallen patches and fully accounted
   support intervals. This is not met. Support authoring and a qualified complete
   bundle remain open; P7C and asset distribution remain outside this pass.
-- Closeout: scoped tooling publication through guarded `gitpush.ps1` is selected.
-  Preserve the source-bound local proof above; the run's `publication.json`
-  records the verified candidate tree and confirmed remote commit separately.
+- Publication: guarded `gitpush.ps1` saved RustSMF `b50bed1` and GaimEngine
+  `76ddc64`; each run's `publication.json` binds the candidate and remote commit.
+- Review/recheck, 2026-10-22: conditioning matched Three.js world-space skinning;
+  no producer defect or edit. GaimEngine `61dcd13` closes receiver support-byte
+  and transition findings (44 tests). Its source-role/endpoint-lineage pass is
+  next from static evidence; probes were not rerun. Preserve fixed v1, 19/65
+  failures, missing support and three local Rust overlays. This docs-only batch
+  uses guarded publication.
 
 Backlog status: review, recheck, GLB cleanup and installed API acceptance complete locally. Recovery and owned installations are reconciled. Actual native destination-dialog acceptance remains below. HISTORY owns source-bound proof.
 
@@ -188,4 +193,8 @@ bounded noncombat fixture.
 
 <!--
 AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | change=closed recovery reconciliation and API checks; bounded remaining dialog proof
+-->
+
+<!--
+AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-review-recheck-cleanup | change=rechecked published producer proof and routed the bounded receiver provenance follow-up
 -->

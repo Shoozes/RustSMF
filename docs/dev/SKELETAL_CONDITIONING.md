@@ -76,9 +76,10 @@ pretty-printed asset JSON and 12.75 MB of references.
 
 Original-to-derived conversion differences are descriptive: the report measures
 joint matrices at every integer tick and five endpoint/fractional phases, and
-positions at those five phases. Original integer joint poses remain within
-`1e-4`; larger fractional changes reflect the explicitly selected continuous
-derivative. They are distinct from receiving errors against that derivative.
+world-space skinned positions at those five phases, matching Three.js's rendered
+mesh transform. Original integer joint poses remain within `1e-4`; larger
+fractional changes reflect the explicitly selected continuous derivative. They
+are distinct from receiving errors against that derivative.
 
 The first ten-role diagnostic compared 50 samples. Native and WASM were exactly
 equal, but 18 derivative-reference comparisons failed. The largest first-failing

@@ -2,6 +2,38 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-22 - P7B review and receiver recheck
+
+Reviewed RustSMF `b50bed1` on `main`, preserving the pre-existing TODO overlay.
+Summary Bank routed the conditioning contract, implementation and tests. The
+original-to-derived position metric is world-space for the GLB-loaded attached
+meshes; a fixture check matched its Wave and Turn results against Three.js
+`SkinnedMesh.applyBoneTransform` followed by `mesh.matrixWorld`. No producer
+source defect was confirmed. The conditioning guide now names that coordinate
+frame.
+
+Rechecked GaimEngine `61dcd13`. Its receiver validates support semantics from
+the same bounded bytes whose size and hash it checked, and binds transition
+report rows to all 36 recipe tuples and packet cases. In the GaimEngine checkout,
+`node --test tests/product/humanoid-input-bundle.mjs` exited 0 with 44 tests
+passing, including both support-byte and transition-lineage regressions. Three
+unrelated modified Rust files and two local documentation edits were preserved;
+this pass made no GaimEngine edits. No RustSMF source changes were made; this
+batch closes the review in documentation.
+
+The current local GaimEngine documentation then selected a separate
+source-role/endpoint-lineage admission pass. Static inspection confirms that the
+reader only requires gait and idle source clips in the recipe, uses the first
+matching conditioning row for base cases, and does not bind each endpoint clip
+duration to its source row. Its cited source-role probes were not rerun here;
+the receiver source/tests remain unmodified in GaimEngine.
+
+P7B remains blocked by the existing 19/65 independent-reference failures and
+missing authored support content. The full milestone and P7C remain open as
+tracked in TODO.
+
+<!-- AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-review-recheck-cleanup | change=recorded current producer review, receiver closure recheck and unchanged P7B blocker -->
+
 ## 2026-10-22 - P7B tooling closeout; content remains blocked
 
 Completed explicit v3 conditioning, immutable export and GaimEngine's 46-case
