@@ -1,6 +1,37 @@
 # RustSMF TODO
 
-Last reviewed: 2026-10-16
+Last reviewed: 2026-10-22
+
+## P7B conditioning and receiving — blocked, 2026-10-22
+
+- What: preserve the original White Wolf while producing an identity-bound
+  continuous derivative, ten source roles and 36 six-tick transitions for v1.
+- Why: qualify source-bound content without weakening independent comparisons.
+- Where: RustSMF owns conditioning/export; GaimEngine owns independent receiving.
+- When: selected on 2026-10-22; this cross-repository batch precedes P7C.
+- How: the explicit v3 job preserves skin/bind geometry and residual hip tilt,
+  serializes/re-imports the GLB, and publishes bounded immutable packets. See
+  [the contract and evidence](SKELETAL_CONDITIONING.md).
+- Risk: glTF spherical interpolation and fixed GaimEngine normalized linear
+  interpolation differ at fractional phases. The ten-role diagnostic has exact
+  native/WASM equality but 18/50 failed derivative-reference samples.
+- Decision: the operator retained v1 and the recipe. Finish tooling and record
+  the blocker; do not relax tolerances or claim content acceptance.
+- Tests: focused conditioning/export/job/CLI/publication tests pass 21/21;
+  `run.ps1 -Task verify` passes with 664 frontend tests and 14 Rust checks.
+  GaimEngine's 133-command gate and all 46 synthetic receiving packets pass.
+  The final source-matched actual comparison reproduces 18/50 base-role failures
+  and one transition failure (19/65 samples across eleven candidate packets).
+  The run summary records exact source identities, receipts and cleanup.
+- Verification: the retained run summary separates successful tooling gates
+  from the failed White Wolf comparison and missing authored support content.
+- Done when: all 46 role/phase cases pass independent receiving at unchanged
+  tolerances, with actual authored sole/fallen patches and fully accounted
+  support intervals. This is not met. Support authoring and a qualified complete
+  bundle remain open; P7C and asset distribution remain outside this pass.
+- Closeout: scoped tooling publication through guarded `gitpush.ps1` is selected.
+  Preserve the source-bound local proof above; the run's `publication.json`
+  records the verified candidate tree and confirmed remote commit separately.
 
 Backlog status: review, recheck, GLB cleanup and installed API acceptance complete locally. Recovery and owned installations are reconciled. Actual native destination-dialog acceptance remains below. HISTORY owns source-bound proof.
 

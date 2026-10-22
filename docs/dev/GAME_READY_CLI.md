@@ -3,6 +3,9 @@
 Optional command-line workflows. Normal editing uses the app.
 Prepare a complete versioned job in `job.json` before running these commands.
 
+For the separate `gaim.skeletal-asset.v1` packet exporter, see
+[SKELETAL_EXPORT.md](SKELETAL_EXPORT.md).
+
 ## Game-ready CLI
 
 For reproducible batch repair and explicit numeric-rig retargeting, use a versioned JSON job with absolute input/output paths:

@@ -11,7 +11,7 @@ the model, texture and clips.
 
 - Five bones: Base, Shoulder, Elbow, Wrist and Head.
 - Two two-second clips: Wave and Turn.
-- 240 indexed vertices and three named materials: Ceramic, Graphite and Brass.
+- 2,400 indexed vertices across ten skinned parts, plus three named materials: Ceramic, Graphite and Brass.
 - No textures, third-party models or external resource files.
 
 Open the GLB. Choose **Animate → Tools**, select **Wave**, then **Play**.

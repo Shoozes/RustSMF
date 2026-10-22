@@ -24,7 +24,7 @@
   "groups": {
     "docs__orientation": {
       "description": "Lean current-state orientation. Use a focused feature or subsystem group before reading broader source.",
-      "max_kb": 84,
+      "max_kb": 88,
       "paths": [
         "docs/dev/APP_STATE.md",
         "docs/dev/TODO.md"
@@ -33,12 +33,12 @@
         "TODO owns executable work and completion conditions.",
         "APP_STATE owns shipped behavior; review.md is opened only for integrity-pass evidence.",
         "README launch/format entry remains in issue__verification_current_head and is read directly during task intake; orientation retains current state and the work queue.",
-        "APP_STATE/TODO fit 84 KiB; use focused routes for asset details. Generation cap: 256 KiB."
+        "APP_STATE/TODO fit 88 KiB; use focused routes for asset details. Generation cap: 256 KiB."
       ]
     },
     "workflow__context_bank": {
       "description": "Portable public context routing, validation, and generation entry points.",
-      "max_kb": 114,
+      "max_kb": 120,
       "paths": [
         "summary_bank.json",
         "scripts/context-bank-lib.mjs",
@@ -290,6 +290,45 @@
         "Generated assets, reports, private job paths, and source models stay outside context routes."
       ]
     },
+    "workflow__skeletal_export": {
+      "description": "Strict v1/v2 GLB skeletal export and immutable publication; explicit continuous conditioning is routed through workflow__skeletal_conditioning.",
+      "max_kb": 224,
+      "paths": [
+        "docs/dev/SKELETAL_EXPORT.md",
+        "examples/README.md",
+        "source/frontend/package.json",
+        "source/frontend/scripts/bounded-file-read.ts",
+        "source/frontend/scripts/node-three-runtime.ts",
+        "source/frontend/scripts/skeletal-export-cli.ts",
+        "source/frontend/scripts/skeletal-export-producer.ts",
+        "source/frontend/src/loaders/glb.ts",
+        "source/frontend/src/loaders/geometryAttributes.ts",
+        "source/frontend/src/loaders/smfBinary.ts",
+        "source/frontend/src/test/installFileReaderTestPolyfill.ts",
+        "source/frontend/src/utils/imagePayload.ts",
+        "source/frontend/src/utils/materialPreview.ts",
+        "source/frontend/src/utils/modelResourceBundle.ts",
+        "source/frontend/src/utils/modelFormat.ts",
+        "source/frontend/src/utils/textureImageReadiness.ts",
+        "source/frontend/src/utils/threeDisposal.ts",
+        "source/frontend/src/utils/threeTypeGuards.ts",
+        "source/frontend/src/utils/skeletalExport.ts",
+        "source/frontend/src/utils/skeletalExport.test.ts",
+        "source/frontend/src/utils/skeletalExportCli.test.ts",
+        "source/frontend/src/utils/skeletalExportGeneration.ts",
+        "source/frontend/src/utils/skeletalExportGeneration.test.ts",
+        "source/frontend/src/utils/skeletalExportJob.ts",
+        "source/frontend/src/utils/skeletalExportJob.test.ts",
+        "source/frontend/tests/fixtures/PROVENANCE.md"
+      ],
+      "notes": [
+        "The strict job admits one absolute-path, self-contained GLB under the existing 256 MiB model limit. Coordinates are caller-declared and are not guessed or converted; authored inverse binds must resolve to one shared, nonsingular scene-root bind-shape, which is baked into common-bind-space geometry.",
+        "All admitted source joints, vertices, triangles, keys, and four influence slots are preserved. Job v1 exports all admitted clips; v2 selects 1–32 unique exact source names and binds that selection into settings and generation identity. LINEAR tracks are admitted; STEP and CUBICSPLINE interpolation fail closed. Other unsupported forms or fixed limits fail without trimming; asset JSON is capped at 4 MiB and references at 16 MiB. V3 opts into separately serialized source conditioning; read workflow__skeletal_conditioning for that authority.",
+        "The generation manifest binds revision/working-tree and producer/source identity hashes, role-tagged source input hash/bytes, settings identity, semantics, and artifact path/bytes/SHA-256. Manifest-last staging, atomic directory publication, and optional post-publication direct-child current pointer protect prior accepted state.",
+        "Reference geometry and joint matrices include the source deformation after root-motion extraction; root translation and +Y yaw remain separate fields so the receiver can compare the full result.",
+        "Signal Robot is a RustSMF-authored diagnostic fixture. Its exporter proof does not qualify humanoids, assert receiving-engine admission, or establish gameplay acceptance; generated output stays in ignored output storage."
+      ]
+    },
     "workflow__game_ready_neutral_proof": {
       "description": "Neutral caller-owned saved-job proof, re-import checks, publication rollback, and production dependency boundaries.",
       "max_kb": 164,
@@ -301,8 +340,7 @@
         "source/frontend/scripts/check-game-ready-dependencies.mjs",
         "source/frontend/scripts/game-ready-cli.ts",
         "source/frontend/src/utils/gameReadyGeneration.ts",
-        "source/frontend/src/utils/gameReadyJob.ts",
-        "source/frontend/package.json"
+        "source/frontend/src/utils/gameReadyJob.ts"
       ],
       "notes": [
         "The fixture is a small noncombat two-motion rig with caller-supplied mapping and constraints; it invokes the actual saved-job CLI, reimports the published GLB, and checks transforms, timing, skin, material, and provenance.",
@@ -672,7 +710,7 @@
     },
     "tests__quality": {
       "description": "Verification contract, test inventory, shared browser fixtures, lint/type gates, and production-boundary checks.",
-      "max_kb": 132,
+      "max_kb": 136,
       "paths": [
         "source/frontend/package.json",
         "source/frontend/playwright.config.ts",
@@ -1371,6 +1409,15 @@
       "notes": [
         "subsystem__retarget_core owns analyze_v1 integration, native receipt and runtime-proof runner. feature__retarget_assistance owns review/lifecycle; feature__retarget_profiles owns explicit profile fields.",
         "Generated first-party fixtures only. Explicit maps win; unresolved animal chains cannot fall through to humanoid/normalized/fuzzy matching. No rig creation or new solver."
+      ]
+    },
+    "workflow__skeletal_conditioning": {
+      "description": "Explicit producer-job v3 continuous conditioning, locomotion root, transition baking, original/derived lineage, and the blocked White Wolf P7B qualification. Reuse workflow__skeletal_export for export/publication contracts.",
+      "max_kb": 64,
+      "paths": [
+        "docs/dev/SKELETAL_CONDITIONING.md",
+        "source/frontend/src/utils/skeletalConditioning.ts",
+        "source/frontend/src/utils/skeletalConditioning.test.ts"
       ]
     }
   },

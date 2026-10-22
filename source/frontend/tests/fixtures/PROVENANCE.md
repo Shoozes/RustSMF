@@ -2,7 +2,8 @@
 
 The project license in the repository root applies to RustSMF-authored code.
 It does not grant rights to assets whose author or license is unknown. These
-fixtures are test inputs and are not product samples.
+fixtures are test inputs unless individually identified below; their test-only
+provenance does not imply permission to redistribute them as product samples.
 
 ## Identified RustSMF-authored fixtures
 

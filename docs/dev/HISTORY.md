@@ -2,6 +2,157 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-22 - P7B tooling closeout; content remains blocked
+
+Completed explicit v3 conditioning, immutable export and GaimEngine's 46-case
+bundle tooling. Focused producer tests pass 21/21; `run.ps1 -Task verify` passes
+664 frontend tests and 14 Rust checks. GaimEngine's 133-command gate and all 46
+synthetic receiving packets pass. The actual eleven-packet comparison retains
+65 native/WASM-equal samples but 19 independent-reference failures. The operator
+kept v1 and the conditioning recipe; actual support authoring, complete content
+receiving and P7C remain open. [SKELETAL_CONDITIONING.md](SKELETAL_CONDITIONING.md)
+owns the contract and exact failure metrics. The local run at
+`D:/Compact_Evidence/RustSMF/runs/p7b-conditioning-20261022/` retains original
+producer bindings in `summary.json` and guarded publication in `publication.json`.
+Private inputs and generated qualification packets are excluded from Git.
+
+## 2026-10-21 - Local skeletal asset packet exporter
+
+Complete with verified limitations on local main at source revision
+`f1e6dc7e8e5aa8a8001aa3384c77600bfa0e2fb5`. Added the strict
+`rustsmf.skeletal-export-job.v1` CLI and `gaim.skeletal-asset.v1`, mapping,
+reference-sample, and immutable-generation outputs. The job reads one bounded,
+self-contained GLB through RustSMF's loader. Bind transforms must match authored
+inverse-bind matrices. Every admitted vertex, triangle, joint, influence and key
+is retained; unsupported forms and caps fail closed. The complete job and root,
+unit, interpolation, coordinate, root-motion and limit contracts are in
+`SKELETAL_EXPORT.md`.
+
+The reviewed diagnostic packet uses project-owned `examples/rustsmf-demo.glb`,
+input SHA-256
+`749527c997ac44e34a5e4d45e7860df5a9db5eb0977e4957cfb6b82a84acf9c7`.
+The current generation is
+`output/skeletal-export-priority7a-20261021/generations/c0a321b7786d415d00795304f6834738343fd98e03d0c40d1f67431c8c9b6d7b/`;
+its manifest SHA-256 is
+`2ab580657f8539d62927291dd0d4530220061a7b0f19bd13e47cc2d6ff7c602e`.
+It contains five joints, 2,400 vertices, 360 indices, two clips, 18 asset keys,
+and ten full-source reference samples. Producer revision is
+`f1e6dc7e8e5aa8a8001aa3384c77600bfa0e2fb5`; working tree is dirty. Producer
+source identity is
+`07a499ad3bc87569cd2391b85b9043a98fcf087ac8f6ce687945fa7d41eca1ee`, exporter
+identity `f4dcb7f15691e845f002159880ee1239ca893b4f757d57b249da51647e65162a`,
+and canonical input-set identity
+`d5d9720c28d2058ea060a120b626985289be6a9fafed54cbaf18c9c4ab7c62ab`. Settings
+identity is
+`b1e587cd4fc3d4a928c60bbdf8c9b920f3f49d773e1aeca7f2f65aa01b870336`.
+
+| Artifact | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `asset.json` | 664,734 | `d53b051f1d0777a254db7df78075fe7bc5a1066ab3d383a30750e3cbece1a28c` |
+| `mapping.json` | 204,988 | `acc5329f34e0e1b5c5c6507e8f3870bbc67482324f13dc7f01ed5276ea9137c6` |
+| `references.json` | 4,288,216 | `cace1c5e083618c3237151df6cf82cdcca621366dcdcf39b331985edbffb458f` |
+
+Reference tolerances are 5e-5 position, 1e-4 radians for normals, 1e-4 for
+matrices, and 1e-5 for root position/yaw. Receiver-side fractional Wave
+comparison reported maximum position error 2.481e-5, normal error 5.772e-5
+radians, and joint-matrix error 5.772e-5; endpoint errors were zero and root
+errors were below 1e-8. The source references remain evaluated by RustSMF's
+Three.js loader and mixer.
+
+The command `npm.cmd --prefix source/frontend run skeletal-export -- --job <absolute-job-path>`
+exited 0 twice with the same generation ID and artifact hashes. An independent
+packet audit verified pointer and manifest schema,
+generation ID, immutable/manifest-last fields, raw source hash, canonical
+`SHA-256(JSON.stringify(inputs))`, all artifact byte counts/hashes, both mapping
+and reference source identities, and complete fixture counts. Wrong-root CLI
+input preserved the accepted pointer; generation tests also cover precommit
+failure/cancellation rollback. The oversized Sable source was rejected at
+10,425 vertices without trimming.
+
+Focused proof passed: 11/11 skeletal tests; production and test TypeScript
+`tsc --noEmit`; targeted ESLint; the game-ready dependency guard; Summary Bank
+validation and 10/10 context-bank tests; project integrity (373 frontend files,
+11 durable docs); and `git diff --check`. Full application verification,
+humanoid qualification, consumer runtime admission, and gameplay acceptance
+were not part of this CLI slice. Signal Robot proves the RustSMF exporter path
+only; no GaimEngine files were changed and nothing was published.
+
+## 2026-10-21 - Explicit skeletal clip selection
+
+Complete with verified limitations on local main based on source revision
+`f1e6dc7e8e5aa8a8001aa3384c77600bfa0e2fb5`. Added
+`rustsmf.skeletal-export-job.v2` with 1–32 unique clip IDs matched against
+exact source GLB animation names. Missing, duplicate, and ambiguous requests
+fail before publication. Selected clips and reference samples follow request
+order, and the selection is bound into settings and generation identity. Job
+v1 keeps its all-admitted-clips behavior and settings contract. The selected
+clip path leaves full input bytes and their source hash intact.
+
+Focused job/CLI proof passed (4/4): v1 all-clips output, v2 order and reference
+selection, source hash preservation, identity changes, and current-pointer
+preservation after invalid selections. V1 retains its recorded settings identity.
+Final verification passed: 14/14 skeletal tests, 19/19 game-ready tests,
+production and test TypeScript typechecks, targeted ESLint, Summary Bank
+validation, 10/10 context-bank tests, project integrity (373 frontend files and
+11 durable docs), and `git diff --check`. The registered Fight Game Study
+source was supplied for the candidate. Its
+`makerBodySources.wolf` entry and `.fighter` package SHA-256 match
+`64c1c506bd868eda3412ce46f0f758d4c9553e094a8da799f72ea133a668d901`.
+`decodeMakerDocument` confirmed the distinct body import-source identity
+`50277b11cec817161fdec6d84d35e88ad108398aee6f2cff40056a55120acaf2`, embedded
+body GLB SHA-256
+`e37f63b05b5f0873f95ed3b1468f0c736155e9f8af4ea9a4738bbcee151faf07`, and
+movement-document identity
+`13afb2ee91cb797d4a174ff5ec767fab90cfa5b1e5048a0fe2907872505b7884`. RustSMF's
+loader confirmed one root `mixamorigHips`, 28 joints, 3,726 vertices, 38 unique
+source animations, and one exact match each for `idle` and `walk`.
+
+The initial bind refusal was traced to node 35 `wolf-normalization`, a shared
+ancestor of mesh and joints with uniform scale `4.407004976`. The authored
+`mixamorigHips` inverse bind contains translation Y `-0.493159413` and Z
+`0.001420893`, while the loaded joint world matrix has scale `4.40700498` and
+translation Y `2.17335599`, Z `-0.006261882`. Across all 28 joints,
+`jointWorld × inverseBind` resolves to one common scene-root bind-shape matrix
+with maximum element difference `2.18e-7`. RustSMF now validates that shared,
+nonsingular bind shape and bakes it into common-bind-space geometry. A focused
+regression verifies every mesh vertex and all reference-sample positions retain
+the common ancestor scale.
+
+The exact v2 `idle`/`walk` job was rerun with the original root and staged GLB.
+It now reaches animation validation and exits 1 before creating a generation
+or current pointer: `Clip idle track mixamorigHips.quaternion uses unsupported
+STEP interpolation; only LINEAR vector and shortest-arc quaternion tracks are
+admitted.` The GLB declares STEP samplers for the selected clips (51 keys per
+idle channel; 41 per walk channel), which glTF supports but the current
+`gaim.skeletal-asset.v1` track contract does not represent. The hash-verified
+GLB remains staged at
+`output/skeletal-export-priority7b-white-wolf-20261021/source/captain-wolf.glb`;
+its hash and the source `.fighter` package hash were rechecked unchanged. No
+generation was published.
+
+A bounded in-memory conditioning study sampled each selected STEP channel at
+all integer 60 Hz ticks and treated those samples as LINEAR tracks. Separate
+Three.js mixers evaluated the original and conditioned motion at the exporter's
+five existing reference phases per clip, including all three fractional
+interior phases. Existing tolerances were unchanged: 5e-5 m position, 1e-4 rad
+normal angle, 1e-4 joint-matrix element, 1e-5 m root position, and 1e-5 rad root
+yaw. Maximum errors were:
+
+| Clip | Position (m) | Normal (rad) | Joint matrix | Root position (m) | Root yaw (rad) |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| `idle` | 0.115687 | 0.091299 | 0.383627 | 0.007722 | 0.009570 |
+| `walk` | 0.250483 | 0.290050 | 1.067419 | 0.056404 | 0.031743 |
+
+All five measures fail for both clips. The conditioned tracks would require
+1,932 keys against the 16,384-key cap, with 28 joints, 3,726 vertices, and two
+clips, so count limits are not the blocker. The source also exceeds the current
+separate-root-motion policy at tick 0: residual non-yaw rotation is 0.033546 rad
+for `idle` and 0.183953 rad for `walk`, against the 1e-5 rad limit. Conditioning
+therefore stops before publication or any schema/runtime change. The P7B
+generation root and current pointer remain absent; the staged GLB and source
+package hashes were rechecked unchanged. No receiving-engine qualification,
+redistribution, or P7C claim was made.
+
 ## 2026-10-16 - Current-source installed API acceptance and recovery closeout
 
 Complete with verified limitations on local main `279a537`: restored the three
