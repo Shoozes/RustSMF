@@ -104,9 +104,9 @@ identity contract.
 
 The explicit [v3 conditioning job](SKELETAL_CONDITIONING.md) serializes and
 re-imports a continuous derivative with a separate locomotion root. Its original,
-recipe and report identities remain distinct. White Wolf P7B is still blocked by
-the fixed engine/reference interpolation difference; successful export is not
-receiving acceptance.
+recipe and report identities remain distinct. Its additional explicit NLERP
+mode admits only canonical generated chord-cubic non-root rotations. Successful
+export is separate from receiving and authored support acceptance.
 
 ## Bind, animation, and limits
 
@@ -125,7 +125,7 @@ for v1. V2 selects at least one clip from the source. Limits are 8,192
 vertices, 49,152 triangle indices, 32 exported clips, 16,384 total
 keys, and 4 MiB for `asset.json`. Clips must use unique supported ASCII IDs,
 LINEAR complete position/quaternion/scale tracks targeting bones, and key times
-that land on integer 60 Hz ticks. STEP and CUBICSPLINE interpolation are not
+that land on integer 60 Hz ticks. STEP and arbitrary CUBICSPLINE interpolation are not
 representable by the current output track contract and fail with the source
 mode identified. Unkeyed endpoints are added from the source clip evaluation.
 Unsupported channels, interpolation, out-of-range values, or any limit
@@ -155,3 +155,5 @@ publication for that fixture. It does not prove engine/runtime admission,
 receiver compatibility beyond the published schema, gameplay behavior, or
 asset acceptance. Oversized or unsupported sources must be reduced or corrected
 at their source and exported again; RustSMF does not silently simplify them.
+
+<!-- AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-chord-conditioning | change=routed the narrow conditioned chord exception while preserving strict original jobs -->

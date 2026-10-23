@@ -7,7 +7,8 @@ import { loadGLB } from '../loaders/glb';
 import { bytesToArrayBuffer } from '../loaders/smfBinary';
 import { installNodeThreeRuntime } from '../../scripts/node-three-runtime';
 import { disposeThreeObject } from './threeDisposal';
-import { conditionSkeletalModel, CONDITIONING_MODE, measureConditioningDifferences, type ConditioningRecipe } from './skeletalConditioning';
+import { conditionSkeletalModel, CONDITIONING_MODE, CONDITIONING_NLERP_MODE, measureConditioningDifferences, type ConditioningRecipe } from './skeletalConditioning';
+import { trackInterpolation } from './animationTrackInterpolation';
 import { prepareSkeletalExport } from './skeletalExport';
 
 test('conditioning serializes continuous poses with unweighted root, retained tilt and bind geometry', async () => {
@@ -39,6 +40,44 @@ async function fixture(): Promise<Awaited<ReturnType<typeof loadGLB>>> {
   return loadGLB(bytesToArrayBuffer(await readFile(fileURLToPath(new URL('../../../../examples/rustsmf-demo.glb', import.meta.url)))));
 }
 const recipe: ConditioningRecipe = { mode: CONDITIONING_MODE, sourceRootJoint: 'Base', locomotionRootJoint: 'LocomotionRoot', clipIds: ['Wave', 'Turn'], transitions: [{ idle: 'Wave', gait: 'Turn', phases: [0, .25, .5, .75], durationTicks: 6 }] };
+
+test('opt-in NLERP survives GLB serialization, matches fractional gait endpoints and unwraps root yaw', async () => {
+  const model = await fixture(); let derived: Awaited<ReturnType<typeof loadGLB>> | undefined;
+  try {
+    const base = model.skeleton!.bones[0], child = model.skeleton!.bones[1];
+    const times = Array.from({ length: 6 }, (_, i) => i / 60);
+    const rotations = times.flatMap((_, i) => new THREE.Quaternion().setFromEuler(new THREE.Euler(i % 2 ? 2.6 : .1, .15 * i, .05)).toArray());
+    model.clips = [new THREE.AnimationClip('idle', 2 / 60, []), new THREE.AnimationClip('gait', 5 / 60, [
+      new THREE.QuaternionKeyframeTrack(`${base.name}.quaternion`, times, times.flatMap((_, i) => new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), 2.8 + .8 * i / 5).toArray())),
+      new THREE.QuaternionKeyframeTrack(`${child.name}.quaternion`, times, rotations, THREE.InterpolateDiscrete),
+    ])];
+    const result = await conditionSkeletalModel(model, { ...recipe, mode: CONDITIONING_NLERP_MODE, clipIds: ['idle', 'gait'], transitions: [{ idle: 'idle', gait: 'gait', phases: [0, .25, .5, .75], durationTicks: 6 }] });
+    derived = await loadGLB(bytesToArrayBuffer(result.bytes));
+    assert.ok(derived.clips.flatMap(c => c.tracks).some(t => trackInterpolation(t) === 'gltf-cubic-spline'));
+    assert.ok(derived.clips.flatMap(c => c.tracks).filter(t => t.name.startsWith('LocomotionRoot.')).every(t => t.getInterpolation() === THREE.InterpolateLinear));
+    const at = (id: string, tick: number): number[][] => {
+      const mixer = new THREE.AnimationMixer(derived!.root), action = mixer.clipAction(derived!.clips.find(c => c.name === id)!);
+      action.setLoop(THREE.LoopOnce, 1); action.clampWhenFinished = true; action.play();
+      try { mixer.setTime(tick / 60); derived!.root.updateMatrixWorld(true); return derived!.skeleton!.bones.map(b => [...b.matrixWorld.elements]); }
+      finally { action.stop(); mixer.uncacheRoot(derived!.root); }
+    };
+    const near = (a: number[][], b: number[][]): void => assert.ok(a.every((row, i) => row.every((v, c) => Math.abs(v - b[i][c]) < 2e-5)));
+    for (const phase of [0, .25, .5, .75]) {
+      near(at(`start-gait-p${phase * 100}`, 6), at('gait', phase * 5));
+      near(at(`stop-gait-p${phase * 100}`, 0), at('gait', phase * 5));
+      near(at(`stop-gait-p${phase * 100}`, 6), at('idle', 0));
+    }
+    const selected = { ...derived, clips: derived.clips.filter(c => c.name === 'gait') };
+    await assert.rejects(prepareSkeletalExport(selected, { sourceIdentitySha256: 'a'.repeat(64), rootJoint: 'LocomotionRoot' }), /unsupported/);
+    const options = { sourceIdentitySha256: 'a'.repeat(64), rootJoint: 'LocomotionRoot', conditionedRotationMode: CONDITIONING_NLERP_MODE };
+    const packet = await prepareSkeletalExport(selected, options);
+    assert.ok(packet.asset.clips[0].root.at(-1)!.yaw > Math.PI);
+    assert.ok(packet.asset.clips[0].root.every((key, i, keys) => !i || Math.abs(key.yaw - keys[i - 1].yaw) < Math.PI));
+    const cubic = selected.clips[0].tracks.find(t => trackInterpolation(t) === 'gltf-cubic-spline')!;
+    cubic.values[8] += .001;
+    await assert.rejects(prepareSkeletalExport(selected, options), /canonical conditioned NLERP/);
+  } finally { disposeThreeObject(model.root); if (derived) disposeThreeObject(derived.root); }
+});
 
 test('serialized conditioning is deterministic and retains a scaled authored bind shape and source tick poses', async () => {
   const a = await fixture(), b = await fixture(), reference = await fixture();

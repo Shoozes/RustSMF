@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import type { LoadedModel } from '../loaders/glb';
+import { trackInterpolation } from './animationTrackInterpolation';
+import { CONDITIONING_NLERP_MODE, validateChordRotation } from './skeletalChordRotation';
 
 export const SKELETAL_ASSET_SCHEMA = 'gaim.skeletal-asset.v1';
 export const SKELETAL_MAPPING_SCHEMA = 'gaim.skeletal-export-mapping.v1';
@@ -112,6 +114,7 @@ export interface PrepareSkeletalExportOptions {
   rootJoint: string;
   signal?: AbortSignal;
   yieldEvery?: number;
+  conditionedRotationMode?: typeof CONDITIONING_NLERP_MODE;
 }
 
 interface SourceMesh {
@@ -406,6 +409,7 @@ function buildClipBindings(
   root: THREE.Object3D,
   boneIndices: Map<THREE.Bone, number>,
   rootBoneIndex: number,
+  conditionedRotationMode?: typeof CONDITIONING_NLERP_MODE,
 ): { durationTicks: number; tracks: number[][]; rootTicks: number[] } {
   if (!validIdentifier(clip.name)) fail(`Clip name ${JSON.stringify(clip.name)} cannot be used as an asset ID; rename it to 1–64 ASCII letters, digits, underscore, dot, or hyphen.`);
   if (!Number.isFinite(clip.duration) || clip.duration <= 0) fail(`Clip ${clip.name} has an invalid duration.`);
@@ -418,7 +422,8 @@ function buildClipBindings(
   const rootTicks = new Set<number>([0, durationTicks]);
   const seenProperties = new Set<string>();
   for (const track of clip.tracks) {
-    if (!interpolationIsLinear(track)) {
+    const chord = conditionedRotationMode === CONDITIONING_NLERP_MODE && trackInterpolation(track) === 'gltf-cubic-spline';
+    if (!interpolationIsLinear(track) && !chord) {
       fail(`Clip ${clip.name} track ${track.name} uses unsupported ${interpolationLabel(track)} interpolation; only LINEAR vector and shortest-arc quaternion tracks are admitted.`);
     }
     if (track.times.length < 1 || track.values.length !== track.times.length * track.getValueSize()) {
@@ -438,8 +443,14 @@ function buildClipBindings(
     }
     if (parsed.propertyIndex !== undefined) fail(`Clip ${clip.name} track ${track.name} targets one component; export requires complete TRS channels.`);
     const expectedSize = property === 'quaternion' ? 4 : 3;
-    if (track.getValueSize() !== expectedSize) fail(`Clip ${clip.name} track ${track.name} has the wrong value size for ${property}.`);
+    if (track.getValueSize() !== expectedSize * (chord ? 3 : 1)) fail(`Clip ${clip.name} track ${track.name} has the wrong value size for ${property}.`);
     const boneIndex = boneIndices.get(node)!;
+    if (chord) {
+      if (property !== 'quaternion' || boneIndex === rootBoneIndex) fail('Conditioned chord interpolation is restricted to non-locomotion joint rotations.');
+      validateChordRotation(track, durationTicks);
+    } else if (conditionedRotationMode && property === 'quaternion' && boneIndex !== rootBoneIndex) {
+      fail(`Clip ${clip.name} track ${track.name} requires canonical conditioned NLERP chord rotation.`);
+    }
     const propertyKey = `${boneIndex}:${property}`;
     if (seenProperties.has(propertyKey)) fail(`Clip ${clip.name} has duplicate ${property} tracks for joint ${node.name}.`);
     seenProperties.add(propertyKey);
@@ -604,6 +615,7 @@ export async function prepareSkeletalExport(
   loaded: LoadedModel,
   options: PrepareSkeletalExportOptions,
 ): Promise<PreparedSkeletalExport> {
+  if (options.conditionedRotationMode !== undefined && options.conditionedRotationMode !== CONDITIONING_NLERP_MODE) fail('Unsupported conditioned rotation mode.');
   if (!/^[a-f0-9]{64}$/.test(options.sourceIdentitySha256)) {
     fail('Source identity must be a lowercase SHA-256 digest.');
   }
@@ -716,7 +728,7 @@ export async function prepareSkeletalExport(
   if (positions.length !== totalVertices) fail('Internal vertex accounting did not match the source mesh set.');
 
   const boneIndices = new Map(ordered.map((bone, index) => [bone, index]));
-  const bindings = loaded.clips.map(clip => buildClipBindings(clip, loaded.root, boneIndices, rootBoneIndex));
+  const bindings = loaded.clips.map(clip => buildClipBindings(clip, loaded.root, boneIndices, rootBoneIndex, options.conditionedRotationMode));
   const totalKeys = totalKeyCount(bindings);
   if (totalKeys > MAX_KEYS) {
     fail(`Lossless 60 Hz export needs ${totalKeys} keys across all tracks; the asset limit is ${MAX_KEYS}. No tracks or clips were removed.`);
@@ -778,9 +790,14 @@ export async function prepareSkeletalExport(
           keys: keyTicks.map(tick => ({ tick, transform: poses.get(tick)!.localTransforms[joint] })),
         });
       }
+      let priorYaw: number | undefined;
       const root = binding.rootTicks.map(tick => {
         const pose = poses.get(tick)!;
-        return { tick, position: pose.rootPosition, yaw: pose.rootYaw };
+        const yaw = options.conditionedRotationMode && priorYaw !== undefined
+          ? priorYaw + Math.atan2(Math.sin(pose.rootYaw - priorYaw), Math.cos(pose.rootYaw - priorYaw))
+          : pose.rootYaw;
+        priorYaw = yaw;
+        return { tick, position: pose.rootPosition, yaw };
       });
       assetClips.push({
         id: clip.name,
@@ -803,6 +820,11 @@ export async function prepareSkeletalExport(
           phaseTicks,
           clip.name,
         );
+        if (options.conditionedRotationMode) {
+          let previous = root[0];
+          for (const key of root) if (key.tick <= phaseTicks) previous = key;
+          phasePose.rootYaw = previous.yaw + Math.atan2(Math.sin(phasePose.rootYaw - previous.yaw), Math.cos(phasePose.rootYaw - previous.yaw));
+        }
         const geometry = sourceReferenceGeometry(
           sourceMeshList,
           phasePose.adjustedGlobals,

@@ -2,41 +2,32 @@
 
 Last reviewed: 2026-10-22
 
-## P7B conditioning and receiving — blocked, 2026-10-22
+## P7B conditioning and receiving — complete locally, 2026-10-22
 
-- What: preserve the original White Wolf while producing an identity-bound
-  continuous derivative, ten source roles and 36 six-tick transitions for v1.
-- Why: qualify source-bound content without weakening independent comparisons.
-- Where: RustSMF owns conditioning/export; GaimEngine owns independent receiving.
-- When: selected on 2026-10-22; this cross-repository batch precedes P7C.
-- How: the explicit v3 job preserves skin/bind geometry and residual hip tilt,
-  serializes/re-imports the GLB, and publishes bounded immutable packets. See
-  [the contract and evidence](SKELETAL_CONDITIONING.md).
-- Risk: glTF spherical interpolation and fixed GaimEngine normalized linear
-  interpolation differ at fractional phases. The ten-role diagnostic has exact
-  native/WASM equality but 18/50 failed derivative-reference samples.
-- Decision: the operator retained v1 and the recipe. Finish tooling and record
-  the blocker; do not relax tolerances or claim content acceptance.
-- Tests: focused conditioning/export/job/CLI/publication tests pass 21/21;
-  `run.ps1 -Task verify` passes with 664 frontend tests and 14 Rust checks.
-  GaimEngine's 133-command gate and all 46 synthetic receiving packets pass.
-  The final source-matched actual comparison reproduces 18/50 base-role failures
-  and one transition failure (19/65 samples across eleven candidate packets).
-  The run summary records exact source identities, receipts and cleanup.
-- Verification: the retained run summary separates successful tooling gates
-  from the failed White Wolf comparison and missing authored support content.
-- Done when: all 46 role/phase cases pass independent receiving at unchanged
-  tolerances, with actual authored sole/fallen patches and fully accounted
-  support intervals. This is not met. Support authoring and a qualified complete
-  bundle remain open; P7C and asset distribution remain outside this pass.
-- Publication: guarded `gitpush.ps1` saved RustSMF `b50bed1` and GaimEngine
-  `76ddc64`; each run's `publication.json` binds the candidate and remote commit.
-- Review/recheck, 2026-10-22: conditioning matched Three.js world-space skinning;
-  no producer defect or edit. GaimEngine `61dcd13` closes receiver support-byte
-  and transition findings (44 tests). Its source-role/endpoint-lineage pass is
-  next from static evidence; probes were not rerun. Preserve fixed v1, 19/65
-  failures, missing support and three local Rust overlays. This docs-only batch
-  uses guarded publication.
+- What: qualify all 46 actual White Wolf cases at unchanged GaimEngine v1
+  tolerances, preserving original sampled poses, geometry, bind and influences.
+- Why: close actual-content acceptance without weakening independent comparison.
+- Where: RustSMF owns producer conditioning and private support authoring;
+  GaimEngine owns receiving.
+- When: the producer-only revision was selected 2026-10-22.
+- How: opt-in v3 `continuous-60hz-locomotion-root-nlerp` serializes canonical
+  chord-cubic joint rotations, LINEAR locomotion and continuous exported yaw.
+  Fractional transition targets use the revised curve. Old jobs stay unchanged.
+  [SKELETAL_CONDITIONING.md](SKELETAL_CONDITIONING.md) owns the contract.
+- Tests: 24 focused tests and full RustSMF verification (667 frontend tests,
+  14 Rust checks); all 46 actual packets pass 590 independent samples
+  with exact native/WASM equality. All 38 targeted samples and 36 endpoint checks
+  pass against the fresh GaimEngine build. Original failed evidence is retained.
+- Support: inspected sole sets and transient front finger-pad/back forearm
+  contact have exact source/export indices and 604 spans over all 46 clips.
+  This does not claim torso support, stable contact or P7C course quality.
+- Done when: actual authored support/bundle receiving and RustSMF's final local
+  gate pass with identities and cleanup bound. Met: the fresh actual 46-packet
+  bundle passes admission, comparison, isolation, restore replay and cleanup.
+  P7C and distribution remain separate; all three GaimEngine Rust overlays remain.
+- Verification: retained run `p7b-chord-conditioning-20261022` binds producer
+  evidence; GaimEngine's paired run is `p7b-chord-receiving-20261022`.
+  HISTORY owns receipt locations and closeout.
 
 Backlog status: review, recheck, GLB cleanup and installed API acceptance complete locally. Recovery and owned installations are reconciled. Actual native destination-dialog acceptance remains below. HISTORY owns source-bound proof.
 
@@ -198,3 +189,5 @@ AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | chang
 <!--
 AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-review-recheck-cleanup | change=rechecked published producer proof and routed the bounded receiver provenance follow-up
 -->
+
+<!-- AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-chord-conditioning | change=closed actual 46-case P7B qualification with authored transient support and preserved P7C boundary -->

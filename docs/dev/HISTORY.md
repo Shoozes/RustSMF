@@ -2,6 +2,76 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-22 - P7B producer NLERP and actual 46-case qualification
+
+Implemented the explicit job-v3 mode
+`continuous-60hz-locomotion-root-nlerp`. Original jobs and the original mode
+retain their behavior. Non-locomotion joint rotations serialize standard glTF
+chord CUBICSPLINE from stored float32 values/times with hemisphere continuity;
+only that conditioning context admits exact canonical chord tracks. Translation,
+scale and root rotation stay LINEAR, root yaw is continuously unwrapped, and
+fractional transition targets are evaluated from the revised stored curve.
+The new helper and interpolation dependency are included in producer identity.
+
+Original White Wolf bytes and all retained failed evidence remain intact. The
+re-imported derivative retains 3,726 vertices, authored skin/bind/influences,
+28 original joints plus one unweighted locomotion root, ten source roles and
+36 six-tick transitions. Maximum original integer-tick joint-matrix difference
+is `9.590332776809873e-7` against `1e-4`. Producer source identity is
+`ec060ec39e419b7e3e1327499bc31f23fc2e4f1d5cefed71c8ca711cb35e009e`;
+exporter identity is
+`c90689a42697967bab3571d7adcf20dd6b2bc1a118514357c1e34b8925414110`.
+Original model identity is
+`e37f63b05b5f0873f95ed3b1468f0c736155e9f8af4ea9a4738bbcee151faf07`;
+serialized derivative identity is
+`d862cb5708fa788ce12b28a7b8efa8457abbd0c8e1b18b7293423e5fbceaa028`.
+
+All 46 actual packets pass 590 independent references with exact native/WASM
+equality at unchanged GaimEngine v1 tolerances. A separate bounded source probe
+matches canonical source evaluation exactly and passes 38 targeted receiving
+samples. All 36 transition endpoints pass; maximum matrix/position difference
+is `6.792987030657116e-7`, and maximum root-yaw difference is
+`1.572125860604956e-7`. Two probe-construction failures are retained separately;
+they were repaired by matching the established common-bind-space source chain,
+without changing the engine, reference values or receiving tolerances.
+
+Authored support uses 70 vertices per sole, the positive-Z left index-finger pad
+`[2110,2111]` over `damageFall [12,13)`, and the negative-Z right forearm point
+`[1656]` over `[6,7)`. Exact source/export indices, skin weights, normals,
+anatomical views and quarter-tick contact measurements are retained. The body
+contacts are transient; no torso, stable-support or P7C acceptance is claimed.
+The complete 604-span authoring partitions all 46 clips, including every endpoint
+clip; bundle assembly merges only adjacent identical spans to 88 and binds v1
+sidecars without copying generation data. The 46-packet bundle is 623,767,879
+aggregate bytes, with a 112,061-byte index. Unsupported spans retain reasons.
+
+Local proof: 24 focused conditioner/export/job/CLI/publication tests passed.
+`pwsh -NoProfile -File ./run.ps1 -Task verify` exited 0 in 151.273 seconds,
+including 667 frontend tests and 14 Rust checks. The before/after dirty-source
+inventory is unchanged at
+`405a3e3ca22222bdc787c7ae67a1a0e5b91fa630b1007f9ed29cb32ab088e484`.
+GaimEngine's fresh gate passes 134 commands and 1,101 Node tests with 1,158
+stable source files, one expected build-dependent skip and two existing GPU
+ignores. Its receipt is
+`C:/DevStuff/GaimEngine/.artifacts/proof/1792721749866-22464-engine-check.json`.
+The engine v1 runtime and all three pre-existing Rust overlays are preserved.
+
+Retained producer run:
+`D:/Compact_Evidence/RustSMF/runs/p7b-chord-conditioning-20261022/`.
+`all-cases-exports.json`, `independent-source-probes.json`, `authored-support.json`,
+`support-authoring/`, `gaim-bundle.json`, `gaim-supports/`, source snapshots and
+the compact summary/journal form the source-bound graph. The paired receiver
+run is `D:/Compact_Evidence/GaimEngine/runs/p7b-chord-receiving-20261022/`.
+Its `actual-bundle-receiving.json` passes all 46 cases, support admission,
+comparison, instance isolation, six-tick restore replay and cleanup; SHA-256 is
+`059910b8c4130f9107d0e195189af4f9581e687a17fc951b6a7717aae944b083`.
+The source-probe receipt and compatibility controls remain in that paired run.
+
+P7B is complete with the support limits above. P7C and distribution remain
+separate. Publication uses the scoped staged-tree guard in `GIT_PUBLISH.md`.
+
+<!-- AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-chord-conditioning | change=recorded producer-only NLERP, actual support and all 46 receiving cases at fixed v1 -->
+
 ## 2026-10-22 - P7B review and receiver recheck
 
 Reviewed RustSMF `b50bed1` on `main`, preserving the pre-existing TODO overlay.

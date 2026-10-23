@@ -1,9 +1,13 @@
 import * as THREE from 'three';
 import { exportGLB, type LoadedModel } from '../loaders/glb';
+import { createTrackInterpolant } from './animationTrackInterpolation';
+import { chordRotationTrack, CONDITIONING_NLERP_MODE } from './skeletalChordRotation';
+
+export { CONDITIONING_NLERP_MODE } from './skeletalChordRotation';
 
 export const CONDITIONING_MODE = 'continuous-60hz-locomotion-root' as const;
 export interface ConditioningRecipe {
-  mode: typeof CONDITIONING_MODE;
+  mode: typeof CONDITIONING_MODE | typeof CONDITIONING_NLERP_MODE;
   sourceRootJoint: string;
   locomotionRootJoint: string;
   clipIds: string[];
@@ -41,7 +45,7 @@ function blend(a: Pose, b: Pose, alpha: number): Pose {
     scale: a.scale.map((v, i) => v + (b.scale[i] - v) * alpha),
   };
 }
-function clipFromSamples(id: string, bones: readonly THREE.Bone[], samples: Sample[]): THREE.AnimationClip {
+function clipFromSamples(id: string, bones: readonly THREE.Bone[], samples: Sample[], mode: ConditioningRecipe['mode']): THREE.AnimationClip {
   const times = samples.map((_, tick) => Math.fround(tick / 60));
   const tracks: THREE.KeyframeTrack[] = [];
   bones.forEach((bone, index) => {
@@ -55,11 +59,25 @@ function clipFromSamples(id: string, bones: readonly THREE.Bone[], samples: Samp
       const keyTimes = constant ? [times[0], times[times.length - 1]] : times;
       const keyValues = constant ? [...values[0], ...values[0]] : values.flat();
       tracks.push(property === 'rotation'
-        ? new THREE.QuaternionKeyframeTrack(`${bone.name}.quaternion`, keyTimes, keyValues)
+        ? mode === CONDITIONING_NLERP_MODE && index !== bones.length - 1
+          ? chordRotationTrack(`${bone.name}.quaternion`, keyTimes, keyValues)
+          : new THREE.QuaternionKeyframeTrack(`${bone.name}.quaternion`, keyTimes, keyValues)
         : new THREE.VectorKeyframeTrack(`${bone.name}.${property}`, keyTimes, keyValues));
     }
   });
   return new THREE.AnimationClip(id, times[times.length - 1], tracks);
+}
+
+function generatedSample(clip: THREE.AnimationClip, bones: readonly THREE.Bone[], seconds: number): Sample {
+  const poses = bones.map(bone => pose(bone.matrix));
+  for (const track of clip.tracks) {
+    const binding = THREE.PropertyBinding.parseTrackName(track.name);
+    const index = bones.findIndex(bone => bone.name === binding.nodeName);
+    const property = binding.propertyName === 'quaternion' ? 'rotation' : binding.propertyName;
+    if (index < 0 || !['position', 'rotation', 'scale'].includes(property)) throw new Error('Invalid generated conditioning track.');
+    poses[index][property as keyof Pose] = Array.from(createTrackInterpolant(track).evaluate(seconds));
+  }
+  return { joints: poses.slice(0, -1), motion: poses[poses.length - 1] };
 }
 
 // GLTFExporter emits one skin per mesh even when all meshes share a skeleton.
@@ -95,7 +113,7 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
   if (!skeleton || skeleton.bones.length >= 64 || loaded.skinnedMeshes.some(m => m.skeleton !== skeleton)) throw new Error('Conditioning requires one shared skeleton with room for an unweighted root.');
   const vertices = loaded.skinnedMeshes.reduce((count, mesh) => count + mesh.geometry.getAttribute('position').count, 0);
   if (vertices < 3 || vertices > 8192) throw new Error('Conditioning requires 3–8,192 vertices without truncation.');
-  if (recipe.mode !== CONDITIONING_MODE || !/^[A-Za-z0-9_.-]{1,64}$/.test(recipe.locomotionRootJoint)) throw new Error('Unsupported conditioning recipe.');
+  if (![CONDITIONING_MODE, CONDITIONING_NLERP_MODE].includes(recipe.mode) || !/^[A-Za-z0-9_.-]{1,64}$/.test(recipe.locomotionRootJoint)) throw new Error('Unsupported conditioning recipe.');
   const bones = [...skeleton.bones];
   if (new Set(bones.map(b => b.name)).size !== bones.length || bones.some(b => !/^[A-Za-z0-9_.-]{1,64}$/.test(b.name))) throw new Error('Conditioning requires unique safe source joint names.');
   if (loaded.root.getObjectByName(recipe.locomotionRootJoint)) throw new Error('Locomotion root name already exists.');
@@ -160,14 +178,19 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
   skeleton.bones.push(locomotion); skeleton.boneInverses.push(bindShape.clone());
   skeleton.init(); loaded.root.updateMatrixWorld(true);
   const allBones = [...bones, locomotion];
-  const generated = clips.map(c => clipFromSamples(c.name, allBones, sampled.get(c.name)!));
+  const generated = clips.map(c => clipFromSamples(c.name, allBones, sampled.get(c.name)!, recipe.mode));
   const transitions: ConditioningReport['transitions'] = [];
   for (const spec of recipe.transitions) {
     if (spec.durationTicks !== 6 || !sampled.has(spec.gait) || !sampled.has(spec.idle) || !spec.phases.length || spec.phases.some(p => ![0, .25, .5, .75].includes(p))) throw new Error('Invalid six-tick transition recipe.');
-    const idle = sampled.get(spec.idle)![0], gait = sampled.get(spec.gait)!;
+    const idle = recipe.mode === CONDITIONING_NLERP_MODE
+      ? generatedSample(generated.find(c => c.name === spec.idle)!, allBones, 0)
+      : sampled.get(spec.idle)![0];
+    const gait = sampled.get(spec.gait)!;
     for (const phase of spec.phases) {
       const cursor = phase * (gait.length - 1), low = Math.floor(cursor), high = Math.ceil(cursor);
-      const target: Sample = { joints: gait[low].joints.map((p, i) => blend(p, gait[high].joints[i], cursor - low)), motion: blend(gait[low].motion, gait[high].motion, cursor - low) };
+      const target: Sample = recipe.mode === CONDITIONING_NLERP_MODE
+        ? generatedSample(generated.find(c => c.name === spec.gait)!, allBones, cursor / 60)
+        : { joints: gait[low].joints.map((p, i) => blend(p, gait[high].joints[i], cursor - low)), motion: blend(gait[low].motion, gait[high].motion, cursor - low) };
       for (const kind of ['start', 'stop', 'reversal']) {
         const a = kind === 'start' ? idle : target;
         const b = kind === 'stop' ? idle : structuredClone(target);
@@ -175,7 +198,7 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
         const id = `${kind}-${spec.gait}-p${phase * 100}`;
         if (generated.some(c => c.name === id)) throw new Error(`Duplicate conditioned clip ${id}.`);
         const frames = Array.from({ length: 7 }, (_, tick) => ({ joints: a.joints.map((p, i) => blend(p, b.joints[i], tick / 6)), motion: blend(a.motion, b.motion, tick / 6) }));
-        generated.push(clipFromSamples(id, allBones, frames));
+        generated.push(clipFromSamples(id, allBones, frames, recipe.mode));
         transitions.push({ id, gait: spec.gait, idle: spec.idle, kind, phase, durationTicks: 6 });
       }
     }
@@ -192,7 +215,10 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
   loaded.clips = generated;
   const bytes = sharedSkinGlb(await exportGLB(loaded.root, generated));
   signal?.throwIfAborted();
-  return { bytes, report: { schema: 'rustsmf.skeletal-conditioning.v1', recipe, jointLineage: allBones.map((b, i) => ({ originalIndex: i === bones.length ? null : i, conditionedIndex: i, id: b.name })), vertexLineage, model: { units: 'meters', height, restSkinHeight: height, jointCount: allBones.length, vertexCount }, clips: clipRecords, transitions, differencePolicy: 'Sample original STEP/LINEAR at float32 60 Hz endpoints; continuous LINEAR derivative is the independent receiving reference. Original-to-derived differences are reported separately; no smoothing or contact correction.' } };
+  const differencePolicy = recipe.mode === CONDITIONING_NLERP_MODE
+    ? 'Sample original STEP/LINEAR at float32 60 Hz endpoints; hemisphere-continuous quaternion chord CUBICSPLINE gives normalized linear joint rotation. Translation, scale and locomotion yaw remain LINEAR. Re-import the serialized derivative as independent reference; original-to-derived differences are descriptive, without smoothing or contact correction.'
+    : 'Sample original STEP/LINEAR at float32 60 Hz endpoints; continuous LINEAR derivative is the independent receiving reference. Original-to-derived differences are reported separately; no smoothing or contact correction.';
+  return { bytes, report: { schema: 'rustsmf.skeletal-conditioning.v1', recipe, jointLineage: allBones.map((b, i) => ({ originalIndex: i === bones.length ? null : i, conditionedIndex: i, id: b.name })), vertexLineage, model: { units: 'meters', height, restSkinHeight: height, jointCount: allBones.length, vertexCount }, clips: clipRecords, transitions, differencePolicy } };
 }
 
 /** Original comparisons are descriptive conversion evidence, never receiving tolerances. */

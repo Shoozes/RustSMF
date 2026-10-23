@@ -313,6 +313,8 @@
         "source/frontend/src/utils/threeDisposal.ts",
         "source/frontend/src/utils/threeTypeGuards.ts",
         "source/frontend/src/utils/skeletalExport.ts",
+        "source/frontend/src/utils/skeletalChordRotation.ts",
+        "source/frontend/src/utils/animationTrackInterpolation.ts",
         "source/frontend/src/utils/skeletalExport.test.ts",
         "source/frontend/src/utils/skeletalExportCli.test.ts",
         "source/frontend/src/utils/skeletalExportGeneration.ts",
@@ -1412,12 +1414,15 @@
       ]
     },
     "workflow__skeletal_conditioning": {
-      "description": "Explicit producer-job v3 continuous conditioning, locomotion root, transition baking, original/derived lineage, and the blocked White Wolf P7B qualification. Reuse workflow__skeletal_export for export/publication contracts.",
+      "description": "Explicit producer-job v3 LINEAR/NLERP conditioning, locomotion root, transition baking and original/derived lineage. Reuse workflow__skeletal_export for packet/publication contracts.",
       "max_kb": 64,
       "paths": [
         "docs/dev/SKELETAL_CONDITIONING.md",
         "source/frontend/src/utils/skeletalConditioning.ts",
-        "source/frontend/src/utils/skeletalConditioning.test.ts"
+        "source/frontend/src/utils/skeletalConditioning.test.ts",
+        "source/frontend/src/utils/skeletalChordRotation.ts",
+        "source/frontend/src/utils/skeletalChordRotation.test.ts",
+        "source/frontend/src/utils/animationTrackInterpolation.ts"
       ]
     }
   },

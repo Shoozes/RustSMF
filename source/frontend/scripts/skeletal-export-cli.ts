@@ -10,7 +10,7 @@ import {
 import { loadGLB } from '../src/loaders/glb';
 import { MAX_MODEL_INPUT_BYTES } from '../src/utils/modelFormat';
 import { disposeThreeObject } from '../src/utils/threeDisposal';
-import { conditionSkeletalModel, measureConditioningDifferences } from '../src/utils/skeletalConditioning';
+import { conditionSkeletalModel, CONDITIONING_NLERP_MODE, measureConditioningDifferences } from '../src/utils/skeletalConditioning';
 import {
   prepareSkeletalExport,
   SKELETAL_ASSET_SCHEMA,
@@ -117,6 +117,9 @@ function settingsDocument(job: SkeletalExportJob): Record<string, unknown> {
     document.clipSelection = { mode: 'explicit-exact-source-name', clipIds: job.export.clipIds };
   }
   if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA) document.conditioning = job.conditioning;
+  if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.mode === CONDITIONING_NLERP_MODE) {
+    document.animation = 'preserve float32 60 Hz sampled poses; canonical chord CUBICSPLINE joint rotations normalize to shortest-arc NLERP; translation, scale and locomotion yaw remain LINEAR with continuous yaw winding';
+  }
   return document;
 }
 
@@ -204,6 +207,8 @@ export async function runSkeletalExportJob(
       sourceIdentitySha256: source.sha256,
       rootJoint: job.export.rootJoint,
       signal,
+      ...(job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.mode === CONDITIONING_NLERP_MODE
+        ? { conditionedRotationMode: CONDITIONING_NLERP_MODE } : {}),
     });
     throwIfAborted(signal);
     inputs.push({

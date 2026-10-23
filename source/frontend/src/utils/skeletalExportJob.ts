@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { CONDITIONING_MODE, type ConditioningRecipe } from './skeletalConditioning';
+import { CONDITIONING_MODE, CONDITIONING_NLERP_MODE, type ConditioningRecipe } from './skeletalConditioning';
 
 export const SKELETAL_EXPORT_JOB_SCHEMA = 'rustsmf.skeletal-export-job.v1';
 export const SKELETAL_EXPORT_JOB_V2_SCHEMA = 'rustsmf.skeletal-export-job.v2';
@@ -177,7 +177,7 @@ export function parseSkeletalExportJobDocument(
     const c = record(document.conditioning, 'job.conditioning');
     exactKeys(c, ['mode', 'sourceRootJoint', 'locomotionRootJoint', 'clipIds', 'transitions'], 'job.conditioning');
     const identifier = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_.-]{1,64}$/.test(v);
-    if (c.mode !== CONDITIONING_MODE || !identifier(c.sourceRootJoint) || !identifier(c.locomotionRootJoint) || c.sourceRootJoint === c.locomotionRootJoint || c.locomotionRootJoint !== common.export.rootJoint) fail('job.conditioning must name distinct source/locomotion roots and export the locomotion root.');
+    if ((c.mode !== CONDITIONING_MODE && c.mode !== CONDITIONING_NLERP_MODE) || !identifier(c.sourceRootJoint) || !identifier(c.locomotionRootJoint) || c.sourceRootJoint === c.locomotionRootJoint || c.locomotionRootJoint !== common.export.rootJoint) fail('job.conditioning must name a supported mode, distinct source/locomotion roots and export the locomotion root.');
     if (!Array.isArray(c.clipIds) || c.clipIds.length < 1 || c.clipIds.length > 32 || !c.clipIds.every(identifier) || new Set(c.clipIds).size !== c.clipIds.length) fail('job.conditioning.clipIds must contain 1–32 unique safe source names.');
     if (!Array.isArray(c.transitions) || c.transitions.length > 3) fail('job.conditioning.transitions must contain at most three gait recipes.');
     const transitions = c.transitions.map((value, index) => {
@@ -188,7 +188,7 @@ export function parseSkeletalExportJobDocument(
     });
     if (new Set(transitions.map(t => t.gait)).size !== transitions.length) fail('Duplicate conditioning gait recipe.');
     if (common.output.currentPointer) fail('Conditioned candidate jobs omit the current pointer.');
-    return { ...common, $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA, export: { ...common.export, clipIds: clipIds! }, conditioning: { mode: CONDITIONING_MODE, sourceRootJoint: c.sourceRootJoint, locomotionRootJoint: c.locomotionRootJoint, clipIds: c.clipIds, transitions }, output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
+    return { ...common, $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA, export: { ...common.export, clipIds: clipIds! }, conditioning: { mode: c.mode, sourceRootJoint: c.sourceRootJoint, locomotionRootJoint: c.locomotionRootJoint, clipIds: c.clipIds, transitions }, output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
   }
   if (isV2) {
     const explicitClipIds = clipIds ?? fail('job.export.clipIds must contain 1 to 32 explicit source animation clip IDs.');

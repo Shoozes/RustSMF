@@ -9,7 +9,7 @@ import {
   SKELETAL_EXPORT_JOB_V3_SCHEMA,
   selectSkeletalExportClips,
 } from './skeletalExportJob';
-import { CONDITIONING_MODE } from './skeletalConditioning';
+import { CONDITIONING_MODE, CONDITIONING_NLERP_MODE } from './skeletalConditioning';
 
 function job(root: string): Record<string, unknown> {
   return {
@@ -39,6 +39,10 @@ test('v3 explicitly binds conditioning and rejects ambiguous recipes and candida
     output: { generationRoot: path.join(root, 'generations'), conditioningRoot: path.join(root, 'conditioned') },
   };
   assert.equal(parseSkeletalExportJobDocument(valid).$schema, SKELETAL_EXPORT_JOB_V3_SCHEMA);
+  const revised = { ...valid, conditioning: { ...valid.conditioning, mode: CONDITIONING_NLERP_MODE } };
+  const parsedRevised = parseSkeletalExportJobDocument(revised);
+  assert.ok(parsedRevised.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA);
+  assert.equal(parsedRevised.conditioning.mode, CONDITIONING_NLERP_MODE);
   assert.throws(() => parseSkeletalExportJobDocument({ ...valid, output: { ...valid.output, currentPointer: path.join(root, 'generations/current.json') } }), /omit the current pointer/);
   const invalidPhase = structuredClone(valid); invalidPhase.conditioning.transitions[0].phases = [.1];
   assert.throws(() => parseSkeletalExportJobDocument(invalidPhase), /quarter phases/);

@@ -7,6 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SKELETAL_EXPORT_JOB_SCHEMA, SKELETAL_EXPORT_JOB_V2_SCHEMA, SKELETAL_EXPORT_JOB_V3_SCHEMA } from './skeletalExportJob';
+import { CONDITIONING_MODE, CONDITIONING_NLERP_MODE } from './skeletalConditioning';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../');
 const sourceRoot = path.join(repositoryRoot, 'source');
@@ -22,14 +23,14 @@ function invoke(jobPath: string): SpawnSyncReturns<string> {
   });
 }
 
-test('v3 CLI reimports an immutable conditioned GLB and binds original, recipe and report reproducibly', async () => {
+for (const mode of [CONDITIONING_MODE, CONDITIONING_NLERP_MODE]) test(`v3 ${mode} reimports and binds an immutable conditioned GLB reproducibly`, async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'skeletal-v3-cli-'));
   const jobPath = path.join(root, 'job.json');
   try {
     await writeFile(jobPath, JSON.stringify({ $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA,
       input: { skinnedModel: signalRobotPath },
       export: { rootJoint: 'LocomotionRoot', units: 'meters', upAxis: '+Y', forwardAxis: '+Z', handedness: 'right', ticksPerSecond: 60, rootMotion: 'separate-track', clipIds: ['Wave'] },
-      conditioning: { mode: 'continuous-60hz-locomotion-root', sourceRootJoint: 'Base', locomotionRootJoint: 'LocomotionRoot', clipIds: ['Wave', 'Turn'], transitions: [] },
+      conditioning: { mode, sourceRootJoint: 'Base', locomotionRootJoint: 'LocomotionRoot', clipIds: ['Wave', 'Turn'], transitions: [] },
       output: { generationRoot: path.join(root, 'generations'), conditioningRoot: path.join(root, 'conditioned') },
     }));
     const first = invoke(jobPath), second = invoke(jobPath);
@@ -44,6 +45,7 @@ test('v3 CLI reimports an immutable conditioned GLB and binds original, recipe a
     assert.notEqual(identities.get('source-skinned-model'), identities.get('original-skinned-model'));
     assert.equal(identities.get('conditioning-report'), hash(await readFile(result.conditioning.report)));
     assert.equal(identities.get('conditioning-recipe'), hash(await readFile(result.conditioning.recipe)));
+    assert.equal((JSON.parse(await readFile(result.conditioning.recipe, 'utf8')) as { mode: string }).mode, mode);
     assert.deepEqual((await readdir(path.join(root, 'generations'))), [result.id]);
   } finally { await rm(root, { recursive: true, force: true }); }
 });

@@ -15,6 +15,7 @@ const EXPORTER_FILES = [
   'source/frontend/src/utils/skeletalExportGeneration.ts',
   'source/frontend/src/utils/skeletalExportJob.ts',
   'source/frontend/src/utils/skeletalConditioning.ts',
+  'source/frontend/src/utils/skeletalChordRotation.ts',
 ].sort();
 const SOURCE_FILES = [
   ...EXPORTER_FILES,
@@ -32,6 +33,7 @@ const SOURCE_FILES = [
   'source/frontend/src/utils/textureImageReadiness.ts',
   'source/frontend/src/utils/threeDisposal.ts',
   'source/frontend/src/utils/threeTypeGuards.ts',
+  'source/frontend/src/utils/animationTrackInterpolation.ts',
   'source/package-lock.json',
   'source/package.json',
 ].sort();
