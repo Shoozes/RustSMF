@@ -15,6 +15,8 @@ const EXPORTER_FILES = [
   'source/frontend/src/utils/skeletalExportGeneration.ts',
   'source/frontend/src/utils/skeletalExportJob.ts',
   'source/frontend/src/utils/skeletalConditioning.ts',
+  'source/frontend/src/utils/skeletalConditioningFidelity.ts',
+  'source/frontend/src/utils/skeletalTerminalRotation.ts',
   'source/frontend/src/utils/skeletalChordRotation.ts',
   'source/frontend/src/utils/skeletalTransitionFloor.ts',
   'source/frontend/src/utils/skeletalPlantedIdle.ts',

@@ -2,6 +2,301 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-23 - P7C terminal and feasibility publication closeout
+
+The authorized main publication batch contains 14 named source/test/doc/bank
+files: explicit terminal rotation authoring and source-fidelity guards, its
+producer identity/CLI wiring, focused tests and contracts, plus the measured
+right-sole feasibility decision and bounded next pass. No private source asset,
+qualification generation, dependency, receiver implementation or Rust overlay
+is included. Local and actual remote main initially equal `999fdcd`.
+
+The producer source remains
+bc9a4322bc7f1bab25f9f4bf841972eb61ba3f72eb35aec9c2dfb3befba4433d. Its full
+687-frontend/14-Rust gate and actual 46-packet/590-reference receiving proof are
+reused on identical implementation bytes. Later docs have their own current
+checks. Independent publication review found no actionable code/scope blocker.
+The private staged-only helper binds the exact allowlist, reviewed base and
+verified candidate tree; it does not absorb other paths or rebase this batch.
+
+The publication run is
+`D:/Compact_Evidence/RustSMF/runs/p7c-terminal-guarded-publication-20261023/`.
+Its isolated-source/check receipts bind staged blobs to verified checkout bytes;
+its summary owns observed tests, the guarded helper result, confirmed remote
+commit and final source/protected-file/owned-scratch checks. Isolation reuses
+shared dependencies and generated bindings through named junctions; those
+targets stay protected. The copied candidate is task-owned publication scratch
+and is released after verification, while compact receipts and all qualification
+evidence remain retained. No fresh full receiving or engine gate is claimed.
+
+Three terminal seams are repaired. Four drift/floor criteria remain failed;
+the distal family was rejected and TODO selects right-leg arc feasibility.
+Publishing preserves verified progress; full P7C and the next repair are open.
+No deployment or release artifact is included.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-terminal-publication | change=bound guarded scoped progress publication and retained open physical criteria -->
+
+## 2026-10-23 - P7C right-sole arc feasibility
+
+Completed the selected measurement/repair-selection batch on local main
+`999fdcdbb0f82d37c5555f4d4b20b7430e2516ec` plus the preserved 14-file candidate.
+The reviewed terminal implementation is verified complete; the unmeasured
+distal correction claim was actionable. No additional drop-in/inbox item was
+supplied or discovered. No production authoring option or fidelity exception was
+added. Producer source remains
+bc9a4322bc7f1bab25f9f4bf841972eb61ba3f72eb35aec9c2dfb3befba4433d; exporter remains
+7aefabf75b6d119aa6dea0b187b696e0d0692a7c169c5ca8647465d46fb5a3ff.
+
+Source STEP v0/v8 fractional heights reproduce about +0.00012599 m. Actual
+conditioned mixer measurements reproduce v8@43.25 at -0.03964006761833336 m and
+v0@43.5 at -0.05192448898780397 m. The complete five-case 637-pose baseline
+agrees with retained receiver metric maxima within 7.537483707e-8 m and retains
+the same first-failure vertices/phases. Root composition applies exactly once.
+The ankle dips from Y=0.389209186 m at 43 to 0.338970626 m at 43.5, then
+0.389209502 m at 44. Its own local rotation cannot change that joint position.
+
+The actual sampled distal channel is mixamorigRightFoot.quaternion (91 keys,
+463 influenced vertices); mixamorigRightToeBase has no quaternion track in
+walkSlow. Tested one finite six-variable family: independent local XYZ
+post-rotations at keys 43/44, actual stored geodesic correction <=45 degrees,
+canonical chord keys, fixed coordinate steps 8/4/2/1/0.5/0.25 degrees and at
+most three passes per step. The corrected worst-criterion search evaluates 121
+trials. Best tested rotations are [0,1,0.5] degrees at 43 and [0,0,-1.5] at 44;
+actual stored corrections are 1.118031543 and 1.500001619 degrees.
+Both sole criteria still fail at v23@43.5: 0.050155154308 m against the unchanged
+0.021012886070915813 m limit. This family is rejected. Its result is not a
+global impossibility proof for every distal rotation or an accepted repair.
+
+Measured every declared patch vertex and whole skin over all 13 quarter-tick
+poses in [42,45], including both-support entry at 44. The rejected experiment
+also received a 361-pose full-walk check: all 348 observations outside [42,45],
+root motion and calibration/transition phase inputs remain exact. All 45 other
+clips and 12 slow-walk transitions are unchanged; original clips are not mutated.
+Drift and whole-skin first/max witnesses remain exactly equal to the independently
+measured baseline. Both knees have zero inversions and maximum relative segment
+length variation is 3.513350516e-7. Four physical criteria remain failed.
+Conditional feasible-candidate serialization/qualification is inapplicable;
+no failed prototype GLB or production generation was published.
+
+Selected the next smallest measurement scope: add right upper/lower-leg rotation
+control to the same two stored ticks, retaining foot alignment, fixed root and
+the existing contact schedule. SKELETAL_CONDITIONING/TODO own its criteria.
+This investigates the ankle trajectory; a production repair still requires a
+measured candidate, explicit bounds, strict opt-in/source guards and renewed
+46/590 receiving proof. Existing terminal, idle and p25 qualification remains
+bound to the unchanged producer/content, not to these unqualified experiments.
+
+Retained run:
+D:/Compact_Evidence/RustSMF/runs/p7c-right-sole-arc-feasibility-20261023/.
+`preflight.json` snapshots all 14 initially dirty files and binds 5,371 protected
+files, 4,583,405,172 logical bytes, including the complete terminal run and prior
+evidence. `source-*.mjs`, `baseline-mixer.json`, `search-max.json`,
+`verification.json` and `journal.jsonl` own commands, scripts, inputs, runtime,
+elapsed times, exit codes, candidate parameters and comparisons. The probe and
+verification commands run from source/frontend with `node --import tsx`;
+baseline-mixer, search-max and verify-family exit 0. These are measurement
+successes with an explicitly rejected physical candidate. No new native/WASM
+receiving, compiler or full app gate is claimed.
+
+Diagnostics remain retained: the first probe assumed an absent toe channel;
+the second used a default float32 interpolant output and an unnecessarily tight
+manual/mixer comparison. Changed to the actual mixer. An initial weighted-error
+search worsened the worst criterion; the final search prioritizes that criterion
+and uses the imported curve evaluator. None of these trials altered source
+models or accepted generations. All loaded models are disposed; no persistent
+owned process or copied dependency/build tree is retained. No Git publication
+or owner deletion was performed.
+
+Closeout uses `pwsh -NoProfile -File ./run.ps1 -Task context` and
+`git diff --check`; the run's `summary.json` owns their observed results, final
+dirty-source inventory and fresh protected-file comparison. Existing Summary
+Bank paths remain correct; no route/cap change is needed. Prior 46/590 receiving
+and the 687-frontend/14-Rust producer gate are reused against unchanged code.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-sole-arc-feasibility | change=measured and rejected bounded distal family; selected upstream contact measurement -->
+
+## 2026-10-23 - P7C terminal review, recheck and scoped cleanup
+
+Reviewed local main `999fdcdbb0f82d37c5555f4d4b20b7430e2516ec` plus all 13
+terminal-candidate files. At intake, all matched the prior final byte inventory; fresh
+`readSkeletalExportProducer()` reports source
+bc9a4322bc7f1bab25f9f4bf841972eb61ba3f72eb35aec9c2dfb3befba4433d and exporter
+7aefabf75b6d119aa6dea0b187b696e0d0692a7c169c5ca8647465d46fb5a3ff.
+Summary Bank routes, implementation, strict parsing, fidelity guards, CLI,
+identity, tests and neighboring idle/floor consumers were read. Independent
+read-only review found no actionable terminal/fidelity defect. Repository
+doc/import/module integrity is checked separately; unrelated app features retain
+their existing proof.
+
+Fresh read-only SHA-256/byte checks match all 4,528 protected files,
+3,303,093,555 logical bytes, against the terminal run's preflight inventory.
+All 46 generation bindings, 138 artifact descriptors and 46 support descriptors
+match current files; the 184 generation files total 625,704,558 bytes. Bundle
+58faeea3a9e7cf221a48b2692afd7e5158f28ebae2c4aee48bc7206b9754839b and model
+c900e54b0fa93e6874e949f567184e03d24a2d94dfa93f5354159a3d23ddaa26 match scoped
+acceptance. No tests, compiler or receiving jobs ran during read-only review.
+The unchanged implementation reuses the terminal run's actual 46/590 receiving,
+637-pose pilot and full 687-frontend/14-Rust gate. These were inspected, not
+rerun. The three seam findings are verified closed; the exact four physical
+drift/floor witnesses remain open. Full P7C is not accepted.
+
+Scoped cleanup changes docs only: refreshed the stale review snapshot, corrected
+the P7B proof owner and selected one bounded right-sole arc feasibility pass in
+SKELETAL_CONDITIONING/TODO. The paired failures share v0@43.5 between safe source
+ticks 43/44; the right distal-chain correction surface/bound is unmeasured.
+The pass checks adjacent [42,45] curves and both-support entry at 44 while
+preserving all transition endpoints, walkSlow@22.5 idle calibration and terminal
+closure. Its completion is an evidenced repair decision or measured obstruction,
+not an unproven production bake. No source, schema, solver or route path changes
+were needed. GaimEngine v1, three Rust overlays, shared dependencies, private
+inputs and prior evidence are preserved; no publication or owner deletion.
+
+The first docs check passed 20 project tests but found the expanded review
+snapshot at 99.4 KiB against the existing 98 KiB route cap. Condensed the
+superseded P7B summary to its retained HISTORY pointer. A second check measured
+45 excess bytes; exact route-byte inspection and a shorter current summary
+resolved it. No budget was raised. Final
+`pwsh -NoProfile -File ./run.ps1 -Task context` exits 0: 20 project-integrity
+tests, 10 context tests, 385 frontend source/test files, 11 durable docs and
+67 context groups pass; defaults are 87.8 KiB with zero warnings. Node is
+v26.5.0. `git diff --check` passes. The producer source/identity remains
+unchanged; the full producer and receiving gates were reused rather than rerun.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-terminal-review | change=recorded source-bound review and bounded next pass -->
+
+## 2026-10-23 - P7C terminal rotation closure
+
+Implemented the selected ticks 89–90 walkSlow closure from main `999fdcd` plus
+the preserved three-file review. Explicit NLERP `terminalRotationClosure`
+selects only mixamorigLeftUpLeg, mixamorigLeftLeg and mixamorigLeftFoot, using
+their own entry values and a 45-degree stored correction bound. Actual stored
+corrections are 21.174786223, 42.790125149 and 11.364110593 degrees. All earlier
+values/tangents and evaluated poses through tick 89 remain exact; only terminal
+values and final-interval chord tangents are authored. Root trajectory, duration,
+29 other raw walk channels, all 45 other canonical clips (105 occurrences),
+mesh/skin/bind, mappings and support declarations are unchanged.
+
+Three actual residual loop seams now pass: skin 2.168666982e-7 m, joint position
+2.079614104e-7 m and angle 2.957558667e-6 degrees, against the unchanged
+0.021012886070915813 m and 5-degree limits. All five tail poses meet the Y=0
+floor constraint; minimum skin Y is +0.000268439437 m. The original and repaired
+361-pose walks both have zero knee inversions. All 27 segments remain stable,
+with maximum relative length variation 3.513350522e-7. All idle/p25 metrics,
+endpoint checks and transition seams retain acceptance.
+
+The new 46 packets/590 independent references pass exact native/WASM receiving,
+isolation, six-tick restored replay and cleanup against the preserved receiver.
+The 637-pose/55-reference pilot has exactly four unchanged drift/floor failures,
+with identical first/maximum witnesses. Its expected exit 1 is retained;
+separate scoped acceptance passes. All selected Done When criteria are met;
+full P7C collision, other roles/phases, scale/facing, f32 and visual acceptance
+remain open. No subsequent repair was selected.
+
+The strict recipe, actual bounds, missing/duplicate/root targets, wrong interval,
+legacy mode and cancellation are covered. Source-fidelity checks moved to
+skeletalConditioningFidelity.ts with the existing export retained. Only the
+selected terminal rotations may differ: validate entry targets and stored bounds,
+undo just those local rotations for checking every original joint matrix, and
+retain the 1e-4 guard for all other transforms/ticks. Raw source differences
+remain reported. Tests reject earlier, unselected-terminal and root changes;
+walkSlow is never passed as the authored idle.
+
+All 29 focused tests pass. `pwsh -NoProfile -File ./run.ps1 -Task verify` exits
+0 in 136419 ms on the final source: 687 frontend tests, 14 Rust checks, lint, production/test type
+checks, build and repository/context/main/process guards pass. Actual no-option
+GLB bytes match the accepted idle/p25 derivative. Five CLI refusal controls
+release native copies and produce no partial generations. Rust solvers and
+dependencies are unchanged. Receiver proof reuses its preserved source and exact
+native/WASM output renewal; no new full engine-check is claimed.
+
+Retained run:
+D:/Compact_Evidence/RustSMF/runs/p7c-terminal-rotation-closure-20261023/final/.
+Producer source identity bc9a4322bc7f1bab25f9f4bf841972eb61ba3f72eb35aec9c2dfb3befba4433d;
+derivative c900e54b0fa93e6874e949f567184e03d24a2d94dfa93f5354159a3d23ddaa26;
+bundle 58faeea3a9e7cf221a48b2692afd7e5158f28ebae2c4aee48bc7206b9754839b.
+acceptance.json binds actual proof; the parent run's summary.json owns the final
+source inventory, check receipts, protected-file/resource audit and local state.
+
+Two diagnostic runner failures remain retained: the first WASM-only probe passed
+exports instead of WebAssembly.Instance, then used the documented instance;
+the first acceptance probe compared endpoint error vectors against a different
+retained reference generation. The corrected check retains unchanged v1 limits
+and independently proves exact unselected clips/channels. Context routing initially
+exceeded two existing caps; moved terminal details to their focused contract and
+condensed duplicate export notes. No existing cap was raised. New routes point
+to the terminal/fidelity owners; prior review/p25 records and all retained proof
+are preserved. A final diff check found one trailing blank line in a producer-bound
+file. Removing it renewed the source identity; all 46 generations, receiving,
+physical pilot, controls and full gate were renewed under final/. The GLB stays
+byte-identical. An initial renewal launch from repo cwd refused missing tsx;
+frontend cwd resolved it before production. Both candidate graphs and diagnostics
+remain retained. Work remains local and uncommitted.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-terminal-rotation-closure | change=closed three residual seams with exact receiving and preserved physical baselines -->
+
+## 2026-10-23 - Seven-failure review and selected terminal closure
+
+Reviewed clean main `999fdcdbb0f82d37c5555f4d4b20b7430e2516ec`, the published
+candidate's source-byte inventory, and retained source attribution/receiving
+measurements. All 20 published source descriptors match. All 2,482 protected
+files (1,981,705,422 logical bytes) match the retained preflight hashes, including
+GaimEngine v1, the three Rust overlays, shared dependency sentinels and prior
+qualification evidence. Source/evidence review made no implementation changes
+and launched no compiler, receiving, browser or model job.
+
+The complete 637-pose/55-reference pilot in
+D:/Compact_Evidence/RustSMF/runs/p7c-idle-planted-bake-20261023/actual-floor-pilot-renewed.json
+still reports exactly seven failed criteria. Its bundle is
+9ef2ad7d65411be1e8364d2c73a5c581013ab610c50f74e1059ae33f9aa17ecb;
+the derivative is 8e4f45b01cf5bc52a561f47c638fbf7cff617282d71d2224fd0b14415edfe5bd.
+This review reuses those complete measurements; it does not claim a fresh pilot.
+
+| Criterion | Retained maximum | Limit | Cause |
+| --- | --- | --- | --- |
+| Planted sole drift | 0.673400723 m, left v3467@23.75 | 0.042025772 m | Original motion drifts; fractional conditioning changes the maximum. |
+| Sole gap | 0.051924414 m, right v0@43.5 | 0.021012886 m | Downward interpolated arc between source ticks 43/44. |
+| Sole penetration | Same 0.051924414 m witness | 0.021012886 m | Same arc, separately failed criterion. |
+| Whole-skin penetration | 0.206904965 m, v2@51 | 0.021012886 m | Original integer pose penetrates; interpolation adds earlier failures. |
+| Loop skin seam | 0.301496329 m, v980, 90 -> 0 | 0.021012886 m | Nonperiodic residual source endpoint. |
+| Loop joint-position seam | 0.298733394 m, joint 7 | 0.021012886 m | Same endpoint; mixamorigLeftLeg. |
+| Loop joint-angle seam | 21.702578178 degrees, joint 7 | 5 degrees | Same endpoint rotation. |
+
+Selected one bounded producer pass: close only the three residual loop seams
+through terminal rotations of mixamorigLeftUpLeg, mixamorigLeftLeg and
+mixamorigLeftFoot. Read-only inspection of the stored canonical walkSlow packet
+finds tick-89 local angles from entry of 0.572364579, 0.168551239 and
+0.658501027 degrees, but tick-90 angles of 21.174786180, 42.790123250 and
+11.364110209. The current 89 -> 90 knee step is 42.813554353 degrees.
+Residual hip translation already agrees to roundoff; the original hip travel
+was extracted to the locomotion root. The final [89,90) span is unsupported;
+all declared support observations end before it. Root translation alone cannot
+repair the residual orientation seam.
+
+The selected contract in SKELETAL_CONDITIONING.md replaces only those terminal
+rotations with their own entry values, preserving root travel and the first
+89 ticks, with canonical final-interval tangents and an explicit 45-degree
+stored correction bound. This is a proposed repair, not a measured passing
+candidate. The worker must prove seam/floor/kinematic limits and preservation
+after serialization. The retained floor receipt checked knee/segment validity
+for idle/p25 only; a slow-walk kinematic baseline must be established explicitly.
+Four drift/floor failures remain deferred. Full P7C and visual acceptance remain
+open; an unmet tail constraint requires measured diagnosis before widening scope.
+
+TODO now selects that pass and retains the four physical criteria. Completed
+idle/P7B/p25 backlog entries and superseded p25 pass-down prose were removed;
+their existing implementation contracts, history and immutable evidence remain.
+Summary Bank ownership and budgets are unchanged. No task-owned processes or
+scratch were created; no evidence or shared dependency cleanup was performed.
+
+`node scripts/verify-context-bank.mjs` passes: 66 groups, 87.7 KiB default,
+zero warnings. The first expanded-route check rejected excess context; the
+pass-down was shortened within existing caps. `node scripts/verify-project-integrity.mjs`
+passes (382 frontend source/test files, 11 durable docs), and `git diff --check`
+passes. No product tests or physical measurements were rerun. The three changed
+documentation files remain local; no commit or push was requested for this review.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-slow-walk-review | change=reviewed seven physical failures and selected bounded terminal rotation closure -->
+
 ## 2026-10-23 - P7C guarded publication closeout
 
 Closeout/Publish authorizes the verified 20-file P7C batch from local main

@@ -6,28 +6,27 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Published P7B review, recheck and cleanup — 2026-10-22
+## P7C terminal review, recheck and cleanup — 2026-10-23
 
-Reviewed clean `main` at `08152f0`: conditioning/export implementation,
-interpolation, consumers, contracts, tests, identity and retained receipts through
-Summary Bank, plus repo integrity. Other features retain their dated proof.
+Reviewed local main `999fdcd` plus the 13-file terminal candidate. Its source
+identity remains `bc9a4322` (full binding in HISTORY). Summary Bank routed
+conditioning, terminal/fidelity, CLI/identity and neighboring idle/floor owners.
+Source, tests and retained actual proof were inspected; independent code review
+found no actionable defect. Three seam findings are closed; drift, sole gap,
+sole penetration and whole-skin floor remain open.
 
-- Closed: interpolation/support blockers; 46 cases, 590 samples, 38 probes and
-  36 endpoints retain exact proof. Fallen support remains transient.
-- Repaired: stale review/TODO claims now distinguish published P7B from cleanup.
-- Follow-up closed, 2026-10-23: both scratch junctions and the three named paths
-  were removed through accepted native commands. Shared dependencies, all 400
-  existing evidence files and the three Rust overlays retain their hashes.
-  P7C and installed dialogs remain separate.
+The measured distal family failed; [TODO](TODO.md) selects right-leg feasibility.
+HISTORY owns fresh binding, preservation and docs checks; 4,528 protected files
+match. GaimEngine v1, three overlays, dependencies and evidence are preserved.
+No owner deletion or publication. Unrelated features retain dated proof;
+full P7C is open.
 
-No new producer defect was confirmed. HISTORY binds reused full-gate/receiving
-proof and fresh docs checks. GaimEngine's independent `2d0362b` changes five docs/
-routes; v1 and the three Rust overlays are unchanged. Product code is unchanged.
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-sole-arc-feasibility | change=recorded measured distal-family failure -->
 
-## Earlier review and recheck — 2026-10-22
+## Earlier P7B reviews — 2026-10-22
 
-The superseded `b50bed1`/`61dcd13` review, world-space metric check and earlier
-receiver handoff remain in HISTORY under "P7B review and receiver recheck".
+HISTORY retains the published `08152f0` review and closed scratch cleanup,
+plus the `b50bed1`/`61dcd13` recheck, world-space metrics and receiver handoff.
 
 ## Review, recheck and cleanup — 2026-10-16
 

@@ -4,8 +4,10 @@ import { createTrackInterpolant } from './animationTrackInterpolation';
 import { chordRotationTrack, CONDITIONING_NLERP_MODE } from './skeletalChordRotation';
 import { bakeTransitionFloor, parseTransitionFloor, type TransitionFloorRecipe, type TransitionFloorReport } from './skeletalTransitionFloor';
 import { bakePlantedIdle, parsePlantedIdle, type PlantedIdleRecipe, type ContactBatchSolver } from './skeletalPlantedIdle';
+import { closeTerminalRotations, parseTerminalRotationClosure, type TerminalRotationClosureRecipe } from './skeletalTerminalRotation';
 
 export { CONDITIONING_NLERP_MODE } from './skeletalChordRotation';
+export { measureConditioningDifferences } from './skeletalConditioningFidelity';
 
 export const CONDITIONING_MODE = 'continuous-60hz-locomotion-root' as const;
 export interface ConditioningRecipe {
@@ -16,6 +18,7 @@ export interface ConditioningRecipe {
   transitions: Array<{ gait: string; idle: string; phases: number[]; durationTicks: 6 }>;
   transitionFloor?: TransitionFloorRecipe;
   plantedIdle?: PlantedIdleRecipe;
+  terminalRotationClosure?: TerminalRotationClosureRecipe;
 }
 interface Pose { position: number[]; rotation: number[]; scale: number[] }
 interface Sample { joints: Pose[]; motion: Pose }
@@ -30,6 +33,7 @@ export interface ConditioningReport {
   differencePolicy: string;
   floorBakes?: TransitionFloorReport[];
   plantedIdleBake?: Awaited<ReturnType<typeof bakePlantedIdle>>['report'];
+  terminalRotationClosureBake?: ReturnType<typeof closeTerminalRotations>['report'];
 }
 
 function pose(matrix: THREE.Matrix4): Pose {
@@ -125,6 +129,8 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
   if (floor && recipe.mode !== CONDITIONING_NLERP_MODE) throw new Error('transitionFloor requires the explicit NLERP mode.');
   const planted = recipe.plantedIdle === undefined ? undefined : parsePlantedIdle(recipe.plantedIdle,recipe.transitions.map(t=>t.idle),recipe.clipIds);
   if (planted && (recipe.mode !== CONDITIONING_NLERP_MODE || !solveContacts)) throw new Error('plantedIdle requires NLERP and the native contact runner.');
+  const terminal = recipe.terminalRotationClosure === undefined ? undefined : parseTerminalRotationClosure(recipe.terminalRotationClosure, recipe.transitions.map(t => t.gait), recipe.clipIds, [recipe.sourceRootJoint, recipe.locomotionRootJoint]);
+  if (terminal && recipe.mode !== CONDITIONING_NLERP_MODE) throw new Error('terminalRotationClosure requires the explicit NLERP mode.');
   const bones = [...skeleton.bones];
   if (new Set(bones.map(b => b.name)).size !== bones.length || bones.some(b => !/^[A-Za-z0-9_.-]{1,64}$/.test(b.name))) throw new Error('Conditioning requires unique safe source joint names.');
   if (loaded.root.getObjectByName(recipe.locomotionRootJoint)) throw new Error('Locomotion root name already exists.');
@@ -235,55 +241,17 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
     const baked = bakeTransitionFloor(loaded, generated[index], locomotion, floor!, height, signal);
     generated[index] = baked.clip; floorBakes.push(baked.report);
   }
+  let terminalRotationClosureBake: ConditioningReport['terminalRotationClosureBake'];
+  if (terminal) {
+    const index = generated.findIndex(c => c.name === terminal.clipId);
+    const result = closeTerminalRotations(generated[index], terminal, signal);
+    generated[index] = result.clip; terminalRotationClosureBake = result.report;
+  }
   loaded.clips = generated;
   const bytes = sharedSkinGlb(await exportGLB(loaded.root, generated));
   signal?.throwIfAborted();
   const differencePolicy = recipe.mode === CONDITIONING_NLERP_MODE
     ? 'Sample original STEP/LINEAR at float32 60 Hz endpoints; hemisphere-continuous quaternion chord CUBICSPLINE gives normalized linear joint rotation. Translation, scale and locomotion yaw remain LINEAR. Re-import the serialized derivative as independent reference; original-to-derived differences are descriptive, without smoothing or contact correction.'
     : 'Sample original STEP/LINEAR at float32 60 Hz endpoints; continuous LINEAR derivative is the independent receiving reference. Original-to-derived differences are reported separately; no smoothing or contact correction.';
-  return { bytes, report: { schema: 'rustsmf.skeletal-conditioning.v1', recipe, jointLineage: allBones.map((b, i) => ({ originalIndex: i === bones.length ? null : i, conditionedIndex: i, id: b.name })), vertexLineage, model: { units: 'meters', height, restSkinHeight: height, jointCount: allBones.length, vertexCount }, clips: clipRecords, transitions, differencePolicy: differencePolicy + (floor ? ' Explicit selected transitionFloor bakes only interior locomotion-root Y keys; floor/lift bounds and dense before/after values are reported.' : '') + (planted ? ' Explicit plantedIdle bakes calibrated native contact corrections into idle pelvis/leg/toe channels; endpoints, other channels and clips remain unchanged.' : ''), ...(floor ? { floorBakes } : {}), ...(planted ? { plantedIdleBake } : {}) } };
-}
-
-/** Original comparisons are descriptive conversion evidence, never receiving tolerances. */
-export function measureConditioningDifferences(original: LoadedModel, derived: LoadedModel, clipIds: string[], authoredIdleId?: string): Array<{ clipId: string; phases: number[]; maximumPositionMeters: number; maximumJointMatrix: number; maximumTickJointMatrix: number; maximumEndpointJointMatrix: number; differenceKind: string }> {
-  function sample(model: LoadedModel, clip: THREE.AnimationClip, tick: number): { positions: THREE.Vector3[]; matrices: Map<string, number[]> } {
-    const mixer = new THREE.AnimationMixer(model.root), action = mixer.clipAction(clip);
-    action.setLoop(THREE.LoopOnce, 1); action.clampWhenFinished = true; action.play();
-    try {
-      mixer.setTime(Math.fround(tick / 60)); model.root.updateMatrixWorld(true);
-      const positions: THREE.Vector3[] = [];
-      for (const mesh of model.skinnedMeshes) {
-        const p = mesh.geometry.getAttribute('position'), joints = mesh.geometry.getAttribute('skinIndex'), weights = mesh.geometry.getAttribute('skinWeight');
-        const palette = mesh.skeleton.bones.map((bone, i) => bone.matrixWorld.clone().multiply(mesh.skeleton.boneInverses[i]).multiply(mesh.bindMatrix));
-        for (let v = 0; v < p.count; v++) {
-          const point = new THREE.Vector3();
-          for (let j = 0; j < 4; j++) point.addScaledVector(new THREE.Vector3().fromBufferAttribute(p, v).applyMatrix4(palette[joints.getComponent(v, j)]), weights.getComponent(v, j));
-          positions.push(point);
-        }
-      }
-      return { positions, matrices: new Map(model.skeleton!.bones.map(b => [b.name, [...b.matrixWorld.elements]])) };
-    } finally { action.stop(); mixer.stopAllAction(); mixer.uncacheRoot(model.root); }
-  }
-  return clipIds.map(clipId => {
-    const a = original.clips.find(c => c.name === clipId)!, b = derived.clips.find(c => c.name === clipId)!;
-    const ticks = Math.round(a.duration * 60), phases = [0, ticks * .25 + .125, ticks * .5 + .25, ticks * .75 - .125, ticks];
-    let maximumPositionMeters = 0, maximumJointMatrix = 0, maximumTickJointMatrix = 0, maximumEndpointJointMatrix = 0;
-    for (const tick of [...new Set([...phases, ...Array.from({ length: ticks + 1 }, (_, i) => i)])]) {
-      const left = sample(original, a, tick), right = sample(derived, b, tick);
-      for (const [name, values] of left.matrices) {
-        const other = right.matrices.get(name);
-        if (!other) throw new Error(`Conditioning lost joint ${name}.`);
-        const error = Math.max(...values.map((v, i) => Math.abs(v - other[i])));
-        maximumJointMatrix = Math.max(maximumJointMatrix, error);
-        if (Number.isInteger(tick)) maximumTickJointMatrix = Math.max(maximumTickJointMatrix, error);
-        if (tick === 0 || tick === ticks) maximumEndpointJointMatrix = Math.max(maximumEndpointJointMatrix,error);
-      }
-      if (left.positions.length !== right.positions.length) throw new Error('Conditioning changed the vertex count.');
-      if (phases.includes(tick)) left.positions.forEach((p, i) => { maximumPositionMeters = Math.max(maximumPositionMeters, p.distanceTo(right.positions[i])); });
-    }
-    if (![maximumPositionMeters,maximumJointMatrix,maximumTickJointMatrix,maximumEndpointJointMatrix].every(Number.isFinite)
-      || (clipId === authoredIdleId ? maximumEndpointJointMatrix : maximumTickJointMatrix) > 1e-4) throw new Error(`Conditioning ${clipId} failed original tick-pose preservation (${maximumTickJointMatrix}).`);
-    return { clipId, phases, maximumPositionMeters, maximumJointMatrix, maximumTickJointMatrix, maximumEndpointJointMatrix,
-      differenceKind: clipId === authoredIdleId ? 'explicit planted idle authoring; endpoints retain source fidelity' : 'sampled source tick preservation' };
-  });
+  return { bytes, report: { schema: 'rustsmf.skeletal-conditioning.v1', recipe, jointLineage: allBones.map((b, i) => ({ originalIndex: i === bones.length ? null : i, conditionedIndex: i, id: b.name })), vertexLineage, model: { units: 'meters', height, restSkinHeight: height, jointCount: allBones.length, vertexCount }, clips: clipRecords, transitions, differencePolicy: differencePolicy + (floor ? ' Explicit selected transitionFloor bakes only interior locomotion-root Y keys; floor/lift bounds and dense before/after values are reported.' : '') + (planted ? ' Explicit plantedIdle bakes calibrated native contact corrections into idle pelvis/leg/toe channels; endpoints, other channels and clips remain unchanged.' : '') + (terminal ? ' Explicit terminalRotationClosure authors only selected final quaternion values and final-interval chord tangents; other tick transforms retain source fidelity.' : ''), ...(floor ? { floorBakes } : {}), ...(planted ? { plantedIdleBake } : {}), ...(terminal ? { terminalRotationClosureBake } : {}) } };
 }

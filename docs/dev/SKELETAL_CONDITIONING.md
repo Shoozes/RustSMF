@@ -3,7 +3,7 @@
 Job v3 supports the original continuous LINEAR recipe and the explicit
 `continuous-60hz-locomotion-root-nlerp` mode. Both preserve geometry and, without explicit authoring, original sampled
 poses. The revised mode resolves the joint-interpolation mismatch
-without changing GaimEngine v1. TODO owns current P7B acceptance; private source
+without changing GaimEngine v1. HISTORY owns completed P7B proof; private source
 models and qualification evidence remain local. P7C is separate.
 
 ## Explicit v3 job
@@ -200,44 +200,11 @@ with the serialized start/stop geometry within `1.54e-7 m`. Endpoint penetration
 is only `0.000473353 m` and `0.000669054 m`. Thus the p25 pair needs a constrained
 producer bake; endpoint fidelity alone does not make the intervening pose safe.
 
-The attribution selected an explicit offline floor-constrained bake for only
-`start-walkSlow-p25` and `stop-walkSlow-p25`, keeping their six-tick durations and
-endpoint pose/root values. The same bounded producer defect affects both clips,
-and their unchanged base endpoints already meet the floor limit. TODO owns the
-repair's exact Done When. That attribution pass changed no content; the subsequent
-[floor-bake implementation](#selected-transition-floor-bake) now meets the bounded
-criteria below while the remaining P7C course stays open.
-
-Repair Done When: produce a separately identified opt-in recipe/derivative for
-the p25 start/stop pair. Both clips must meet whole-skin penetration
-<=`0.021012886070915813 m` at every one of their 25 quarter-tick observations at
-1x/+Z, Y=0. Preserve their six-tick duration and endpoint pose/root transforms;
-endpoint source fidelity and positional/angular seams retain existing limits.
-Report interior motion corrections in the recipe/report, bake them before
-independent GLB reload/reference generation, and preserve mesh/skin/bind,
-unaffected clip content, original inputs and existing recipes/generations.
-Keep support patches/windows and unsupported transition declarations unchanged;
-declare the authoring floor explicitly rather than applying a receiving offset.
-Transforms must be finite, segment lengths stable and knee bend valid. Actual
-native/WASM comparisons, isolation, six-tick restore replay and cleanup must
-pass. Renew affected producer checks and all 46-case/590-reference receiving
-proof for the new candidate. Rerun the five-case pilot and retain the eight other
-failed criteria as unresolved baselines; its overall physical failure remains
-truthful. Keep GaimEngine v1, all three Rust overlays, shared dependencies and
-retained evidence unchanged. Full P7C remains open.
-
-Retained run:
-`D:/Compact_Evidence/RustSMF/runs/p7c-five-case-attribution-20261023/`.
-`measurements-fractional-controls.json` owns the source bindings, all witnesses,
-interpolation controls and independent blend. `baseline-fractional-controls.json`
-binds 445 preserved files; all match afterward, as do all 1,161 engine source
-hashes, the frozen archive, five dependency sentinels and three Rust overlays.
-The original failed pilot and P7B evidence remain unchanged. No engine receiving
-or full product gate was rerun; existing native/WASM proof was reused against
-the matching inputs. The initial probe's overly strict raw-bind comparison
-failure is retained alongside the corrected, passing comparison at v1 limits.
-P7C's remaining physical, collision, scale/facing, f32, replay and visual course
-criteria remain open.
+The selected p25 repair is complete; [its contract and actual results](#selected-transition-floor-bake)
+and HISTORY retain the acceptance record. Attribution inputs, all witnesses and
+controls remain in
+`D:/Compact_Evidence/RustSMF/runs/p7c-five-case-attribution-20261023/measurements-fractional-controls.json`.
+Later idle qualification leaves seven slow-walk failures, with full P7C open.
 
 <a id="next-bounded-pass--idle-planted-contact"></a>
 ### Idle planted contact — complete locally
@@ -246,6 +213,80 @@ The selected Work batch is implemented as an explicit bounded native bake.
 [The idle contract](SKELETAL_PLANTED_IDLE.md) owns recipe, source/endpoint guards,
 original acceptance and actual proof. It closes idle drift while preserving the
 other 45 clips and p25 repair; seven slow-walk criteria/full P7C remain open.
+
+<a id="next-bounded-pass--slow-walk-terminal-rotation-closure"></a>
+### Slow-walk terminal rotation closure — complete locally
+
+The selected batch is implemented as explicit NLERP authoring. The
+[terminal closure contract](SKELETAL_TERMINAL_ROTATION.md) owns selection, bounds,
+source-fidelity guards and actual proof. Three loop seams pass while all four
+slow-walk drift/floor criteria remain unchanged. Root, 45 other clips and
+accepted idle/p25 content are preserved. Full P7C remains open.
+
+<a id="next-bounded-pass--slow-walk-right-sole-arc-feasibility"></a>
+### Right-sole arc feasibility — complete locally
+
+The selected finite family is measured and rejected. The 91-key
+mixamorigRightFoot.quaternion channel influences 463 vertices, including the
+70-vertex right sole; no right-toe quaternion channel exists in walkSlow.
+Independent source/mixer measurements reproduce the original fractional floor
+witnesses, and all 637 baseline poses agree with retained receiver maxima within
+7.538e-8 m. The explicit family post-rotates the foot at stored ticks 43/44,
+with a 45-degree actual stored correction cap and 121 worst-criterion trials.
+Its best tested gap/penetration is 0.0501551543 m at v23@43.5, above the unchanged
+0.021012886070915813 m limit. Stored corrections are 1.118031543/1.500001619
+degrees. No feasible candidate was found; this is not an exhaustive impossibility
+proof for every distal correction.
+
+Every patch vertex and whole skin were measured over [42,45]. The rejected
+361-pose experiment keeps 348 samples outside that interval exact, root motion,
+all 45 other clips, 12 slow-walk transitions and walkSlow@22.5 calibration intact.
+Knees remain valid and segment lengths stable; the four physical failures remain.
+Conditional feasible-candidate serialization is inapplicable. No production
+option, prototype GLB or generation was published. HISTORY and
+`D:/Compact_Evidence/RustSMF/runs/p7c-right-sole-arc-feasibility-20261023/`
+own the source-bound scripts, parameters, diagnostics and actual measurements.
+
+<a id="next-bounded-pass--slow-walk-right-leg-arc"></a>
+### Next bounded pass — right-leg arc feasibility
+
+Phase: local measurement and repair selection, owned by RustSMF. The next
+candidate scope adds mixamorigRightUpLeg and mixamorigRightLeg rotation control
+to mixamorigRightFoot at the same stored ticks 43/44. Their hierarchy can change
+ankle trajectory; foot rotation alone cannot move its own joint position.
+Measured ankle Y falls from 0.389209186 m at 43 to 0.338970626 m at 43.5, returning
+to 0.389209502 m at 44. This motivates the next scope; necessity/sufficiency is
+not established. No broader contact-window or root edit is selected.
+
+Keep the declared right support [29,47), both-support entry at 44, 1x/+Z, Y=0
+and canonical 60 Hz chord representation. Existing planted-idle and
+transition-floor options do not authorize gait interiors. Declare one finite
+candidate family and correction caps before probing; retain actual stored
+bounds. Preserve root/hips translation, other limbs and source assets. Do not
+pass walkSlow as authored idle, relabel support or infer a receiving offset.
+
+Done When:
+
+1. Bind the unchanged candidate/curve and reproduce the current witness. Measure
+   source right-leg/ankle transforms and one bounded contact-preserving family.
+2. Measure all patch vertices and whole skin at 13 quarter-tick poses over
+   [42,45]. A feasible candidate must meet both sole limits above, preserve the
+   floor-safe endpoint contacts and avoid new skin-floor, drift, segment-length
+   or knee-inversion failures, including both-support entry. Report corrections.
+3. For a feasible candidate, serialize/reload independently and compare the full
+   361-pose walk with the 637-pose pilot baseline. Retain drift first/max at
+   ticks 2/23.75 and whole-skin first/max at 24.25/51. Root/duration, unselected
+   channels and stored values at ticks 0–42 and 45–90 stay exact; poses outside
+   [42,45], terminal closure, 45 other clips, all 12 slow-walk transition
+   endpoints/seams and idle calibration at 22.5 retain their accepted behavior.
+4. Return a measured producer repair contract and actual stored bounds, or the
+   tested family's obstruction and smallest next scope. Failed search alone
+   cannot establish global impossibility. Experiments remain unqualified.
+
+Production integration, strict opt-in/source guards and renewed 46/590 receiving
+proof require a subsequently selected repair. Drift/whole-skin repairs and full
+P7C collision/other roles/phases/scale/facing/f32/visual acceptance remain open.
+Preserve GaimEngine v1, three Rust overlays, dependencies and retained evidence.
 
 The retained White Wolf candidate has 29 joints, 3,726 vertices and 46 clips
 (ten original roles plus 36 transitions). Packet selection preserves the existing
@@ -257,7 +298,8 @@ Original-to-derived conversion differences are descriptive: the report measures
 joint matrices at every integer tick and five endpoint/fractional phases, and
 world-space skinned positions at those five phases, matching Three.js's rendered
 mesh transform. Original integer joint poses remain within `1e-4` except the explicitly authored
-idle, whose endpoints keep that limit and whose interior differences are reported. Larger
+idle and selected terminal rotations; their contract-specific guards retain all other
+source transforms. Authored differences remain reported. Larger
 fractional changes reflect the explicitly selected continuous derivative. They
 are distinct from receiving errors against that derivative.
 
@@ -294,6 +336,12 @@ AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-five-case-attribution | chan
 
 AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-p25-floor-bake | change=specified opt-in floor baking and verified the actual bounded pair without closing full P7C
 
+AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-slow-walk-review | change=selected terminal closure and retained physical baselines
+
 <!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-review-cleanup | change=bound stored float32 lift and selected idle contact pass-down -->
 
 <!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-idle-planted-bake | change=closed selected pass-down and routed native idle authoring contract -->
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-terminal-rotation-closure | change=closed terminal authoring and routed its fidelity/proof contract -->
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-sole-arc-feasibility | change=closed measured distal family and selected bounded right-leg feasibility -->

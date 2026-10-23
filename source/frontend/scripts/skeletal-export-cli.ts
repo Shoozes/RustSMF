@@ -193,7 +193,7 @@ export async function runSkeletalExportJob(
       const report = normalizedSkeletalJsonBytes({ ...conditioned.report,
         sourceModelIdentitySha256: source.sha256, originalSourceIdentitySha256: input.sha256,
         recipeIdentitySha256: sha256(recipe), producer,
-        differences: measureConditioningDifferences(original, loaded, job.conditioning.clipIds,job.conditioning.plantedIdle?.clipId),
+        differences: measureConditioningDifferences(original, loaded, job.conditioning.clipIds,job.conditioning.plantedIdle?.clipId,job.conditioning.terminalRotationClosure),
       });
       throwIfAborted(signal);
       conditioning = await publishConditionedSkeletalInput(source.bytes, recipe, report, { generationRoot: job.output.conditioningRoot, signal });

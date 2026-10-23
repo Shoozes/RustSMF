@@ -239,6 +239,9 @@ clips stay unchanged.
 NLERP `transitionFloor` bakes bounded interior root Y for selected start/stop
 clips; endpoints and other clips stay unchanged.
 
+NLERP [`terminalRotationClosure`](SKELETAL_TERMINAL_ROTATION.md) closes selected
+terminal rotations; root travel and earlier poses stay unchanged.
+
 ## Architecture Ownership
 
 | Owner | Responsibility |
@@ -425,3 +428,5 @@ AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | chang
 <!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p25-floor | change=opt-in bake -->
 
 <!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-idle-planted-bake | change=recorded opt-in native idle authoring -->
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-terminal-rotation-closure | change=recorded opt-in final-tick quaternion authoring -->
