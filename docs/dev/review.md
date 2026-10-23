@@ -6,26 +6,27 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Review and recheck — 2026-10-22
+## Published P7B review, recheck and cleanup — 2026-10-22
 
-Reviewed RustSMF `b50bed1` on `main`; the existing TODO overlay was preserved.
-The conditioning position metric reports world-space skinned vertices and
-matched an independent Three.js skinning/world-transform check. No producer
-source defect or implementation change was needed. The conditioning guide now
-states the metric's coordinate frame.
+Reviewed clean `main` at `08152f0`: conditioning/export implementation,
+interpolation, consumers, contracts, tests, identity and retained receipts through
+Summary Bank, plus repo integrity. Other features retain their dated proof.
 
-Rechecked GaimEngine's published `61dcd13`: support validation uses the same
-bounded bytes it hashes, and transition lineage binds report, recipe and packet
-cases. `node --test tests/product/humanoid-input-bundle.mjs` passed 44/44. Two
-local documentation edits and three unrelated dirty Rust files in that checkout
-were left untouched. P7B remains
-blocked by the unchanged White Wolf comparison failures and missing authored
-support; HISTORY and TODO retain the boundary and next work.
+- Closed: interpolation/support blockers; 46 cases, 590 samples, 38 probes and
+  36 endpoints retain exact proof. Fallen support remains transient.
+- Repaired: stale review/TODO claims now distinguish published P7B from cleanup.
+- Open: publication scratch and two dependency junctions. Automatic approval
+  review rejected nonrecursive removal; no retry or bypass was attempted. TODO
+  owns the bounded next task. P7C and installed dialogs remain separate.
 
-GaimEngine's current local TODO selects a separate source-role/endpoint-lineage
-admission pass. Static inspection confirms the reported selection, base-row
-uniqueness and endpoint-duration gaps; its cited probes were not rerun here. The
-RustSMF producer remains outside that receiver-owned repair.
+No new producer defect was confirmed. HISTORY binds reused full-gate/receiving
+proof and fresh docs checks. GaimEngine's independent `2d0362b` changes five docs/
+routes; v1 and the three Rust overlays are unchanged. Cleanup edits records only.
+
+## Earlier review and recheck — 2026-10-22
+
+The superseded `b50bed1`/`61dcd13` review, world-space metric check and earlier
+receiver handoff remain in HISTORY under "P7B review and receiver recheck".
 
 ## Review, recheck and cleanup — 2026-10-16
 
@@ -277,5 +278,5 @@ AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | chang
 -->
 
 <!--
-AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-review-recheck-cleanup | change=recorded current producer review and GaimEngine receiver recheck
+AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-review-recheck-cleanup | change=recorded published P7B review and separate scratch policy blocker
 -->

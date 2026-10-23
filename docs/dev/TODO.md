@@ -2,32 +2,36 @@
 
 Last reviewed: 2026-10-22
 
-## P7B conditioning and receiving — complete locally, 2026-10-22
+## P7B conditioning and receiving — published `08152f0`
 
-- What: qualify all 46 actual White Wolf cases at unchanged GaimEngine v1
-  tolerances, preserving original sampled poses, geometry, bind and influences.
-- Why: close actual-content acceptance without weakening independent comparison.
-- Where: RustSMF owns producer conditioning and private support authoring;
-  GaimEngine owns receiving.
-- When: the producer-only revision was selected 2026-10-22.
-- How: opt-in v3 `continuous-60hz-locomotion-root-nlerp` serializes canonical
-  chord-cubic joint rotations, LINEAR locomotion and continuous exported yaw.
-  Fractional transition targets use the revised curve. Old jobs stay unchanged.
-  [SKELETAL_CONDITIONING.md](SKELETAL_CONDITIONING.md) owns the contract.
-- Tests: 24 focused tests and full RustSMF verification (667 frontend tests,
-  14 Rust checks); all 46 actual packets pass 590 independent samples
-  with exact native/WASM equality. All 38 targeted samples and 36 endpoint checks
-  pass against the fresh GaimEngine build. Original failed evidence is retained.
-- Support: inspected sole sets and transient front finger-pad/back forearm
-  contact have exact source/export indices and 604 spans over all 46 clips.
-  This does not claim torso support, stable contact or P7C course quality.
-- Done when: actual authored support/bundle receiving and RustSMF's final local
-  gate pass with identities and cleanup bound. Met: the fresh actual 46-packet
-  bundle passes admission, comparison, isolation, restore replay and cleanup.
-  P7C and distribution remain separate; all three GaimEngine Rust overlays remain.
-- Verification: retained run `p7b-chord-conditioning-20261022` binds producer
-  evidence; GaimEngine's paired run is `p7b-chord-receiving-20261022`.
-  HISTORY owns receipt locations and closeout.
+- What: qualify all 46 actual White Wolf cases at unchanged GaimEngine v1.
+- Why: close content acceptance with independent comparison and preserved poses.
+- Where: RustSMF producer/support authoring; GaimEngine receiving.
+- When: published through guarded `gitpush.ps1` on 2026-10-22 at `08152f0`.
+- How: explicit v3 NLERP; [SKELETAL_CONDITIONING.md](SKELETAL_CONDITIONING.md).
+- Done when: Met; actual support admission, comparison, isolation, six-tick replay
+  and receiving cleanup pass. Fallen contacts are transient finger-pad/forearm
+  annotations; P7C and distribution remain separate.
+- Verification: 24 focused tests, 667 frontend tests and 14 Rust checks;
+  46 packets/590 samples, exact native/WASM parity, 38 probes and 36 endpoints.
+  HISTORY owns the retained runs, publication receipt and support limits.
+
+## P7B publication scratch — blocked by execution policy
+
+- What: release only the task-owned publication snapshot, archive and allowlist.
+- Why: task-owned publication scratch remains after completed publication.
+- Where: `runtime-data/p7b-publish-candidate-20261022`,
+  `runtime-data/p7b-publish-candidate-20261022.tar`,
+  `runtime-data/p7b-publish-paths-20261022.json`.
+- When: blocked 2026-10-22; the execution-policy owner must provide an allowed route.
+- How: remove the snapshot's two dependency junctions without recursion before
+  removing only the named scratch. Preserve both shared targets and retained proof.
+- Done when: all three named paths are absent; shared dependencies, qualification
+  evidence, GaimEngine v1 and its three Rust overlays remain unchanged.
+- Verification: retained run `p7b-chord-conditioning-20261022` contains
+  `publication-cleanup.json`: automatic approval review rejected nonrecursive
+  unlinking with "blocked by policy"; no command ran. Current read-only recheck
+  confirms the three paths and two links remain. No retry or bypass is selected.
 
 Backlog status: review, recheck, GLB cleanup and installed API acceptance complete locally. Recovery and owned installations are reconciled. Actual native destination-dialog acceptance remains below. HISTORY owns source-bound proof.
 
@@ -187,7 +191,7 @@ AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | chang
 -->
 
 <!--
-AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-review-recheck-cleanup | change=rechecked published producer proof and routed the bounded receiver provenance follow-up
+AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-review-recheck-cleanup | change=separated published P7B completion from the scoped scratch execution blocker
 -->
 
 <!-- AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-chord-conditioning | change=closed actual 46-case P7B qualification with authored transient support and preserved P7C boundary -->

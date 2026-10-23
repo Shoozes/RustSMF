@@ -2,6 +2,44 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-22 - Published P7B review and record cleanup
+
+Reviewed clean RustSMF `08152f09a7807d96cbbadeb87e3fb3df2ade8c19`, tree
+`ceb44dc336f6997441874161ab503abdcc37ba7a`. Summary Bank selected conditioning,
+skeletal export and guarded publication; implementation, interpolation, caller
+integration, schemas, focused tests and retained proof were inspected. No new
+producer defect was confirmed. At intake, fifteen closeout files matched exact
+recorded hashes; HISTORY's only delta was the reviewed publication wording.
+The existing 24 focused tests, 667-frontend/14-Rust full gate and ten publication
+guard tests were reused, not rerun for this records-only batch.
+
+The actual-bundle receipt remains byte-identical at
+`059910b8c4130f9107d0e195189af4f9581e687a17fc951b6a7717aae944b083`:
+all 46 packets, 590 references, isolation, six-tick replay and cleanup pass.
+Its separate 38 targeted samples and 36 endpoints retain their original proof.
+The earlier interpolation and support blockers are therefore closed for the
+selected mode and transient contact limits. P7C remains separate.
+
+Guarded publication is complete at `08152f0`; the existing run's
+`publication.json` binds the exact staged tree and confirmed remote commit.
+Its `publication-cleanup.json` separately records the rejected nonrecursive
+junction removal and 63,350,439 retained scratch bytes. The three exact scratch
+paths and two links still exist. Their unchanged execution-policy blocker was
+not retried or bypassed. Private qualification data and shared dependencies
+remain protected.
+
+GaimEngine independently advanced from `b65541f` to `2d0362b` through five
+documentation/routing files. All three Rust overlay hashes still match the
+publication preservation baseline; engine v1 source is unchanged. This pass
+made no GaimEngine edit. Cleanup corrected review/TODO status; implementation,
+routes, accepted evidence and publication are unchanged. Final
+`pwsh -NoProfile -File ./run.ps1 -Task context` exited 0: both validators,
+20 project-integrity tests and ten context tests pass. Initial review growth
+exceeded one route's 98 KiB budget; condensing superseded review prose into
+HISTORY links restored that same budget. No budget or route was changed.
+
+<!-- AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-published-review | change=rechecked source-bound qualification and separated published delivery from blocked scratch cleanup -->
+
 ## 2026-10-22 - P7B producer NLERP and actual 46-case qualification
 
 Implemented the explicit job-v3 mode
