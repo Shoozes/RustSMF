@@ -232,15 +232,12 @@ remains explicit. See HUMANOID_POSE_REVIEW.md for the bounded schema.
 - Display-only material, opacity, sampler, legacy-lighting, and weight-color previews are restored for the entire asynchronous GLB/FBX exporter call and reapplied only if the same root remains mounted.
 - Export workspace copy states texture behavior per format. GLB is the preferred high-fidelity output for static models, materials/textures, morphs, object tracks, multiple skeletons, and scale animation.
 
-NLERP [`plantedIdle`](SKELETAL_PLANTED_IDLE.md) bakes idle pelvis/leg/toe
-corrections with native Rust. Root/upper-body local tracks, endpoints and other
-clips stay unchanged.
-
-NLERP `transitionFloor` bakes bounded interior root Y for selected start/stop
-clips; endpoints and other clips stay unchanged.
-
-NLERP [`terminalRotationClosure`](SKELETAL_TERMINAL_ROTATION.md) closes selected
-terminal rotations; root travel and earlier poses stay unchanged.
+NLERP authoring is explicit: [`plantedIdle`](SKELETAL_PLANTED_IDLE.md) uses native
+Rust for idle contacts; `transitionFloor` lifts selected transition interiors;
+[`terminalRotationClosure`](SKELETAL_TERMINAL_ROTATION.md) closes final rotations;
+[`twoKeyRotationBake`](SKELETAL_TWO_KEY_ROTATION.md) authors three connected
+non-root joints at two internal ticks. Each retains its own bounds and source
+guards. Locomotion root/unselected content stay unchanged except declared transition lift.
 
 ## Architecture Ownership
 
@@ -429,4 +426,4 @@ AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | chang
 
 <!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-idle-planted-bake | change=recorded opt-in native idle authoring -->
 
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-terminal-rotation-closure | change=recorded opt-in final-tick quaternion authoring -->
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-two-key-bake | change=recorded opt-in internal quaternion authoring -->

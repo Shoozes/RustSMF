@@ -38,7 +38,7 @@
     },
     "workflow__context_bank": {
       "description": "Portable public context routing, validation, and generation entry points.",
-      "max_kb": 120,
+      "max_kb": 124,
       "paths": [
         "summary_bank.json",
         "scripts/context-bank-lib.mjs",
@@ -1427,7 +1427,8 @@
       "notes": [
         "Optional transitionFloor ownership is in workflow__skeletal_transition_floor; workflow__skeletal_export owns CLI and publication contracts.",
         "Optional plantedIdle authoring and the native batch adapter are routed by workflow__skeletal_planted_idle.",
-        "workflow__skeletal_terminal_rotation owns terminal authoring and skeletalConditioningFidelity.ts; read it for original-source guards."
+        "workflow__skeletal_terminal_rotation owns terminal authoring and skeletalConditioningFidelity.ts; read it for original-source guards.",
+        "workflow__skeletal_two_key_rotation owns explicit two-key authoring and its source-fidelity exception."
       ]
     },
     "workflow__skeletal_transition_floor": {
@@ -1485,6 +1486,25 @@
       ],
       "notes": [
         "Intentional overlap with conditioning/export owns the shared recipe, original-source guards and independent GLB reload. Existing floor and idle routes retain their separate authoring contracts."
+      ]
+    },
+    "workflow__skeletal_two_key_rotation": {
+      "description": "Explicit adjacent internal rotation authoring, stored bounds, source-fidelity guards and independent producer/receiving proof.",
+      "max_kb": 112,
+      "paths": [
+        "docs/dev/SKELETAL_TWO_KEY_ROTATION.md",
+        "source/frontend/src/utils/skeletalTwoKeyRotation.ts",
+        "source/frontend/src/utils/skeletalTwoKeyRotation.test.ts",
+        "source/frontend/src/utils/skeletalConditioningFidelity.ts",
+        "source/frontend/src/utils/skeletalConditioning.ts",
+        "source/frontend/src/utils/skeletalExportJob.ts",
+        "source/frontend/scripts/skeletal-export-cli.ts",
+        "source/frontend/scripts/skeletal-export-producer.ts",
+        "source/frontend/src/utils/skeletalChordRotation.ts",
+        "source/frontend/src/utils/animationTrackInterpolation.ts"
+      ],
+      "notes": [
+        "Intentional overlap with conditioning/export and terminal authoring follows the shared v3 job, canonical chord and selective original-source matrix guard. Idle and floor authoring retain separate focused contracts."
       ]
     }
   },

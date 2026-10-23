@@ -15,13 +15,13 @@ Source, tests and retained actual proof were inspected; independent code review
 found no actionable defect. Three seam findings are closed; drift, sole gap,
 sole penetration and whole-skin floor remain open.
 
-The measured distal family failed; [TODO](TODO.md) selects right-leg feasibility.
-HISTORY owns fresh binding, preservation and docs checks; 4,528 protected files
+The producer arc passes locally; [TODO](TODO.md) queues residual physical review.
+HISTORY owns fresh binding, preservation and docs checks; 5,465 protected files
 match. GaimEngine v1, three overlays, dependencies and evidence are preserved.
-No owner deletion or publication. Unrelated features retain dated proof;
+No owner deletion. HISTORY owns publication. Unrelated features retain dated proof;
 full P7C is open.
 
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-sole-arc-feasibility | change=recorded measured distal-family failure -->
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-two-key-publication | change=recorded producer closure and publication route -->
 
 ## Earlier P7B reviews — 2026-10-22
 

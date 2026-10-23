@@ -1,9 +1,15 @@
 import * as THREE from 'three';
 import type { LoadedModel } from '../loaders/glb';
 import { rotationDifferenceDegrees, type TerminalRotationClosureRecipe } from './skeletalTerminalRotation';
+import { parseTwoKeyRotationBake, type TwoKeyRotationBakeRecipe } from './skeletalTwoKeyRotation';
 
 /** Original conversion differences remain separate from receiving tolerances. */
-export function measureConditioningDifferences(original: LoadedModel, derived: LoadedModel, clipIds: string[], authoredIdleId?: string, terminal?: TerminalRotationClosureRecipe) {
+export function measureConditioningDifferences(original: LoadedModel, derived: LoadedModel, clipIds: string[], authoredIdleId?: string, terminal?: TerminalRotationClosureRecipe, twoKey?: TwoKeyRotationBakeRecipe) {
+  if (twoKey) {
+    const roots = [...original.skeleton!.bones, ...derived.skeleton!.bones].filter(b => !(b.parent instanceof THREE.Bone)).map(b => b.name);
+    twoKey = parseTwoKeyRotationBake(twoKey, clipIds, clipIds, roots);
+    if (twoKey.clipId === authoredIdleId) throw new Error('Two-key gait authoring cannot use the idle source-fidelity exception.');
+  }
   function sample(model: LoadedModel, clip: THREE.AnimationClip, tick: number, restore?: Map<string, number[]>) {
     const mixer = new THREE.AnimationMixer(model.root), action = mixer.clipAction(clip);
     action.setLoop(THREE.LoopOnce, 1); action.clampWhenFinished = true; action.play();
@@ -31,21 +37,32 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
   return clipIds.map(clipId => {
     const a = original.clips.find(c => c.name === clipId)!, b = derived.clips.find(c => c.name === clipId)!;
     const ticks = Math.round(a.duration * 60), phases = [0, ticks * .25 + .125, ticks * .5 + .25, ticks * .75 - .125, ticks];
+    if (twoKey?.clipId === clipId && twoKey.startTick + 1 >= ticks) throw new Error('Invalid two-key source-fidelity interval.');
     let maximumPositionMeters = 0, maximumJointMatrix = 0, maximumTickJointMatrix = 0, maximumEndpointJointMatrix = 0, maximumPreservedTickJointMatrix = 0;
     for (const tick of [...new Set([...phases, ...Array.from({ length: ticks + 1 }, (_, i) => i)])]) {
       const left = sample(original, a, tick), right = sample(derived, b, tick);
       let checked = right;
+      const restore = new Map<string, number[]>();
       if (terminal?.clipId === clipId && tick === ticks) {
         if (terminal.startTick !== ticks - 1 || clipId === authoredIdleId) throw new Error('Invalid terminal source-fidelity selection.');
-        const entry = sample(original, a, 0), restore = new Map<string, number[]>();
+        const entry = sample(original, a, 0);
         for (const joint of terminal.joints) {
           const expected = entry.rotations.get(joint), actual = right.rotations.get(joint), before = left.rotations.get(joint);
           if (!expected || !actual || !before || rotationDifferenceDegrees(expected, actual) > 1e-4 || rotationDifferenceDegrees(before, actual) > terminal.maxRotationDegrees) throw new Error(`Invalid terminal entry rotation for ${joint}.`);
           restore.set(joint, before);
         }
-        // Undo only authorized local rotations for fidelity checks of every joint.
-        checked = sample(derived, b, tick, restore);
       }
+      if (twoKey?.clipId === clipId && (tick === twoKey.startTick || tick === twoKey.startTick + 1)) {
+        for (const rotation of twoKey.rotations) {
+          const before = left.rotations.get(rotation.joint), actual = right.rotations.get(rotation.joint);
+          const expected = rotation.values[tick - twoKey.startTick];
+          if (!before || !actual || rotationDifferenceDegrees(expected, actual) > 1e-4
+            || rotationDifferenceDegrees(before, actual) > twoKey.maxRotationDegrees) throw new Error(`Invalid two-key source-fidelity rotation for ${rotation.joint}.`);
+          restore.set(rotation.joint, before);
+        }
+      }
+      // Undo only authorized local rotations for fidelity checks of every joint.
+      if (restore.size) checked = sample(derived, b, tick, restore);
       for (const [name, values] of left.matrices) {
         const other = right.matrices.get(name), preserved = checked.matrices.get(name);
         if (!other || !preserved) throw new Error(`Conditioning lost joint ${name}.`);
@@ -62,6 +79,6 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
     }
     if (![maximumPositionMeters, maximumJointMatrix, maximumTickJointMatrix, maximumEndpointJointMatrix, maximumPreservedTickJointMatrix].every(Number.isFinite) || maximumPreservedTickJointMatrix > 1e-4) throw new Error(`Conditioning ${clipId} failed original tick-pose preservation (${maximumPreservedTickJointMatrix}).`);
     return { clipId, phases, maximumPositionMeters, maximumJointMatrix, maximumTickJointMatrix, maximumEndpointJointMatrix, maximumPreservedTickJointMatrix,
-      differenceKind: clipId === authoredIdleId ? 'explicit planted idle authoring; endpoints retain source fidelity' : clipId === terminal?.clipId ? 'explicit terminal rotation authoring; all other tick transforms retain source fidelity' : 'sampled source tick preservation' };
+      differenceKind: clipId === authoredIdleId ? 'explicit planted idle authoring; endpoints retain source fidelity' : clipId === twoKey?.clipId ? 'explicit two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : clipId === terminal?.clipId ? 'explicit terminal rotation authoring; all other tick transforms retain source fidelity' : 'sampled source tick preservation' };
   });
 }

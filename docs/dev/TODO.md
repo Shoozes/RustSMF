@@ -2,15 +2,15 @@
 
 Last reviewed: 2026-10-23
 
-## P7C right-leg arc feasibility — selected
+## P7C residual drift/floor review — next
 
-- What: Measure a bounded right-leg correction for the paired sole gap/penetration failures.
-- Why: The tested foot-only family still reaches -0.050155 m at tick 43.5; four criteria remain open.
-- Where: [Pass-down](SKELETAL_CONDITIONING.md#next-bounded-pass--slow-walk-right-leg-arc); HISTORY.
-- When: Selected after the completed 2026-10-23 distal-family feasibility pass.
-- How: Assess upper/lower-leg and foot rotations at stored ticks 43/44; preserve root, supports and accepted content.
-- Done when: Measure one bounded contact-preserving family and return an evidenced repair contract or its obstruction.
-- Verification: Pass-down owns dense, serialized and fidelity checks. Prior 637-pose baseline and rejected 361-pose trial pass measurement checks; full P7C remains open.
+- What: Review the four remaining slow-walk physical failures and select one bounded next pass.
+- Why: The two-key right-leg bake passes locally; the left sole still fails at 87.25/87.5.
+- Where: [Bake contract](SKELETAL_TWO_KEY_ROTATION.md); HISTORY owns current measurements.
+- When: Next after the completed 2026-10-23 producer bake.
+- How: Reuse the renewed pilot and attribute residual drift/floor witnesses; preserve accepted content.
+- Done when: Return an evidenced bounded pass-down without widening support, root or receiving tolerances.
+- Verification: Current 46/590 receiving and 637-pose proof pass the bounded repair. Four global criteria and a 1.528 mm increase at existing failed drift remain explicit; full P7C is open.
 
 ## Editing and interchange reliability — source complete
 
@@ -177,4 +177,4 @@ AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=cl
 
 <!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-terminal-rotation-closure | change=closed selected seam repair; retained four physical failures without selecting another repair -->
 
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-sole-arc-feasibility | change=closed distal family and selected right-leg measurement -->
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-two-key-bake | change=closed producer repair and queued residual physical review -->

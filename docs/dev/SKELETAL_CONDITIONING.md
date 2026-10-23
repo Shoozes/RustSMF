@@ -226,67 +226,41 @@ accepted idle/p25 content are preserved. Full P7C remains open.
 <a id="next-bounded-pass--slow-walk-right-sole-arc-feasibility"></a>
 ### Right-sole arc feasibility — complete locally
 
-The selected finite family is measured and rejected. The 91-key
-mixamorigRightFoot.quaternion channel influences 463 vertices, including the
-70-vertex right sole; no right-toe quaternion channel exists in walkSlow.
-Independent source/mixer measurements reproduce the original fractional floor
-witnesses, and all 637 baseline poses agree with retained receiver maxima within
-7.538e-8 m. The explicit family post-rotates the foot at stored ticks 43/44,
-with a 45-degree actual stored correction cap and 121 worst-criterion trials.
-Its best tested gap/penetration is 0.0501551543 m at v23@43.5, above the unchanged
-0.021012886070915813 m limit. Stored corrections are 1.118031543/1.500001619
-degrees. No feasible candidate was found; this is not an exhaustive impossibility
-proof for every distal correction.
-
-Every patch vertex and whole skin were measured over [42,45]. The rejected
-361-pose experiment keeps 348 samples outside that interval exact, root motion,
-all 45 other clips, 12 slow-walk transitions and walkSlow@22.5 calibration intact.
-Knees remain valid and segment lengths stable; the four physical failures remain.
-Conditional feasible-candidate serialization is inapplicable. No production
-option, prototype GLB or generation was published. HISTORY and
+The finite foot-only family is rejected: its best gap/penetration reaches
+0.0501551543 m at v23@43.5 versus the unchanged 0.021012886070915813 m limit.
+The 121 trials post-rotate the foot at 43/44 with a 45-degree stored bound;
+no toe quaternion channel exists. This is not a global impossibility proof.
+HISTORY and
 `D:/Compact_Evidence/RustSMF/runs/p7c-right-sole-arc-feasibility-20261023/`
-own the source-bound scripts, parameters, diagnostics and actual measurements.
+own source measurements, actual corrections, the 637-pose baseline and rejected
+361-pose fidelity/kinematics proof. All four failures remain; no option was added.
 
 <a id="next-bounded-pass--slow-walk-right-leg-arc"></a>
-### Next bounded pass — right-leg arc feasibility
+### Right-leg arc feasibility — complete locally
 
-Phase: local measurement and repair selection, owned by RustSMF. The next
-candidate scope adds mixamorigRightUpLeg and mixamorigRightLeg rotation control
-to mixamorigRightFoot at the same stored ticks 43/44. Their hierarchy can change
-ankle trajectory; foot rotation alone cannot move its own joint position.
-Measured ankle Y falls from 0.389209186 m at 43 to 0.338970626 m at 43.5, returning
-to 0.389209502 m at 44. This motivates the next scope; necessity/sufficiency is
-not established. No broader contact-window or root edit is selected.
+The measured three-joint family is feasible at stored ticks 43/44. Independent
+GLB reload meets both local sole limits: 0.020891718305268984 m versus
+0.021012886070915813 m over all 13 quarter poses in [42,45]. The largest stored
+local correction is 12.267215277 degrees. Root and 348 outside poses stay exact;
+the 637-pose comparison, 45 other clips, calibration and 24 transition seams pass.
+No new drift threshold failure or knee inversion occurs. Existing drift at
+v200@43.5 increases 0.001527899987 m; drift/skin first/max remain unchanged.
+An unchanged left-sole witness at 87.5 still reaches 0.036732960250 m. All four
+whole-walk physical criteria remain open. HISTORY owns the original-source,
+bounded-search, serialization and residual evidence. The prototype is unqualified.
 
-Keep the declared right support [29,47), both-support entry at 44, 1x/+Z, Y=0
-and canonical 60 Hz chord representation. Existing planted-idle and
-transition-floor options do not authorize gait interiors. Declare one finite
-candidate family and correction caps before probing; retain actual stored
-bounds. Preserve root/hips translation, other limbs and source assets. Do not
-pass walkSlow as authored idle, relabel support or infer a receiving offset.
+<a id="next-bounded-pass--slow-walk-two-key-rotation-bake"></a>
+### Two-key right-leg rotation bake — complete locally
 
-Done When:
-
-1. Bind the unchanged candidate/curve and reproduce the current witness. Measure
-   source right-leg/ankle transforms and one bounded contact-preserving family.
-2. Measure all patch vertices and whole skin at 13 quarter-tick poses over
-   [42,45]. A feasible candidate must meet both sole limits above, preserve the
-   floor-safe endpoint contacts and avoid new skin-floor, drift, segment-length
-   or knee-inversion failures, including both-support entry. Report corrections.
-3. For a feasible candidate, serialize/reload independently and compare the full
-   361-pose walk with the 637-pose pilot baseline. Retain drift first/max at
-   ticks 2/23.75 and whole-skin first/max at 24.25/51. Root/duration, unselected
-   channels and stored values at ticks 0–42 and 45–90 stay exact; poses outside
-   [42,45], terminal closure, 45 other clips, all 12 slow-walk transition
-   endpoints/seams and idle calibration at 22.5 retain their accepted behavior.
-4. Return a measured producer repair contract and actual stored bounds, or the
-   tested family's obstruction and smallest next scope. Failed search alone
-   cannot establish global impossibility. Experiments remain unqualified.
-
-Production integration, strict opt-in/source guards and renewed 46/590 receiving
-proof require a subsequently selected repair. Drift/whole-skin repairs and full
-P7C collision/other roles/phases/scale/facing/f32/visual acceptance remain open.
-Preserve GaimEngine v1, three Rust overlays, dependencies and retained evidence.
+The selected repair is explicit producer-only NLERP authoring. The
+[two-key contract](SKELETAL_TWO_KEY_ROTATION.md) owns strict selection, actual
+stored bounds, narrow original-source guards and serialized receiving proof.
+The six right-leg rotations at 43/44 fit the declared 13-degree bound and meet
+both local sole limits. Root, supports, accepted idle/p25/terminal behavior and
+45 other clips remain intact. Renewed actual 46/590 receiving and the 637-pose
+pilot verify the bounded repair; four whole-walk criteria remain failed.
+HISTORY records exact source/commands and the 1.528 mm increase at existing failed
+drift. TODO queues residual physical review; full P7C remains open.
 
 The retained White Wolf candidate has 29 joints, 3,726 vertices and 46 clips
 (ten original roles plus 36 transitions). Packet selection preserves the existing
@@ -298,7 +272,7 @@ Original-to-derived conversion differences are descriptive: the report measures
 joint matrices at every integer tick and five endpoint/fractional phases, and
 world-space skinned positions at those five phases, matching Three.js's rendered
 mesh transform. Original integer joint poses remain within `1e-4` except the explicitly authored
-idle and selected terminal rotations; their contract-specific guards retain all other
+idle, terminal and two-key rotations; their contract-specific guards retain all other
 source transforms. Authored differences remain reported. Larger
 fractional changes reflect the explicitly selected continuous derivative. They
 are distinct from receiving errors against that derivative.
@@ -344,4 +318,4 @@ AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-slow-walk-review | change=se
 
 <!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-terminal-rotation-closure | change=closed terminal authoring and routed its fidelity/proof contract -->
 
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-sole-arc-feasibility | change=closed measured distal family and selected bounded right-leg feasibility -->
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-two-key-bake | change=closed producer authoring and routed its strict contract -->

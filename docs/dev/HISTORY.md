@@ -2,6 +2,188 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-23 - P7C two-key publication closeout
+
+Prepared the 14-path producer/test/contract/status/bank batch from main
+`63d446247f7cfed83700b4455b72b6d4c8babb56`. All candidate files matched the
+completed bake receipt before these closeout notes. The implementation and
+producer identities remain those recorded below. The canonical local
+`pwsh -NoProfile -File ./run.ps1 -Task verify` proof is reused on unchanged
+implementation bytes: 693 frontend tests, 14 Rust checks and all application
+gates pass. Fresh staged-copy checks cover the publication candidate and records.
+
+Retained receiving proof covers all 46 cases/590 independent references in native
+and actual WASM, with isolation, restored replay and resource release. The
+637-pose pilot proves the selected 13-pose local repair; its four global physical
+failures and the 1.528 mm increase at an existing drift failure remain explicit.
+TODO queues the residual drift/floor review. Full P7C and visual acceptance remain open.
+
+The compact publication record is
+`D:/Compact_Evidence/RustSMF/runs/p7c-two-key-guarded-publication-20261023/`.
+It owns the exact staged tree, isolated checks, guarded `gitpush.ps1 -StagedOnly`
+result, actual remote main verification and final resource disposition. Staging
+is limited to the 14 reviewed paths; the reviewed base/tree and literal allowlist
+constrain the helper. No release or deployment is part of this batch.
+
+Preflight rechecked 5,917 protected files (5,228,945,981 logical bytes), including
+GaimEngine v1, all three Rust overlays, shared inputs and retained qualification
+and storage receipts. Compacted evidence retains its original paths and bytes.
+Only this publication's isolated candidate and ignored allowlist state are
+disposable; their shared junction targets remain protected.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-two-key-publication | change=bound scoped closeout and publication to verified source and retained evidence -->
+
+## 2026-10-23 - P7C two-key right-leg producer bake
+
+Implemented the selected local repair on main `63d4462`, preserving the four
+existing feasibility documentation changes. New `conditioning.twoKeyRotationBake`
+is strict v3 NLERP authoring: one selected gait, three connected non-root joints,
+two adjacent internal stored ticks, explicit unit quaternions and an actual
+stored correction bound. It clones selected tracks, rebuilds only neighboring
+canonical chord tangents and refuses any other stored-value/sign change.
+The CLI reloads the serialized output before references and source comparison.
+The source guard checks requested orientations/bounds, temporarily restores only
+those six local rotations and retains every other original integer matrix guard.
+Raw differences remain visible. No solver, receiver schema or tolerance changed.
+
+Producer source is
+ddb72db800c76901ae8cdd119135fb8a48de8ece91f1fc3346edf7fa10e3ffd0; exporter is
+fd3bbda80c10edae0c79855458a6c1a3b610d31e69a0fb106f0544fad69e5d9b. The new ordinary
+CLI model is
+137eece56afa6f17a94f458c784bd3a404cc33a875b5d028acb73190428bcbf0
+(2,088,636 bytes). Its binary payload is exact to the measured prototype;
+serialization additionally updates nine min/max metadata values in the three
+selected output accessors. The prototype's whole-file hash therefore differs.
+The new bundle is
+f2766927489e6ecd446aa60868207330eecf3b77562300035e3a0773b98b3f08.
+
+The 13-pose reloaded GLB check reaches 0.020891718305 m gap/penetration; actual
+native/WASM reaches 0.020891640925 m, below 0.021012886071 m. The largest of the
+six stored corrections is 12.267215277 degrees against 13. Root, 348 outside
+poses, 45 other clips, 29 raw walk channels, 24 slow-walk transition seams,
+terminal closure and calibration remain accepted. No new drift threshold
+failure or knee inversion occurs; maximum segment-length change remains below
+1e-4. Existing v200@43.5 drift increases 0.001527899987 m. Drift first/max at
+2/23.75 and whole-skin first/max at 24.25/51 are unchanged. The left sole still
+fails at 87.25, maximum 0.036732960250 m at 87.5. All four global physical
+criteria/full P7C remain open.
+
+Fresh local proof uses Node v26.5.0/PowerShell 7.6.6. Twenty-three focused tests
+and test TypeScript pass. An independent read-only code review found no
+actionable guard defect. The actual CLI control without this option reproduces
+the previous model bytes, idle/p25/terminal reports. Seven malformed real CLI
+jobs and pre-aborted execution refuse with no partial generation or native-copy
+leak; unit tests also cover cancellation during authoring and descendant guards.
+Initial test failures were corrected fixture assumptions: float32 boundary
+time, a deliberately shared unselected track, and an empty exported idle clip.
+An initial Node spawn of npm.cmd failed with EINVAL before npm ran; the explicit
+PowerShell route passes. No dependency or compiler pin was changed.
+
+All 46 packets were regenerated (111,200 ms) and admitted with mesh/skin/bind,
+lineage and support declarations unchanged. Fresh receiving passes 590 independent
+references in native and actual WASM (30,632 ms), isolation, six-tick restored
+replay and resource cleanup. The unchanged engine build is reused only after
+the frozen receiver verifies exact source/output fingerprints. The actual
+637-pose/55-reference pilot completes (33,885 ms) and correctly exits 1 for four
+retained physical failures. The selected repair acceptance exits 0. Its initial
+assertion incorrectly required an identical maximum witness for passing metrics;
+roundoff can select different equal extrema. The corrected comparison retains
+metric/status bounds and exact first/max witnesses for failed physical criteria.
+
+Evidence is retained at
+`D:/Compact_Evidence/RustSMF/runs/p7c-two-key-rotation-bake-20261023/`.
+`run-check.mjs` binds exact commands, runtime, exits and dirty source snapshots.
+The `checks` receipts cover focused proof, type checks, ordinary CLI production,
+assembly, actual receiving, floor diagnostic, compatibility, acceptance and the
+canonical full verification gate. `summary.json` owns final gate counts,
+protection/storage checks and owned resource disposition. Accepted generations
+and required evidence remain retained; disposable compatibility outputs have
+their own scoped cleanup record. No Git publication occurred.
+
+The first canonical gate passed all 693 frontend tests, 14 Rust checks and
+application checks, but failed the context registry's own 120 KiB group budget.
+The new focused route expands that group to 121.2 KiB. Its ceiling is now
+124 KiB after measurement; other group/default budgets and all production
+tolerances stay unchanged. The final canonical rerun binds the corrected bank.
+
+The new contract and focused Summary Bank group route the implementation.
+TODO queues residual physical review after this completed bounded bake.
+GaimEngine v1, all three Rust overlays, shared dependencies and previous retained
+qualification evidence remain protected. No visual or full P7C acceptance is claimed.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-two-key-bake | change=implemented strict producer authoring and recorded actual serialized and receiving proof -->
+
+## 2026-10-23 - P7C right-leg arc feasibility
+
+Completed the selected measurement and repair-selection batch on clean local
+main `63d446247f7cfed83700b4455b72b6d4c8babb56`. Producer source remains
+bc9a4322bc7f1bab25f9f4bf841972eb61ba3f72eb35aec9c2dfb3befba4433d; exporter remains
+7aefabf75b6d119aa6dea0b187b696e0d0692a7c169c5ca8647465d46fb5a3ff. No production
+option, solver/schema change, candidate generation or receiving renewal was made.
+
+The declared family changes only mixamorigRightUpLeg, mixamorigRightLeg and
+mixamorigRightFoot local rotations at stored ticks 43/44. It reconstructs the
+two-bone chain with unchanged lengths, source ankle X/Z and world foot rotation;
+knee swivel is bounded to +/-45 degrees and ankle Y lift to 0.019 m. Actual
+stored local corrections are bounded to 45 degrees during the search. The
+78-trial fixed-ankle slice still reaches 0.050490956696 m. A 503-trial slice with
+an additional no-increase cap on already-failing drift points reaches
+0.02133758 m. That experimental cap exceeds the selected no-new-failure rule;
+the final declared family enforces the unchanged drift threshold, preserves
+the original global maximum and records increases at already-failing points.
+
+The final 496 trials find swivels 1.75/0 degrees and ankle lifts
+0.01825/0.0095 m at 43/44. Actual stored corrections in degrees are upper leg
+6.579325701/0.763575308, lower leg 12.267215277/1.208357544 and foot
+5.688909303/0.445273761. The six float32 quaternions are retained verbatim.
+Both local sole gap and whole-skin penetration reach 0.020891718305268984 m
+across all 13 quarter poses in [42,45], below the unchanged
+0.021012886070915813 m limit. Endpoint contacts remain within that limit,
+including both-support entry. No new drift threshold failure occurs. Existing
+v200@43.5 drift increases from 0.161864934611 to 0.163392834598 m
+(0.001527899987 m); this local regression remains explicit in the next contract.
+
+One experimental GLB patches only the three selected CUBICSPLINE output
+accessors. All other GLB bytes are identical to parent model
+c900e54b0fa93e6874e949f567184e03d24a2d94dfa93f5354159a3d23ddaa26. The retained
+2,088,632-byte prototype hashes to
+cbbcc1e02914e5639019e3277529ec5077b943e1d1c13ad8d69bdb03b48df6a2. Independent
+reload proves 637 pilot poses/361 walk poses, 348 exact outside observations,
+45 unchanged clips, 29 unchanged raw walk channels, exact root/calibration and
+24 accepted seams for all 12 slow-walk transitions. Terminal closure passes.
+Baseline maxima agree with retained native measurements within 7.477e-8 m.
+Maximum relative segment-length change is 3.514e-7; no knee inversion occurs.
+Original private-source Hips/right-leg/ankle transforms at both keys agree with
+the conditioned source within 1.626e-7 m and 0.000003819 degrees.
+
+The initial serializer check incorrectly expected whole-walk sole criteria to
+close. Its failure exposed the unchanged left-sole witness v3470@87.25
+(0.026621638582 m), maximum v3467@87.5 (0.036732960250 m). The corrected proof
+requires the selected local arc criteria and records these global failures.
+Drift first/max at 2/23.75 and whole-skin first/max at 24.25/51 remain exact.
+All four whole-walk physical criteria remain failed in both the experiment
+and unchanged production candidate. Full P7C remains open.
+
+Evidence is retained at
+`D:/Compact_Evidence/RustSMF/runs/p7c-right-leg-arc-feasibility-20261023/`.
+From `source/frontend`, Node v26.5.0 ran `node --import tsx <run>/probe-final.mjs`
+(10,517 ms, exit 0), `verify-final.mjs` (4,969 ms, exit 0), and
+`source-transforms.mjs` (exit 0). The family declarations, failed intermediate
+slices, initial serializer failure, drift diagnostic, original transforms,
+actual stored keys and reloaded measurements remain retained. `summary.json`
+binds commands/runtime/source, final docs/context checks and protected-file
+recheck. No new full application, native/WASM or visual acceptance is claimed.
+Models are disposed and no owned process, copied dependency or build tree remains.
+
+TODO selects a strict producer-only v3 NLERP two-key rotation bake with a
+13-degree actual stored bound and a narrow original-source fidelity exception.
+Its contract requires serialized local proof and renewed actual 46/590 receiving
+qualification on the new producer. GaimEngine v1, all three Rust overlays,
+shared dependencies and retained qualification evidence remain protected.
+This batch updates only four documentation files; no Git publication occurred.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-right-leg-arc-feasibility | change=proved serialized local arc and recorded residual failures and next producer repair -->
+
 ## 2026-10-23 - P7C terminal and feasibility publication closeout
 
 The authorized main publication batch contains 14 named source/test/doc/bank
