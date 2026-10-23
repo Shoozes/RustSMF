@@ -1,6 +1,6 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-10-22
+Last reviewed: 2026-10-23
 
 Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
@@ -15,13 +15,14 @@ Summary Bank, plus repo integrity. Other features retain their dated proof.
 - Closed: interpolation/support blockers; 46 cases, 590 samples, 38 probes and
   36 endpoints retain exact proof. Fallen support remains transient.
 - Repaired: stale review/TODO claims now distinguish published P7B from cleanup.
-- Open: publication scratch and two dependency junctions. Automatic approval
-  review rejected nonrecursive removal; no retry or bypass was attempted. TODO
-  owns the bounded next task. P7C and installed dialogs remain separate.
+- Follow-up closed, 2026-10-23: both scratch junctions and the three named paths
+  were removed through accepted native commands. Shared dependencies, all 400
+  existing evidence files and the three Rust overlays retain their hashes.
+  P7C and installed dialogs remain separate.
 
 No new producer defect was confirmed. HISTORY binds reused full-gate/receiving
 proof and fresh docs checks. GaimEngine's independent `2d0362b` changes five docs/
-routes; v1 and the three Rust overlays are unchanged. Cleanup edits records only.
+routes; v1 and the three Rust overlays are unchanged. Product code is unchanged.
 
 ## Earlier review and recheck — 2026-10-22
 
@@ -278,5 +279,5 @@ AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | chang
 -->
 
 <!--
-AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-review-recheck-cleanup | change=recorded published P7B review and separate scratch policy blocker
+AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=closed the scratch blocker after accepted scoped removal and preservation checks
 -->

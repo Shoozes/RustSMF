@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-10-22
+Last reviewed: 2026-10-23
 
 ## P7B conditioning and receiving — published `08152f0`
 
@@ -16,22 +16,22 @@ Last reviewed: 2026-10-22
   46 packets/590 samples, exact native/WASM parity, 38 probes and 36 endpoints.
   HISTORY owns the retained runs, publication receipt and support limits.
 
-## P7B publication scratch — blocked by execution policy
+## P7B publication scratch — complete, 2026-10-23
 
 - What: release only the task-owned publication snapshot, archive and allowlist.
-- Why: task-owned publication scratch remains after completed publication.
+- Why: release consumed publication scratch while retaining qualification proof.
 - Where: `runtime-data/p7b-publish-candidate-20261022`,
   `runtime-data/p7b-publish-candidate-20261022.tar`,
   `runtime-data/p7b-publish-paths-20261022.json`.
-- When: blocked 2026-10-22; the execution-policy owner must provide an allowed route.
-- How: remove the snapshot's two dependency junctions without recursion before
-  removing only the named scratch. Preserve both shared targets and retained proof.
-- Done when: all three named paths are absent; shared dependencies, qualification
-  evidence, GaimEngine v1 and its three Rust overlays remain unchanged.
-- Verification: retained run `p7b-chord-conditioning-20261022` contains
-  `publication-cleanup.json`: automatic approval review rejected nonrecursive
-  unlinking with "blocked by policy"; no command ran. Current read-only recheck
-  confirms the three paths and two links remain. No retry or bypass is selected.
+- When: completed 2026-10-23 through accepted native PowerShell commands.
+- How: unlink both dependency junctions individually without force or recursion;
+  verify zero remaining reparse points, then remove only the named snapshot/files.
+- Done when: Met; all three paths are absent. Shared dependencies, qualification
+  evidence, GaimEngine v1 and its three Rust overlays are preserved.
+- Verification: 63,348,546 logical bytes released; all 400 pre-existing evidence
+  files, five shared dependency checks and three Rust overlays retain their hashes.
+  HISTORY and `publication-cleanup-complete-20261023.json` in the retained run
+  bind the accepted commands and preservation checks. Earlier refusals remain.
 
 Backlog status: review, recheck, GLB cleanup and installed API acceptance complete locally. Recovery and owned installations are reconciled. Actual native destination-dialog acceptance remains below. HISTORY owns source-bound proof.
 
@@ -191,7 +191,7 @@ AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | chang
 -->
 
 <!--
-AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-review-recheck-cleanup | change=separated published P7B completion from the scoped scratch execution blocker
+AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=closed the exact publication scratch cleanup with verified preservation
 -->
 
 <!-- AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-chord-conditioning | change=closed actual 46-case P7B qualification with authored transient support and preserved P7C boundary -->

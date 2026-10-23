@@ -2,6 +2,34 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-23 - P7B publication scratch cleanup complete
+
+Closed the remaining task-owned scratch on RustSMF `e8fcba0`. Preflight matched
+all 1,361 snapshot paths to the published candidate, verified the two exact
+dependency-junction targets and found no active snapshot process. Five separate
+native PowerShell `Remove-Item -LiteralPath` commands were accepted through the
+normal policy checks. Neither force nor recursion was used for junction removal.
+After confirming both links were absent and zero reparse points remained, only
+the resolved contained snapshot was removed recursively; its archive and JSON
+allowlist were then removed individually. No policy setting or approval override
+was changed. Earlier rejected attempts remain in their original receipts.
+
+All three exact task paths are absent. Released 63,348,546 logical bytes across
+1,361 copied source files, the archive and allowlist. Both shared dependency
+targets remain available; five dependency-file hashes match. All 400 existing
+qualification/evidence files and all three GaimEngine Rust overlay hashes are
+unchanged. GaimEngine remains at `2d0362b`, with its existing owner status intact;
+this pass made no engine edit and preserves v1. Source, private models and
+receiving proof remain untouched.
+
+The additive receipt `publication-cleanup-complete-20261023.json` in
+`D:/Compact_Evidence/RustSMF/runs/p7b-chord-conditioning-20261022/` binds the
+accepted commands, exact scope and preservation checks. TODO and the current
+review snapshot close the scratch item. P7C and installed-dialog acceptance
+remain separate. Final documentation validation is recorded in that receipt.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=recorded policy-accepted scoped cleanup and unchanged shared evidence and Rust overlays -->
+
 ## 2026-10-22 - Published P7B review and record cleanup
 
 Reviewed clean RustSMF `08152f09a7807d96cbbadeb87e3fb3df2ade8c19`, tree
