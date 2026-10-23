@@ -1050,7 +1050,6 @@
       "max_kb": 108,
       "paths": [
         "source/pose-contact/Cargo.toml",
-        "source/pose-contact/Cargo.lock",
         "source/pose-contact/src/lib.rs",
         "source/pose-contact/src/v1.rs",
         "source/pose-contact/tests/v1.rs",
@@ -1069,7 +1068,8 @@
         "Canonical v1.rs is vendored verbatim where consumers cannot snapshot the RustSMF path crate; it uses existing libm 0.2.16.",
         "Input is parent-first uniform-scale local TRS and one/two calibrated direct chains with independent limb subtrees; output is corrected full TRS, aligned joint orientations, and bounded diagnostics.",
         "Calibrate the hip bend plane as pole × upper-axis and knee plane normal with the positive (hip-to-knee) × (knee-to-ankle) sign. No contact schedule or root travel is owned here.",
-        "Native/WASM parity covered four fixtures and 548 exact numeric outputs; source npm run verify:rust is the shared compile-only gate and npm run transition:runtime-proof rebuilds and receipts the native/browser-WASM transition artifacts."
+        "Native/WASM parity covered four fixtures and 548 exact numeric outputs; source npm run verify:rust is the shared compile-only gate and npm run transition:runtime-proof rebuilds and receipts the native/browser-WASM transition artifacts.",
+        "Cargo.lock now includes native JSON transport dev dependencies and is owned by workflow__skeletal_planted_idle; Cargo.toml retains the unchanged exact libm runtime pin."
       ]
     },
     "workflow__product_continuity_journeys": {
@@ -1423,6 +1423,47 @@
         "source/frontend/src/utils/skeletalChordRotation.ts",
         "source/frontend/src/utils/skeletalChordRotation.test.ts",
         "source/frontend/src/utils/animationTrackInterpolation.ts"
+      ],
+      "notes": [
+        "Optional transitionFloor ownership is in workflow__skeletal_transition_floor; workflow__skeletal_export owns CLI and publication contracts.",
+        "Optional plantedIdle authoring and the native batch adapter are routed by workflow__skeletal_planted_idle."
+      ]
+    },
+    "workflow__skeletal_transition_floor": {
+      "description": "Opt-in bounded offline floor bake for generated six-tick start/stop clips, job validation, report and producer identity.",
+      "max_kb": 80,
+      "paths": [
+        "docs/dev/SKELETAL_CONDITIONING.md",
+        "source/frontend/src/utils/skeletalTransitionFloor.ts",
+        "source/frontend/src/utils/skeletalTransitionFloor.test.ts",
+        "source/frontend/src/utils/skeletalConditioning.ts",
+        "source/frontend/src/utils/skeletalExportJob.ts",
+        "source/frontend/src/utils/skeletalExportJob.test.ts",
+        "source/frontend/scripts/skeletal-export-producer.ts"
+      ],
+      "notes": [
+        "Intentional overlap with conditioning/export groups follows their shared recipe and serialized-reference boundary; use workflow__skeletal_conditioning for base/chord regressions and workflow__skeletal_export for CLI/generation mechanics."
+      ]
+    },
+    "workflow__skeletal_planted_idle": {
+      "description": "Explicit offline idle contact authoring, canonical native Rust adapter, recipe/fidelity guards and serialized proof.",
+      "max_kb": 112,
+      "paths": [
+        "docs/dev/SKELETAL_PLANTED_IDLE.md",
+        "source/frontend/src/utils/skeletalPlantedIdle.ts",
+        "source/frontend/src/utils/skeletalPlantedIdle.test.ts",
+        "source/frontend/scripts/pose-contact-native.ts",
+        "source/pose-contact/examples/pose_contact_batch.rs",
+        "source/pose-contact/Cargo.toml",
+        "source/pose-contact/Cargo.lock",
+        "source/frontend/src/utils/skeletalConditioning.ts",
+        "source/frontend/src/utils/skeletalConditioning.test.ts",
+        "source/frontend/src/utils/skeletalExportJob.ts",
+        "source/frontend/scripts/skeletal-export-cli.ts",
+        "source/frontend/scripts/skeletal-export-producer.ts"
+      ],
+      "notes": [
+        "Intentional overlap with conditioning/export follows the shared v3 recipe, independent reload and producer identity. feature__runtime_pose_contact owns the unchanged canonical Rust solver; the floor route owns p25 corrections."
       ]
     }
   },

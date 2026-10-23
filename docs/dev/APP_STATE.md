@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-10-22
+Last reviewed: 2026-10-23
 
 ## Editing and interchange reliability
 
@@ -232,6 +232,13 @@ remains explicit. See HUMANOID_POSE_REVIEW.md for the bounded schema.
 - Display-only material, opacity, sampler, legacy-lighting, and weight-color previews are restored for the entire asynchronous GLB/FBX exporter call and reapplied only if the same root remains mounted.
 - Export workspace copy states texture behavior per format. GLB is the preferred high-fidelity output for static models, materials/textures, morphs, object tracks, multiple skeletons, and scale animation.
 
+NLERP [`plantedIdle`](SKELETAL_PLANTED_IDLE.md) bakes idle pelvis/leg/toe
+corrections with native Rust. Root/upper-body local tracks, endpoints and other
+clips stay unchanged.
+
+NLERP `transitionFloor` bakes bounded interior root Y for selected start/stop
+clips; endpoints and other clips stay unchanged.
+
 ## Architecture Ownership
 
 | Owner | Responsibility |
@@ -414,3 +421,7 @@ AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | chang
 -->
 
 <!-- AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-chord-conditioning | change=recorded opt-in producer NLERP and actual P7B acceptance -->
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p25-floor | change=opt-in bake -->
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-idle-planted-bake | change=recorded opt-in native idle authoring -->

@@ -2,6 +2,257 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-23 - P7C guarded publication closeout
+
+Closeout/Publish authorizes the verified 20-file P7C batch from local main
+6eb5e8bfdc5c8b4658cc328a9796d2dd33a00e35 to existing origin/main through
+gitpush.ps1 StagedOnly, with an explicit path allowlist and reviewed tree.
+The publication receipt at
+D:/Compact_Evidence/RustSMF/runs/p7c-guarded-publication-20261023/
+binds the staged candidate, isolated verification and confirmed remote commit.
+
+Reused proof remains bound to the unchanged implementation bytes in the idle
+run below: 682 frontend tests, 14 Rust checks, all 46 packets/590 references,
+actual native/WASM parity, p25 and no-option compatibility, and owned cleanup.
+Publication does not close the seven slow-walk failures or full P7C acceptance.
+TODO retains those outcomes; Summary Bank routes the floor and idle owners.
+GaimEngine v1, all three Rust overlays, shared dependencies and qualification
+evidence remain protected. The retained receiver build is required proof;
+publication scratch has a separate owned cleanup route and no shared target
+or dependency deletion is authorized.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-guarded-publication | change=bound verified progress publication and retained milestone limits -->
+
+## 2026-10-23 - P7C idle planted-contact bake
+
+Dropin/Work accepted the selected idle-only pass-down at local main 6eb5e8b plus
+the preserved 12-file candidate. P25 was verified complete; the inbox contained
+only its policy README. Root-only cancellation was unsupported by measurement:
+removing root travel gave 0.461246 m drift; fitting one translation to both soles
+left 0.182892 m against 0.042026 m. Reused the unchanged canonical Rust contact
+solver through a bounded native JSON example/adapter, with no copied equations
+or GaimEngine source changes. Only the selected idle's pelvis translation and
+hip/knee/ankle/toe rotation channels are authored. Root and upper-body local
+channels, duration, both endpoints, mesh/skin/bind and 45 other clips are retained.
+
+At 201 actual idle quarter-tick samples, maximum planted drift drops from
+0.243508944674649 m to 0.0038391876231595413 m. Sole gap is
+0.0028231030835864784 m and whole-skin/sole penetration 0.0013677948343130963 m;
+all meet unchanged limits. Both knees have zero inversions; 27 segments have
+maximum relative length change 2.0227983577694888e-7. Six idle/p25 source endpoint
+comparisons and all applicable seams pass. All 45 unselected clips (81 repeated
+occurrences), root motion and 23 unaffected raw idle channels compare exactly.
+The p25 repair and support patches/windows/modes/unsupported spans are unchanged.
+
+The 46 new packets/590 references pass exact native/WASM receiving, isolation,
+six-tick restored replay and cleanup. The 637-sample/55-reference five-case pilot
+retains exactly seven slow-walk failures, with unchanged measurements; its exit
+1 is expected and retained. Separate scoped repair acceptance exits 0. This
+completes the selected idle Done When, not full P7C collision, other roles/phases,
+scale/facing, f32 receiving or attended visual acceptance.
+
+Retained run: D:/Compact_Evidence/RustSMF/runs/p7c-idle-planted-bake-20261023/.
+Producer source identity 930f4d9f5bee8b634cdad8b01e28dc3d5cdc509cf12cb25feb00575410637e53;
+derived GLB 8e4f45b01cf5bc52a561f47c638fbf7cff617282d71d2224fd0b14415edfe5bd;
+bundle 9ef2ad7d65411be1e8364d2c73a5c581013ab610c50f74e1059ae33f9aa17ecb.
+The recipe/report bind declared 0.1 m/60-degree bounds, source calibration at
+unchanged walkSlow@22.5, actual stored corrections and native source/executable
+hashes. Maximum pelvis correction is about 0.001952 m and local rotation 26.245
+degrees. The generic library/v1/libm pin are unchanged; pinned serde_json is a
+native-example dev dependency. The producer identity includes every new owner.
+
+The shared engine native trace was replaced by concurrent builds, so the first
+pilot attempt correctly refused its old exact-output binding. Rebuilt the
+preserved 1,161-file receiver into an owned target. renewed-engine-build.json
+transparently reuses the prior unchanged-source 134-command passed gate and adds
+two observed locked offline builds; no fresh full engine-check is claimed.
+WASM stays 7ec92870...dde; renewed native is 8015c500...7285. The concurrent
+shader candidate remains outside this qualification. Original source/proof and
+shared dependencies are preserved, and new native copies/assets release.
+
+Two diagnostic refusals remain recorded: the initial candidate hit the original
+tick-preservation guard, which is now extended only for explicitly authored idle
+interiors while retaining endpoint/other-role limits; and the first isolation
+probe compared downstream local-TRS decomposition bytes, differing near 1e-15.
+The corrected probe proves exact raw GLB channel preservation without changing
+physical or receiving tolerances. A synthetic floor fixture was corrected to
+start at its declared floor before focused proof. All 24 focused tests pass,
+including serialized reload, bounds/selection, native failure and active cancel
+cleanup. Final producer/context/portability proof is recorded at closeout.
+
+Final `pwsh -NoProfile -File ./run.ps1 -Task verify` exits 0 in 194164 ms:
+682 frontend tests, 14 Rust checks, lint, production/test type checks, build,
+project/context and main/process guards pass. The native bridge example's test
+passes. Native/browser-WASM transition portability rebuilds and passes nine
+corrected frames with fingerprint 61931913f4cced0d; both exact artifacts are
+retained. An explicit after-spawn cancellation probe observes the live frozen
+native executable and verifies its release. Actual no-option P7B and p25-only
+GLBs remain byte-identical to their accepted baselines; floor reports also match.
+
+The read-only storage audit verifies ten named artifacts with no findings.
+An optional attempt to capture the producer executable after all Cargo tests
+correctly refused changed shared-cache bytes; no replacement was substituted
+for the hash observed during production. Its disposable runtime copies were
+released by contract; receiving reopens the retained immutable GLB/packet graph.
+The initial absent-inventory audit failure and corrected passing audit remain
+in the journal. The owned receiver target and source/receipt graphs remain
+retained for exact-output verification; no prior files were removed.
+
+The focused idle route owns the new transport dependency lock; the generic
+contact route retains canonical solver ownership and its exact libm declaration.
+No existing context budget was raised. TODO now retains seven slow-walk failures
+without selecting another repair. Work remains local and unpublished.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-idle-planted-bake | change=closed selected authoring and actual receiving while retaining unresolved course proof -->
+
+## 2026-10-23 - P7C review, recheck and scoped cleanup
+
+Reviewed local main at `6eb5e8b` plus its 12 dirty candidate files through the
+conditioning, floor and export routes. Rechecked all candidate hashes, 469
+protected inputs, 12 receipt bindings and 1,161 engine source hashes before
+cleanup. The two p25 penetration findings are verified closed; the eight
+remaining physical failures stay open. Coverage is the current P7C producer
+batch and affected receivers/contracts, not an audit of unrelated app behavior.
+
+Found and repaired one P2 guard defect: computed lift could fit maxLiftMeters
+while float32 key rounding exceeded it. A synthetic floor of 0.002 m accepted
+0.30201001465320587 m stored lift against a declared 0.30201001192092897 m bound.
+The new regression failed on the old implementation and passes after checking
+actual stored offsets. An exactly sufficient stored bound still passes; source
+keys and bind pose remain unchanged on refusal. All 18 focused tests pass.
+
+The rebuilt GLB and all 138 asset/mapping/reference artifacts are byte-identical
+to the preceding p25 candidate. New producer source identity:
+`61b3284b8e090d22ed3409333f675b0e991fb41f1390002ea0ade349342b2b37`.
+Bundle: `3955c56d0ffb3f2016347b1a40de46b66731f276a2af615384fe515a7f401211`.
+The 46 packets/590 references pass exact native/WASM receiving, isolation,
+six-tick restore replay and cleanup. The 637-sample pilot repeats the same
+bounded p25 success, endpoint/seam/knee/segment results and eight unchanged
+physical failures; its expected exit 1 is retained and scoped acceptance passes.
+
+Concurrent GaimEngine shader work changed scene.mjs after our preflight. The
+live receiving attempt correctly refused the stale engine gate. We preserved
+that work and froze the 1,161 exact gate-bound source files in this run, recovering
+only scene.mjs from ad07276 with its hash-matched CRLF bytes. The preserved
+receiver reuses the accepted exact native/WASM outputs and unchanged guards;
+no engine source or owner docs were edited. This qualifies the new producer
+against that accepted receiver, not the concurrent shader candidate. Its future
+integration requires a fresh source-matched engine gate and receiving pass.
+
+Retained run: D:/Compact_Evidence/RustSMF/runs/p7c-p25-review-cleanup-20261023/.
+The preflight, output-equivalence.json, receiver-fixture.json, failed live receipt,
+actual-bundle-receiving-frozen.json, actual-floor-pilot.json, repair-acceptance.json
+and journal preserve source bindings, observations and fallback provenance.
+The initial focused command used the wrong dependency working directory; the
+corrected frontend command produced the intended failing regression. Both
+results are retained. The first full producer run passed 676 frontend tests, 14 Rust checks and
+code/build gates, but failed TODO schema validation after our compact rewrite.
+Restored both completed entries to the required seven fields; final closeout
+is recorded below.
+
+Final `pwsh -NoProfile -File ./run.ps1 -Task verify` exits 0 in 140278 ms:
+676 frontend tests, 14 Rust checks, lint, production/test type checks, build,
+project/context, main and process-ownership guards pass. The actual no-option
+White Wolf control again matches accepted P7B byte-for-byte and has no floor
+report. Closing documentation uses the separate final-context receipt. The
+preflight catalogs 868 protected files; closeout binds their final byte audit,
+exact build outputs, released native copies/assets and source snapshots. The
+new receiver fixture is 19,074,579 source bytes; no shared dependency or Cargo
+target tree was copied. Routes still fit their existing budgets; no route or
+budget changes were needed in this cleanup.
+
+The next bounded Work batch is idle planted contact only, with unchanged entry
+anchors and support declarations; SKELETAL_CONDITIONING owns the acceptance.
+Seven slow-walk failures and full P7C remain open after that future target.
+No publication or broad deletion is part of this review/cleanup.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-review-cleanup | change=closed evidenced stored-lift defect and retained guarded receiving fallback -->
+
+## 2026-10-23 - P7C p25 floor-constrained start/stop bake
+
+Implemented opt-in `conditioning.transitionFloor` for named generated NLERP
+start/stop clips. It measures all skin at quarter ticks and bakes bounded
+interior locomotion-root Y keys while preserving the endpoints, root X/Z/yaw,
+joint rotations, mesh/skin/bind and other clips. Its report records declared
+floor/lift bounds, seven actual lift values and 25 before/after minimum heights.
+Unsafe endpoints, invalid selection, excessive lift and cancellation refuse
+without changing original clips or the loaded bind pose. Producer identity now
+includes the new helper. Existing modes remain compatible: the actual no-option
+White Wolf derivative is byte-identical to accepted P7B (`d862cb57...aa028`).
+
+Actual pair penetration drops from 0.082395 m to 0.0006689944911612844 m (start)
+and 0.0006690006037463614 m (stop), against 0.021012886070915813 m. Both 25-sample
+native/WASM courses pass. Four pre-bake endpoint comparisons and four seam
+pairs pass unchanged limits. Both knees have zero inversions; all 27 physical
+segments stay stable (maximum relative change 1.1925891094828643e-7). The
+source-bound pole calibration comes from the unchanged published slow-walk p25
+endpoint, not the corrected transition. Mesh, bind, skin, mappings, support
+patches/windows/unsupported spans and all 44 unselected clips match P7B exactly.
+
+All 46 new packets/590 references pass native/WASM comparison, two-instance
+isolation, six-tick restored replay and cleanup through the unchanged engine
+receiving test. The five-case pilot measures 637 samples/55 independent
+references and correctly exits 1 with exactly the same eight remaining physical
+criteria failed. `verify-repair.mjs` exits 0 after asserting the repaired pair,
+endpoint/knee/segment checks and unchanged failure baselines. Full P7C stays open.
+
+Retained run:
+`D:/Compact_Evidence/RustSMF/runs/p7c-p25-floor-bake-20261023/`.
+Producer source identity `3a0bff4fd9a82d6ebb96bb8a22ce57f3cd80ae6d155c58f22a99159164d7ac1c`;
+derived GLB `5eaa978b9cd5f240a36894b74836ea962d6d26ddaad44135ce96c539b07e364b`;
+actual bundle `132bed7ac9c6fa914d5c9f9dd8e97f54f019862949c6032de994e0ffb46e8c4f`.
+`repair-acceptance.json`, both actual receiving receipts, `content-isolation.json`,
+`legacy-control.json` and the journal own exact source/input/result bindings.
+The task runner's missing Node bootstrap and later cumulative image-budget
+failure remain recorded. Resuming through the existing isolated CLI per job
+completed the candidate with unchanged resource limits and dependencies.
+
+`pwsh -NoProfile -File ./run.ps1 -Task verify` exits 0: 675 frontend tests,
+14 Rust checks, lint, production/test type checks, build, project/context,
+Git-main and process-ownership guards pass. New focused coverage includes
+selection/bounds, endpoint preservation, GLB roundtrip, no-option equivalence
+and cancellation restoration. The focused floor route fits its 80 KiB cap;
+existing budgets are unchanged. Engine build outputs and the three Rust overlays
+remain unchanged, and current source matches the retained engine gate. Existing
+qualification and attribution evidence is preserved. This batch remains local
+and unpublished; no GaimEngine source or owner documentation was edited.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-p25-floor-bake | change=closed source-bound p25 repair and renewed actual receiving while retaining full P7C failures -->
+
+## 2026-10-23 - Five-case P7C failure attribution
+
+At RustSMF `6eb5e8b`, attributed all ten physical failures from GaimEngine
+`ad07276`'s five-case floor pilot. The conditioning contract records the cause
+table and exact witnesses; TODO selects one next repair, the explicit offline
+floor-constrained p25 start/stop bake. No content or engine repair was implemented.
+
+From `source/frontend`,
+`node --import tsx D:/Compact_Evidence/RustSMF/runs/p7c-five-case-attribution-20261023/attribute.mjs fractional-controls`
+exited 0. Independent GLB evaluation covered 637 quarter-tick samples, 55
+position/joint/root reference samples, 20 first/maximum records, 142 original
+integer poses and a reconstructed local-TRS midpoint. It distinguishes original
+motion/support limitations, introduced fractional floor arcs, original loop
+nonperiodicity and unconstrained generated transition blends. The initial probe
+failed an unnecessarily strict raw-inverse-bind assertion; the corrected probe
+uses unchanged v1 comparison limits and retains both results. No P7C threshold
+was changed. The journal, source snapshots and measurement receipts remain in
+that run, separate from accepted P7B and failed P7C evidence.
+
+All 445 protected files match before/after, including retained qualification,
+five shared dependency sentinels, the frozen archive and three Rust overlays.
+All 1,161 engine source hashes match its accepted gate. Existing engine
+native/WASM receiving proof is reused; no engine code, shared dependency,
+private source or retained evidence was edited. P7B stays complete; P7C stays
+open. This attribution and TODO update remain local and unpublished.
+
+Documentation checks: `node scripts/verify-context-bank.mjs` and
+`node scripts/verify-project-integrity.mjs` pass, as does `git diff --check`.
+The first draft exceeded existing TODO route budgets and used a machine-local
+path in the portable queue. Linking the detailed criteria and consolidating
+completed P7B records fixed both; no context budget or route was changed.
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-five-case-attribution | change=recorded source-bound ten-failure attribution and the selected p25 transition repair -->
+
 ## 2026-10-23 - P7B publication scratch cleanup complete
 
 Closed the remaining task-owned scratch on RustSMF `e8fcba0`. Preflight matched

@@ -4,6 +4,7 @@ import { pathToFileURL } from 'node:url';
 import { readFileBounded } from './bounded-file-read';
 import { installNodeThreeRuntime } from './node-three-runtime';
 import { readSkeletalExportProducer } from './skeletal-export-producer';
+import { solveNativePoseContacts } from './pose-contact-native';
 import {
   bytesToArrayBuffer,
 } from '../src/loaders/smfBinary';
@@ -183,7 +184,7 @@ export async function runSkeletalExportJob(
     let source = input;
     const inputs: SkeletalExportInput[] = [];
     if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA) {
-      const conditioned = await conditionSkeletalModel(loaded, job.conditioning, signal);
+      const conditioned = await conditionSkeletalModel(loaded, job.conditioning, signal, solveNativePoseContacts);
       disposeThreeObject(loaded.root); loaded = undefined;
       loaded = await loadGLB(bytesToArrayBuffer(conditioned.bytes));
       original = await loadGLB(bytesToArrayBuffer(input.bytes));
@@ -192,7 +193,7 @@ export async function runSkeletalExportJob(
       const report = normalizedSkeletalJsonBytes({ ...conditioned.report,
         sourceModelIdentitySha256: source.sha256, originalSourceIdentitySha256: input.sha256,
         recipeIdentitySha256: sha256(recipe), producer,
-        differences: measureConditioningDifferences(original, loaded, job.conditioning.clipIds),
+        differences: measureConditioningDifferences(original, loaded, job.conditioning.clipIds,job.conditioning.plantedIdle?.clipId),
       });
       throwIfAborted(signal);
       conditioning = await publishConditionedSkeletalInput(source.bytes, recipe, report, { generationRoot: job.output.conditioningRoot, signal });

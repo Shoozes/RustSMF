@@ -11,6 +11,25 @@ import {
 } from './skeletalExportJob';
 import { CONDITIONING_MODE, CONDITIONING_NLERP_MODE } from './skeletalConditioning';
 
+test('v3 floor bake binds only selected generated start/stop clips and declared bounds', () => {
+  const directory = path.join(os.tmpdir(), 'skeletal-floor-job');
+  const document = { $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA, input: { skinnedModel: path.join(directory, 'source.glb') },
+    export: { rootJoint: 'LocomotionRoot', units: 'meters', upAxis: '+Y', forwardAxis: '+Z', handedness: 'right', ticksPerSecond: 60, rootMotion: 'separate-track', clipIds: ['start-walk-p25'] },
+    conditioning: { mode: CONDITIONING_NLERP_MODE as string, sourceRootJoint: 'Base', locomotionRootJoint: 'LocomotionRoot', clipIds: ['idle', 'walk'],
+      transitions: [{ idle: 'idle', gait: 'walk', phases: [.25], durationTicks: 6 }],
+      transitionFloor: { clipIds: ['start-walk-p25', 'stop-walk-p25'], floorY: 0, maxLiftMeters: .1 } },
+    output: { generationRoot: path.join(directory, 'generations'), conditioningRoot: path.join(directory, 'conditioned') } };
+  const parsed = parseSkeletalExportJobDocument(document);
+  assert.equal(parsed.$schema, SKELETAL_EXPORT_JOB_V3_SCHEMA);
+  if (parsed.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA) assert.deepEqual(parsed.conditioning.transitionFloor, document.conditioning.transitionFloor);
+  for (const id of ['idle', 'reversal-walk-p25', 'start-walk-p50']) {
+    const bad = structuredClone(document); bad.conditioning.transitionFloor.clipIds = [id];
+    assert.throws(() => parseSkeletalExportJobDocument(bad), /transitionFloor/);
+  }
+  const old = structuredClone(document); old.conditioning.mode = CONDITIONING_MODE;
+  assert.throws(() => parseSkeletalExportJobDocument(old), /NLERP/);
+});
+
 function job(root: string): Record<string, unknown> {
   return {
     $schema: SKELETAL_EXPORT_JOB_SCHEMA,

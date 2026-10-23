@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import { exportGLB, type LoadedModel } from '../loaders/glb';
 import { createTrackInterpolant } from './animationTrackInterpolation';
 import { chordRotationTrack, CONDITIONING_NLERP_MODE } from './skeletalChordRotation';
+import { bakeTransitionFloor, parseTransitionFloor, type TransitionFloorRecipe, type TransitionFloorReport } from './skeletalTransitionFloor';
+import { bakePlantedIdle, parsePlantedIdle, type PlantedIdleRecipe, type ContactBatchSolver } from './skeletalPlantedIdle';
 
 export { CONDITIONING_NLERP_MODE } from './skeletalChordRotation';
 
@@ -12,6 +14,8 @@ export interface ConditioningRecipe {
   locomotionRootJoint: string;
   clipIds: string[];
   transitions: Array<{ gait: string; idle: string; phases: number[]; durationTicks: 6 }>;
+  transitionFloor?: TransitionFloorRecipe;
+  plantedIdle?: PlantedIdleRecipe;
 }
 interface Pose { position: number[]; rotation: number[]; scale: number[] }
 interface Sample { joints: Pose[]; motion: Pose }
@@ -24,6 +28,8 @@ export interface ConditioningReport {
   clips: Array<{ id: string; durationTicks: number; sourceInterpolation: number[] }>;
   transitions: Array<{ id: string; gait: string; idle: string; kind: string; phase: number; durationTicks: 6 }>;
   differencePolicy: string;
+  floorBakes?: TransitionFloorReport[];
+  plantedIdleBake?: Awaited<ReturnType<typeof bakePlantedIdle>>['report'];
 }
 
 function pose(matrix: THREE.Matrix4): Pose {
@@ -107,13 +113,18 @@ function sharedSkinGlb(bytes: Uint8Array): Uint8Array {
 }
 
 /** Mutates only the caller-owned loaded model; the original input bytes remain untouched. */
-export async function conditionSkeletalModel(loaded: LoadedModel, recipe: ConditioningRecipe, signal?: AbortSignal): Promise<{ bytes: Uint8Array; report: ConditioningReport }> {
+export async function conditionSkeletalModel(loaded: LoadedModel, recipe: ConditioningRecipe, signal?: AbortSignal, solveContacts?: ContactBatchSolver): Promise<{ bytes: Uint8Array; report: ConditioningReport }> {
   signal?.throwIfAborted();
   const skeleton = loaded.skeleton;
   if (!skeleton || skeleton.bones.length >= 64 || loaded.skinnedMeshes.some(m => m.skeleton !== skeleton)) throw new Error('Conditioning requires one shared skeleton with room for an unweighted root.');
   const vertices = loaded.skinnedMeshes.reduce((count, mesh) => count + mesh.geometry.getAttribute('position').count, 0);
   if (vertices < 3 || vertices > 8192) throw new Error('Conditioning requires 3–8,192 vertices without truncation.');
   if (![CONDITIONING_MODE, CONDITIONING_NLERP_MODE].includes(recipe.mode) || !/^[A-Za-z0-9_.-]{1,64}$/.test(recipe.locomotionRootJoint)) throw new Error('Unsupported conditioning recipe.');
+  const allowedFloorClips = recipe.transitions.flatMap(t => t.phases.flatMap(p => ['start', 'stop'].map(kind => `${kind}-${t.gait}-p${p * 100}`)));
+  const floor = recipe.transitionFloor === undefined ? undefined : parseTransitionFloor(recipe.transitionFloor, allowedFloorClips);
+  if (floor && recipe.mode !== CONDITIONING_NLERP_MODE) throw new Error('transitionFloor requires the explicit NLERP mode.');
+  const planted = recipe.plantedIdle === undefined ? undefined : parsePlantedIdle(recipe.plantedIdle,recipe.transitions.map(t=>t.idle),recipe.clipIds);
+  if (planted && (recipe.mode !== CONDITIONING_NLERP_MODE || !solveContacts)) throw new Error('plantedIdle requires NLERP and the native contact runner.');
   const bones = [...skeleton.bones];
   if (new Set(bones.map(b => b.name)).size !== bones.length || bones.some(b => !/^[A-Za-z0-9_.-]{1,64}$/.test(b.name))) throw new Error('Conditioning requires unique safe source joint names.');
   if (loaded.root.getObjectByName(recipe.locomotionRootJoint)) throw new Error('Locomotion root name already exists.');
@@ -212,17 +223,29 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
     vertexCount += positions.count; return row;
   });
   const height = box.max.y - box.min.y;
+  let plantedIdleBake: ConditioningReport['plantedIdleBake'];
+  if (planted) {
+    const index = generated.findIndex(c=>c.name===planted.clipId);
+    const result = await bakePlantedIdle(loaded,generated[index],generated.find(c=>c.name===planted.calibration.clipId)!,locomotion,planted,height,solveContacts!,signal);
+    generated[index] = result.clip; plantedIdleBake = result.report;
+  }
+  const floorBakes: TransitionFloorReport[] = [];
+  for (const id of floor?.clipIds ?? []) {
+    const index = generated.findIndex(c => c.name === id);
+    const baked = bakeTransitionFloor(loaded, generated[index], locomotion, floor!, height, signal);
+    generated[index] = baked.clip; floorBakes.push(baked.report);
+  }
   loaded.clips = generated;
   const bytes = sharedSkinGlb(await exportGLB(loaded.root, generated));
   signal?.throwIfAborted();
   const differencePolicy = recipe.mode === CONDITIONING_NLERP_MODE
     ? 'Sample original STEP/LINEAR at float32 60 Hz endpoints; hemisphere-continuous quaternion chord CUBICSPLINE gives normalized linear joint rotation. Translation, scale and locomotion yaw remain LINEAR. Re-import the serialized derivative as independent reference; original-to-derived differences are descriptive, without smoothing or contact correction.'
     : 'Sample original STEP/LINEAR at float32 60 Hz endpoints; continuous LINEAR derivative is the independent receiving reference. Original-to-derived differences are reported separately; no smoothing or contact correction.';
-  return { bytes, report: { schema: 'rustsmf.skeletal-conditioning.v1', recipe, jointLineage: allBones.map((b, i) => ({ originalIndex: i === bones.length ? null : i, conditionedIndex: i, id: b.name })), vertexLineage, model: { units: 'meters', height, restSkinHeight: height, jointCount: allBones.length, vertexCount }, clips: clipRecords, transitions, differencePolicy } };
+  return { bytes, report: { schema: 'rustsmf.skeletal-conditioning.v1', recipe, jointLineage: allBones.map((b, i) => ({ originalIndex: i === bones.length ? null : i, conditionedIndex: i, id: b.name })), vertexLineage, model: { units: 'meters', height, restSkinHeight: height, jointCount: allBones.length, vertexCount }, clips: clipRecords, transitions, differencePolicy: differencePolicy + (floor ? ' Explicit selected transitionFloor bakes only interior locomotion-root Y keys; floor/lift bounds and dense before/after values are reported.' : '') + (planted ? ' Explicit plantedIdle bakes calibrated native contact corrections into idle pelvis/leg/toe channels; endpoints, other channels and clips remain unchanged.' : ''), ...(floor ? { floorBakes } : {}), ...(planted ? { plantedIdleBake } : {}) } };
 }
 
 /** Original comparisons are descriptive conversion evidence, never receiving tolerances. */
-export function measureConditioningDifferences(original: LoadedModel, derived: LoadedModel, clipIds: string[]): Array<{ clipId: string; phases: number[]; maximumPositionMeters: number; maximumJointMatrix: number; maximumTickJointMatrix: number }> {
+export function measureConditioningDifferences(original: LoadedModel, derived: LoadedModel, clipIds: string[], authoredIdleId?: string): Array<{ clipId: string; phases: number[]; maximumPositionMeters: number; maximumJointMatrix: number; maximumTickJointMatrix: number; maximumEndpointJointMatrix: number; differenceKind: string }> {
   function sample(model: LoadedModel, clip: THREE.AnimationClip, tick: number): { positions: THREE.Vector3[]; matrices: Map<string, number[]> } {
     const mixer = new THREE.AnimationMixer(model.root), action = mixer.clipAction(clip);
     action.setLoop(THREE.LoopOnce, 1); action.clampWhenFinished = true; action.play();
@@ -244,7 +267,7 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
   return clipIds.map(clipId => {
     const a = original.clips.find(c => c.name === clipId)!, b = derived.clips.find(c => c.name === clipId)!;
     const ticks = Math.round(a.duration * 60), phases = [0, ticks * .25 + .125, ticks * .5 + .25, ticks * .75 - .125, ticks];
-    let maximumPositionMeters = 0, maximumJointMatrix = 0, maximumTickJointMatrix = 0;
+    let maximumPositionMeters = 0, maximumJointMatrix = 0, maximumTickJointMatrix = 0, maximumEndpointJointMatrix = 0;
     for (const tick of [...new Set([...phases, ...Array.from({ length: ticks + 1 }, (_, i) => i)])]) {
       const left = sample(original, a, tick), right = sample(derived, b, tick);
       for (const [name, values] of left.matrices) {
@@ -253,11 +276,14 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
         const error = Math.max(...values.map((v, i) => Math.abs(v - other[i])));
         maximumJointMatrix = Math.max(maximumJointMatrix, error);
         if (Number.isInteger(tick)) maximumTickJointMatrix = Math.max(maximumTickJointMatrix, error);
+        if (tick === 0 || tick === ticks) maximumEndpointJointMatrix = Math.max(maximumEndpointJointMatrix,error);
       }
       if (left.positions.length !== right.positions.length) throw new Error('Conditioning changed the vertex count.');
       if (phases.includes(tick)) left.positions.forEach((p, i) => { maximumPositionMeters = Math.max(maximumPositionMeters, p.distanceTo(right.positions[i])); });
     }
-    if (!Number.isFinite(maximumPositionMeters) || maximumTickJointMatrix > 1e-4) throw new Error(`Conditioning ${clipId} failed original tick-pose preservation (${maximumTickJointMatrix}).`);
-    return { clipId, phases, maximumPositionMeters, maximumJointMatrix, maximumTickJointMatrix };
+    if (![maximumPositionMeters,maximumJointMatrix,maximumTickJointMatrix,maximumEndpointJointMatrix].every(Number.isFinite)
+      || (clipId === authoredIdleId ? maximumEndpointJointMatrix : maximumTickJointMatrix) > 1e-4) throw new Error(`Conditioning ${clipId} failed original tick-pose preservation (${maximumTickJointMatrix}).`);
+    return { clipId, phases, maximumPositionMeters, maximumJointMatrix, maximumTickJointMatrix, maximumEndpointJointMatrix,
+      differenceKind: clipId === authoredIdleId ? 'explicit planted idle authoring; endpoints retain source fidelity' : 'sampled source tick preservation' };
   });
 }

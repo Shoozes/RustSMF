@@ -2,38 +2,35 @@
 
 Last reviewed: 2026-10-23
 
-## P7B conditioning and receiving — published `08152f0`
+## P7C idle planted contact — complete locally
 
-- What: qualify all 46 actual White Wolf cases at unchanged GaimEngine v1.
-- Why: close content acceptance with independent comparison and preserved poses.
-- Where: RustSMF producer/support authoring; GaimEngine receiving.
-- When: published through guarded `gitpush.ps1` on 2026-10-22 at `08152f0`.
-- How: explicit v3 NLERP; [SKELETAL_CONDITIONING.md](SKELETAL_CONDITIONING.md).
-- Done when: Met; actual support admission, comparison, isolation, six-tick replay
-  and receiving cleanup pass. Fallen contacts are transient finger-pad/forearm
-  annotations; P7C and distribution remain separate.
-- Verification: 24 focused tests, 667 frontend tests and 14 Rust checks;
-  46 packets/590 samples, exact native/WASM parity, 38 probes and 36 endpoints.
-  HISTORY owns the retained runs, publication receipt and support limits.
+- What: Bounded native idle bake.
+- Why: Close planted drift.
+- Where: SKELETAL_PLANTED_IDLE; HISTORY.
+- When: Verified 2026-10-23; guarded publication authorized.
+- How: Preserve endpoints/root, 45 clips and protected inputs.
+- Done when: Met for contact, kinematics, receiving and lifecycle.
+- Verification: 201/637 samples; 46/590; drift 0.003840 m.
 
-## P7B publication scratch — complete, 2026-10-23
+## P7C slow-walk physical failures — open
 
-- What: release only the task-owned publication snapshot, archive and allowlist.
-- Why: release consumed publication scratch while retaining qualification proof.
-- Where: `runtime-data/p7b-publish-candidate-20261022`,
-  `runtime-data/p7b-publish-candidate-20261022.tar`,
-  `runtime-data/p7b-publish-paths-20261022.json`.
-- When: completed 2026-10-23 through accepted native PowerShell commands.
-- How: unlink both dependency junctions individually without force or recursion;
-  verify zero remaining reparse points, then remove only the named snapshot/files.
-- Done when: Met; all three paths are absent. Shared dependencies, qualification
-  evidence, GaimEngine v1 and its three Rust overlays are preserved.
-- Verification: 63,348,546 logical bytes released; all 400 pre-existing evidence
-  files, five shared dependency checks and three Rust overlays retain their hashes.
-  HISTORY and `publication-cleanup-complete-20261023.json` in the retained run
-  bind the accepted commands and preservation checks. Earlier refusals remain.
+- What: One drift, three floor and three seam failures.
+- Why: Source motion and fractional arcs need repair.
+- Where: SKELETAL_CONDITIONING; HISTORY.
+- When: Next bounded repair not selected.
+- How: Preserve idle/p25, v1, overlays, dependencies and evidence.
+- Done when: Selected repair meets unchanged course limits.
+- Verification: Seven failures retained; full P7C open.
 
-Backlog status: review, recheck, GLB cleanup and installed API acceptance complete locally. Recovery and owned installations are reconciled. Actual native destination-dialog acceptance remains below. HISTORY owns source-bound proof.
+## P7B and p25 qualification — complete
+
+- What: P7B input fidelity and p25 floor repair.
+- Why: Close accepted input/transition boundaries.
+- Where: HISTORY owns proof and scratch cleanup.
+- When: P7B `08152f0`/docs `6eb5e8b`; p25 verified 2026-10-23.
+- How: Explicit NLERP/support and bounded bake.
+- Done when: Met; protected inputs retained.
+- Verification: 46/590; p25 seams/kinematics/replay/cleanup pass.
 
 ## Editing and interchange reliability — source complete
 
@@ -195,3 +192,11 @@ AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=cl
 -->
 
 <!-- AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-chord-conditioning | change=closed actual 46-case P7B qualification with authored transient support and preserved P7C boundary -->
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-five-case-attribution | change=closed attribution; selected p25 repair; linked P7B history -->
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p25-floor | change=verified pair; eight failures remain -->
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-review-cleanup | change=classified p25 fixes and selected bounded idle contact repair -->
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-idle-planted-bake | change=closed selected idle work and retained seven slow-walk failures -->

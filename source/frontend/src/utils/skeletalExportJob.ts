@@ -1,5 +1,7 @@
 import path from 'node:path';
 import { CONDITIONING_MODE, CONDITIONING_NLERP_MODE, type ConditioningRecipe } from './skeletalConditioning';
+import { parseTransitionFloor } from './skeletalTransitionFloor';
+import { parsePlantedIdle } from './skeletalPlantedIdle';
 
 export const SKELETAL_EXPORT_JOB_SCHEMA = 'rustsmf.skeletal-export-job.v1';
 export const SKELETAL_EXPORT_JOB_V2_SCHEMA = 'rustsmf.skeletal-export-job.v2';
@@ -175,7 +177,7 @@ export function parseSkeletalExportJobDocument(
   };
   if (isV3) {
     const c = record(document.conditioning, 'job.conditioning');
-    exactKeys(c, ['mode', 'sourceRootJoint', 'locomotionRootJoint', 'clipIds', 'transitions'], 'job.conditioning');
+    exactKeys(c, ['mode', 'sourceRootJoint', 'locomotionRootJoint', 'clipIds', 'transitions', ...['transitionFloor','plantedIdle'].filter(key=>Object.prototype.hasOwnProperty.call(c,key))], 'job.conditioning');
     const identifier = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_.-]{1,64}$/.test(v);
     if ((c.mode !== CONDITIONING_MODE && c.mode !== CONDITIONING_NLERP_MODE) || !identifier(c.sourceRootJoint) || !identifier(c.locomotionRootJoint) || c.sourceRootJoint === c.locomotionRootJoint || c.locomotionRootJoint !== common.export.rootJoint) fail('job.conditioning must name a supported mode, distinct source/locomotion roots and export the locomotion root.');
     if (!Array.isArray(c.clipIds) || c.clipIds.length < 1 || c.clipIds.length > 32 || !c.clipIds.every(identifier) || new Set(c.clipIds).size !== c.clipIds.length) fail('job.conditioning.clipIds must contain 1–32 unique safe source names.');
@@ -187,8 +189,13 @@ export function parseSkeletalExportJobDocument(
       return { gait: t.gait, idle: t.idle, phases: t.phases as number[], durationTicks: 6 as const };
     });
     if (new Set(transitions.map(t => t.gait)).size !== transitions.length) fail('Duplicate conditioning gait recipe.');
+    const floor = Object.prototype.hasOwnProperty.call(c, 'transitionFloor') ? parseTransitionFloor(c.transitionFloor,
+      transitions.flatMap(t => t.phases.flatMap(p => ['start', 'stop'].map(kind => `${kind}-${t.gait}-p${p * 100}`)))) : undefined;
+    if (floor && c.mode !== CONDITIONING_NLERP_MODE) fail('transitionFloor requires the explicit NLERP mode.');
+    const planted = Object.prototype.hasOwnProperty.call(c,'plantedIdle') ? parsePlantedIdle(c.plantedIdle,transitions.map(t=>t.idle),c.clipIds as string[]) : undefined;
+    if (planted && c.mode !== CONDITIONING_NLERP_MODE) fail('plantedIdle requires the explicit NLERP mode.');
     if (common.output.currentPointer) fail('Conditioned candidate jobs omit the current pointer.');
-    return { ...common, $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA, export: { ...common.export, clipIds: clipIds! }, conditioning: { mode: c.mode, sourceRootJoint: c.sourceRootJoint, locomotionRootJoint: c.locomotionRootJoint, clipIds: c.clipIds, transitions }, output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
+    return { ...common, $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA, export: { ...common.export, clipIds: clipIds! }, conditioning: { mode: c.mode, sourceRootJoint: c.sourceRootJoint, locomotionRootJoint: c.locomotionRootJoint, clipIds: c.clipIds, transitions, ...(floor ? { transitionFloor: floor } : {}), ...(planted ? { plantedIdle:planted } : {}) }, output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
   }
   if (isV2) {
     const explicitClipIds = clipIds ?? fail('job.export.clipIds must contain 1 to 32 explicit source animation clip IDs.');

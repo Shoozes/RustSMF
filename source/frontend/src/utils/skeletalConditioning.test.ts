@@ -41,6 +41,36 @@ async function fixture(): Promise<Awaited<ReturnType<typeof loadGLB>>> {
 }
 const recipe: ConditioningRecipe = { mode: CONDITIONING_MODE, sourceRootJoint: 'Base', locomotionRootJoint: 'LocomotionRoot', clipIds: ['Wave', 'Turn'], transitions: [{ idle: 'Wave', gait: 'Turn', phases: [0, .25, .5, .75], durationTicks: 6 }] };
 
+test('explicit authored idle reports changed source ticks while retaining endpoint and other-role guards',async()=>{
+  const original=await fixture(),derived=await fixture();
+  try {
+    const base=original.skeleton!.bones[0],values=[base.position.toArray(),base.position.toArray(),base.position.toArray()].flat();
+    original.clips=[new THREE.AnimationClip('idle',2/60,[new THREE.VectorKeyframeTrack(`${base.name}.position`,[0,1/60,2/60],values)])];
+    const corrected=[...values];corrected[3]+=.05;
+    derived.clips=[new THREE.AnimationClip('idle',2/60,[new THREE.VectorKeyframeTrack(`${base.name}.position`,[0,1/60,2/60],corrected)])];
+    assert.throws(()=>measureConditioningDifferences(original,derived,['idle']),/tick-pose preservation/);
+    assert.throws(()=>measureConditioningDifferences(original,derived,['idle'],'other'),/tick-pose preservation/);
+    const report=measureConditioningDifferences(original,derived,['idle'],'idle')[0];
+    assert.ok(report.maximumTickJointMatrix>.01);assert.ok(report.maximumEndpointJointMatrix<1e-6);
+    assert.match(report.differenceKind,/explicit planted/);
+    derived.clips[0].tracks[0].values[6]+=.1;
+    assert.throws(()=>measureConditioningDifferences(original,derived,['idle'],'idle'),/tick-pose preservation/);
+  }finally{disposeThreeObject(original.root);disposeThreeObject(derived.root);}
+});
+
+test('transition floor is opt-in and modifies no unselected clip channels', async () => {
+  const a = await fixture(), b = await fixture();
+  try {
+    const baseline = await conditionSkeletalModel(a, { ...recipe, mode: CONDITIONING_NLERP_MODE });
+    const selected = await conditionSkeletalModel(b, { ...recipe, mode: CONDITIONING_NLERP_MODE,
+      transitionFloor: { clipIds: ['start-Turn-p25', 'stop-Turn-p25'], floorY: -100, maxLiftMeters: .1 } });
+    assert.deepEqual(selected.bytes, baseline.bytes);
+    assert.equal(baseline.report.floorBakes, undefined);
+    assert.deepEqual(selected.report.floorBakes!.map(r => r.clipId), ['start-Turn-p25', 'stop-Turn-p25']);
+    assert.ok(selected.report.floorBakes!.every(r => r.rootYLiftByTick.every(v => v === 0)));
+  } finally { disposeThreeObject(a.root); disposeThreeObject(b.root); }
+});
+
 test('opt-in NLERP survives GLB serialization, matches fractional gait endpoints and unwraps root yaw', async () => {
   const model = await fixture(); let derived: Awaited<ReturnType<typeof loadGLB>> | undefined;
   try {

@@ -16,6 +16,14 @@ const EXPORTER_FILES = [
   'source/frontend/src/utils/skeletalExportJob.ts',
   'source/frontend/src/utils/skeletalConditioning.ts',
   'source/frontend/src/utils/skeletalChordRotation.ts',
+  'source/frontend/src/utils/skeletalTransitionFloor.ts',
+  'source/frontend/src/utils/skeletalPlantedIdle.ts',
+  'source/frontend/scripts/pose-contact-native.ts',
+  'source/pose-contact/Cargo.toml',
+  'source/pose-contact/Cargo.lock',
+  'source/pose-contact/src/lib.rs',
+  'source/pose-contact/src/v1.rs',
+  'source/pose-contact/examples/pose_contact_batch.rs',
 ].sort();
 const SOURCE_FILES = [
   ...EXPORTER_FILES,
