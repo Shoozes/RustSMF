@@ -204,7 +204,7 @@ export function parseSkeletalExportJobDocument(
     if ((rotations.twoKeyRotationBake || rotations.twoKeyRotationBakes) && c.mode !== CONDITIONING_NLERP_MODE) fail('Two-key rotation authoring requires the explicit NLERP mode.');
     const boundary = Object.prototype.hasOwnProperty.call(exportSettings, 'twoKeyExportBoundary');
     if (boundary && (exportSettings.twoKeyExportBoundary !== TWO_KEY_EXPORT_BOUNDARY_POLICY
-      || c.mode !== CONDITIONING_NLERP_MODE || !rotations.twoKeyRotationBake || rotations.twoKeyRotationBakes)) fail('twoKeyExportBoundary requires the explicit singular NLERP bake and supported policy.');
+      || c.mode !== CONDITIONING_NLERP_MODE || (!rotations.twoKeyRotationBake && !rotations.twoKeyRotationBakes))) fail('twoKeyExportBoundary requires explicit NLERP bakes and the supported policy.');
     if (common.output.currentPointer) fail('Conditioned candidate jobs omit the current pointer.');
     return { ...common, $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA, export: { ...common.export, clipIds: clipIds!, ...(boundary ? { twoKeyExportBoundary: TWO_KEY_EXPORT_BOUNDARY_POLICY } : {}) }, conditioning: { mode: c.mode, sourceRootJoint: c.sourceRootJoint, locomotionRootJoint: c.locomotionRootJoint, clipIds: c.clipIds, transitions, ...(floor ? { transitionFloor: floor } : {}), ...(planted ? { plantedIdle:planted } : {}), ...(terminal ? { terminalRotationClosure: terminal } : {}), ...rotations }, output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
   }

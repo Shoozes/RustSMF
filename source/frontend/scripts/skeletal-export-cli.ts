@@ -195,7 +195,8 @@ export async function runSkeletalExportJob(
       const conditioned = await conditionSkeletalModel(loaded, job.conditioning, signal, solveNativePoseContacts);
       if (job.export.twoKeyExportBoundary) twoKeyExportBoundary = {
         policy: TWO_KEY_EXPORT_BOUNDARY_POLICY,
-        report: conditioned.report.twoKeyRotationBake ?? fail('Missing singular two-key authoring report.'),
+        ...(conditioned.report.twoKeyRotationBake ? { report: conditioned.report.twoKeyRotationBake }
+          : { reports: conditioned.report.twoKeyRotationBakes ?? fail('Missing two-key authoring reports.') }),
       };
       disposeThreeObject(loaded.root); loaded = undefined;
       loaded = await loadGLB(bytesToArrayBuffer(conditioned.bytes));
@@ -216,12 +217,19 @@ export async function runSkeletalExportJob(
     const clips = job.$schema !== SKELETAL_EXPORT_JOB_SCHEMA
       ? selectSkeletalExportClips(loaded.clips, job.export.clipIds)
       : loaded.clips;
+    let exportBoundary: TwoKeyExportBoundary | undefined;
+    if (twoKeyExportBoundary?.report) {
+      const context = twoKeyExportBoundary;
+      if (clips.some(c => c.name === context.report?.clipId)) exportBoundary = context;
+    } else if (twoKeyExportBoundary?.reports) {
+      const reports = twoKeyExportBoundary.reports.filter(r => clips.some(c => c.name === r.clipId));
+      if (reports.length) exportBoundary = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, reports };
+    }
     const prepared = await prepareSkeletalExport({ ...loaded, clips }, {
       sourceIdentitySha256: source.sha256,
       rootJoint: job.export.rootJoint,
       signal,
-      ...(twoKeyExportBoundary && clips.some(c => c.name === twoKeyExportBoundary?.report.clipId)
-        ? { twoKeyExportBoundary } : {}),
+      ...(exportBoundary ? { twoKeyExportBoundary: exportBoundary } : {}),
       ...(job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.mode === CONDITIONING_NLERP_MODE
         ? { conditionedRotationMode: CONDITIONING_NLERP_MODE } : {}),
     });

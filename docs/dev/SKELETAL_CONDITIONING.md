@@ -250,8 +250,11 @@ left87/88 under 13/7-degree bounds. Renewed actual 46/590 receiving and the
 637-pose pilot close both global sole criteria at 0.020938074220 m versus
 0.021012886071 m. Drift and whole-skin first/max witnesses remain unchanged;
 the diagnostic retains those two failures and separate bounded acceptance
-passes. No new drift failure occurs; all 502 increases are retained. The two-key
-contract and HISTORY own full proof. Full P7C and visual acceptance remain open.
+passes for its original source scope. The subsequent explicit [union export
+boundary](SKELETAL_EXPORT_BOUNDARY.md#plural-union-results) preserves all 348
+outside poses exactly against qualified singular output. Its renewed runtime
+proof retains all 447 positive drift increases and no new threshold failure;
+the earlier 502-record GLB result remains retained. Full P7C/visual acceptance stay open.
 
 The retained White Wolf candidate has 29 joints, 3,726 vertices and 46 clips
 (ten original roles plus 36 transitions). Packet selection preserves the existing
@@ -278,25 +281,4 @@ No reference values, receiving tolerances or GaimEngine v1 behavior were changed
 Numerical receiving proof does not establish visual acceptance or model
 redistribution rights; TODO and HISTORY own current P7C results.
 
-AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-conditioning | change=implemented v3 and recorded the retained interpolation blocker
-AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-chord-conditioning | change=specified opt-in chord NLERP, continuous root yaw, canonical admission and serialized endpoint proof
-
-AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-five-case-attribution | change=attributed ten physical failures and selected the bounded p25 floor-constrained transition repair
-
-AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-p25-floor-bake | change=specified opt-in floor baking and verified the actual bounded pair without closing full P7C
-
-AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-slow-walk-review | change=selected terminal closure and retained physical baselines
-
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-review-cleanup | change=bound stored float32 lift and selected idle contact pass-down -->
-
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-idle-planted-bake | change=closed selected pass-down and routed native idle authoring contract -->
-
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-terminal-rotation-closure | change=closed terminal authoring and routed its fidelity/proof contract -->
-
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-two-key-bake | change=closed producer authoring and routed its strict contract -->
-
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-residual-review | change=routed the selected left-leg feasibility pass -->
-
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-left-leg-feasibility | change=routed the measured two-record producer repair -->
-
-<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-composition-bake | change=closed qualified producer composition and retained two residual physical failures -->
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-union-boundary | change=closed bounded union sampling with renewed runtime proof and retained physical failures -->

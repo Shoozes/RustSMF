@@ -2,6 +2,176 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-24 - Verified plural union and attribution publication closeout
+
+The operator paired Closeout and Publish for the 15-file reviewed batch based on
+main 22dfbd6: strict plural union export-boundary sampling, focused tests and
+compatibility, completed review/recheck and read-only residual attribution,
+current contracts/routes and the selected fixed-root right-swing feasibility
+pass-down. The index starts empty; local main, origin/main and actual remote
+main agree at 22dfbd6 with no unrelated outgoing commits or local paths.
+
+Producer 55ad2c76/exporter 3c833999 remain byte-identical to qualified union proof.
+The canonical 706-frontend/14-Rust gate is reused after matching implementation,
+tests, bank and source identity. Existing actual 46/590 native/WASM receiving,
+361 poses with 348 outside exact, both local arcs, lifecycle/restored replay and
+637-pose diagnostic remain retained. The two physical failures remain failed;
+read-only attribution reproduces all 361 WASM measurements and selects only
+right-swing feasibility at experimental 47–66. Its 77 local/284 outside-pose and
+preservation criteria remain pending and unchanged. This saves scoped progress,
+without claiming full P7C/visual acceptance or implementing that next experiment.
+
+The exact staged tree is checked in an owned full source projection with a
+private index and two named dependency/binding junctions. Preserve working
+checkout bytes while verifying every staged blob; no dependency or native build
+tree is copied and no qualification graph is regenerated. Fresh staged checks,
+guarded helper invocation, exact remote-main confirmation and exact-file scratch
+cleanup are bound in
+`D:/Compact_Evidence/RustSMF/runs/p7c-union-attribution-publication-20261024/summary.json`.
+The helper owns authentication and uses the literal 15-path allowlist plus exact
+base/tree. Source snapshots, receipts and all previous qualification/failure
+bytes remain retained. Only newly owned publication scratch may be released
+following verified publication. GaimEngine v1, all three Rust overlays, shared
+dependencies and retained evidence stay unchanged.
+
+## 2026-10-24 - Read-only P7C slow-walk residual attribution
+
+Completed the selected attribution against unchanged producer 55ad2c76,
+model d8d9a606 and bundle 85702c3c on local main 22dfbd6. All15 starting files match
+the prior review snapshot. Renderer-free in-memory sampling uses exact qualified
+WASM bytes and reproduces the complete361-pose retained measurement, including
+first/max witnesses and root travel. Native/WASM receiving and canonical 706/14
+proof are reused; no new native build/copy, candidate, model, support or reference
+was produced. Original/conditioned GLBs were inspected in memory and disposed.
+
+Drift fails five of six declared planted windows: left [0, 24), [44, 58), [84, 89),
+right [29, 47), [66, 87); right [26, 27) passes. The sweep measures332 patch and 23,240
+per-vertex observations against true entry anchors. First stays2/v3398 at
+0.043712615010 m; maximum 23.75/v3467 at 0.673400722680 m. Signed displacement
+projections at that maximum are 0.087489648 m root translation, 0.092581979 m yaw
+and 0.493329096 m residual leg/skin motion. Original STEP source already exceeds
+the current drift limit in all five windows at those observed peak phases.
+This is authored motion versus declared planted semantics; labels are not changed.
+
+Whole-skin failure has 63 poses, 3,549 violating vertex observations and 122 unique
+vertices, weighted only to RightLeg/Foot/ToeBase. The24.25–24.75 island contributes
+210 observations and is introduced by continuous interpolation between STEP
+poses; first 24.25/v0 is 0.031723661124 m, island maximum 24.5/v0 is 0.042937258177 m.
+The48.5–63.25 island contributes 3, 339 observations over 60 poses, including 2, 846
+with planted left support and 493 after that support ends. Its51/v2 maximum is
+0.206904965068 m; original source already reaches0.206905144981 m there.
+Conditioned source/runtime differ by less than 2.64e-7 m at the five source controls.
+A root-only lift at 51 needs0.185892079 m, while left sole gap permits0.017001670 m;
+that family is obstructed without changing another accepted criterion.
+
+Selected one next producer pass: fixed-root right-leg swing-clearance feasibility
+within experimental[47, 66], targeting94.1% of skin-violating observations. Its
+contract requires77 local poses, 284 exact outside poses, exact nominal boundary
+samples, unchanged planted drift/accepted arcs/root/seams and independently
+reloaded emitted-runtime proof. This bracket is an experiment, not an already
+certified safe interval. Keep public two-record admission unchanged; any later
+producer integration and renewed46/590/637/canonical qualification need separate
+selection. Early skin and all drift failures remain open. No authoring or
+publication is included in this attribution.
+
+The TODO, boundary contract, review snapshot and this HISTORY entry record the
+results. Compact measurements, source-mode controls and preservation are retained
+at `D:/Compact_Evidence/RustSMF/runs/p7c-slow-walk-attribution-20261024/summary.json`.
+All existing evidence, GaimEngine v1, Rust overlays and shared dependencies remain
+unchanged; no files/processes are removed. Full P7C/visual acceptance remain open.
+
+## 2026-10-24 - Plural union Review/Recheck/Cleanup
+
+Read-only Review covered the 15-file local candidate on main 22dfbd6, using the
+focused boundary/two-key routes and affected parser, conditioner/fidelity,
+producer fingerprint, CLI, exporter, tests and contracts. Recheck matched every
+starting file to the qualified snapshot, all 428 retained run artifacts and 7014
+protected files to exact byte hashes. Producer55ad2c76/exporter 3c833999 stay
+unchanged. No new correctness, integration, cancellation, hardcoding or measured
+performance defect was found; no implementation repair or speculative cleanup
+was justified.
+
+Verified closed: emitted boundary leakage (all 348 outside poses exact), strict
+singular/plural admission, singular/omitted byte compatibility, model/mapping/
+references and accessor extrema, both global sole criteria, runtime cleanup and
+context budgets. The source-matched 706 frontend/14 Rust gate and actual 46/590,
+361 native/WASM, 26 arc poses, 637 diagnostic, endpoints/seams/segments/isolation/
+replay proof remain valid in their recorded scope. These were reused, not rerun.
+Still open: physical sole drift and whole-skin penetration with unchanged first/
+max witnesses; full P7C and visual acceptance remain open.
+
+Cleanup changes only TODO, review, this HISTORY entry and the boundary pass-down.
+The next selected batch is read-only attribution of those two residual families,
+then one bounded producer feasibility question or an evidenced obstruction.
+The existing candidate, supports, thresholds and permitted intervals stay fixed;
+no new anatomical authoring, engine change, saved graph, source refactor or
+publication is included. Current docs/context validation covers the edited
+records; the old qualification evidence is retained unchanged. A compact receipt
+is registered at
+`D:/Compact_Evidence/RustSMF/runs/p7c-plural-union-review-20261024/summary.json`.
+No files or processes are deleted. GaimEngine v1, all three Rust overlays,
+shared dependencies and retained qualification/failure evidence are preserved.
+
+## 2026-10-24 - P7C plural union export-boundary implementation
+
+Completed the selected producer-only boundary extension on local main based on
+`22dfbd6f58b661c2700d50a634e7f42f0b0ea34e`; no commit/push is included. The
+existing singular `report` API remains valid, while strict one/two disjoint
+`reports` restore all before-values together per clip before emitted sampling.
+Full provenance/chain/bound admission precedes mixer allocation; unselected keys
+use the reconstructed baseline and the selected union uses the authored GLB.
+The CLI filters context by packet clips and binds policy/settings into producer
+identity. No authoring, reference schedule, tolerance or engine behavior changed.
+
+Producer `55ad2c76679f41ba75a680c0a83f85c69851bb743d0d366937bd896ee63ebf27`,
+exporter `3c8339995f717e3dbdb08b732b49acc3bbce0a16fb1f9f30faaef244ecdeef77`,
+bundle `85702c3c37be1d59f988daa66ec13a07af341f6fbf218eab3a8f9255575cc395`.
+Ordinary CLI keeps model `d8d9a606...`, all 590 original references
+(501,671,081 bytes), mappings, authoring bounds/reports and six selected accessor
+extrema exact. All right keys and unselected keys remain exact versus qualified
+singular; only six left87/88 keys differ in each of13 gait packets. Mesh/skin/bind,
+lineage, supports, root, idle/p25/calibration, 45 other clips, 105 occurrences,
+29 raw walk channels and the terminal curve remain exact. Actual CLI controls
+prove unchanged singular opted-in and singular/plural omitted model, artifact
+and settings bytes. Reversed plural order preserves content and binds settings
+order separately. New tests cover union restoration on shared tracks, reversed
+order, multiple clips, stale/ambiguous/overlapping reports and cancellation.
+
+Actual receiving passes 46 packets/590 native/WASM independent references,
+isolation, six-tick restored replay and cleanup using the unchanged qualified
+engine build outputs. Dense proof checks both graphs at all361 phases; all348
+outside [86,89] remain exact. The unchanged right13-pose arc max is
+0.020891640925 m; the left13-pose max is 0.020938074220 m, both below
+0.021012886071 m. Six endpoints, 24 seams, loop/tail, 27 segments and zero knee
+inversions pass. True-anchor measurement covers 23,240 planted observations,
+retaining all447 increases, 374 previously passing and73 already failing, with
+zero new threshold failures. Largest increases are 0.000403009271 m at88.25
+left vertex3383 and 0.000237563384 m at88.5 left vertex3489 among existing failures.
+The 637-pose pilot completes with expected exit1 and exactly two residual
+failures: sole drift (first/max2/23.75) and whole-skin penetration (24.25/51).
+Those witnesses and all other pilot cases remain exact; both global sole
+criteria now pass. Full P7C/visual acceptance stay open.
+
+The fresh canonical `pwsh -NoProfile -File ./run.ps1 -Task verify` gate passes
+706 frontend tests and14 Rust checks. Its first run passed these suites but
+failed two context budgets. The general export route now delegates boundary
+tests to the focused route; that eight-file route has a measured128 KiB cap.
+The initial receiver adapter selected an older target root and refused exact
+build hashes; the corrected run reuses the configured, matching qualified
+outputs without rebuilding. Initial diagnostic adapters also retained strict
+selected-key scale and absent-support metric failures; corrected evidence uses
+the required six-key boundary and excludes only zero-observation metrics from
+max selection. All failed attempts remain retained; product source stayed stable.
+
+The registered run
+`D:/Compact_Evidence/RustSMF/runs/p7c-plural-union-boundary-20261024/`
+contains exact commands, source snapshots, fresh receipts, `acceptance.json`,
+`summary.json` and cleanup/preservation records. Only newly declared disposable
+compatibility controls are released after exact-path/hash checks. GaimEngine v1,
+all three Rust overlays, shared dependencies and retained historical qualification
+bytes are preserved. TODO closes this batch and retains a read-only review of
+the two physical failures before another repair is selected.
+
 ## 2026-10-24 - Verified P7C progress publication closeout
 
 The operator explicitly paired Closeout and Publish for the reviewed P7C progress.
@@ -4687,3 +4857,11 @@ license/notice. No receiving checkout was changed and nothing was published.
 <!-- AI-edited: 2026-10-16 | agent=Codex/root | task=animal-chain-review | change=recorded reproduced deform-boundary repair and source-specific focused proof -->
 
 <!-- AI-edited: 2026-10-16 | agent=Codex/root | task=reliability-review | change=recorded OBJ failure regression, final checks and exact native cleanup -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-union-boundary | change=closed bounded union sampling with renewed runtime proof and retained physical failures -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-union-review-cleanup | change=recorded source-bound review recheck and scoped record cleanup -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-residual-attribution | change=recorded complete read-only attribution and one bounded producer pass-down -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-union-publication | change=bound reviewed union and attribution progress to guarded publication and owned cleanup -->

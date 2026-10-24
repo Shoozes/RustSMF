@@ -23,7 +23,6 @@ moving clips still need positive duration. Semantic bone names and public format
 are unchanged. Native and actual-WASM evidence stays distinct from installed UI
 acceptance. HISTORY and the reliability receipt own candidate-specific results.
 
-
 ## Original Sable sample and motion pack
 
 Sable is the original 24-joint cat with Idle/Walk/Run/Sit and a packed 1K atlas.
@@ -237,7 +236,9 @@ Rust for idle contacts; `transitionFloor` lifts selected transition interiors;
 [`terminalRotationClosure`](SKELETAL_TERMINAL_ROTATION.md) closes final rotations;
 [`twoKeyRotationBake`/`twoKeyRotationBakes`](SKELETAL_TWO_KEY_ROTATION.md) author
 one/two disjoint pairs on connected non-root chains, with stored bounds and union
-source guards. Root/unselected content stays unchanged except declared transition lift.
+source guards. Explicit [boundary sampling](SKELETAL_EXPORT_BOUNDARY.md) preserves
+unselected emitted keys for both forms; independent references stay unchanged.
+Root/unselected content stays unchanged except declared transition lift.
 
 ## Architecture Ownership
 
@@ -416,14 +417,4 @@ the existing solver and rejecting invalid source knees or exceeded correction
 limits without partial output. [TRANSITION_BAKE.md](TRANSITION_BAKE.md) owns the
 input contract, bounds, vendoring requirements, and native/browser WASM proof.
 
-<!--
-AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | change=recorded real native API acceptance and exact recovery cleanup
--->
-
-<!-- AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-chord-conditioning | change=recorded opt-in producer NLERP and actual P7B acceptance -->
-
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p25-floor | change=opt-in bake -->
-
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-idle-planted-bake | change=recorded opt-in native idle authoring -->
-
-<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-composition-bake | change=recorded strict singular and plural internal quaternion authoring -->
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-union-boundary | change=closed bounded union sampling with renewed runtime proof and retained physical failures -->

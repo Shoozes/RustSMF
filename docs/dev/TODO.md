@@ -2,15 +2,25 @@
 
 Last reviewed: 2026-10-24
 
-## P7C plural boundary composition — selected
+## P7C right-swing clearance feasibility — selected
 
-- What: Extend explicit boundary sampling to one/two disjoint bakes.
-- Why: Plural runtime preservation fails: 335/348 outside poses.
-- Where: [Pass-down](SKELETAL_EXPORT_BOUNDARY.md#next-bounded-pass); HISTORY.
-- When: Next; rechecked 2026-10-24.
-- How: Restore the union; preserve singular/omitted output, model/references and v1.
-- Done when: Linked strict admission, exact keys/runtime, fresh 46/590 and 637-pose proof, canonical gate and preservation pass; physical failures stay reported.
-- Verification: Rechecked f44a2449: singular-only. Plural remains 335/348 left-outside and 326/335 union-outside exact; Work pending.
+- What: Test fixed-root right-leg clearance within experimental ticks 47–66.
+- Why: This island contains 60/63 skin-failing poses and 94.1% of violating vertex observations; root-only lift breaks planted left support.
+- Where: [Bounded pass-down](SKELETAL_EXPORT_BOUNDARY.md#right-swing-clearance-feasibility); existing three-joint rotation/chord owners.
+- When: Next; read-only attribution completed 2026-10-24.
+- How: Predeclare a finite right hip/knee/ankle family; keep pelvis/root, left chain, toe local transform and existing 13/7-degree bakes fixed. No public API extension in feasibility.
+- Done when: All 77 experimental poses clear the whole skin under the existing floor limit, 284 outside poses and both boundary samples stay exact, planted drift and accepted guards remain unchanged; or report the tested family's obstruction. Feasible prototypes need a separate integration pass.
+- Verification: Source 55ad2c76; all 361 current poses reproduce the retained measurement. Five drift windows and both skin islands attributed. Early 24.25–24.75 skin and all drift failures remain open; no new authoring performed.
+
+## P7C plural boundary composition — complete locally
+
+- What: Explicit one/two-record union export sampling.
+- Why: Close emitted-runtime boundary leakage.
+- Where: [Proof and criteria](SKELETAL_EXPORT_BOUNDARY.md#plural-union-results); HISTORY.
+- When: Closed locally 2026-10-24.
+- How: Restore all before-values; sample authored selected ticks.
+- Done when: All five linked criteria pass; full P7C stays open.
+- Verification: Rechecked source 55ad2c76: 46/590 receiving, 361 parity/348 exact outside, both arcs and 637 pilot. Sole criteria pass; drift/skin stay open. Canonical 706/14 reused; no new implementation defect.
 
 ## Editing and interchange reliability — source complete
 
@@ -163,22 +173,4 @@ bounded noncombat fixture.
 - Done when: `verify`, normal browser tests, all five journeys, strict visuals, desktop smoke, and Windows packaging pass; the post-bump `0.2.0` verify/package pass; README and HISTORY identify the artifact and hash; and each selected remote ref is either retired under the stated condition or retained with a recorded reason.
 - Verification: Sequentially run `verify`, `test:e2e -NoGenEye`, `test:journey`, `test:visual-strict`, `desktop-smoke`, and `package:windows`; then run `verify` and `package:windows` again after the version bump. Actual Windows OS-dialog checks remain separate from native IPC mocks.
 
-<!--
-AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | change=closed recovery reconciliation and API checks; bounded remaining dialog proof
--->
-
-<!--
-AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=closed the exact publication scratch cleanup with verified preservation
--->
-
-<!-- AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-chord-conditioning | change=closed actual 46-case P7B qualification with authored transient support and preserved P7C boundary -->
-
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-slow-walk-review | change=selected bounded terminal closure; retained four drift/floor criteria and published proof in HISTORY -->
-
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-terminal-rotation-closure | change=closed selected seam repair; retained four physical failures without selecting another repair -->
-
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-left-leg-feasibility | change=closed measured left family and selected producer composition -->
-
-<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-review-cleanup | change=rechecked feasibility and retained bounded composition with accessor coverage -->
-
-<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-recheck | change=rechecked open union boundary repair -->
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-residual-attribution | change=attributed both physical families and selected fixed-root swing feasibility -->

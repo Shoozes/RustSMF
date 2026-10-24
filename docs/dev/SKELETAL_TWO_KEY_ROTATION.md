@@ -233,8 +233,8 @@ Done When:
 The original producer/GLB acceptance and 46/590 receiving proof passed at source
 `3860565c...`. Later comparison with the qualified singular graph exposes a
 separate emitted-runtime gap: only 335/348 outside left-arc poses stay exact,
-despite raw GLB preservation. [The selected boundary repair](SKELETAL_EXPORT_BOUNDARY.md#next-bounded-pass)
-must close that gap and renew qualification. The following results remain the
+despite raw GLB preservation. [The completed union boundary repair](SKELETAL_EXPORT_BOUNDARY.md#plural-union-results)
+closes that separate gap with renewed qualification. The following results remain the
 original source-bound measurements; they do not establish that exact runtime
 criterion or qualify the proposed boundary extension.
 
@@ -271,3 +271,5 @@ own exact source identities, commands, canonical gate and preservation evidence.
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-review-cleanup | change=preserved raw prototype and required exact ordinary-export accessor extrema -->
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-composition-bake | change=closed qualified producer composition and retained two residual physical failures -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-union-boundary | change=closed bounded union sampling with renewed runtime proof and retained physical failures -->

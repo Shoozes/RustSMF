@@ -291,8 +291,8 @@
       ]
     },
     "workflow__skeletal_export_boundary": {
-      "description": "Explicit singular NLERP job policy, emitted-key preservation, independent references and unchanged omitted/plural output. Receiving qualification stays caller-owned.",
-      "max_kb": 112,
+      "description": "Explicit singular/plural NLERP job policy, union baseline reconstruction, emitted-key preservation and independent references. Receiving qualification stays caller-owned.",
+      "max_kb": 128,
       "paths": [
         "docs/dev/SKELETAL_EXPORT_BOUNDARY.md",
         "source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts",
@@ -332,7 +332,6 @@
         "source/frontend/src/utils/threeTypeGuards.ts",
         "source/frontend/src/utils/skeletalExport.ts",
         "source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts",
-        "source/frontend/src/utils/skeletalTwoKeyExportBoundary.test.ts",
         "source/frontend/src/utils/skeletalChordRotation.ts",
         "source/frontend/src/utils/animationTrackInterpolation.ts",
         "source/frontend/src/utils/skeletalExport.test.ts",
@@ -344,7 +343,7 @@
         "source/frontend/tests/fixtures/PROVENANCE.md"
       ],
       "notes": [
-        "SKELETAL_EXPORT.md owns strict v1/v2 GLB and immutable generation contracts. workflow__skeletal_conditioning owns explicit v3 authoring; floor, idle and terminal details have separate focused routes.",
+        "SKELETAL_EXPORT.md owns strict v1/v2 GLB and immutable generation contracts. workflow__skeletal_export_boundary owns opted-in boundary policy tests; workflow__skeletal_conditioning owns explicit v3 authoring and focused floor, idle and terminal routes.",
         "Preserve all joints, vertices, influences and keys. Unsupported forms and resource limits fail closed; clip selection and authoring options belong in hashed settings.",
         "Manifests bind producer/source identities, role-tagged inputs, semantics/settings and artifact path/bytes/SHA-256. Publish manifest-last and preserve prior accepted generations.",
         "Independent references come from re-imported GLB; account for separate root translation/yaw exactly once. Producer identity includes every authoring/fidelity owner.",

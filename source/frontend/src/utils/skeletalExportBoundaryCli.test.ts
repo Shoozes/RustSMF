@@ -26,7 +26,7 @@ function job(root: string) {
     output: { generationRoot: path.join(root, 'generations'), conditioningRoot: path.join(root, 'conditioned') } };
 }
 
-test('boundary policy is optional, v3 singular NLERP only and refuses present invalid values', () => {
+test('boundary policy is optional, v3 singular/plural NLERP only and refuses present invalid values', () => {
   const base = job(path.join(os.tmpdir(), 'boundary-job')), enabled = { ...base, export: { ...base.export, twoKeyExportBoundary: policy } };
   const parsed = parseSkeletalExportJobDocument(enabled);
   assert.equal(parsed.$schema, SKELETAL_EXPORT_JOB_V3_SCHEMA);
@@ -35,8 +35,10 @@ test('boundary policy is optional, v3 singular NLERP only and refuses present in
   const { twoKeyRotationBake, ...none } = base.conditioning;
   const plural = { ...base, conditioning: { ...none, twoKeyRotationBakes: [twoKeyRotationBake] } };
   assert.doesNotThrow(() => parseSkeletalExportJobDocument(plural));
+  assert.doesNotThrow(() => parseSkeletalExportJobDocument({ ...plural, export: enabled.export }));
   for (const bad of [undefined, null, false, '', 'preserve.v0', { policy }]) assert.throws(() => parseSkeletalExportJobDocument({ ...enabled, export: { ...enabled.export, twoKeyExportBoundary: bad } }), /twoKeyExportBoundary/);
-  for (const conditioning of [none, plural.conditioning, { ...base.conditioning, mode: CONDITIONING_MODE }]) assert.throws(() => parseSkeletalExportJobDocument({ ...enabled, conditioning }), /twoKey|NLERP/);
+  for (const conditioning of [none, { ...none, twoKeyRotationBakes: [] }, { ...none, twoKeyRotationBakes: [spec,spec] },
+    { ...base.conditioning, twoKeyRotationBakes: [spec] }, { ...base.conditioning, mode: CONDITIONING_MODE }]) assert.throws(() => parseSkeletalExportJobDocument({ ...enabled, conditioning }), /twoKey|NLERP/);
   for (const schema of ['rustsmf.skeletal-export-job.v1', 'rustsmf.skeletal-export-job.v2']) {
     const { clipIds, ...fields } = enabled.export;
     assert.throws(() => parseSkeletalExportJobDocument({ $schema: schema, input: base.input,
@@ -78,23 +80,40 @@ test('ordinary CLI binds boundary settings while preserving model, references, l
     assert.deepEqual((await manifest(fixed)).semantics, (await manifest(legacy)).semantics);
     const plural = await publish({ ...base, conditioning: { ...none, twoKeyRotationBakes: [twoKeyRotationBake] } });
     for (const key of ['asset', 'mapping', 'references'] as const) assert.deepEqual(await readFile(plural[key]), await readFile(legacy[key]));
+    const one = await publish({ ...enabled, conditioning: { ...none, twoKeyRotationBakes: [twoKeyRotationBake] } });
+    for (const key of ['asset', 'mapping', 'references'] as const) assert.deepEqual(await readFile(one[key]), await readFile(fixed[key]));
+    const second = { ...twoKeyRotationBake, startTick: 87, maxRotationDegrees: 7,
+      rotations: twoKeyRotationBake.rotations.map(r => ({ joint: r.joint, values: [quat(.97),quat(.98)] })) };
+    const pair = { ...enabled, conditioning: { ...none, twoKeyRotationBakes: [twoKeyRotationBake,second] } };
+    const pairResult = await publish(pair), reverse = await publish({ ...pair, conditioning: { ...pair.conditioning, twoKeyRotationBakes: [second,twoKeyRotationBake] } });
+    for (const key of ['asset', 'mapping', 'references'] as const) assert.deepEqual(await readFile(pairResult[key]), await readFile(reverse[key]));
+    assert.deepEqual(await readFile(pairResult.conditioning!.model), await readFile(reverse.conditioning!.model));
+    assert.notEqual(pairResult.settingsIdentitySha256, reverse.settingsIdentitySha256, 'settings retain caller record order');
     const original = await publish({ ...base, conditioning: none });
     const asset = async (r: SkeletalExportJobResult) => JSON.parse(await readFile(r.asset, 'utf8')) as SkeletalAssetDocument;
     const a = (await asset(original)).clips[0], b = (await asset(legacy)).clips[0], c = (await asset(fixed)).clips[0]; let leaks = 0;
+    const d = (await asset(pairResult)).clips[0];
     for (let t = 0; t < a.tracks.length; t++) for (let tick = 0; tick <= 90; tick++) {
       if (tick === 43 || tick === 44) assert.deepEqual(c.tracks[t].keys[tick], b.tracks[t].keys[tick]);
       else { assert.deepEqual(c.tracks[t].keys[tick], a.tracks[t].keys[tick]); if (JSON.stringify(a.tracks[t].keys[tick]) !== JSON.stringify(b.tracks[t].keys[tick])) leaks++; }
+      if (tick !== 87 && tick !== 88) assert.deepEqual(d.tracks[t].keys[tick], c.tracks[t].keys[tick]);
     }
     assert.ok(leaks > 0, 'fixture must expose the emitted-key leak');
     const idle = await publish({ ...base, export: { ...base.export, clipIds: ['idle'] } });
     const idleFixed = await publish({ ...enabled, export: { ...enabled.export, clipIds: ['idle'] } });
     for (const key of ['asset', 'mapping', 'references'] as const) assert.deepEqual(await readFile(idle[key]), await readFile(idleFixed[key]));
+    const idlePair = await publish({ ...pair, export: { ...pair.export, clipIds: ['idle'] } });
+    const idlePairLegacy = await publish({ ...pair, export: { ...base.export, clipIds: ['idle'] } });
+    for (const key of ['asset', 'mapping', 'references'] as const) assert.deepEqual(await readFile(idlePairLegacy[key]), await readFile(idlePair[key]));
     const generations = await readdir(base.output.generationRoot), conditioned = await readdir(base.output.conditioningRoot);
     for (const bad of [{ ...enabled, export: { ...enabled.export, twoKeyExportBoundary: 'invalid' } }, { ...enabled, conditioning: none },
-      { ...enabled, conditioning: { ...none, twoKeyRotationBakes: [twoKeyRotationBake] } }, { ...enabled, conditioning: { ...base.conditioning, mode: CONDITIONING_MODE } }]) {
+      { ...enabled, conditioning: { ...none, twoKeyRotationBakes: [twoKeyRotationBake,twoKeyRotationBake] } }, { ...enabled, conditioning: { ...base.conditioning, mode: CONDITIONING_MODE } }]) {
       const r = await invoke(bad); assert.notEqual(r.status, 0); assert.match(r.stderr, /twoKey|NLERP/);
       assert.deepEqual(await readdir(base.output.generationRoot), generations); assert.deepEqual(await readdir(base.output.conditioningRoot), conditioned);
     }
+    const late = await invoke({ ...pair, conditioning: { ...pair.conditioning, twoKeyRotationBakes: [twoKeyRotationBake,{ ...second, maxRotationDegrees: .001 }] } });
+    assert.notEqual(late.status, 0); assert.match(late.stderr, /bound/);
+    assert.deepEqual(await readdir(base.output.generationRoot), generations); assert.deepEqual(await readdir(base.output.conditioningRoot), conditioned);
     await writeFile(jobPath, JSON.stringify(enabled)); const abort = new AbortController(); abort.abort(new Error('cancel boundary job'));
     await assert.rejects(runSkeletalExportJob(jobPath, abort.signal), /cancel boundary job/);
     assert.deepEqual(await readdir(base.output.generationRoot), generations); assert.deepEqual(await readdir(base.output.conditioningRoot), conditioned);

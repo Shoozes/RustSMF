@@ -6,20 +6,16 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Plural boundary review/recheck — 2026-10-24
+## Residual attribution — 2026-10-24
 
-Reviewed main `ca75e20`; producer `f44a2449` is unchanged. Read-only recheck
-admits both bundles/models and all 92 generations, 276 artifacts and 1,180
-references through the repository verifier. Prior native/WASM measurements
-remain current: plural is 335/348 left-outside and 326/335 union-outside exact.
-
-No new immediate code defect was found. Singular qualification remains closed;
-plural policy is still unsupported. [TODO](TODO.md) retains the bounded union
-sampling Work batch and fresh qualification requirements. Cleanup changes only
-work records; no implementation or retained input changed. HISTORY owns proof
-and the unchanged pass-down. Full P7C/visual remain open.
-
-<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-recheck | change=rechecked exact packet bindings and retained selected producer scope -->
+Union producer 55ad2c76 remains qualified. Fresh read-only WASM 361 reproduces
+retained metrics exactly: five planted-drift windows and two right-foot skin
+islands. Source STEP motion already slides and crosses floor; continuous
+interpolation adds the short 24-tick dip. Root lift at 51 breaks left support.
+[Next](SKELETAL_EXPORT_BOUNDARY.md#right-swing-clearance-feasibility): fixed-root
+right-swing feasibility within experimental 47–66; no integration yet. Existing
+706/14, 46/590 and 348-exact qualification is reused. Both physical failures and
+full P7C/visual stay open. HISTORY retains proof and prior review closure.
 
 ## Earlier P7B reviews — 2026-10-22
 
@@ -280,3 +276,5 @@ AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=cl
 -->
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-composition-bake | change=closed qualified producer composition and retained two residual physical failures -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-residual-attribution | change=attributed both physical failures and selected swing feasibility -->
