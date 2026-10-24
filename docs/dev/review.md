@@ -1,27 +1,25 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-10-23
+Last reviewed: 2026-10-24
 
 Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## P7C terminal review, recheck and cleanup — 2026-10-23
+## Plural boundary review/recheck — 2026-10-24
 
-Reviewed local main `999fdcd` plus the 13-file terminal candidate. Its source
-identity remains `bc9a4322` (full binding in HISTORY). Summary Bank routed
-conditioning, terminal/fidelity, CLI/identity and neighboring idle/floor owners.
-Source, tests and retained actual proof were inspected; independent code review
-found no actionable defect. Three seam findings are closed; drift, sole gap,
-sole penetration and whole-skin floor remain open.
+Reviewed main `ca75e20`; producer `f44a2449` is unchanged. Read-only recheck
+admits both bundles/models and all 92 generations, 276 artifacts and 1,180
+references through the repository verifier. Prior native/WASM measurements
+remain current: plural is 335/348 left-outside and 326/335 union-outside exact.
 
-The producer arc passes locally; [TODO](TODO.md) queues residual physical review.
-HISTORY owns fresh binding, preservation and docs checks; 5,465 protected files
-match. GaimEngine v1, three overlays, dependencies and evidence are preserved.
-No owner deletion. HISTORY owns publication. Unrelated features retain dated proof;
-full P7C is open.
+No new immediate code defect was found. Singular qualification remains closed;
+plural policy is still unsupported. [TODO](TODO.md) retains the bounded union
+sampling Work batch and fresh qualification requirements. Cleanup changes only
+work records; no implementation or retained input changed. HISTORY owns proof
+and the unchanged pass-down. Full P7C/visual remain open.
 
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-two-key-publication | change=recorded producer closure and publication route -->
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-recheck | change=rechecked exact packet bindings and retained selected producer scope -->
 
 ## Earlier P7B reviews — 2026-10-22
 
@@ -280,3 +278,5 @@ AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | chang
 <!--
 AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=closed the scratch blocker after accepted scoped removal and preservation checks
 -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-composition-bake | change=closed qualified producer composition and retained two residual physical failures -->

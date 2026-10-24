@@ -5,6 +5,11 @@ exports one self-contained, skinned GLB to the consumer-facing
 `gaim.skeletal-asset.v1` contract. The job and all output locations are explicit;
 the command does not modify the input model.
 
+The explicit producer-only [two-key boundary context](SKELETAL_EXPORT_BOUNDARY.md)
+preserves unselected emitted keys without changing independent GLB references.
+Its singular v3 integration and GaimEngine's renewed bounded qualification are
+complete locally. Omitted-option and plural output stay compatible; full P7C stays open.
+
 ```json
 {
   "$schema": "rustsmf.skeletal-export-job.v1",
@@ -157,3 +162,5 @@ asset acceptance. Oversized or unsupported sources must be reduced or corrected
 at their source and exported again; RustSMF does not silently simplify them.
 
 <!-- AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-chord-conditioning | change=routed the narrow conditioned chord exception while preserving strict original jobs -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-export-boundary-preservation | change=route the disjoint emitted-key preservation proof and explicit integration limitation -->

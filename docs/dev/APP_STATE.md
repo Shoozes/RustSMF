@@ -235,9 +235,9 @@ remains explicit. See HUMANOID_POSE_REVIEW.md for the bounded schema.
 NLERP authoring is explicit: [`plantedIdle`](SKELETAL_PLANTED_IDLE.md) uses native
 Rust for idle contacts; `transitionFloor` lifts selected transition interiors;
 [`terminalRotationClosure`](SKELETAL_TERMINAL_ROTATION.md) closes final rotations;
-[`twoKeyRotationBake`](SKELETAL_TWO_KEY_ROTATION.md) authors three connected
-non-root joints at two internal ticks. Each retains its own bounds and source
-guards. Locomotion root/unselected content stay unchanged except declared transition lift.
+[`twoKeyRotationBake`/`twoKeyRotationBakes`](SKELETAL_TWO_KEY_ROTATION.md) author
+one/two disjoint pairs on connected non-root chains, with stored bounds and union
+source guards. Root/unselected content stays unchanged except declared transition lift.
 
 ## Architecture Ownership
 
@@ -426,4 +426,4 @@ AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | chang
 
 <!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-idle-planted-bake | change=recorded opt-in native idle authoring -->
 
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-two-key-bake | change=recorded opt-in internal quaternion authoring -->
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-composition-bake | change=recorded strict singular and plural internal quaternion authoring -->

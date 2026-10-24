@@ -290,9 +290,27 @@
         "Generated assets, reports, private job paths, and source models stay outside context routes."
       ]
     },
+    "workflow__skeletal_export_boundary": {
+      "description": "Explicit singular NLERP job policy, emitted-key preservation, independent references and unchanged omitted/plural output. Receiving qualification stays caller-owned.",
+      "max_kb": 112,
+      "paths": [
+        "docs/dev/SKELETAL_EXPORT_BOUNDARY.md",
+        "source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts",
+        "source/frontend/src/utils/skeletalTwoKeyExportBoundary.test.ts",
+        "source/frontend/src/utils/skeletalExport.ts",
+        "source/frontend/scripts/skeletal-export-producer.ts",
+        "source/frontend/scripts/skeletal-export-cli.ts",
+        "source/frontend/src/utils/skeletalExportJob.ts",
+        "source/frontend/src/utils/skeletalExportBoundaryCli.test.ts"
+      ],
+      "notes": [
+        "Intentional overlap follows the existing exporter, strict job admission and producer fingerprint. Plural authoring retains its own two-key route; general job/publication coverage stays in workflow__skeletal_export.",
+        "Source references remain independently sampled from the re-imported authored GLB; engine v1 and all tolerances/limits stay fixed. Preserve legacy omitted-option jobs and all historical failures."
+      ]
+    },
     "workflow__skeletal_export": {
       "description": "Strict v1/v2 GLB skeletal export and immutable publication; explicit continuous conditioning is routed through workflow__skeletal_conditioning.",
-      "max_kb": 224,
+      "max_kb": 240,
       "paths": [
         "docs/dev/SKELETAL_EXPORT.md",
         "examples/README.md",
@@ -313,6 +331,8 @@
         "source/frontend/src/utils/threeDisposal.ts",
         "source/frontend/src/utils/threeTypeGuards.ts",
         "source/frontend/src/utils/skeletalExport.ts",
+        "source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts",
+        "source/frontend/src/utils/skeletalTwoKeyExportBoundary.test.ts",
         "source/frontend/src/utils/skeletalChordRotation.ts",
         "source/frontend/src/utils/animationTrackInterpolation.ts",
         "source/frontend/src/utils/skeletalExport.test.ts",
@@ -1489,8 +1509,8 @@
       ]
     },
     "workflow__skeletal_two_key_rotation": {
-      "description": "Explicit adjacent internal rotation authoring, stored bounds, source-fidelity guards and independent producer/receiving proof.",
-      "max_kb": 112,
+      "description": "Singular or bounded disjoint two-record rotation authoring, stored bounds, union source guards and independent producer/receiving proof.",
+      "max_kb": 120,
       "paths": [
         "docs/dev/SKELETAL_TWO_KEY_ROTATION.md",
         "source/frontend/src/utils/skeletalTwoKeyRotation.ts",

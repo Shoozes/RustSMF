@@ -1,16 +1,16 @@
 # RustSMF TODO
 
-Last reviewed: 2026-10-23
+Last reviewed: 2026-10-24
 
-## P7C residual drift/floor review — next
+## P7C plural boundary composition — selected
 
-- What: Review the four remaining slow-walk physical failures and select one bounded next pass.
-- Why: The two-key right-leg bake passes locally; the left sole still fails at 87.25/87.5.
-- Where: [Bake contract](SKELETAL_TWO_KEY_ROTATION.md); HISTORY owns current measurements.
-- When: Next after the completed 2026-10-23 producer bake.
-- How: Reuse the renewed pilot and attribute residual drift/floor witnesses; preserve accepted content.
-- Done when: Return an evidenced bounded pass-down without widening support, root or receiving tolerances.
-- Verification: Current 46/590 receiving and 637-pose proof pass the bounded repair. Four global criteria and a 1.528 mm increase at existing failed drift remain explicit; full P7C is open.
+- What: Extend explicit boundary sampling to one/two disjoint bakes.
+- Why: Plural runtime preservation fails: 335/348 outside poses.
+- Where: [Pass-down](SKELETAL_EXPORT_BOUNDARY.md#next-bounded-pass); HISTORY.
+- When: Next; rechecked 2026-10-24.
+- How: Restore the union; preserve singular/omitted output, model/references and v1.
+- Done when: Linked strict admission, exact keys/runtime, fresh 46/590 and 637-pose proof, canonical gate and preservation pass; physical failures stay reported.
+- Verification: Rechecked f44a2449: singular-only. Plural remains 335/348 left-outside and 326/335 union-outside exact; Work pending.
 
 ## Editing and interchange reliability — source complete
 
@@ -177,4 +177,8 @@ AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=cl
 
 <!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-terminal-rotation-closure | change=closed selected seam repair; retained four physical failures without selecting another repair -->
 
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-two-key-bake | change=closed producer repair and queued residual physical review -->
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-left-leg-feasibility | change=closed measured left family and selected producer composition -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-review-cleanup | change=rechecked feasibility and retained bounded composition with accessor coverage -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-recheck | change=rechecked open union boundary repair -->

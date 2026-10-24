@@ -3,7 +3,8 @@ import { CONDITIONING_MODE, CONDITIONING_NLERP_MODE, type ConditioningRecipe } f
 import { parseTransitionFloor } from './skeletalTransitionFloor';
 import { parsePlantedIdle } from './skeletalPlantedIdle';
 import { parseTerminalRotationClosure } from './skeletalTerminalRotation';
-import { parseTwoKeyRotationBake } from './skeletalTwoKeyRotation';
+import { parseTwoKeyRotationSelection } from './skeletalTwoKeyRotation';
+import { TWO_KEY_EXPORT_BOUNDARY_POLICY } from './skeletalTwoKeyExportBoundary';
 
 export const SKELETAL_EXPORT_JOB_SCHEMA = 'rustsmf.skeletal-export-job.v1';
 export const SKELETAL_EXPORT_JOB_V2_SCHEMA = 'rustsmf.skeletal-export-job.v2';
@@ -36,7 +37,7 @@ export interface SkeletalExportJobV2 extends SkeletalExportJobBase {
 
 export interface SkeletalExportJobV3 extends SkeletalExportJobBase {
   $schema: typeof SKELETAL_EXPORT_JOB_V3_SCHEMA;
-  export: SkeletalExportJobBase['export'] & { clipIds: string[] };
+  export: SkeletalExportJobBase['export'] & { clipIds: string[]; twoKeyExportBoundary?: typeof TWO_KEY_EXPORT_BOUNDARY_POLICY };
   conditioning: ConditioningRecipe;
   output: SkeletalExportJobBase['output'] & { conditioningRoot: string };
 }
@@ -121,6 +122,7 @@ export function parseSkeletalExportJobDocument(
   exactKeys(exportSettings, [
     'rootJoint', 'units', 'upAxis', 'forwardAxis', 'handedness', 'ticksPerSecond', 'rootMotion',
     ...(selectsClips ? ['clipIds'] : []),
+    ...(isV3 && Object.prototype.hasOwnProperty.call(exportSettings, 'twoKeyExportBoundary') ? ['twoKeyExportBoundary'] : []),
   ], 'job.export');
   if (typeof exportSettings.rootJoint !== 'string' || !exportSettings.rootJoint.trim()) {
     fail('job.export.rootJoint must name the source skeleton root joint.');
@@ -179,7 +181,7 @@ export function parseSkeletalExportJobDocument(
   };
   if (isV3) {
     const c = record(document.conditioning, 'job.conditioning');
-    exactKeys(c, ['mode', 'sourceRootJoint', 'locomotionRootJoint', 'clipIds', 'transitions', ...['transitionFloor','plantedIdle','terminalRotationClosure','twoKeyRotationBake'].filter(key=>Object.prototype.hasOwnProperty.call(c,key))], 'job.conditioning');
+    exactKeys(c, ['mode', 'sourceRootJoint', 'locomotionRootJoint', 'clipIds', 'transitions', ...['transitionFloor','plantedIdle','terminalRotationClosure','twoKeyRotationBake','twoKeyRotationBakes'].filter(key=>Object.prototype.hasOwnProperty.call(c,key))], 'job.conditioning');
     const identifier = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_.-]{1,64}$/.test(v);
     if ((c.mode !== CONDITIONING_MODE && c.mode !== CONDITIONING_NLERP_MODE) || !identifier(c.sourceRootJoint) || !identifier(c.locomotionRootJoint) || c.sourceRootJoint === c.locomotionRootJoint || c.locomotionRootJoint !== common.export.rootJoint) fail('job.conditioning must name a supported mode, distinct source/locomotion roots and export the locomotion root.');
     if (!Array.isArray(c.clipIds) || c.clipIds.length < 1 || c.clipIds.length > 32 || !c.clipIds.every(identifier) || new Set(c.clipIds).size !== c.clipIds.length) fail('job.conditioning.clipIds must contain 1–32 unique safe source names.');
@@ -198,10 +200,13 @@ export function parseSkeletalExportJobDocument(
     if (planted && c.mode !== CONDITIONING_NLERP_MODE) fail('plantedIdle requires the explicit NLERP mode.');
     const terminal = Object.prototype.hasOwnProperty.call(c,'terminalRotationClosure') ? parseTerminalRotationClosure(c.terminalRotationClosure, transitions.map(t => t.gait), c.clipIds as string[], [c.sourceRootJoint, c.locomotionRootJoint]) : undefined;
     if (terminal && c.mode !== CONDITIONING_NLERP_MODE) fail('terminalRotationClosure requires the explicit NLERP mode.');
-    const twoKey = Object.prototype.hasOwnProperty.call(c,'twoKeyRotationBake') ? parseTwoKeyRotationBake(c.twoKeyRotationBake, transitions.map(t => t.gait), c.clipIds as string[], [c.sourceRootJoint, c.locomotionRootJoint]) : undefined;
-    if (twoKey && c.mode !== CONDITIONING_NLERP_MODE) fail('twoKeyRotationBake requires the explicit NLERP mode.');
+    const rotations = parseTwoKeyRotationSelection(c, transitions.map(t => t.gait), c.clipIds as string[], [c.sourceRootJoint, c.locomotionRootJoint]);
+    if ((rotations.twoKeyRotationBake || rotations.twoKeyRotationBakes) && c.mode !== CONDITIONING_NLERP_MODE) fail('Two-key rotation authoring requires the explicit NLERP mode.');
+    const boundary = Object.prototype.hasOwnProperty.call(exportSettings, 'twoKeyExportBoundary');
+    if (boundary && (exportSettings.twoKeyExportBoundary !== TWO_KEY_EXPORT_BOUNDARY_POLICY
+      || c.mode !== CONDITIONING_NLERP_MODE || !rotations.twoKeyRotationBake || rotations.twoKeyRotationBakes)) fail('twoKeyExportBoundary requires the explicit singular NLERP bake and supported policy.');
     if (common.output.currentPointer) fail('Conditioned candidate jobs omit the current pointer.');
-    return { ...common, $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA, export: { ...common.export, clipIds: clipIds! }, conditioning: { mode: c.mode, sourceRootJoint: c.sourceRootJoint, locomotionRootJoint: c.locomotionRootJoint, clipIds: c.clipIds, transitions, ...(floor ? { transitionFloor: floor } : {}), ...(planted ? { plantedIdle:planted } : {}), ...(terminal ? { terminalRotationClosure: terminal } : {}), ...(twoKey ? { twoKeyRotationBake: twoKey } : {}) }, output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
+    return { ...common, $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA, export: { ...common.export, clipIds: clipIds!, ...(boundary ? { twoKeyExportBoundary: TWO_KEY_EXPORT_BOUNDARY_POLICY } : {}) }, conditioning: { mode: c.mode, sourceRootJoint: c.sourceRootJoint, locomotionRootJoint: c.locomotionRootJoint, clipIds: c.clipIds, transitions, ...(floor ? { transitionFloor: floor } : {}), ...(planted ? { plantedIdle:planted } : {}), ...(terminal ? { terminalRotationClosure: terminal } : {}), ...rotations }, output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
   }
   if (isV2) {
     const explicitClipIds = clipIds ?? fail('job.export.clipIds must contain 1 to 32 explicit source animation clip IDs.');

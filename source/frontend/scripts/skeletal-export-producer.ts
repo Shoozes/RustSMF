@@ -12,6 +12,7 @@ const EXPORTER_FILES = [
   'source/frontend/scripts/skeletal-export-cli.ts',
   'source/frontend/scripts/skeletal-export-producer.ts',
   'source/frontend/src/utils/skeletalExport.ts',
+  'source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts',
   'source/frontend/src/utils/skeletalExportGeneration.ts',
   'source/frontend/src/utils/skeletalExportJob.ts',
   'source/frontend/src/utils/skeletalConditioning.ts',

@@ -5,13 +5,13 @@ import { chordRotationTrack, CONDITIONING_NLERP_MODE } from './skeletalChordRota
 import { bakeTransitionFloor, parseTransitionFloor, type TransitionFloorRecipe, type TransitionFloorReport } from './skeletalTransitionFloor';
 import { bakePlantedIdle, parsePlantedIdle, type PlantedIdleRecipe, type ContactBatchSolver } from './skeletalPlantedIdle';
 import { closeTerminalRotations, parseTerminalRotationClosure, type TerminalRotationClosureRecipe } from './skeletalTerminalRotation';
-import { bakeTwoKeyRotations, parseTwoKeyRotationBake, type TwoKeyRotationBakeRecipe } from './skeletalTwoKeyRotation';
+import { bakeTwoKeyRotations, parseTwoKeyRotationSelection, type TwoKeyRotationSelection } from './skeletalTwoKeyRotation';
 
 export { CONDITIONING_NLERP_MODE } from './skeletalChordRotation';
 export { measureConditioningDifferences } from './skeletalConditioningFidelity';
 
 export const CONDITIONING_MODE = 'continuous-60hz-locomotion-root' as const;
-export interface ConditioningRecipe {
+export interface ConditioningRecipe extends TwoKeyRotationSelection {
   mode: typeof CONDITIONING_MODE | typeof CONDITIONING_NLERP_MODE;
   sourceRootJoint: string;
   locomotionRootJoint: string;
@@ -20,7 +20,6 @@ export interface ConditioningRecipe {
   transitionFloor?: TransitionFloorRecipe;
   plantedIdle?: PlantedIdleRecipe;
   terminalRotationClosure?: TerminalRotationClosureRecipe;
-  twoKeyRotationBake?: TwoKeyRotationBakeRecipe;
 }
 interface Pose { position: number[]; rotation: number[]; scale: number[] }
 interface Sample { joints: Pose[]; motion: Pose }
@@ -37,6 +36,7 @@ export interface ConditioningReport {
   plantedIdleBake?: Awaited<ReturnType<typeof bakePlantedIdle>>['report'];
   terminalRotationClosureBake?: ReturnType<typeof closeTerminalRotations>['report'];
   twoKeyRotationBake?: ReturnType<typeof bakeTwoKeyRotations>['report'];
+  twoKeyRotationBakes?: Array<ReturnType<typeof bakeTwoKeyRotations>['report']>;
 }
 
 function pose(matrix: THREE.Matrix4): Pose {
@@ -134,8 +134,9 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
   if (planted && (recipe.mode !== CONDITIONING_NLERP_MODE || !solveContacts)) throw new Error('plantedIdle requires NLERP and the native contact runner.');
   const terminal = recipe.terminalRotationClosure === undefined ? undefined : parseTerminalRotationClosure(recipe.terminalRotationClosure, recipe.transitions.map(t => t.gait), recipe.clipIds, [recipe.sourceRootJoint, recipe.locomotionRootJoint]);
   if (terminal && recipe.mode !== CONDITIONING_NLERP_MODE) throw new Error('terminalRotationClosure requires the explicit NLERP mode.');
-  const twoKey = recipe.twoKeyRotationBake === undefined ? undefined : parseTwoKeyRotationBake(recipe.twoKeyRotationBake, recipe.transitions.map(t => t.gait), recipe.clipIds, [recipe.sourceRootJoint, recipe.locomotionRootJoint]);
-  if (twoKey && recipe.mode !== CONDITIONING_NLERP_MODE) throw new Error('twoKeyRotationBake requires the explicit NLERP mode.');
+  const { twoKeyRotationBake: twoKey, twoKeyRotationBakes: twoKeys } = parseTwoKeyRotationSelection(recipe, recipe.transitions.map(t => t.gait), recipe.clipIds, [recipe.sourceRootJoint, recipe.locomotionRootJoint]);
+  const rotationRecipes = twoKey ? [twoKey] : twoKeys ?? [];
+  if (rotationRecipes.length && recipe.mode !== CONDITIONING_NLERP_MODE) throw new Error('Two-key rotation authoring requires the explicit NLERP mode.');
   const bones = [...skeleton.bones];
   if (new Set(bones.map(b => b.name)).size !== bones.length || bones.some(b => !/^[A-Za-z0-9_.-]{1,64}$/.test(b.name))) throw new Error('Conditioning requires unique safe source joint names.');
   if (loaded.root.getObjectByName(recipe.locomotionRootJoint)) throw new Error('Locomotion root name already exists.');
@@ -252,17 +253,18 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
     const result = closeTerminalRotations(generated[index], terminal, signal);
     generated[index] = result.clip; terminalRotationClosureBake = result.report;
   }
-  let twoKeyRotationBake: ConditioningReport['twoKeyRotationBake'];
-  if (twoKey) {
-    const index = generated.findIndex(c => c.name === twoKey.clipId);
-    const result = bakeTwoKeyRotations(generated[index], twoKey, allBones, [recipe.sourceRootJoint, recipe.locomotionRootJoint], signal);
-    generated[index] = result.clip; twoKeyRotationBake = result.report;
+  const authored = rotationRecipes.length ? [...generated] : generated;
+  const rotationReports: NonNullable<ConditioningReport['twoKeyRotationBakes']> = [];
+  for (const spec of rotationRecipes) {
+    const index = authored.findIndex(c => c.name === spec.clipId);
+    const result = bakeTwoKeyRotations(authored[index], spec, allBones, [recipe.sourceRootJoint, recipe.locomotionRootJoint], signal);
+    authored[index] = result.clip; rotationReports.push(result.report);
   }
-  loaded.clips = generated;
-  const bytes = sharedSkinGlb(await exportGLB(loaded.root, generated));
+  loaded.clips = authored;
+  const bytes = sharedSkinGlb(await exportGLB(loaded.root, authored));
   signal?.throwIfAborted();
   const differencePolicy = recipe.mode === CONDITIONING_NLERP_MODE
     ? 'Sample original STEP/LINEAR at float32 60 Hz endpoints; hemisphere-continuous quaternion chord CUBICSPLINE gives normalized linear joint rotation. Translation, scale and locomotion yaw remain LINEAR. Re-import the serialized derivative as independent reference; original-to-derived differences are descriptive, without smoothing or contact correction.'
     : 'Sample original STEP/LINEAR at float32 60 Hz endpoints; continuous LINEAR derivative is the independent receiving reference. Original-to-derived differences are reported separately; no smoothing or contact correction.';
-  return { bytes, report: { schema: 'rustsmf.skeletal-conditioning.v1', recipe, jointLineage: allBones.map((b, i) => ({ originalIndex: i === bones.length ? null : i, conditionedIndex: i, id: b.name })), vertexLineage, model: { units: 'meters', height, restSkinHeight: height, jointCount: allBones.length, vertexCount }, clips: clipRecords, transitions, differencePolicy: differencePolicy + (floor ? ' Explicit selected transitionFloor bakes only interior locomotion-root Y keys; floor/lift bounds and dense before/after values are reported.' : '') + (planted ? ' Explicit plantedIdle bakes calibrated native contact corrections into idle pelvis/leg/toe channels; endpoints, other channels and clips remain unchanged.' : '') + (terminal ? ' Explicit terminalRotationClosure authors only selected final quaternion values and final-interval chord tangents; other tick transforms retain source fidelity.' : '') + (twoKey ? ' Explicit twoKeyRotationBake authors only three selected local rotations at two internal ticks and adjacent chord tangents; all other tick transforms retain source fidelity.' : ''), ...(floor ? { floorBakes } : {}), ...(planted ? { plantedIdleBake } : {}), ...(terminal ? { terminalRotationClosureBake } : {}), ...(twoKey ? { twoKeyRotationBake } : {}) } };
+  return { bytes, report: { schema: 'rustsmf.skeletal-conditioning.v1', recipe, jointLineage: allBones.map((b, i) => ({ originalIndex: i === bones.length ? null : i, conditionedIndex: i, id: b.name })), vertexLineage, model: { units: 'meters', height, restSkinHeight: height, jointCount: allBones.length, vertexCount }, clips: clipRecords, transitions, differencePolicy: differencePolicy + (floor ? ' Explicit selected transitionFloor bakes only interior locomotion-root Y keys; floor/lift bounds and dense before/after values are reported.' : '') + (planted ? ' Explicit plantedIdle bakes calibrated native contact corrections into idle pelvis/leg/toe channels; endpoints, other channels and clips remain unchanged.' : '') + (terminal ? ' Explicit terminalRotationClosure authors only selected final quaternion values and final-interval chord tangents; other tick transforms retain source fidelity.' : '') + (twoKey ? ' Explicit twoKeyRotationBake authors only three selected local rotations at two internal ticks and adjacent chord tangents; all other tick transforms retain source fidelity.' : '') + (twoKeys ? ' Explicit twoKeyRotationBakes composes disjoint selected local rotations and adjacent chord tangents; all other tick transforms retain source fidelity.' : ''), ...(floor ? { floorBakes } : {}), ...(planted ? { plantedIdleBake } : {}), ...(terminal ? { terminalRotationClosureBake } : {}), ...(twoKey ? { twoKeyRotationBake: rotationReports[0] } : {}), ...(twoKeys ? { twoKeyRotationBakes: rotationReports } : {}) } };
 }

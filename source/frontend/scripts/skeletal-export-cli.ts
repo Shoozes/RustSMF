@@ -12,6 +12,7 @@ import { loadGLB } from '../src/loaders/glb';
 import { MAX_MODEL_INPUT_BYTES } from '../src/utils/modelFormat';
 import { disposeThreeObject } from '../src/utils/threeDisposal';
 import { conditionSkeletalModel, CONDITIONING_NLERP_MODE, measureConditioningDifferences } from '../src/utils/skeletalConditioning';
+import { TWO_KEY_EXPORT_BOUNDARY_POLICY, type TwoKeyExportBoundary } from '../src/utils/skeletalTwoKeyExportBoundary';
 import {
   prepareSkeletalExport,
   SKELETAL_ASSET_SCHEMA,
@@ -118,6 +119,12 @@ function settingsDocument(job: SkeletalExportJob): Record<string, unknown> {
     document.clipSelection = { mode: 'explicit-exact-source-name', clipIds: job.export.clipIds };
   }
   if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA) document.conditioning = job.conditioning;
+  if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.export.twoKeyExportBoundary) {
+    document.twoKeyExportSampling = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY,
+      unselectedKeys: 'pre-authoring canonical chord at existing nominal tick/60',
+      selectedKeys: 'authored re-imported GLB at existing nominal tick/60',
+      references: 'authored re-imported GLB; unchanged independent phases and tolerances' };
+  }
   if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.mode === CONDITIONING_NLERP_MODE) {
     document.animation = 'preserve float32 60 Hz sampled poses; canonical chord CUBICSPLINE joint rotations normalize to shortest-arc NLERP; translation, scale and locomotion yaw remain LINEAR with continuous yaw winding';
   }
@@ -177,6 +184,7 @@ export async function runSkeletalExportJob(
   let loaded: Awaited<ReturnType<typeof loadGLB>> | undefined;
   let original: Awaited<ReturnType<typeof loadGLB>> | undefined;
   let conditioning: SkeletalExportJobResult['conditioning'];
+  let twoKeyExportBoundary: TwoKeyExportBoundary | undefined;
   try {
     loaded = await loadGLB(bytesToArrayBuffer(input.bytes));
     throwIfAborted(signal);
@@ -185,6 +193,10 @@ export async function runSkeletalExportJob(
     const inputs: SkeletalExportInput[] = [];
     if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA) {
       const conditioned = await conditionSkeletalModel(loaded, job.conditioning, signal, solveNativePoseContacts);
+      if (job.export.twoKeyExportBoundary) twoKeyExportBoundary = {
+        policy: TWO_KEY_EXPORT_BOUNDARY_POLICY,
+        report: conditioned.report.twoKeyRotationBake ?? fail('Missing singular two-key authoring report.'),
+      };
       disposeThreeObject(loaded.root); loaded = undefined;
       loaded = await loadGLB(bytesToArrayBuffer(conditioned.bytes));
       original = await loadGLB(bytesToArrayBuffer(input.bytes));
@@ -193,7 +205,7 @@ export async function runSkeletalExportJob(
       const report = normalizedSkeletalJsonBytes({ ...conditioned.report,
         sourceModelIdentitySha256: source.sha256, originalSourceIdentitySha256: input.sha256,
         recipeIdentitySha256: sha256(recipe), producer,
-        differences: measureConditioningDifferences(original, loaded, job.conditioning.clipIds,job.conditioning.plantedIdle?.clipId,job.conditioning.terminalRotationClosure,job.conditioning.twoKeyRotationBake),
+        differences: measureConditioningDifferences(original, loaded, job.conditioning.clipIds,job.conditioning.plantedIdle?.clipId,job.conditioning.terminalRotationClosure,job.conditioning.twoKeyRotationBake,job.conditioning.twoKeyRotationBakes),
       });
       throwIfAborted(signal);
       conditioning = await publishConditionedSkeletalInput(source.bytes, recipe, report, { generationRoot: job.output.conditioningRoot, signal });
@@ -208,6 +220,8 @@ export async function runSkeletalExportJob(
       sourceIdentitySha256: source.sha256,
       rootJoint: job.export.rootJoint,
       signal,
+      ...(twoKeyExportBoundary && clips.some(c => c.name === twoKeyExportBoundary?.report.clipId)
+        ? { twoKeyExportBoundary } : {}),
       ...(job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.mode === CONDITIONING_NLERP_MODE
         ? { conditionedRotationMode: CONDITIONING_NLERP_MODE } : {}),
     });

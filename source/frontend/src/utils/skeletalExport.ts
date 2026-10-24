@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { LoadedModel } from '../loaders/glb';
 import { trackInterpolation } from './animationTrackInterpolation';
 import { CONDITIONING_NLERP_MODE, validateChordRotation } from './skeletalChordRotation';
+import { TWO_KEY_EXPORT_BOUNDARY_POLICY, twoKeyExportBaseline, type TwoKeyExportBoundary } from './skeletalTwoKeyExportBoundary';
 
 export const SKELETAL_ASSET_SCHEMA = 'gaim.skeletal-asset.v1';
 export const SKELETAL_MAPPING_SCHEMA = 'gaim.skeletal-export-mapping.v1';
@@ -115,6 +116,7 @@ export interface PrepareSkeletalExportOptions {
   signal?: AbortSignal;
   yieldEvery?: number;
   conditionedRotationMode?: typeof CONDITIONING_NLERP_MODE;
+  twoKeyExportBoundary?: TwoKeyExportBoundary;
 }
 
 interface SourceMesh {
@@ -616,6 +618,9 @@ export async function prepareSkeletalExport(
   options: PrepareSkeletalExportOptions,
 ): Promise<PreparedSkeletalExport> {
   if (options.conditionedRotationMode !== undefined && options.conditionedRotationMode !== CONDITIONING_NLERP_MODE) fail('Unsupported conditioned rotation mode.');
+  if (options.twoKeyExportBoundary && (options.conditionedRotationMode !== CONDITIONING_NLERP_MODE
+    || options.twoKeyExportBoundary.policy !== TWO_KEY_EXPORT_BOUNDARY_POLICY
+    || !loaded.clips.some(c => c.name === options.twoKeyExportBoundary?.report?.clipId))) fail('Two-key export-boundary sampling requires its selected conditioned NLERP clip.');
   if (!/^[a-f0-9]{64}$/.test(options.sourceIdentitySha256)) {
     fail('Source identity must be a lowercase SHA-256 digest.');
   }
@@ -752,14 +757,31 @@ export async function prepareSkeletalExport(
   for (const [clipIndex, clip] of loaded.clips.entries()) {
     throwIfAborted(options.signal);
     const binding = bindings[clipIndex];
+    const sampleTicks = [...new Set([
+      ...binding.rootTicks,
+      ...binding.tracks.flatMap(ticks => ticks),
+    ])].sort((a, b) => a - b);
+    const poses = new Map<number, SampledPose>();
+    const boundary = options.twoKeyExportBoundary?.report.clipId === clip.name ? options.twoKeyExportBoundary : undefined;
+    if (boundary) {
+      const baseline = twoKeyExportBaseline(clip, boundary, sourceBones, [options.rootJoint], options.signal);
+      const { mixer, action } = createMixer(loaded.root, baseline);
+      try {
+        for (const tick of sampleTicks) {
+          if (boundary.report.ticks.includes(tick)) continue;
+          throwIfAborted(options.signal);
+          setMixerTime(mixer, action, tick / SKELETAL_EXPORT_TICK_RATE);
+          loaded.root.updateMatrixWorld(true);
+          poses.set(tick, capturePose(loaded.root, rootInverse, ordered, parentByBone, exportIndices, rootBoneIndex, bindGlobals, tick, clip.name));
+          workSinceYield += 1;
+          if (workSinceYield >= yieldEvery) { await yieldToEventLoop(); throwIfAborted(options.signal); workSinceYield = 0; }
+        }
+      } finally { cleanupMixer(loaded.root, mixer, action); loaded.root.updateMatrixWorld(true); }
+    }
     const { mixer, action } = createMixer(loaded.root, clip);
     try {
-      const sampleTicks = [...new Set([
-        ...binding.rootTicks,
-        ...binding.tracks.flatMap(ticks => ticks),
-      ])].sort((a, b) => a - b);
-      const poses = new Map<number, SampledPose>();
       for (const tick of sampleTicks) {
+        if (poses.has(tick)) continue;
         throwIfAborted(options.signal);
         setMixerTime(mixer, action, tick / SKELETAL_EXPORT_TICK_RATE);
         loaded.root.updateMatrixWorld(true);

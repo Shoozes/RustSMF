@@ -9,6 +9,24 @@ export interface TwoKeyRotationBakeRecipe {
   rotations: Array<{ joint: string; values: number[][] }>;
 }
 
+export interface TwoKeyRotationSelection {
+  twoKeyRotationBake?: TwoKeyRotationBakeRecipe;
+  twoKeyRotationBakes?: TwoKeyRotationBakeRecipe[];
+}
+
+export function parseTwoKeyRotationSelection(value: { twoKeyRotationBake?: unknown; twoKeyRotationBakes?: unknown }, gaitIds: readonly string[], clipIds: readonly string[], roots: readonly string[]): TwoKeyRotationSelection {
+  const single = Object.prototype.hasOwnProperty.call(value, 'twoKeyRotationBake'), plural = Object.prototype.hasOwnProperty.call(value, 'twoKeyRotationBakes');
+  if (single && plural) throw new Error('twoKeyRotationBake and twoKeyRotationBakes are mutually exclusive.');
+  if (single) return { twoKeyRotationBake: parseTwoKeyRotationBake(value.twoKeyRotationBake, gaitIds, clipIds, roots) };
+  if (!plural) return {};
+  if (!Array.isArray(value.twoKeyRotationBakes) || value.twoKeyRotationBakes.length < 1 || value.twoKeyRotationBakes.length > 2) throw new Error('twoKeyRotationBakes requires one or two recipes.');
+  const recipes = Array.from(value.twoKeyRotationBakes, entry => parseTwoKeyRotationBake(entry, gaitIds, clipIds, roots));
+  if (recipes.length === 2 && recipes[0].clipId === recipes[1].clipId
+    && Math.abs(recipes[0].startTick - recipes[1].startTick) <= 2
+    && recipes[0].rotations.some(a => recipes[1].rotations.some(b => a.joint === b.joint))) throw new Error('twoKeyRotationBakes cannot overlap keys or adjacent intervals on the same clip/joint.');
+  return { twoKeyRotationBakes: recipes };
+}
+
 export function parseTwoKeyRotationBake(value: unknown, gaitIds: readonly string[], clipIds: readonly string[], roots: readonly string[]): TwoKeyRotationBakeRecipe {
   const fail = (): never => { throw new Error('twoKeyRotationBake requires one selected gait, an internal adjacent tick pair, three unique non-root joints, two unit quaternions per joint and a finite rotation bound.'); };
   if (!value || typeof value !== 'object' || Array.isArray(value)) fail();

@@ -179,26 +179,14 @@ Those checks do not establish each vertex's cumulative lock to its entry anchor
 or the tighter dense P7C floor limit. Patch lineage and half-open windows are
 intact; relabelling the windows would not repair the motion.
 
-All 637 quarter-tick poses were evaluated independently from the retained GLB.
-Direct authored skinning and separate-root composition agree within `1e-12 m`;
-the skin/support maxima differ from the engine receipt by at most `8.36e-8 m`.
-All 20 first/maximum failure records reproduce. The 55 position/joint/root
-source-reference comparisons pass the unchanged v1 limits; direct authored
-inverse binds differ from common-bind reconstruction by at most `2.65e-7 m`.
-Across all 142 original idle/slow-walk integer samples, original-to-derived skin
-differences are at most `1.13e-6 m`. These comparisons establish producer/content
-causes for these failures without changing the receiving contract.
-
-The original slow-walk endpoints differ in three left-leg rotation channels and
-hip translation. Its root net travel is `[0.061237, 0.238395, 0.064630] m`;
-residual seam measurements already remove that separate root transform. A root
-offset alone cannot close the measured orientation seam.
-
-An independent local translation/scale lerp and quaternion slerp of the admitted
-idle/slow-walk endpoint TRS yields `0.082395378 m` midpoint penetration. It agrees
-with the serialized start/stop geometry within `1.54e-7 m`. Endpoint penetration
-is only `0.000473353 m` and `0.000669054 m`. Thus the p25 pair needs a constrained
-producer bake; endpoint fidelity alone does not make the intervening pose safe.
+The retained attribution independently evaluates 637 GLB poses, reproduces all
+20 first/maximum records and passes 55 source references under unchanged v1
+limits. Integer skin differences remain within `1.13e-6 m`. The original loop
+has three left-leg orientation differences, so root offset alone cannot close
+its seam. Independent endpoint blending reproduces p25 midpoint penetration
+`0.082395378 m` despite floor-safe endpoints. HISTORY and the immutable
+attribution receipt retain exact controls, comparison errors and endpoint/root
+measurements; the constrained p25 producer repair below closes that pair.
 
 The selected p25 repair is complete; [its contract and actual results](#selected-transition-floor-bake)
 and HISTORY retain the acceptance record. Attribution inputs, all witnesses and
@@ -238,16 +226,12 @@ own source measurements, actual corrections, the 637-pose baseline and rejected
 <a id="next-bounded-pass--slow-walk-right-leg-arc"></a>
 ### Right-leg arc feasibility — complete locally
 
-The measured three-joint family is feasible at stored ticks 43/44. Independent
-GLB reload meets both local sole limits: 0.020891718305268984 m versus
-0.021012886070915813 m over all 13 quarter poses in [42,45]. The largest stored
-local correction is 12.267215277 degrees. Root and 348 outside poses stay exact;
-the 637-pose comparison, 45 other clips, calibration and 24 transition seams pass.
-No new drift threshold failure or knee inversion occurs. Existing drift at
-v200@43.5 increases 0.001527899987 m; drift/skin first/max remain unchanged.
-An unchanged left-sole witness at 87.5 still reaches 0.036732960250 m. All four
-whole-walk physical criteria remain open. HISTORY owns the original-source,
-bounded-search, serialization and residual evidence. The prototype is unqualified.
+The measured three-joint family at 43/44 is feasible. Reloaded GLB reaches
+0.020891718305268984 m against 0.021012886070915813 m; largest stored correction
+is 12.267215277 degrees. The two-key contract below and HISTORY own actual keys,
+fidelity and preservation proof. Existing v200@43.5 drift increases 1.528 mm;
+no new drift failure or knee inversion occurs. The unqualified prototype retains
+four whole-walk failures.
 
 <a id="next-bounded-pass--slow-walk-two-key-rotation-bake"></a>
 ### Two-key right-leg rotation bake — complete locally
@@ -260,7 +244,14 @@ both local sole limits. Root, supports, accepted idle/p25/terminal behavior and
 45 other clips remain intact. Renewed actual 46/590 receiving and the 637-pose
 pilot verify the bounded repair; four whole-walk criteria remain failed.
 HISTORY records exact source/commands and the 1.528 mm increase at existing failed
-drift. TODO queues residual physical review; full P7C remains open.
+drift. The subsequent [producer composition](SKELETAL_TWO_KEY_ROTATION.md#selected-producer-repair--composable-two-key-bakes)
+is complete locally: strict plural selection retains right43/44 and adds
+left87/88 under 13/7-degree bounds. Renewed actual 46/590 receiving and the
+637-pose pilot close both global sole criteria at 0.020938074220 m versus
+0.021012886071 m. Drift and whole-skin first/max witnesses remain unchanged;
+the diagnostic retains those two failures and separate bounded acceptance
+passes. No new drift failure occurs; all 502 increases are retained. The two-key
+contract and HISTORY own full proof. Full P7C and visual acceptance remain open.
 
 The retained White Wolf candidate has 29 joints, 3,726 vertices and 46 clips
 (ten original roles plus 36 transitions). Packet selection preserves the existing
@@ -277,31 +268,15 @@ source transforms. Authored differences remain reported. Larger
 fractional changes reflect the explicitly selected continuous derivative. They
 are distinct from receiving errors against that derivative.
 
-The original-mode ten-role diagnostic compared 50 samples. Native and WASM were exactly
-equal, but 18 derivative-reference comparisons failed. The largest first-failing
-position metric was `damageFall@7.375`: `0.0040840223 m` versus `0.00005 m`.
-GaimEngine v1 uses normalized linear quaternion interpolation; the independent
-GLB reference uses spherical interpolation. The retained recipe, tick grid and
-tolerances cannot qualify this content under that evaluator. No reference
-values, tolerance, engine schema or interpolation implementation was changed.
-
-The original-mode final source-matched build reproduces those 18 failures. Eleven candidate
-packets provide 65 native/WASM-equal samples with 19 independent failures;
-`start-walkSlow-p25@3.25` adds a matrix error of `0.00011174838196370551` against
-`0.0001`. RustSMF's full `run.ps1 -Task verify` passes (664 frontend tests and
-14 Rust checks), as do GaimEngine's 133-command gate and all 46 synthetic bundle
-packets. The synthetic proof also covers failed-reference cleanup and unchanged
-generic partial-support reporting; it does not establish White Wolf contact.
-
-Retained private inputs, jobs, candidate generations and diagnostic results are
-under `D:/Compact_Evidence/RustSMF/runs/p7b-conditioning-20261022/`. Final local
-commands/results and exact candidate identities belong to that run's summary.
-The revised-mode run is
+HISTORY retains the original LINEAR diagnostic: native/WASM parity passed but
+SLERP-reference mismatches prevented qualification. Its exact witnesses, gates,
+private inputs and jobs remain under
+`D:/Compact_Evidence/RustSMF/runs/p7b-conditioning-20261022/`. Revised NLERP
+qualification is retained separately at
 `D:/Compact_Evidence/RustSMF/runs/p7b-chord-conditioning-20261022/`.
-Its immutable actual packets, source probes and anatomical support evidence
-remain separate from the original-mode failure. Numerical proof alone does not
-establish support completeness; TODO and HISTORY own final receiving results.
-No model redistribution or P7C acceptance is implied.
+No reference values, receiving tolerances or GaimEngine v1 behavior were changed.
+Numerical receiving proof does not establish visual acceptance or model
+redistribution rights; TODO and HISTORY own current P7C results.
 
 AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-conditioning | change=implemented v3 and recorded the retained interpolation blocker
 AI-edited: 2026-10-22 | agent=Codex/root | task=p7b-chord-conditioning | change=specified opt-in chord NLERP, continuous root yaw, canonical admission and serialized endpoint proof
@@ -319,3 +294,9 @@ AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-slow-walk-review | change=se
 <!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-terminal-rotation-closure | change=closed terminal authoring and routed its fidelity/proof contract -->
 
 <!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-two-key-bake | change=closed producer authoring and routed its strict contract -->
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-residual-review | change=routed the selected left-leg feasibility pass -->
+
+<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-left-leg-feasibility | change=routed the measured two-record producer repair -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-composition-bake | change=closed qualified producer composition and retained two residual physical failures -->
