@@ -6,11 +6,11 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## P7C proposal recheck — 2026-10-25
+## P7C pelvis reach screen — 2026-10-25
 
-Proposal rechecked; code still caps two. Private motion proof holds; two stale
-accessors await ordinary serialization. TODO retains three-record integration;
-HISTORY owns exact coverage.
+Full hip-sphere coverage refuses pelvis/leg rotation: deficit at least23.6 mm.
+Source-root admission and opposite-leg guards also bind; no motion authored.
+TODO owns the translation-contract decision. Prior proof stays valid; P7C remains open.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-right-swing-feasibility | change=distinguished verified prototype from unchanged qualified producer -->
 
@@ -278,4 +278,4 @@ AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=cl
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-residual-attribution | change=attributed both physical failures and selected swing feasibility -->
 
-<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-proposal-review | change=rechecked proposal and retained serialization gaps -->
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-reach-screen | change=recorded geometric and admission refusal -->

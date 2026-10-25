@@ -71,7 +71,7 @@ function composedRecipe(records = [spec, laterSpec]): Parameters<typeof conditio
     transitions: [{ idle: 'idle', gait: 'gait', phases: [0], durationTicks: 6 }], twoKeyRotationBakes: records };
 }
 
-test('plural rotation admission owns one or two disjoint recipes and refuses ambiguous footprints', () => {
+test('plural rotation admission owns bounded disjoint recipes and refuses ambiguous footprints', () => {
   const parse = (selection: Parameters<typeof parseTwoKeyRotationSelection>[0]) => parseTwoKeyRotationSelection(selection, ['gait', 'other'], ['idle', 'gait', 'other'], ['Base', 'LocomotionRoot']);
   assert.deepEqual(parse({}), {});
   const parsed = parse({ twoKeyRotationBakes: [spec, laterSpec] });
@@ -87,6 +87,74 @@ test('plural rotation admission owns one or two disjoint recipes and refuses amb
   const compound = { ...document, conditioning: composedRecipe() };
   assert.equal(parseSkeletalExportJobDocument(compound).$schema, SKELETAL_EXPORT_JOB_V3_SCHEMA);
   assert.throws(() => parseSkeletalExportJobDocument({ ...compound, conditioning: { ...compound.conditioning, mode: CONDITIONING_MODE } }), /NLERP/);
+});
+
+const thirdSpec: TwoKeyRotationBakeRecipe = { ...laterSpec, startTick: 8 };
+const tripleOrders = [[spec, laterSpec, thirdSpec], [spec, thirdSpec, laterSpec], [laterSpec, spec, thirdSpec],
+  [laterSpec, thirdSpec, spec], [thirdSpec, spec, laterSpec], [thirdSpec, laterSpec, spec]];
+
+test('three-record admission checks every pair and refuses fourth, sparse and malformed records', () => {
+  const parse = (records: unknown) => parseTwoKeyRotationSelection({ twoKeyRotationBakes: records }, ['gait'], ['gait'], ['Base']);
+  for (const order of tripleOrders) {
+    assert.deepEqual(parse(order).twoKeyRotationBakes, order);
+    for (let i = 0; i < 3; i++) for (let j = i + 1; j < 3; j++) {
+      for (const offset of [0, 1, 2]) {
+        const conflict = [...order]; conflict[j] = { ...conflict[j], startTick: conflict[i].startTick + offset };
+        assert.throws(() => parse(conflict), /overlap/);
+      }
+    }
+  }
+  for (const records of [[spec, laterSpec, thirdSpec, { ...thirdSpec, startTick: 11 }],
+    [spec, laterSpec, null], [spec, laterSpec, { ...thirdSpec, extra: 1 }], Object.assign(Array(3), { 0: spec, 2: thirdSpec })]) assert.throws(() => parse(records));
+});
+
+test('third source-fidelity selection is required and late third failures preserve input clips', async () => {
+  installNodeThreeRuntime();
+  const a = fixture(10), b = fixture(10);
+  try {
+    b.clips[1] = [spec, laterSpec, thirdSpec].reduce((clip, r) => bakeTwoKeyRotations(clip, r, b.skeleton!.bones, ['Base']).clip, a.clips[1]);
+    assert.ok(measureConditioningDifferences(a, b, ['gait'], undefined, undefined, undefined, tripleOrders[0])[0].maximumPreservedTickJointMatrix < 1e-6);
+    assert.throws(() => measureConditioningDifferences(a, b, ['gait'], undefined, undefined, undefined, [spec, laterSpec]), /tick-pose/);
+  } finally { disposeThreeObject(a.root); disposeThreeObject(b.root); }
+  const good = linearFixture(); let calls = 0;
+  try { await conditionSkeletalModel(good, composedRecipe(tripleOrders[0]), { throwIfAborted() { calls++; } } as AbortSignal); }
+  finally { disposeThreeObject(good.root); }
+  for (const cancel of [false, true]) {
+    const model = linearFixture(), clips = model.clips, before = clips.map(c => c.tracks.map(t => Array.from(t.values))); let seen = 0;
+    try {
+      const signal = { throwIfAborted() { if (++seen === calls - 2) throw new Error('cancel third recipe'); } } as AbortSignal;
+      await assert.rejects(conditionSkeletalModel(model, composedRecipe(cancel ? tripleOrders[0] : [spec, laterSpec, { ...thirdSpec, maxRotationDegrees: .0001 }]), cancel ? signal : undefined), cancel ? /cancel third/ : /bound/);
+      assert.equal(model.clips, clips); assert.deepEqual(clips.map(c => c.tracks.map(t => Array.from(t.values))), before);
+    } finally { disposeThreeObject(model.root); }
+  }
+});
+
+test('ordinary three-record CLI permutations preserve model, asset, mapping, references and exact extrema', async () => {
+  installNodeThreeRuntime(); const root = await mkdtemp(path.join(os.tmpdir(), 'rustsmf-three-key-cli-')), model = linearFixture();
+  try {
+    await writeFile(path.join(root, 'source.glb'), await exportGLB(model.root, model.clips));
+    const document = job(root), jobPath = path.join(root, 'job.json'), cli = fileURLToPath(new URL('../../scripts/skeletal-export-cli.ts', import.meta.url));
+    const invoke = async (records: TwoKeyRotationBakeRecipe[]) => {
+      await writeFile(jobPath, JSON.stringify({ ...document, conditioning: composedRecipe(records) }));
+      return spawnSync(process.execPath, ['--import', 'tsx', cli, '--job', jobPath], { cwd: fileURLToPath(new URL('../..', import.meta.url)), encoding: 'utf8', windowsHide: true, timeout: 30000 });
+    };
+    let expected: Buffer[] | undefined;
+    for (const order of tripleOrders) {
+      const result = await invoke(order); assert.equal(result.status, 0, result.stderr);
+      const output = JSON.parse(result.stdout), bytes = await readFile(output.conditioning.model);
+      const report = JSON.parse(await readFile(output.conditioning.report, 'utf8'));
+      assert.deepEqual(report.twoKeyRotationBakes.map((r: { ticks: number[] }) => r.ticks[0]), order.map(r => r.startTick));
+      const doc = JSON.parse(bytes.toString('utf8', 20, 20 + bytes.readUInt32LE(12))) as RotationBoundsGlb;
+      const accessors = assertRotationAccessorBounds(bytes, doc);
+      for (const delta of [-1, 1]) { const bad = structuredClone(doc); bad.accessors[accessors[0]].max![0] += delta; assert.throws(() => assertRotationAccessorBounds(bytes, bad), /rotation accessor bounds/); }
+      const actual = [bytes, ...await Promise.all([output.asset, output.mapping, output.references].map(p => readFile(p)))];
+      if (expected) assert.deepEqual(actual, expected); else expected = actual;
+    }
+    const generations = await readdir(document.output.generationRoot);
+    const refused = await invoke([...tripleOrders[0], { ...thirdSpec, startTick: 11 }]); assert.notEqual(refused.status, 0);
+    const late = await invoke([spec, laterSpec, { ...thirdSpec, maxRotationDegrees: .0001 }]); assert.notEqual(late.status, 0);
+    assert.deepEqual(await readdir(document.output.generationRoot), generations);
+  } finally { disposeThreeObject(model.root); await rm(root, { recursive: true, force: true }); }
 });
 
 test('plural authoring preserves singular bytes, reports each bake and is deterministic in either disjoint order', async () => {

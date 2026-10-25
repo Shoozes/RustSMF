@@ -1,9 +1,9 @@
 # Bounded rotation-span authoring
 
 NLERP job v3 may explicitly add `conditioning.rotationSpanBake` alongside the
-existing singular or one/two disjoint two-key recipes. It requires the explicit
+existing singular or one–three disjoint two-key recipes. It requires the explicit
 `export.twoKeyExportBoundary: "preserve-unselected-emitted-keys.v1"` policy.
-The public two-key limit and all legacy jobs retain their behavior.
+The two-key selection owns its separate three-record cap; legacy jobs retain their behavior.
 
 The span declares `clipId`, `startTick`, `maxRotationDegrees` and `rotations`.
 Exactly three unique non-root joints must form an existing direct parent chain.
@@ -46,3 +46,5 @@ This API does not expose a runtime IK solver or change GaimEngine v1.
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=specified explicit bounded authoring provenance and component-preserving export -->
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-review-cleanup | change=fixed shared ticks and selected proof renewal -->
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-drift-review-cleanup | change=aligned current plural cap with shared admission -->

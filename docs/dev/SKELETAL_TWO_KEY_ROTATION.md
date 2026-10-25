@@ -26,12 +26,12 @@ unit-length error at most `1e-6`. Names use the existing safe identifier rules.
 Unknown fields, wrong roles/modes, missing or duplicate targets, disconnected
 chains, endpoint pairs, constant two-key channels and noncanonical chords refuse.
 
-The plural field is a strict array of one or two of these objects, mutually
+The plural field is a strict array of one to three of these objects, mutually
 exclusive with the singular field. Complete structural admission precedes
 authoring. Records sharing a clip and joint must have start ticks more than two
 ticks apart, so their key and adjacent-interval footprints do not overlap.
-Distinct joints or clips may use the same ticks. Both bakes are staged before
-publishing; a late bound failure or cancellation publishes neither. The plural
+Distinct joints or clips may use the same ticks. All bakes are staged before
+publishing; a late bound failure or cancellation publishes none. The plural
 report has one entry per record; the singular report and omitted behavior retain
 their existing shape and bytes. Source fidelity checks requested values/bounds
 and restores only the declared union before checking every original joint matrix,
@@ -275,13 +275,12 @@ own exact source identities, commands, canonical gate and preservation evidence.
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-union-boundary | change=closed bounded union sampling with renewed runtime proof and retained physical failures -->
 
 <a id="selected-three-recipe-contract-proposal"></a>
-## Selected three-recipe contract — proposal only
+## Selected three-recipe contract — verified implementation
 
-The read-only 2026-10-25 representation decision selects a bounded extension of
-the existing plural field to one, two or three records. Current source still
-admits at most two; this section is the next implementation contract, not a claim
-that the extension or its receiving qualification exists. Keep job v3, the
-existing record/report shapes and explicit NLERP/export-boundary policy.
+The 2026-10-25 implementation admits one, two or three existing plural records.
+Job v3, record/report shapes and explicit NLERP/export-boundary policy remain.
+HISTORY binds actual ordinary CLI, receiving/pilot and canonical proof; full
+P7C and visual acceptance remain separate.
 
 Use the existing two-key primitive for right24/25, right43/44 and left87/88.
 Each pair passes current structural admission and all three pairwise footprint
@@ -293,14 +292,13 @@ No special model names, hidden preprocessing, new correction field, runtime IK
 or receiving-engine change is selected. Replacing a prior bake violates
 preservation; merging right24..65 needs 42 keys and exceeds the span bound.
 
-The verified admission owners are `parseTwoKeyRotationSelection` and
-`twoKeyExportReports`: both currently cap the list at two. The selection parser
-currently compares only indices 0/1. The implementation must check every pair,
-including 0/2 and 1/2, with the existing same-clip/shared-joint adjacency rule;
-four or more records and sparse/malformed entries must refuse. The existing
-conditioning, fidelity, CLI and baseline-restoration loops already iterate
-records, but must receive explicit third-record regressions. Preserve report
-order and recipe hashing; do not mutate caller arrays or publish partial work.
+`parseTwoKeyRotationSelection` and `twoKeyExportReports` share the three-record
+cap. Selection checks every pair, including 0/2 and 1/2, with the existing
+same-clip/shared-joint adjacency rule. Four-plus and sparse/malformed records
+refuse. Conditioning, fidelity, CLI and baseline-restoration regressions cover
+third provenance, all six permutations, late failure and cancellation. Report
+order and recipe hashing remain caller-owned; arrays are owned and partial
+authoring is not published.
 
 The private motion proof is reusable as a reference for the selected rotations,
 not as an ordinary serialization or asset-byte baseline. Its patched GLB retains
@@ -314,6 +312,13 @@ compositor in five translation/scale components at tick 25 by at most
 ordinary output; do not silently assert private-asset byte equality or waive any
 exact root/outside/drift guard. If these cannot all hold, report the bounded
 integration refusal and measured cause before selecting another contract.
+
+Actual ordinary serialization now passes exact extrema on all 968 rotation
+accessors. Right24/25 clears at 0.017258021112 m against 0.021012886071 m;
+all 348 outside poses and 23,240 drift observations remain exact. All 46/590
+receiving/replay checks pass. The 637-pose pilot retains only the unchanged
+walkSlow planted-drift failure. This closes the selected integration, not full
+P7C. Raw prototype and earlier qualification evidence remain intact.
 
 | Required proof | Acceptance |
 | --- | --- |
@@ -331,3 +336,5 @@ protected. No publication is part of this implementation pass-down.
 <!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-representation-decision | change=selected bounded proposal and explicit ordinary serialization proof -->
 
 <!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-proposal-review | change=clarified the sole limit exception and complete permutation compatibility -->
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-three-recipe-integration | change=implemented bounded admission and qualified ordinary right24/25 -->

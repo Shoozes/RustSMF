@@ -43,14 +43,14 @@ function document(root: string) {
     export: { rootJoint: 'LocomotionRoot', units: 'meters', upAxis: '+Y', forwardAxis: '+Z', handedness: 'right', ticksPerSecond: 60, rootMotion: 'separate-track', clipIds: ['gait'], twoKeyExportBoundary: TWO_KEY_EXPORT_BOUNDARY_POLICY }, conditioning: recipe(), output: { generationRoot: path.join(root, 'generations'), conditioningRoot: path.join(root, 'conditioned') } };
 }
 
-test('rotation-span admission is bounded, immutable and disjoint without expanding two-key admission', () => {
+test('rotation-span admission is bounded, immutable and disjoint with an independent two-key cap', () => {
   const parse = (x: unknown) => parseRotationSpanBake(x, ['gait'], ['gait', 'idle'], ['Base']);
   const parsed = parse(spec); assert.deepEqual(parsed, spec); assert.notEqual(parsed.rotations[0].values[0], spec.rotations[0].values[0]);
   for (const bad of [null, [], { ...spec, extra: 1 }, { ...spec, maxRotationDegrees: 25.01 }, { ...spec, startTick: 0 }, { ...spec, clipId: 'idle' }, { ...spec, rotations: Array(3) }, { ...spec, rotations: spec.rotations.map(r => ({ ...r, values: Array(18) })) }, { ...spec, rotations: spec.rotations.map(r => ({ ...r, values: [quat(0), quat(0)] })) }, { ...spec, rotations: spec.rotations.map(r => ({ ...r, values: Array(19).fill(quat(0)) })) }, { ...spec, rotations: spec.rotations.map(r => ({ ...r, values: Array(18).fill([0, 0, 0, NaN]) })) }, { ...spec, rotations: spec.rotations.map(r => ({ ...r, joint: 'Base' })) }]) assert.throws(() => parse(bad));
   assert.doesNotThrow(() => assertDisjointRotationSpan(spec, [pair(43), pair(87)]));
   for (const tick of [46, 47, 48, 64, 65, 66]) assert.throws(() => assertDisjointRotationSpan(spec, [pair(tick)]), /overlap|adjoin/);
   const job = document(os.tmpdir()); assert.doesNotThrow(() => parseSkeletalExportJobDocument(job));
-  assert.throws(() => parseSkeletalExportJobDocument({ ...job, conditioning: { ...job.conditioning, twoKeyRotationBakes: [pair(4), pair(20), pair(80)] } }), /one or two/);
+  assert.throws(() => parseSkeletalExportJobDocument({ ...job, conditioning: { ...job.conditioning, twoKeyRotationBakes: [pair(4), pair(20), pair(80), pair(10)] } }), /one to three/);
   const noPolicy = { ...job.export }; delete (noPolicy as Partial<typeof noPolicy>).twoKeyExportBoundary;
   assert.throws(() => parseSkeletalExportJobDocument({ ...job, export: noPolicy }), /preservation/);
   assert.throws(() => parseSkeletalExportJobDocument({ ...job, conditioning: { ...job.conditioning, mode: CONDITIONING_MODE } }), /NLERP/);

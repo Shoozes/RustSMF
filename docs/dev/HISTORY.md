@@ -2,6 +2,265 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="p7c-integration-publication-closeout"></a>
+## 2026-10-25 - Three-recipe integration and drift-screen publication closeout
+
+The reviewed main publication candidate contains the shared three-record cap,
+all-pairs admission and union provenance tests, ordinary right24/25 integration,
+fixed-hip and pelvis-rotation refusal records, and corrected current contracts.
+Its 13 named paths exclude engine sources, overlays, dependencies and evidence.
+Source9f7a2378 and exporter644013c1 match the verified working-tree candidate;
+all six frozen code/test/bank inputs match the passing716 frontend/14 Rust
+canonical build. The actual ordinary46/590 receiving/replay and637-pose pilot
+remain bound to that source and are reused without regeneration.
+
+The pilot's retained `node scripts/humanoid-floor-pilot.mjs` invocation exits1
+for baseline walkSlow/soleDrift only; exact bundle/build-receipt arguments and
+result remain in the integration run's `actual-floor-pilot-command.json`.
+Skin passes. This is verified progress preservation, not full P7C or visual
+acceptance. TODO retains the explicit translation-contract decision; no such
+motion family, exception or affected-pose waiver is included in this candidate.
+
+Closeout rechecks all28 protected files, the1173-file captured engine source
+map and qualified outputs. The guarded Git transaction suite passes10 tests.
+The isolated staged candidate reuses the existing task-owned publication copy;
+the original archive stays unchanged and no new large copy or dependency copy
+is made. Its context gate and exact tree/allowlist checks precede the guarded
+`gitpush.ps1 -StagedOnly` transaction. Confirmed commit, remote identity and
+post-push preservation checks belong to the compact publication receipt at
+`D:/Compact_Evidence/RustSMF/runs/p7c-integration-publish-20261025/publication.json`.
+
+Retained qualification/refusal proof stays at its existing paths. No task-owned
+services remain. The previously policy-blocked candidate archive/directory stay
+retained and tracked in TODO; this closeout does not retry deletion through a
+different route. No release, installer, deployment or engine change is selected.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-integration-publication | change=bound scoped closeout to source proof and guarded main transaction -->
+
+<a id="p7c-pelvis-reach-screen"></a>
+## 2026-10-25 - Read-only pelvis-rotation reach screen
+
+Dropin accepted the current TODO screen and confirmed prior rotation refusal
+and corrected summaries against producer 9f7a2378. No research-inbox files were
+found in tracked discovery. Source, tests, job, model and recipes are unchanged;
+this batch implements measurement and records only, with no motion authoring.
+
+At 57.75, pelvis mixamorigHips is the conditioning source root, parent of both
+upper legs. The left hip moves on a sphere of radius 0.242370174676 m under
+arbitrary pelvis rotation. Rebounding the skin-weighted leg radius from the
+uniform pelvis-parent transform keeps it independent of pelvis orientation.
+Its baseline necessary reach deficit is 0.097050310939 m, giving a conservative
+minimum rotation angle of 23.098586567 degrees before reach could be possible.
+This angle is a lower bound, not a feasible solution.
+
+An exploratory 8192-direction sphere sample finds no necessary-reach solution;
+its best maximum deficit is 0.032070011177 m at 41.256731421 degrees. This finite
+search alone does not prove impossibility. A separate full latitude/longitude
+coverage certificate uses 16380 positions at two-degree steps. Every point on
+the hip sphere lies within 0.008460315113 m of a grid point. Distance to each
+allowed sole-target cylinder is 1-Lipschitz in hip position, as is the maximum
+across 70 vertices. The sampled minimum maximum deficit is 0.032062266538 m;
+subtracting coverage gives a global lower bound 0.023601951425 m. The bounds
+already allow 0.00001 m safety and arbitrary leg/toe rotations. Therefore no
+pelvis orientation can satisfy every required target at 57.75 while pelvis
+translation, local lengths/scales, anchor 44 and existing limits stay fixed.
+This is a necessary-condition refusal, not an authored/runtime IK result.
+
+Both ordinary two-key and span parsers also reject mixamorigHips as a source-root
+target; the otherwise identical two-key control parses when only that exclusion
+is removed. No exclusion was changed. With accepted right local rotations fixed,
+nonidentity pelvis rotation changes their world orientations by the same angle.
+The best exploratory position would shift right UpLeg/Leg/Foot by 0.137844,
+0.574513 and 0.813611 m respectively, and rotate each by 41.256731 degrees.
+Identity counterfactuals at 56/59 preserve the three world frames. No candidate
+curve, seam proof, compensation or public admission expansion was attempted.
+
+The screen is refused. Rotation-only family selection is complete; authoring
+and compensation are outside this batch. A source-root rotation exception alone
+would not resolve the geometric failure. TODO now requires an explicit bounded
+translation-capable contract and affected-pose requalification decision, or
+retention of refusal. Locomotion root, anchor, supports and thresholds remain
+binding. No such contract change is authorized by these measurements.
+
+Evidence lives at
+`D:/Compact_Evidence/RustSMF/runs/p7c-pelvis-reach-screen-20261025/`:
+`screen-final.json` and `reach-certificate.json` are authoritative together.
+The latter supersedes the exploratory screen's suggested rotation-exception
+next step. An initial exploratory assertion wrongly expected a sampled reachable
+point; its failed receipt is retained separately. The corrected runner accepts
+the measured absence and the coverage certificate proves the refusal.
+All 28 protected files and six frozen source/test/bank inputs match; prior
+716 frontend/14 Rust build proof and 46/590 receiving/637 pilot are reused.
+No engine build, dependency copy, clip/job write, deletion or publication occurs.
+Both loaded models release; no owned processes remain. Summary Bank ownership
+and paths stay unchanged; final context/diff validation covers record edits.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-reach-screen | change=certified all-rotation refusal and exposed translation-contract boundary -->
+
+<a id="p7c-drift-review-cleanup"></a>
+## 2026-10-25 - Planted-drift review, recheck and scoped cleanup
+
+Review covered the unpublished three-recipe source/test delta, Summary Bank's
+two-key/span/export-boundary owners and their conditioning, fidelity, job and
+export consumers, plus the retained refusal runner, bounds and current proof.
+This is current-goal coverage, not a new audit of every unrelated subsystem.
+Producer remains 9f7a2378; all six frozen source/test/bank inputs match the
+passing canonical candidate. No new production defect was found.
+
+Read-only recheck independently recomputes all 560 weighted reach radii and
+target-cylinder distances from retained terms: 112 unreachable targets agree.
+The fresh refusal measurement equals the retained walkSlow pilot exactly;
+five of six planted windows fail. All 28 protected file hashes match. The
+read-only storage audit verifies 17 declared artifacts with no findings; it
+does not recursively inventory unrelated storage. These checks exit 0.
+`node scripts/verify-context-bank.mjs` passes 70 groups with zero warnings.
+The unchanged source reuses 716 frontend/14 Rust checks and the production
+build, plus 46/590 receiving/replay and 637-pose pilot; none was rerun here.
+
+Cleanup corrects two current documentation summaries: the span's old two-record
+cap and the export entry's old cap/two-failure status. Dated historical proof
+stays intact. No implementation, route, threshold, support or evidence changes.
+TODO selects a read-only pelvis-rotation reach screen at 57.75: compare the
+pelvis-driven hip locus with the planted target, account for opposite-leg
+effects and fixed 56/59 boundaries, then select one bounded family and proof
+controls or refuse. Root, anchor 44, supports, limits and accepted bakes remain
+binding; no motion authoring or API expansion is part of that screen.
+Final `pwsh -NoProfile -File ./run.ps1 -Task context` passes all 30 tests;
+routing stays within its existing budgets. `git diff --check` passes.
+No deletion, Git staging, commit or publication was performed.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-drift-review-cleanup | change=rechecked refusal corrected current summaries and selected pelvis screen -->
+
+<a id="p7c-planted-drift-feasibility"></a>
+## 2026-10-25 - Fixed-hip planted-drift rotation refusal
+
+Completed the selected bounded feasibility/refusal branch on producer
+9f7a2378a27cae11e9566071f1c3b376039e964f6e00fe08dd8c4885fbb4ca9d.
+No production code, recipe, root, support, threshold or accepted bake changed.
+The existing 11 modified integration files remain unpublished.
+
+Fresh native/WASM equality at all 361 quarter-tick gait poses reproduces the
+prior pilot's complete walkSlow measurement exactly, including first drift
+tick2/v3398 at 0.04371261501028426 m and maximum tick23.75/v3467 at
+0.6734007226803665 m. Five of six planted windows fail drift; right26–27 passes.
+Window maxima in order left0–24, left44–58, left84–89, right26–27,
+right29–47 and right66–87 are respectively 0.673401, 0.270334, 0.055268,
+0.032997, 0.224640 and 0.308010 m. The unchanged limit is 0.042025772142 m.
+
+The selected family is mixamorigLeftUpLeg/LeftLeg/LeftFoot rotation keys57/58,
+maximum 25 degrees, affected interval 56–59, fixed 56/59 boundaries and fixed
+left-sole anchor 44. Selection and controls precede feasibility. This is a
+mathematical screen, not a fourth admitted recipe: the three-record cap stays.
+
+A conservative skin-weighted reach sphere sums fixed translation lengths and
+inverse-bind vertex radii, bounded by parent matrix and local scale operator
+norms. It permits unrestricted rotations, including toe rotation, a superset
+of the selected three-joint family. The target cylinder allows the existing
+horizontal drift and absolute floor limits. Across 70 sole vertices and eight
+poses 56–57.75, 112/560 required targets lie outside their reach spheres.
+At 57.75/v3411, minimum required radius is 2.285956064283 m but the upper
+reachable radius is 2.188895673545 m: deficit 0.097050390738 m after a
+0.00001 m safety allowance. Minimum achievable horizontal drift there is at
+least 0.200447086520 m, exceeding the existing 0.042025772142 m limit.
+Every actual point lies inside its bound; all 560 synthetic targets centered
+under the hip pass this necessary reach condition. Reload/native error is
+below 9.59e-8 m. These controls validate a necessary condition, not an IK solution.
+
+The family is refused before authoring: more rotation keys or a larger angle
+cannot solve this witness while the hip, translations/scales and anchor stay
+fixed. No alternative family or public admission expansion was attempted.
+TODO now requires a read-only hip-scope decision before further motion changes.
+Planted drift, full P7C and visual acceptance remain open. Unchanged ordinary
+46/590 receiving/replay and 637-pose pilot evidence is reused, not rerun.
+
+Fresh `pwsh -NoProfile -File ./run.ps1 -Task verify` passes in 125,708 ms:
+716 frontend tests, 14 Rust checks, type/lint/dependency guards and production
+build pass. The source and 11 captured working-tree inputs remain stable during
+the gate. Final record-only updates receive a separate context/diff check.
+Summary Bank ownership and paths need no change.
+
+Evidence is retained at
+`D:/Compact_Evidence/RustSMF/runs/p7c-planted-drift-feasibility-20261025/`:
+`selection-final.json`, `feasibility-final.json` and `reach-bounds.json`.
+The initial adapter used an unprefixed bone name, failed before sampling and
+released its owners; that failed receipt remains separate from the corrected
+refusal. All 28 protected files, the 1173-file captured engine snapshot and its
+qualified outputs match. Asset/model owners and the owned native copy release;
+no shared builds, dependency copies, services, deletion or Git publication.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-planted-drift-feasibility | change=recorded bounded rotation refusal and preserved source proof -->
+
+<a id="p7c-three-recipe-integration"></a>
+## 2026-10-25 - Ordinary three-recipe producer integration for right24/25
+
+Completed the selected local integration on main 0e02b31, producer
+9f7a2378a27cae11e9566071f1c3b376039e964f6e00fe08dd8c4885fbb4ca9d and exporter
+644013c1654a1df2b3dc0110f03ac02240b692cb918717d1ed61ead36504e99f.
+Authoring/job and export provenance share one three-record cap, with all-pairs
+same-clip/shared-joint adjacency validation. Four-plus, sparse/malformed records,
+stale later provenance, singular/plural conflicts and invalid bounds refuse.
+Existing roles, mode, schema/report shapes and the single 3–18-key span remain.
+Both accepted two-key bakes and the span, terminal, idle and floor authoring
+remain intact. No runtime solver, model-specific branch or engine change was added.
+
+All 29 focused tests pass, including every pair position, six ordinary CLI
+permutations with exact model/asset/mapping/reference bytes, source-fidelity
+missing-third refusal, stale/excess report refusal, third late-bound/cancellation
+preservation and exact accessor extrema with widened/understated controls.
+The legacy ordinary two-recipe White Wolf job retains exact GLB, asset, mapping
+and reference bytes. Initial fixture bootstrap and obsolete cap expectations
+were corrected before the final focused proof.
+
+All 46 actual ordinary CLI jobs now include the measured right24/25 recipe.
+The new ordinary model is
+724698704fb11638b0104b51549b7a57622b1570b1c500dfe5d4540b10d45532.
+All 968 rotation accessors have exact stored-triplet extrema. No byte patch or
+experimental compositor supplies the qualified model/asset. The two raw-private
+stale accessors remain preserved as historical evidence. Fresh serialization
+keeps 45 other clips, 29 unselected walk channels, 267 outside stored rotation
+values and nonadjacent tangents exact; original two-key/span reports match.
+
+| Done When proof | Observed result |
+| --- | --- |
+| Local whole-skin clearance | 13 poses / 48,438 vertices; runtime max 0.017258021112 m, reload max 0.017258069636 m at v200@24.25; limit 0.021012886071 m |
+| Active sole limits | Maximum 0.003797231226 m across 350 observations |
+| Stored corrections | Maximum 24.500000427 degrees within 25 |
+| Actual native/WASM | Exact at 361 gait poses and 752 compared samples per host |
+| Reload/runtime agreement | Maximum 7.346015244e-7 m locally |
+| Preservation | 348 complete outside poses, 23/26 boundaries, root and all 23,240 planted-drift observations exact |
+| Prior guards | Both 13-pose arcs, 77-pose span region, terminal/calibration phases, 27 stable segments/no knee inversion, 24 seams and six independent endpoints pass |
+| Ordinary receiving/replay | All 46 packets / 590 references, instance isolation, restored six-tick replay and cleanup pass; 69 binding/refusal checks pass |
+| Actual pilot | All 637 poses / 55 independent references measured; only walkSlow soleDrift fails unchanged; skin passes |
+| Canonical | Full local verify exits 0 in 180,472 ms; 716 frontend tests and 14 Rust checks pass |
+
+Bundle 2ab46e351aa9cd879d3ee6ac3530cdb5f13f3b7d722f47de47f91e334b9292ce
+binds the actual new producer graph. Supports retain exact patches, intervals,
+modes and unsupported spans; only binding metadata is renewed. The pilot
+correctly exits 1 for the retained drift: first tick2/v3398 at
+0.04371261501028426 m, maximum tick23.75/v3467 at 0.6734007226803665 m.
+This closes the selected integration, not planted drift, full P7C or visual
+acceptance. TODO selects a read-only bounded planted-drift repair decision,
+reusing prior source attribution and preserving root/support/thresholds/bakes.
+
+The full captured 1173-file f280d357 engine map and qualified 7ec92870 WASM /
+41fc7f54 native outputs remain exact; their qualification is reused without a
+rebuild. All named original/retained v1 and three-overlay files, previous inputs,
+raw prototype and qualification evidence are preserved. Shared dependencies stay
+in place. Dense proof releases 18 asset owners, two models and its verified native
+copy; receiving/pilot report resource release. No owned services remain.
+An initial dense adapter lacked a threshold field, exited before sampling and
+released its owners; its failed receipt is retained separately from the passing
+final runner. No source-binding or tolerance bypass was used.
+
+Exact commands, source snapshots, legacy comparison, ordinary graphs and receipts
+are retained at `D:/Compact_Evidence/RustSMF/runs/p7c-three-recipe-integration-20261025/`.
+The canonical receipt binds the tested source/test/bank bytes; final record-only
+edits receive a separate context/diff check. Summary Bank keeps its focused owners
+and existing budgets, with the description corrected to three records. No
+deletion, Git staging, commit or publication is selected.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-three-recipe-integration | change=closed ordinary authoring receiving and physical proof while retaining drift -->
+
 ## 2026-10-25 - P7C feasibility and proposal publication closeout
 
 Closed the four-record private 24/25 feasibility, representation decision and

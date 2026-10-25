@@ -27,6 +27,21 @@ function authored(model: LoadedModel, startTick: number) {
     rotations: ['Leg', 'Knee', 'Foot'].map(joint => ({ joint, values: [quat(.01 * startTick + .1), quat(.01 * (startTick + 1) + .1)] })) }, model.skeleton!.bones, ['Base']);
   return { baked, context: { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, report: baked.report } satisfies TwoKeyExportBoundary };
 }
+test('three-report baseline restores the complete union and rejects stale or excess provenance', async () => {
+  const model = fixture(), original = model.clips[0], reports = [], options = { sourceIdentitySha256: 'a'.repeat(64), rootJoint: 'Base', conditionedRotationMode: CONDITIONING_NLERP_MODE };
+  try {
+    const baseline = await prepareSkeletalExport(model, options);
+    for (const tick of [24, 43, 87]) { const result = authored(model, tick); reports.push(result.baked.report); model.clips = [result.baked.clip]; }
+    const context = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, reports };
+    assert.deepEqual(twoKeyExportBaseline(model.clips[0], context, model.skeleton!.bones, ['Base']).tracks.map(t => Array.from(t.values)), original.tracks.map(t => Array.from(t.values)));
+    const legacy = await prepareSkeletalExport(model, options), fixed = await prepareSkeletalExport(model, { ...options, twoKeyExportBoundary: context });
+    assert.deepEqual(fixed.referenceBytes, legacy.referenceBytes);
+    for (let t = 0; t < fixed.asset.clips[0].tracks.length; t++) for (let tick = 0; tick <= 90; tick++) assert.deepEqual(fixed.asset.clips[0].tracks[t].keys[tick], ([24,25,43,44,87,88].includes(tick) ? legacy : baseline).asset.clips[0].tracks[t].keys[tick]);
+    const bad = structuredClone(context); bad.reports[2].corrections[0].values[0].after[0] += .01;
+    await assert.rejects(prepareSkeletalExport(model, { ...options, twoKeyExportBoundary: bad }));
+    await assert.rejects(prepareSkeletalExport(model, { ...options, twoKeyExportBoundary: { ...context, reports: [...reports, reports[0]] } }));
+  } finally { disposeThreeObject(model.root); }
+});
 for (const startTick of [43, 87]) test(`export boundary preserves emitted keys when float32 times straddle nominal ticks (${startTick})`, async () => {
   const model = fixture(), options = { sourceIdentitySha256: 'a'.repeat(64), rootJoint: 'Base', conditionedRotationMode: CONDITIONING_NLERP_MODE };
   try {

@@ -14,16 +14,20 @@ export interface TwoKeyRotationSelection {
   twoKeyRotationBakes?: TwoKeyRotationBakeRecipe[];
 }
 
+export const MAX_TWO_KEY_ROTATION_BAKES = 3;
+
 export function parseTwoKeyRotationSelection(value: { twoKeyRotationBake?: unknown; twoKeyRotationBakes?: unknown }, gaitIds: readonly string[], clipIds: readonly string[], roots: readonly string[]): TwoKeyRotationSelection {
   const single = Object.prototype.hasOwnProperty.call(value, 'twoKeyRotationBake'), plural = Object.prototype.hasOwnProperty.call(value, 'twoKeyRotationBakes');
   if (single && plural) throw new Error('twoKeyRotationBake and twoKeyRotationBakes are mutually exclusive.');
   if (single) return { twoKeyRotationBake: parseTwoKeyRotationBake(value.twoKeyRotationBake, gaitIds, clipIds, roots) };
   if (!plural) return {};
-  if (!Array.isArray(value.twoKeyRotationBakes) || value.twoKeyRotationBakes.length < 1 || value.twoKeyRotationBakes.length > 2) throw new Error('twoKeyRotationBakes requires one or two recipes.');
+  if (!Array.isArray(value.twoKeyRotationBakes) || value.twoKeyRotationBakes.length < 1 || value.twoKeyRotationBakes.length > MAX_TWO_KEY_ROTATION_BAKES) throw new Error('twoKeyRotationBakes requires one to three recipes.');
   const recipes = Array.from(value.twoKeyRotationBakes, entry => parseTwoKeyRotationBake(entry, gaitIds, clipIds, roots));
-  if (recipes.length === 2 && recipes[0].clipId === recipes[1].clipId
-    && Math.abs(recipes[0].startTick - recipes[1].startTick) <= 2
-    && recipes[0].rotations.some(a => recipes[1].rotations.some(b => a.joint === b.joint))) throw new Error('twoKeyRotationBakes cannot overlap keys or adjacent intervals on the same clip/joint.');
+  for (let i = 0; i < recipes.length; i++) for (let j = i + 1; j < recipes.length; j++) {
+    if (recipes[i].clipId === recipes[j].clipId
+      && Math.abs(recipes[i].startTick - recipes[j].startTick) <= 2
+      && recipes[i].rotations.some(a => recipes[j].rotations.some(b => a.joint === b.joint))) throw new Error('twoKeyRotationBakes cannot overlap keys or adjacent intervals on the same clip/joint.');
+  }
   return { twoKeyRotationBakes: recipes };
 }
 

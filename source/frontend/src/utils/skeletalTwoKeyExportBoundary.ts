@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { chordRotationTrack, validateChordRotation } from './skeletalChordRotation';
-import { bakeTwoKeyRotations, parseTwoKeyRotationSelection, parseTwoKeyRotationBake } from './skeletalTwoKeyRotation';
+import { bakeTwoKeyRotations, parseTwoKeyRotationSelection, parseTwoKeyRotationBake, MAX_TWO_KEY_ROTATION_BAKES } from './skeletalTwoKeyRotation';
 import { rotationDifferenceDegrees } from './skeletalTerminalRotation';
 import { bakeRotationSpan, parseRotationSpanBake, assertDisjointRotationSpan } from './skeletalRotationSpan';
 
@@ -17,7 +17,7 @@ export function twoKeyExportReports(context: TwoKeyExportBoundary): readonly (Re
     || (single && plural) || (!single && !plural && !span)
     || Object.keys(context).sort().join(',') !== ['policy', ...(single ? ['report'] : plural ? ['reports'] : []), ...(span ? ['spanReport'] : [])].sort().join(',')) throw new Error('Invalid two-key export-boundary selection.');
   const reports: Report[] = single ? [context.report!] : plural ? context.reports! : [];
-  if (!Array.isArray(reports) || ((single || plural) && reports.length < 1) || reports.length > 2
+  if (!Array.isArray(reports) || ((single || plural) && reports.length < 1) || reports.length > MAX_TWO_KEY_ROTATION_BAKES
     || reports.some(report => !report || report.policy !== 'two-adjacent-interior-rotations.v1'
       || !Array.isArray(report.ticks) || report.ticks.length !== 2 || report.ticks[1] !== report.ticks[0] + 1
       || !Array.isArray(report.corrections) || report.corrections.length !== 3)) throw new Error('Invalid two-key export-boundary provenance.');

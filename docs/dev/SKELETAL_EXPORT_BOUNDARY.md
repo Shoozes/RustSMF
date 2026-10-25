@@ -8,7 +8,7 @@ raw-GLB preservation check did not prove the emitted runtime property.
 
 `skeletalTwoKeyExportBoundary.ts` supplies the explicit producer-only
 `preserve-unselected-emitted-keys.v1` context for `prepareSkeletalExport`.
-It accepts the existing singular `report` or strict one/two-record `reports`,
+It accepts the existing singular `report` or strict one–three-record `reports`,
 mutually exclusively, plus a separately bounded optional `spanReport`. Span-only
 contexts are also admitted. All applicable reports, disjoint footprints, clip bindings,
 direct joint chains, stored values and correction bounds validate before mixers
@@ -20,11 +20,16 @@ the baseline. Reports are filtered by packet clips. Caller arrays/reports remain
 
 Source references always sample the independently re-imported authored GLB at
 their original phases. This context changes no mesh, skin, bind, root extraction,
-reference schedule, engine format, evaluator, tolerance or resource limit. It
+reference schedule, engine format, evaluator, tolerance or other resource limit. It
 does not round every sample to float32. Omitted context retains prior output.
 The baseline mixer releases on success, failure and cancellation; the caller's
 track arrays and provenance report remain unchanged. The exporter fingerprint
 includes the new helper.
+
+The three-recipe right24/25 integration now uses the same union policy with the
+accepted right43/44, left87/88 and right48–65 span. Actual ordinary serialization
+and 46/590 receiving/replay pass; the complete 637-pose pilot retains only planted
+drift. HISTORY binds source 9f7a2378, exact extrema and preserved dense guards.
 
 ## Original singular proof and integration
 

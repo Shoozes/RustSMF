@@ -2,15 +2,15 @@
 
 Last reviewed: 2026-10-25
 
-## P7C three-recipe producer integration — next bounded batch
+## P7C planted-drift motion-contract decision — next bounded batch
 
-- What: Integrate proven right24/25 with explicit at-most-three recipe admission.
-- Why: Close early skin while preserving accepted bakes.
-- Where: [Selected proposal](SKELETAL_TWO_KEY_ROTATION.md#selected-three-recipe-contract-proposal).
-- When: Next; not implemented.
-- How: All-pairs overlap guards; retain the single 3–18-key span and legacy output bytes.
-- Done when: Ordinary CLI/extrema, linked guards, 46/590, 637 pilot and canonical proof meet the proposal. Keep only unchanged planted drift failed.
-- Verification: Proposal rechecked; admission still two. Private proof is not ordinary GLB qualification.
+- What: Decide whether to permit a bounded pelvis-translation family and affected-pose requalification.
+- Why: Rotation-only pelvis/leg motion remains unreachable at 57.75.
+- Where: [Screen](HISTORY.md#p7c-pelvis-reach-screen).
+- When: Before further authoring or API expansion.
+- How: Review the source-root exception and coupled leg impact; retain locomotion root, anchor 44, supports and limits.
+- Done when: Explicitly accept a bounded feasibility contract or retain refusal; no motion changes in this decision.
+- Verification: All-rotation reach deficit at least 23.6 mm; current parsers reject pelvis. Prior 46/590 and 637 proof stays valid; drift/full P7C remain open.
 
 ## P7C publication scratch — blocked
 
@@ -181,4 +181,4 @@ bounded noncombat fixture.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-current-source-qualification | change=closed current-source receiving and retained physical limits -->
 
-<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-proposal-review | change=rechecked the selected integration batch and open proof -->
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-reach-screen | change=refused rotation and retained contract decision -->

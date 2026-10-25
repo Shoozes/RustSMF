@@ -1509,7 +1509,7 @@
       ]
     },
     "workflow__skeletal_two_key_rotation": {
-      "description": "Singular or bounded disjoint two-record rotation authoring, stored bounds, union source guards and independent producer/receiving proof.",
+      "description": "Singular or bounded disjoint three-record rotation authoring, stored bounds, union source guards and independent producer/receiving proof.",
       "max_kb": 120,
       "paths": [
         "docs/dev/SKELETAL_TWO_KEY_ROTATION.md",
