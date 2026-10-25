@@ -201,8 +201,10 @@ export async function runSkeletalExportJob(
         policy: TWO_KEY_EXPORT_BOUNDARY_POLICY,
         ...(conditioned.report.twoKeyRotationBake ? { report: conditioned.report.twoKeyRotationBake }
           : conditioned.report.twoKeyRotationBakes ? { reports: conditioned.report.twoKeyRotationBakes }
-          : conditioned.report.rotationSpanBake ? { spanReport: conditioned.report.rotationSpanBake } : fail('Missing rotation authoring reports.')),
+          : conditioned.report.rotationSpanBake ? { spanReport: conditioned.report.rotationSpanBake }
+          : conditioned.report.pelvisLayerBake ? { pelvisReport: conditioned.report.pelvisLayerBake } : fail('Missing rotation authoring reports.')),
         ...(conditioned.report.rotationSpanBake ? { spanReport: conditioned.report.rotationSpanBake } : {}),
+        ...(conditioned.report.pelvisLayerBake ? { pelvisReport: conditioned.report.pelvisLayerBake } : {}),
       };
       disposeThreeObject(loaded.root); loaded = undefined;
       loaded = await loadGLB(bytesToArrayBuffer(conditioned.bytes));
@@ -212,7 +214,7 @@ export async function runSkeletalExportJob(
       const report = normalizedSkeletalJsonBytes({ ...conditioned.report,
         sourceModelIdentitySha256: source.sha256, originalSourceIdentitySha256: input.sha256,
         recipeIdentitySha256: sha256(recipe), producer,
-        differences: measureConditioningDifferences(original, loaded, job.conditioning.clipIds,job.conditioning.plantedIdle?.clipId,job.conditioning.terminalRotationClosure,job.conditioning.twoKeyRotationBake,job.conditioning.twoKeyRotationBakes,job.conditioning.rotationSpanBake),
+        differences: measureConditioningDifferences(original, loaded, job.conditioning.clipIds,job.conditioning.plantedIdle?.clipId,job.conditioning.terminalRotationClosure,job.conditioning.twoKeyRotationBake,job.conditioning.twoKeyRotationBakes,job.conditioning.rotationSpanBake,job.conditioning.pelvisLayerBake,conditioned.report.pelvisLayerBake),
       });
       throwIfAborted(signal);
       conditioning = await publishConditionedSkeletalInput(source.bytes, recipe, report, { generationRoot: job.output.conditioningRoot, signal });
@@ -234,6 +236,10 @@ export async function runSkeletalExportJob(
       if (reports.length) exportBoundary = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, reports, ...(selectedSpan ? { spanReport: selectedSpan } : {}) };
     }
     if (!exportBoundary && selectedSpan) exportBoundary = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, spanReport: selectedSpan };
+    const selectedPelvis = twoKeyExportBoundary?.pelvisReport;
+    if (selectedPelvis && clips.some(c => c.name === selectedPelvis.clipId)) exportBoundary = exportBoundary
+      ? { ...exportBoundary, pelvisReport: selectedPelvis }
+      : { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, pelvisReport: selectedPelvis };
     const prepared = await prepareSkeletalExport({ ...loaded, clips }, {
       sourceIdentitySha256: source.sha256,
       rootJoint: job.export.rootJoint,

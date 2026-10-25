@@ -6,6 +6,10 @@ poses. The revised mode resolves the joint-interpolation mismatch
 without changing GaimEngine v1. HISTORY owns completed P7B proof; private source
 models and qualification evidence remain local. P7C is separate.
 
+The explicit [pelvis/leg layer](SKELETAL_PELVIS_LAYER.md) composes bounded
+positions and rotations after prior bakes, with root and unselected components
+preserved through reverse-order fidelity and export checks.
+
 ## Explicit v3 job
 
 Use the ordinary `skeletal-export -- --job <absolute-json>` command with
@@ -283,4 +287,4 @@ redistribution rights; TODO and HISTORY own current P7C results.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-union-boundary | change=closed bounded union sampling with renewed runtime proof and retained physical failures -->
 
-<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=routed bounded span authoring and independent reference preservation -->
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-layer-integration | change=routed explicit pelvis composition -->

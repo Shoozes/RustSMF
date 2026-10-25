@@ -7,6 +7,7 @@ import { bakePlantedIdle, parsePlantedIdle, type PlantedIdleRecipe, type Contact
 import { closeTerminalRotations, parseTerminalRotationClosure, type TerminalRotationClosureRecipe } from './skeletalTerminalRotation';
 import { bakeTwoKeyRotations, parseTwoKeyRotationSelection, type TwoKeyRotationSelection } from './skeletalTwoKeyRotation';
 import { bakeRotationSpan, parseRotationSpanBake, assertDisjointRotationSpan, type RotationSpanBakeRecipe } from './skeletalRotationSpan';
+import { bakePelvisLayer, parsePelvisLayer, type PelvisLayerRecipe, type PelvisLayerReport } from './skeletalPelvisLayer';
 
 export { CONDITIONING_NLERP_MODE } from './skeletalChordRotation';
 export { measureConditioningDifferences } from './skeletalConditioningFidelity';
@@ -22,6 +23,7 @@ export interface ConditioningRecipe extends TwoKeyRotationSelection {
   plantedIdle?: PlantedIdleRecipe;
   terminalRotationClosure?: TerminalRotationClosureRecipe;
   rotationSpanBake?: RotationSpanBakeRecipe;
+  pelvisLayerBake?: PelvisLayerRecipe;
 }
 interface Pose { position: number[]; rotation: number[]; scale: number[] }
 interface Sample { joints: Pose[]; motion: Pose }
@@ -40,6 +42,7 @@ export interface ConditioningReport {
   twoKeyRotationBake?: ReturnType<typeof bakeTwoKeyRotations>['report'];
   twoKeyRotationBakes?: Array<ReturnType<typeof bakeTwoKeyRotations>['report']>;
   rotationSpanBake?: ReturnType<typeof bakeRotationSpan>['report'];
+  pelvisLayerBake?: PelvisLayerReport;
 }
 
 function pose(matrix: THREE.Matrix4): Pose {
@@ -139,6 +142,9 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
   if (terminal && recipe.mode !== CONDITIONING_NLERP_MODE) throw new Error('terminalRotationClosure requires the explicit NLERP mode.');
   const { twoKeyRotationBake: twoKey, twoKeyRotationBakes: twoKeys } = parseTwoKeyRotationSelection(recipe, recipe.transitions.map(t => t.gait), recipe.clipIds, [recipe.sourceRootJoint, recipe.locomotionRootJoint]);
   const rotationRecipes = twoKey ? [twoKey] : twoKeys ?? [];
+  const pelvisLayer = recipe.pelvisLayerBake === undefined ? undefined : parsePelvisLayer(recipe.pelvisLayerBake, recipe.transitions.map(t => t.gait), recipe.clipIds, recipe.sourceRootJoint, recipe.locomotionRootJoint);
+  if (pelvisLayer && recipe.mode !== CONDITIONING_NLERP_MODE) throw new Error('pelvisLayerBake requires explicit NLERP authoring.');
+  if (pelvisLayer && terminal?.clipId === pelvisLayer.clipId && pelvisLayer.startTick + 2 >= terminal.startTick) throw new Error('pelvisLayerBake conflicts with terminal authoring.');
   if (rotationRecipes.length && recipe.mode !== CONDITIONING_NLERP_MODE) throw new Error('Two-key rotation authoring requires the explicit NLERP mode.');
   const span = recipe.rotationSpanBake === undefined ? undefined : parseRotationSpanBake(recipe.rotationSpanBake, recipe.transitions.map(t => t.gait), recipe.clipIds, [recipe.sourceRootJoint, recipe.locomotionRootJoint]);
   if (span) {
@@ -263,7 +269,7 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
     const result = closeTerminalRotations(generated[index], terminal, signal);
     generated[index] = result.clip; terminalRotationClosureBake = result.report;
   }
-  const authored = rotationRecipes.length || span ? [...generated] : generated;
+  const authored = rotationRecipes.length || span || pelvisLayer ? [...generated] : generated;
   const rotationReports: NonNullable<ConditioningReport['twoKeyRotationBakes']> = [];
   for (const spec of rotationRecipes) {
     const index = authored.findIndex(c => c.name === spec.clipId);
@@ -276,11 +282,17 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
     const result = bakeRotationSpan(authored[index], span, allBones, [recipe.sourceRootJoint, recipe.locomotionRootJoint], signal);
     authored[index] = result.clip; rotationSpanBake = result.report;
   }
+  let pelvisLayerBake: PelvisLayerReport | undefined;
+  if (pelvisLayer) {
+    const index = authored.findIndex(c => c.name === pelvisLayer.clipId);
+    const result = bakePelvisLayer(authored[index], pelvisLayer, allBones, loaded.root, recipe.sourceRootJoint, recipe.locomotionRootJoint, height, signal);
+    authored[index] = result.clip; pelvisLayerBake = result.report;
+  }
   loaded.clips = authored;
   const bytes = sharedSkinGlb(await exportGLB(loaded.root, authored));
   signal?.throwIfAborted();
   const differencePolicy = recipe.mode === CONDITIONING_NLERP_MODE
     ? 'Sample original STEP/LINEAR at float32 60 Hz endpoints; hemisphere-continuous quaternion chord CUBICSPLINE gives normalized linear joint rotation. Translation, scale and locomotion yaw remain LINEAR. Re-import the serialized derivative as independent reference; original-to-derived differences are descriptive, without smoothing or contact correction.'
     : 'Sample original STEP/LINEAR at float32 60 Hz endpoints; continuous LINEAR derivative is the independent receiving reference. Original-to-derived differences are reported separately; no smoothing or contact correction.';
-  return { bytes, report: { schema: 'rustsmf.skeletal-conditioning.v1', recipe, jointLineage: allBones.map((b, i) => ({ originalIndex: i === bones.length ? null : i, conditionedIndex: i, id: b.name })), vertexLineage, model: { units: 'meters', height, restSkinHeight: height, jointCount: allBones.length, vertexCount }, clips: clipRecords, transitions, differencePolicy: differencePolicy + (floor ? ' Explicit selected transitionFloor bakes only interior locomotion-root Y keys; floor/lift bounds and dense before/after values are reported.' : '') + (planted ? ' Explicit plantedIdle bakes calibrated native contact corrections into idle pelvis/leg/toe channels; endpoints, other channels and clips remain unchanged.' : '') + (terminal ? ' Explicit terminalRotationClosure authors only selected final quaternion values and final-interval chord tangents; other tick transforms retain source fidelity.' : '') + (twoKey ? ' Explicit twoKeyRotationBake authors only three selected local rotations at two internal ticks and adjacent chord tangents; all other tick transforms retain source fidelity.' : '') + (twoKeys ? ' Explicit twoKeyRotationBakes composes disjoint selected local rotations and adjacent chord tangents; all other tick transforms retain source fidelity.' : '') + (span ? ' Explicit rotationSpanBake authors only declared bounded local rotations and adjacent chord tangents; all other tick transforms retain source fidelity.' : ''), ...(floor ? { floorBakes } : {}), ...(planted ? { plantedIdleBake } : {}), ...(terminal ? { terminalRotationClosureBake } : {}), ...(twoKey ? { twoKeyRotationBake: rotationReports[0] } : {}), ...(twoKeys ? { twoKeyRotationBakes: rotationReports } : {}), ...(span ? { rotationSpanBake } : {}) } };
+  return { bytes, report: { schema: 'rustsmf.skeletal-conditioning.v1', recipe, jointLineage: allBones.map((b, i) => ({ originalIndex: i === bones.length ? null : i, conditionedIndex: i, id: b.name })), vertexLineage, model: { units: 'meters', height, restSkinHeight: height, jointCount: allBones.length, vertexCount }, clips: clipRecords, transitions, differencePolicy: differencePolicy + (floor ? ' Explicit selected transitionFloor bakes only interior locomotion-root Y keys; floor/lift bounds and dense before/after values are reported.' : '') + (planted ? ' Explicit plantedIdle bakes calibrated native contact corrections into idle pelvis/leg/toe channels; endpoints, other channels and clips remain unchanged.' : '') + (terminal ? ' Explicit terminalRotationClosure authors only selected final quaternion values and final-interval chord tangents; other tick transforms retain source fidelity.' : '') + (twoKey ? ' Explicit twoKeyRotationBake authors only three selected local rotations at two internal ticks and adjacent chord tangents; all other tick transforms retain source fidelity.' : '') + (twoKeys ? ' Explicit twoKeyRotationBakes composes disjoint selected local rotations and adjacent chord tangents; all other tick transforms retain source fidelity.' : '') + (pelvisLayer ? ' Explicit pelvisLayerBake composes bounded pelvis position and leg rotations after prior authoring; root and unselected components retain fidelity.' : '') + (span ? ' Explicit rotationSpanBake authors only declared bounded local rotations and adjacent chord tangents; all other tick transforms retain source fidelity.' : ''), ...(floor ? { floorBakes } : {}), ...(planted ? { plantedIdleBake } : {}), ...(terminal ? { terminalRotationClosureBake } : {}), ...(twoKey ? { twoKeyRotationBake: rotationReports[0] } : {}), ...(twoKeys ? { twoKeyRotationBakes: rotationReports } : {}), ...(span ? { rotationSpanBake } : {}), ...(pelvisLayerBake ? { pelvisLayerBake } : {}) } };
 }

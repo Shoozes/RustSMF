@@ -3,9 +3,19 @@ import type { LoadedModel } from '../loaders/glb';
 import { rotationDifferenceDegrees, type TerminalRotationClosureRecipe } from './skeletalTerminalRotation';
 import { parseTwoKeyRotationSelection, type TwoKeyRotationBakeRecipe } from './skeletalTwoKeyRotation';
 import { parseRotationSpanBake, assertDisjointRotationSpan, type RotationSpanBakeRecipe } from './skeletalRotationSpan';
+import { parsePelvisLayer, pelvisLayerRecipe, restorePelvisLayer, type PelvisLayerRecipe, type PelvisLayerReport } from './skeletalPelvisLayer';
 
 /** Original conversion differences remain separate from receiving tolerances. */
-export function measureConditioningDifferences(original: LoadedModel, derived: LoadedModel, clipIds: string[], authoredIdleId?: string, terminal?: TerminalRotationClosureRecipe, twoKey?: TwoKeyRotationBakeRecipe, twoKeys?: readonly TwoKeyRotationBakeRecipe[], spanRecipe?: RotationSpanBakeRecipe) {
+export function measureConditioningDifferences(original: LoadedModel, derived: LoadedModel, clipIds: string[], authoredIdleId?: string, terminal?: TerminalRotationClosureRecipe, twoKey?: TwoKeyRotationBakeRecipe, twoKeys?: readonly TwoKeyRotationBakeRecipe[], spanRecipe?: RotationSpanBakeRecipe, pelvisRecipe?: PelvisLayerRecipe, pelvisReport?: PelvisLayerReport) {
+  let checkedDerived = derived;
+  if (pelvisRecipe !== undefined || pelvisReport !== undefined) {
+    const originalRoots = original.skeleton!.bones.filter(b => !original.skeleton!.bones.includes(b.parent as THREE.Bone)), roots = derived.skeleton!.bones.filter(b => !derived.skeleton!.bones.includes(b.parent as THREE.Bone));
+    if (!pelvisRecipe || !pelvisReport || originalRoots.length !== 1 || roots.length !== 1 || pelvisRecipe.clipId === authoredIdleId) throw new Error('Missing or invalid gait pelvis-layer fidelity selection.');
+    const spec = parsePelvisLayer(pelvisRecipe, clipIds, clipIds, originalRoots[0].name, roots[0].name);
+    if (JSON.stringify(spec) !== JSON.stringify(pelvisLayerRecipe(pelvisReport))) throw new Error('Pelvis-layer recipe/provenance differs.');
+    checkedDerived = { ...derived, clips: derived.clips.map(c => c.name === spec.clipId
+      ? restorePelvisLayer(c, pelvisReport, derived.skeleton!.bones, derived.root, roots[0].name, pelvisReport.height) : c) };
+  }
   let selections: TwoKeyRotationBakeRecipe[] = [];
   if (twoKey !== undefined || twoKeys !== undefined) {
     const roots = [...original.skeleton!.bones, ...derived.skeleton!.bones].filter(b => !(b.parent instanceof THREE.Bone)).map(b => b.name);
@@ -48,26 +58,27 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
   }
   return clipIds.map(clipId => {
     const a = original.clips.find(c => c.name === clipId)!, b = derived.clips.find(c => c.name === clipId)!;
+    const checkedClip = checkedDerived.clips.find(c => c.name === clipId)!;
     const ticks = Math.round(a.duration * 60), phases = [0, ticks * .25 + .125, ticks * .5 + .25, ticks * .75 - .125, ticks];
     const selected = selections.filter(s => s.clipId === clipId);
     if (selected.some(s => s.startTick + s.rotations[0].values.length - 1 >= ticks)) throw new Error('Invalid rotation source-fidelity interval.');
     let maximumPositionMeters = 0, maximumJointMatrix = 0, maximumTickJointMatrix = 0, maximumEndpointJointMatrix = 0, maximumPreservedTickJointMatrix = 0;
     for (const tick of [...new Set([...phases, ...Array.from({ length: ticks + 1 }, (_, i) => i)])]) {
       const left = sample(original, a, tick), right = sample(derived, b, tick);
-      let checked = right;
+      let checked = checkedDerived === derived ? right : sample(checkedDerived, checkedClip, tick);
       const restore = new Map<string, number[]>();
       if (terminal?.clipId === clipId && tick === ticks) {
         if (terminal.startTick !== ticks - 1 || clipId === authoredIdleId) throw new Error('Invalid terminal source-fidelity selection.');
         const entry = sample(original, a, 0);
         for (const joint of terminal.joints) {
-          const expected = entry.rotations.get(joint), actual = right.rotations.get(joint), before = left.rotations.get(joint);
+          const expected = entry.rotations.get(joint), actual = checked.rotations.get(joint), before = left.rotations.get(joint);
           if (!expected || !actual || !before || rotationDifferenceDegrees(expected, actual) > 1e-4 || rotationDifferenceDegrees(before, actual) > terminal.maxRotationDegrees) throw new Error(`Invalid terminal entry rotation for ${joint}.`);
           restore.set(joint, before);
         }
       }
       for (const selection of selected.filter(s => Number.isInteger(tick) && tick >= s.startTick && tick < s.startTick + s.rotations[0].values.length)) {
         for (const rotation of selection.rotations) {
-          const before = left.rotations.get(rotation.joint), actual = right.rotations.get(rotation.joint);
+          const before = left.rotations.get(rotation.joint), actual = checked.rotations.get(rotation.joint);
           const expected = rotation.values[tick - selection.startTick];
           if (!before || !actual || rotationDifferenceDegrees(expected, actual) > 1e-4
             || rotationDifferenceDegrees(before, actual) > selection.maxRotationDegrees) throw new Error(`Invalid ${selection === span ? 'rotation-span' : 'two-key'} source-fidelity rotation for ${rotation.joint}.`);
@@ -75,7 +86,7 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
         }
       }
       // Undo only authorized local rotations for fidelity checks of every joint.
-      if (restore.size) checked = sample(derived, b, tick, restore);
+      if (restore.size) checked = sample(checkedDerived, checkedClip, tick, restore);
       for (const [name, values] of left.matrices) {
         const other = right.matrices.get(name), preserved = checked.matrices.get(name);
         if (!other || !preserved) throw new Error(`Conditioning lost joint ${name}.`);
@@ -92,6 +103,6 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
     }
     if (![maximumPositionMeters, maximumJointMatrix, maximumTickJointMatrix, maximumEndpointJointMatrix, maximumPreservedTickJointMatrix].every(Number.isFinite) || maximumPreservedTickJointMatrix > 1e-4) throw new Error(`Conditioning ${clipId} failed original tick-pose preservation (${maximumPreservedTickJointMatrix}).`);
     return { clipId, phases, maximumPositionMeters, maximumJointMatrix, maximumTickJointMatrix, maximumEndpointJointMatrix, maximumPreservedTickJointMatrix,
-      differenceKind: clipId === authoredIdleId ? 'explicit planted idle authoring; endpoints retain source fidelity' : clipId === span?.clipId ? 'explicit bounded rotation-span authoring; only declared local rotations and existing selections excepted' : clipId === twoKey?.clipId ? 'explicit two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : selected.length ? 'explicit composed two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : clipId === terminal?.clipId ? 'explicit terminal rotation authoring; all other tick transforms retain source fidelity' : 'sampled source tick preservation' };
+      differenceKind: clipId === pelvisRecipe?.clipId ? 'explicit bounded pelvis/leg layer; reversed before older selections and all-joint fidelity' : clipId === authoredIdleId ? 'explicit planted idle authoring; endpoints retain source fidelity' : clipId === span?.clipId ? 'explicit bounded rotation-span authoring; only declared local rotations and existing selections excepted' : clipId === twoKey?.clipId ? 'explicit two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : selected.length ? 'explicit composed two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : clipId === terminal?.clipId ? 'explicit terminal rotation authoring; all other tick transforms retain source fidelity' : 'sampled source tick preservation' };
   });
 }

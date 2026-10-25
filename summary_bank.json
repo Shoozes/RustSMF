@@ -38,7 +38,7 @@
     },
     "workflow__context_bank": {
       "description": "Portable public context routing, validation, and generation entry points.",
-      "max_kb": 124,
+      "max_kb": 126,
       "paths": [
         "summary_bank.json",
         "scripts/context-bank-lib.mjs",
@@ -310,7 +310,7 @@
     },
     "workflow__skeletal_export": {
       "description": "Strict v1/v2 GLB skeletal export and immutable publication; explicit continuous conditioning is routed through workflow__skeletal_conditioning.",
-      "max_kb": 240,
+      "max_kb": 244,
       "paths": [
         "docs/dev/SKELETAL_EXPORT.md",
         "examples/README.md",
@@ -1510,7 +1510,7 @@
     },
     "workflow__skeletal_two_key_rotation": {
       "description": "Singular or bounded disjoint three-record rotation authoring, stored bounds, union source guards and independent producer/receiving proof.",
-      "max_kb": 120,
+      "max_kb": 122,
       "paths": [
         "docs/dev/SKELETAL_TWO_KEY_ROTATION.md",
         "source/frontend/src/utils/skeletalTwoKeyRotation.ts",
@@ -1545,6 +1545,25 @@
       ],
       "notes": [
         "Shared conditioning, fidelity, job and exporter ownership is intentional; two-key tests and publication retain their existing routes."
+      ]
+    },
+    "workflow__skeletal_pelvis_layer": {
+      "description": "Bounded post-bake pelvis/leg composition, reverse provenance, source fidelity and emitted component preservation.",
+      "max_kb": 128,
+      "paths": [
+        "docs/dev/SKELETAL_PELVIS_LAYER.md",
+        "source/frontend/src/utils/skeletalPelvisLayer.ts",
+        "source/frontend/src/utils/skeletalPelvisLayer.test.ts",
+        "source/frontend/src/utils/skeletalConditioning.ts",
+        "source/frontend/src/utils/skeletalConditioningFidelity.ts",
+        "source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts",
+        "source/frontend/src/utils/skeletalExportJob.ts",
+        "source/frontend/scripts/skeletal-export-cli.ts",
+        "source/frontend/scripts/skeletal-export-producer.ts"
+      ],
+      "notes": [
+        "Export sampler and neighbor tests: workflow__skeletal_export_boundary. Existing two-key/span and idle routes retain separate ownership; overlap here follows the post-bake composition boundary.",
+        "The two-key record and span caps, root motion and engine remain unchanged."
       ]
     }
   },

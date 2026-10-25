@@ -9,14 +9,21 @@ raw-GLB preservation check did not prove the emitted runtime property.
 `skeletalTwoKeyExportBoundary.ts` supplies the explicit producer-only
 `preserve-unselected-emitted-keys.v1` context for `prepareSkeletalExport`.
 It accepts the existing singular `report` or strict one–three-record `reports`,
-mutually exclusively, plus a separately bounded optional `spanReport`. Span-only
-contexts are also admitted. All applicable reports, disjoint footprints, clip bindings,
-direct joint chains, stored values and correction bounds validate before mixers
-are allocated. Every declared `before` rotation is restored together in one
+mutually exclusively, plus optional bounded `spanReport` and `pelvisReport`.
+Either layer may stand alone. Report structure validates before restoration;
+stored provenance and bounds validate before emitted/reference sampling.
+Every declared older `before` rotation is restored together in one
 pre-authoring baseline per clip. Unselected emitted integer keys sample that
 baseline at nominal `tick/60`; the selected tick union samples the authored GLB.
 Span ticks replace only declared joint rotations; other components remain from
 the baseline. Reports are filtered by packet clips. Caller arrays/reports remain immutable.
+
+The [pelvis layer](SKELETAL_PELVIS_LAYER.md) reverses first. Older selected keys
+sample that intermediate curve, not the final curve: otherwise a new chord can
+leak into an older span at a nominal boundary. Only the new layer's declared
+positions/rotations sample the final curve. The
+[overlap regression](../../source/frontend/src/utils/skeletalPelvisLayer.test.ts)
+covers this ordering and exact unselected components.
 
 Source references always sample the independently re-imported authored GLB at
 their original phases. This context changes no mesh, skin, bind, root extraction,
@@ -408,4 +415,4 @@ all earlier baselines and failed attempts remain retained.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-current-source-qualification | change=closed current-source receiving and retained physical limits -->
 
-<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-new-source-renewal | change=closed renewal and retained physical failures -->
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-layer-integration | change=preserved intermediate and final components -->

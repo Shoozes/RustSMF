@@ -2,6 +2,453 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="p7c-pelvis-layer-publication"></a>
+## 2026-10-25 - Pelvis-layer publication closeout
+
+The operator authorized the verified57/58 integration and provenance cleanup for
+main through guarded gitpush.ps1. The seventeen-file batch preserves the reviewed
+producer bytes and source-bound 722/14,46/590 and637-pose receipts below. The pilot
+still fails only planted drift; TODO retains early0–24 attribution. Publication
+checks bind the staged tree, isolated candidate and remote main in the retained
+`p7c-pelvis-layer-publish-20261025` receipt. No installer/release work is included;
+prior policy-blocked scratch, engine/dependencies and retained proof stay intact.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=pelvis-publish | change=recorded authorized scoped closeout -->
+
+<a id="p7c-pelvis-layer-review-cleanup"></a>
+## 2026-10-25 - Pelvis-layer review, recheck and provenance cleanup
+
+Complete with verified limitations, locally on main e09859a; no publication.
+Review/recheck inspected the layer, fidelity/export/job/CLI consumers, contracts,
+tests and retained ordinary/receiver proof before cleanup. Prior tick-59 leakage
+remains closed. One new provenance finding reproduced against the qualified
+White Wolf report: sparse after snapshots bypassed `some`, and a negative meter
+claim near zero fit the comparison tolerance. Cleanup visits every snapshot slot
+and rejects negative or over-bound requested/stored meter claims. Six focused
+tests pass, including four sparse snapshots and both negative meter fields;
+valid zero-correction restoration and input immutability remain proved.
+
+Repaired producer identity:
+7b018358502ffe1e40acc29e74c27ae7152790594ec38d8bb8b6370ef8c9953c;
+exporter 2f9b192b9233a52607654356f8c61ed79fb310084e8d74605b7aa1cf2ba73da6.
+All 46 actual ordinary exports were renewed: conditioned GLB, asset, mapping and
+590 reference bytes exactly match the prior qualified graph. Support patches,
+intervals and modes also match. This reuses the prior dense/root/350 outside-pose,
+968 accessor-extrema, segment/knee/seam and native/WASM proof by identical input
+bytes and unchanged qualified engine outputs, rather than claiming those dense
+commands were rerun. Captured engine qualification remains f280d357 /1173 files.
+
+New-source actual receiving/replay passes 46/590, instance isolation and six-tick
+restore. Binding/refusal checks pass. The actual 637-pose pilot with 55 independent
+references completes; expected exit 1 retains only walkSlow/soleDrift, identical
+to the prior measurement. Target57.75 remains 40.30 mm drift, 14.24 mm gap and no
+skin penetration; global maximum remains 673.40 mm at23.75. No motion, root,
+support, threshold or accepted bake changed. Full P7C/visual remain open.
+
+`pwsh -NoProfile -File ./run.ps1 -Task verify` exits0 in160152ms on stable
+source: 722 frontend tests and all14 Rust verification checks. The focused six
+tests exit0 in1622ms. Final context/diff checks and preservation receipts are in
+`D:/Compact_Evidence/RustSMF/runs/p7c-pelvis-layer-recheck-20261025/summary.json`.
+All17 pre-existing task paths remain; the index and HEAD are unchanged. GaimEngine
+v1, three Rust overlays, shared dependencies and retained proof are preserved.
+Receiver-owned assets/native copies release; immutable qualification graphs stay
+retained. Policy-blocked publication scratch remains untouched. TODO retains the
+next read-only left-sole0–24 attribution/selection batch before further authoring.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-layer-review-cleanup | change=recorded reproduced refusals source renewal and bounded next batch -->
+
+<a id="p7c-pelvis-layer-integration"></a>
+## 2026-10-25 - Ordinary bounded pelvis-layer producer integration
+
+Completed local producer integration on main e09859a. Final source identity is
+adda572413fcb02f6436f046109d0c39567e8841db658a4dfce036c34ae73cd6;
+exporter 6feb5a70d1508c4c3a64d546e8302a193b7ce038535842eb4f7640c3fea84de4.
+Job v3 explicitly admits one NLERP `pelvisLayerBake`: two interior pelvis
+positions and two independent three-joint rotation chains, bounded by 3% rest
+height and 25 degrees. Source pelvis topology, full finite channel grids, roles,
+exact fields, terminal conflict, requested/stored meter caps and actual stored
+rotation corrections validate. Legacy three-record/span caps and omitted jobs
+retain their behavior; the actual legacy GLB/asset/mapping/reference bytes match.
+
+The new layer runs last. Fidelity reverses it before checking older selections
+and every original joint matrix, while retaining descriptive final differences.
+Export independently binds height to the rest mesh, restores the source baseline,
+samples older selections from the intermediate qualified curve, and copies only
+new selected components from the final GLB. Source references remain independent.
+No source-root-wide, gait-wide or descendant exemption was added.
+
+Five focused tests cover strict/sparse/role admission, parent-scale meter bounds,
+immutable caller/clip data, layer-only ordinary CLI, late cap/cancellation refusal,
+missing fidelity selection, overlapping span order and component preservation,
+stale values, forged height/meters and invalid correction provenance. Neighboring
+tests remain included in the final canonical suite. Initial fixture/bootstrap
+errors were corrected before proof.
+
+Actual dense integration initially exposed a new nominal 59 leak: the older span
+was still sampling the final curve. The regression now spans both sides of the
+new layer and compares older selected keys with the intermediate export. The
+corrected graph proves all 1173 emitted body keys outside 57/58 and all 350
+outside/boundary poses exact, including 59. All 64 unselected components at
+57/58 remain exact; the entire ordinary clip body matches the private compositor.
+No tolerance or time-grid change was used.
+The initial source/run is retained as superseded; its passing receiving/canonical
+checks do not substitute for the final source's complete proof.
+
+All 46 ordinary CLI jobs complete with 590 references and one shared conditioned
+model 53a1fd087d521c7177ce13cc391648fa2def4a159aa8fbca270bfae464d9aff5.
+All 968 rotation accessor extrema are exact. The seven selected track arrays match
+private feasibility exactly; 45 other clips and 25 unselected walk channels stay
+exact. Older report semantic fields remain exact. Idle contact solver source is
+unchanged; its executable identity is explicitly renewed rather than substituted
+for the old identity. Both identities remain in `idle-runtime-provenance.json`.
+
+| Done When proof | Final ordinary result |
+| --- | --- |
+| Target 57.75 | All 70 sole vertices: drift 0.040300494696 m; gap 0.014237713937 m; whole-skin penetration 0; unchanged limits pass |
+| Stored caps | Pelvis 0.120142483529 m <0.126077316425; rotation 17.477739055636 degrees <25 |
+| Dense/gait | All 13 local poses and 361 full gait poses pass physical/kinematic guards; native/WASM exact at 752 compared samples per host |
+| Root/outside | Locomotion root exact; 350 outside/boundary complete poses exact; both 13-pose arcs exact |
+| Affected span | All 77 poses checked: 66 unchanged and 11 affected/requalified; 27 stable segments, no knee inversion |
+| Reload/runtime | Maximum 3.704360134e-7 m; raw nominal boundary residual 2.430764861e-7 m remains visible; emitted boundaries exact |
+| Seams/endpoints | Loop, 24 transition seams and six independent endpoint comparisons pass |
+| Receiving/replay | All 46 packets/590 references, instance isolation and restored six-tick replay pass |
+| Actual pilot | 637 poses/55 independent references measured; only known walkSlow/soleDrift fails; skin passes |
+| Canonical | `pwsh -NoProfile -File ./run.ps1 -Task verify` exits 0 in 138,095 ms; 721 frontend tests and 14 Rust checks, lint/types/dependencies/build pass |
+
+The actual pilot correctly exits 1 for remaining drift. First/max global drift
+witnesses at 2/v3398 and 23.75/v3467 are unchanged. The left 44–58 window maximum
+improves from 0.270333727838 m at 57.75 to 0.229779027602 m at fixed 56; its earlier
+failure remains. All other support-window first/max witnesses are exact.
+This closes bounded producer integration, not full planted drift/P7C/visual
+acceptance. TODO selects read-only early 0–24 drift repair selection.
+
+The final qualified bundle is
+cac41d57d08283e58e6b126079f658c655c7d299558620eff38129adde67b360.
+Source-bound jobs, reports, graph, native/WASM proof, commands/exits and source
+snapshots remain at
+`D:/Compact_Evidence/RustSMF/runs/p7c-pelvis-layer-final-20261025/`.
+The superseded boundary-failing attempt remains at
+`D:/Compact_Evidence/RustSMF/runs/p7c-pelvis-layer-integration-20261025/`.
+All original private trial and qualification evidence stays immutable.
+
+The 71-group Summary Bank adds one focused pelvis route. Measured consumer growth
+requires bounded context/export/two-key budgets 126/244/122 KiB; the new route is
+128 KiB. Defaults and the 256 KiB ceiling are unchanged. Final context/diff checks
+cover record-only updates after the canonical source/test/bank snapshot.
+All 28 protected files, the 1173-file captured engine map and qualified outputs
+match. Owned assets/models/native copies release on final and failed runs; no
+shared engine build, dependency copy or owned service remains. Previously blocked
+publication scratch remains retained. No Git staging, commit or publication.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-layer-integration | change=qualified ordinary producer graph and fixed intermediate boundary sampling -->
+
+<a id="p7c-three-percent-translation"></a>
+## 2026-10-25 - Three-percent pelvis-translation feasibility passes
+
+Completed the selected private stored-key 57/58 trial on main e09859a,
+source 9f7a2378/exporter 644013c1. Fixed pelvis orientation, zero correction at
+56/59, original anchor 44, root and all physical thresholds remain binding.
+No production source/API change or ordinary generation is admitted in this pass.
+
+The unchanged Rust pose-contact batch adapter seeds both stored ticks and a
+diagnostic 57.75 frame. Nine fixed target combinations use left ankle shifts of
+20/30/40 mm toward the hip and floor lifts of 0/10/20 mm; the right ankle keeps
+its original swing position/orientation. Five combinations refuse solver
+residual, three stored-key candidates fail sole gap, and the 40 mm/10 mm family
+passes. No search bound, rotation cap or contact threshold was widened.
+Requested solver pelvis displacement is at most 0.120142505951 m. Actual stored
+pelvis displacement is 0.120142483529 m (cap 0.126077316425 m); maximum dense
+displacement is 0.120142283020 m. Maximum stored/dense leg corrections are
+17.477739055636/17.477709988402 degrees, below 25.
+
+Actual `exportGLB` writes the 2,088,672-byte candidate, independently reloaded as
+f46279dba1cc9f733940c81720567cdd3b6b36c2d5c3052d7f1b89b80d32d232.
+All 968 rotation accessor extrema are exact. All 45 other clips and 25 unselected
+walk channels stay exact. Selected tracks retain every unselected value and
+nonadjacent tangent. This is actual serialization, not a byte-patched GLB.
+
+The private emitted compositor clones the qualified v1 asset and copies only
+12 local leg rotations and two pelvis positions at 57/58 from the ordinary
+exporter of that independent reload. Its hash is
+bba19fff3be82b7af4925f2c74f801039fcb4754ba21788e22ed5efd93509735.
+Root, mesh, joints and all unselected emitted components/keys remain exact.
+References sample the reloaded GLB independently. The compositor is not a public
+job/generation and does not bypass existing public admission for qualification.
+
+| Done When proof | Observed result |
+| --- | --- |
+| Mandatory 57.75 target | All 70 sole vertices: drift 0.040300494696 m <0.042025772142; gap 0.014237713937 m <0.021012886071; skin penetration 0 |
+| Local dense region | All 13 poses 56–59 pass skin/active-sole/cap checks |
+| Full gait | All 361 native/WASM gait poses exact; whole-skin maximum 0.020938074220 m passes |
+| Outside and boundaries | All 350 emitted outside/boundary poses exact; root exact throughout |
+| Existing span | All 77 poses rechecked: 66 unchanged, 11 affected and physically/kinematically requalified |
+| Other guards | Both 13-pose arcs exact; 27 stable segments, maximum relative change 3.546e-7, no knee inversion |
+| Seams/references | All 24 transition seams, loop closure and six independent endpoints pass; 752 compared native/WASM samples per host |
+| Reload/runtime | Maximum 3.704360134e-7 m; unchanged tolerances |
+| Reversal/refusal | New raw/emitted layer restores baseline; old reports refuse composed final as stale, then pass after reversal; no report rewrites |
+| Lifecycle/caps | Abort-before-bake/native-spawn, zero and over-cap controls pass; originals immutable |
+
+Raw GLB nominal boundary sampling retains a visible 2.430764861e-7 m timestamp
+residual. The private emitted component policy preserves 56/59 exactly; no time
+grid or tolerance was changed. Public integration must reproduce this preservation,
+not reuse a raw-GLB boundary comparison as emitted-runtime proof.
+
+All six support windows retain explicit before/after first/max witnesses.
+The affected left 44–58 maximum drops from 0.270333727838 m at 57.75/v3398 to
+0.229779027602 m at fixed 56/v3398; its first violation 46.5 stays unchanged.
+Every other window's witnesses are exact. Global drift first 2/v3398 and maximum
+23.75/v3467 remain unchanged, so this target repair does not close planted drift,
+the entire 44–58 window, full P7C or visual acceptance.
+
+Evidence is retained at
+`D:/Compact_Evidence/RustSMF/runs/p7c-three-percent-translation-20261025/`:
+`seed.json`, `screen.json`, `candidate-keys.json`, `serialization.json`,
+`verification.json`, `support-window-witnesses.json` and `provenance-order.json`.
+The source/model-bound records retain before/requested/stored values, solver
+source/executable identities, caps, anchors and actual commands/exits.
+All 28 protected files, the 1173-file captured engine source map and qualified
+outputs match. Eighteen asset owners, two verification models and the owned
+native copy release; other runners release their own models and native solver
+copy. No shared engine build, dependency copy, service or public generation.
+
+### Next bounded producer integration
+
+TODO selects one explicit NLERP producer layer for this two-key pelvis position
+and coupled leg rotation footprint, with the same 3%/25-degree caps. Keep the
+three-record two-key cap, single bounded span and all legacy jobs unchanged.
+Admission must name the authorized pelvis/leg components without broad source-root
+or gait exemptions; cancellation and late refusal publish no candidate.
+Reverse this new layer before checking older report values and restoring their
+union. Preserve unselected emitted components at nominal times and independent
+GLB references; do not rewrite old reports to conceal overlap with the span.
+
+Reproduce the measured keys through ordinary CLI serialization, exact accessor
+extrema and dense preservation/kinematic controls. Then renew all 46/590 actual
+receiving/replay and the actual 637-pose pilot on the captured qualified engine,
+and run the full local verify/build on the implemented source. Keep remaining
+drift explicit. Those new public graphs/gates are not claimed by this private
+trial; unchanged production source retains its prior 716 frontend/14 Rust proof.
+Update affected docs/Summary Bank only with the actual new ownership/interface.
+No engine v1, overlay, shared dependency, support, threshold or release change.
+No Git publication is selected. Final context validation passes 30 tests/70 groups;
+`git diff --check` passes. Summary Bank ownership/paths remain unchanged.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-three-percent-translation | change=proved private stored-key feasibility and selected bounded producer integration -->
+
+<a id="p7c-revised-translation-cap"></a>
+## 2026-10-25 - Revised pelvis-translation cap decision
+
+Decision: select one revised offline trial with Euclidean pelvis translation
+bounded by 3% of rest-skin height, 0.126077316425 m for White Wolf. This replaces
+only the 2% trial cap; no other motion, physical or resource limit changes.
+The fixed-orientation family retains the six UpLeg/Leg/Foot correction caps of
+25 degrees, stored ticks 57/58, fixed boundaries 56/59 and unchanged anchor 44.
+The earlier 2% refusal remains valid evidence and is not rewritten.
+
+The revised bound exceeds the necessary 0.097050389201 m displacement while
+remaining a single bounded engineering trial. To avoid repeating a known
+geometric contradiction, recomputed all 70 target spheres at 57.75 with one common
+scene-root translation vector [-0.030,-0.097,-0.074] m. Its norm is
+0.125638369935 m, strictly within the new cap. The maximum target-cylinder
+distance minus conservative leg radius and safety is -0.028587790477 m.
+All 70 necessary sphere conditions therefore admit this translated hip position.
+The control allows unrestricted leg rotations: it does not establish the
+25-degree key bound, an actual skinned pose, contact clearance or feasibility.
+Use it as a possible search seed, not a prescribed authored solution or promised
+rotation-cap success. Final stored and interpolated corrections still need proof.
+
+### Requalification plan and stopping condition
+
+Inherit the [accepted affected-pose plan](#p7c-pelvis-translation-contract), with
+the translation cap changed to 3% only. Compose after root extraction and the
+existing bakes. Pelvis orientation/scale, toe and upper-body local channels stay
+fixed. Convert scene-root meters through the actual parent transform; all
+LocomotionRoot values and sampled transforms remain exact. Check requested,
+stored float32 and dense displacement norms against the revised cap; refuse
+overflow, failed/cancelled solves or changes outside the selected footprint.
+No automatic widening, extra keys, pelvis rotation or tolerance changes.
+
+Require an actual stored 57/58 candidate before claiming feasibility. At 57.75,
+all 70 original left-sole anchors must satisfy the unchanged drift and absolute
+floor limits and all 3726 skin vertices must pass penetration. Measure all 13
+quarter poses 56–59 plus the full 361-pose gait. Preserve existing passing criteria,
+do not worsen other remaining drift windows, and retain the original failing
+boundary 56 rather than claiming full 44–58 planted-window closure.
+
+Outside (56,59), complete poses and unselected stored components/tangents remain
+exact; 56/59 boundaries remain exact. Within the overlap, requalify all affected
+descendants and skin, both legs' lengths/knee signs, the prior 77-pose span region,
+both 13-pose arcs, terminal/loop closure, 24 seams and six independent endpoints.
+Prove actual native/WASM and reload/runtime agreement, immutable baseline data,
+zero/over-cap/refusal controls, reverse-layer restoration and owned cleanup.
+Prior world-pose equality inside the footprint is not reused as candidate proof.
+
+Only a passing private trial selects a separate narrow producer integration.
+No shipping recipe, gait-wide fidelity exception or old report rewrite is
+accepted by this decision. Integration must prove ordinary serialization,
+component-preserving export and independent references, then renew 46/590
+receiving/replay, the actual 637-pose pilot and full local verify/build on the
+new source. Report all remaining drift and visual acceptance limits explicitly.
+Failure retains the bounded refusal without changing the API or engine.
+
+This pass edits records only. Baseline main e09859a/source 9f7a2378 and all 28
+protected file hashes match. GaimEngine v1, the three Rust overlays, captured
+qualification, dependencies and retained evidence stay unchanged. Summary Bank
+paths/ownership need no update. Read-only Node cap/sphere controls exit 0.
+Final context validation passes 30 tests/70 groups; `git diff --check` passes.
+No new build, runtime qualification, motion authoring or publication is claimed.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-revised-translation-cap | change=selected evidenced 3-percent trial and retained affected-pose qualification requirements -->
+
+<a id="p7c-pelvis-translation-trial"></a>
+## 2026-10-25 - Bounded pelvis-translation trial refused
+
+Completed the selected 57/58 trial's necessary-condition/refusal branch against
+main e09859a, source 9f7a2378/exporter 644013c1. Pelvis orientation stays fixed;
+the accepted displacement cap is 0.084051544284 m. The prior fixed-hip bound
+already exceeds that cap. This comparison was missed when selecting the cap;
+the contract record is corrected by this refusal, without widening its bounds.
+
+Fresh qualified native/WASM samples agree exactly at anchor 44 and all 13 quarter
+poses 56–59 (14 samples). Recomputed all 70 target bounds at 57.75 using the same
+original anchor, support and limits. Six targets remain unreachable even if
+leg/toe rotations are unrestricted, a superset of the 25-degree stored-key family.
+At v3411, required radius is 2.285956064283 m and the conservative leg radius is
+2.188895673545 m. After 0.00001 m safety, the deficit is 0.097050390738 m.
+Translation can reduce target-cylinder distance by at most its norm; weighted
+affine radius inflation adds at most abs(sum(weights)-1) times that norm.
+The cap's maximum effect is 0.084051545614 m, leaving a strictly positive
+0.012998845124 m residual. Thus no stored 57/58 candidate can meet the mandatory
+57.75 target while respecting this cap, fixed pelvis orientation and all other
+trial constraints. At least 0.097050389201 m (2.309306510155% height) is necessary;
+that is a lower bound, not a sufficient cap or a feasible solution.
+
+Reload/runtime error is below 9.41e-8 m. Zero and exact-cap translation controls
+are admitted by the trial's cap check; a 1-micrometer over-cap control refuses.
+Original track arrays, asset/model bytes and root stay unchanged. No motion
+candidate, delta layer, serializer change or public recipe is authored. Candidate
+skin/kinematic/seam/endpoint qualification and new 46/590/637 renewal do not run:
+the required target is already provably impossible. Their baseline proof remains
+valid and is not represented as passing proof for a new candidate.
+
+Exact command and results are retained in
+`D:/Compact_Evidence/RustSMF/runs/p7c-pelvis-translation-feasibility-20261025/`:
+`trial.mjs`, `feasibility.json` and `translation-bounds.json`. All 28 protected
+files, six frozen source/test/bank inputs, the 1173-file captured engine source
+map and qualified outputs match. The asset, model and verified native copy
+release; no shared builds, dependency copies or owned processes remain.
+Prior 716 frontend/14 Rust build proof is reused for unchanged production source.
+Final context validation passes 30 tests/70 groups; `git diff --check` passes.
+No implementation test is claimed.
+
+TODO requires an explicit translation-bound decision or retention of refusal.
+No larger cap is authorized here. Locomotion root, engine v1, Rust overlays,
+supports, thresholds, shared dependencies and all retained evidence stay fixed.
+Planted drift, full P7C and visual acceptance remain open. No Git publication.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-translation-trial | change=proved cap refusal and preserved unimplemented requalification boundary -->
+
+<a id="p7c-pelvis-translation-contract"></a>
+## 2026-10-25 - Bounded pelvis-translation contract decision and requalification plan
+
+Decision: permit one offline feasibility family against published main e09859a,
+producer 9f7a2378/exporter 644013c1. The prior all-rotation certificate's 23.6 mm
+lower reach deficit justifies testing translation, not admitting a shipping API.
+No motion, solver, parser, serializer or engine implementation changes in this
+decision. The existing idle translation mechanism is an implementation reference;
+its idle-only source-fidelity exception must not be applied wholesale to a gait.
+
+### Accepted trial boundary
+
+Select walkSlow pelvis mixamorigHips position and both direct UpLeg/Leg/Foot
+rotation chains at stored ticks 57/58 only. Changed interpolation is confined to
+(56,59); correction is zero at 56/59. Tick 44's original left-sole anchor, clip
+duration, calibration, supports, unsupported spans and physical thresholds stay
+fixed. Pelvis orientation/scale, toe and upper-body local channels stay fixed.
+All other clips and local channels retain the qualified baseline.
+
+Apply an additive layer after locomotion-root extraction and the accepted
+rotation bakes. Never feed the correction back into root extraction. Every
+LocomotionRoot position/yaw/scale value and every sampled root transform must
+remain exact. Scene-root displacement is measured in meters after parent scale
+and rotation; do not mistake raw pelvis-local units for meters.
+
+The trial cap is Euclidean pelvis displacement at most 2% of rest-skin height,
+0.084051544284 m for this model, and at most 25 degrees per actual stored
+UpLeg/Leg/Foot correction against the current qualified pose. Check requested,
+stored float32 and dense interpolated values; refuse out-of-bound results.
+These are selected engineering trial bounds, not measured feasibility or relaxed
+contact limits. No widening within this batch. The existing three-record cap,
+single 18-key span and source-root exclusions remain unchanged in public code.
+
+Existing recipes/reports/model remain immutable baseline evidence. A trial may
+compose new deltas over the right 48–65 span only at 57/58 and adjacent intervals.
+Within that footprint, exact prior descendant world-pose equality is replaced
+by fresh qualification, not silently claimed preserved. Outside it, exact pose
+and stored-key/tangent preservation remains binding. Do not rewrite prior
+reports to make changed final values look like their original qualification.
+
+### Feasibility proof and refusal controls
+
+First test the mandatory 57.75 target: all 70 left-sole vertices must satisfy
+their original horizontal drift anchors and absolute floor limits, and all 3726
+skin vertices must satisfy the existing penetration limit. A necessary reach
+screen alone is insufficient. Require an actual stored-key/chord candidate;
+then independently reload it and compare the emitted pose. No byte-patched
+artifact qualifies as ordinary producer integration.
+
+Measure all 13 quarter poses 56–59 and the full 361-pose gait against the current
+baseline, reporting each support window's first/max witnesses. Existing passing
+criteria may not fail; other remaining drift windows must not worsen. At fixed
+boundary 56, baseline drift already fails: preserve and report it rather than
+claiming this local witness trial closes the entire 44–58 planted window.
+For affected phases other than the required target, introduce no new failed
+criterion and do not increase baseline drift maxima. Measure every descendant
+and every skin vertex, including upper body and the opposite swing leg.
+
+Recheck both legs' lengths, calibrated knee signs/no inversion, all 77 poses of
+the prior 47–66 span region, both 13-pose accepted arcs, terminal/loop closure,
+all 24 slow-walk transition seams and six independent endpoints. Outside (56,59),
+compare complete poses exactly. At 56/59, compare complete boundary poses and
+root exactly. Within the overlap, old exact span comparisons are diagnostic;
+the existing physical/kinematic limits are the acceptance authority.
+Compare actual native/WASM samples and serialized/runtime poses under existing
+tolerances. Release all owned models/assets/native copies on failure/cancel;
+zero-correction and rejected over-cap trials must preserve baseline clips/data.
+
+Retain a compact source/model-bound before/requested/stored delta report, bounds,
+anchors, affected-pose diff and actual commands/exits. Prove reversing only this
+layer restores the qualified three-recipe model before applying any older
+report-based fidelity restoration. No broad gait or descendant exclusion is
+permitted. Failure closes this bounded family with evidence and no API changes.
+
+### Integration gate after a passing trial
+
+A successful private trial is a pass-down to a separate narrow producer contract
+implementation, not public admission in this decision. It must compose provenance
+in reverse layer order for fidelity/export baseline restoration, preserve
+unselected emitted position/rotation/scale components despite float32 key times,
+and retain independent GLB references. Do not overload the idle exception, relax
+old parsers or silently replace the occupied three-record selection.
+
+Before calling any integrated candidate qualified, run focused admission,
+composition, stale-report, cap, cancellation and boundary tests; ordinary CLI
+serialization with exact accessor extrema; then all 46/590 receiving/replay and
+the actual 637-pose pilot against the same captured engine qualification.
+Keep any remaining drift failure explicit. Finish the full local verify/build
+gate on that source, update TODO and retain proof. No engine v1/schema, Rust
+overlay, dependency, support, threshold, release or publication change follows
+from this plan. Broader planted-drift and visual acceptance remain separate.
+
+Current decision checks match producer/exporter identities and all 28 protected
+files. Existing qualification evidence remains at its bound paths; no models,
+clips, jobs or shared dependencies were written by this decision. Summary Bank
+ownership/paths need no change. Final context validation passes 30 tests and
+70 groups with zero warnings; `git diff --check` passes. No build or runtime
+qualification is claimed for the unimplemented trial.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-translation-contract | change=accepted bounded trial and explicit affected-pose requalification plan -->
+
 <a id="p7c-integration-publication-closeout"></a>
 ## 2026-10-25 - Three-recipe integration and drift-screen publication closeout
 

@@ -6,6 +6,7 @@ import { parseTerminalRotationClosure } from './skeletalTerminalRotation';
 import { parseTwoKeyRotationSelection } from './skeletalTwoKeyRotation';
 import { TWO_KEY_EXPORT_BOUNDARY_POLICY } from './skeletalTwoKeyExportBoundary';
 import { parseRotationSpanBake, assertDisjointRotationSpan } from './skeletalRotationSpan';
+import { parsePelvisLayer } from './skeletalPelvisLayer';
 
 export const SKELETAL_EXPORT_JOB_SCHEMA = 'rustsmf.skeletal-export-job.v1';
 export const SKELETAL_EXPORT_JOB_V2_SCHEMA = 'rustsmf.skeletal-export-job.v2';
@@ -182,7 +183,7 @@ export function parseSkeletalExportJobDocument(
   };
   if (isV3) {
     const c = record(document.conditioning, 'job.conditioning');
-    exactKeys(c, ['mode', 'sourceRootJoint', 'locomotionRootJoint', 'clipIds', 'transitions', ...['transitionFloor','plantedIdle','terminalRotationClosure','twoKeyRotationBake','twoKeyRotationBakes','rotationSpanBake'].filter(key=>Object.prototype.hasOwnProperty.call(c,key))], 'job.conditioning');
+    exactKeys(c, ['mode', 'sourceRootJoint', 'locomotionRootJoint', 'clipIds', 'transitions', ...['transitionFloor','plantedIdle','terminalRotationClosure','twoKeyRotationBake','twoKeyRotationBakes','rotationSpanBake','pelvisLayerBake'].filter(key=>Object.prototype.hasOwnProperty.call(c,key))], 'job.conditioning');
     const identifier = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_.-]{1,64}$/.test(v);
     if ((c.mode !== CONDITIONING_MODE && c.mode !== CONDITIONING_NLERP_MODE) || !identifier(c.sourceRootJoint) || !identifier(c.locomotionRootJoint) || c.sourceRootJoint === c.locomotionRootJoint || c.locomotionRootJoint !== common.export.rootJoint) fail('job.conditioning must name a supported mode, distinct source/locomotion roots and export the locomotion root.');
     if (!Array.isArray(c.clipIds) || c.clipIds.length < 1 || c.clipIds.length > 32 || !c.clipIds.every(identifier) || new Set(c.clipIds).size !== c.clipIds.length) fail('job.conditioning.clipIds must contain 1–32 unique safe source names.');
@@ -210,11 +211,14 @@ export function parseSkeletalExportJobDocument(
     }
     if ((rotations.twoKeyRotationBake || rotations.twoKeyRotationBakes) && c.mode !== CONDITIONING_NLERP_MODE) fail('Two-key rotation authoring requires the explicit NLERP mode.');
     const boundary = Object.prototype.hasOwnProperty.call(exportSettings, 'twoKeyExportBoundary');
+    const pelvisLayer = Object.prototype.hasOwnProperty.call(c, 'pelvisLayerBake') ? parsePelvisLayer(c.pelvisLayerBake, transitions.map(t => t.gait), c.clipIds as string[], c.sourceRootJoint, c.locomotionRootJoint) : undefined;
+    if (pelvisLayer && (!boundary || c.mode !== CONDITIONING_NLERP_MODE)) fail('pelvisLayerBake requires explicit NLERP export-boundary preservation.');
+    if (pelvisLayer && terminal?.clipId === pelvisLayer.clipId && pelvisLayer.startTick + 2 >= terminal.startTick) fail('pelvisLayerBake conflicts with terminal authoring.');
     if (span && (!boundary || c.mode !== CONDITIONING_NLERP_MODE)) fail('rotationSpanBake requires explicit NLERP export-boundary preservation.');
     if (boundary && (exportSettings.twoKeyExportBoundary !== TWO_KEY_EXPORT_BOUNDARY_POLICY
-      || c.mode !== CONDITIONING_NLERP_MODE || (!rotations.twoKeyRotationBake && !rotations.twoKeyRotationBakes && !span))) fail('twoKeyExportBoundary requires explicit NLERP bakes and the supported policy.');
+      || c.mode !== CONDITIONING_NLERP_MODE || (!rotations.twoKeyRotationBake && !rotations.twoKeyRotationBakes && !span && !pelvisLayer))) fail('twoKeyExportBoundary requires explicit NLERP bakes and the supported policy.');
     if (common.output.currentPointer) fail('Conditioned candidate jobs omit the current pointer.');
-    return { ...common, $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA, export: { ...common.export, clipIds: clipIds!, ...(boundary ? { twoKeyExportBoundary: TWO_KEY_EXPORT_BOUNDARY_POLICY } : {}) }, conditioning: { mode: c.mode, sourceRootJoint: c.sourceRootJoint, locomotionRootJoint: c.locomotionRootJoint, clipIds: c.clipIds, transitions, ...(floor ? { transitionFloor: floor } : {}), ...(planted ? { plantedIdle:planted } : {}), ...(terminal ? { terminalRotationClosure: terminal } : {}), ...rotations, ...(span ? { rotationSpanBake: span } : {}) }, output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
+    return { ...common, $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA, export: { ...common.export, clipIds: clipIds!, ...(boundary ? { twoKeyExportBoundary: TWO_KEY_EXPORT_BOUNDARY_POLICY } : {}) }, conditioning: { mode: c.mode, sourceRootJoint: c.sourceRootJoint, locomotionRootJoint: c.locomotionRootJoint, clipIds: c.clipIds, transitions, ...(floor ? { transitionFloor: floor } : {}), ...(planted ? { plantedIdle:planted } : {}), ...(terminal ? { terminalRotationClosure: terminal } : {}), ...rotations, ...(span ? { rotationSpanBake: span } : {}), ...(pelvisLayer ? { pelvisLayerBake: pelvisLayer } : {}) }, output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
   }
   if (isV2) {
     const explicitClipIds = clipIds ?? fail('job.export.clipIds must contain 1 to 32 explicit source animation clip IDs.');

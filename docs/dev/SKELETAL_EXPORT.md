@@ -9,6 +9,8 @@ The explicit producer-only [two-key boundary context](SKELETAL_EXPORT_BOUNDARY.m
 preserves unselected emitted keys without changing independent GLB references.
 The [bounded span option](SKELETAL_ROTATION_SPAN.md) also preserves every
 unselected component at its selected ticks; source references remain independent.
+The [pelvis/leg layer](SKELETAL_PELVIS_LAYER.md) adds bounded post-bake composition
+with reverse provenance and component-preserving export.
 Singular and disjoint one–three-record plural v3 integration now pass renewed
 46/590 native/WASM receiving and exact outside-runtime preservation. Omitted
 options retain their bytes. Skin clearance passes; planted drift and full P7C
@@ -173,4 +175,4 @@ at their source and exported again; RustSMF does not silently simplify them.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=routed bounded span authoring and independent reference preservation -->
 
-<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-drift-review-cleanup | change=aligned current cap and remaining drift failure -->
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-layer-integration | change=routed bounded layer export -->

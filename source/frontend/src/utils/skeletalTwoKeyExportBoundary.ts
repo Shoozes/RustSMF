@@ -3,19 +3,21 @@ import { chordRotationTrack, validateChordRotation } from './skeletalChordRotati
 import { bakeTwoKeyRotations, parseTwoKeyRotationSelection, parseTwoKeyRotationBake, MAX_TWO_KEY_ROTATION_BAKES } from './skeletalTwoKeyRotation';
 import { rotationDifferenceDegrees } from './skeletalTerminalRotation';
 import { bakeRotationSpan, parseRotationSpanBake, assertDisjointRotationSpan } from './skeletalRotationSpan';
+import { PELVIS_LAYER_POLICY, pelvisLayerRecipe, restorePelvisLayer, type PelvisLayerReport } from './skeletalPelvisLayer';
 
 export const TWO_KEY_EXPORT_BOUNDARY_POLICY = 'preserve-unselected-emitted-keys.v1' as const;
 type Report = ReturnType<typeof bakeTwoKeyRotations>['report'];
 type SpanReport = ReturnType<typeof bakeRotationSpan>['report'];
-export type TwoKeyExportBoundary = { policy: typeof TWO_KEY_EXPORT_BOUNDARY_POLICY; spanReport?: SpanReport } & (
-  { report: Report; reports?: never } | { reports: Report[]; report?: never } | { spanReport: SpanReport; report?: never; reports?: never }
+export type TwoKeyExportBoundary = { policy: typeof TWO_KEY_EXPORT_BOUNDARY_POLICY; spanReport?: SpanReport; pelvisReport?: PelvisLayerReport } & (
+  { report: Report; reports?: never } | { reports: Report[]; report?: never } | { spanReport: SpanReport; report?: never; reports?: never } | { pelvisReport: PelvisLayerReport; report?: never; reports?: never }
 );
 
-export function twoKeyExportReports(context: TwoKeyExportBoundary): readonly (Report | SpanReport)[] {
-  const single = Object.prototype.hasOwnProperty.call(context, 'report'), plural = Object.prototype.hasOwnProperty.call(context, 'reports'), span = Object.prototype.hasOwnProperty.call(context, 'spanReport');
+export function twoKeyExportReports(context: TwoKeyExportBoundary): readonly (Report | SpanReport | PelvisLayerReport)[] {
+  const single = Object.prototype.hasOwnProperty.call(context, 'report'), plural = Object.prototype.hasOwnProperty.call(context, 'reports'), span = Object.prototype.hasOwnProperty.call(context, 'spanReport'), pelvis = Object.prototype.hasOwnProperty.call(context, 'pelvisReport');
+  if (pelvis) pelvisLayerRecipe(context.pelvisReport!);
   if (context.policy !== TWO_KEY_EXPORT_BOUNDARY_POLICY
-    || (single && plural) || (!single && !plural && !span)
-    || Object.keys(context).sort().join(',') !== ['policy', ...(single ? ['report'] : plural ? ['reports'] : []), ...(span ? ['spanReport'] : [])].sort().join(',')) throw new Error('Invalid two-key export-boundary selection.');
+    || (single && plural) || (!single && !plural && !span && !pelvis)
+    || Object.keys(context).sort().join(',') !== ['policy', ...(single ? ['report'] : plural ? ['reports'] : []), ...(span ? ['spanReport'] : []), ...(pelvis ? ['pelvisReport'] : [])].sort().join(',')) throw new Error('Invalid two-key export-boundary selection.');
   const reports: Report[] = single ? [context.report!] : plural ? context.reports! : [];
   if (!Array.isArray(reports) || ((single || plural) && reports.length < 1) || reports.length > MAX_TWO_KEY_ROTATION_BAKES
     || reports.some(report => !report || report.policy !== 'two-adjacent-interior-rotations.v1'
@@ -25,7 +27,7 @@ export function twoKeyExportReports(context: TwoKeyExportBoundary): readonly (Re
     startTick: report.ticks[0], maxRotationDegrees: report.maxRotationDegrees,
     rotations: report.corrections.map(r => ({ joint: r.joint, values: r.values?.map(v => v.after) })) })) },
   reports.map(r => r.clipId), reports.map(r => r.clipId), []);
-  if (!span) return reports;
+  if (!span) return [...reports, ...(pelvis ? [context.pelvisReport!] : [])];
   const report = context.spanReport;
   if (!report || report.policy !== 'bounded-interior-rotation-span.v1' || !Array.isArray(report.ticks)
     || report.ticks.length < 3 || report.ticks.length > 18 || Array.from(report.ticks).some((t, i) => t !== report.ticks[0] + i)
@@ -35,15 +37,21 @@ export function twoKeyExportReports(context: TwoKeyExportBoundary): readonly (Re
   if (report.ticks.length !== spec.rotations[0].values.length) throw new Error('Invalid rotation-span tick coverage.');
   assertDisjointRotationSpan(spec, reports.map(r => ({ clipId: r.clipId, startTick: r.ticks[0], maxRotationDegrees: r.maxRotationDegrees,
     rotations: r.corrections.map(c => ({ joint: c.joint, values: c.values.map(v => v.after) })) })));
-  return [...reports, report];
+  return [...reports, report, ...(pelvis ? [context.pelvisReport!] : [])];
 }
 
 /** Restore the pre-authoring curve for unselected emitted keys, never source references. */
-export function twoKeyExportBaseline(clip: THREE.AnimationClip, context: TwoKeyExportBoundary, bones: readonly THREE.Bone[], roots: readonly string[], signal?: AbortSignal): THREE.AnimationClip {
+export function twoKeyExportBaseline(clip: THREE.AnimationClip, context: TwoKeyExportBoundary, bones: readonly THREE.Bone[], roots: readonly string[], signal?: AbortSignal, scene?: THREE.Object3D, height?: number): THREE.AnimationClip {
   signal?.throwIfAborted();
-  const reports = twoKeyExportReports(context).filter(report => report.clipId === clip.name);
+  const allReports = twoKeyExportReports(context).filter(report => report.clipId === clip.name);
+  const pelvis = allReports.find((report): report is PelvisLayerReport => report.policy === PELVIS_LAYER_POLICY);
+  if (pelvis) {
+    if (!scene || height === undefined || roots.length !== 1) throw new Error('Missing pelvis-layer scene/height binding.');
+    clip = restorePelvisLayer(clip, pelvis, bones, scene, roots[0], height, signal);
+  }
+  const reports = allReports.filter((report): report is Report | SpanReport => report.policy !== PELVIS_LAYER_POLICY);
   const fail = (): never => { throw new Error('Invalid two-key export-boundary provenance.'); };
-  if (!reports.length) fail();
+  if (!reports.length) { if (pelvis) return clip; fail(); }
   const rootNames = [...roots, ...bones.filter(b => !bones.includes(b.parent as THREE.Bone)).map(b => b.name)];
   const specs = reports.map(report => (report.policy === 'bounded-interior-rotation-span.v1' ? parseRotationSpanBake : parseTwoKeyRotationBake)({ clipId: report.clipId,
     startTick: report.ticks[0], maxRotationDegrees: report.maxRotationDegrees,
