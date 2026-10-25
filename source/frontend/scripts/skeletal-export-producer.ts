@@ -19,6 +19,7 @@ const EXPORTER_FILES = [
   'source/frontend/src/utils/skeletalConditioningFidelity.ts',
   'source/frontend/src/utils/skeletalTerminalRotation.ts',
   'source/frontend/src/utils/skeletalTwoKeyRotation.ts',
+  'source/frontend/src/utils/skeletalRotationSpan.ts',
   'source/frontend/src/utils/skeletalChordRotation.ts',
   'source/frontend/src/utils/skeletalTransitionFloor.ts',
   'source/frontend/src/utils/skeletalPlantedIdle.ts',

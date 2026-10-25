@@ -124,6 +124,10 @@ function settingsDocument(job: SkeletalExportJob): Record<string, unknown> {
       unselectedKeys: 'pre-authoring canonical chord at existing nominal tick/60',
       selectedKeys: 'authored re-imported GLB at existing nominal tick/60',
       references: 'authored re-imported GLB; unchanged independent phases and tolerances' };
+    if (job.conditioning.rotationSpanBake) document.rotationSpanExportSampling = {
+      selectedRotations: 'only declared joint/tick rotations from authored re-imported GLB at nominal tick/60',
+      preservedComponents: 'all other transform components, keys and root samples from restored baseline',
+    };
   }
   if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.mode === CONDITIONING_NLERP_MODE) {
     document.animation = 'preserve float32 60 Hz sampled poses; canonical chord CUBICSPLINE joint rotations normalize to shortest-arc NLERP; translation, scale and locomotion yaw remain LINEAR with continuous yaw winding';
@@ -196,7 +200,9 @@ export async function runSkeletalExportJob(
       if (job.export.twoKeyExportBoundary) twoKeyExportBoundary = {
         policy: TWO_KEY_EXPORT_BOUNDARY_POLICY,
         ...(conditioned.report.twoKeyRotationBake ? { report: conditioned.report.twoKeyRotationBake }
-          : { reports: conditioned.report.twoKeyRotationBakes ?? fail('Missing two-key authoring reports.') }),
+          : conditioned.report.twoKeyRotationBakes ? { reports: conditioned.report.twoKeyRotationBakes }
+          : conditioned.report.rotationSpanBake ? { spanReport: conditioned.report.rotationSpanBake } : fail('Missing rotation authoring reports.')),
+        ...(conditioned.report.rotationSpanBake ? { spanReport: conditioned.report.rotationSpanBake } : {}),
       };
       disposeThreeObject(loaded.root); loaded = undefined;
       loaded = await loadGLB(bytesToArrayBuffer(conditioned.bytes));
@@ -206,7 +212,7 @@ export async function runSkeletalExportJob(
       const report = normalizedSkeletalJsonBytes({ ...conditioned.report,
         sourceModelIdentitySha256: source.sha256, originalSourceIdentitySha256: input.sha256,
         recipeIdentitySha256: sha256(recipe), producer,
-        differences: measureConditioningDifferences(original, loaded, job.conditioning.clipIds,job.conditioning.plantedIdle?.clipId,job.conditioning.terminalRotationClosure,job.conditioning.twoKeyRotationBake,job.conditioning.twoKeyRotationBakes),
+        differences: measureConditioningDifferences(original, loaded, job.conditioning.clipIds,job.conditioning.plantedIdle?.clipId,job.conditioning.terminalRotationClosure,job.conditioning.twoKeyRotationBake,job.conditioning.twoKeyRotationBakes,job.conditioning.rotationSpanBake),
       });
       throwIfAborted(signal);
       conditioning = await publishConditionedSkeletalInput(source.bytes, recipe, report, { generationRoot: job.output.conditioningRoot, signal });
@@ -218,13 +224,16 @@ export async function runSkeletalExportJob(
       ? selectSkeletalExportClips(loaded.clips, job.export.clipIds)
       : loaded.clips;
     let exportBoundary: TwoKeyExportBoundary | undefined;
+    const spanReport = twoKeyExportBoundary?.spanReport;
+    const selectedSpan = spanReport && clips.some(c => c.name === spanReport.clipId) ? spanReport : undefined;
     if (twoKeyExportBoundary?.report) {
       const context = twoKeyExportBoundary;
-      if (clips.some(c => c.name === context.report?.clipId)) exportBoundary = context;
+      if (clips.some(c => c.name === context.report?.clipId)) exportBoundary = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, report: context.report!, ...(selectedSpan ? { spanReport: selectedSpan } : {}) };
     } else if (twoKeyExportBoundary?.reports) {
       const reports = twoKeyExportBoundary.reports.filter(r => clips.some(c => c.name === r.clipId));
-      if (reports.length) exportBoundary = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, reports };
+      if (reports.length) exportBoundary = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, reports, ...(selectedSpan ? { spanReport: selectedSpan } : {}) };
     }
+    if (!exportBoundary && selectedSpan) exportBoundary = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, spanReport: selectedSpan };
     const prepared = await prepareSkeletalExport({ ...loaded, clips }, {
       sourceIdentitySha256: source.sha256,
       rootJoint: job.export.rootJoint,

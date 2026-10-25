@@ -2,15 +2,25 @@ import * as THREE from 'three';
 import type { LoadedModel } from '../loaders/glb';
 import { rotationDifferenceDegrees, type TerminalRotationClosureRecipe } from './skeletalTerminalRotation';
 import { parseTwoKeyRotationSelection, type TwoKeyRotationBakeRecipe } from './skeletalTwoKeyRotation';
+import { parseRotationSpanBake, assertDisjointRotationSpan, type RotationSpanBakeRecipe } from './skeletalRotationSpan';
 
 /** Original conversion differences remain separate from receiving tolerances. */
-export function measureConditioningDifferences(original: LoadedModel, derived: LoadedModel, clipIds: string[], authoredIdleId?: string, terminal?: TerminalRotationClosureRecipe, twoKey?: TwoKeyRotationBakeRecipe, twoKeys?: readonly TwoKeyRotationBakeRecipe[]) {
+export function measureConditioningDifferences(original: LoadedModel, derived: LoadedModel, clipIds: string[], authoredIdleId?: string, terminal?: TerminalRotationClosureRecipe, twoKey?: TwoKeyRotationBakeRecipe, twoKeys?: readonly TwoKeyRotationBakeRecipe[], spanRecipe?: RotationSpanBakeRecipe) {
   let selections: TwoKeyRotationBakeRecipe[] = [];
   if (twoKey !== undefined || twoKeys !== undefined) {
     const roots = [...original.skeleton!.bones, ...derived.skeleton!.bones].filter(b => !(b.parent instanceof THREE.Bone)).map(b => b.name);
     const parsed = parseTwoKeyRotationSelection({ ...(twoKey === undefined ? {} : { twoKeyRotationBake: twoKey }), ...(twoKeys === undefined ? {} : { twoKeyRotationBakes: twoKeys }) }, clipIds, clipIds, roots);
     selections = parsed.twoKeyRotationBake ? [parsed.twoKeyRotationBake] : parsed.twoKeyRotationBakes!;
     if (selections.some(s => s.clipId === authoredIdleId)) throw new Error('Two-key gait authoring cannot use the idle source-fidelity exception.');
+  }
+  const span = spanRecipe === undefined ? undefined : parseRotationSpanBake(spanRecipe, clipIds, clipIds,
+    [...original.skeleton!.bones, ...derived.skeleton!.bones].filter(b => !(b.parent instanceof THREE.Bone)).map(b => b.name));
+  if (span) {
+    if (span.clipId === authoredIdleId) throw new Error('Rotation-span gait authoring cannot use the idle source-fidelity exception.');
+    assertDisjointRotationSpan(span, selections);
+    if (terminal?.clipId === span.clipId && span.startTick + span.rotations[0].values.length >= terminal.startTick
+      && terminal.joints.some(j => span.rotations.some(r => r.joint === j))) throw new Error('rotationSpanBake conflicts with terminal source fidelity.');
+    selections.push(span);
   }
   function sample(model: LoadedModel, clip: THREE.AnimationClip, tick: number, restore?: Map<string, number[]>) {
     const mixer = new THREE.AnimationMixer(model.root), action = mixer.clipAction(clip);
@@ -40,7 +50,7 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
     const a = original.clips.find(c => c.name === clipId)!, b = derived.clips.find(c => c.name === clipId)!;
     const ticks = Math.round(a.duration * 60), phases = [0, ticks * .25 + .125, ticks * .5 + .25, ticks * .75 - .125, ticks];
     const selected = selections.filter(s => s.clipId === clipId);
-    if (selected.some(s => s.startTick + 1 >= ticks)) throw new Error('Invalid two-key source-fidelity interval.');
+    if (selected.some(s => s.startTick + s.rotations[0].values.length - 1 >= ticks)) throw new Error('Invalid rotation source-fidelity interval.');
     let maximumPositionMeters = 0, maximumJointMatrix = 0, maximumTickJointMatrix = 0, maximumEndpointJointMatrix = 0, maximumPreservedTickJointMatrix = 0;
     for (const tick of [...new Set([...phases, ...Array.from({ length: ticks + 1 }, (_, i) => i)])]) {
       const left = sample(original, a, tick), right = sample(derived, b, tick);
@@ -55,12 +65,12 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
           restore.set(joint, before);
         }
       }
-      for (const selection of selected.filter(s => tick === s.startTick || tick === s.startTick + 1)) {
+      for (const selection of selected.filter(s => Number.isInteger(tick) && tick >= s.startTick && tick < s.startTick + s.rotations[0].values.length)) {
         for (const rotation of selection.rotations) {
           const before = left.rotations.get(rotation.joint), actual = right.rotations.get(rotation.joint);
           const expected = rotation.values[tick - selection.startTick];
           if (!before || !actual || rotationDifferenceDegrees(expected, actual) > 1e-4
-            || rotationDifferenceDegrees(before, actual) > selection.maxRotationDegrees) throw new Error(`Invalid two-key source-fidelity rotation for ${rotation.joint}.`);
+            || rotationDifferenceDegrees(before, actual) > selection.maxRotationDegrees) throw new Error(`Invalid ${selection === span ? 'rotation-span' : 'two-key'} source-fidelity rotation for ${rotation.joint}.`);
           restore.set(rotation.joint, before);
         }
       }
@@ -82,6 +92,6 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
     }
     if (![maximumPositionMeters, maximumJointMatrix, maximumTickJointMatrix, maximumEndpointJointMatrix, maximumPreservedTickJointMatrix].every(Number.isFinite) || maximumPreservedTickJointMatrix > 1e-4) throw new Error(`Conditioning ${clipId} failed original tick-pose preservation (${maximumPreservedTickJointMatrix}).`);
     return { clipId, phases, maximumPositionMeters, maximumJointMatrix, maximumTickJointMatrix, maximumEndpointJointMatrix, maximumPreservedTickJointMatrix,
-      differenceKind: clipId === authoredIdleId ? 'explicit planted idle authoring; endpoints retain source fidelity' : clipId === twoKey?.clipId ? 'explicit two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : selected.length ? 'explicit composed two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : clipId === terminal?.clipId ? 'explicit terminal rotation authoring; all other tick transforms retain source fidelity' : 'sampled source tick preservation' };
+      differenceKind: clipId === authoredIdleId ? 'explicit planted idle authoring; endpoints retain source fidelity' : clipId === span?.clipId ? 'explicit bounded rotation-span authoring; only declared local rotations and existing selections excepted' : clipId === twoKey?.clipId ? 'explicit two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : selected.length ? 'explicit composed two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : clipId === terminal?.clipId ? 'explicit terminal rotation authoring; all other tick transforms retain source fidelity' : 'sampled source tick preservation' };
   });
 }

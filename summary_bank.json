@@ -299,13 +299,13 @@
         "source/frontend/src/utils/skeletalTwoKeyExportBoundary.test.ts",
         "source/frontend/src/utils/skeletalExport.ts",
         "source/frontend/scripts/skeletal-export-producer.ts",
-        "source/frontend/scripts/skeletal-export-cli.ts",
         "source/frontend/src/utils/skeletalExportJob.ts",
         "source/frontend/src/utils/skeletalExportBoundaryCli.test.ts"
       ],
       "notes": [
         "Intentional overlap follows the existing exporter, strict job admission and producer fingerprint. Plural authoring retains its own two-key route; general job/publication coverage stays in workflow__skeletal_export.",
-        "Source references remain independently sampled from the re-imported authored GLB; engine v1 and all tolerances/limits stay fixed. Preserve legacy omitted-option jobs and all historical failures."
+        "Source references remain independently sampled from the re-imported authored GLB; engine v1 and all tolerances/limits stay fixed. Preserve legacy omitted-option jobs and all historical failures.",
+        "CLI: workflow__skeletal_export; bounded spans: workflow__skeletal_rotation_span."
       ]
     },
     "workflow__skeletal_export": {
@@ -1447,7 +1447,8 @@
         "Optional transitionFloor ownership is in workflow__skeletal_transition_floor; workflow__skeletal_export owns CLI and publication contracts.",
         "Optional plantedIdle authoring and the native batch adapter are routed by workflow__skeletal_planted_idle.",
         "workflow__skeletal_terminal_rotation owns terminal authoring and skeletalConditioningFidelity.ts; read it for original-source guards.",
-        "workflow__skeletal_two_key_rotation owns explicit two-key authoring and its source-fidelity exception."
+        "workflow__skeletal_two_key_rotation owns explicit two-key authoring and its source-fidelity exception.",
+        "Bounded span authoring/fidelity/export: workflow__skeletal_rotation_span."
       ]
     },
     "workflow__skeletal_transition_floor": {
@@ -1458,12 +1459,12 @@
         "source/frontend/src/utils/skeletalTransitionFloor.ts",
         "source/frontend/src/utils/skeletalTransitionFloor.test.ts",
         "source/frontend/src/utils/skeletalConditioning.ts",
-        "source/frontend/src/utils/skeletalExportJob.ts",
         "source/frontend/src/utils/skeletalExportJob.test.ts",
         "source/frontend/scripts/skeletal-export-producer.ts"
       ],
       "notes": [
-        "Intentional overlap with conditioning/export groups follows their shared recipe and serialized-reference boundary; use workflow__skeletal_conditioning for base/chord regressions and workflow__skeletal_export for CLI/generation mechanics."
+        "Intentional overlap with conditioning/export groups follows their shared recipe and serialized-reference boundary; use workflow__skeletal_conditioning for base/chord regressions and workflow__skeletal_export for CLI/generation mechanics.",
+        "Job/CLI admission: workflow__skeletal_export."
       ]
     },
     "workflow__skeletal_planted_idle": {
@@ -1480,11 +1481,11 @@
         "source/frontend/src/utils/skeletalConditioning.ts",
         "source/frontend/src/utils/skeletalConditioning.test.ts",
         "source/frontend/src/utils/skeletalExportJob.ts",
-        "source/frontend/scripts/skeletal-export-cli.ts",
         "source/frontend/scripts/skeletal-export-producer.ts"
       ],
       "notes": [
-        "Intentional overlap with conditioning/export follows the shared v3 recipe, independent reload and producer identity. feature__runtime_pose_contact owns the unchanged canonical Rust solver; the floor route owns p25 corrections."
+        "Intentional overlap with conditioning/export follows the shared v3 recipe, independent reload and producer identity. feature__runtime_pose_contact owns the unchanged canonical Rust solver; the floor route owns p25 corrections.",
+        "CLI implementation: workflow__skeletal_export."
       ]
     },
     "workflow__skeletal_terminal_rotation": {
@@ -1517,13 +1518,33 @@
         "source/frontend/src/utils/skeletalConditioningFidelity.ts",
         "source/frontend/src/utils/skeletalConditioning.ts",
         "source/frontend/src/utils/skeletalExportJob.ts",
-        "source/frontend/scripts/skeletal-export-cli.ts",
         "source/frontend/scripts/skeletal-export-producer.ts",
         "source/frontend/src/utils/skeletalChordRotation.ts",
         "source/frontend/src/utils/animationTrackInterpolation.ts"
       ],
       "notes": [
-        "Intentional overlap with conditioning/export and terminal authoring follows the shared v3 job, canonical chord and selective original-source matrix guard. Idle and floor authoring retain separate focused contracts."
+        "Intentional overlap with conditioning/export and terminal authoring follows the shared v3 job, canonical chord and selective original-source matrix guard. Idle and floor authoring retain separate focused contracts.",
+        "CLI: workflow__skeletal_export; bounded spans: workflow__skeletal_rotation_span."
+      ]
+    },
+    "workflow__skeletal_rotation_span": {
+      "description": "Bounded producer-only rotation spans alongside existing two-key bakes; strict admission, stored bounds, fidelity union, component-preserving export and CLI proof.",
+      "max_kb": 160,
+      "paths": [
+        "docs/dev/SKELETAL_ROTATION_SPAN.md",
+        "source/frontend/src/utils/skeletalRotationSpan.ts",
+        "source/frontend/src/utils/skeletalRotationSpan.test.ts",
+        "source/frontend/src/utils/skeletalConditioning.ts",
+        "source/frontend/src/utils/skeletalConditioningFidelity.ts",
+        "source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts",
+        "source/frontend/src/utils/skeletalExport.ts",
+        "source/frontend/src/utils/skeletalExportJob.ts",
+        "source/frontend/scripts/skeletal-export-cli.ts",
+        "source/frontend/scripts/skeletal-export-producer.ts",
+        "source/frontend/src/utils/skeletalChordRotation.ts"
+      ],
+      "notes": [
+        "Shared conditioning, fidelity, job and exporter ownership is intentional; two-key tests and publication retain their existing routes."
       ]
     }
   },

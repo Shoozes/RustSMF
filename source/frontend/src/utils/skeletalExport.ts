@@ -765,8 +765,10 @@ export async function prepareSkeletalExport(
     ])].sort((a, b) => a - b);
     const poses = new Map<number, SampledPose>();
     const baseline = boundaryBaselines.get(clip.name);
+    const reports = boundaryReports.filter(r => r.clipId === clip.name);
+    const span = reports.find(r => r.policy === 'bounded-interior-rotation-span.v1');
     if (baseline) {
-      const selectedTicks = new Set(boundaryReports.filter(r => r.clipId === clip.name).flatMap(r => r.ticks));
+      const selectedTicks = new Set(reports.filter(r => r.policy !== 'bounded-interior-rotation-span.v1').flatMap(r => r.ticks));
       const { mixer, action } = createMixer(loaded.root, baseline);
       try {
         for (const tick of sampleTicks) {
@@ -783,11 +785,12 @@ export async function prepareSkeletalExport(
     const { mixer, action } = createMixer(loaded.root, clip);
     try {
       for (const tick of sampleTicks) {
-        if (poses.has(tick)) continue;
+        const spanTick = span?.ticks.includes(tick);
+        if (poses.has(tick) && !spanTick) continue;
         throwIfAborted(options.signal);
         setMixerTime(mixer, action, tick / SKELETAL_EXPORT_TICK_RATE);
         loaded.root.updateMatrixWorld(true);
-        poses.set(tick, capturePose(
+        const sampled = capturePose(
           loaded.root,
           rootInverse,
           ordered,
@@ -797,7 +800,14 @@ export async function prepareSkeletalExport(
           bindGlobals,
           tick,
           clip.name,
-        ));
+        );
+        if (spanTick && span && poses.has(tick)) {
+          const preserved = poses.get(tick)!;
+          for (const correction of span.corrections) {
+            const joint = ordered.findIndex(b => b.name === correction.joint);
+            preserved.localTransforms[joint] = { ...preserved.localTransforms[joint], rotation: sampled.localTransforms[joint].rotation };
+          }
+        } else poses.set(tick, sampled);
         workSinceYield += 1;
         if (workSinceYield >= yieldEvery) {
           await yieldToEventLoop();

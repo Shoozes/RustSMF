@@ -6,16 +6,15 @@ Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Residual attribution — 2026-10-24
+## Right-swing integration — 2026-10-24
 
-Union producer 55ad2c76 remains qualified. Fresh read-only WASM 361 reproduces
-retained metrics exactly: five planted-drift windows and two right-foot skin
-islands. Source STEP motion already slides and crosses floor; continuous
-interpolation adds the short 24-tick dip. Root lift at 51 breaks left support.
-[Next](SKELETAL_EXPORT_BOUNDARY.md#right-swing-clearance-feasibility): fixed-root
-right-swing feasibility within experimental 47–66; no integration yet. Existing
-706/14, 46/590 and 348-exact qualification is reused. Both physical failures and
-full P7C/visual stay open. HISTORY retains proof and prior review closure.
+Shared-tick export repair passes 28 focused checks and canonical 712/14.
+Current producer 21f96612 needs receiving renewal; prior proof stays bound to
+6831d596. TODO owns the next batch; early skin/drift remain open.
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-right-swing-feasibility | change=distinguished verified prototype from unchanged qualified producer -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=recorded local producer proof and refused stale receiver binding -->
 
 ## Earlier P7B reviews — 2026-10-22
 
@@ -278,3 +277,5 @@ AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=cl
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-composition-bake | change=closed qualified producer composition and retained two residual physical failures -->
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-residual-attribution | change=attributed both physical failures and selected swing feasibility -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-review-cleanup | change=fixed shared ticks and selected proof renewal -->

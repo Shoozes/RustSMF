@@ -7,6 +7,8 @@ the command does not modify the input model.
 
 The explicit producer-only [two-key boundary context](SKELETAL_EXPORT_BOUNDARY.md)
 preserves unselected emitted keys without changing independent GLB references.
+The [bounded span option](SKELETAL_ROTATION_SPAN.md) also preserves every
+unselected component at its selected ticks; source references remain independent.
 Singular and disjoint one/two-record plural v3 integration now pass renewed
 46/590 native/WASM receiving and exact outside-runtime preservation. Omitted
 options retain their bytes. Full P7C remains open with two physical failures.
@@ -167,3 +169,5 @@ at their source and exported again; RustSMF does not silently simplify them.
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-export-boundary-preservation | change=route the disjoint emitted-key preservation proof and explicit integration limitation -->
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-union-boundary | change=closed bounded union sampling with renewed runtime proof and retained physical failures -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=routed bounded span authoring and independent reference preservation -->

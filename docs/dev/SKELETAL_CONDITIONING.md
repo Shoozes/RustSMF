@@ -266,7 +266,7 @@ Original-to-derived conversion differences are descriptive: the report measures
 joint matrices at every integer tick and five endpoint/fractional phases, and
 world-space skinned positions at those five phases, matching Three.js's rendered
 mesh transform. Original integer joint poses remain within `1e-4` except the explicitly authored
-idle, terminal and two-key rotations; their contract-specific guards retain all other
+idle, terminal, two-key and [bounded span](SKELETAL_ROTATION_SPAN.md) rotations; their guards retain all other
 source transforms. Authored differences remain reported. Larger
 fractional changes reflect the explicitly selected continuous derivative. They
 are distinct from receiving errors against that derivative.
@@ -282,3 +282,5 @@ Numerical receiving proof does not establish visual acceptance or model
 redistribution rights; TODO and HISTORY own current P7C results.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-union-boundary | change=closed bounded union sampling with renewed runtime proof and retained physical failures -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=routed bounded span authoring and independent reference preservation -->

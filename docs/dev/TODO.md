@@ -2,25 +2,25 @@
 
 Last reviewed: 2026-10-24
 
-## P7C right-swing clearance feasibility — selected
+## P7C cleanup proof renewal — next bounded batch
 
-- What: Test fixed-root right-leg clearance within experimental ticks 47–66.
-- Why: This island contains 60/63 skin-failing poses and 94.1% of violating vertex observations; root-only lift breaks planted left support.
-- Where: [Bounded pass-down](SKELETAL_EXPORT_BOUNDARY.md#right-swing-clearance-feasibility); existing three-joint rotation/chord owners.
-- When: Next; read-only attribution completed 2026-10-24.
-- How: Predeclare a finite right hip/knee/ankle family; keep pelvis/root, left chain, toe local transform and existing 13/7-degree bakes fixed. No public API extension in feasibility.
-- Done when: All 77 experimental poses clear the whole skin under the existing floor limit, 284 outside poses and both boundary samples stay exact, planted drift and accepted guards remain unchanged; or report the tested family's obstruction. Feasible prototypes need a separate integration pass.
-- Verification: Source 55ad2c76; all 361 current poses reproduce the retained measurement. Five drift windows and both skin islands attributed. Early 24.25–24.75 skin and all drift failures remain open; no new authoring performed.
+- What: Renew White Wolf qualification after the shared-tick export repair.
+- Why: Current producer 21f96612 differs from qualified baseline 6831d596.
+- Where: [Span criteria](SKELETAL_EXPORT_BOUNDARY.md#right-swing-rotation-span-integration); HISTORY.
+- When: Next, before further motion edits.
+- How: Ordinary CLI/reload; rebind captured engine f280d357 and outputs. Preserve the linked motion/support/mesh constraints.
+- Done when: Renew 46/590 receiving, isolation/replay and actual 637 pilot; all linked dense/outside/boundary/drift/arc/seam guards remain exact and cleanup passes. Keep the two physical failures explicit.
+- Verification: 28 focused checks and canonical 712/14 pass. Prior receiving binds 6831d596; reuse unchanged canonical proof.
 
-## P7C plural boundary composition — complete locally
+## Completed P7C producer baselines
 
-- What: Explicit one/two-record union export sampling.
-- Why: Close emitted-runtime boundary leakage.
-- Where: [Proof and criteria](SKELETAL_EXPORT_BOUNDARY.md#plural-union-results); HISTORY.
+- What: Union export sampling and right-swing span qualification.
+- Why: Retain accepted baselines.
+- Where: [Contract](SKELETAL_EXPORT_BOUNDARY.md); HISTORY.
 - When: Closed locally 2026-10-24.
-- How: Restore all before-values; sample authored selected ticks.
-- Done when: All five linked criteria pass; full P7C stays open.
-- Verification: Rechecked source 55ad2c76: 46/590 receiving, 361 parity/348 exact outside, both arcs and 637 pilot. Sole criteria pass; drift/skin stay open. Canonical 706/14 reused; no new implementation defect.
+- How: Exact qualified snapshots and independent receiving.
+- Done when: Closed at 55ad2c76/6831d596; full P7C stays open.
+- Verification: 46/590 and 637 pilot pass scoped checks; skin/drift remain open.
 
 ## Editing and interchange reliability — source complete
 
@@ -174,3 +174,11 @@ bounded noncombat fixture.
 - Verification: Sequentially run `verify`, `test:e2e -NoGenEye`, `test:journey`, `test:visual-strict`, `desktop-smoke`, and `package:windows`; then run `verify` and `package:windows` again after the version bump. Actual Windows OS-dialog checks remain separate from native IPC mocks.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-residual-attribution | change=attributed both physical families and selected fixed-root swing feasibility -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-right-swing-feasibility | change=closed measured feasibility and selected bounded rotation-span integration -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=recorded verified producer work and external receiving prerequisite -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-current-source-qualification | change=closed current-source receiving and retained physical limits -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-review-cleanup | change=fixed shared ticks and selected proof renewal -->

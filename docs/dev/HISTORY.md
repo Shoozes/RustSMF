@@ -2,6 +2,263 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-24 - P7C span closeout and scoped publication
+
+Closed out the 18-file producer span, qualified-baseline records and shared-tick
+repair batch on main. Application source remains 21f96612; its exact inputs reuse
+the preceding 712-frontend/14-Rust canonical proof and 28 focused checks. Current
+docs and the staged candidate receive isolated validation before guarded push.
+The Summary Bank already routes the affected implementation and tests.
+
+This saves verified progress. The 6831d596 graph retains its qualified captured
+f280d357 receiving/replay and 637-pose pilot; TODO still selects proof renewal for
+21f96612 before more motion work. Planted drift, three early skin poses and full
+P7C/visual acceptance remain open. V1, all three Rust overlays, shared dependencies
+and retained failure/qualification evidence remain protected. No GaimEngine
+publication or release is selected. Guarded publication, exact candidate tree,
+isolated checks and confirmed remote identity belong in
+`D:/Compact_Evidence/RustSMF/runs/p7c-span-closeout-publish-20261024/publication.json`.
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-publish | change=recorded scoped closeout and retained source-proof renewal -->
+
+## 2026-10-24 - Span review, recheck and shared-tick cleanup
+
+Read-only review covered span admission/baking, union provenance/restoration,
+source-fidelity exceptions, CLI selection/settings/fingerprints, consumers and
+focused tests. Native context generation ran with stdout only; the broad default
+output was truncated, so the affected source files were read directly. Recheck
+matched all 18 prior working files and producer 6831d596, the complete captured
+1173-file engine f280d357 and both exact qualified outputs against the retained
+qualification. Its 46/590 receiving, isolation/replay, 637 pilot and dense proof
+remain valid at that baseline. Early skin/drift remain open. Later live engine
+changes are outside this review's qualification; no engine work is selected.
+
+A new supported-composition defect was reproduced: disjoint chains may share
+ticks, but the two-key selection skips their baseline pose. The span merge then
+dereferenced missing localTransforms. The new regression failed with that exact
+TypeError before the repair. The exporter now merges span rotations only when
+a baseline pose exists; shared two-key ticks retain the existing authored
+full-pose semantics. No admission limit, source reference, tolerance or motion
+recipe changes. Singular/plural shared ticks, neighboring component preservation,
+independent references and immutable input tracks are covered.
+
+Focused command `node --import tsx --test src/utils/skeletalRotationSpan.test.ts
+src/utils/skeletalTwoKeyRotation.test.ts src/utils/skeletalTwoKeyExportBoundary.test.ts
+src/utils/skeletalExportJob.test.ts` passed 28 checks. Fresh canonical
+`pwsh -NoProfile -File ./run.ps1 -Task verify` passed exit 0 with 712 frontend
+tests, 14 Rust tests, lint, strict types, build/chunks and repository checks.
+Current producer is 21f9661299230d9c9c3b1f28be322179f68ba7cc82e74b0cd1c09fe0fa06e4ae;
+exporter 3266487aa475771b64d80c9df28f2fe0a3ce73a1f3a536feefcd9daacd2ace4b.
+Runtime v26.5.0; elapsed 174958 ms. Exact input snapshots,
+command, environment, source stability and output are retained under
+`D:/Compact_Evidence/RustSMF/runs/p7c-span-review-cleanup-20261024/`.
+
+This cleanup is locally verified. It does not relabel the old 46/590 graph as a
+new-source export: TODO selects one bounded proof renewal against the preserved
+f280d357 snapshot/output pair before new motion work. The prior 6831d596 graph,
+failed attempts and qualification evidence remain untouched. No dependency
+installation, deletion, engine/overlay edit, Git staging or publication.
+
+## 2026-10-24 - Current-source engine qualification closes span receiving
+
+Completed the selected qualification on a frozen latest-current-source snapshot
+f280d3570c3a7b079ab1e90e8245641e853dff39e53e950635ab718c81df2457 (1173 files),
+including all three preserved Rust overlays. This is separate from the earlier
+qualified c4fac1aa snapshot receiving; neither old receipts nor source snapshots
+are rewritten. Fresh `node scripts/engine.mjs engine-check` passes all
+137 commands with stable before/after source maps, locked offline builds,
+Clippy and workspace/runtime checks. Native proof: `D:\Compact_Evidence\RustSMF\runs\p7c-current-source-qualification-20261024\current-source-snapshot\.artifacts\proof\1792894404197-60796-engine-check.json`.
+
+The first live gate passed all 137 commands but correctly refused a pass
+when another owner edited two LTS source files during the run. That failed
+receipt stays retained. The retry freezes all 1,287 public files from the captured current
+working source, including the three overlays, and runs the complete gate on its
+unchanged 1,173-file input map. The operator approved this captured snapshot
+while another owner continued editing two live LTS files. Later live LTS bytes
+are outside this qualification. The live original is preserved without resets.
+The first isolated gate lacked the existing Jolt cache/native fixture setup; its
+failure stays retained. The corrected gate uses the existing pinned cache in
+place and binds only the exact native physics fixture and receipt, without
+copying a dependency or build tree.
+The two exact skeletal runtime outputs are frozen for receiving. Shared target
+outputs reverify/restore to their original bytes after the build exits; no build
+tree, dependency copy, engine code edit or release regeneration is needed.
+The current full-source receipt binds the current receiver and pilot directly,
+without an old-receipt/new-launcher mixture or source-binding exception.
+
+Fresh actual receiving passes all 46 retained packets/590 independent references,
+native/WASM equality, isolated instances, six-tick restored replay, binding
+refusal and cleanup. The unchanged producer is 6831d596/exporter 2df7a94b; bundle
+fd499ad8/model e2455830 stays immutable. The complete 637-pose/55-reference pilot
+correctly exits 1 with two physical failures: unchanged planted drift and three
+early skin-failing poses/210 vertex observations at 24.25–24.75. First skin
+witness 24.25/v0 and maximum 24.5/v0 = 0.04293725817655859 m stay exact. Both global
+sole criteria pass; no support, threshold, tolerance or authored motion changes.
+
+The existing 77-pose clearance, 284 outside poses, 47/66 boundaries, 23,240 drift
+observations, both arcs, 27 segments/knees, 24 seams and six endpoints remain bound
+to exact inputs and runtime outputs. The producer's unchanged 711-frontend/14-Rust
+canonical proof is reused. Final record checks, complete source/artifact binding,
+retained dense-proof reuse or renewed execution, preservation and cleanup are in
+`D:/Compact_Evidence/RustSMF/runs/p7c-current-source-qualification-20261024/summary.json`.
+
+The bounded rotation-span integration is complete with verified limitations.
+Early skin/stance producer work, full P7C/visual acceptance and unrelated LTS/cold
+startup work remain open. GaimEngine v1, overlays, shared dependencies and every
+retained failure/qualification graph stay protected. No Git publication.
+
+## 2026-10-24 - Right-swing span source verified; receiving externally blocked
+
+Implemented the selected producer-only 25-degree right-swing span at stored
+48–65 on main 1807908, preserving the prior uncommitted feasibility records.
+`rotationSpanBake` admits one existing direct three-joint non-root chain with
+3–18 consecutive unit-quaternion values per joint and a measured stored bound
+up to 25 degrees. The selected job supplies 54 rotations alongside the unchanged
+13-degree right43/44 and 7-degree left87/88 bakes. Their strict two-record limit
+is unchanged. The new helper is included in producer/exporter fingerprints.
+
+Conditioning authors only selected values and adjacent canonical chord tangents.
+Original-source fidelity restores the complete declared local-rotation union
+and retains every other matrix guard. Export validates provenance and restores
+all before-values together; span ticks substitute only declared joint rotations,
+retaining all other emitted components/keys/root from the baseline. References
+continue to sample the independently reloaded authored GLB at the original
+phases/tolerances. Malformed, stale, overlapping/adjacent, disconnected, conflicting
+and out-of-bound selections fail; cancellation/late failures preserve input clip
+arrays and prior publication. Span jobs require explicit NLERP/boundary policy.
+
+Fresh canonical `pwsh -NoProfile -File ./run.ps1 -Task verify` passed exit0 in
+184,255 ms on stable source 6831d596af5e5e24e7b37297fd3143bd5fa19512f5d157d71db8088c198a9165,
+exporter 2df7a94b25b435a366650f0ec0e04a9ef9194b7b6c308097ab4386c4a602d28c.
+It includes 711 frontend tests, 14 Rust checks and repository/context/private
+publication safeguards. Process-local `CARGO_INCREMENTAL=0` avoids new incremental
+caches; `TSX_DISABLE_CACHE=1` avoids shared transform-cache writes. No pins or
+dependencies changed. Source/test checks remain bound to this unchanged runtime;
+final record edits receive the separate context gate. Summary Bank adds one
+focused span route and delegates common CLI/job ownership without raising budgets.
+
+All 46 ordinary CLI packets regenerate on that producer, with the original
+independent-reference schedule. Model SHA is e24558309c74fa23cacde8630f1b9d026fe96e68d6eb2d076944fb81b0bcb2e1;
+bundle SHA is fd499ad8b193ac647bd52601589194913d8c0d91a535c2b615cd18c42a61805e.
+The model's entire BIN matches the measured feasibility prototype; JSON differs
+only in correctly recomputed extrema for the three selected rotation accessors.
+The emitted asset matches the prototype after normalizing only its source-derived
+ID. Fresh independent reload of all 77 poses matches that prototype exactly:
+286,902 vertex observations, root, joint matrices and local rotations have zero
+difference. This explicitly reuses the prototype's qualified runtime comparison;
+it is not renewed 46/590 receiving qualification.
+
+The additional limited-runtime fallback freshly binds 536 runtime-source files
+and nine executed helpers (545 files) to the retained module hashes and verifies
+the exact native/WASM artifacts. It freshly executes all 361 gait phases:
+native/WASM agree, 284 outside poses, 47/66 boundaries and all 23,240 planted-drift
+observations are exact. All 77 local poses clear the original floor limit;
+reloaded-source/runtime error is below 6.884e-7 m. Both accepted 13-pose arcs,
+27 segments, zero knee inversions, 24 seams and six endpoints pass. The remaining
+early island stays three poses/210 violations, first 24.25/v0 and maximum
+24.5/v0 at 0.042937258177 m. This explicitly scoped module proof does not execute
+the drifted launcher or qualify full bundle receiving/replay or the 637-pose pilot.
+
+Actual `node --test tests/product/humanoid-input-receiving.mjs` and
+`node scripts/humanoid-floor-pilot.mjs --bundle <run>/gaim-bundle.json
+--bundle-sha256 fd499ad8b193ac647bd52601589194913d8c0d91a535c2b615cd18c42a61805e
+--build-receipt C:/DevStuff/GaimEngine/.artifacts/proof/1792788088697-9540-engine-check.json
+--receipt <run>/actual-floor-pilot.json` refuse before admission/measurement.
+The receipt does not bind current receiver `scripts/engine.mjs` (expected SHA
+7809a97d…, actual d581c351…). No tolerance or source-binding check is weakened.
+The full current engine source map has 1,172 paths versus the receipt's 1,168,
+including four new LTS candidate/acceptance script/test files. An earlier copied
+preflight claiming the old identity is retained as unqualified diagnostic data;
+fresh reconciliation hashes actual receiver files separately from the full map.
+
+Bounded fallback searched existing receipt/source evidence and 78 Git/reflog
+revisions for the exact qualified launcher bytes. They are unavailable; a
+source-only frozen receiver projection cannot be created truthfully. Current
+GaimEngine work is preserved without rebuilding it, creating a substitute receipt,
+or claiming failed admission as a passed qualification. To finish the selected
+Done When, the owner must provide the matching qualified receiver snapshot or a
+passed current-source engine-check receipt with matching native/WASM artifacts.
+Then renew actual 46/590 receiving, isolation/restored replay and the 637-pose pilot.
+
+Exact independent checks, commands/exit codes, runtime-subset scope, failed
+diagnostics, final record validation, preservation and owned-resource disposition
+are retained in
+`D:/Compact_Evidence/RustSMF/runs/p7c-right-swing-span-integration-20261024/summary.json`.
+The task is blocked by that external qualification condition; producer source is
+verified locally. Early skin and planted drift, full P7C and visual acceptance
+remain open. No engine code, v1 release, Rust overlays, shared dependencies or
+prior evidence is edited; no commit/push or unrelated cleanup is performed.
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=recorded verified source delivery and exact external receiving blocker -->
+
+## 2026-10-24 - Fixed-root right-swing clearance feasibility
+
+Completed all four selected criteria on main 1807908, unchanged producer
+55ad2c76/exporter 3c833999 and qualified model d8d9a606/bundle 85702c3c. The finite
+family was written before trials: seven ankle-lift values 0–0.4 m, three foot
+orientation blends 0.5/0.75/1, three knee swivels -15/0/15 degrees, plus baseline;
+64 trials total, with a declared stored-local correction ceiling of 100 degrees.
+Analytic two-bone IK preserves root/pelvis and translations/scales. Only right
+UpLeg/Leg/Foot stored rotations 48–65 change; fixed toe local, left chain, original
+supports, mesh/skin/bind and both qualified 13/7-degree bakes remain binding.
+
+Forty-two trials pass local floor/bend checks. The selected family member uses
+0.15 m lift, 0.5 orientation blend and 15-degree swivel with smoothstep tapers at
+47–49 and 64–66. Stored hip/knee/ankle corrections peak at 13.391759656,
+21.826770268 and 24.529416426 degrees. The next integration bound is 25 degrees.
+Only three CUBICSPLINE accessors are patched in a separate 2,088,636-byte GLB,
+SHA 7b9de1cc85c28a596eac16be414ff8f071c7d946e0033b2dc1096a882b0a6048;
+all other bytes and 45 clips remain exact. Independent reload validates chords,
+219 unselected stored values, 29 other walk channels and 284 outside poses.
+
+The serialized curve passes 286,902 skin observations at all 77 quarter poses,
+maximum penetration 0.000440425695 m. Actual emitted runtime reaches
+0.000440352387 m and active sole gap 0.004653326308 m, both below the unchanged
+0.021012886071 m limit. Nominal 66 source sampling leaks 1.236633e-7 m despite an
+exact stored boundary. The experimental compositor therefore retains the entire
+qualified emitted asset and substitutes only 54 selected local rotations from
+the ordinary exporter of the reloaded GLB. Other components/keys, including
+nominal 47/66, stay exact. This experimental asset has no immutable-generation
+manifest or current producer-job admission. References remain independent;
+no retained input/reference bytes are replaced.
+
+Fresh exact native/WASM comparison uses the qualified source-bound build receipt
+`C:/DevStuff/GaimEngine/.artifacts/proof/1792788088697-9540-engine-check.json`
+and the existing target at `D:/Codex_Builds/GaimEngine-build/cargo-target`.
+Each graph's complete 361 gait poses match across hosts, plus 24 seam and six
+independent endpoint samples: 752 compared pairs. The emitted prototype preserves
+284 outside poses, both boundaries, all 23,240 planted-drift observations and
+both accepted 13-pose arcs exactly. All 27 segments pass (maximum relative length
+change 3.546e-7), zero knee inversions, calibration 22.5, terminal/tail, root,
+24 seams and six source-reference endpoints pass. Reload/runtime maximum skin
+difference is 6.884e-7 m. The baseline full measurement matches retained proof
+exactly; its 51/v2 maximum remains untouched evidence.
+
+The larger island's 3,339 violating vertex observations disappear. The early
+24.25–24.75 island remains three failing poses/210 observations, with unchanged
+first 24.25/v0 and prototype global maximum 24.5/v0 at 0.042937258177 m. All drift
+values remain unchanged. Both physical criteria and full P7C/visual acceptance
+remain open. Existing 46/590/637 and canonical 706/14 evidence is reused only for
+unchanged production inputs; no new production qualification is claimed.
+
+The first probe refused a missing calibration field before trials. The first
+runtime harness finished gait assertions but queried idle from a walk-only packet;
+the second reached endpoints but supplied raw rather than validated mapping.
+Both failures remain retained. A six-endpoint bounded adapter precheck passed
+through `readSkeletalExportGeneration`; the corrected complete verifier passed.
+These fixes affect evidence scripts only. All model/asset owners and each exact
+frozen native executable copy are released; no dependency/build copies, production
+generation, deletion, engine edits or publication occurred.
+
+Exact commands, source/script hashes, exit codes, preservation and storage checks
+are retained in
+`D:/Compact_Evidence/RustSMF/runs/p7c-right-swing-clearance-feasibility-20261024/summary.json`.
+The [next bounded integration](SKELETAL_EXPORT_BOUNDARY.md#right-swing-rotation-span-integration)
+adds one explicit span alongside the occupied strict two-record policy and must
+renew actual receiving/pilot/canonical proof. TODO selects it without starting it.
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-right-swing-feasibility | change=recorded finite search serialized runtime proof and scoped integration handoff -->
+
 ## 2026-10-24 - Verified plural union and attribution publication closeout
 
 The operator paired Closeout and Publish for the 15-file reviewed batch based on
@@ -4865,3 +5122,7 @@ license/notice. No receiving checkout was changed and nothing was published.
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-residual-attribution | change=recorded complete read-only attribution and one bounded producer pass-down -->
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-union-publication | change=bound reviewed union and attribution progress to guarded publication and owned cleanup -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-current-source-qualification | change=closed current-source receiving and retained physical limits -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-review-cleanup | change=fixed shared ticks and selected proof renewal -->

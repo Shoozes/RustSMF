@@ -6,6 +6,7 @@ import { bakeTransitionFloor, parseTransitionFloor, type TransitionFloorRecipe, 
 import { bakePlantedIdle, parsePlantedIdle, type PlantedIdleRecipe, type ContactBatchSolver } from './skeletalPlantedIdle';
 import { closeTerminalRotations, parseTerminalRotationClosure, type TerminalRotationClosureRecipe } from './skeletalTerminalRotation';
 import { bakeTwoKeyRotations, parseTwoKeyRotationSelection, type TwoKeyRotationSelection } from './skeletalTwoKeyRotation';
+import { bakeRotationSpan, parseRotationSpanBake, assertDisjointRotationSpan, type RotationSpanBakeRecipe } from './skeletalRotationSpan';
 
 export { CONDITIONING_NLERP_MODE } from './skeletalChordRotation';
 export { measureConditioningDifferences } from './skeletalConditioningFidelity';
@@ -20,6 +21,7 @@ export interface ConditioningRecipe extends TwoKeyRotationSelection {
   transitionFloor?: TransitionFloorRecipe;
   plantedIdle?: PlantedIdleRecipe;
   terminalRotationClosure?: TerminalRotationClosureRecipe;
+  rotationSpanBake?: RotationSpanBakeRecipe;
 }
 interface Pose { position: number[]; rotation: number[]; scale: number[] }
 interface Sample { joints: Pose[]; motion: Pose }
@@ -37,6 +39,7 @@ export interface ConditioningReport {
   terminalRotationClosureBake?: ReturnType<typeof closeTerminalRotations>['report'];
   twoKeyRotationBake?: ReturnType<typeof bakeTwoKeyRotations>['report'];
   twoKeyRotationBakes?: Array<ReturnType<typeof bakeTwoKeyRotations>['report']>;
+  rotationSpanBake?: ReturnType<typeof bakeRotationSpan>['report'];
 }
 
 function pose(matrix: THREE.Matrix4): Pose {
@@ -137,6 +140,13 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
   const { twoKeyRotationBake: twoKey, twoKeyRotationBakes: twoKeys } = parseTwoKeyRotationSelection(recipe, recipe.transitions.map(t => t.gait), recipe.clipIds, [recipe.sourceRootJoint, recipe.locomotionRootJoint]);
   const rotationRecipes = twoKey ? [twoKey] : twoKeys ?? [];
   if (rotationRecipes.length && recipe.mode !== CONDITIONING_NLERP_MODE) throw new Error('Two-key rotation authoring requires the explicit NLERP mode.');
+  const span = recipe.rotationSpanBake === undefined ? undefined : parseRotationSpanBake(recipe.rotationSpanBake, recipe.transitions.map(t => t.gait), recipe.clipIds, [recipe.sourceRootJoint, recipe.locomotionRootJoint]);
+  if (span) {
+    if (recipe.mode !== CONDITIONING_NLERP_MODE) throw new Error('rotationSpanBake requires the explicit NLERP mode.');
+    assertDisjointRotationSpan(span, rotationRecipes);
+    if (terminal?.clipId === span.clipId && span.startTick + span.rotations[0].values.length >= terminal.startTick
+      && terminal.joints.some(j => span.rotations.some(r => r.joint === j))) throw new Error('rotationSpanBake conflicts with terminal authoring.');
+  }
   const bones = [...skeleton.bones];
   if (new Set(bones.map(b => b.name)).size !== bones.length || bones.some(b => !/^[A-Za-z0-9_.-]{1,64}$/.test(b.name))) throw new Error('Conditioning requires unique safe source joint names.');
   if (loaded.root.getObjectByName(recipe.locomotionRootJoint)) throw new Error('Locomotion root name already exists.');
@@ -253,12 +263,18 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
     const result = closeTerminalRotations(generated[index], terminal, signal);
     generated[index] = result.clip; terminalRotationClosureBake = result.report;
   }
-  const authored = rotationRecipes.length ? [...generated] : generated;
+  const authored = rotationRecipes.length || span ? [...generated] : generated;
   const rotationReports: NonNullable<ConditioningReport['twoKeyRotationBakes']> = [];
   for (const spec of rotationRecipes) {
     const index = authored.findIndex(c => c.name === spec.clipId);
     const result = bakeTwoKeyRotations(authored[index], spec, allBones, [recipe.sourceRootJoint, recipe.locomotionRootJoint], signal);
     authored[index] = result.clip; rotationReports.push(result.report);
+  }
+  let rotationSpanBake: ConditioningReport['rotationSpanBake'];
+  if (span) {
+    const index = authored.findIndex(c => c.name === span.clipId);
+    const result = bakeRotationSpan(authored[index], span, allBones, [recipe.sourceRootJoint, recipe.locomotionRootJoint], signal);
+    authored[index] = result.clip; rotationSpanBake = result.report;
   }
   loaded.clips = authored;
   const bytes = sharedSkinGlb(await exportGLB(loaded.root, authored));
@@ -266,5 +282,5 @@ export async function conditionSkeletalModel(loaded: LoadedModel, recipe: Condit
   const differencePolicy = recipe.mode === CONDITIONING_NLERP_MODE
     ? 'Sample original STEP/LINEAR at float32 60 Hz endpoints; hemisphere-continuous quaternion chord CUBICSPLINE gives normalized linear joint rotation. Translation, scale and locomotion yaw remain LINEAR. Re-import the serialized derivative as independent reference; original-to-derived differences are descriptive, without smoothing or contact correction.'
     : 'Sample original STEP/LINEAR at float32 60 Hz endpoints; continuous LINEAR derivative is the independent receiving reference. Original-to-derived differences are reported separately; no smoothing or contact correction.';
-  return { bytes, report: { schema: 'rustsmf.skeletal-conditioning.v1', recipe, jointLineage: allBones.map((b, i) => ({ originalIndex: i === bones.length ? null : i, conditionedIndex: i, id: b.name })), vertexLineage, model: { units: 'meters', height, restSkinHeight: height, jointCount: allBones.length, vertexCount }, clips: clipRecords, transitions, differencePolicy: differencePolicy + (floor ? ' Explicit selected transitionFloor bakes only interior locomotion-root Y keys; floor/lift bounds and dense before/after values are reported.' : '') + (planted ? ' Explicit plantedIdle bakes calibrated native contact corrections into idle pelvis/leg/toe channels; endpoints, other channels and clips remain unchanged.' : '') + (terminal ? ' Explicit terminalRotationClosure authors only selected final quaternion values and final-interval chord tangents; other tick transforms retain source fidelity.' : '') + (twoKey ? ' Explicit twoKeyRotationBake authors only three selected local rotations at two internal ticks and adjacent chord tangents; all other tick transforms retain source fidelity.' : '') + (twoKeys ? ' Explicit twoKeyRotationBakes composes disjoint selected local rotations and adjacent chord tangents; all other tick transforms retain source fidelity.' : ''), ...(floor ? { floorBakes } : {}), ...(planted ? { plantedIdleBake } : {}), ...(terminal ? { terminalRotationClosureBake } : {}), ...(twoKey ? { twoKeyRotationBake: rotationReports[0] } : {}), ...(twoKeys ? { twoKeyRotationBakes: rotationReports } : {}) } };
+  return { bytes, report: { schema: 'rustsmf.skeletal-conditioning.v1', recipe, jointLineage: allBones.map((b, i) => ({ originalIndex: i === bones.length ? null : i, conditionedIndex: i, id: b.name })), vertexLineage, model: { units: 'meters', height, restSkinHeight: height, jointCount: allBones.length, vertexCount }, clips: clipRecords, transitions, differencePolicy: differencePolicy + (floor ? ' Explicit selected transitionFloor bakes only interior locomotion-root Y keys; floor/lift bounds and dense before/after values are reported.' : '') + (planted ? ' Explicit plantedIdle bakes calibrated native contact corrections into idle pelvis/leg/toe channels; endpoints, other channels and clips remain unchanged.' : '') + (terminal ? ' Explicit terminalRotationClosure authors only selected final quaternion values and final-interval chord tangents; other tick transforms retain source fidelity.' : '') + (twoKey ? ' Explicit twoKeyRotationBake authors only three selected local rotations at two internal ticks and adjacent chord tangents; all other tick transforms retain source fidelity.' : '') + (twoKeys ? ' Explicit twoKeyRotationBakes composes disjoint selected local rotations and adjacent chord tangents; all other tick transforms retain source fidelity.' : '') + (span ? ' Explicit rotationSpanBake authors only declared bounded local rotations and adjacent chord tangents; all other tick transforms retain source fidelity.' : ''), ...(floor ? { floorBakes } : {}), ...(planted ? { plantedIdleBake } : {}), ...(terminal ? { terminalRotationClosureBake } : {}), ...(twoKey ? { twoKeyRotationBake: rotationReports[0] } : {}), ...(twoKeys ? { twoKeyRotationBakes: rotationReports } : {}), ...(span ? { rotationSpanBake } : {}) } };
 }

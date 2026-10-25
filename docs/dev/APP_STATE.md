@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-10-23
+Last reviewed: 2026-10-24
 
 ## Editing and interchange reliability
 
@@ -235,9 +235,10 @@ NLERP authoring is explicit: [`plantedIdle`](SKELETAL_PLANTED_IDLE.md) uses nati
 Rust for idle contacts; `transitionFloor` lifts selected transition interiors;
 [`terminalRotationClosure`](SKELETAL_TERMINAL_ROTATION.md) closes final rotations;
 [`twoKeyRotationBake`/`twoKeyRotationBakes`](SKELETAL_TWO_KEY_ROTATION.md) author
-one/two disjoint pairs on connected non-root chains, with stored bounds and union
-source guards. Explicit [boundary sampling](SKELETAL_EXPORT_BOUNDARY.md) preserves
-unselected emitted keys for both forms; independent references stay unchanged.
+one/two disjoint pairs; [`rotationSpanBake`](SKELETAL_ROTATION_SPAN.md) adds one
+3–18-key chain span, bounded to 25 degrees. Union source guards and explicit
+[boundary sampling](SKELETAL_EXPORT_BOUNDARY.md) preserve unselected components;
+source references stay independent.
 Root/unselected content stays unchanged except declared transition lift.
 
 ## Architecture Ownership
@@ -418,3 +419,5 @@ limits without partial output. [TRANSITION_BAKE.md](TRANSITION_BAKE.md) owns the
 input contract, bounds, vendoring requirements, and native/browser WASM proof.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-union-boundary | change=closed bounded union sampling with renewed runtime proof and retained physical failures -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=routed bounded span authoring and independent reference preservation -->

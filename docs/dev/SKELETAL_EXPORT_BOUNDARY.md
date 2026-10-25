@@ -9,12 +9,14 @@ raw-GLB preservation check did not prove the emitted runtime property.
 `skeletalTwoKeyExportBoundary.ts` supplies the explicit producer-only
 `preserve-unselected-emitted-keys.v1` context for `prepareSkeletalExport`.
 It accepts the existing singular `report` or strict one/two-record `reports`,
-mutually exclusively. All applicable reports, disjoint footprints, clip bindings,
+mutually exclusively, plus a separately bounded optional `spanReport`. Span-only
+contexts are also admitted. All applicable reports, disjoint footprints, clip bindings,
 direct joint chains, stored values and correction bounds validate before mixers
 are allocated. Every declared `before` rotation is restored together in one
 pre-authoring baseline per clip. Unselected emitted integer keys sample that
 baseline at nominal `tick/60`; the selected tick union samples the authored GLB.
-Reports are filtered by packet clips. Caller arrays/reports remain immutable.
+Span ticks replace only declared joint rotations; other components remain from
+the baseline. Reports are filtered by packet clips. Caller arrays/reports remain immutable.
 
 Source references always sample the independently re-imported authored GLB at
 their original phases. This context changes no mesh, skin, bind, root extraction,
@@ -281,19 +283,14 @@ root-lift obstruction. Original full-precision witnesses and all qualification
 remain retained. Attribution is complete; both physical criteria still fail.
 
 <a id="right-swing-clearance-feasibility"></a>
-## Selected producer pass — right-swing clearance feasibility
+## Right-swing clearance feasibility
 
-Next phase: bounded producer feasibility, not production integration. RustSMF
-owns the experiment; GaimEngine supplies the unchanged evaluator. Test only
-right UpLeg/Leg/Foot local rotations within experimental bracket [47, 66], keeping
-pelvis/root travel/yaw, left chain, toe local transform, all translations/scales,
-mesh/skin/bind, original supports and 13/7-degree bakes fixed. Predeclare a finite
-family, correction/lift ranges and search budget before trials. Derive stored
-correction bounds from measurement; do not silently borrow a prior bake's bound.
-The bracket is chosen from the right support gap and contains all 60 poses in
-the larger island; it is not certified safe before the controls pass. This is
-one leg and one island, covering 94.1% of current skin violations. The short
-24.25–24.75 island and all planted-drift repair are explicitly outside this pass.
+Completed 2026-10-24: producer feasibility in experimental [47, 66], using the
+unchanged evaluator. Only right UpLeg/Leg/Foot rotations may change. Root/pelvis,
+left chain, toe local, translations/scales, mesh/skin/bind, supports and 13/7-degree
+bakes stay fixed. Predeclare the finite family/ranges/budget and measure stored
+bounds. The bracket contains the larger skin island; certify it through controls.
+Early 24.25–24.75 skin and planted-drift repair remain outside this pass.
 
 Done When:
 
@@ -324,6 +321,67 @@ No production authoring, new support editing, engine changes or publication are
 included in the completed attribution. Preserve v1, all three Rust overlays,
 shared dependencies, current qualification and every retained failure/prototype.
 
+### Measured result
+
+All four criteria pass in a separate prototype on producer 55ad2c76. Of 64 trials,
+42 pass local skin/bend checks. Selected: 0.15 m lift, 0.5 foot-orientation blend,
+15-degree knee swivel, tapered to unchanged endpoints; only stored 48–65 change.
+Hip/knee/ankle corrections peak at 13.391760/21.826770/24.529416 degrees. The next
+bound is 25 degrees, measured independently of the search's 100-degree cap.
+
+Independent GLB reload and actual runtime each pass all 286,902 whole-skin
+observations across 77 poses. Runtime maximum penetration is 0.000440352387 m
+against 0.021012886071 m; active sole maximum gap is 0.004653326308 m. Native/WASM
+agree exactly for 361 gait poses per graph and 30 seam/endpoint samples. All 284
+outside poses, emitted 47/66 boundaries, 23,240 planted-drift observations, both
+13-pose arcs, 27 segments, knee signs, 24 seams and six independent endpoints pass.
+Root, calibration/tail, 45 other clips and unselected channels/keys remain exact.
+
+Nominal 66 leaks 1.236633e-7 m despite its exact stored boundary. The experimental
+compositor copies only 54 rotations from reloaded GLB export into the qualified
+asset; other components/keys, including 47/66, stay exact. Reload/runtime error is
+below 6.884e-7 m. This prototype has no admitted job or immutable generation.
+
+The larger island's 3,339 violations disappear in the prototype. The unchanged
+early island retains three poses/210 violations, first 24.25/v0 and new global
+maximum 24.5/v0 at 0.042937258177 m. The old 51/v2 maximum remains retained baseline
+evidence. Drift/skin still fail; P7C/visual acceptance stays open. HISTORY owns
+commands, harness failures, hashes and cleanup; no engine/dependency rebuild.
+
+## Right-swing rotation-span integration
+
+Implemented as explicit producer-only `rotationSpanBake` alongside the existing
+two-key records, preserving their two-record limit. The
+[span contract](SKELETAL_ROTATION_SPAN.md) owns admission, stored bounds,
+provenance, refusal and cancellation behavior. The measured selection binds
+three right-leg joints, 18 interior ticks 48–65, 54 quaternions and a 25-degree
+bound. Original-source fidelity excepts only declared rotations. Every other
+source component and the 13/7-degree recipes stay binding.
+
+Restore all declared before-values together for unselected emitted sampling;
+author only the selected local rotations, preserving translations/scales and
+nominal boundary keys. Independent references still sample the reloaded authored
+GLB. Do not pass an extra record through or weaken the current strict two-key
+parser. Legacy/singular/plural jobs must retain exact compatibility and cleanup.
+
+Done When: ordinary CLI authoring and independent reload reproduce this bounded
+prototype; renew all 46 packets/590 independent native/WASM references, isolation,
+restored replay, actual 637-pose pilot and canonical gate on the new producer.
+Reprove all 77 local poses, 284 exact outside poses, both nominal boundaries,
+23,240 exact drift observations and every preserved guard above. Keep the early
+skin witness and drift failures explicit. No root/support/floor/threshold, engine,
+mesh/skin/bind or unrelated source edits; no publication is selected here.
+
+Retained producer 6831d596 is qualified locally. Cleanup changes the producer
+fingerprint; TODO selects proof renewal. Captured
+engine f280d357 passes 137 qualification commands, actual 46/590 receiving,
+isolation and restored replay. The complete 637-pose pilot retains exactly two
+physical failures: planted drift and the three-pose early skin island. Existing
+77 local/284 outside poses, 47/66 boundaries, 23,240 drift observations and accepted
+guards pass; the producer's unchanged canonical 711/14 proof is reused. HISTORY
+binds the current-source receipt, exact outputs and preservation. Earlier stale
+receipt failures and later c4fac1aa snapshot proof remain retained separately.
+
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-progress-publication | change=polished proof criteria while retaining the selected unimplemented union boundary scope -->
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-comparison | change=attributed retained runtime leakage and selected explicit union sampling with source-bound proof criteria -->
@@ -339,3 +397,11 @@ shared dependencies, current qualification and every retained failure/prototype.
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-union-review-cleanup | change=retained qualified implementation and bounded the next read-only attribution -->
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-residual-attribution | change=measured all residual families and bounded the fixed-root swing experiment -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-right-swing-feasibility | change=proved serialized and emitted clearance and bounded producer integration -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=integrated bounded authoring and recorded the external qualification block -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-current-source-qualification | change=closed current-source receiving and retained physical limits -->
+
+<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-review-cleanup | change=fixed shared ticks and selected proof renewal -->
