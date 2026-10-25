@@ -2,25 +2,25 @@
 
 Last reviewed: 2026-10-25
 
-## P7C right-leg clearance feasibility — next bounded batch
+## P7C three-recipe producer integration — next bounded batch
 
-- What: Fixed-root right-leg two-key 24/25 prototype; evaluate ticks 23–26.
-- Why: The continuous arc dips all 70 right-sole vertices below the floor.
-- Where: [Attribution](HISTORY.md#p7c-early-skin-attribution); [contract](SKELETAL_EXPORT_BOUNDARY.md).
-- When: Next; feasibility only.
-- How: Right UpLeg/Leg/Foot within 25 degrees; preserve root trajectory, bakes, supports and thresholds.
-- Done when: Meet existing floor limits at 13 local poses, preserve 348 outside poses and linked guards, or document a bounded refusal with tested coverage. No job/schema change or record-limit expansion.
-- Verification: Three poses attributed; native/WASM exact. Candidate feasibility remains untested.
+- What: Integrate proven right24/25 with explicit at-most-three recipe admission.
+- Why: Close early skin while preserving accepted bakes.
+- Where: [Selected proposal](SKELETAL_TWO_KEY_ROTATION.md#selected-three-recipe-contract-proposal).
+- When: Next; not implemented.
+- How: All-pairs overlap guards; retain the single 3–18-key span and legacy output bytes.
+- Done when: Ordinary CLI/extrema, linked guards, 46/590, 637 pilot and canonical proof meet the proposal. Keep only unchanged planted drift failed.
+- Verification: Proposal rechecked; admission still two. Private proof is not ordinary GLB qualification.
 
-## Completed P7C renewal and early-skin attribution
+## P7C publication scratch — blocked
 
-- What: Qualify 21f96612 and trace the three early skin failures.
-- Why: Close proof and attribution gaps.
-- Where: HISTORY and the linked contract.
-- When: Closed locally 2026-10-25.
-- How: Original STEP, conditioned reload and qualified f280d357 runtime.
-- Done when: Attribution complete; no bake authored; full P7C stays open.
-- Verification: 46/590 and 637 pilot remain valid; all 210 failing observations trace to the right-sole arc. Runtime agrees within 0.3 micrometres; 712/14 reused.
+- What: Remove only publication candidate.zip and candidate/.
+- Why: Disposable copies retain about 50 MiB.
+- Where: `runtime-data/p7c-records-publish-20261025/`; HISTORY.
+- When: A policy-approved deletion route is available.
+- How: Closeout owner verifies exact paths; preserve dependencies and proof.
+- Done when: Both named paths are absent; no other storage changes.
+- Verification: Approval review blocked deletion; both remain retained.
 
 ## Editing and interchange reliability — source complete
 
@@ -181,4 +181,4 @@ bounded noncombat fixture.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-current-source-qualification | change=closed current-source receiving and retained physical limits -->
 
-<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-early-skin-attribution | change=attributed right-sole arc and bounded feasibility -->
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-proposal-review | change=rechecked the selected integration batch and open proof -->

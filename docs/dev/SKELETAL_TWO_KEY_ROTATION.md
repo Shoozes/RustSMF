@@ -273,3 +273,61 @@ own exact source identities, commands, canonical gate and preservation evidence.
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-composition-bake | change=closed qualified producer composition and retained two residual physical failures -->
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-union-boundary | change=closed bounded union sampling with renewed runtime proof and retained physical failures -->
+
+<a id="selected-three-recipe-contract-proposal"></a>
+## Selected three-recipe contract — proposal only
+
+The read-only 2026-10-25 representation decision selects a bounded extension of
+the existing plural field to one, two or three records. Current source still
+admits at most two; this section is the next implementation contract, not a claim
+that the extension or its receiving qualification exists. Keep job v3, the
+existing record/report shapes and explicit NLERP/export-boundary policy.
+
+Use the existing two-key primitive for right24/25, right43/44 and left87/88.
+Each pair passes current structural admission and all three pairwise footprint
+checks; each is disjoint from the existing right48–65 span. The new selected
+24/25 recipe declares a 25-degree bound and reuses the six measured values in
+the private feasibility run. Legacy per-record bounds remain unchanged. Keep
+one 3–18-key span, the terminal/idle/floor bakes and all other resource limits.
+No special model names, hidden preprocessing, new correction field, runtime IK
+or receiving-engine change is selected. Replacing a prior bake violates
+preservation; merging right24..65 needs 42 keys and exceeds the span bound.
+
+The verified admission owners are `parseTwoKeyRotationSelection` and
+`twoKeyExportReports`: both currently cap the list at two. The selection parser
+currently compares only indices 0/1. The implementation must check every pair,
+including 0/2 and 1/2, with the existing same-clip/shared-joint adjacency rule;
+four or more records and sparse/malformed entries must refuse. The existing
+conditioning, fidelity, CLI and baseline-restoration loops already iterate
+records, but must receive explicit third-record regressions. Preserve report
+order and recipe hashing; do not mutate caller arrays or publish partial work.
+
+The private motion proof is reusable as a reference for the selected rotations,
+not as an ordinary serialization or asset-byte baseline. Its patched GLB retains
+stale extrema on RightUpLeg and RightFoot rotation accessors; the latter
+understates new tangent ranges. Preserve that raw evidence. The ordinary writer
+must regenerate exact min/max from every stored float32 CUBICSPLINE triplet,
+using the existing `assertRotationAccessorBounds` regression pattern. The
+ordinary selected full-pose export also differs from the private rotation-only
+compositor in five translation/scale components at tick 25 by at most
+2.220446049250313e-16. Keep the existing full-pose policy and measure the actual
+ordinary output; do not silently assert private-asset byte equality or waive any
+exact root/outside/drift guard. If these cannot all hold, report the bounded
+integration refusal and measured cause before selecting another contract.
+
+| Required proof | Acceptance |
+| --- | --- |
+| Admission and failure lifecycle | Three valid records; all pair positions, duplicate/adjacent footprints, fourth record, singular/plural conflict, wrong mode/role/root, malformed provenance and stale later reports tested. Late third-bound failure and cancellation leave clips/generations unpublished and release owners. |
+| Compatibility and ordering | Omitted, singular and existing one/two-record conditioned GLB, asset, mapping and reference bytes remain exact at fixed inputs. All six valid record permutations yield identical model/asset/mapping/reference bytes; settings/report record order remains caller-owned. Producer/generation identity metadata may change with source. |
+| Ordinary producer path | Actual CLI performs authoring, serialization/reload and export. Stored bounds and exact accessor extrema pass. Use independent references from that reload; include missing third provenance and widened/understated extrema negative controls. |
+| Private-to-ordinary local proof | Right24/25 within 25 degrees; all 13 local quarter poses within existing skin/active-sole limits, 348 exact outside samples and 23/26 boundaries, unchanged root and 23,240 exact drift observations. Report rounding differences rather than changing tolerances. |
+| Preserved accepted behavior | Both 13-pose arcs, 77-pose span region, terminal/calibration phases, 27 stable segments/no knee inversion, 24 seams, six endpoints, 45 other clips, geometry/skin/bind, supports and thresholds retain acceptance. |
+| Qualification and canonical gate | Renew all 46 packets/590 actual native/WASM references, isolation/restored replay and actual 637-pose pilot on the new producer; reuse the unchanged qualified captured engine only after source/output validation. Expect only the known planted-drift failure; skin must pass. Run affected tests and the full local canonical gate. Full P7C/visual acceptance stays separate. |
+
+Ownership is RustSMF producer code and its tests/docs. GaimEngine v1, all three
+Rust overlays, shared dependencies and retained qualification evidence remain
+protected. No publication is part of this implementation pass-down.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-representation-decision | change=selected bounded proposal and explicit ordinary serialization proof -->
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-proposal-review | change=clarified the sole limit exception and complete permutation compatibility -->

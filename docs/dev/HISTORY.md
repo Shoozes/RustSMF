@@ -2,6 +2,243 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-25 - P7C feasibility and proposal publication closeout
+
+Closed the four-record private 24/25 feasibility, representation decision and
+review batch for scoped publication from main 1ba3ecf. Producer source
+21f96612/exporter 3266487a remains unchanged. Fresh checks bind the six inputs,
+prototype/experimental asset, 22 named v1/overlay preservation files, full
+1173-file captured engine map and both qualified outputs. The 17-artifact
+read-only inventory audit passes. Relevant unchanged-source 712/14 and private
+13-local/348-outside/23,240-drift proof are reused with their recorded limits.
+
+The raw prototype still has two stale accessor-extrema records; ordinary
+serialization and three-recipe implementation/qualification remain unstarted.
+TODO and the proposal retain the full next-batch proof matrix. This publication
+saves verified findings and decisions, not an integrated repair or full P7C.
+Planted drift and visual acceptance remain open.
+
+The existing task-owned isolated candidate is reused: verify its tracked bytes
+against the staged tree's in-memory archive, refresh only the four named records,
+and validate with the existing hash-verified generated binding. No new model,
+dependency, build or large scratch copy is needed. Preserve the original scratch
+archive exactly; the prior policy-blocked cleanup stays tracked. No owned service
+remains. The publication receipt binds exact base/tree, four-path allowlist,
+isolated context and helper safety checks, resource disposition and confirmed
+remote main commit. Summary Bank paths and budgets are unchanged.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-feasibility-publication | change=closed verified records and retained unimplemented integration -->
+
+## 2026-10-25 - Three-recipe proposal review, recheck and cleanup
+
+Reviewed main 1ba3ecf plus the four local record changes, source 21f96612/exporter
+3266487a, against the representation decision and private 24/25 proof. Native
+Summary Bank generation selected the current two-key route through stdout with
+nine files and no omissions. Coverage includes current admission, authoring,
+source fidelity, baseline/export/CLI consumers, their regressions and the local
+proposal; unchanged source was reused rather than repeating the investigation.
+This is scoped P7C coverage, not new whole-application or visual acceptance.
+
+Read-only Node/tsx assertions exit 0. Current job admission still accepts the
+existing two recipes and refuses three; all three pairwise recipe checks and
+span disjointness pass. Exact source/test/bank and six input bindings, prototype
+and experimental-asset hashes, 22 named original/retained v1/overlay files, the
+full 1173-file captured engine map and both qualified outputs match. A read-only
+storage audit verifies all 17 declared feasibility artifacts without findings.
+No native/WASM matrix or immutable runner was repeated.
+
+Verified closed: representation decision and private measured-motion proof.
+Still open: third-record implementation, ordinary serialization/extrema and
+new-producer receiving/pilot proof. RightUpLeg and RightFoot extrema are still
+stale in the retained private file; RightLeg extrema match. The five ordinary
+full-pose/private-compositor rounding differences remain bound to unchanged
+source and prototype bytes; their prior measurement is reused. Existing planted
+drift and full P7C/visual acceptance remain open. No new actionable source defect
+was found in the reviewed path. The two-record refusal is current intended
+behavior, not a claimed failed implementation.
+
+Cleanup preserves the selected next batch. The proposal now calls the record
+count its sole limit exception and includes mapping bytes in all permutation
+compatibility checks. TODO retains the same bounded three-recipe producer
+integration and its ordinary CLI/extrema, preservation, 46/590, 637-pose and
+canonical proof criteria. Code, admission limits, supports, thresholds and
+retained evidence are unchanged; no deletion, owner-process termination,
+Git index mutation or publication occurred. Previously blocked publication
+scratch remains retained. Four records change locally; Summary Bank routes do
+not change. Final `pwsh -NoProfile -File ./run.ps1 -Task context` passes 30
+project/context tests with zero bank warnings; `git -c core.safecrlf=false diff
+--check` passes.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-proposal-review | change=rechecked source-bound proposal and retained the next implementation boundary -->
+
+## 2026-10-25 - P7C producer representation decision
+
+Completed the selected read-only assessment on main 1ba3ecf, source
+21f96612/exporter 3266487a, preserving the three existing dirty records. The
+drop-in's private motion feasibility is verified complete; product integration
+is actionable but remains unimplemented. Ordinary qualification is unsupported
+for that private prototype; publication scratch remains externally blocked and
+outside this batch. A bounded repository research/inbox filename search found
+no additional relevant item; this is not a claim about other stores.
+
+Read-only Node/tsx assertions exit 0: all three real recipes are individually
+valid, all three record pairs pass current disjointness rules, and all records
+are disjoint from right48–65. Current selection/job/export-report admission
+refuses the triple. A merged right24..65 span needs 42 keys and is refused by
+the unchanged 18-key bound. Authoring and export-report admission cap two;
+selection compares only the first pair. Conditioning, fidelity, CLI and union
+baseline restoration already iterate arrays. The smallest selected extension is
+one–three existing plural records, with all-pairs validation and four-plus refusal;
+existing omitted/singular/one/two behavior and the one-span bound remain binding.
+This is a future contract proposal only: no current admission limit changed.
+
+Two integration gaps were measured rather than hidden. The private patched GLB's
+RightUpLeg accessor retains max-X 2.3899788856506348 instead of actual
+2.156879186630249. RightFoot min-X and max-Y/Z/W also differ; some declared
+ranges understate the new tangent values. RightLeg extrema match. These stale
+metadata do not change the retained measured poses, but the raw file is not an
+ordinary serialization qualification. Preserve it; require the actual CLI writer
+to regenerate exact stored-triplet extrema, reusing the existing accessor-bound
+regression. A separate in-memory ordinary export found five selected tick-25
+translation/scale differences from the private compositor, maximum
+2.220446049250313e-16. No new motion or artifact was authored. Keep existing
+full-pose semantics and reprove exact root/outside/drift guards; do not substitute
+the private asset hash or alter tolerances to manufacture compatibility.
+
+The selected proposal and dependency-ordered proof matrix are in
+SKELETAL_TWO_KEY_ROTATION.md#selected-three-recipe-contract-proposal. It covers
+all pair positions and permutations, late third failures/cancellation, legacy
+byte compatibility, ordinary CLI/extrema/reload, the full physical preservation
+guards, fresh 46/590 receiving/replay and 637-pose pilot, and canonical local
+verification. Only unchanged planted drift may remain failed. Full P7C/visual
+acceptance stays open. Source/test owners are verified; the worker derives the
+implementation within these constraints.
+
+The prototype/asset hashes, six input bindings, 22 named original/retained
+v1/overlay files, full captured 1173-file engine map and both qualified outputs
+remain exact. No source/schema/limit change, authoring, build, dependency copy,
+Git index mutation, cleanup or publication occurred. The assessment now updates
+only its four owning records; Summary Bank paths are unchanged. The private
+proof remains retained with the serialization gaps recorded separately.
+`pwsh -NoProfile -File ./run.ps1 -Task context` validates the final records:
+30 project/context tests pass, all 70 groups validate with zero warnings, and
+`git -c core.safecrlf=false diff --check` passes. Existing source-bound runtime
+proof is reused; no physical qualification matrix was rerun for this decision.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-representation-decision | change=selected explicit producer extension and measured integration gaps -->
+
+<a id="p7c-right24-25-feasibility"></a>
+
+## 2026-10-25 - Fixed-root right-leg 24/25 feasibility
+
+Completed the selected private producer feasibility pass on main 1ba3ecf,
+producer 21f96612/exporter 3266487a. Root means the existing authored trajectory,
+preserved exactly. The original two recipes at 43/44 and 87/88, span at 48–65,
+terminal closure, planted idle and transition floor bakes remain intact. No
+ordinary job, public schema/record limit, producer source or retained model was
+changed. The three existing dirty records were captured before updating them.
+
+An 11-trial screen rotated only RightUpLeg key 25 toward its key 24 orientation.
+At 24.999 degrees it still penetrated 0.021075125 m, above the unchanged
+0.021012886070915813 m limit. This is a bounded family refusal, not impossibility.
+A second 70-trial screen held that thigh correction at 24.5 degrees and probed
+then refined bounded local XYZ adjustments of knee/foot key 25. Actual stored
+corrections are 24.500000427, 2.338815878 and 1.468584581 degrees respectively;
+all key 24 values stay exact. The selected three-channel two-key prototype
+rebuilds canonical chord tangents. No support or floor correction is inferred.
+
+One 2,088,640-byte private GLB patches only the three rotation output ranges.
+Its SHA-256 is 7d8e3fbc87e432665fe8af496da889862a4bf095fc70e9ace31922e745505dd6.
+Reload confirms 45 other clips, 29 unselected walk channels, 267 other stored
+rotation values and nonadjacent tangents exact. All other GLB bytes, including
+root/mesh/skin/bind, remain exact. A private compositor clones the qualified
+asset and copies only six local rotations at 24/25 from its ordinary in-memory
+export; other emitted components and keys stay exact. This experimental asset
+is not an admitted job, generation or replacement qualification graph.
+
+| Proof | Result |
+| --- | --- |
+| 13 local quarter poses, 48,438 skin observations | Reload maximum 0.017258069636 m; runtime 0.017258021112 m at v200@24.25, below 0.021012886071 m |
+| Active sole gap/penetration | Maximum runtime 0.003797231226 m across 350 observations |
+| Stored correction cap | Maximum 24.500000427 degrees, below 25 |
+| Native/WASM | Exact at 361 gait poses and 752 compared samples per host including retained endpoints |
+| Reload/runtime agreement | Maximum 7.346015239e-7 m locally |
+| Outside window and root | 348 complete samples exact; 23/26 emitted boundaries and authored root trajectory exact |
+| Planted drift | All 23,240 observations and first/max witnesses exact; the existing failure remains |
+| Prior repairs | 77-pose span region, both 13-pose arcs, terminal/calibration phases exact |
+| Kinematics | 27 segments; maximum relative length change 3.546e-7; zero knee inversions |
+| Transition and reference guards | All 24 seams and six independent endpoints pass |
+
+The private full 361-pose gait now has zero whole-skin failures. Sole gap and
+penetration retain their passing measurements; only planted drift remains failed
+in that private gait check. This does not renew actual 46/590 receiving or the
+637-pose pilot for production, and does not establish visual/full P7C acceptance.
+The published producer, existing qualification graph and their known skin/drift
+results remain unchanged. All 22 protected original/retained v1/overlay files,
+six input bindings, captured 1173-file f280d357 source map and both qualified
+7ec92870/41fc7f54 outputs were freshly checked exact. Dependencies were reused in
+place; the current unchanged-source 712/14 application proof remains reusable.
+
+Selected next: a read-only producer representation decision for this third
+disjoint repair. Compare bounded explicit contract options, preserve accepted
+bakes and current two-recipe/one-span limits until a separate change is selected,
+and return one implementation/proof pass-down or documented refusal. Do not
+admit a third recipe or disguise it in the existing 18-key span during this pass.
+
+The five Node/tsx setup, two screening, serialization and verification commands
+exit 0; the final runtime proof took 30,367 ms. Exact commands, source/input
+bindings, six stored quaternions, serialized prototype and compact results live
+in `D:/Compact_Evidence/RustSMF/runs/p7c-right24-25-feasibility-20261025/`.
+Models and all 18 runtime asset owners were released; the verified owned native
+copy was disposed. No builds, dependency copies, production generations or owned
+processes remain. Retain this bounded prototype and proof; prior publication
+scratch stays policy-blocked and untouched. Only TODO, review and HISTORY change
+in the repository; no Git staging or publication is selected.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-right24-25-feasibility | change=proved bounded private clearance and preserved producer admission -->
+
+## 2026-10-25 - Published P7C review, recheck and scoped records cleanup
+
+Reviewed clean main 1ba3ecf2c9f614d239102e2c2d366a579370cc2f against the prior
+64c1c04 review and retained attribution. Live origin/main matched. The delta is
+four documentation files; producer 21f96612/exporter 3266487a remain unchanged.
+Summary Bank native generation used stdout only; focused reads covered two-key
+and span admission/authoring, original-source fidelity, union baseline restoration,
+component-preserving export and their CLI/shared-tick regressions. This is scoped
+P7C coverage, not a new whole-application or visual acceptance claim.
+
+A read-only Node 26.5.0 assertion pass exited 0. Current canonical source/test/bank
+inputs, all six attribution inputs, the losslessly compressed 210 observations,
+22 protected named v1/overlay files, the full 1173-file captured engine map,
+build receipt and both qualified outputs remain exact. Original STEP holds,
+the same 70 right-sole vertices at each fractional pose and exact weighted-Y
+reconstruction were rechecked. Existing source-bound 712/14, 46/590 and 637-pose
+proof is reused; the expected pilot exit 1 and recorder reconciliation remain
+explicit. No expensive matrix or immutable runner was repeated.
+
+Verified closed: shared-tick boundary repair, receiving/replay renewal, recorder
+reconciliation and early-skin attribution. Still open: walkSlow skin/drift and
+full P7C/visual acceptance. Unverified: the selected 24/25 feasibility prototype.
+No new actionable source defect was found in the reviewed path. Cleanup changes
+only current records: completed renewal/attribution is retained here and in the
+published receipt; TODO clarifies that fixed root means preserving the authored
+trajectory, retains two recipes plus one bounded span, and tracks the real scratch
+blocker. A negative search must report tested coverage rather than impossibility.
+
+The existing automatic approval-review rejection still leaves only the named
+publication candidate.zip and candidate/ retained under
+`runtime-data/p7c-records-publish-20261025/`. This code-integrity cleanup makes no
+new deletion attempt. Prior evidence, dependencies, v1 and all three overlays
+remain protected. No source/model/threshold/support changes, Git index mutation,
+publication or owned service launch occurred. Summary Bank paths are unchanged;
+`pwsh -NoProfile -File ./run.ps1 -Task context` validates the final records with
+30 passing project/context tests and zero bank warnings. The assessment was kept
+within the existing 98 KiB route budget; no route limit was raised.
+`git -c core.safecrlf=false diff --check` passes. These three record edits remain
+local and unstaged; publication is not selected in this batch.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-records-recheck | change=rechecked scoped source and proof then clarified active records -->
+
 ## 2026-10-25 - P7C renewal and attribution closeout
 
 Closed the four-file renewal, reconciliation and early-skin attribution record
