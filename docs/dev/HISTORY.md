@@ -12,6 +12,11 @@ still fails only planted drift; TODO retains early0–24 attribution. Publicatio
 checks bind the staged tree, isolated candidate and remote main in the retained
 `p7c-pelvis-layer-publish-20261025` receipt. No installer/release work is included;
 prior policy-blocked scratch, engine/dependencies and retained proof stay intact.
+Guarded publication saved23ff1ff with remote alignment. Automatic approval review
+then rejected deletion of the new isolated candidate as "blocked by policy".
+The candidate and both dependency junctions remain retained; TODO names the batch.
+No alternative deletion route was attempted; the publication receipt owns its
+inventory and preservation check.
 
 <!-- AI-edited: 2026-10-25 | agent=Codex/root | task=pelvis-publish | change=recorded authorized scoped closeout -->
 

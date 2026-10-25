@@ -14,13 +14,13 @@ Last reviewed: 2026-10-25
 
 ## P7C publication scratch — blocked
 
-- What: Remove only publication candidate.zip and candidate/.
-- Why: Disposable copies retain about 50 MiB.
-- Where: `runtime-data/p7c-records-publish-20261025/`; HISTORY.
+- What: Remove only named publication scratch.
+- Why: Disposable copies; preserve shared dependency targets.
+- Where: `runtime-data/p7c-records-publish-20261025/` candidate.zip/candidate; `Compact_Evidence/RustSMF/runs/p7c-pelvis-layer-publish-20261025/candidate/`.
 - When: A policy-approved deletion route is available.
-- How: Closeout owner verifies exact paths; preserve dependencies and proof.
-- Done when: Both named paths are absent; no other storage changes.
-- Verification: Approval review blocked deletion; both remain retained.
+- How: Verify owned paths; remove dependency links without targets before the new candidate.
+- Done when: Named scratch is absent; dependencies and retained proof remain.
+- Verification: Approval review blocked both batches; retained, no alternate route attempted.
 
 ## Editing and interchange reliability — source complete
 
