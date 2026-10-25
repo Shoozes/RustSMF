@@ -372,15 +372,14 @@ Reprove all 77 local poses, 284 exact outside poses, both nominal boundaries,
 skin witness and drift failures explicit. No root/support/floor/threshold, engine,
 mesh/skin/bind or unrelated source edits; no publication is selected here.
 
-Retained producer 6831d596 is qualified locally. Cleanup changes the producer
-fingerprint; TODO selects proof renewal. Captured
-engine f280d357 passes 137 qualification commands, actual 46/590 receiving,
-isolation and restored replay. The complete 637-pose pilot retains exactly two
-physical failures: planted drift and the three-pose early skin island. Existing
-77 local/284 outside poses, 47/66 boundaries, 23,240 drift observations and accepted
-guards pass; the producer's unchanged canonical 711/14 proof is reused. HISTORY
-binds the current-source receipt, exact outputs and preservation. Earlier stale
-receipt failures and later c4fac1aa snapshot proof remain retained separately.
+Published producer 21f96612 now renews all 46/590 receiving, isolation/replay
+and the complete 637-pose pilot with captured engine f280d357. All 46 regenerated
+asset/mapping/reference sets and the conditioned model match 6831d596 exactly;
+support semantics and motion stay unchanged. Fresh dense guards pass, including
+77 local/284 outside poses, 47/66 boundaries, drift, arcs, segments, seams and
+endpoints. Canonical 712/14 is reused at unchanged source/test bytes. The pilot
+retains exactly the known skin/drift failures. HISTORY binds the renewed graph;
+all earlier baselines and failed attempts remain retained.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-progress-publication | change=polished proof criteria while retaining the selected unimplemented union boundary scope -->
 
@@ -404,4 +403,4 @@ receipt failures and later c4fac1aa snapshot proof remain retained separately.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-current-source-qualification | change=closed current-source receiving and retained physical limits -->
 
-<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-review-cleanup | change=fixed shared ticks and selected proof renewal -->
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-new-source-renewal | change=closed renewal and retained physical failures -->

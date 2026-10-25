@@ -2,6 +2,184 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+## 2026-10-25 - P7C renewal and attribution closeout
+
+Closed the four-file renewal, reconciliation and early-skin attribution record
+batch for guarded publication from main 64c1c04. Implementation and Summary Bank
+routes are unchanged. Fresh input checks bind the retained 712-frontend/14-Rust
+canonical proof, all six attribution inputs, the 1173-file captured engine map,
+its build receipt and both qualified outputs. All 22 named v1/overlay and retained
+preservation files remain exact. Receiving 46/590, restored replay, the measured
+637-pose pilot and its recorder reconciliation are reused at unchanged inputs.
+The pilot's expected exit 1 remains explicit; skin/drift and full P7C/visual
+acceptance are open. No new bake or feasibility result is claimed.
+
+The staged documentation candidate receives isolated project/context validation;
+the installed Git helper receives its local safety tests before publication.
+The publication receipt binds their exact commands/results, reviewed base/tree,
+four-path allowlist and confirmed remote main commit. Existing proof remains in
+place. Automatic approval review rejected deletion of this publication's
+disposable `runtime-data/p7c-records-publish-20261025/candidate.zip` and
+`candidate/` as "blocked by policy," without a more specific reason. Both remain
+owned by this closeout; cleanup requires an approved deletion of these exact
+paths. No shared dependencies, engine/overlay files or prior evidence are cleanup
+targets. No task-owned background process remains.
+
+TODO retains the fixed-root right-leg 24/25 feasibility pass over 23–26, with
+unchanged floor limits, outside poses and accepted guards. A negative result must
+state tested coverage; it does not establish global impossibility. Publication
+saves the completed proof/attribution progress and leaves this next batch unstarted.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-records-publication | change=bound scoped closeout and preserved open physical criteria -->
+
+<a id="p7c-early-skin-attribution"></a>
+
+## 2026-10-25 - Early right-sole skin attribution
+
+Completed the selected read-only batch on main 64c1c04, source 21f96612 and
+qualified captured engine f280d357. The drop-in's renewal and prior repair claims
+remain verified complete; the early-skin item was actionable and is now attributed.
+No additional repository research-inbox item was supplied or found for this scope.
+No source clips, packet bytes, root/support/thresholds, public admission or existing
+records were rewritten. Existing dirty records were preserved and updated locally.
+
+All 21 original walkSlow channels are STEP. The original source holds tick 24 at
+24.25/24.5/24.75 and stays inside the 0.021012886070915813 m skin limit. Its
+24/25 endpoints agree with the conditioned model to submicrometre precision. The
+explicit continuous derivative instead joins them with canonical NLERP joint
+curves and linear root travel. Right UpLeg/Leg/Foot rotate about 31.78/50.46/19.61
+degrees across the source jump. The coupled arc dips the entire 70-vertex
+right-sole patch: 210 failing observations across the three fractional poses.
+
+| Tick | Worst runtime penetration (m) | Vertex | Root rise from 24 (m) | Vertex 0 root-relative fall (m) |
+| --- | --- | --- | --- | --- |
+| 24.25 | 0.031772178645 | 1 | 0.050001538404 | -0.081851466594 |
+| 24.5 | 0.042937258177 | 0 | 0.100003076809 | -0.143066602051 |
+| 24.75 | 0.032189092116 | 8 | 0.150004615213 | -0.182185248710 |
+
+The pilot's first violation remains 24.25/v0 at 0.03172366112364888 m, distinct
+from that pose's worst vertex. All failing influences are RightFoot/RightToeBase,
+with a small RightLeg blend; weights and source/export vertex order are exact.
+Vertex 0 is 21.1482% foot and 78.8518% toe. Toe local rotation is constant: its
+world motion inherits the parent foot. Root Y is rising linearly and composed
+once; root-relative foot descent dominates it. The 24–26 support span is empty,
+so sole-window criteria pass while whole-skin penetration still fails.
+
+Fresh native/WASM samples match exactly at the five proving/control phases.
+Whole-mesh reload/runtime error peaks at 2.9741237772488186e-7 m; float32 timing
+effects are also submicrometre. These cannot explain a 21 mm threshold crossing.
+Per-vertex weighted Y reconstructs every failing conditioned point exactly.
+Existing terminal, right43/44, left87/88, right48–65, idle and transition bakes
+have no authoring footprint at 24/25. The attribution is an intended STEP-to-
+continuous motion consequence, not evidence of a receiver or timestamp defect.
+
+In-memory diagnostic holds identify the right chain: holding RightUpLeg at its
+24 rotation clears skin at these three samples; holding Hips leaves all 70
+violations and holding ToeBase has no effect. These probes change swing shape
+and are not a candidate or feasibility proof. The Hips probe holds rotation,
+not translation. No model or packet was exported.
+Models, asset owners and the verified native copy were released after both
+inspection passes; existing source tracks and qualification inputs remain exact.
+
+Selected next: a private fixed-root right UpLeg/Leg/Foot two-key 24/25 feasibility
+prototype within 25 degrees, evaluated over 23–26. Prove serialized and prospective
+emitted floor clearance at 13 quarter poses, 348 exact outside poses, unchanged
+root and 23,240 drift observations, accepted 77-pose region, arcs, segments/knees,
+24 seams and six endpoints; or document a bounded refusal and its tested coverage.
+A failed search alone does not establish global impossibility. Preserve
+mesh/bind/weights, declared supports and thresholds. Keep the existing two-record
+limit and one bounded span intact: this is not admission of a third ordinary
+recipe or product integration. Any later integration needs a separately selected
+batch. Planted drift and full P7C/visual acceptance remain open.
+
+Exact measurements and per-vertex influences are retained losslessly in
+`D:/Compact_Evidence/RustSMF/runs/p7c-early-skin-attribution-20261025/detailed-measurements.json.gz`;
+`attribution.json` binds inputs, assertions and the pass-down. The run summary
+records current-source/preservation and the 30 context/project checks. Current
+canonical 712/14 and renewed 46/590/637 proof are reused at unchanged source.
+No deletion, engine/overlay/dependency edit, Git staging or publication.
+
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-early-skin-attribution | change=attributed right-sole arc and bounded feasibility -->
+## 2026-10-25 - Renewal review, recheck and evidence cleanup
+
+Reviewed the current P7C span/boundary implementation, consumers, regression and
+renewal assertions on main 64c1c04 plus the four existing record changes. Producer
+21f96612/exporter 3266487a, source/test/bank inputs, the captured 1173-file f280d357
+engine and both qualified outputs remain exact. Native context generation used
+stdout only. Read-only inventory verification checked all 370 renewed proof
+files; no receiving, pilot, dense or canonical rerun was needed. The prior
+shared-tick repair and renewal prerequisite remain verified closed. No new
+actionable source defect was found; physical skin/drift and full P7C/visual
+acceptance remain open.
+
+Evidence cleanup adds a reconciliation without rewriting the retained records.
+The recovered pilot command inherited `sourceMapStable: false` from the original
+recorder validation failure. The saved error is the wrong prior-pilot path lookup,
+reached after its source-map assertion passed. The recorder had conflated all
+validation errors with source stability; the separate recovery retained that
+flag. The exact source/output checks, saved complete pilot and unchanged witnesses
+confirm the existing qualification. The correction changes interpretation of the
+flag, not measurement, source binding or the expected physical-failure exit 1.
+Both old records and all diagnostics remain immutable. The addendum is
+`D:/Compact_Evidence/RustSMF/runs/p7c-renewal-review-20261025/recheck.json`.
+
+TODO keeps one next bounded batch: read-only attribution at 24.25, 24.5 and 24.75
+using original source, conditioned reload and the qualified runtime. Identify
+joint/vertex and root/sampling contributions, select one feasibility pass, and
+stop before authoring. Derive evidence paths from the retained preflight; do not
+rerun immutable runners or mix the moving engine checkout with the frozen build.
+Only records changed; 30 context/project checks and diff checks validate them.
+V1, the three Rust overlays, shared dependencies and all evidence are preserved.
+No deletion, process termination, Git staging or publication.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-renewal-review | change=reconciled recorder metadata and retained scoped qualification -->
+
+<a id="p7c-new-source-renewal"></a>
+
+## 2026-10-25 - Published-source P7C proof renewal
+
+Closed the selected renewal on published main 64c1c042eb23ba8d6829f3770394b4d6da8243ee,
+producer 21f9661299230d9c9c3b1f28be322179f68ba7cc82e74b0cd1c09fe0fa06e4ae and exporter
+3266487aa475771b64d80c9df28f2fe0a3ce73a1f3a536feefcd9daacd2ace4b. All 46 ordinary CLI exports ran
+with clean published metadata before documentation changed. They emit 590 independent
+references; all asset/mapping/reference files, all 118 clip occurrences, recipes,
+both two-key bakes, span and conditioned model e2455830 remain exact to the retained
+6831d596 graph. Generation/manifests and support binding metadata are renewed;
+patch vertices, intervals/windows, modes and unsupported spans remain unchanged.
+
+Bundle be8a521d8fdc6d730459e9994eb200bf48c59cc5826a2220615ab422dfee9b51 binds the new producer. It freshly passes
+69 binding/refusal checks and actual 46-packet/590-reference native/WASM receiving,
+instance isolation and six-tick restored replay. The engine is the approved
+1173-file captured f280d357 snapshot and exact qualified outputs 7ec92870 WASM
+and 41fc7f54 native. Its 137-command qualification is reused after fresh full
+source-map, receipt and output validation; no engine build, source or dependency
+change is needed. The moving live checkout is outside that qualification.
+
+The actual pilot ran once: 637 poses/55 independent references, measurement
+complete and expected exit 1. Only walkSlow soleDrift and skinPenetration fail.
+First/max witness structures match prior exactly: drift first 2/v3398 and maximum
+0.6734007226803665 m; skin first 24.25/v0 and maximum 24.5/v0 at
+0.04293725817655859 m. Three early skin poses/210 violating observations remain.
+Both global sole criteria pass. Thresholds, support and authored motion are fixed.
+
+Fresh dense native/WASM and independent reload proof passes 361 gait poses per
+host, 77 local poses/286,902 skin observations, all 284 outside poses and ticks
+47/66 exact, all 23,240 drift observations exact, both accepted arcs, 27 segments
+without inversion, 24 seams and six endpoints. Reload/runtime error stays below
+1e-6 m. The unchanged-source/test 712-frontend/14-Rust canonical proof is reused;
+current record/context and diff checks close the documentation phase.
+
+The bounded renewal is complete with verified physical limitations. TODO selects
+read-only attribution of the three early skin poses before another producer
+feasibility pass; planted drift and full P7C/visual acceptance stay open. No
+implementation, threshold, root, support, mesh/bind or engine/overlay edits, and no
+Git synchronization.
+The complete producer graph, fresh commands, cleanup and preservation result are in
+`D:/Compact_Evidence/RustSMF/runs/p7c-new-source-renewal-20261025/summary.json`.
+Initial runner setup/recorder diagnostics remain retained; the measured pilot was
+not rerun. V1, all overlays, shared dependencies and prior evidence are preserved.
+
 ## 2026-10-24 - P7C span closeout and scoped publication
 
 Closed out the 18-file producer span, qualified-baseline records and shared-tick
@@ -5126,3 +5304,5 @@ license/notice. No receiving checkout was changed and nothing was published.
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-current-source-qualification | change=closed current-source receiving and retained physical limits -->
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-review-cleanup | change=fixed shared ticks and selected proof renewal -->
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-new-source-renewal | change=closed renewal and retained physical failures -->

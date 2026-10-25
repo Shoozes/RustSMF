@@ -1,16 +1,16 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-10-24
+Last reviewed: 2026-10-25
 
 Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
-## Right-swing integration — 2026-10-24
+## P7C early skin attribution — 2026-10-25
 
-Shared-tick export repair passes 28 focused checks and canonical 712/14.
-Current producer 21f96612 needs receiving renewal; prior proof stays bound to
-6831d596. TODO owns the next batch; early skin/drift remain open.
+Early skin failures trace to the right-sole continuous arc between source
+STEP keys 24/25. Source-clear endpoints and exact native/WASM agree with the
+reloaded GLB. TODO selects fixed-root feasibility; no bake is authored.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-right-swing-feasibility | change=distinguished verified prototype from unchanged qualified producer -->
 
@@ -278,4 +278,4 @@ AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=cl
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-residual-attribution | change=attributed both physical failures and selected swing feasibility -->
 
-<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-review-cleanup | change=fixed shared ticks and selected proof renewal -->
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-early-skin-attribution | change=attributed right-sole arc and bounded feasibility -->

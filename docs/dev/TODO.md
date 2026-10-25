@@ -1,26 +1,26 @@
 # RustSMF TODO
 
-Last reviewed: 2026-10-24
+Last reviewed: 2026-10-25
 
-## P7C cleanup proof renewal — next bounded batch
+## P7C right-leg clearance feasibility — next bounded batch
 
-- What: Renew White Wolf qualification after the shared-tick export repair.
-- Why: Current producer 21f96612 differs from qualified baseline 6831d596.
-- Where: [Span criteria](SKELETAL_EXPORT_BOUNDARY.md#right-swing-rotation-span-integration); HISTORY.
-- When: Next, before further motion edits.
-- How: Ordinary CLI/reload; rebind captured engine f280d357 and outputs. Preserve the linked motion/support/mesh constraints.
-- Done when: Renew 46/590 receiving, isolation/replay and actual 637 pilot; all linked dense/outside/boundary/drift/arc/seam guards remain exact and cleanup passes. Keep the two physical failures explicit.
-- Verification: 28 focused checks and canonical 712/14 pass. Prior receiving binds 6831d596; reuse unchanged canonical proof.
+- What: Fixed-root right-leg two-key 24/25 prototype; evaluate ticks 23–26.
+- Why: The continuous arc dips all 70 right-sole vertices below the floor.
+- Where: [Attribution](HISTORY.md#p7c-early-skin-attribution); [contract](SKELETAL_EXPORT_BOUNDARY.md).
+- When: Next; feasibility only.
+- How: Right UpLeg/Leg/Foot within 25 degrees; preserve root trajectory, bakes, supports and thresholds.
+- Done when: Meet existing floor limits at 13 local poses, preserve 348 outside poses and linked guards, or document a bounded refusal with tested coverage. No job/schema change or record-limit expansion.
+- Verification: Three poses attributed; native/WASM exact. Candidate feasibility remains untested.
 
-## Completed P7C producer baselines
+## Completed P7C renewal and early-skin attribution
 
-- What: Union export sampling and right-swing span qualification.
-- Why: Retain accepted baselines.
-- Where: [Contract](SKELETAL_EXPORT_BOUNDARY.md); HISTORY.
-- When: Closed locally 2026-10-24.
-- How: Exact qualified snapshots and independent receiving.
-- Done when: Closed at 55ad2c76/6831d596; full P7C stays open.
-- Verification: 46/590 and 637 pilot pass scoped checks; skin/drift remain open.
+- What: Qualify 21f96612 and trace the three early skin failures.
+- Why: Close proof and attribution gaps.
+- Where: HISTORY and the linked contract.
+- When: Closed locally 2026-10-25.
+- How: Original STEP, conditioned reload and qualified f280d357 runtime.
+- Done when: Attribution complete; no bake authored; full P7C stays open.
+- Verification: 46/590 and 637 pilot remain valid; all 210 failing observations trace to the right-sole arc. Runtime agrees within 0.3 micrometres; 712/14 reused.
 
 ## Editing and interchange reliability — source complete
 
@@ -181,4 +181,4 @@ bounded noncombat fixture.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-current-source-qualification | change=closed current-source receiving and retained physical limits -->
 
-<!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-review-cleanup | change=fixed shared ticks and selected proof renewal -->
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-early-skin-attribution | change=attributed right-sole arc and bounded feasibility -->
