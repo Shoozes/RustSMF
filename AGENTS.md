@@ -11,6 +11,22 @@ Prioritize correctness and readability over cleverness.
 TypeScript React in the front
 Rust in the backend/main source
 
+## Quiet Installed-App Checks
+
+For RustSMF installed-app acceptance, use
+[GenEye installed control](docs/dev/skills/geneye-installed-control/SKILL.md).
+Use app controls and exact, owner-verified window handles for installed-product
+checks. Prefer GenEye observation and background-capable UIA or message control.
+Tests should leave the operator's cursor and foreground window alone by default.
+Launch the task-owned installed app minimized when the workflow permits it.
+Windows native file dialogs can still appear in the operator's foreground from
+a minimized app. Do not issue Open/Save/Retarget picker actions on the active
+desktop during quiet tests; first establish an isolated desktop/session route.
+Do not move the physical pointer to operate the app during a quiet test. If a
+required WebView control has no quiet route, leave that case unverified and
+report the control gap. Keep test output concise and inspect only actionable
+failures.
+
 ## Git Workflow
 
 Work locally on `main` only unless the user explicitly requests a different branch. Local Codex work should reflect `main` in progress, not a PR branch workflow.

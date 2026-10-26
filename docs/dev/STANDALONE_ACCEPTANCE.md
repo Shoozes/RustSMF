@@ -9,8 +9,8 @@ libraries and installed development toolchains remain ordinary prerequisites.
 
 The 2026-10-26 candidate starts at `7a062c4` with the reviewed standalone changes.
 The exact changed-source inventory, commands and hashes belong to the dated
-HISTORY record and its compact receipt. No version bump, commit, publication or
-replacement of the public `0.2.1-preview` is part of this batch.
+HISTORY record and its compact receipt. The candidate was committed locally as
+`7b66717`; no public release replaced `0.2.1-preview`.
 
 | Acceptance | Current evidence boundary |
 | --- | --- |
@@ -18,7 +18,7 @@ replacement of the public `0.2.1-preview` is part of this batch.
 | Predictable browser routing | Direct default and `-NoGenEye` agree; ambient/sibling controls and explicit integration failure controls pass. |
 | Isolated build and verification | Source-only copy passed verify (723 frontend tests, 14 Rust checks), browser 212, journeys 13, strict visuals 3, retarget/transition native-WASM proof and desktop smoke. |
 | Ordinary exporters | Generated native-contact CLI success/refusal and job cancellation passed in verify; retained consumer proof is not renewed. |
-| Installed workflows | Installer A succeeded and five bundled resources match. Required native-dialog cases remain unobserved; API/mocks do not close them. |
+| Installed workflows | Installer A and five bundled resources passed. Quiet UIA loaded Signal Robot and Sable, saved/reopened projects, refused malformed/missing ZIP resources, handled ambiguous ZIP choice/cancel, saved and retried queued GLBs, and opened bundled Help. Independent project/GLB continuity passed; installer B/profile B reopened the Sable project and saved identical bytes. Queue write failure and Sable retarget/animal assistance remain open. |
 | Local release candidate | Installer, checksums, notices, samples and startup guide exist locally. Second clean install/profile, workflow acceptance and final evidence closure remain open. |
 
 The [2026-10-26 review record](HISTORY.md#standalone-review-20261026) binds
@@ -70,17 +70,55 @@ Exercise ZIP, presets/queues, retargeting and bounded animal assistance with
 Signal Robot, Sable or generated fixtures; test offline Help and reopening in a
 second clean location. Confirm normal/failure/cancellation resource release.
 
-Next bounded batch: establish the installed Signal Robot Open/cancel and project
-Save/cancel/reopen path using GenEye observation plus documented commands. Check
-fresh PID, creation time, executable and HWND before input; process-local control
-gates must not change global GenEye policy. The previous minimized-window focus
-failure is a control limitation, not an application failure or accepted workflow.
-Do not assume the attempted normal-window relaunch succeeded. Independently
-inspect the saved project/export for animation, skin and material continuity.
-Retain before/after observations and verify owned process release. If this lane
-cannot perform a required action, record the exact unsupported operation and
-select a bounded GenEye capability fix before expanding the UI matrix. No CUA
-fallback or claim that commands are better without measured completion evidence.
+The initial 2026-10-26 installed-A pass verified executable SHA-256
+`2688ecb8cf5093be700b8101149f94f160e388c0b10ad21ab85c9b581aaa7f13`,
+PID/HWND ownership, the real Open dialog, cancellation and single-model ZIP load.
+GenEye captured the loaded Signal Robot with quality `ok` (frame SHA-256
+`2320fe2b9af4a6ebb639a46175033ab813ef66aa72addd0ab564876aae4488d1`).
+The native file picker accepted an exact-HWND filename field and Open button
+message without moving the cursor. Its controls surfaced as UIA panes without
+Invoke/Value patterns. The WebView toolbar exposed only container UIA nodes;
+GenEye's background and foreground click reports did not open a dialog, so their
+execution reports are not treated as workflow proof. A pointer fallback did open
+the dialog but took the operator's cursor; the operator disallowed that route
+for further quiet tests. A local WebView debugging launch was rejected by command
+policy before execution. The owned process was stopped after exact PID, path and
+start-time checks. No saved project or exported GLB was produced in that pass.
+
+A later minimized launch from the same task-owned installation used a fresh
+WebView2 profile and the renderer child `Chrome_RenderWidgetHostHWND`. Its UIA
+tree exposed semantic buttons, tabs and disclosures; exact owned child HWND
+messages operated native file dialogs. The pointer did not move, but the native
+file dialogs appeared on the operator's active desktop despite the minimized
+app. The installed app loaded Signal Robot and Sable
+from single/ambiguous ZIPs, canceled the ambiguous choice without replacing
+work, and reported missing-sidecar and malformed-ZIP errors. It saved and
+reopened `signal-project.rsproj` (139,728 bytes), saved
+`sable-after-refusals.rsproj` (3,150,386 bytes), and exported
+`sable-direct-export.glb` (2,361,468 bytes). Independent project/GLB parsing
+and sampled continuity passed for Sable's Idle, Run, Sit and Walk, including
+animation, skin and material presence. The export queue saved its first GLB,
+canceled a second destination, then retried only that incomplete item; the
+first output hash stayed unchanged. The operator closed a later foreground
+Save As dialog during a separate locked-output trial before a write was issued,
+so write-failure handling remains unverified. Bundled Help opened and closed
+through UIA.
+
+The same installer was silently installed to a second clean task-owned location
+with a separate WebView2 profile. That installed app reopened the Sable project,
+then saved a 3,150,386-byte project whose SHA-256 exactly matched the first
+installation's `c4cc11c37d8bf71a71f65fdb16a859060343526269288f47225ea15c928d4398`.
+Both exact owned application PIDs and the temporary output-lock helper exited.
+
+The task-owned app/profile and output receipts are under
+`D:/RustSMF-Standalone-20261026/`. Use the
+[GenEye installed control skill](skills/geneye-installed-control/SKILL.md)
+for the remaining queue write-failure and Sable retarget/animal assistance cases.
+The installed Transfer tab was reached, but the Retarget clips picker was not
+completed; operator dismissal of foreground dialogs cannot establish a UIA
+failure. Establish a verified isolated desktop/session before any more native
+picker actions. Recheck current process/HWND identity before each action and
+verify owned process release at closeout. No CUA or cursor input.
 
 ## Optional consumer qualification
 
@@ -95,4 +133,4 @@ root/pelvis constraints, engine v1, three Rust overlays and retained evidence st
 protected. A reproducible general tool defect can reopen source work through a
 bounded local regression; unqualified private motion does not keep the editor open.
 
-<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone | change=separated product and consumer acceptance -->
+<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone-p7c-continuation | change=record partial installed proof and quiet control boundary -->

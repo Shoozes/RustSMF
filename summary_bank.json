@@ -1570,6 +1570,9 @@
       "max_kb": 88,
       "paths": [
         "docs/dev/STANDALONE_ACCEPTANCE.md",
+        "docs/dev/skills/geneye-installed-control/SKILL.md",
+        "docs/dev/skills/geneye-installed-control/IMPLEMENTATION_NOTES.md",
+        "docs/dev/skills/geneye-installed-control/scripts/quiet-control.ps1",
         "run.ps1",
         "scripts/standalone-launcher.test.mjs",
         "source/frontend/scripts/check-game-ready-dependencies.mjs",

@@ -2,6 +2,108 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="standalone-quiet-uia-20261026"></a>
+## 2026-10-26 - Quiet installed UIA continuity and second clean profile
+
+The installed-A app was relaunched minimized with a task-owned fresh WebView2
+profile. GenEye verified the exact titled HWND and PID; UIA on its owned
+`Chrome_RenderWidgetHostHWND` child exposed the real editor controls while the
+top-level Tauri HWND exposed containers only. The repository's
+`geneye-installed-control` helper checks PID, executable and creation time
+before each semantic UIA action or exact native-dialog child-HWND message.
+No physical pointer was moved. Native Windows file dialogs still appeared in
+the operator's foreground despite the minimized main window; the operator
+closed some dialogs. Active-desktop picker testing was stopped on that report.
+
+The app loaded Signal Robot from a single-model ZIP; saved/reopened its
+139,728-byte project; presented both choices from an ambiguous ZIP, canceled
+without replacing work, then selected Sable; reported missing-sidecar and
+malformed-ZIP errors; saved a 3,150,386-byte Sable project and exported a
+2,361,468-byte GLB. Independent project/GLB parsing and sampled continuity
+passed for Idle, Run, Sit and Walk, skin and material. The queue saved one GLB,
+canceled the next destination and retried only the incomplete item while the
+first output hash remained unchanged. Bundled Help opened and closed through
+UIA. A separate locked-output attempt reached a Save As dialog, but the operator
+closed it before path submission; write-failure behavior remains open. The
+installed Transfer tab was reached, but no retarget or animal review completed.
+
+The same installer SHA-256 `01e10593ec5d62d39cd65ac7c2ecca267df9fa2c333d92ac75f70d61a16c79d2`
+installed to a second clean task-owned directory. Its separately profiled
+minimized app reopened the Sable project and saved byte-identical output:
+3,150,386 bytes, SHA-256
+`c4cc11c37d8bf71a71f65fdb16a859060343526269288f47225ea15c928d4398`.
+Both installed app PIDs and the temporary output-lock helper exited after
+identity checks. `D:/RustSMF-Standalone-20261026/` retains the two owned
+installation/profile receipts and resulting files. No source graph, GaimEngine,
+overlay, shared dependency or retained qualification evidence changed.
+
+GenEye consumer feedback was placed in its local
+`C:/DevStuff/GenEye/docs/research-inbox/2026-10-26-1711-rustsmf-quiet-uia.md`.
+It records the renderer-child UIA route, current GenEye child-HWND resolution
+gap, stale-HWND rejection and the command-policy rejection of a CDP launch.
+It now also records the active-desktop dialog intrusion and isolated-desktop
+requirement.
+No GenEye implementation was changed.
+The repository-local UIA method and its possible GenEye extraction boundary are
+recorded in [implementation notes](skills/geneye-installed-control/IMPLEMENTATION_NOTES.md).
+
+<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone-installed-quiet-uia | change=record installed project queue Help and clean-profile proof -->
+
+<a id="standalone-quiet-installed-20261026"></a>
+## 2026-10-26 - Partial installed acceptance and quiet control boundary
+
+On clean main `7b66717`, installed A's `rustsmf.exe` matched SHA-256
+`2688ecb8cf5093be700b8101149f94f160e388c0b10ad21ab85c9b581aaa7f13`.
+The real Open picker appeared, Escape canceled it, and a second Open selected
+`single-model.zip`. GenEye captured loaded Signal Robot at quality `ok`, frame
+SHA-256 `2320fe2b9af4a6ebb639a46175033ab813ef66aa72addd0ab564876aae4488d1`.
+The picker exposed an owned filename Edit and Open button as UIA panes; exact
+child-window messages selected the ZIP without pointer movement. Auxiliary
+titleless RustSMF HWNDs were excluded from the app-window target. The owned
+test process exited after exact PID, executable and creation-time verification.
+
+The WebView toolbar did not expose actionable UIA elements. GenEye background
+and foreground click steps reported execution but caused no Open action, so they
+are not accepted as application proof. A direct physical-pointer click opened
+the picker but took the operator's cursor; that fallback was stopped. A quiet
+local WebView debugging launch was rejected by command policy before execution.
+No project Save/reopen, exported GLB, ZIP refusal, queue, Sable, Help or second
+profile claim follows from this partial run. A new repository
+[GenEye installed control skill](skills/geneye-installed-control/SKILL.md) and
+AGENTS.md route require quiet exact-HWND observation and app controls for the
+remaining installed cases. The skill validator passed; no new application
+binary, source or consumer graph was built.
+
+Read-only P7C composition decision: the retained private 65-degree 23/24 family
+changes walkSlow 22.5 through chord interpolation from fixed tick 22. The four
+failing p25 transition endpoints compare directly with that 22.5 pose. Their
+largest differences are 332.624854 mm skin, 277.768390 mm joint and 19.793460
+degrees; the same candidate penetrates 61.520789 mm at 22.5/v3368. A next
+private trial must include left keys 22/23/24 and those four dependent endpoints,
+with outer 21/25 boundaries and other seams guarded. No producer recipe or
+capacity changed; the trial and full P7C qualification remain open.
+
+A private follow-up scan then changed only the tick-22 rotations in the three
+left-leg joints while retaining the measured 23/24 correction. Four finite
+families tested 466 variants: 13 uniform and 125 independent counter-rotations,
+72 single-joint local-axis rotations and 256 deterministic varied-axis
+three-joint rotations. All stayed under the 65-degree stored cap; none passed
+the unchanged floor/contact limits. The varied-axis best physical score has
+52.255439 mm floor penetration at 22.5/v3398 and 65.757777 mm contact gap at
+22, both against the 21.012886 mm limit. Target 23–24 drift stayed 7.623032 mm.
+These are finite family refusals, not proof that every strict approach fails.
+No producer code, exported graph, native/WASM receiver or GaimEngine source
+changed. Scripts, measurements and compact summary are retained at
+`D:/Compact_Evidence/RustSMF/runs/p7c-left22-24-feasibility-20261026/`.
+
+The three named P7C publication scratch paths were inventoried. The D: copy
+contains two junctions to the repository's shared node_modules; the C: candidate
+has no reparse points. The checked junction-unlink command and a simple named-ZIP
+deletion were both rejected before execution by command policy. All three paths,
+their shared targets and the retained qualification evidence remain untouched.
+
+<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone-p7c-continuation | change=record partial installed proof quiet-control limit and source-bound P7C decision -->
+
 <a id="standalone-review-20261026"></a>
 ## 2026-10-26 - Standalone review, recheck and record cleanup
 

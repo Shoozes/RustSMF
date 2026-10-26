@@ -27,35 +27,36 @@ The public 0.2.1 preview is distinct from the newer local source candidate.
 - Done when: Verify, browser, journey, strict visuals, native/actual-WASM proofs, ordinary exports, desktop smoke and Windows packaging pass with recorded identities and dependency locations.
 - Verification: Final verify passes (723 frontend tests, 14 Rust checks); browser 212, journeys 13, strict visuals 3, native/actual-WASM proofs, desktop smoke and packaging pass. Default browser routing also passes 212 with irrelevant siblings/ambient integration variables. Source identities and command receipts: [review record](HISTORY.md#standalone-review-20261026).
 
-## 3. Installed Open and project persistence — next bounded batch
+## 3. Installed acceptance — finish remaining real-app cases
 
-- What: Prove actual installed Signal Robot Open/cancel and project Save/cancel/reopen using GenEye plus commands.
+- What: Finish queue write-failure and Sable retarget/animal assistance acceptance.
 - Why: API/browser evidence and the older preview do not prove current installed workflows.
 - Where: Tauri, ZIP, project persistence, queue, retarget/animal owners; [acceptance](STANDALONE_ACCEPTANCE.md).
 - When: After isolated build/package proof.
-- How: Recheck the task-owned installer/process identity and fresh HWND; use documented GenEye commands with process-local gates and captures. Do not assume the previous normal-window relaunch succeeded. Preserve user settings/recovery and inspect saved project/export bytes independently. No CUA fallback or global control-policy change.
-- Done when: Real OS Open/cancel and Save/cancel/reopen preserve editable animation, skin and materials; one exported GLB passes the prepared continuity validator; evidence binds app/source/output identity and owned processes are released. If control fails, record the exact operation and a bounded capability repair before expanding scope.
-- Verification: Installer A exit 0, five bundled resources match; required UI cases remain unobserved. The earlier GenEye focus attempt rejected a minimized window. The old owned PID was absent at review; relaunch success and replacement process identity remain unverified.
-- After this batch: ZIP missing/ambiguous/cancel, queue destination/failure/retry and completed-file preservation, Sable retarget/animal workflows, offline Help, then a second clean install/profile. Freeze the final evidence/checksum set only after those cases pass. No public release replacement.
+- How: Establish a verified isolated desktop/session before another native picker; minimizing the app alone let Windows dialogs jump onto the operator's screen. Recheck the task-owned installer/process identity and fresh HWND; use the [GenEye installed control skill](skills/geneye-installed-control/SKILL.md) and its renderer-child UIA helper. Preserve user settings/recovery and inspect saved project/export bytes independently. No CUA, physical pointer movement or global control-policy change.
+- Done when: A real queue write failure and retry preserve completed outputs; Sable retarget and bounded animal assistance are exercised; owned processes and temporary resources are released.
+- Verification: Installer A and five bundled resources passed. The minimized app's renderer-child UIA opened Signal Robot and Sable ZIPs, saved and reopened projects, refused malformed/missing resources, handled ambiguous ZIP cancel/selection, queued two GLBs with destination cancel/retry, and opened bundled Help. Independent Sable project/GLB continuity passed with four clips, skin, material and sampled animation. Clean installer B/profile B reopened the Sable project and saved byte-identical 3,150,386-byte project output; PID was released. Native dialogs still appeared in the operator's foreground; the operator closed a later locked-output Save As before write. Transfer was reached but no retarget was completed. See [acceptance](STANDALONE_ACCEPTANCE.md).
+- After this batch: Freeze the final evidence/checksum set only after remaining cases pass. No public release replacement.
 
 ## Optional consumer qualification — P7C remains open
 
-- What: Read-only left-leg 22–23 approach/p25 seam decision.
-- Why: All 45 private 65-degree candidates were refused; the best fails floor and four seams.
+- What: Trial the user-selected opt-in producer-only v3 five-window contact-release profile after bounded strict left-leg refusals.
+- Why: All 45 private 65-degree 23/24 candidates were refused; the best fails floor at 22.5 and four seams compare directly with that changed pose. Keeping the p25 source endpoint exact while changing tick 23 is incompatible with the present chord interpolation and fixed tick-22 key.
 - Where: [Retained trial](HISTORY.md#p7c-left23-24-refusal).
 - When: Separately selected consumer work; not a RustSMF product or release prerequisite.
-- How: Preserve root/pelvis, anchor0, supports, limits, accepted bakes, GaimEngine v1, three Rust overlays, dependencies and evidence; keep the 65-degree ceiling.
-- Done when: Select one exact key/seam scope with controls or refuse before further authoring; no fourth public recipe or silent scope expansion.
-- Verification: Targets pass, but 61.52 mm penetration and four p25 seam failures remain. Prior source-bound 46/590 and 637-pose results stay retained; no motion repair is claimed.
+- How: Keep strict thresholds, roots, pelvis, accepted bakes and default export bytes unchanged. Declare explicit left release intervals 0–24, 44–58, 84–89 and right 29–47, 66–87 with bounded lock/unlock ramps; right 26–27 remains strictly planted. Reports must separate released from planted ticks. Test floor, skin, seams and visual behavior of all released spans, plus unaffected poses, native/WASM, replay and default-byte identity before accepting any graph.
+- Done when: The optional profile's declared releases and ramps satisfy floor, skin, seam and visual criteria without reporting released ticks as planted-drift passes; default omission preserves existing bytes/support behavior. If a bound fails, retain the exact refusal and required contract decision.
+- Verification: Retained 45-candidate 23/24 refusal had 61.52 mm penetration at 22.5/v3368 and four p25 endpoint discrepancies up to 332.62 mm skin, 277.77 mm joint and 19.79 degrees. Four new finite tick-22 families tested 466 variants with zero passes. The varied-axis family's best physical score has 52.26 mm floor penetration at 22.5 and 65.76 mm contact gap at 22 against the unchanged 21.01 mm limit. These finite refusals do not prove all strict corrections infeasible. The compact receipt is identified in [HISTORY](HISTORY.md#standalone-quiet-installed-20261026). Prior source-bound 46/590 and 637-pose results remain retained; no motion repair is claimed.
+- After an accepted graph: renew independent GLB reload, unaffected channels/poses, native/WASM, serialized replay, 46/590 receiving and the 637-pose pilot. Full P7C still needs collision, role/phase, scale/facing, f32 and visual checks.
 
 ## Housekeeping exception — publication scratch remains blocked
 
 - What: Remove named scratch only through an authorized route.
 - Why: Reclaim disposable copies without affecting product acceptance.
 - Where: `runtime-data/p7c-records-publish-20261025/` candidate.zip/candidate; `Compact_Evidence/RustSMF/runs/p7c-pelvis-layer-publish-20261025/candidate/`.
-- When: Host permits named operations; separate from this implementation batch.
+- When: Command policy permits the exact named operations; separate from qualification.
 - How: Unlink dependencies without targets; remove only proven owned scratch.
 - Done when: Named scratch is absent; shared dependencies and retained proof remain intact.
-- Verification: Both retained; even nonrecursive frontend-junction unlink was blocked. New candidate: 1,390 files/32,474,567 bytes. Do not retry or bypass the restriction here.
+- Verification: All three remain. Current inventory found two shared-dependency junctions in the D: candidate and no reparse points in the C: candidate. The checked two-junction unlink and single named-ZIP deletion were both rejected by command policy before execution on 2026-10-26. Do not bypass that restriction.
 
-<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone | change=prioritized product acceptance and retained consumer/housekeeping limits -->
+<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone-p7c-continuation | change=record quiet installed control and bounded P7C refusals -->
