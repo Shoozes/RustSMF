@@ -2,6 +2,23 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="p7c-pelvis-scratch-policy-recheck"></a>
+## 2026-10-25 - Publication scratch policy recheck
+
+The operator authorized only 57/58 publication scratch cleanup and TODO upkeep.
+On main e9ca5ec, the named isolated candidate still contains 1,390 ordinary files,
+32,474,567 bytes and two dependency junctions. The bounded inventory excludes
+both shared targets. Automatic approval review rejected even a nonrecursive,
+literal-path removal of the frontend node_modules junction: "blocked by policy".
+No deletion command executed. No other deletion method was attempted afterward.
+The cleanup remains blocked pending host permission for those named operations;
+TODO retains the exact batch. Earlier runtime-data publication scratch is outside
+this request and remains untouched. No source change, commit or push is included.
+Inventory, preservation checks and the cleanup receipt remain beside the existing
+publication receipt as `scratch-cleanup-inventory.json` and `scratch-cleanup.json`.
+
+<!-- AI-edited: 2026-10-25 | agent=Codex/root | task=pelvis-scratch | change=recorded exact policy blocker and retained ownership -->
+
 <a id="p7c-pelvis-layer-publication"></a>
 ## 2026-10-25 - Pelvis-layer publication closeout
 

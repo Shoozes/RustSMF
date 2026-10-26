@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-10-25
+Last reviewed: 2026-10-26
 
 ## P7C early planted-drift repair selection — next bounded batch
 
@@ -14,13 +14,13 @@ Last reviewed: 2026-10-25
 
 ## P7C publication scratch — blocked
 
-- What: Remove only named publication scratch.
-- Why: Disposable copies; preserve shared dependency targets.
+- What: Remove named scratch only.
+- Why: Reclaim disposable copies.
 - Where: `runtime-data/p7c-records-publish-20261025/` candidate.zip/candidate; `Compact_Evidence/RustSMF/runs/p7c-pelvis-layer-publish-20261025/candidate/`.
-- When: A policy-approved deletion route is available.
-- How: Verify owned paths; remove dependency links without targets before the new candidate.
-- Done when: Named scratch is absent; dependencies and retained proof remain.
-- Verification: Approval review blocked both batches; retained, no alternate route attempted.
+- When: Host permits named operations.
+- How: Unlink dependencies without targets; remove owned scratch.
+- Done when: Scratch absent; dependencies/proof intact.
+- Verification: Both retained; even nonrecursive frontend-junction unlink blocked. New candidate: 1,390 files/32,474,567 bytes.
 
 ## Editing and interchange reliability — source complete
 
@@ -184,3 +184,5 @@ bounded noncombat fixture.
 <!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-layer-integration | change=closed integration and retained drift selection -->
 
 <!-- AI-edited: 2026-10-25 | agent=Codex/root | task=pelvis-recheck | change=renewed proof -->
+
+<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=pelvis-scratch | change=verified cleanup records for publication -->
