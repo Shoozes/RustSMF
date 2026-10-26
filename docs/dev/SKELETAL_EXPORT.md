@@ -11,10 +11,11 @@ The [bounded span option](SKELETAL_ROTATION_SPAN.md) also preserves every
 unselected component at its selected ticks; source references remain independent.
 The [pelvis/leg layer](SKELETAL_PELVIS_LAYER.md) adds bounded post-bake composition
 with reverse provenance and component-preserving export.
-Singular and disjoint one–three-record plural v3 integration now pass renewed
-46/590 native/WASM receiving and exact outside-runtime preservation. Omitted
-options retain their bytes. Skin clearance passes; planted drift and full P7C
-remain open. HISTORY binds the current source and retained pilot evidence.
+Retained singular and disjoint one–three-record plural v3 qualification passes
+46/590 native/WASM receiving and exact outside-runtime preservation at its
+recorded source identity. Omitted options retain their bytes. Skin clearance
+passes there; planted drift and full P7C remain open. HISTORY binds that source
+and pilot evidence; later standalone maintenance does not renew consumer proof.
 
 ```json
 {
@@ -159,6 +160,17 @@ cover comparison differences without replacing the source-side evaluation.
 
 ## Scope of proof
 
+The exporter and contact-conditioning helper belong to RustSMF. Generated and
+first-party fixtures exercise them without another engine checkout. The `gaim.*`
+names identify output contracts, not runtime dependencies. Actual-engine receiving
+is optional consumer qualification and does not gate editor startup, ordinary
+verification or packaging. See [standalone acceptance](STANDALONE_ACCEPTANCE.md).
+
+This developer CLI requires Git for revision/working-tree provenance and the
+declared local Rust toolchain for native contact conditioning. It does not invent
+a source revision for an unpacked archive. The installed editor bundles its
+native computation and does not require Git or Rust development tools.
+
 The project-owned Signal Robot GLB exercises a real RustSMF load/export path and
 is a diagnostic fixture, not humanoid qualification. Its packet proves the
 RustSMF exporter, mapping, source-reference generation, bounds, and transactional
@@ -176,3 +188,5 @@ at their source and exported again; RustSMF does not silently simplify them.
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=routed bounded span authoring and independent reference preservation -->
 
 <!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-layer-integration | change=routed bounded layer export -->
+
+<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone | change=separated producer acceptance and retained consumer qualification -->

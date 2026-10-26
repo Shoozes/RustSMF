@@ -770,7 +770,7 @@ Last reviewed: 2026-09-25 (stable PL IDs and Guard references plus v0.2 palette,
 ### Q: What pitfall are we preventing?
 
 **ID:** PL-028
-**Guard:** `source/frontend/geneye-playwright.json`, `source/frontend/scripts/run-playwright-geneye.mjs`
+**Guard:** `source/frontend/geneye-playwright.json`, `source/frontend/scripts/run-playwright-geneye.mjs`, `scripts/standalone-launcher.test.mjs`
 
 
 
@@ -787,13 +787,13 @@ Last reviewed: 2026-09-25 (stable PL IDs and Guard references plus v0.2 palette,
 2. `72/100` Pass RustSMF's shell command to GenEye, result: project evidence worked until the external compatibility boundary was hardened.
 3. `98/100` Use project-owned argv manifests and a local pinned-CLI entry, result: default and journey evidence run with `shell=false` while the independent fallback remains available.
 
-**Current solution:** `run.ps1` resolves GenEye, then uses separate checked manifests for the default browser gate and recorded journey. The pinned local entry resolves the workspace-owned Playwright CLI without a shell. `-NoGenEye` or `RUSTSMF_NO_GENEYE=1` forces direct Playwright; missing/pre-project GenEye failures fall back, while project-test failures remain authoritative.
+**Current solution:** Direct project-owned Playwright is the default, equivalent to `-NoGenEye`. Only explicit `-GenEyeRoot` selects the checked optional integration; ambient settings and nearby checkouts are ignored. Requested unavailable integrations, wrapper errors and missing success evidence fail explicitly. The pinned local entry still resolves the workspace-owned Playwright CLI without a shell.
 
 **Effectiveness:** `98/100`, durable. Both manifests produced passing argv-bound summaries, the journey ingested one video, and the browser-only lane remains independent.
 
-**Relevance check:** Current. RustSMF is the active external consumer for proving GenEye's browser-app testing workflow.
+**Relevance check:** Current optional integration; GenEye qualification is not a RustSMF product or release dependency.
 
-**Next prevention step:** After any GenEye wrapper or RustSMF e2e command change, run both the GenEye-backed e2e path and the browser-only fallback, then update docs if evidence paths or command names change.
+**Next prevention step:** Keep default/ambient/sibling and explicit success/failure routing fixtures in the normal launcher gate. Run actual GenEye enrichment only when separately requested; preserve its argv and evidence contracts.
 
 ### Q: What pitfall are we preventing?
 

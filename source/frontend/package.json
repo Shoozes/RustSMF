@@ -9,7 +9,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
     "check:production-any": "node scripts/check-production-any.mjs",
-    "check:game-ready-dependencies": "node scripts/check-game-ready-dependencies.mjs",
+    "check:game-ready-dependencies": "node scripts/check-game-ready-dependencies.mjs && node --test scripts/check-game-ready-dependencies.test.mjs",
     "check:lint-coverage": "node scripts/check-eslint-coverage.mjs",
     "check:entry-chunks": "node scripts/check-entry-chunks.mjs",
     "preview": "vite preview",

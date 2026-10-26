@@ -112,7 +112,7 @@ HTML is an explicit diagnostic option: `npm run test:e2e -- --reporter=html,list
 ## Verification Gates
 
 - `pwsh -File run.ps1 -Task verify`: context-bank validation/tests, fail-closed ESLint coverage, lint, app and test typechecks, production `any` guard, production build, chunk checks, frontend units, and Rust fmt/clippy/tests/check.
-- `pwsh -File run.ps1 -Task test:e2e`: Playwright through the checked `geneye-playwright.json` argv manifest with deterministic GenEye artifact review; add `-NoGenEye` for the independent browser-only lane.
+- `pwsh -File run.ps1 -Task test:e2e`: direct project-owned Playwright; `-NoGenEye` is equivalent. An explicit `-GenEyeRoot` selects optional integration through the checked argv manifest. Missing or failed requested integrations fail clearly; ambient settings and sibling folders are ignored.
 - `pwsh -NoProfile -File .\run.ps1 -Task test:journey -NoGenEye`: runs twelve stories sequentially through `playwright.journey.config.ts`: the retained hand-wave and four core product journeys, a malformed project/recovery story, five authoring-continuity journeys for profiles, Rig, IK/animation, Skin, and Model/materials, and the original Sable project/queue story. The hand-wave capture is written under ignored `output/playwright/hand-wave-journey/`; raw results use ignored `test-results/product-journeys/`.
 - `npm.cmd run test:journey:hand-wave`: targeted hand-wave run for focused repair work.
 - `pwsh -File run.ps1 -Task desktop-smoke`: unbundled Tauri build, Rust native tests, and the native IPC browser suite.

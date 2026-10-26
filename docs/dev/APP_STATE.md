@@ -1,6 +1,16 @@
 # RustSMF App State
 
-Last reviewed: 2026-10-24
+Last reviewed: 2026-10-26
+
+## Standalone product boundary
+
+RustSMF owns its editor, local Rust/WASM solvers, exports, tests and packaging.
+Declared third-party libraries/toolchains remain prerequisites; other first-party
+checkouts do not. Engine receiving and private P7C motion qualification are
+optional consumer work, separate from product completion. The current candidate's
+isolation and installed-dialog evidence is tracked in
+[STANDALONE_ACCEPTANCE.md](STANDALONE_ACCEPTANCE.md); the public 0.2.1 preview
+retains its older, separately identified package.
 
 ## Editing and interchange reliability
 
@@ -307,7 +317,7 @@ Primary commands from the repository root:
 - `npm audit --omit=optional` from `source`
 - `cargo fmt --all -- --check`, `cargo clippy --all-targets -- -D warnings`, and `cargo test` from `source/src-tauri`
 
-`run.ps1 -Task context` and `run.ps1 -Task verify` also run the project-integrity guard, which checks durable-doc presence, explicit active TODO contracts, portable current-doc references, research-note review status, relative frontend imports/re-exports, Rust module declarations, `PL-001`–`PL-062` Guard file existence, Modern palette ownership, explicitly scoped Original selectors, and frontend/Cargo/Tauri version equality. The Modern CSS palette check applies to UI chrome. Semantic Three.js colors for selection, rig state, and diagnostic overlays remain role-specific render colors and are not palette tokens. The `source` workspace `npm.cmd run verify` owns the application checks, including lint coverage, ESLint, app/test typechecks, the production-`any` guard, the game-ready production dependency guard, production build, entry-chunk guards, frontend units, and Rust fmt/clippy/tests/check. The launcher adds context-bank, project-integrity, dev-process, and main-synchronization checks around that workspace gate. The entry-chunk guard requires the Tauri bridge to remain a dynamic browser import in addition to preserving Three.js and model-worker boundaries. Playwright runs against one production Vite preview server. Optional GenEye wrapping uses project-owned argv manifests and a pinned local CLI entry instead of shell command text; `-NoGenEye` remains the independent browser-only gate. The default browser gate excludes recorded journeys; `test:journey` runs the recorded continuity stories, including the retained hand-wave capture. Strict screenshots are opt-in. `desktop-smoke` runs an unbundled Tauri build, all Rust tests, and native IPC browser coverage; actual Windows dialog evidence is recorded separately. `package:windows` builds the NSIS installer and prints its absolute path and SHA-256.
+`run.ps1 -Task context` and `run.ps1 -Task verify` also run the project-integrity guard, which checks durable-doc presence, explicit active TODO contracts, portable current-doc references, research-note review status, relative frontend imports/re-exports, Rust module declarations, `PL-001`–`PL-062` Guard file existence, Modern palette ownership, explicitly scoped Original selectors, and frontend/Cargo/Tauri version equality. The Modern CSS palette check applies to UI chrome. Semantic Three.js colors for selection, rig state, and diagnostic overlays remain role-specific render colors and are not palette tokens. The `source` workspace `npm.cmd run verify` owns the application checks, including lint coverage, ESLint, app/test typechecks, the production-`any` guard, the game-ready production dependency guard, production build, entry-chunk guards, frontend units, and Rust fmt/clippy/tests/check. The launcher adds context-bank, project-integrity, dev-process, and main-synchronization checks around that workspace gate. The entry-chunk guard requires the Tauri bridge to remain a dynamic browser import in addition to preserving Three.js and model-worker boundaries. Playwright runs against one production Vite preview server. Direct project-owned Playwright is the default; `-NoGenEye` is equivalent. Optional `-GenEyeRoot` wrapping uses checked argv manifests and a local CLI entry. Ambient integration settings and sibling checkouts are ignored; requested integration failures are explicit. The default browser gate excludes recorded journeys; `test:journey` runs the recorded continuity stories, including the retained hand-wave capture. Strict screenshots are opt-in. `desktop-smoke` runs an unbundled Tauri build, all Rust tests, and native IPC browser coverage; actual Windows dialog evidence is recorded separately. `package:windows` builds the NSIS installer and prints its absolute path and SHA-256.
 
 When the bundled Playwright Chromium executable is rejected by a managed Windows process boundary, set `RUSTSMF_PLAYWRIGHT_EXECUTABLE` to an approved existing absolute Chrome/Edge executable for that process only. The config validates the path and does not persist or weaken the app sandbox/CSP.
 

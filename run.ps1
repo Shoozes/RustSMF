@@ -307,30 +307,13 @@ function Invoke-FrontendNpm([string[]]$NpmArgs) {
 }
 
 function Resolve-GenEyeRunBat {
-    $candidates = [System.Collections.Generic.List[string]]::new()
-    if (-not [string]::IsNullOrWhiteSpace($env:GENEYE_RUN_BAT)) {
-        $runBat = try { Resolve-Path -LiteralPath $env:GENEYE_RUN_BAT -ErrorAction Stop } catch { $null }
-        if ($runBat -and (Test-Path -LiteralPath $runBat.ProviderPath -PathType Leaf)) {
-            return $runBat.ProviderPath
-        }
+    if ([string]::IsNullOrWhiteSpace($GenEyeRoot)) { return $null }
+    $resolved = Resolve-Path -LiteralPath $GenEyeRoot -ErrorAction Stop
+    $runBat = Join-Path $resolved.ProviderPath "run.bat"
+    if (-not (Test-Path -LiteralPath $runBat -PathType Leaf)) {
+        throw "Requested GenEye integration is unavailable: $runBat"
     }
-    if (-not [string]::IsNullOrWhiteSpace($GenEyeRoot)) { $candidates.Add($GenEyeRoot) }
-    if (-not [string]::IsNullOrWhiteSpace($env:GENEYE_ROOT)) { $candidates.Add($env:GENEYE_ROOT) }
-    $candidates.Add("C:\DevStuff\Three-sisters\GenEye")
-    $candidates.Add((Join-Path $RepoRoot "..\GenEye"))
-    $candidates.Add((Join-Path $RepoRoot "..\..\GenEye"))
-    $candidates.Add((Join-Path $RepoRoot "..\Three-sisters\GenEye"))
-
-    foreach ($candidate in $candidates) {
-        if ([string]::IsNullOrWhiteSpace($candidate)) { continue }
-        $resolved = try { Resolve-Path -LiteralPath $candidate -ErrorAction Stop } catch { $null }
-        if (-not $resolved) { continue }
-        $runBat = Join-Path $resolved.ProviderPath "run.bat"
-        if (Test-Path -LiteralPath $runBat -PathType Leaf) {
-            return $runBat
-        }
-    }
-    return $null
+    return $runBat
 }
 
 function Read-GenEyeProjectStatus([string]$ReportPath) {
@@ -363,19 +346,19 @@ function Invoke-GenEyePlaywright(
     [Parameter(Mandatory = $true)][string]$RunName,
     [ValidateRange(1, 64)][int]$VideoFrameLimit = 4
 ) {
-    if ($NoGenEye -or $env:RUSTSMF_NO_GENEYE -eq "1") {
-        Write-Info "[GENEYE] Disabled for this run; running browser-only Playwright."
+    if ($NoGenEye -and -not [string]::IsNullOrWhiteSpace($GenEyeRoot)) {
+        throw "Choose direct Playwright (-NoGenEye) or an explicit -GenEyeRoot, not both."
+    }
+    if ([string]::IsNullOrWhiteSpace($GenEyeRoot)) {
+        Write-Info "[BROWSER] Running project-owned Playwright directly."
         return $false
     }
 
-    $runBat = Resolve-GenEyeRunBat
-    if (-not $runBat) {
-        Write-Warn "[GENEYE] GenEye not found; running browser-only Playwright."
-        return $false
+    try { $runBat = Resolve-GenEyeRunBat } catch {
+        throw "Requested GenEye integration is unavailable: $($_.Exception.Message)"
     }
     if (-not (Test-Path -LiteralPath $ManifestPath -PathType Leaf)) {
-        Write-Warn "[GENEYE] Project manifest missing: $ManifestPath"
-        return $false
+        throw "Requested GenEye project manifest is missing: $ManifestPath"
     }
 
     Ensure-Dirs
@@ -390,14 +373,13 @@ function Invoke-GenEyePlaywright(
         "-PlaywrightTestManifest", $ManifestPath,
         "-PlaywrightTestReportJson", $reportJson,
         "-ProjectOnly",
-        "-AllowGenEyeFailure",
         "-Out", $outDir,
         "-DurationMs", "600000",
         "-VideoFrameLimit", [string]$VideoFrameLimit,
         "-MaxFrames", "0"
     )
 
-    Write-Info "[GENEYE] Running advisory GenEye Playwright wrapper with $ManifestPath."
+    Write-Info "[GENEYE] Running explicitly requested Playwright integration with $ManifestPath."
     Write-Info "[GENEYE] Evidence output: $outDir"
     Push-Location -LiteralPath $genEyeRoot
     try {
@@ -408,10 +390,8 @@ function Invoke-GenEyePlaywright(
     }
 
     $summaryPath = Join-Path $outDir "summary.json"
-    $fallbackPath = Join-Path $outDir "advisory-fallback-summary.json"
     $summaryProject = Read-GenEyeProjectStatus $summaryPath
-    $fallbackProject = Read-GenEyeProjectStatus $fallbackPath
-    $projectStatus = if ($summaryProject) { $summaryProject } else { $fallbackProject }
+    $projectStatus = $summaryProject
     if ($projectStatus) {
         Write-Info "[GENEYE] run_path=$outDir project_tests.status=$($projectStatus.Status) project_tests.exit_code=$($projectStatus.ExitCode)"
     } else {
@@ -423,26 +403,11 @@ function Invoke-GenEyePlaywright(
         exit $projectStatus.ExitCode
     }
 
-    if ($exitCode -eq 0) {
-        if ($projectStatus -and (Test-Path -LiteralPath $summaryPath)) {
-            Write-Ok "[GENEYE] Advisory subagent evidence ready: $summaryPath"
-            return $true
-        }
-        if ($projectStatus -and (Test-Path -LiteralPath $fallbackPath)) {
-            Write-Warn "[GENEYE] Enrichment fell back to direct RustSMF tests: $fallbackPath"
-            return $true
-        }
-        Write-Warn "[GENEYE] Wrapper exited 0 without successful project-test evidence; rerunning browser-only Playwright."
-        return $false
-    }
-
-    if ($projectStatus) {
-        Write-Warn "[GENEYE] GenEye wrapper failed after RustSMF tests passed; treating GenEye as advisory."
+    if ($exitCode -eq 0 -and $projectStatus -and $projectStatus.Status -eq 'passed') {
+        Write-Ok "[GENEYE] Requested integration evidence ready: $summaryPath"
         return $true
     }
-
-    Write-Warn "[GENEYE] Wrapper failed before producing RustSMF project-test evidence (exit $exitCode); running browser-only Playwright."
-    return $false
+    throw "Requested GenEye integration failed (exit $exitCode) or omitted successful project-test evidence: $summaryPath"
 }
 
 function Invoke-SourceNpm([string[]]$NpmArgs) {
@@ -591,6 +556,8 @@ switch -Exact ($NormalizedTask) {
         if (-not (Invoke-GitMainSafetyVerification)) { $ok = $false }
         & $NodeExecutable --test scripts/dev-process-ownership.test.mjs
         if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "dev-process ownership tests failed" }
+        & $NodeExecutable --test scripts/standalone-launcher.test.mjs
+        if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "standalone launcher tests failed" }
         if (Test-Path $FrontendDir) {
             if (-not (Invoke-FrontendNpm @("run", "check:lint-coverage"))) { $ok = $false; Write-Warn "lint coverage check failed" }
             if (-not (Invoke-FrontendNpm @("run", "lint"))) { $ok = $false; Write-Warn "lint failed" }
@@ -711,8 +678,8 @@ Tasks:
   retarget:runtime-proof - native Rust / actual browser WASM mapping parity
   context       - validate project docs/imports/modules and summary-bank routing
   test:unit     - frontend unit tests only
-  test:e2e      - Playwright through the checked GenEye argv manifest (use -NoGenEye for browser-only)
-  test:journey  - sequential frontend journeys with retained hand-wave captures (use -NoGenEye for browser-only)
+  test:e2e      - direct project-owned Playwright (optional explicit -GenEyeRoot)
+  test:journey  - direct sequential journeys with retained hand-wave captures
   test:visual-strict - opt-in strict SMF visual snapshot checks
   test:visual-update - refresh opt-in strict SMF visual snapshots
   desktop-smoke - release build + Rust tests + native IPC browser checks
@@ -726,7 +693,7 @@ Examples:
   .\run.bat 2
   .\run.ps1 -Task run
   .\run.ps1 -Task verify
-  .\run.ps1 -Task test:e2e -GenEyeRoot C:\DevStuff\Three-sisters\GenEye
+  .\run.ps1 -Task test:e2e -GenEyeRoot <explicit-integration-directory>
   .\run.ps1 -Task test:e2e -NoGenEye
   .\run.ps1 -Task test:journey
 

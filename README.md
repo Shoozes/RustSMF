@@ -4,6 +4,10 @@ RustSMF is a local editor for SMF, GLB/GLTF, FBX, DAE/Collada and OBJ models, ri
 
 Paint weights and export in one app. No external 3D editor required.
 
+RustSMF owns its editor, formats, retargeting and contact solver. Building, testing
+and packaging need only this repository and its declared third-party dependencies.
+GaimEngine and other consumers are optional export integrations.
+
 [**Download for Windows x64**](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe) · [0.2.1 preview notes](https://github.com/Shoozes/RustSMF/releases/tag/v0.2.1-preview) · [Sample model](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb)
 
 ![Our test dummy in RustSMF Modern, with animation controls and Tools closed](docs/images/rustsmf-modern-overview.png)
@@ -77,7 +81,17 @@ pwsh -NoProfile -File .\run.ps1 -Task run
 
 `run.ps1 -Task dev` opens the browser app. Setup installs local WASM tooling.
 
+Normal browser checks run project-owned Playwright directly. GenEye enrichment
+requires an explicit `-GenEyeRoot`; nearby repositories and ambient integration
+variables do not select it. The skeletal export developer CLI additionally needs
+a Git checkout for truthful source provenance. The installed editor needs neither
+Git nor the development toolchains.
+
 After setup, build the NSIS installer with `pwsh -NoProfile -File .\run.ps1 -Task package:windows`. The command reports its path and SHA-256.
+
+[Standalone acceptance](docs/dev/STANDALONE_ACCEPTANCE.md) records the newer local
+source candidate separately from the downloadable `0.2.1-preview`. That candidate
+does not replace the public preview or imply that private consumer motion is qualified.
 
 ## Contribute and report problems
 
@@ -88,5 +102,5 @@ After setup, build the NSIS installer with `pwsh -NoProfile -File .\run.ps1 -Tas
 Project-owned code and the Signal Robot and Sable samples are [MIT licensed](LICENSE), copyright 2026 Shoozes. Third-party code, fixtures and reference assets retain their own terms. [Third-party notices](THIRD_PARTY_NOTICES.md) and [fixture provenance](source/frontend/tests/fixtures/PROVENANCE.md) describe that boundary; unidentified assets receive no new reuse grant.
 
 <!--
-AI-edited: 2026-10-16 | agent=Codex/root | task=animal-chain-assistance | change=showed all four Sable clips
+AI-edited: 2026-10-26 | agent=Codex/root | task=standalone | change=clarified independent product and candidate boundaries
 -->

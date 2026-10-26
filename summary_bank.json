@@ -313,7 +313,6 @@
       "max_kb": 244,
       "paths": [
         "docs/dev/SKELETAL_EXPORT.md",
-        "examples/README.md",
         "source/frontend/package.json",
         "source/frontend/scripts/bounded-file-read.ts",
         "source/frontend/scripts/node-three-runtime.ts",
@@ -358,7 +357,6 @@
         "source/frontend/tests/helpers/skinned-glb-fixture.ts",
         "source/frontend/src/utils/boundedFileRead.test.ts",
         "source/frontend/scripts/node-three-runtime.ts",
-        "source/frontend/scripts/check-game-ready-dependencies.mjs",
         "source/frontend/scripts/game-ready-cli.ts",
         "source/frontend/src/utils/gameReadyGeneration.ts",
         "source/frontend/src/utils/gameReadyJob.ts"
@@ -367,7 +365,8 @@
         "The fixture is a small noncombat two-motion rig with caller-supplied mapping and constraints; it invokes the actual saved-job CLI, reimports the published GLB, and checks transforms, timing, skin, material, and provenance.",
         "V3 preserve-existing coverage uses caller-owned textured skinned GLB fixtures, including asymmetric PNG/JPEG images in duplicate-named material slots, and the independent skinned animated FBX. It checks pixel orientation and texture-slot assignments after export/re-import, explicit sidecar resolution, animation/skin round-trip, and cancellation before publication; v2 repair coverage remains separate.",
         "Malformed mapping, missing source clip, and injected publication failure preserve the prior valid generation and caller-owned inputs. The dependency guard rejects fight-game-study/GaimEngine checkout references without making game acceptance a RustSMF concern.",
-        "The runtime receipt is generated under excluded test-results output and is evidence only; it is not a context-bank route or source input."
+        "The runtime receipt is generated under excluded test-results output and is evidence only; it is not a context-bank route or source input.",
+        "Repository-wide dependency containment now belongs to workflow__standalone_product; this route retains producer semantics and neutral fixtures."
       ]
     },
     "feature__model_outliner_authoring": {
@@ -1564,6 +1563,23 @@
       "notes": [
         "Export sampler and neighbor tests: workflow__skeletal_export_boundary. Existing two-key/span and idle routes retain separate ownership; overlap here follows the post-bake composition boundary.",
         "The two-key record and span caps, root motion and engine remain unchanged."
+      ]
+    },
+    "workflow__standalone_product": {
+      "description": "Repository independence, explicit optional test integrations and isolated installed-product acceptance.",
+      "max_kb": 88,
+      "paths": [
+        "docs/dev/STANDALONE_ACCEPTANCE.md",
+        "run.ps1",
+        "scripts/standalone-launcher.test.mjs",
+        "source/frontend/scripts/check-game-ready-dependencies.mjs",
+        "source/frontend/scripts/check-game-ready-dependencies.test.mjs",
+        "source/package.json",
+        "source/src-tauri/tauri.conf.json"
+      ],
+      "notes": [
+        "Static containment and executable launcher controls complement isolated build/export/package and actual installed-dialog proof; consumer motion qualification remains separate.",
+        "Launcher/manifests intentionally overlap project-integrity and quality routes because they own required public entry points."
       ]
     }
   },

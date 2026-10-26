@@ -1,19 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import * as THREE from 'three';
-import { readdir } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseSkeletalExportJobDocument, SKELETAL_EXPORT_JOB_V3_SCHEMA } from './skeletalExportJob';
 import { CONDITIONING_MODE, CONDITIONING_NLERP_MODE } from './skeletalConditioning';
 import { bakePlantedIdle, parsePlantedIdle, type PlantedIdleRecipe, type ContactBatchSolver } from './skeletalPlantedIdle';
 import { solveNativePoseContacts } from '../../scripts/pose-contact-native';
+import { runSkeletalExportJob } from '../../scripts/skeletal-export-cli';
 import { disposeThreeObject } from './threeDisposal';
 import { exportGLB, loadGLB, type LoadedModel } from '../loaders/glb';
 import { installNodeThreeRuntime } from '../../scripts/node-three-runtime';
 import { bytesToArrayBuffer } from '../loaders/smfBinary';
 
-function fixture() {
+const repositoryRoot=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'../../../../');
+const sourceRoot=path.join(repositoryRoot,'source');
+const cliPath=path.join(sourceRoot,'frontend/scripts/skeletal-export-cli.ts');
+
+function fixture(ticks=6) {
   const group=new THREE.Group(),root=new THREE.Bone(),pelvis=new THREE.Bone(),chest=new THREE.Bone();
   const pelvisY=1+Math.cos(.15);
   root.name='Root';pelvis.name='Pelvis';chest.name='Chest';pelvis.position.y=pelvisY;root.add(pelvis);pelvis.add(chest);group.add(root);
@@ -32,14 +40,131 @@ function fixture() {
   for(const leg of legs){const foot=bones.findIndex(b=>b.name===leg.ankle),p=new THREE.Vector3().setFromMatrixPosition(bones[foot].matrixWorld);for(const x of [-.02,0,.02]){positions.push(p.x+x,p.y,p.z);joints.push(foot,0,0,0);weights.push(1,0,0,0);}}
   const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(positions.map((_,i)=>i%3===1?1:0),3));geometry.setAttribute('skinIndex',new THREE.Uint16BufferAttribute(joints,4));geometry.setAttribute('skinWeight',new THREE.Float32BufferAttribute(weights,4));
   const skeleton=new THREE.Skeleton(bones),mesh=new THREE.SkinnedMesh(geometry,new THREE.MeshBasicMaterial());group.add(mesh);mesh.bind(skeleton);
-  const times=Array.from({length:7},(_,i)=>i/60);
-  const upper=new THREE.QuaternionKeyframeTrack('Chest.quaternion',times,times.flatMap((_,i)=>new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.sin(i*Math.PI/3)*.1).toArray()));
-  const clip=new THREE.AnimationClip('idle',Math.fround(.1),[new THREE.VectorKeyframeTrack('Pelvis.position',times,times.flatMap((_,i)=>[i===0||i===6?0:.1*Math.sin(i*Math.PI/6),pelvisY,0])),upper]);
+  const times=Array.from({length:ticks+1},(_,i)=>i/60);
+  const upper=new THREE.QuaternionKeyframeTrack('Chest.quaternion',times,times.flatMap((_,i)=>new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),Math.sin(i*2*Math.PI/ticks)*.1).toArray()));
+  const clip=new THREE.AnimationClip('idle',Math.fround(ticks/60),[new THREE.VectorKeyframeTrack('Pelvis.position',times,times.flatMap((_,i)=>[i===0||i===ticks?0:.1*Math.sin(i*Math.PI/ticks),pelvisY,0])),upper]);
   const model:LoadedModel={root:group,skeleton,skinnedMeshes:[mesh],clips:[clip],mixer:new THREE.AnimationMixer(group)};
   const spec:PlantedIdleRecipe={clipId:'idle',pelvisJoint:'Pelvis',calibration:{clipId:'idle',phaseTicks:0},legs,floorY:0,maxPelvisCorrectionMeters:.1,maxRotationDegrees:90};
   return {model,root,clip,spec,upper};
 }
 const ownedCopies=async()=> (await readdir(os.tmpdir())).filter(n=>n.startsWith('rustsmf-contact-')).sort();
+
+function addHeightVertices(model:LoadedModel):void {
+  const geometry=model.skinnedMeshes[0].geometry;
+  const positions=geometry.getAttribute('position'),normals=geometry.getAttribute('normal'),indices=geometry.getAttribute('skinIndex'),weights=geometry.getAttribute('skinWeight');
+  geometry.setAttribute('position',new THREE.Float32BufferAttribute([...Array.from(positions.array),0,2.2,0, .02,2.2,0, 0,2.22,.02],3));
+  geometry.setAttribute('normal',new THREE.Float32BufferAttribute([...Array.from(normals.array),0,1,0, 0,1,0, 0,1,0],3));
+  geometry.setAttribute('skinIndex',new THREE.Uint16BufferAttribute([...Array.from(indices.array),2,0,0,0, 2,0,0,0, 2,0,0,0],4));
+  geometry.setAttribute('skinWeight',new THREE.Float32BufferAttribute([...Array.from(weights.array),1,0,0,0, 1,0,0,0, 1,0,0,0],4));
+}
+
+function cli(jobPath:string):{code:number|null;stdout:string;stderr:string} {
+  const child=spawnSync(process.execPath,['--import','tsx',cliPath,'--job',jobPath],{cwd:sourceRoot,windowsHide:true,encoding:'utf8',timeout:60_000,maxBuffer:16*1024*1024});
+  if(child.error)throw child.error;
+  return {code:child.status,stdout:child.stdout,stderr:child.stderr};
+}
+
+async function outputBytes(directory:string):Promise<Array<[string,string]>> {
+  const rows:Array<[string,string]>=[];
+  const visit=async(current:string,relative=''):Promise<void>=>{
+    for(const entry of await readdir(current,{withFileTypes:true})) {
+      const item=path.join(current,entry.name),name=path.posix.join(relative,entry.name);
+      if(entry.isDirectory()) await visit(item,name);
+      else rows.push([name,createHash('sha256').update(await readFile(item)).digest('hex')]);
+    }
+  };
+  await visit(directory);return rows.sort(([a],[b])=>a.localeCompare(b));
+}
+
+test('ordinary CLI runs native planted contact conditioning and preserves published outputs on refusal and cancellation',async()=>{
+  installNodeThreeRuntime();
+  const runtimeRoot=path.join(repositoryRoot,'runtime-data');await mkdir(runtimeRoot,{recursive:true});
+  const root=await mkdtemp(path.join(runtimeRoot,'standalone-native-contact-cli-'));
+  let modelFixture:ReturnType<typeof fixture>|undefined,longModel:LoadedModel|undefined;
+  let controller:AbortController|undefined,pendingRun:Promise<{kind:'resolved'}|{kind:'rejected';error:unknown}>|undefined;
+  try {
+    modelFixture=fixture();
+    const gait=new THREE.AnimationClip('gait',modelFixture.clip.duration,modelFixture.clip.tracks.map(track=>track.clone()));
+    addHeightVertices(modelFixture.model);
+    const sourcePath=path.join(root,'source.glb'),jobPath=path.join(root,'job.json');
+    const generationRoot=path.join(root,'generations'),conditioningRoot=path.join(root,'conditioned');
+    const sourceBytes=await exportGLB(modelFixture.model.root,[modelFixture.clip,gait]);
+    const sourceHash=createHash('sha256').update(sourceBytes).digest('hex'),helperCopies=await ownedCopies();
+    const transition=[{gait:'gait',idle:'idle',phases:[.25],durationTicks:6}];
+    const base={ $schema:SKELETAL_EXPORT_JOB_V3_SCHEMA,input:{skinnedModel:sourcePath},
+      export:{rootJoint:'LocomotionRoot',units:'meters',upAxis:'+Y',forwardAxis:'+Z',handedness:'right',ticksPerSecond:60,rootMotion:'separate-track',clipIds:['idle']},
+      conditioning:{mode:CONDITIONING_NLERP_MODE,sourceRootJoint:'Root',locomotionRootJoint:'LocomotionRoot',clipIds:['idle','gait'],transitions:transition,plantedIdle:modelFixture.spec},
+      output:{generationRoot,conditioningRoot} };
+    const writeJob=async(value:unknown)=>writeFile(jobPath,JSON.stringify(value));
+    await writeFile(sourcePath,sourceBytes);await writeJob(base);
+    const success=await cli(jobPath);
+    assert.equal(success.code,0,success.stderr);
+    const published=JSON.parse(success.stdout) as {status:string;manifest:string;asset:string;conditioning:{model:string;recipe:string;report:string}};
+    assert.equal(published.status,'complete');
+    const report=JSON.parse(await readFile(published.conditioning.report,'utf8')) as {plantedIdleBake:{before:{maxDrift:number};after:{maxDrift:number;maxSoleGap:number;maxPenetration:number};runtime:{solverSourceSha256:string;executableSha256:string}}};
+    assert.ok(report.plantedIdleBake.before.maxDrift>.09,JSON.stringify(report.plantedIdleBake.before));
+    assert.ok(report.plantedIdleBake.after.maxDrift<.002,JSON.stringify(report.plantedIdleBake.after));
+    assert.ok(report.plantedIdleBake.after.maxSoleGap<.01,JSON.stringify(report.plantedIdleBake.after));
+    assert.ok(report.plantedIdleBake.after.maxPenetration<.01,JSON.stringify(report.plantedIdleBake.after));
+    assert.match(report.plantedIdleBake.runtime.solverSourceSha256,/^[a-f0-9]{64}$/);
+    assert.match(report.plantedIdleBake.runtime.executableSha256,/^[a-f0-9]{64}$/);
+    assert.ok((await readFile(published.conditioning.model)).length>0);
+    assert.ok((await readFile(published.asset)).length>0);
+    const digest=async(file:string)=>createHash('sha256').update(await readFile(file)).digest('hex');
+    const manifest=JSON.parse(await readFile(published.manifest,'utf8')) as {inputs:Array<{role:string;sha256:string;bytes:number}>};
+    const manifestInputs=new Map(manifest.inputs.map(input=>[input.role,input]));
+    for(const [role,file] of [['original-skinned-model',sourcePath],['source-skinned-model',published.conditioning.model],['conditioning-report',published.conditioning.report],['conditioning-recipe',published.conditioning.recipe]]) {
+      const input=manifestInputs.get(role);assert.ok(input,`manifest missing ${role}`);
+      assert.equal(input.sha256,await digest(file),`${role} SHA-256`);
+      assert.equal(input.bytes,(await readFile(file)).byteLength,`${role} byte count`);
+    }
+    const preservedGeneration=await outputBytes(generationRoot),preservedConditioning=await outputBytes(conditioningRoot);
+    assert.equal(createHash('sha256').update(await readFile(sourcePath)).digest('hex'),sourceHash);
+    assert.deepEqual(await ownedCopies(),helperCopies);
+
+    await writeJob({...base,conditioning:{...base.conditioning,plantedIdle:{...modelFixture.spec,maxRotationDegrees:.001}}});
+    const refused=await cli(jobPath);
+    assert.notEqual(refused.code,0);assert.match(refused.stderr,/rotation correction|rotation exceeds/i);
+    assert.deepEqual(await outputBytes(generationRoot),preservedGeneration);
+    assert.deepEqual(await outputBytes(conditioningRoot),preservedConditioning);
+    assert.equal(createHash('sha256').update(await readFile(sourcePath)).digest('hex'),sourceHash);
+    assert.deepEqual(await ownedCopies(),helperCopies);
+
+    const longFixture=fixture(600),longGait=new THREE.AnimationClip('gait',longFixture.clip.duration,longFixture.clip.tracks.map(track=>track.clone()));longModel=longFixture.model;addHeightVertices(longFixture.model);
+    const longPath=path.join(root,'long-source.glb');
+    const longBytes=await exportGLB(longFixture.model.root,[longFixture.clip,longGait]);
+    const longHash=createHash('sha256').update(longBytes).digest('hex');await writeFile(longPath,longBytes);
+    await writeJob({...base,input:{skinnedModel:longPath},conditioning:{...base.conditioning,plantedIdle:longFixture.spec}});
+    controller=new AbortController();
+    pendingRun=runSkeletalExportJob(jobPath,controller.signal).then(()=>({kind:'resolved' as const}),error=>({kind:'rejected' as const,error}));
+    let nativeRunnerObserved=false;
+    for(let attempt=0;attempt<100;attempt++) {
+      const owners=await ownedCopies();
+      if(owners.some(name=>!helperCopies.includes(name))) { nativeRunnerObserved=true;await new Promise(resolve=>setTimeout(resolve,25));break; }
+      await new Promise(resolve=>setTimeout(resolve,10));
+    }
+    if(!controller.signal.aborted)controller.abort(new Error('native contact integration cancellation'));
+    const cancellation=await pendingRun;
+    assert.equal(nativeRunnerObserved,true,'job reached the RustSMF contact helper before cancellation');
+    assert.equal(cancellation.kind,'rejected');
+    if(cancellation.kind==='rejected')assert.match(String(cancellation.error),/native contact integration cancellation|cancel/i);
+    assert.deepEqual(await outputBytes(generationRoot),preservedGeneration);
+    assert.deepEqual(await outputBytes(conditioningRoot),preservedConditioning);
+    assert.equal(createHash('sha256').update(await readFile(sourcePath)).digest('hex'),sourceHash);
+    assert.equal(createHash('sha256').update(await readFile(longPath)).digest('hex'),longHash);
+    assert.deepEqual(await ownedCopies(),helperCopies);
+    assert.equal((await readdir(generationRoot)).some(name=>name.startsWith('.rustsmf-skeletal-staging-')),false);
+    assert.equal((await readdir(conditioningRoot)).some(name=>name.startsWith('.rustsmf-conditioning-')),false);
+  }finally{
+    if(controller&&!controller.signal.aborted)controller.abort(new Error('test cleanup cancellation'));
+    if(pendingRun)await pendingRun;
+    if(modelFixture)disposeThreeObject(modelFixture.model.root);
+    if(longModel)disposeThreeObject(longModel.root);
+    const resolvedRoot=path.resolve(root),resolvedParent=path.resolve(runtimeRoot),relative=path.relative(resolvedParent,resolvedRoot);
+    assert.ok(relative!==''&&relative!=='..'&&!relative.startsWith(`..${path.sep}`)&&!path.isAbsolute(relative),'temporary test root must remain below runtime-data');
+    await rm(resolvedRoot,{recursive:true,force:true});
+  }
+});
 
 test('native planted bake retains animated upper body and endpoints, survives GLB reload and releases its copy',async()=>{
   installNodeThreeRuntime();const {model,root,clip,spec,upper}=fixture(),before=await ownedCopies();let derived:LoadedModel|undefined;

@@ -2,6 +2,238 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="standalone-review-20261026"></a>
+## 2026-10-26 - Standalone review, recheck and record cleanup
+
+Closeout: the 40 context, project-integrity and guarded Git transaction tests
+passed without skips; Summary Bank validation reports 72 groups and no warnings.
+No RustSMF process remains at the closeout process inventory. The task-owned
+`D:/RustSMF-Standalone-20261026/` source/build/install/profile and fixtures remain
+deliberately retained by the standalone acceptance task for its next installed
+proof; close any future owned app using its PID/start-time/executable receipt,
+then reassess only this named scratch after acceptance. Shared dependencies,
+the compact candidate and all referenced logs/proofs remain protected. No bulk
+cleanup is authorized. This publication saves verified progress; it does not
+close installed acceptance or private P7C drift. Existing P7C attribution/refusal
+records below are preserved with their source-bound limitations.
+
+Reviewed local main `7a062c431744bcaf9790343392b2452df7d055f3` plus the
+uncommitted standalone changes. Coverage: standalone Summary Bank owners,
+launcher/status handling and executable regressions, dependency guard/config
+consumers and negative fixtures, generated native-contact exporter test,
+packaging configuration, changed documentation and retained command receipts.
+This is the standalone change review, not a fresh audit of every unchanged
+editor subsystem. The prior baseline is the isolated source inventory and logs,
+not HEAD alone or a separately signed review report.
+
+Before record cleanup, all files matched `candidate-source-v2.json` except
+`summary_bank.json`; its hash matches the recorded route correction used by final
+verify. The source inventories and logs are retained at
+`D:/RustSMF-Standalone-20261026/`. V2 identity is
+`295881ed54c9070cc0147c0fb0200869ae2b9354256916c6f12360add2932bee`.
+The installer was built from v1 identity
+`796cc05c6f934067e171f8975d91c76bcd60b9dfe962382aeaec30d8aebdd676`;
+the intervening delta changes guards, tests and records, not application inputs.
+No application/runtime implementation was edited during this review.
+
+Rechecked closed: explicit optional integration routing, source/config containment
+within documented static limits, and final context-budget correction. Retained
+`verify-resolved-result.json` reports exit 0 for
+`pwsh -NoProfile -File ./run.ps1 -Task verify`, completed 06:33:53 UTC:
+723 frontend tests, 17 dependency regressions, three launcher tests and 14 Rust
+checks. `lanes.json` records exit 0 for browser 212, journeys 13, strict visuals 3,
+retarget and transition native/actual-WASM proofs, desktop smoke and packaging.
+`default-e2e-result.json` and `default-e2e.log` additionally prove 212 browser
+tests with irrelevant sibling roots and ambient integration variables ignored.
+These retained gates were inspected, not rerun or relabeled as installed proof.
+
+New record defect fixed: TODO and acceptance still marked completed automated
+lanes pending. Still open/unverified: actual installed dialog workflows, second
+clean profile and final resource/evidence closure. Installer A returned 0 and
+five resources match; its NSIS bundle marker accounts for the three executable
+byte differences. Installer SHA-256 is
+`01e10593ec5d62d39cd65ac7c2ecca267df9fa2c333d92ac75f70d61a16c79d2`.
+Candidate files remain in
+`D:/Compact_Evidence/RustSMF/runs/standalone-20261026/candidate/`.
+
+Selected next batch: installed Signal Robot Open/cancel and project
+Save/cancel/reopen through documented GenEye commands and observation, with
+independent saved-output continuity checks. Minimized-window focus failure does
+not prove an app defect; normal-window relaunch and control capability must be
+established before broadening the matrix. TODO owns the exact stopping criteria.
+No new native interaction was performed during review.
+
+Protected inventory recheck: 28/28 hashes match the pre-task receipt, including
+GaimEngine v1, the three Rust overlays and retained evidence. Existing root/pelvis
+and consumer qualification remain unchanged. No owner files, shared dependencies,
+scratch or evidence were deleted; no commit, push or publication occurred.
+
+<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone-review | change=reconciled source-bound proof and bounded installed pass-down -->
+
+<a id="p7c-left23-24-refusal"></a>
+## 2026-10-26 - Private 65-degree left 23/24 trial refused
+
+Completed the selected bounded-refusal branch on main 7a062c4, preserving both
+existing modified records below. No producer implementation or public graph was
+changed. Source 7b018358/exporter 2f9b192b, baseline asset 21a32871 and conditioned
+GLB 53a1fd08 retain the qualified 57/58 identity. Root/pelvis and every accepted
+layer remain fixed; this private trial neither occupies a fourth two-key record
+nor changes the three-record, span or pelvis-layer contracts.
+
+The recorded family contains 45 candidates: nine ankle targets at keys 23/24
+(horizontal shifts 0/10/20 mm toward the hip and vertical shifts -5/0/+5 mm), then
+the same nine with four knee-pole offsets -60/-30/+30/+60 degrees. The existing
+native contact solver uses maximumPelvisCorrection 0. Only the six selected
+left UpLeg/Leg/Foot rotation values are copied through the existing two-key bake.
+The actual stored 65-degree cap rejects 35 candidates; all 10 within the cap fail
+the unchanged approach floor/contact limits. No candidate is accepted. This is
+a finite tested family, not proof that every possible 65-degree solution fails.
+
+The best rejected specimen uses zero horizontal shift, -5 mm vertical shift and
+-30-degree pole offset. Maximum stored correction is 64.886750291 degrees.
+All 70 left-sole vertices pass at 23/23.25/23.5/23.75: maximum drift 7.623029 mm
+against 42.025772 mm, maximum gap 4.848315 mm against 21.012886 mm. However,
+approach 22.25/22.5/22.75 adds skin/contact failures: 184 vertex observations over
+three poses. Worst penetration/gap is 61.520789 mm at 22.5/v3368, almost three
+times the 21.012886 mm limit. Existing drift never worsens across 6,720 left 0–24
+vertex observations, but unchanged boundary 22 still drifts 606.981914 mm.
+
+Four existing p25 seams also fail against the changed 22.5 pose:
+start@6, stop@0 and reversal@0/@6. Maximum discrepancies are 332.624854 mm skin,
+277.768390 mm joint position and 19.793460 degrees versus 21.012886 mm/5 degrees.
+Root seam criteria pass. The other 20 transition seams and the 90->0 loop pass;
+six independent original idle/start/stop endpoints remain qualified. These are
+private-candidate regressions; the retained ordinary graph has not changed.
+
+Actual exportGLB serialization and independent reload preserve 45 other clips,
+29 unselected walkSlow channels and all 968 rotation-accessor extrema. The
+private component compositor copies exactly six selected rotations from the
+ordinary exporter of that reload into a clone of the qualified asset; reversing
+those six restores the entire baseline. Candidate GLB SHA a149eadf and private
+asset SHA cb2b0099 identify the rejected specimen, not an admitted generation.
+Zero-correction, over 65, cancellation and input-immutability controls pass.
+
+Fresh qualified native/WASM comparisons are exact for 361 baseline and 361
+candidate gait poses plus 30 transition/reference endpoints: 752 per host.
+All 348 outside poses and both 22/25 boundaries are exact. Root/pelvis/right-leg
+joint matrices stay exact across 361 poses; all 25,270 right-sole observations
+and 16,520 other support observations stay exact. All 27 segments pass with
+maximum relative change 3.545932e-7; knee inversion count is 0. Thirteen reloaded
+local poses agree with runtime within 0.000000735 m and reproduce the same
+penetration witness. Five independent source references and six-step replay
+from a JSON-serialized checkpoint pass; the sibling instance stays unchanged.
+
+The first runtime harness attempt stopped after its physical measurements
+because it passed a raw mapping without the receiver's derived vertex map.
+The corrected mapping/reference/replay slice passed before one complete rerun;
+no production code or tolerances were changed. Both attempts released owners.
+
+Next bounded pass-down: read-only approach/p25 composition decision. Examine
+only the left-leg 22–23 approach and its four 22.5 seam obligations, using this
+refusal and the accepted graph. Determine whether preserving the current p25
+pose is compatible with a bounded key/timing family under the 65-degree ceiling,
+or whether changed source boundaries and dependent transition rebakes must be
+explicitly included. Return one selected private feasibility scope or refusal,
+with exact keys, fixed boundaries, seam consumers, controls and requalification
+requirements before further authoring. Do not change root/pelvis, anchor 0,
+support/thresholds, accepted bakes, public capacity, or extend to full 0–24.
+
+Done When for this trial is the retained reproducible refusal, not a repaired
+physical interval. Full P7C planted drift and visual acceptance remain open.
+The unchanged source/graph's 722-unit/14-Rust verify, 46/590 receiving/replay and
+637-pose pilot are reused, not rerun. Current docs receive context/diff checks;
+Summary Bank routes need no path/ownership change. Proof/scripts and the rejected
+candidate are retained under
+`D:/Compact_Evidence/RustSMF/runs/p7c-left23-24-feasibility-20261026/`, principally
+`verification-final.json`, `guard-proof.json`, `serialization.json`,
+`bend-candidate-keys.json` and `summary.json`.
+
+All 28 protected descriptors, the 1,173-file qualified engine snapshot and exact
+native/WASM outputs match. GaimEngine v1, all three Rust overlays, dependencies
+and prior evidence remain intact. Owned native copies, two replay instances,
+all asset/model owners release; no shared engine build, dependency copy,
+production generation, prior scratch deletion, commit or push occurred.
+
+<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=left-trial | change=retained bounded refusal and selected approach/seam decision -->
+
+<a id="p7c-left-early-attribution"></a>
+## 2026-10-26 - Read-only left-sole0–24 drift attribution
+
+Completed attribution and selected one private feasibility pass on clean main
+7a062c4. Current source7b018358/exporter2f9b192b exactly match the qualified
+57/58 cleanup graph. Actual asset21a32871 and conditioned GLB53a1fd08 remain
+unchanged. The current Summary Bank conditioning/two-key/pelvis/export routes,
+strict admission, exported-boundary restoration, support measurement and retained
+qualification were read directly; no context pack was generated.
+
+Fresh qualified WASM sampling covers96 quarter poses in half-open0–24 and70 sole
+vertices:6,720 observations,5,998 failing,88 poses with at least one failure.
+First violation reproduces2/v3398 at0.043712615010 m; the maximum reproduces
+23.75/v3467 at0.673400722680 m. At1.75 all vertices pass; by22 all70 fail.
+Tick24 is outside this planted interval; its682.67 mm anchor displacement is a
+neighbor diagnostic, not another planted-window observation. The drift limit is
+0.042025772142 m and floor/skin limits0.021012886071 m.
+
+At23.75 sole gap is3.797 mm and whole-skin penetration0.519 mm, both passing.
+The max-drift vertex displacement splits exactly into world-root contribution
+[-0.197170,-0.204932,-0.163737] m and residual-body contribution
+[0.139313,0.204894,-0.507174] m. These are vectors, not additive distance claims:
+horizontal magnitudes256.29/525.96 mm combine to673.40 mm. The decomposition
+applies the current root to the anchor residual pose; root stays authoritative.
+The sole's deviation from its anchor shape carried by the current foot frame is
+only5.149 mm. Toe local rotation is unchanged at the witnesses; all70 vertices
+have foot/toe weights,47 also have at most3.653% lower-leg weight. This points to
+stance translation/leg coordination, with a small deformation residual, rather
+than a floor-gap failure or a new57/58-layer regression.
+
+All6,720 targets pass the conservative unrestricted-descendant rotation reach
+sphere screen; minimum slack including its10-micrometer allowance is51.678 mm.
+Actual-point containment passes, and independently reloaded GLB skin agrees with
+WASM within the recorded sub-micrometer error. This necessary condition neither
+proves an IK solution nor an angle-limited recipe. Prior same-byte full native/
+WASM parity,46/590 receiving/replay and637-pose pilot are reused, not rerun.
+
+A rigid-anchor ankle diagnostic separates geometric reach from correction size.
+At23.75, fixed hip to anchor ankle distance is1.473727 m within1.732611 m total
+leg length. Keeping that exact ankle target requires63.572575 degrees knee bend
+versus5.000003 currently, a58.572572-degree difference; at2 the difference is
+8.145419 degrees. Exact ankle restoration is stronger than the contact limits,
+so this does not prove that every25-degree candidate is impossible.
+
+Selected next batch: private fixed-root left UpLeg/Leg/Foot rotation keys23/24,
+65-degree maximum actual stored correction per joint, affected interval22–25,
+fixed complete boundaries22/25 and unchanged left anchor0.65 degrees is a bounded
+experiment motivated by that diagnostic, not a proven sufficient or minimum cap.
+Pelvis and root channels, selected translations/scales, toe channels, support
+vertices/intervals/modes, limits and every accepted bake remain fixed.
+
+Done When: a private serialized/reloaded candidate makes all70 sole vertices
+pass drift/gap at23,23.25,23.5,23.75; all13 quarter poses22–25 retain skin,
+contact, segment, knee and seam guards and do not worsen existing drift. Both
+boundaries and all outside poses/root are exact; the right24/25 repair remains
+qualified. Zero/over-cap/cancellation/immutability controls and native/WASM/
+serialized replay must pass. Otherwise retain the bounded refusal and stop;
+do not widen angle, keys, joints, move the anchor or add pelvis translation.
+Boundary22 already fails at606.982 mm and stays unchanged; full0–24 drift,
+other planted intervals, full P7C and visual acceptance remain open.
+
+Current public admission already uses all three two-key records (right43/44,
+left87/88,right24/25), its single span and pelvis layer. The trial may not insert
+a fourth public record, replace an accepted bake or change that cap. A feasible
+private result needs a separate bounded integration/capacity decision, followed
+by ordinary46/590 receiving/replay,637-pose pilot and full verify if admitted.
+No correction was authored in this attribution; no public graph or API changed.
+
+Compact measurements, read-only scripts, selected controls and preservation
+receipt are in `D:/Compact_Evidence/RustSMF/runs/p7c-left-early-attribution-20261026/`:
+`attribution.json`, `ankle-anchor.jsonl`, `selection.json`, `summary.json`.
+Only TODO/HISTORY change. Context/diff checks cover those records. Existing
+engine source/output identities, v1, three overlays, dependencies and retained
+proof stay protected. Asset/model owners release; no native process, shared build,
+dependency copy, scratch deletion, commit or push is part of this pass.
+
+<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=left-attribution | change=measured early stance and selected private bounded feasibility -->
+
 <a id="p7c-pelvis-scratch-policy-recheck"></a>
 ## 2026-10-25 - Publication scratch policy recheck
 

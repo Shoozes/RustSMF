@@ -181,13 +181,15 @@ describe('project integrity checks', () => {
     const frontendPackage = JSON.parse(readFileSync(join(process.cwd(), 'source/frontend/package.json'), 'utf8'))
     assert.equal(
       frontendPackage.scripts?.['check:game-ready-dependencies'],
-      'node scripts/check-game-ready-dependencies.mjs',
+      'node scripts/check-game-ready-dependencies.mjs && node --test scripts/check-game-ready-dependencies.test.mjs',
     )
     assert.equal(
       sourcePackage.scripts?.['check:game-ready-dependencies'],
       'npm --workspace frontend run check:game-ready-dependencies',
     )
     assert.match(sourcePackage.scripts?.verify ?? '', /(?:^| && )npm run check:game-ready-dependencies(?: && |$)/)
+    const launcher = readFileSync(join(process.cwd(), 'run.ps1'), 'utf8')
+    assert.match(launcher, /--test scripts\/standalone-launcher\.test\.mjs/)
   })
 
   it('preserves the launcher npm exit code and repo-local npm preference', () => {

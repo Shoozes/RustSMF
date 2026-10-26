@@ -6,6 +6,12 @@ Work locally on `main`, preserve existing changes, and publish only an explicitl
 
 RustSMF owns import/export, rig inspection, skin editing, retargeting, generic pose constraints, animation sampling and reproducible asset processing. `fight-game-study` owns fighter definitions, moves, candidate selection and game visual acceptance. `GaimEngine` owns scheduling, hosts, packages and target delivery. Jobs and game-specific mappings/appearance remain caller-owned; tool work reopens for a reproducible defect with a bounded noncombat fixture.
 
+RustSMF is a standalone product. No other first-party checkout is required to
+build, run, verify, package or maintain it. Versioned export formats are supported
+interoperability contracts; consumer receiving and private content qualification
+are separate optional work. [Standalone acceptance](STANDALONE_ACCEPTANCE.md)
+owns the isolated candidate and installed-workflow proof boundary.
+
 The 0.2.1 preview adds first-party MIT metadata, installed dependency notices and a project-generated sample. `docs/user/PREVIEW_0_2_1.md` owns the observed installed-app acceptance and limits; current source state and dated proof remain in APP_STATE and HISTORY. Real Windows UI checks are separate from browser and mocked IPC evidence.
 
 Keep developer docs concise and evidence-based. This repo has one current-state doc, one backlog, one pitfall ledger, and one context bank.
@@ -15,6 +21,13 @@ Keep developer docs concise and evidence-based. This repo has one current-state 
 From the repository root, `run.bat` or `pwsh -File run.ps1` opens the numbered menu. Choose `2. Run if already installed`, or use `run.bat 2` / `pwsh -File run.ps1 -Task run` directly. `-Task dev` launches browser development.
 
 Use the canonical launcher for close-safe sessions. Direct `npm run dev` and `npm run tauri:dev` launches are supported for ad-hoc use but do not provide the same orphan-prevention guarantees. Process ownership belongs to the launcher; stop only the processes owned by the current run.
+
+Browser tests and journeys run project-owned Playwright directly by default;
+`-NoGenEye` remains a compatible explicit direct request. Only `-GenEyeRoot`
+selects the optional GenEye integration. Ambient environment variables and sibling
+folders do not select it. A requested missing or failed integration fails clearly.
+The developer skeletal-export CLI requires Git for truthful revision/status
+provenance; the installed editor requires neither Git nor a source checkout.
 
 ## Durable Homes
 

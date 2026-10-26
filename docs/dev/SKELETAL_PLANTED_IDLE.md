@@ -108,4 +108,18 @@ outputs are retained; the concurrent shader candidate is not qualified here.
 GaimEngine v1, its three Rust overlays, shared dependencies, frozen 0.1.0 and all
 prior qualification evidence stay protected.
 
-<!-- AI-edited: 2026-10-23 | agent=Codex/root | task=p7c-idle-planted-bake | change=implemented bounded native offline idle contact and recorded selected acceptance -->
+## Standalone producer acceptance
+
+`skeletalPlantedIdle.test.ts` also runs a generated skinned idle/gait fixture
+through the ordinary skeletal-export CLI and RustSMF's local native contact
+helper. It checks measured drift, gap and penetration; binds original/model/
+recipe/report bytes to the manifest; and preserves prior output through a
+rotation-bound refusal and active cooperative cancellation. Cancellation uses
+the CLI's exported job entry with AbortSignal; it does not claim Windows process
+signal handling. Helper copies and staging are released.
+
+This generated-fixture producer proof is part of normal RustSMF acceptance.
+The source-bound consumer measurements above remain retained history and are
+not a prerequisite for editor startup, verification or packaging.
+
+<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone | change=added independent CLI and native contact proof boundary -->
