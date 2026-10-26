@@ -49,6 +49,16 @@ The public 0.2.1 preview is distinct from the newer local source candidate.
 - Verification: Retained 45-candidate 23/24 refusal had 61.52 mm penetration at 22.5/v3368 and four p25 endpoint discrepancies up to 332.62 mm skin, 277.77 mm joint and 19.79 degrees. Four new finite tick-22 families tested 466 variants with zero passes. The varied-axis family's best physical score has 52.26 mm floor penetration at 22.5 and 65.76 mm contact gap at 22 against the unchanged 21.01 mm limit. These finite refusals do not prove all strict corrections infeasible. The compact receipt is identified in [HISTORY](HISTORY.md#standalone-quiet-installed-20261026). Prior source-bound 46/590 and 637-pose results remain retained; no motion repair is claimed.
 - After an accepted graph: renew independent GLB reload, unaffected channels/poses, native/WASM, serialized replay, 46/590 receiving and the 637-pose pilot. Full P7C still needs collision, role/phase, scale/facing, f32 and visual checks.
 
+## Optional imported idle root/body receiving — producer graph ready
+
+- What: Receive the immutable private idle root-Y/body 46-packet graph; do not treat the producer floor proxy as engine acceptance.
+- Why: Existing committed idle clearance fails despite a source-world pose that meets the unchanged floor limits.
+- Where: [Source-bound producer trial](HISTORY.md#private-idle-root-body-20261026) and the optional consumer's receiving course.
+- When: After the consumer's independent root-composition control is qualified; separate from RustSMF standalone acceptance and the P7C slow-walk task.
+- How: Receive strict-v1-admitted bundle SHA-256 `01968fc3f68bbb76e9795a51dcdbbde0fa0dd0aea090f43e30acd5e4cdc0f4db` from the [retained graph](HISTORY.md#private-idle-root-body-20261026). All 36 transition packets canonically carry idle; the producer renewed those plus the idle packet while keeping nine other single-role packet payloads exact. Keep root/capsule policy, support semantics, v1 limits and both standalone build paths unchanged. Test declared 0%/25%/50%/75% entries and 0.5x/1x/2x, both facings; test committed floor, seams, collision, replay and fractional-entry obligations.
+- Done when: The complete graph passes the unchanged physical and serialization criteria, or an exact remaining witness is retained with the smallest producer/consumer decision. Do not report the one-packet feasibility result as complete receiving.
+- Verification: Private complete producer graph contains 46 immutable packets/590 references from 25 root/body-adjusted clips. Independent reload found at most `1.1921e-7 m` world-skin difference across 801 samples; file/hash/lineage/support audit, repeat export and the consumer's strict v1 bundle admission passed, with nine unrelated packet payloads exact. An earlier graph was refused for an extra semantics field and is retained. The focused standalone RustSMF tests passed 24/24. The hypothetical fixed-root proxy is below the 1x clearance limit. GaimEngine engine receiving and full graph qualification are pending.
+
 ## Housekeeping exception — publication scratch remains blocked
 
 - What: Remove named scratch only through an authorized route.

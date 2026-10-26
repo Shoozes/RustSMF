@@ -2,6 +2,68 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="private-idle-root-body-20261026"></a>
+## 2026-10-26 - Private idle root/body producer graph
+
+At RustSMF source commit `97bdcaf` (producer source identity `854eaf9c`, exporter
+identity `2f9b192b`), a private producer trial started from the immutable
+`dccaabb7` P7C bundle and conditioned GLB `53a1fd08`. Its declared five-factor
+family transfers only idle root Y into the direct hip's LINEAR Y channel at
+the same 51 ticks, capped at 0.06 m. The selected factor is zero, with a
+maximum transfer of `0.052123450 m`. Other GLB binary accessors, clips,
+mesh, binds, weights, indices, X/Z, yaw and support declarations stay exact;
+only the two selected accessor bounds change in glTF JSON.
+
+The serialized candidate GLB SHA-256 is `87bded1ae8ddf0e766e1b54f6c9021ca6719f950c99ad329583bae01c51ac207`.
+RustSMF's existing reload/export and immutable-generation helpers produced idle
+generation `9380dd6b57cb8f1856217bbe7fce04670fa0b509487890e4a097db6150cbbea3`.
+Manifest, asset, mapping, references and updated support bindings match their
+recorded hashes. A second run verified the exact existing bytes. Across 201
+quarter-tick samples, maximum original-world skin difference was
+`1.1921e-7 m`, joint-matrix element difference `1.1921e-7`, and weighted normal
+palette element difference `4.7684e-7`. Independent source sole gap and skin
+penetration remained `0.00282305 m` and `0.00136786 m`. A hypothetical fixed
+`0.0001 m` root gives `0.00292305 m` gap and `0.00126786 m` penetration for
+the selected factor, below the unchanged `0.02101289 m` 1x limit. This proxy
+is not a committed engine result.
+
+The producer then applied the same root/body split to all 12 start and 12 stop
+clips, using seven-key linear ramps that preserve their original endpoints.
+The maximum transfer is `0.092303135 m`, below the declared `0.1 m` transition
+cap. Independent GLB reload across 801 dense samples (201 idle and 25 for each
+transition) found maximum original-world skin difference `1.1921e-7 m`,
+joint-matrix element difference `1.1921e-7`, and normal-palette element
+difference `4.7684e-7`. Only the 25 selected clips' root/hip Y accessors and
+their bounds changed; unrelated binary accessors, mesh, binds, weights,
+gait/reversal motion and support patches stay exact.
+
+Existing RustSMF export and immutable publication helpers renewed the complete
+46-packet graph with 590 references. The bundle is
+`D:/Compact_Evidence/RustSMF/runs/p7c-idle-root-body-20261026/graph-v1-contract/gaim-bundle.json`,
+SHA-256 `01968fc3f68bbb76e9795a51dcdbbde0fa0dd0aea090f43e30acd5e4cdc0f4db`,
+from source model `31e7bcb562e593af5c9f42284a4fe344d56d0d7c93dd137b00168c3c41a11772`.
+All 36 transition packets carry idle in their canonical clip selection, so
+37 packets contain changed motion and nine single-role packets retain exact
+animation payloads and references. An independent file/hash/lineage/support
+audit passed for all 46 packets, including 57 exact unchanged clip payloads
+and 285 exact unchanged reference samples; wrong-hash, wrong-source, duplicate-ID
+and path-escape controls were rejected. Reexport produced the same bundle SHA.
+The first retained graph (`4350eb1b`) added a private field to the strict v1
+manifest semantics object and was refused by consumer admission before engine
+execution. Fresh immutable generations keep that object exactly equal to the
+qualified baseline; private provenance stays in the conditioning report,
+declared input roles and settings identity. The consumer's strict v1 bundle
+reader admitted the corrected 46-packet graph without running the engine.
+The focused RustSMF conditioning, planted-idle, export and immutable-generation
+tests passed 24/24 without GaimEngine. No application or public exporter source
+changed; the private trial is not wired into a v3 job. Committed engine receiving,
+root/capsule behavior, entry phases, scale/facing, seams and visual acceptance
+remain with the optional consumer. Recipe, reproducible scripts, graph,
+support records and verification receipts are retained under
+`D:/Compact_Evidence/RustSMF/runs/p7c-idle-root-body-20261026/`.
+
+<!-- AI-edited: 2026-10-26 | agent=Codex/root | task=private-idle-root-body | change=record strict-v1 producer graph and receiver boundary -->
+
 <a id="standalone-quiet-uia-20261026"></a>
 ## 2026-10-26 - Quiet installed UIA continuity and second clean profile
 
