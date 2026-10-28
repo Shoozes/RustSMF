@@ -2,6 +2,57 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="p7c-left-stance-trajectory-20261028"></a>
+## 2026-10-28 - Private whole-stance left-leg feasibility
+
+At clean RustSMF main `c158e0ca`, the immutable 46-packet baseline bundle SHA-256
+`01968fc3f68bbb76e9795a51dcdbbde0fa0dd0aea090f43e30acd5e4cdc0f4db`
+and conditioned GLB SHA-256 `31e7bcb562e593af5c9f42284a4fe344d56d0d7c93dd137b00168c3c41a11772`
+bound a private finite trial. The existing native one-leg solver handled exactly
+45 target/pole trajectories and 1,035 stored key frames. Only left UpLeg, Leg
+and Foot local rotations at walkSlow ticks 2–24 were candidates; complete
+poses at ticks 1 and 25, root, pelvis, right leg, support and limits stayed fixed.
+Thirty-five trajectories exceeded the actual 65-degree stored correction cap.
+Ten passed all 96 planted quarter poses, approach/exit, 70 left-sole and 3,726
+whole-skin vertices, 27 segments, both knee signs, root and opposite leg.
+
+All ten also passed source-backed regeneration of the six-tick start, stop and
+reversal walkSlow-p25 transitions from corrected phase 22.5. The regeneration
+control matches the original selected tracks to `8.01e-8`. The selected zero
+shift, zero lift, zero pole candidate needs at most `59.062582` degrees of
+stored correction. Its maximum planted drift is `0.021273063 m` against
+`0.042025772 m`; sole gap is `0.006881490 m` and whole-skin penetration is
+`0.017258070 m` against `0.021012886 m`. No knee inversions occur and segment
+relative change is below `3e-7`. Four regenerated p25 seams differ by at most
+`2.608e-7 m` skin, `2.388e-7 m` joint position and `9.508e-6` degrees;
+transition penetration peaks at `0.000669072 m`.
+
+Source `exportGLB` emitted a private four-clip specimen SHA-256
+`3313a09a9ea9ec6f22db86701dab382f48503dd9762e8c7d89df8a7c1effe3b0`.
+Independent reload preserves 42 other clips and 1,220 untouched tracks exactly;
+266 outside-interval gait samples differ by at most `1.51e-15 m`. Across 436
+quarter-tick samples per host, qualified snapshot native and actual WASM samples
+agree exactly. Twenty independent source references pass their declared
+tolerances; source/engine skin difference peaks at `1.077e-6 m`. Six-step
+serialized checkpoint replay and sibling isolation pass. The four clips were
+exported separately because a combined request exceeded the existing 16 MiB
+reference limit; no cap or source code changed.
+
+The reproducible plan, all 45 outcomes, corrected p25 receipt, private GLB,
+serialization and runtime receipts are retained in
+`D:/Compact_Evidence/RustSMF/runs/p7c-left-stance-trajectory-20261027/`.
+`p25-final.json` and `runtime-final.json` supersede the two earlier reporting
+receipts. Automatic approval review blocked removal of those two superseded
+scratch receipts and an empty runtime directory, so they remain explicitly
+unselected. No ordinary v3 producer recipe, admitted 46-packet graph, 590
+receiving references or 637-pose pilot changed. The next bounded decision is
+the explicit 23-key/65-degree producer contract and p25 composition; full P7C
+qualification and installed-product cases remain open. GaimEngine v1, all three
+Rust overlays, shared dependencies and prior qualification evidence stayed
+untouched.
+
+<!-- AI-edited: 2026-10-28 | agent=Codex/root | task=p7c-left-stance-private-closeout | change=record finite strict feasibility, source-backed p25 seams and private runtime proof -->
+
 <a id="private-idle-root-body-20261026"></a>
 ## 2026-10-26 - Private idle root/body producer graph
 

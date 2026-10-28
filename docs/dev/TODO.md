@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-10-26
+Last reviewed: 2026-10-28
 
 RustSMF product acceptance is independent of optional engine receiving and private
 content qualification. Completed editor, format, reliability, ZIP, queue, retarget,
@@ -38,16 +38,16 @@ The public 0.2.1 preview is distinct from the newer local source candidate.
 - Verification: Installer A and five bundled resources passed. The minimized app's renderer-child UIA opened Signal Robot and Sable ZIPs, saved and reopened projects, refused malformed/missing resources, handled ambiguous ZIP cancel/selection, queued two GLBs with destination cancel/retry, and opened bundled Help. Independent Sable project/GLB continuity passed with four clips, skin, material and sampled animation. Clean installer B/profile B reopened the Sable project and saved byte-identical 3,150,386-byte project output; PID was released. Native dialogs still appeared in the operator's foreground; the operator closed a later locked-output Save As before write. Transfer was reached but no retarget was completed. See [acceptance](STANDALONE_ACCEPTANCE.md).
 - After this batch: Freeze the final evidence/checksum set only after remaining cases pass. No public release replacement.
 
-## Optional consumer qualification — P7C remains open
+## Optional consumer qualification — private strict candidate; producer integration open
 
-- What: Trial the user-selected opt-in producer-only v3 five-window contact-release profile after bounded strict left-leg refusals.
-- Why: All 45 private 65-degree 23/24 candidates were refused; the best fails floor at 22.5 and four seams compare directly with that changed pose. Keeping the p25 source endpoint exact while changing tick 23 is incompatible with the present chord interpolation and fixed tick-22 key.
-- Where: [Retained trial](HISTORY.md#p7c-left23-24-refusal).
-- When: Separately selected consumer work; not a RustSMF product or release prerequisite.
-- How: Keep strict thresholds, roots, pelvis, accepted bakes and default export bytes unchanged. Declare explicit left release intervals 0–24, 44–58, 84–89 and right 29–47, 66–87 with bounded lock/unlock ramps; right 26–27 remains strictly planted. Reports must separate released from planted ticks. Test floor, skin, seams and visual behavior of all released spans, plus unaffected poses, native/WASM, replay and default-byte identity before accepting any graph.
-- Done when: The optional profile's declared releases and ramps satisfy floor, skin, seam and visual criteria without reporting released ticks as planted-drift passes; default omission preserves existing bytes/support behavior. If a bound fails, retain the exact refusal and required contract decision.
-- Verification: Retained 45-candidate 23/24 refusal had 61.52 mm penetration at 22.5/v3368 and four p25 endpoint discrepancies up to 332.62 mm skin, 277.77 mm joint and 19.79 degrees. Four new finite tick-22 families tested 466 variants with zero passes. The varied-axis family's best physical score has 52.26 mm floor penetration at 22.5 and 65.76 mm contact gap at 22 against the unchanged 21.01 mm limit. These finite refusals do not prove all strict corrections infeasible. The compact receipt is identified in [HISTORY](HISTORY.md#standalone-quiet-installed-20261026). Prior source-bound 46/590 and 637-pose results remain retained; no motion repair is claimed.
-- After an accepted graph: renew independent GLB reload, unaffected channels/poses, native/WASM, serialized replay, 46/590 receiving and the 637-pose pilot. Full P7C still needs collision, role/phase, scale/facing, f32 and visual checks.
+- What: Decide an exact producer contract for the passing private 23-key left-leg trajectory at walkSlow ticks 2–24 and its dependent six-tick p25 transitions, then qualify an ordinary exported graph.
+- Why: The earlier 23/24-only and tick-22 finite families failed, but a whole-stance family now meets the unchanged planted limits. Existing public capacity is three occupied two-key bakes, one 18-key/25-degree span and one two-key pelvis layer; the private 23-key/65-degree trial does not fit those contracts.
+- Where: [Private whole-stance result](HISTORY.md#p7c-left-stance-trajectory-20261028) and the existing conditioning, rotation-span and transition-floor routes.
+- When: Separately selected producer/consumer work; not a RustSMF standalone product or release prerequisite.
+- How: Select the zero-shift, zero-lift, zero-pole candidate or repeat the same bound at a proven variant. Author only left UpLeg/Leg/Foot rotations at ticks 2–24, fixing complete poses at 1 and 25. Regenerate start/stop/reversal walkSlow-p25 from corrected 22.5 before floor baking. Add an explicit, narrow admission/refusal contract; preserve root, pelvis, right leg, support declarations, thresholds, other accepted bakes and default omission bytes. Prove source fidelity, seam/skin/contact guards, ordinary export and independent reload before receiving. The previously selected opt-in five-window flex profile remains a fallback if strict integration or visual review fails; it cannot count released ticks as planted passes.
+- Done when: An admitted graph passes the unchanged left planted drift, sole gap, whole skin, segment, knee, root, opposite-leg and four p25 seam limits, keeps outside-interval behavior exact, and passes independent receiving/replay. Refuse a failing integration with its exact witness instead of widening the trial silently.
+- Verification: Of 45 private trajectories (1,035 solved keys), 35 exceeded the actual stored 65-degree cap and 10 met physical limits and regenerated p25 seams. The selected zero-offset/pole candidate has maximum 21.273 mm drift, 6.881 mm gap, 17.258 mm whole-skin penetration and 59.063-degree stored correction; limits are 42.026 mm, 21.013 mm and 65 degrees. Four seam maxima are below 0.000261 mm skin, 0.000239 mm joint and 0.000010 degrees; transition penetration is 0.669 mm. Independent GLB reload, 436 native/WASM samples per host, 20 source references and six-step replay pass for the private four-clip specimen. No public recipe, 46-packet graph or 637-pose pilot was renewed.
+- After an accepted graph: renew all 46 packets/590 references and the 637-pose pilot, then finish collision, role/phase, scale/facing, f32 and visual checks before claiming full P7C qualification.
 
 ## Optional imported idle root/body receiving — producer graph ready
 
