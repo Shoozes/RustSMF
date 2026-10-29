@@ -7,9 +7,33 @@ import {
   SKELETAL_EXPORT_JOB_SCHEMA,
   SKELETAL_EXPORT_JOB_V2_SCHEMA,
   SKELETAL_EXPORT_JOB_V3_SCHEMA,
+  SKELETAL_EXPORT_JOB_V4_SCHEMA,
   selectSkeletalExportClips,
 } from './skeletalExportJob';
 import { CONDITIONING_MODE, CONDITIONING_NLERP_MODE } from './skeletalConditioning';
+import { HIP_Y_LOOP_ENDPOINT_POLICY } from './skeletalHipYLoopEndpoint';
+
+test('v4 endpoint route is explicit and leaves all older schemas closed', () => {
+  const root = path.join(os.tmpdir(), 'skeletal-endpoint-job');
+  const document = { $schema: SKELETAL_EXPORT_JOB_V4_SCHEMA,
+    input: { skinnedModel: path.join(root, 'conditioned.glb'), conditioningReport: path.join(root, 'report.json'), originalSkinnedModel: path.join(root, 'original.glb') },
+    export: { rootJoint: 'LocomotionRoot', units: 'meters', upAxis: '+Y', forwardAxis: '+Z', handedness: 'right', ticksPerSecond: 60,
+      rootMotion: 'separate-track', clipIds: ['walkSlow'], twoKeyExportBoundary: 'preserve-unselected-emitted-keys.v1' },
+    endpoint: { policy: HIP_Y_LOOP_ENDPOINT_POLICY, clipId: 'walkSlow', joint: 'mixamorigHips', maxCorrectionMeters: .24 },
+    output: { generationRoot: path.join(root, 'generations'), conditioningRoot: path.join(root, 'conditioned') } };
+  const parsed = parseSkeletalExportJobDocument(document);
+  assert.equal(parsed.$schema, SKELETAL_EXPORT_JOB_V4_SCHEMA);
+  if (parsed.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA) assert.deepEqual(parsed.endpoint, document.endpoint);
+  for (const invalid of [
+    { ...document, endpoint: { ...document.endpoint, extra: true } },
+    { ...document, endpoint: { ...document.endpoint, maxCorrectionMeters: .25 } },
+    { ...document, export: { ...document.export, twoKeyExportBoundary: 'other' } },
+    { ...document, input: { ...document.input, conditioningReport: document.input.skinnedModel } },
+    { ...document, output: { ...document.output, currentPointer: path.join(root, 'generations', 'current.json') } },
+  ]) assert.throws(() => parseSkeletalExportJobDocument(invalid));
+  for (const oldSchema of [SKELETAL_EXPORT_JOB_SCHEMA, SKELETAL_EXPORT_JOB_V2_SCHEMA, SKELETAL_EXPORT_JOB_V3_SCHEMA])
+    assert.throws(() => parseSkeletalExportJobDocument({ ...document, $schema: oldSchema }), /unsupported field/);
+});
 
 test('v3 floor bake binds only selected generated start/stop clips and declared bounds', () => {
   const directory = path.join(os.tmpdir(), 'skeletal-floor-job');

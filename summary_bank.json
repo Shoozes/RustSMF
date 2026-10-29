@@ -38,7 +38,7 @@
     },
     "workflow__context_bank": {
       "description": "Portable public context routing, validation, and generation entry points.",
-      "max_kb": 126,
+      "max_kb": 130,
       "paths": [
         "summary_bank.json",
         "scripts/context-bank-lib.mjs",
@@ -299,7 +299,6 @@
         "source/frontend/src/utils/skeletalTwoKeyExportBoundary.test.ts",
         "source/frontend/src/utils/skeletalExport.ts",
         "source/frontend/scripts/skeletal-export-producer.ts",
-        "source/frontend/src/utils/skeletalExportJob.ts",
         "source/frontend/src/utils/skeletalExportBoundaryCli.test.ts"
       ],
       "notes": [
@@ -310,7 +309,7 @@
     },
     "workflow__skeletal_export": {
       "description": "Strict v1/v2 GLB skeletal export and immutable publication; explicit continuous conditioning is routed through workflow__skeletal_conditioning.",
-      "max_kb": 244,
+      "max_kb": 250,
       "paths": [
         "docs/dev/SKELETAL_EXPORT.md",
         "source/frontend/package.json",
@@ -323,9 +322,7 @@
         "source/frontend/src/loaders/smfBinary.ts",
         "source/frontend/src/test/installFileReaderTestPolyfill.ts",
         "source/frontend/src/utils/imagePayload.ts",
-        "source/frontend/src/utils/materialPreview.ts",
         "source/frontend/src/utils/modelResourceBundle.ts",
-        "source/frontend/src/utils/modelFormat.ts",
         "source/frontend/src/utils/textureImageReadiness.ts",
         "source/frontend/src/utils/threeDisposal.ts",
         "source/frontend/src/utils/threeTypeGuards.ts",
@@ -1433,7 +1430,7 @@
     },
     "workflow__skeletal_conditioning": {
       "description": "Explicit producer-job v3 LINEAR/NLERP conditioning, locomotion root, transition baking and original/derived lineage. Reuse workflow__skeletal_export for packet/publication contracts.",
-      "max_kb": 64,
+      "max_kb": 68,
       "paths": [
         "docs/dev/SKELETAL_CONDITIONING.md",
         "source/frontend/src/utils/skeletalConditioning.ts",
@@ -1468,7 +1465,7 @@
     },
     "workflow__skeletal_planted_idle": {
       "description": "Explicit offline idle contact authoring, canonical native Rust adapter, recipe/fidelity guards and serialized proof.",
-      "max_kb": 112,
+      "max_kb": 116,
       "paths": [
         "docs/dev/SKELETAL_PLANTED_IDLE.md",
         "source/frontend/src/utils/skeletalPlantedIdle.ts",
@@ -1479,7 +1476,6 @@
         "source/pose-contact/Cargo.lock",
         "source/frontend/src/utils/skeletalConditioning.ts",
         "source/frontend/src/utils/skeletalConditioning.test.ts",
-        "source/frontend/src/utils/skeletalExportJob.ts",
         "source/frontend/scripts/skeletal-export-producer.ts"
       ],
       "notes": [
@@ -1489,7 +1485,7 @@
     },
     "workflow__skeletal_terminal_rotation": {
       "description": "Explicit final-tick quaternion closure, strict source-fidelity exception, canonical chord and serialized receiving proof.",
-      "max_kb": 112,
+      "max_kb": 116,
       "paths": [
         "docs/dev/SKELETAL_TERMINAL_ROTATION.md",
         "source/frontend/src/utils/skeletalTerminalRotation.ts",
@@ -1497,7 +1493,6 @@
         "source/frontend/src/utils/skeletalConditioningFidelity.ts",
         "source/frontend/src/utils/skeletalConditioning.ts",
         "source/frontend/src/utils/skeletalConditioning.test.ts",
-        "source/frontend/src/utils/skeletalExportJob.ts",
         "source/frontend/src/utils/skeletalExportJob.test.ts",
         "source/frontend/scripts/skeletal-export-cli.ts",
         "source/frontend/scripts/skeletal-export-producer.ts",
@@ -1509,14 +1504,13 @@
     },
     "workflow__skeletal_two_key_rotation": {
       "description": "Singular or bounded disjoint three-record rotation authoring, stored bounds, union source guards and independent producer/receiving proof.",
-      "max_kb": 122,
+      "max_kb": 126,
       "paths": [
         "docs/dev/SKELETAL_TWO_KEY_ROTATION.md",
         "source/frontend/src/utils/skeletalTwoKeyRotation.ts",
         "source/frontend/src/utils/skeletalTwoKeyRotation.test.ts",
         "source/frontend/src/utils/skeletalConditioningFidelity.ts",
         "source/frontend/src/utils/skeletalConditioning.ts",
-        "source/frontend/src/utils/skeletalExportJob.ts",
         "source/frontend/scripts/skeletal-export-producer.ts",
         "source/frontend/src/utils/skeletalChordRotation.ts",
         "source/frontend/src/utils/animationTrackInterpolation.ts"
@@ -1537,7 +1531,6 @@
         "source/frontend/src/utils/skeletalConditioningFidelity.ts",
         "source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts",
         "source/frontend/src/utils/skeletalExport.ts",
-        "source/frontend/src/utils/skeletalExportJob.ts",
         "source/frontend/scripts/skeletal-export-cli.ts",
         "source/frontend/scripts/skeletal-export-producer.ts",
         "source/frontend/src/utils/skeletalChordRotation.ts"
@@ -1563,6 +1556,50 @@
       "notes": [
         "Export sampler and neighbor tests: workflow__skeletal_export_boundary. Existing two-key/span and idle routes retain separate ownership; overlap here follows the post-bake composition boundary.",
         "The two-key record and span caps, root motion and engine remain unchanged."
+      ]
+    },
+    "workflow__skeletal_stance_trajectory": {
+      "description": "Opt-in versioned left walkSlow stance, p25 regeneration, strict provenance and emitted-component preservation.",
+      "max_kb": 144,
+      "paths": [
+        "docs/dev/SKELETAL_STANCE_TRAJECTORY.md",
+        "source/frontend/src/utils/skeletalStanceTrajectory.ts",
+        "source/frontend/src/utils/skeletalStanceTrajectory.test.ts",
+        "source/frontend/src/utils/skeletalConditioning.ts",
+        "source/frontend/src/utils/skeletalConditioningFidelity.ts",
+        "source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts",
+        "source/frontend/src/utils/skeletalExport.ts",
+        "source/frontend/src/utils/skeletalExportJob.ts"
+      ],
+      "notes": [
+        "Shared conditioning/export files intentionally overlap their focused routes; CLI and floor owners are in workflow__skeletal_export and workflow__skeletal_transition_floor. Independent receiving and physical P7C acceptance remain consumer-owned."
+      ]
+    },
+    "workflow__skeletal_root_body": {
+      "description": "Opt-in private walkSlow vertical root/body GLB derivative, selected transition regeneration and standalone producer proof.",
+      "max_kb": 48,
+      "paths": [
+        "docs/dev/SKELETAL_WALK_ROOT_BODY.md",
+        "source/frontend/scripts/skeletal-walk-root-body-cli.ts",
+        "source/frontend/src/utils/skeletalRootBodyTransfer.ts",
+        "source/frontend/src/utils/skeletalRootBodyTransfer.test.ts"
+      ],
+      "notes": [
+        "Source fingerprint and immutable packet publication use workflow__skeletal_export. The previous stance and idle graphs remain separate; GaimEngine owns V4 receiving and the 637-pose pilot."
+      ]
+    },
+    "workflow__skeletal_hip_y_loop_endpoint": {
+      "description": "Explicit v4 walkSlow hip-Y tick-90 endpoint recipe, report validation, source fidelity and emitted export boundary.",
+      "max_kb": 112,
+      "paths": [
+        "docs/dev/SKELETAL_HIP_Y_LOOP_ENDPOINT.md",
+        "source/frontend/src/utils/skeletalHipYLoopEndpoint.ts",
+        "source/frontend/src/utils/skeletalHipYLoopEndpoint.test.ts",
+        "source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts",
+        "source/frontend/src/utils/skeletalExport.ts"
+      ],
+      "notes": [
+        "Public producer contract and focused physical scope live here. Immutable generation and general job mechanics remain in workflow__skeletal_export; source root/body transfer stays in workflow__skeletal_root_body. GaimEngine owns runtime receiving and visual qualification."
       ]
     },
     "workflow__standalone_product": {

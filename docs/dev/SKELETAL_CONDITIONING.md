@@ -9,6 +9,8 @@ models and qualification evidence remain local. P7C is separate.
 The explicit [pelvis/leg layer](SKELETAL_PELVIS_LAYER.md) composes bounded
 positions and rotations after prior bakes, with root and unselected components
 preserved through reverse-order fidelity and export checks.
+The opt-in [left-stance trajectory](SKELETAL_STANCE_TRAJECTORY.md) composes
+23 bounded walkSlow left-leg rotation keys and regenerates its p25 transitions.
 
 ## Explicit v3 job
 
@@ -284,6 +286,11 @@ qualification is retained separately at
 No reference values, receiving tolerances or GaimEngine v1 behavior were changed.
 Numerical receiving proof does not establish visual acceptance or model
 redistribution rights; TODO and HISTORY own current P7C results.
+
+The separate [opt-in walkSlow root/body derivative](SKELETAL_WALK_ROOT_BODY.md)
+transfers authored root Y into the existing direct body carrier on the retained
+composed graph and its twelve walkSlow transitions. It preserves world poses and
+publishes a fresh immutable graph; consumer qualification remains separate.
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-union-boundary | change=closed bounded union sampling with renewed runtime proof and retained physical failures -->
 

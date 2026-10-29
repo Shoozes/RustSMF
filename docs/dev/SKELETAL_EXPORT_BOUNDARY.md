@@ -9,13 +9,14 @@ raw-GLB preservation check did not prove the emitted runtime property.
 `skeletalTwoKeyExportBoundary.ts` supplies the explicit producer-only
 `preserve-unselected-emitted-keys.v1` context for `prepareSkeletalExport`.
 It accepts the existing singular `report` or strict one–three-record `reports`,
-mutually exclusively, plus optional bounded `spanReport` and `pelvisReport`.
-Either layer may stand alone. Report structure validates before restoration;
+mutually exclusively, plus optional bounded `spanReport`, `pelvisReport` and
+[`stanceReport`](SKELETAL_STANCE_TRAJECTORY.md). Each layer may stand alone.
+Report structure validates before restoration;
 stored provenance and bounds validate before emitted/reference sampling.
 Every declared older `before` rotation is restored together in one
 pre-authoring baseline per clip. Unselected emitted integer keys sample that
 baseline at nominal `tick/60`; the selected tick union samples the authored GLB.
-Span ticks replace only declared joint rotations; other components remain from
+Span and stance ticks replace only declared joint rotations; other components remain from
 the baseline. Reports are filtered by packet clips. Caller arrays/reports remain immutable.
 
 The [pelvis layer](SKELETAL_PELVIS_LAYER.md) reverses first. Older selected keys
@@ -359,6 +360,16 @@ early island retains three poses/210 violations, first 24.25/v0 and new global
 maximum 24.5/v0 at 0.042937258177 m. The old 51/v2 maximum remains retained baseline
 evidence. Drift/skin still fail; P7C/visual acceptance stays open. HISTORY owns
 commands, harness failures, hashes and cleanup; no engine/dependency rebuild.
+
+## Opt-in loop endpoint composition
+
+The [v4 walkSlow hip-Y endpoint recipe](SKELETAL_HIP_Y_LOOP_ENDPOINT.md)
+follows the qualified root/body source transfer. The boundary reverses its
+single tick-90 hip-Y component while building the pre-bake baseline, alongside
+the existing two-key, span, pelvis and stance reports. The emitted walkSlow
+clip copies only the declared stored hip-Y endpoint from the independently
+loaded derivative; all other emitted components remain on the qualified
+baseline. Unselected clips and v1-v3 jobs retain their existing sampling path.
 
 ## Right-swing rotation-span integration
 

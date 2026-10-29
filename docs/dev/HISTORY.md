@@ -2,6 +2,230 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="p7c-later-stance-private-20261029"></a>
+## 2026-10-29 - Private later-stance sole-constrained trial refused
+
+The endpoint producer remains source-bound to revision `76bc40f`, source identity
+`08e53891` and exporter identity `8e7d7229`. Its immutable conditioned GLB
+`32837faf` and 46-packet/590-reference bundle `81bc8d68` were held fixed.
+This separate private trial authored only left UpLeg/Leg/Foot keys 46–56 under
+65 degrees or right UpLeg/Leg/Foot keys 68–86 under 25 degrees. Root, pelvis,
+hip-Y endpoint, surrounding keys, other channels, supports and limits were
+fixed. No ordinary producer recipe or public graph adopted either candidate.
+
+The preceding private ankle-target family also refused all 45 left fixed-length
+targets and all 108 second-screen right targets under the same caps. Its
+diagnostic and serialized refusals remain at
+`D:/Compact_Evidence/RustSMF/runs/p7c-later-stance-private-20261029/`.
+
+Focused then full-span coordinate searches evaluated 432+990 left and
+432+1,368 right candidates against the recorded consumer trajectory, 70 sole
+vertices, floor, whole skin and knee-sign guards. The serialized/reloaded
+left specimen reduced maximum planted drift from 229.779 to 180.590 mm,
+still above the unchanged 42.026 mm limit. Its maximum gap was 27.795 mm
+and skin penetration 24.338 mm, both above 21.013 mm. The right specimen
+reduced drift from 308.010 to 284.008 mm, with 31.265 mm gap/skin and one
+old calibrated knee-sign inversion. Four regenerated p75 endpoint seams
+passed; the 60.690 mm start/stop floor failure was inherited from the
+baseline. The left 84–89 overlap failure remained exactly unchanged.
+
+Independent GLB reload, unrelated tracks, mesh and bind, and unselected
+stored values passed preservation checks. No candidate met the physical
+entry criteria, so native/WASM renewal, 46/590 receiving/replay, the
+637-pose pilot and a new build were not run for these specimens. This finite
+search is a refusal of the measured candidates, not proof that every
+correction within the caps is infeasible. Scripts, receipts, specimens and
+the compact summary remain in
+`D:/Compact_Evidence/RustSMF/runs/p7c-sole-constrained-20261029/`.
+
+<!-- AI-edited: 2026-10-29 | agent=Codex/root | task=p7c-review-recheck-cleanup | change=retain source-bound private refusal without claiming producer adoption -->
+
+<a id="p7c-hip-y-loop-endpoint-20261028"></a>
+## 2026-10-28 - Public walkSlow hip-Y loop endpoint producer
+
+At base `76bc40f`, the explicit `rustsmf.skeletal-export-job.v4` recipe
+`walkSlow-hip-y-loop-endpoint.v1` admits the already qualified root/body GLB,
+its original GLB and source-bound report as three separate inputs. It changes
+only the stored walkSlow hip-Y tick-90 float32 value from
+`2.3758182525634766` to its tick-0 value `2.137423276901245`, a
+`0.23839497566223145 m` correction under the approved `0.24 m` cap.
+The source GLB SHA-256 is `255b6353`; the derivative is `32837faf` and
+matches the retained private specimen byte for byte. The public baker renews
+the accessor bounds, conditioning report and immutable source/recipe/producer
+lineage. Older v1-v3 and omitted-option jobs remain on their prior paths.
+
+Independent reload checked all 361 walkSlow quarter poses. Through tick 89,
+joint matrices and skin positions are exact. The changed 89-90 interval has
+zero root/linear-joint/XZ difference, at most `9.9911e-9 m` skin prediction
+error, at most `1.943e-16 m` segment-length difference and minimum skin Y
+`0.00024634 m`. The root-relative loop seam is `2.2579e-7 m` skin and
+`4.7022e-7` joint-matrix difference. All 20 six-tick transition seams pass;
+maximum skin difference is `2.9357e-7 m` and angle `0.027992°`. A real
+0.1 m cap refuses before creating publication roots. Focused endpoint, job,
+boundary and CLI tests pass 21/21.
+
+The ordinary v4 CLI produced 46 immutable packets and 590 references under
+bundle SHA-256 `81bc8d68c96d734e4e635c7ddad1b1de23e67a4bd775a59f6970cf966dc22a9d`.
+All 13 walkSlow selected endpoints changed; 577 other references, 36
+transition and 69 other selected clip occurrences remain exact. Mesh, bind,
+socket, mapping apart from source identity, and support patches/spans are
+unchanged. The GaimEngine test-owned bundle reader admits all 46 packets
+read-only. Producer source identity is `08e53891` and exporter identity
+`8e7d7229`. A separate correction record clarifies that the prior private
+decision's `baselineGraphSha256` field actually named the conditioned GLB;
+the true baseline bundle is `679c238b`. Original evidence was not edited.
+
+The source-only RustSMF copy contains 1,401 Git-visible source files, no
+GaimEngine or GenEye sibling, offline lockfile dependencies and the pinned
+WASM tool. Its ordinary CLI independently reproduced the final graph's
+walkSlow model, asset, mapping and reference hashes. The first isolated
+`pwsh -NoProfile -File ./run.ps1 -Task verify` passed code/Rust checks but
+exited 1 because eight Summary Bank groups exceeded byte budgets. Narrowing
+their routes and raising only the self-containing bank group to 130 KiB made
+`node scripts/verify-context-bank.mjs` pass with 75 groups and zero warnings.
+Two full retries using one global `CARGO_TARGET_DIR` then encountered a
+cache-sensitive Rust trait failure: `BakeRequestV1` and `AnalysisInputV1`
+appeared to lack their source-declared serde traits. The same source passed
+the standalone Rust gate in a fresh target before frontend tests ran. Using
+Cargo's normal separate target per crate resolved the conflict without a
+source or dependency change. The final isolated
+`pwsh -NoProfile -File ./run.ps1 -Task verify` passed, exit 0 in 225.9 s:
+735 frontend tests, 14 Rust checks, project integrity, 75 context groups,
+lint, both typechecks and build. The isolated source is byte-exact to all
+1,401 Git-visible workspace files; pinned offline dependencies and no sibling
+checkout were confirmed. No task-owned process remained after the run.
+Records and artifacts are in
+`D:/Compact_Evidence/RustSMF/runs/p7c-loop-seam-public-20261028/`.
+
+Current-source GaimEngine V4 receiving, native/WASM replay, the complete
+637-pose P7C pilot and visual acceptance remain consumer-owned and open.
+GaimEngine v1, all Rust overlays, shared dependencies, prior controls and
+retained evidence were preserved. No commit, push or release was performed.
+
+<!-- AI-edited: 2026-10-28 | agent=Codex/root | task=p7c-hip-y-loop-endpoint | change=record bounded public recipe, immutable graph, isolated proof and consumer boundary -->
+
+<a id="p7c-walk-root-body-20261028"></a>
+## 2026-10-28 - Optional walkSlow root/body vertical derivative
+
+At RustSMF `main` revision `76bc40f`, final producer source identity `dd7fa6cf07b4c1aae2d5c0d786db28bf8ee596229efe50c38dcc53630abadef3`
+and exporter identity `14eb4a6a609882da3a186858eaa4d8707ea8b95f7c2f4cf639f796f16452371f`,
+the separate opt-in source CLI derived the immutable composed bundle `eb6006aa`.
+It flattened only walkSlow locomotion-root Y on 91 integer keys and transferred
+the complete original vertical component into the existing direct hip carrier.
+It made the same transfer in twelve walkSlow start/stop/reversal transitions
+with seven or two keys, preserving root XZ/yaw, all rotations, support, skin,
+mesh and other clips. The final conditioned GLB SHA-256 is `255b6353`.
+
+Independent reload compared 661 quarter-tick source/world poses across the
+gait and all twelve transitions. Maximum joint-matrix and skinned-vertex
+differences were both about `1.1921e-7` against existing `1e-4` and `5e-5 m`
+limits. This includes fixed ticks 1/25 and the 23-frame left stance. Twenty
+entry/exit seams passed, peaking at `2.936e-7 m` skin and `0.028°` against
+`0.021012886 m`/`5°`. The first immutable export refused stale pelvis-layer
+provenance; the producer renewed it from the transformed clip before final
+publication. The first complete graph then failed the GaimEngine test-owned
+bundle reader on a stale top-level vertex-order fingerprint. The final graph
+recomputes that source-bound fingerprint from every new packet mapping and
+passes the same reader with all 46 packets. Its SHA-256 is
+`679c238b4702c653db3d675a269eae286293cca37a45bac7a236d8ed2e356e69`:
+46 packets, 590 independent references, 13 affected packet selections, and 93
+unrelated selected clip payloads and references exact. Emitted transfer
+residual peaks at `1.1921e-7 m`; all support patches, sockets, mesh and binds
+remain exact. Focused tests, both TypeScript checks, lint and
+`pwsh -NoProfile -File ./run.ps1 -Task verify` passed, including the frontend
+build and 14 Rust checks. The current RustSMF app needs no GaimEngine checkout
+or process for these tests. The bounded contract and retained proof are in
+[SKELETAL_WALK_ROOT_BODY.md](SKELETAL_WALK_ROOT_BODY.md) and
+`D:/Compact_Evidence/RustSMF/runs/p7c-walk-root-body-20261028/`.
+
+GaimEngine V4 receiving, native/WASM replay, the 637-pose pilot, committed
+collision/physical/visual checks and LTS acceptance remain separate and open.
+No GaimEngine file, Rust overlay, prior evidence, commit or remote was changed.
+
+<!-- AI-edited: 2026-10-28 | agent=Codex/root | task=p7c-walk-root-body | change=record verified private derivative, graph and consumer boundary -->
+
+<a id="p7c-stance-producer-20261028"></a>
+## 2026-10-28 - Versioned left-stance recipe and composed producer graph
+
+At base `76bc40f`, producer source identity `c49c3118ff79c86e2be8a1f9ab287ca28665d2dc9543cd3c4513cccbad42ca6f`
+and exporter identity `501a4177cea4ef0c98c810750317e4be0de8a325082f0a3c48dd3634aa0d3a0d`,
+the opt-in `walkSlow-left-sole-23-key-trajectory.v1` recipe admitted the selected
+private zero-shift/lift/pole correction through the ordinary v3 export CLI.
+Exactly 23 keys at ticks 2–24 for left UpLeg/Leg/Foot were authored under the
+65-degree stored cap. Start/stop/reversal walkSlow-p25 were regenerated from
+corrected phase 22.5; start/stop retained their existing floor recipe and caps.
+Existing three two-key recipes, span, pelvis layer, supports, root travel,
+GaimEngine v1 and all Rust overlays were unchanged. Omission produced the
+prior conditioned model `53a1fd08`, asset `21a32871` and reference `f325008c`
+bytes exactly. Strict parser, overlap, floor-cap, source-fidelity, stored-bound,
+cancel and forged-provenance regressions passed.
+
+The final-source CLI completed all 46 packets and 590 references. Its conditioned
+GLB SHA-256 is `a300a50bde25ab899f45c9cf757f25d14c21f426f279c4a9792627a93d9b322e`;
+the first strict-v1-admitted stance-only bundle SHA-256 is
+`b57f54d756c061d2ae152c21d822f850328fabf4035173fb4675ee531e4bd156`.
+Authored support patches, intervals, modes, spans and anchor were exact to the
+previous graph, with source/generation bindings renewed. Independent GLB reload
+found 42 unchanged clips, 1,220 unchanged tracks, exact root/pelvis/right-leg
+channels, and zero difference across 266 outside-interval samples. The selected
+gait rotations matched the private passing specimen exactly. Maximum planted
+drift was `0.021273063 m` against `0.042025772 m`; sole gap was
+`0.006881490 m` and whole-skin penetration `0.017258070 m` against
+`0.021012886 m`. Four p25 seams and dense transition skin passed. The private
+finite trial established the same selected 69 rotations under `59.062582`
+degrees with 27 segment and knee-sign guards passing.
+
+The captured qualified GaimEngine v1 native and actual-WASM runtimes agreed
+exactly at 436 samples per host over the changed four clips. Fifty independent
+source references and six-step serialized replay/sibling isolation passed.
+The first graph, model and receipts remain at
+`D:/Compact_Evidence/RustSMF/runs/p7c-stance-producer-final-20261028/`.
+
+Independent consumer inspection then caught a material integration gap: that
+first graph retained the older idle root-Y decomposition, rather than the
+passing private idle root/body representation. On a qualified v1 1x/+Z
+52-frame idle run it failed with 55.047 mm sole gap and 23.816 mm skin
+penetration; the retained `01968fc3` idle graph passed with 2.823 mm gap and
+0.482 mm penetration. The failing graph remains a retained control.
+
+The already qualified private idle/root-body transfer was then composed with
+the stance-conditioned GLB, changing only matching LINEAR root/hip Y
+accessors in idle and 24 start/stop transitions. Dense independent world-pose
+comparison across 801 samples differed by at most `1.1921e-7 m`. Immutable
+reexport and strict-v1 admission produced 46 packets/590 references under
+bundle SHA-256 `eb6006aade20b1f741467ea252b18e7bac43b8457291797f9206d34fcdd75a16`
+and conditioned model SHA-256
+`b03f78f11c7177395f4c6080fcd36fdf759cb308a942854a863c60e44503bb44`.
+Nine packets, 57 unselected clip payloads and 285 source references stay exact
+to the stance-only graph. The idle clip is exact to the passing `01968fc3`
+graph; 22 other start/stop root/hip curves are exact, while the two corrected
+p25 curves preserve their stance rotations and apply the same bounded Y
+transfer to the corrected source. All support semantics and four negative
+binding controls pass. Captured v1 native/WASM playback agrees exactly at
+637 samples per host across idle, walkSlow and three p25 clips; 55 independent
+references and six-step replay/sibling isolation pass. The 52-frame idle
+control now passes with the same 2.823 mm gap and 0.482 mm penetration as
+the retained passing graph, with all owners released. Receipts, scripts and
+the integrated graph are retained at
+`D:/Compact_Evidence/RustSMF/runs/p7c-stance-idle-composition-20261028/`.
+
+The root/body transfer remains a private derivative, not an ordinary CLI
+recipe; productizing it would require a separate producer-contract decision.
+Focused authoring/neighbor tests passed 34/34; both frontend TypeScript
+checks and `pwsh -NoProfile -File ./run.ps1 -Task verify` passed on the
+unchanged product source, including the frontend build and 14 Rust checks.
+Current-source GaimEngine receiving, the complete 637-pose P7C pilot,
+collision, role/phase, scale/facing, f32 and visual review remain open.
+Neither graph proves full P7C qualification or a public release.
+The operator chose to leave the verified RustSMF changes local for that pilot;
+the Git index, commit and remote were not changed. Automatic command review
+blocked removal of four task-owned ignored composition scripts. Exact copies
+remain with the retained graph, and
+`runtime-data/p7c-stance-idle-composition-20261028/owner.json` records the
+local scratch owner and policy-approved cleanup route.
+
+<!-- AI-edited: 2026-10-28 | agent=Codex/root | task=p7c-stance-producer-closeout | change=record source-bound ordinary graph and separate remaining consumer qualification -->
+
 <a id="p7c-left-stance-trajectory-20261028"></a>
 ## 2026-10-28 - Private whole-stance left-leg feasibility
 

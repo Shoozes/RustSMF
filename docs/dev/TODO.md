@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-10-28
+Last reviewed: 2026-10-29
 
 RustSMF product acceptance is independent of optional engine receiving and private
 content qualification. Completed editor, format, reliability, ZIP, queue, retarget,
@@ -38,16 +38,17 @@ The public 0.2.1 preview is distinct from the newer local source candidate.
 - Verification: Installer A and five bundled resources passed. The minimized app's renderer-child UIA opened Signal Robot and Sable ZIPs, saved and reopened projects, refused malformed/missing resources, handled ambiguous ZIP cancel/selection, queued two GLBs with destination cancel/retry, and opened bundled Help. Independent Sable project/GLB continuity passed with four clips, skin, material and sampled animation. Clean installer B/profile B reopened the Sable project and saved byte-identical 3,150,386-byte project output; PID was released. Native dialogs still appeared in the operator's foreground; the operator closed a later locked-output Save As before write. Transfer was reached but no retarget was completed. See [acceptance](STANDALONE_ACCEPTANCE.md).
 - After this batch: Freeze the final evidence/checksum set only after remaining cases pass. No public release replacement.
 
-## Optional consumer qualification — private strict candidate; producer integration open
+## Optional P7C consumer qualification — loop endpoint graph ready
 
-- What: Decide an exact producer contract for the passing private 23-key left-leg trajectory at walkSlow ticks 2–24 and its dependent six-tick p25 transitions, then qualify an ordinary exported graph.
-- Why: The earlier 23/24-only and tick-22 finite families failed, but a whole-stance family now meets the unchanged planted limits. Existing public capacity is three occupied two-key bakes, one 18-key/25-degree span and one two-key pelvis layer; the private 23-key/65-degree trial does not fit those contracts.
-- Where: [Private whole-stance result](HISTORY.md#p7c-left-stance-trajectory-20261028) and the existing conditioning, rotation-span and transition-floor routes.
-- When: Separately selected producer/consumer work; not a RustSMF standalone product or release prerequisite.
-- How: Select the zero-shift, zero-lift, zero-pole candidate or repeat the same bound at a proven variant. Author only left UpLeg/Leg/Foot rotations at ticks 2–24, fixing complete poses at 1 and 25. Regenerate start/stop/reversal walkSlow-p25 from corrected 22.5 before floor baking. Add an explicit, narrow admission/refusal contract; preserve root, pelvis, right leg, support declarations, thresholds, other accepted bakes and default omission bytes. Prove source fidelity, seam/skin/contact guards, ordinary export and independent reload before receiving. The previously selected opt-in five-window flex profile remains a fallback if strict integration or visual review fails; it cannot count released ticks as planted passes.
-- Done when: An admitted graph passes the unchanged left planted drift, sole gap, whole skin, segment, knee, root, opposite-leg and four p25 seam limits, keeps outside-interval behavior exact, and passes independent receiving/replay. Refuse a failing integration with its exact witness instead of widening the trial silently.
-- Verification: Of 45 private trajectories (1,035 solved keys), 35 exceeded the actual stored 65-degree cap and 10 met physical limits and regenerated p25 seams. The selected zero-offset/pole candidate has maximum 21.273 mm drift, 6.881 mm gap, 17.258 mm whole-skin penetration and 59.063-degree stored correction; limits are 42.026 mm, 21.013 mm and 65 degrees. Four seam maxima are below 0.000261 mm skin, 0.000239 mm joint and 0.000010 degrees; transition penetration is 0.669 mm. Independent GLB reload, 436 native/WASM samples per host, 20 source references and six-step replay pass for the private four-clip specimen. No public recipe, 46-packet graph or 637-pose pilot was renewed.
-- After an accepted graph: renew all 46 packets/590 references and the 637-pose pilot, then finish collision, role/phase, scale/facing, f32 and visual checks before claiming full P7C qualification.
+- What: Receive the new opt-in walkSlow hip-Y tick-90 endpoint graph under the separately versioned consumer policy and finish the 637-pose P7C pilot. Retain the qualified singular/composed v1 and root/body graphs as controls.
+- Why: The opt-in [23-key producer contract](SKELETAL_STANCE_TRAJECTORY.md) fits the selected whole-stance correction without changing the older bakes. The root/body graph preserves the passing private idle representation but leaves a loop seam. The bounded [v4 endpoint recipe](SKELETAL_HIP_Y_LOOP_ENDPOINT.md) closes that seam in a new source-bound graph. Producer checks do not establish current consumer visual and full physical acceptance.
+- Where: [Endpoint producer qualification](HISTORY.md#p7c-hip-y-loop-endpoint-20261028), [recipe contract](SKELETAL_HIP_Y_LOOP_ENDPOINT.md), retained immutable graphs, and the consumer receiving course.
+- When: After this producer integration; separately from standalone product and release acceptance.
+- How: Receive endpoint bundle `81bc8d68` under opt-in V4 authored-root-delta.v1, renew native/WASM receiving/replay for all 46 packets/590 references and rerun the complete 637-pose pilot. Keep `679c238b` and `eb6006aa` as unchanged controls. Preserve anchor 0, pelvis/right leg, support, floor, skin, knee, seam and scale/facing limits. Inspect collision, role/phase, f32 and visual checks. The opt-in five-window flex profile remains a fallback if strict acceptance fails, and released ticks cannot count as planted passes.
+- Done when: Current-source receiving, replay and all 637 physical/visual poses pass the unchanged limits, or retain the exact failure and bounded next decision without claiming full P7C qualification.
+- Verification: The `eb6006aa` and `679c238b` controls remain retained. The endpoint GLB is `32837faf`; the normal producer graph `81bc8d68` contains 46 packets/590 references, 13 selected walkSlow endpoints, 577 exact other references, and 105 exact other selected clip occurrences. The GaimEngine test-owned reader admits all 46 packets. Producer quarter-pose, seam, physical bounds and source-only gates are recorded in [HISTORY](HISTORY.md#p7c-hip-y-loop-endpoint-20261028). Current-source V4 runtime replay, the full 637-pose renewal and visual acceptance remain open.
+- Recheck 2026-10-29: Current producer source/exporter identities still match the endpoint proof (`08e53891`/`8e7d7229`). A separate [private later-stance trial](HISTORY.md#p7c-later-stance-private-20261029) within left keys 46–56/65° and right keys 68–86/25° found no eligible candidate. The best serialized left and right specimens still had 180.590 and 284.008 mm planted drift against 42.026 mm; both failed floor/skin limits, and the right also had one old calibrated knee-sign inversion. Neither specimen changes the ordinary graph or closes consumer qualification.
+- Next bounded producer pass-down: Keep the same immutable graph, keys, caps, fixed root/pelvis/hip-Y endpoint, supports and physical limits. Trial one coupled, full-window left-sole objective over keys 46–56 that directly minimizes the maximum declared-sole drift while treating floor, whole skin and calibrated knee signs as hard constraints. Serialize/reload any candidate and prove all 70 sole vertices, adjacent quarter phases, fixed boundary keys, outside poses, exact unrelated channels and p50 transition controls. Stop with the exact limiting witness if no eligible candidate appears; do not integrate a private specimen, widen the cap or claim P7C completion. GaimEngine receiving/replay and the full pilot remain separately consumer-owned.
 
 ## Optional imported idle root/body receiving — producer graph ready
 
@@ -68,5 +69,14 @@ The public 0.2.1 preview is distinct from the newer local source candidate.
 - How: Unlink dependencies without targets; remove only proven owned scratch.
 - Done when: Named scratch is absent; shared dependencies and retained proof remain intact.
 - Verification: All three remain. Current inventory found two shared-dependency junctions in the D: candidate and no reparse points in the C: candidate. The checked two-junction unlink and single named-ZIP deletion were both rejected by command policy before execution on 2026-10-26. Do not bypass that restriction.
+
+The 2026-10-28 isolated hip-Y producer proof retained task-owned rebuildable
+outputs on D: after a passing verify: a failed global Cargo target (4.26 GB
+logical), passing per-crate targets (4.29 GB combined), offline npm dependencies
+(0.35 GB) and generated WASM output (0.18 GB). No owned process remains.
+These are separate from the source, final graph and retained proof. Review the
+exact paths in the [closeout record](HISTORY.md#p7c-hip-y-loop-endpoint-20261028)
+and obtain a new named deletion approval before cleanup; no automatic or broad
+removal is authorized.
 
 <!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone-p7c-continuation | change=record quiet installed control and bounded P7C refusals -->

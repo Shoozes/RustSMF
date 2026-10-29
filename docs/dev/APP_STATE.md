@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-10-26
+Last reviewed: 2026-10-28
 
 ## Standalone product boundary
 
@@ -11,6 +11,12 @@ optional consumer work, separate from product completion. The current candidate'
 isolation and installed-dialog evidence is tracked in
 [STANDALONE_ACCEPTANCE.md](STANDALONE_ACCEPTANCE.md); the public 0.2.1 preview
 retains its older, separately identified package.
+
+The optional skeletal producer now has an explicit v4 job for a single
+walkSlow hip-Y tick-90 loop endpoint. It uses the qualified root/body GLB
+and report as distinct inputs, refuses stale lineage, and retains v1-v3 job
+behavior. [The endpoint contract](SKELETAL_HIP_Y_LOOP_ENDPOINT.md) owns its
+limits; engine receiving and P7C physical/visual acceptance remain separate.
 
 ## Editing and interchange reliability
 
@@ -250,6 +256,14 @@ one/two disjoint pairs; [`rotationSpanBake`](SKELETAL_ROTATION_SPAN.md) adds one
 [boundary sampling](SKELETAL_EXPORT_BOUNDARY.md) preserve unselected components;
 source references stay independent.
 Root/unselected content stays unchanged except declared transition lift.
+The opt-in [`stanceTrajectoryBake`](SKELETAL_STANCE_TRAJECTORY.md) adds the
+versioned 23-key left walkSlow stance, bounded to 65 degrees, and rebuilds its
+three p25 transitions. Omission preserves the prior bytes; private P7C
+qualification remains separate.
+The separate [walkSlow root/body CLI](SKELETAL_WALK_ROOT_BODY.md) optionally
+derives a private vertical-carrier GLB and its twelve walkSlow transitions from
+an immutable conditioned source. It leaves ordinary v3 job schemas and omitted
+option behavior unchanged; GaimEngine V4 receiving remains independent.
 
 ## Architecture Ownership
 

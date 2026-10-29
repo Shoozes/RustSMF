@@ -11,8 +11,9 @@ import {
 import { loadGLB } from '../src/loaders/glb';
 import { MAX_MODEL_INPUT_BYTES } from '../src/utils/modelFormat';
 import { disposeThreeObject } from '../src/utils/threeDisposal';
-import { conditionSkeletalModel, CONDITIONING_NLERP_MODE, measureConditioningDifferences } from '../src/utils/skeletalConditioning';
-import { TWO_KEY_EXPORT_BOUNDARY_POLICY, type TwoKeyExportBoundary } from '../src/utils/skeletalTwoKeyExportBoundary';
+import { conditionSkeletalModel, CONDITIONING_NLERP_MODE, measureConditioningDifferences, type ConditioningReport } from '../src/utils/skeletalConditioning';
+import { bakeHipYLoopEndpoint, measureHipYLoopEndpointFidelity } from '../src/utils/skeletalHipYLoopEndpoint';
+import { TWO_KEY_EXPORT_BOUNDARY_POLICY, twoKeyExportReports, type TwoKeyExportBoundary } from '../src/utils/skeletalTwoKeyExportBoundary';
 import {
   prepareSkeletalExport,
   SKELETAL_ASSET_SCHEMA,
@@ -24,6 +25,7 @@ import {
   SKELETAL_EXPORT_JOB_SCHEMA,
   SKELETAL_EXPORT_JOB_V2_SCHEMA,
   SKELETAL_EXPORT_JOB_V3_SCHEMA,
+  SKELETAL_EXPORT_JOB_V4_SCHEMA,
   selectSkeletalExportClips,
   type SkeletalExportJob,
 } from '../src/utils/skeletalExportJob';
@@ -88,7 +90,9 @@ function readInput(filePath: string, bytes: Uint8Array): SourceInput {
 
 function settingsDocument(job: SkeletalExportJob): Record<string, unknown> {
   const document: Record<string, unknown> = {
-    schema: job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA
+    schema: job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA
+      ? 'rustsmf.skeletal-export-settings.v4'
+      : job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA
       ? 'rustsmf.skeletal-export-settings.v3'
       : job.$schema === SKELETAL_EXPORT_JOB_V2_SCHEMA
       ? 'rustsmf.skeletal-export-settings.v2'
@@ -119,17 +123,19 @@ function settingsDocument(job: SkeletalExportJob): Record<string, unknown> {
     document.clipSelection = { mode: 'explicit-exact-source-name', clipIds: job.export.clipIds };
   }
   if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA) document.conditioning = job.conditioning;
-  if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.export.twoKeyExportBoundary) {
+  if (job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA) document.endpoint = job.endpoint;
+  if ((job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA || job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA) && job.export.twoKeyExportBoundary) {
     document.twoKeyExportSampling = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY,
       unselectedKeys: 'pre-authoring canonical chord at existing nominal tick/60',
       selectedKeys: 'authored re-imported GLB at existing nominal tick/60',
       references: 'authored re-imported GLB; unchanged independent phases and tolerances' };
-    if (job.conditioning.rotationSpanBake) document.rotationSpanExportSampling = {
+    if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.rotationSpanBake) document.rotationSpanExportSampling = {
       selectedRotations: 'only declared joint/tick rotations from authored re-imported GLB at nominal tick/60',
       preservedComponents: 'all other transform components, keys and root samples from restored baseline',
     };
   }
-  if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.mode === CONDITIONING_NLERP_MODE) {
+  if ((job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.mode === CONDITIONING_NLERP_MODE)
+    || job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA) {
     document.animation = 'preserve float32 60 Hz sampled poses; canonical chord CUBICSPLINE joint rotations normalize to shortest-arc NLERP; translation, scale and locomotion yaw remain LINEAR with continuous yaw winding';
   }
   return document;
@@ -202,9 +208,11 @@ export async function runSkeletalExportJob(
         ...(conditioned.report.twoKeyRotationBake ? { report: conditioned.report.twoKeyRotationBake }
           : conditioned.report.twoKeyRotationBakes ? { reports: conditioned.report.twoKeyRotationBakes }
           : conditioned.report.rotationSpanBake ? { spanReport: conditioned.report.rotationSpanBake }
-          : conditioned.report.pelvisLayerBake ? { pelvisReport: conditioned.report.pelvisLayerBake } : fail('Missing rotation authoring reports.')),
+          : conditioned.report.pelvisLayerBake ? { pelvisReport: conditioned.report.pelvisLayerBake }
+          : conditioned.report.stanceTrajectoryBake ? { stanceReport: conditioned.report.stanceTrajectoryBake } : fail('Missing rotation authoring reports.')),
         ...(conditioned.report.rotationSpanBake ? { spanReport: conditioned.report.rotationSpanBake } : {}),
         ...(conditioned.report.pelvisLayerBake ? { pelvisReport: conditioned.report.pelvisLayerBake } : {}),
+        ...(conditioned.report.stanceTrajectoryBake ? { stanceReport: conditioned.report.stanceTrajectoryBake } : {}),
       };
       disposeThreeObject(loaded.root); loaded = undefined;
       loaded = await loadGLB(bytesToArrayBuffer(conditioned.bytes));
@@ -214,12 +222,58 @@ export async function runSkeletalExportJob(
       const report = normalizedSkeletalJsonBytes({ ...conditioned.report,
         sourceModelIdentitySha256: source.sha256, originalSourceIdentitySha256: input.sha256,
         recipeIdentitySha256: sha256(recipe), producer,
-        differences: measureConditioningDifferences(original, loaded, job.conditioning.clipIds,job.conditioning.plantedIdle?.clipId,job.conditioning.terminalRotationClosure,job.conditioning.twoKeyRotationBake,job.conditioning.twoKeyRotationBakes,job.conditioning.rotationSpanBake,job.conditioning.pelvisLayerBake,conditioned.report.pelvisLayerBake),
+        differences: measureConditioningDifferences(original, loaded, job.conditioning.clipIds,job.conditioning.plantedIdle?.clipId,job.conditioning.terminalRotationClosure,job.conditioning.twoKeyRotationBake,job.conditioning.twoKeyRotationBakes,job.conditioning.rotationSpanBake,job.conditioning.pelvisLayerBake,conditioned.report.pelvisLayerBake,job.conditioning.stanceTrajectoryBake),
       });
       throwIfAborted(signal);
       conditioning = await publishConditionedSkeletalInput(source.bytes, recipe, report, { generationRoot: job.output.conditioningRoot, signal });
       inputs.push({ role: 'original-skinned-model', sha256: input.sha256, bytes: input.bytes.byteLength },
         { role: 'conditioning-recipe', sha256: sha256(recipe), bytes: recipe.byteLength },
+        { role: 'conditioning-report', sha256: sha256(report), bytes: report.byteLength });
+    }
+    if (job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA) {
+      const priorBytes = await readFileBounded(job.input.conditioningReport, SKELETAL_EXPORT_JOB_LIMIT, signal);
+      const originalBytes = await readFileBounded(job.input.originalSkinnedModel, MAX_MODEL_INPUT_BYTES, signal);
+      throwIfAborted(signal);
+      let prior: ConditioningReport & { sourceModelIdentitySha256: string; originalSourceIdentitySha256: string; recipeIdentitySha256: string; differences?: unknown };
+      try { prior = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(priorBytes)) as typeof prior; }
+      catch { fail('v4 requires a valid UTF-8 conditioning report.'); }
+      if (!prior || typeof prior !== 'object' || !prior.recipe || typeof prior.recipe !== 'object'
+        || !Array.isArray(prior.recipe.clipIds)) fail('v4 requires a complete conditioning report.');
+      const priorRecipe = normalizedSkeletalJsonBytes(prior.recipe);
+      if (prior.schema !== 'rustsmf.skeletal-conditioning.v1' || prior.sourceModelIdentitySha256 !== input.sha256
+        || prior.originalSourceIdentitySha256 !== sha256(originalBytes) || prior.recipeIdentitySha256 !== sha256(priorRecipe)
+        || prior.recipe.mode !== CONDITIONING_NLERP_MODE || prior.recipe.locomotionRootJoint !== job.export.rootJoint
+        || prior.recipe.sourceRootJoint !== job.endpoint.joint || !prior.recipe.clipIds.includes(job.endpoint.clipId)
+        || !Array.isArray(prior.clips) || !prior.clips.some(c => c.id === job.endpoint.clipId && c.durationTicks === 90))
+        fail('v4 endpoint inputs lack matching conditioned source, original source or NLERP report provenance.');
+      const reports = prior.twoKeyRotationBakes;
+      const context: TwoKeyExportBoundary = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY,
+        ...(reports ? { reports } : {}),
+        ...(prior.rotationSpanBake ? { spanReport: prior.rotationSpanBake } : {}),
+        ...(prior.pelvisLayerBake ? { pelvisReport: prior.pelvisLayerBake } : {}),
+        ...(prior.stanceTrajectoryBake ? { stanceReport: prior.stanceTrajectoryBake } : {}) } as TwoKeyExportBoundary;
+      twoKeyExportReports(context);
+      const baked = bakeHipYLoopEndpoint(input.bytes, job.endpoint);
+      source = readInput(input.path, baked.bytes);
+      original = loaded; loaded = undefined;
+      loaded = await loadGLB(bytesToArrayBuffer(baked.bytes));
+      const fidelity = measureHipYLoopEndpointFidelity(original, loaded, job.endpoint, baked.report);
+      disposeThreeObject(loaded.root); loaded = undefined;
+      loaded = await loadGLB(bytesToArrayBuffer(baked.bytes));
+      const recipe = normalizedSkeletalJsonBytes(job.endpoint);
+      const renewed: Record<string, unknown> = { ...prior, sourceModelIdentitySha256: source.sha256,
+        producer, differencePolicy: prior.differencePolicy + ' Explicit postconditioned walkSlow hip-Y tick-90 endpoint correction; every earlier quarter pose and all root/rotation/mesh channels retain source fidelity.',
+        preEndpointConditioningReportSha256: sha256(priorBytes), preEndpointSourceModelIdentitySha256: input.sha256,
+        preEndpointDifferences: prior.differences, hipYLoopEndpointBake: baked.report, hipYLoopEndpointFidelity: fidelity };
+      delete renewed.differences;
+      const report = normalizedSkeletalJsonBytes(renewed);
+      conditioning = await publishConditionedSkeletalInput(source.bytes, recipe, report, { generationRoot: job.output.conditioningRoot, signal });
+      twoKeyExportBoundary = { ...context, endpointReport: baked.report };
+      inputs.push({ role: 'original-skinned-model', sha256: sha256(originalBytes), bytes: originalBytes.byteLength },
+        { role: 'conditioning-recipe', sha256: sha256(priorRecipe), bytes: priorRecipe.byteLength },
+        { role: 'pre-endpoint-conditioning-report', sha256: sha256(priorBytes), bytes: priorBytes.byteLength },
+        { role: 'pre-endpoint-skinned-model', sha256: input.sha256, bytes: input.bytes.byteLength },
+        { role: 'hip-y-loop-endpoint-recipe', sha256: sha256(recipe), bytes: recipe.byteLength },
         { role: 'conditioning-report', sha256: sha256(report), bytes: report.byteLength });
     }
     const clips = job.$schema !== SKELETAL_EXPORT_JOB_SCHEMA
@@ -240,12 +294,21 @@ export async function runSkeletalExportJob(
     if (selectedPelvis && clips.some(c => c.name === selectedPelvis.clipId)) exportBoundary = exportBoundary
       ? { ...exportBoundary, pelvisReport: selectedPelvis }
       : { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, pelvisReport: selectedPelvis };
+    const selectedStance = twoKeyExportBoundary?.stanceReport;
+    if (selectedStance && clips.some(c => c.name === selectedStance.clipId)) exportBoundary = exportBoundary
+      ? { ...exportBoundary, stanceReport: selectedStance }
+      : { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, stanceReport: selectedStance };
+    const selectedEndpoint = twoKeyExportBoundary?.endpointReport;
+    if (selectedEndpoint && clips.some(c => c.name === selectedEndpoint.clipId)) exportBoundary = exportBoundary
+      ? { ...exportBoundary, endpointReport: selectedEndpoint }
+      : { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, endpointReport: selectedEndpoint };
     const prepared = await prepareSkeletalExport({ ...loaded, clips }, {
       sourceIdentitySha256: source.sha256,
       rootJoint: job.export.rootJoint,
       signal,
       ...(exportBoundary ? { twoKeyExportBoundary: exportBoundary } : {}),
-      ...(job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.mode === CONDITIONING_NLERP_MODE
+      ...(((job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.mode === CONDITIONING_NLERP_MODE)
+        || job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA)
         ? { conditionedRotationMode: CONDITIONING_NLERP_MODE } : {}),
     });
     throwIfAborted(signal);

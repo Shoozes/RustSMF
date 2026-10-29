@@ -7,12 +7,34 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { SKELETAL_EXPORT_JOB_SCHEMA, SKELETAL_EXPORT_JOB_V2_SCHEMA, SKELETAL_EXPORT_JOB_V3_SCHEMA } from './skeletalExportJob';
+import { SKELETAL_EXPORT_JOB_V4_SCHEMA } from './skeletalExportJob';
+import { HIP_Y_LOOP_ENDPOINT_POLICY } from './skeletalHipYLoopEndpoint';
 import { CONDITIONING_MODE, CONDITIONING_NLERP_MODE } from './skeletalConditioning';
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../');
 const sourceRoot = path.join(repositoryRoot, 'source');
 const cliPath = path.join(sourceRoot, 'frontend', 'scripts', 'skeletal-export-cli.ts');
 const signalRobotPath = path.join(repositoryRoot, 'examples', 'rustsmf-demo.glb');
+
+test('v4 refuses mismatched report provenance before publishing any generation', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'skeletal-v4-refusal-'));
+  const original = path.join(root, 'original.glb'), report = path.join(root, 'report.json'), jobPath = path.join(root, 'job.json');
+  try {
+    await writeFile(original, await readFile(signalRobotPath));
+    await writeFile(report, JSON.stringify({ schema: 'rustsmf.skeletal-conditioning.v1', sourceModelIdentitySha256: '0'.repeat(64) }));
+    await writeFile(jobPath, JSON.stringify({ $schema: SKELETAL_EXPORT_JOB_V4_SCHEMA,
+      input: { skinnedModel: signalRobotPath, originalSkinnedModel: original, conditioningReport: report },
+      export: { rootJoint: 'LocomotionRoot', units: 'meters', upAxis: '+Y', forwardAxis: '+Z', handedness: 'right', ticksPerSecond: 60,
+        rootMotion: 'separate-track', clipIds: ['Wave'], twoKeyExportBoundary: 'preserve-unselected-emitted-keys.v1' },
+      endpoint: { policy: HIP_Y_LOOP_ENDPOINT_POLICY, clipId: 'walkSlow', joint: 'mixamorigHips', maxCorrectionMeters: .24 },
+      output: { generationRoot: path.join(root, 'generations'), conditioningRoot: path.join(root, 'conditioned') },
+    }));
+    const result = invoke(jobPath);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /complete conditioning report/);
+    assert.deepEqual((await readdir(root)).sort(), ['job.json', 'original.glb', 'report.json']);
+  } finally { await rm(root, { recursive: true, force: true }); }
+});
 
 function invoke(jobPath: string): SpawnSyncReturns<string> {
   return spawnSync(process.execPath, ['--import', 'tsx', cliPath, '--job', jobPath], {

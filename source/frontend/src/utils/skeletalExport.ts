@@ -4,6 +4,7 @@ import { trackInterpolation } from './animationTrackInterpolation';
 import { CONDITIONING_NLERP_MODE, validateChordRotation } from './skeletalChordRotation';
 import { twoKeyExportReports, twoKeyExportBaseline, type TwoKeyExportBoundary } from './skeletalTwoKeyExportBoundary';
 import { restorePelvisLayer, type PelvisLayerReport } from './skeletalPelvisLayer';
+import { STANCE_TRAJECTORY_POLICY } from './skeletalStanceTrajectory';
 
 export const SKELETAL_ASSET_SCHEMA = 'gaim.skeletal-asset.v1';
 export const SKELETAL_MAPPING_SCHEMA = 'gaim.skeletal-export-mapping.v1';
@@ -621,7 +622,8 @@ export async function prepareSkeletalExport(
   if (options.conditionedRotationMode !== undefined && options.conditionedRotationMode !== CONDITIONING_NLERP_MODE) fail('Unsupported conditioned rotation mode.');
   const boundaryReports = options.twoKeyExportBoundary ? twoKeyExportReports(options.twoKeyExportBoundary) : [];
   if (options.twoKeyExportBoundary && (options.conditionedRotationMode !== CONDITIONING_NLERP_MODE
-    || boundaryReports.some(r => !loaded.clips.some(c => c.name === r.clipId)))) fail('Two-key export-boundary sampling requires its selected conditioned NLERP clip.');
+    || boundaryReports.some(r => !loaded.clips.some(c => c.name === r.clipId))
+    || (options.twoKeyExportBoundary.endpointReport && !loaded.clips.some(c => c.name === options.twoKeyExportBoundary!.endpointReport!.clipId)))) fail('Two-key export-boundary sampling requires its selected conditioned NLERP clip.');
   if (!/^[a-f0-9]{64}$/.test(options.sourceIdentitySha256)) {
     fail('Source identity must be a lowercase SHA-256 digest.');
   }
@@ -735,7 +737,8 @@ export async function prepareSkeletalExport(
 
   const boneIndices = new Map(ordered.map((bone, index) => [bone, index]));
   const bindings = loaded.clips.map(clip => buildClipBindings(clip, loaded.root, boneIndices, rootBoneIndex, options.conditionedRotationMode));
-  const boundaryBaselines = new Map(loaded.clips.filter(c => boundaryReports.some(r => r.clipId === c.name)).map(clip => [clip.name,
+  const boundaryBaselines = new Map(loaded.clips.filter(c => boundaryReports.some(r => r.clipId === c.name)
+    || options.twoKeyExportBoundary?.endpointReport?.clipId === c.name).map(clip => [clip.name,
     twoKeyExportBaseline(clip, options.twoKeyExportBoundary!, sourceBones, [options.rootJoint], options.signal, loaded.root,
       Math.max(...positions.map(p => p[1])) - Math.min(...positions.map(p => p[1])))]));
   const pelvisInputs = new Map(loaded.clips.flatMap(clip => {
@@ -774,7 +777,9 @@ export async function prepareSkeletalExport(
     const baseline = boundaryBaselines.get(clip.name);
     const reports = boundaryReports.filter(r => r.clipId === clip.name);
     const span = reports.find(r => r.policy === 'bounded-interior-rotation-span.v1');
+    const stance = reports.find(r => r.policy === STANCE_TRAJECTORY_POLICY);
     const pelvis = reports.find((r): r is PelvisLayerReport => r.policy === 'bounded-two-key-pelvis-layer.v1');
+    const endpoint = options.twoKeyExportBoundary?.endpointReport?.clipId === clip.name ? options.twoKeyExportBoundary.endpointReport : undefined;
     const priorLayer = pelvisInputs.get(clip.name);
     const selectedTicks = new Set(reports.filter(r => r.policy === 'two-adjacent-interior-rotations.v1').flatMap(r => r.ticks));
     if (baseline) {
@@ -795,12 +800,12 @@ export async function prepareSkeletalExport(
       const { mixer, action } = createMixer(loaded.root, priorLayer);
       try {
         for (const tick of sampleTicks) {
-          if (!selectedTicks.has(tick) && !span?.ticks.includes(tick)) continue;
+          if (!selectedTicks.has(tick) && !span?.ticks.includes(tick) && !stance?.ticks.includes(tick)) continue;
           throwIfAborted(options.signal);
           setMixerTime(mixer, action, tick / SKELETAL_EXPORT_TICK_RATE); loaded.root.updateMatrixWorld(true);
           const sampled = capturePose(loaded.root, rootInverse, ordered, parentByBone, exportIndices, rootBoneIndex, bindGlobals, tick, clip.name);
           if (selectedTicks.has(tick)) poses.set(tick, sampled);
-          else for (const correction of span!.corrections) {
+          else for (const correction of [...(span?.ticks.includes(tick) ? span.corrections : []), ...(stance?.ticks.includes(tick) ? stance.corrections : [])]) {
             const joint = ordered.findIndex(b => b.name === correction.joint), preserved = poses.get(tick)!;
             preserved.localTransforms[joint] = { ...preserved.localTransforms[joint], rotation: sampled.localTransforms[joint].rotation };
           }
@@ -813,9 +818,11 @@ export async function prepareSkeletalExport(
     try {
       for (const tick of sampleTicks) {
         const spanTick = span?.ticks.includes(tick);
+        const stanceTick = stance?.ticks.includes(tick);
         const pelvisTick = pelvis?.ticks.includes(tick);
-        if (priorLayer && !pelvisTick) continue;
-        if (poses.has(tick) && !spanTick && !pelvisTick) continue;
+        const endpointTick = Boolean(endpoint && tick === endpoint.tick);
+        if (priorLayer && !pelvisTick && !endpointTick) continue;
+        if (poses.has(tick) && !spanTick && !stanceTick && !pelvisTick && !endpointTick) continue;
         throwIfAborted(options.signal);
         setMixerTime(mixer, action, tick / SKELETAL_EXPORT_TICK_RATE);
         loaded.root.updateMatrixWorld(true);
@@ -830,15 +837,22 @@ export async function prepareSkeletalExport(
           tick,
           clip.name,
         );
-        if (((spanTick && span) || pelvisTick) && poses.has(tick)) {
+        if (((spanTick && span) || (stanceTick && stance) || pelvisTick || endpointTick) && poses.has(tick)) {
           const preserved = poses.get(tick)!;
-          for (const correction of [...(spanTick && span ? span.corrections : []), ...(pelvisTick && pelvis ? pelvis.corrections : [])]) {
+          for (const correction of [...(spanTick && span ? span.corrections : []), ...(stanceTick && stance ? stance.corrections : []), ...(pelvisTick && pelvis ? pelvis.corrections : [])]) {
             const joint = ordered.findIndex(b => b.name === correction.joint);
             preserved.localTransforms[joint] = { ...preserved.localTransforms[joint], rotation: sampled.localTransforms[joint].rotation };
           }
           if (pelvisTick && pelvis) {
             const joint = ordered.findIndex(b => b.name === pelvis.pelvisJoint);
             preserved.localTransforms[joint] = { ...preserved.localTransforms[joint], translation: sampled.localTransforms[joint].translation };
+          }
+          if (endpointTick && endpoint) {
+            const joint = ordered.findIndex(b => b.name === endpoint.joint);
+            if (joint < 0) fail('Endpoint export joint is missing.');
+            const translation = [...preserved.localTransforms[joint].translation] as [number, number, number];
+            translation[1] = sampled.localTransforms[joint].translation[1];
+            preserved.localTransforms[joint] = { ...preserved.localTransforms[joint], translation };
           }
         } else poses.set(tick, sampled);
         workSinceYield += 1;

@@ -4,9 +4,10 @@ import { rotationDifferenceDegrees, type TerminalRotationClosureRecipe } from '.
 import { parseTwoKeyRotationSelection, type TwoKeyRotationBakeRecipe } from './skeletalTwoKeyRotation';
 import { parseRotationSpanBake, assertDisjointRotationSpan, type RotationSpanBakeRecipe } from './skeletalRotationSpan';
 import { parsePelvisLayer, pelvisLayerRecipe, restorePelvisLayer, type PelvisLayerRecipe, type PelvisLayerReport } from './skeletalPelvisLayer';
+import { assertDisjointStanceTrajectory, parseStanceTrajectory, type StanceTrajectoryRecipe } from './skeletalStanceTrajectory';
 
 /** Original conversion differences remain separate from receiving tolerances. */
-export function measureConditioningDifferences(original: LoadedModel, derived: LoadedModel, clipIds: string[], authoredIdleId?: string, terminal?: TerminalRotationClosureRecipe, twoKey?: TwoKeyRotationBakeRecipe, twoKeys?: readonly TwoKeyRotationBakeRecipe[], spanRecipe?: RotationSpanBakeRecipe, pelvisRecipe?: PelvisLayerRecipe, pelvisReport?: PelvisLayerReport) {
+export function measureConditioningDifferences(original: LoadedModel, derived: LoadedModel, clipIds: string[], authoredIdleId?: string, terminal?: TerminalRotationClosureRecipe, twoKey?: TwoKeyRotationBakeRecipe, twoKeys?: readonly TwoKeyRotationBakeRecipe[], spanRecipe?: RotationSpanBakeRecipe, pelvisRecipe?: PelvisLayerRecipe, pelvisReport?: PelvisLayerReport, stanceRecipe?: StanceTrajectoryRecipe) {
   let checkedDerived = derived;
   if (pelvisRecipe !== undefined || pelvisReport !== undefined) {
     const originalRoots = original.skeleton!.bones.filter(b => !original.skeleton!.bones.includes(b.parent as THREE.Bone)), roots = derived.skeleton!.bones.filter(b => !derived.skeleton!.bones.includes(b.parent as THREE.Bone));
@@ -31,6 +32,12 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
     if (terminal?.clipId === span.clipId && span.startTick + span.rotations[0].values.length >= terminal.startTick
       && terminal.joints.some(j => span.rotations.some(r => r.joint === j))) throw new Error('rotationSpanBake conflicts with terminal source fidelity.');
     selections.push(span);
+  }
+  const stance = stanceRecipe === undefined ? undefined : parseStanceTrajectory(stanceRecipe, clipIds, clipIds);
+  if (stance) {
+    if (stance.clipId === authoredIdleId) throw new Error('stanceTrajectoryBake cannot use the idle source-fidelity exception.');
+    assertDisjointStanceTrajectory(stance, selections.filter(s => s !== span), span);
+    selections.push(stance);
   }
   function sample(model: LoadedModel, clip: THREE.AnimationClip, tick: number, restore?: Map<string, number[]>) {
     const mixer = new THREE.AnimationMixer(model.root), action = mixer.clipAction(clip);
@@ -81,7 +88,7 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
           const before = left.rotations.get(rotation.joint), actual = checked.rotations.get(rotation.joint);
           const expected = rotation.values[tick - selection.startTick];
           if (!before || !actual || rotationDifferenceDegrees(expected, actual) > 1e-4
-            || rotationDifferenceDegrees(before, actual) > selection.maxRotationDegrees) throw new Error(`Invalid ${selection === span ? 'rotation-span' : 'two-key'} source-fidelity rotation for ${rotation.joint}.`);
+            || rotationDifferenceDegrees(before, actual) > selection.maxRotationDegrees) throw new Error(`Invalid ${selection === stance ? 'stance-trajectory' : selection === span ? 'rotation-span' : 'two-key'} source-fidelity rotation for ${rotation.joint}.`);
           restore.set(rotation.joint, before);
         }
       }
@@ -103,6 +110,6 @@ export function measureConditioningDifferences(original: LoadedModel, derived: L
     }
     if (![maximumPositionMeters, maximumJointMatrix, maximumTickJointMatrix, maximumEndpointJointMatrix, maximumPreservedTickJointMatrix].every(Number.isFinite) || maximumPreservedTickJointMatrix > 1e-4) throw new Error(`Conditioning ${clipId} failed original tick-pose preservation (${maximumPreservedTickJointMatrix}).`);
     return { clipId, phases, maximumPositionMeters, maximumJointMatrix, maximumTickJointMatrix, maximumEndpointJointMatrix, maximumPreservedTickJointMatrix,
-      differenceKind: clipId === pelvisRecipe?.clipId ? 'explicit bounded pelvis/leg layer; reversed before older selections and all-joint fidelity' : clipId === authoredIdleId ? 'explicit planted idle authoring; endpoints retain source fidelity' : clipId === span?.clipId ? 'explicit bounded rotation-span authoring; only declared local rotations and existing selections excepted' : clipId === twoKey?.clipId ? 'explicit two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : selected.length ? 'explicit composed two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : clipId === terminal?.clipId ? 'explicit terminal rotation authoring; all other tick transforms retain source fidelity' : 'sampled source tick preservation' };
+      differenceKind: clipId === stance?.clipId ? 'explicit bounded left-stance trajectory; only declared local rotations and existing selections excepted' : clipId === pelvisRecipe?.clipId ? 'explicit bounded pelvis/leg layer; reversed before older selections and all-joint fidelity' : clipId === authoredIdleId ? 'explicit planted idle authoring; endpoints retain source fidelity' : clipId === span?.clipId ? 'explicit bounded rotation-span authoring; only declared local rotations and existing selections excepted' : clipId === twoKey?.clipId ? 'explicit two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : selected.length ? 'explicit composed two-key rotation authoring; only declared local rotations and existing terminal selection excepted' : clipId === terminal?.clipId ? 'explicit terminal rotation authoring; all other tick transforms retain source fidelity' : 'sampled source tick preservation' };
   });
 }

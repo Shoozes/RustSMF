@@ -7,10 +7,13 @@ import { parseTwoKeyRotationSelection } from './skeletalTwoKeyRotation';
 import { TWO_KEY_EXPORT_BOUNDARY_POLICY } from './skeletalTwoKeyExportBoundary';
 import { parseRotationSpanBake, assertDisjointRotationSpan } from './skeletalRotationSpan';
 import { parsePelvisLayer } from './skeletalPelvisLayer';
+import { assertDisjointStanceTrajectory, parseStanceTrajectory } from './skeletalStanceTrajectory';
+import { parseHipYLoopEndpoint, type HipYLoopEndpointRecipe } from './skeletalHipYLoopEndpoint';
 
 export const SKELETAL_EXPORT_JOB_SCHEMA = 'rustsmf.skeletal-export-job.v1';
 export const SKELETAL_EXPORT_JOB_V2_SCHEMA = 'rustsmf.skeletal-export-job.v2';
 export const SKELETAL_EXPORT_JOB_V3_SCHEMA = 'rustsmf.skeletal-export-job.v3';
+export const SKELETAL_EXPORT_JOB_V4_SCHEMA = 'rustsmf.skeletal-export-job.v4';
 export const SKELETAL_EXPORT_JOB_LIMIT = 1024 * 1024;
 
 interface SkeletalExportJobBase {
@@ -43,7 +46,14 @@ export interface SkeletalExportJobV3 extends SkeletalExportJobBase {
   conditioning: ConditioningRecipe;
   output: SkeletalExportJobBase['output'] & { conditioningRoot: string };
 }
-export type SkeletalExportJob = SkeletalExportJobV1 | SkeletalExportJobV2 | SkeletalExportJobV3;
+export interface SkeletalExportJobV4 extends SkeletalExportJobBase {
+  $schema: typeof SKELETAL_EXPORT_JOB_V4_SCHEMA;
+  input: SkeletalExportJobBase['input'] & { conditioningReport: string; originalSkinnedModel: string };
+  export: SkeletalExportJobBase['export'] & { clipIds: string[]; twoKeyExportBoundary: typeof TWO_KEY_EXPORT_BOUNDARY_POLICY };
+  endpoint: HipYLoopEndpointRecipe;
+  output: SkeletalExportJobBase['output'] & { conditioningRoot: string };
+}
+export type SkeletalExportJob = SkeletalExportJobV1 | SkeletalExportJobV2 | SkeletalExportJobV3 | SkeletalExportJobV4;
 
 export function selectSkeletalExportClips<T extends { name: string }>(
   sourceClips: readonly T[],
@@ -108,12 +118,20 @@ export function parseSkeletalExportJobDocument(
   const isV1 = schema === SKELETAL_EXPORT_JOB_SCHEMA;
   const isV2 = schema === SKELETAL_EXPORT_JOB_V2_SCHEMA;
   const isV3 = schema === SKELETAL_EXPORT_JOB_V3_SCHEMA;
-  const selectsClips = isV2 || isV3;
-  if (!isV1 && !selectsClips) fail(`Skeletal export job schema must be ${SKELETAL_EXPORT_JOB_SCHEMA}, ${SKELETAL_EXPORT_JOB_V2_SCHEMA} or ${SKELETAL_EXPORT_JOB_V3_SCHEMA}.`);
-  exactKeys(document, ['$schema', 'input', 'export', 'output', ...(isV3 ? ['conditioning'] : [])], 'Skeletal export job');
+  const isV4 = schema === SKELETAL_EXPORT_JOB_V4_SCHEMA;
+  const selectsClips = isV2 || isV3 || isV4;
+  if (!isV1 && !selectsClips) fail(`Skeletal export job schema must be ${SKELETAL_EXPORT_JOB_SCHEMA}, ${SKELETAL_EXPORT_JOB_V2_SCHEMA}, ${SKELETAL_EXPORT_JOB_V3_SCHEMA} or ${SKELETAL_EXPORT_JOB_V4_SCHEMA}.`);
+  exactKeys(document, ['$schema', 'input', 'export', 'output', ...(isV3 ? ['conditioning'] : []), ...(isV4 ? ['endpoint'] : [])], 'Skeletal export job');
   const input = record(document.input, 'job.input');
-  exactKeys(input, ['skinnedModel'], 'job.input');
+  exactKeys(input, ['skinnedModel', ...(isV4 ? ['conditioningReport', 'originalSkinnedModel'] : [])], 'job.input');
   const skinnedModel = absolutePath(input.skinnedModel, 'job.input.skinnedModel', paths);
+  const conditioningReport = isV4 ? absolutePath(input.conditioningReport, 'job.input.conditioningReport', paths) : undefined;
+  const originalSkinnedModel = isV4 ? absolutePath(input.originalSkinnedModel, 'job.input.originalSkinnedModel', paths) : undefined;
+  if (conditioningReport && (path.extname(conditioningReport).toLocaleLowerCase('en-US') !== '.json'
+    || paths.comparisonKey(conditioningReport) === paths.comparisonKey(skinnedModel)
+    || paths.comparisonKey(conditioningReport) === paths.comparisonKey(originalSkinnedModel!)
+    || paths.comparisonKey(originalSkinnedModel!) === paths.comparisonKey(skinnedModel)
+    || path.extname(originalSkinnedModel!).toLocaleLowerCase('en-US') !== '.glb')) fail('v4 inputs must be three distinct absolute .glb/.json paths.');
   if (path.extname(skinnedModel).toLocaleLowerCase('en-US') !== '.glb') {
     fail('job.input.skinnedModel must name one self-contained .glb. FBX, external glTF sidecars, and other formats are not admitted by this exporter slice.');
   }
@@ -124,7 +142,7 @@ export function parseSkeletalExportJobDocument(
   exactKeys(exportSettings, [
     'rootJoint', 'units', 'upAxis', 'forwardAxis', 'handedness', 'ticksPerSecond', 'rootMotion',
     ...(selectsClips ? ['clipIds'] : []),
-    ...(isV3 && Object.prototype.hasOwnProperty.call(exportSettings, 'twoKeyExportBoundary') ? ['twoKeyExportBoundary'] : []),
+    ...((isV3 && Object.prototype.hasOwnProperty.call(exportSettings, 'twoKeyExportBoundary')) || isV4 ? ['twoKeyExportBoundary'] : []),
   ], 'job.export');
   if (typeof exportSettings.rootJoint !== 'string' || !exportSettings.rootJoint.trim()) {
     fail('job.export.rootJoint must name the source skeleton root joint.');
@@ -154,7 +172,7 @@ export function parseSkeletalExportJobDocument(
   const outputKeys = Object.prototype.hasOwnProperty.call(output, 'currentPointer')
     ? ['generationRoot', 'currentPointer']
     : ['generationRoot'];
-  exactKeys(output, [...outputKeys, ...(isV3 ? ['conditioningRoot'] : [])], 'job.output');
+  exactKeys(output, [...outputKeys, ...(isV3 || isV4 ? ['conditioningRoot'] : [])], 'job.output');
   const generationRoot = absolutePath(output.generationRoot, 'job.output.generationRoot', paths);
   const currentPointer = Object.prototype.hasOwnProperty.call(output, 'currentPointer')
     ? absolutePath(output.currentPointer, 'job.output.currentPointer', paths)
@@ -181,9 +199,19 @@ export function parseSkeletalExportJobDocument(
       ...(currentPointer ? { currentPointer } : {}),
     },
   };
+  if (isV4) {
+    if (common.export.rootJoint !== 'LocomotionRoot' || exportSettings.twoKeyExportBoundary !== TWO_KEY_EXPORT_BOUNDARY_POLICY)
+      fail('v4 endpoint export requires the conditioned locomotion root and explicit boundary policy.');
+    if (common.output.currentPointer) fail('Conditioned candidate jobs omit the current pointer.');
+    return { ...common, $schema: SKELETAL_EXPORT_JOB_V4_SCHEMA,
+      input: { skinnedModel, conditioningReport: conditioningReport!, originalSkinnedModel: originalSkinnedModel! },
+      export: { ...common.export, clipIds: clipIds!, twoKeyExportBoundary: TWO_KEY_EXPORT_BOUNDARY_POLICY },
+      endpoint: parseHipYLoopEndpoint(document.endpoint),
+      output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
+  }
   if (isV3) {
     const c = record(document.conditioning, 'job.conditioning');
-    exactKeys(c, ['mode', 'sourceRootJoint', 'locomotionRootJoint', 'clipIds', 'transitions', ...['transitionFloor','plantedIdle','terminalRotationClosure','twoKeyRotationBake','twoKeyRotationBakes','rotationSpanBake','pelvisLayerBake'].filter(key=>Object.prototype.hasOwnProperty.call(c,key))], 'job.conditioning');
+    exactKeys(c, ['mode', 'sourceRootJoint', 'locomotionRootJoint', 'clipIds', 'transitions', ...['transitionFloor','plantedIdle','terminalRotationClosure','twoKeyRotationBake','twoKeyRotationBakes','rotationSpanBake','pelvisLayerBake','stanceTrajectoryBake'].filter(key=>Object.prototype.hasOwnProperty.call(c,key))], 'job.conditioning');
     const identifier = (v: unknown): v is string => typeof v === 'string' && /^[A-Za-z0-9_.-]{1,64}$/.test(v);
     if ((c.mode !== CONDITIONING_MODE && c.mode !== CONDITIONING_NLERP_MODE) || !identifier(c.sourceRootJoint) || !identifier(c.locomotionRootJoint) || c.sourceRootJoint === c.locomotionRootJoint || c.locomotionRootJoint !== common.export.rootJoint) fail('job.conditioning must name a supported mode, distinct source/locomotion roots and export the locomotion root.');
     if (!Array.isArray(c.clipIds) || c.clipIds.length < 1 || c.clipIds.length > 32 || !c.clipIds.every(identifier) || new Set(c.clipIds).size !== c.clipIds.length) fail('job.conditioning.clipIds must contain 1–32 unique safe source names.');
@@ -212,13 +240,23 @@ export function parseSkeletalExportJobDocument(
     if ((rotations.twoKeyRotationBake || rotations.twoKeyRotationBakes) && c.mode !== CONDITIONING_NLERP_MODE) fail('Two-key rotation authoring requires the explicit NLERP mode.');
     const boundary = Object.prototype.hasOwnProperty.call(exportSettings, 'twoKeyExportBoundary');
     const pelvisLayer = Object.prototype.hasOwnProperty.call(c, 'pelvisLayerBake') ? parsePelvisLayer(c.pelvisLayerBake, transitions.map(t => t.gait), c.clipIds as string[], c.sourceRootJoint, c.locomotionRootJoint) : undefined;
+    const stance = Object.prototype.hasOwnProperty.call(c, 'stanceTrajectoryBake') ? parseStanceTrajectory(c.stanceTrajectoryBake, transitions.map(t => t.gait), c.clipIds as string[]) : undefined;
+    if (stance) {
+      if (!boundary || c.mode !== CONDITIONING_NLERP_MODE || !floor?.clipIds.includes('start-walkSlow-p25') || !floor.clipIds.includes('stop-walkSlow-p25')
+        || floor.floorY !== 0 || floor.maxLiftMeters > .1
+        || !transitions.some(t => t.gait === 'walkSlow' && t.phases.includes(.25)))
+        fail('stanceTrajectoryBake requires NLERP export-boundary preservation and both walkSlow p25 floor bakes.');
+      assertDisjointStanceTrajectory(stance, rotations.twoKeyRotationBake ? [rotations.twoKeyRotationBake] : rotations.twoKeyRotationBakes ?? [], span);
+      if (pelvisLayer?.clipId === stance.clipId && pelvisLayer.startTick <= 25 && pelvisLayer.startTick + 1 >= 1)
+        fail('stanceTrajectoryBake cannot overlap the pelvis layer.');
+    }
     if (pelvisLayer && (!boundary || c.mode !== CONDITIONING_NLERP_MODE)) fail('pelvisLayerBake requires explicit NLERP export-boundary preservation.');
     if (pelvisLayer && terminal?.clipId === pelvisLayer.clipId && pelvisLayer.startTick + 2 >= terminal.startTick) fail('pelvisLayerBake conflicts with terminal authoring.');
     if (span && (!boundary || c.mode !== CONDITIONING_NLERP_MODE)) fail('rotationSpanBake requires explicit NLERP export-boundary preservation.');
     if (boundary && (exportSettings.twoKeyExportBoundary !== TWO_KEY_EXPORT_BOUNDARY_POLICY
-      || c.mode !== CONDITIONING_NLERP_MODE || (!rotations.twoKeyRotationBake && !rotations.twoKeyRotationBakes && !span && !pelvisLayer))) fail('twoKeyExportBoundary requires explicit NLERP bakes and the supported policy.');
+      || c.mode !== CONDITIONING_NLERP_MODE || (!rotations.twoKeyRotationBake && !rotations.twoKeyRotationBakes && !span && !pelvisLayer && !stance))) fail('twoKeyExportBoundary requires explicit NLERP bakes and the supported policy.');
     if (common.output.currentPointer) fail('Conditioned candidate jobs omit the current pointer.');
-    return { ...common, $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA, export: { ...common.export, clipIds: clipIds!, ...(boundary ? { twoKeyExportBoundary: TWO_KEY_EXPORT_BOUNDARY_POLICY } : {}) }, conditioning: { mode: c.mode, sourceRootJoint: c.sourceRootJoint, locomotionRootJoint: c.locomotionRootJoint, clipIds: c.clipIds, transitions, ...(floor ? { transitionFloor: floor } : {}), ...(planted ? { plantedIdle:planted } : {}), ...(terminal ? { terminalRotationClosure: terminal } : {}), ...rotations, ...(span ? { rotationSpanBake: span } : {}), ...(pelvisLayer ? { pelvisLayerBake: pelvisLayer } : {}) }, output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
+    return { ...common, $schema: SKELETAL_EXPORT_JOB_V3_SCHEMA, export: { ...common.export, clipIds: clipIds!, ...(boundary ? { twoKeyExportBoundary: TWO_KEY_EXPORT_BOUNDARY_POLICY } : {}) }, conditioning: { mode: c.mode, sourceRootJoint: c.sourceRootJoint, locomotionRootJoint: c.locomotionRootJoint, clipIds: c.clipIds, transitions, ...(floor ? { transitionFloor: floor } : {}), ...(planted ? { plantedIdle:planted } : {}), ...(terminal ? { terminalRotationClosure: terminal } : {}), ...rotations, ...(span ? { rotationSpanBake: span } : {}), ...(pelvisLayer ? { pelvisLayerBake: pelvisLayer } : {}), ...(stance ? { stanceTrajectoryBake: stance } : {}) }, output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
   }
   if (isV2) {
     const explicitClipIds = clipIds ?? fail('job.export.clipIds must contain 1 to 32 explicit source animation clip IDs.');

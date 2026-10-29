@@ -120,6 +120,12 @@ recipe and report identities remain distinct. Its additional explicit NLERP
 mode admits only canonical generated chord-cubic non-root rotations. Successful
 export is separate from receiving and authored support acceptance.
 
+The explicit [v4 hip-Y endpoint job](SKELETAL_HIP_Y_LOOP_ENDPOINT.md) accepts
+the already conditioned root/body GLB, its source-bound report and its original
+GLB. It corrects only the stored walkSlow hip-Y tick-90 value under a 0.24 m
+cap, then renews lineage and publishes through the ordinary immutable export
+path. The prior v1-v3 job schemas and default bytes remain unchanged.
+
 ## Bind, animation, and limits
 
 Bind TRS comes from the source GLB's loaded node state. For each joint, its

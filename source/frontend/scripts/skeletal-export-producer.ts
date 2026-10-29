@@ -10,6 +10,7 @@ const execFileAsync = promisify(execFile);
 const REPOSITORY = 'Shoozes/RustSMF';
 const EXPORTER_FILES = [
   'source/frontend/scripts/skeletal-export-cli.ts',
+  'source/frontend/scripts/skeletal-walk-root-body-cli.ts',
   'source/frontend/scripts/skeletal-export-producer.ts',
   'source/frontend/src/utils/skeletalExport.ts',
   'source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts',
@@ -20,6 +21,9 @@ const EXPORTER_FILES = [
   'source/frontend/src/utils/skeletalTerminalRotation.ts',
   'source/frontend/src/utils/skeletalTwoKeyRotation.ts',
   'source/frontend/src/utils/skeletalRotationSpan.ts',
+  'source/frontend/src/utils/skeletalStanceTrajectory.ts',
+  'source/frontend/src/utils/skeletalRootBodyTransfer.ts',
+  'source/frontend/src/utils/skeletalHipYLoopEndpoint.ts',
   'source/frontend/src/utils/skeletalPelvisLayer.ts',
   'source/frontend/src/utils/skeletalChordRotation.ts',
   'source/frontend/src/utils/skeletalTransitionFloor.ts',
