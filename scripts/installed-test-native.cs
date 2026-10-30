@@ -25,6 +25,13 @@ public static class InstalledTestNative {
     [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr window,out uint pid);
     [DllImport("user32.dll")] public static extern bool IsWindow(IntPtr window);
     [DllImport("user32.dll")] public static extern IntPtr GetDlgItem(IntPtr dialog,int id);
+    [DllImport("user32.dll")] public static extern IntPtr GetParent(IntPtr window);
+    [DllImport("user32.dll")] public static extern int GetDlgCtrlID(IntPtr window);
+    [DllImport("user32.dll")] public static extern bool IsChild(IntPtr parent,IntPtr child);
+    [DllImport("user32.dll")] public static extern bool IsWindowEnabled(IntPtr window);
+    [DllImport("user32.dll",CharSet=CharSet.Unicode,SetLastError=true)] public static extern IntPtr SendMessageTimeoutW(IntPtr window,uint message,IntPtr wp,string text,uint flags,uint timeout,out IntPtr result);
+    [DllImport("user32.dll",CharSet=CharSet.Unicode,SetLastError=true)] public static extern IntPtr SendMessageTimeoutW(IntPtr window,uint message,IntPtr wp,StringBuilder text,uint flags,uint timeout,out IntPtr result);
+    [DllImport("user32.dll",CharSet=CharSet.Unicode,SetLastError=true)] public static extern IntPtr SendMessageTimeoutW(IntPtr window,uint message,IntPtr wp,IntPtr lp,uint flags,uint timeout,out IntPtr result);
     [DllImport("user32.dll",SetLastError=true)] public static extern bool PostMessageW(IntPtr window,uint message,IntPtr wp,IntPtr lp);
     [DllImport("kernel32.dll",SetLastError=true)] public static extern bool CloseHandle(IntPtr handle);
     [DllImport("kernel32.dll",SetLastError=true)] static extern bool GetExitCodeProcess(IntPtr process,out uint code);

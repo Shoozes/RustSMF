@@ -2,6 +2,77 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="installed-native-queue-20261030"></a>
+## 2026-10-30 - Published picker review and actual native queue failure/retry
+
+Complete with verified limitations, locally above published `ad6b943`. Fixed a
+timeout-verdict race by returning a distinct failure object while late UIA work
+settles, and removed the worker's unchecked final historical-HWND close message.
+The owned job remains the shutdown authority. A dedicated regression proves that
+late completion cannot turn timeout into success.
+
+Filename/Open succeeds using ValuePattern, exact native readback and BN_CLICKED.
+The observed parent equals the top-level dialog: this qualifies the whole
+sequence, not a claim that parent selection alone caused the old failure. Native
+Windows Button.Invoke tried focus/input and failed on the non-input desktop;
+that path is excluded. Toggle controls and disclosure counts are handled through
+their real UIA patterns. No active-desktop/pointer fallback was used.
+
+The real installed queue case saves A, blocks deletion of B's actual native
+staged output, observes the native publication error32 in the installed failed
+item, then releases the obstruction and retries only B. A's SHA-256 and exact
+modification ticks are unchanged; B equals its failed-stage captured bytes.
+The live model is renamed after capture. Dirty replacement refusal survives both
+before/after the failure, and the edited live export remains distinct from the
+retained pre-edit queue captures.
+
+Independent raw accessor/index/material/skin/bind/track checks and 12,960 sampled
+world-skin points pass, with maximum world-skin difference zero and unchanged
+1e-5 tolerance. Playback is explicitly paused/reset to zero before capture.
+An earlier source-bind comparison against a playing snapshot is retained as a
+reference-state mismatch; its default-pose difference is not relabeled as a
+queue corruption or hidden by looser limits. Earlier readiness, label/pattern and
+overwrite-dialog attempts remain failed evidence. The final case uses only fresh
+destinations and an owned staged-file sharing obstruction.
+
+After functional queue success, review discovered that WebView isolation did not
+isolate native autosave. Earlier model runs touched/rotated default recovery
+files. Launches stopped; three discovered generations were preserved with hashes.
+No pre-task copy is known, so original recovery restoration is not claimed.
+The user approved the bounded public opt-in Windows `--profile-dir` contract and
+a fresh installer. Native profile/schema/lock/path refusals and unchanged
+no-flag behavior have 19 passing native tests and warning-free Clippy. The launcher
+now refuses unsupported binaries before UIA and verifies protected recovery.
+Ten focused control/refusal tests pass.
+
+Fresh installer `284e44fb22c36b8458643db924463dd29d5301606eb70dea5a0cf1beabfe4a81`,
+installed executable `fccee3478f3afb11bf6140c3666702e93a59ddcfece5f3b044de3fd94aba2ac0`,
+passes the actual queue and independent output proof described above, plus the
+default picker regression. Native profile attestation, real private autosave,
+unchanged canonical recovery hashes/times and zero-process cleanup all pass.
+The two installer registration keys were restored from exact backups with
+equal before/after exports; existing install B remains intact.
+[Procedure, source manifest and exact receipts](INSTALLED_TEST_SESSION.md).
+All proof is retained under
+`D:/Compact_Evidence/RustSMF/runs/installed-native-queue-20261030/`.
+
+Sable installed retarget/animal assistance comes next, then candidate evidence
+closure. Both apps, their sources and proof epochs remain separate. Producer
+pose generation stays stopped. No commit, push or public release is included.
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly
+
+Local renewal verification: `npm.cmd --prefix source run verify` passes: 739 frontend units, dependency guard/refusal controls, lint, typechecks, production-any policy, build/chunk limits and 14 Rust gate steps (including 19 Tauri tests). Serialization uses one Cargo build job, incremental disabled and offline dependencies. This is a current checkout verification and fresh installer proof; it does not repeat the historical source-only isolated/browser/visual matrices.
+
+
+Closeout/publication is separately authorized for this exact batch. The reviewed
+staged tree and confirmed remote commit belong to the retained publication
+receipt in the same run. Application/runner inputs retain their native proof;
+record polish, isolated staged-candidate checks, guarded publication and owned
+build-cache cleanup do not renew Sable or optional consumer acceptance.
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile-closeout | change=record separate publication phase and preserve qualification boundaries
+
 <a id="installed-isolated-picker-20261030"></a>
 ## 2026-10-30 - Isolated installed picker and review disposition
 

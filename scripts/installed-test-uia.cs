@@ -10,6 +10,8 @@ public sealed class InstalledPickerResult {
     public string rendererExecutable,rendererCreatedUtc;
     public bool pickerInvoked,pickerObserved,pickerCancelled;
     public string[] rendererControls;
+    public InstalledDialogResult submission;
+    public InstalledQueueResult queue;
 }
 public static class InstalledPickerProbe {
     public static void Own(IntPtr h,string jobName,string desktop) {
@@ -19,7 +21,11 @@ public static class InstalledPickerProbe {
         try{if(!InstalledTestNative.IsWindow(h) || !InstalledTestNative.WindowInJob(h,job) || actualDesktop!=desktop)throw new Exception("Stale or foreign HWND/desktop: hwnd="+h+" pid="+actual+" desktop="+actualDesktop+" expected="+desktop);}
         finally{InstalledTestNative.CloseHandle(job);}
     }
-    public static InstalledPickerResult Run(int pid,string executable,string created,string desktop,string jobName,int seconds) {
+    public static InstalledPickerResult Await(Thread thread,InstalledPickerResult result,int milliseconds) {
+        if(thread.Join(milliseconds))return result;
+        return new InstalledPickerResult {pid=result.pid,stage="uia-worker-timeout",error="Dedicated MTA UIA worker timed out; outer job must release process tree."};
+    }
+    public static InstalledPickerResult Run(int pid,string executable,string created,string desktop,string jobName,int seconds,string scenario,string fixture,string output) {
         var r=new InstalledPickerResult();r.pid=pid;
         var t=new Thread(()=>{
             try {
@@ -60,6 +66,22 @@ public static class InstalledPickerProbe {
                 }
                 if(dialog==IntPtr.Zero)throw new TimeoutException("No owned native picker on selected desktop.");
                 Own(dialog,jobName,desktop);r.dialogHwnd=dialog.ToInt64();r.pickerObserved=true;r.stage="picker-cancel";
+                if(scenario!="PickerCancel") {
+                    r.stage="filename-open";r.submission=InstalledDialogControl.Submit(dialog,fixture,false,jobName,desktop,seconds);
+                    if(!r.submission.closed)throw new Exception("Native filename/Open did not close the picker; see submission readback.");
+                    r.stage="model-load";timer.Restart();
+                    while(timer.Elapsed.TotalSeconds<seconds) {
+                        Own(renderer,jobName,desktop);
+                        var tools=root.FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.NameProperty,"Tools"));
+                        if(tools!=null && tools.Current.IsEnabled){
+                            if(scenario=="QueueWriteRetry"){r.queue=InstalledQueueCase.Run(root,renderer,pid,jobName,desktop,seconds,output,fixture);r.status=r.queue.status;r.stage=r.queue.stage;}
+                            else{r.status="passed";r.stage="fixture-loaded";}
+                            return;
+                        }
+                        Thread.Sleep(100);
+                    }
+                    throw new TimeoutException("Fixture selection returned but model did not load.");
+                }
                 var cancelHandle=IntPtr.Zero;timer.Restart();
                 while(timer.Elapsed.TotalSeconds<seconds && cancelHandle==IntPtr.Zero){cancelHandle=InstalledTestNative.GetDlgItem(dialog,2);if(cancelHandle==IntPtr.Zero)Thread.Sleep(100);}
                 if(cancelHandle==IntPtr.Zero || InstalledTestNative.Class(cancelHandle)!="Button")throw new Exception("Native IDCANCEL button unavailable.");
@@ -72,7 +94,6 @@ public static class InstalledPickerProbe {
             }catch(Exception e){r.error=e.ToString();}
         });
         t.SetApartmentState(ApartmentState.MTA);t.IsBackground=true;t.Start();
-        if(!t.Join((seconds*3+10)*1000)){r.status="failed";r.error="Dedicated MTA UIA worker timed out; outer job must release process tree.";}
-        return r;
+        return Await(t,r,(seconds*(scenario=="QueueWriteRetry"?20:4)+10)*1000);
     }
 }

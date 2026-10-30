@@ -18,8 +18,8 @@ HISTORY record and its compact receipt. The candidate was committed locally as
 | Predictable browser routing | Direct default and `-NoGenEye` agree; ambient/sibling controls and explicit integration failure controls pass. |
 | Isolated build and verification | Source-only copy passed verify (723 frontend tests, 14 Rust checks), browser 212, journeys 13, strict visuals 3, retarget/transition native-WASM proof and desktop smoke. |
 | Ordinary exporters | Generated native-contact CLI success/refusal and job cancellation passed in verify; retained consumer proof is not renewed. |
-| Installed workflows | Installer A and five bundled resources passed. Quiet UIA loaded Signal Robot and Sable, saved/reopened projects, refused malformed/missing ZIP resources, handled ambiguous ZIP choice/cancel, saved and retried queued GLBs, and opened bundled Help. Independent project/GLB continuity passed; installer B/profile B reopened the Sable project and saved identical bytes. Queue write failure and Sable retarget/animal assistance remain open. |
-| Local release candidate | Installer, checksums, notices, samples and startup guide exist locally. Second clean installation/profile B and byte-identical project reopen/save are observed. Native write-failure/retry, Sable retarget/animal assistance and final evidence closure remain open. |
+| Installed workflows | Installer A and five bundled resources passed. Quiet UIA loaded Signal Robot and Sable, saved/reopened projects, refused malformed/missing ZIP resources, handled ambiguous ZIP choice/cancel, saved and retried queued GLBs, and opened bundled Help. Independent project/GLB continuity passed; installer B/profile B reopened the Sable project and saved identical bytes. Real native failure/retry is subsequently renewed on the fresh native-profile installer; Sable retarget/animal assistance remain open. |
+| Local release candidate | Installer, checksums, notices, samples and startup guide exist locally. Second clean installation/profile B and byte-identical project reopen/save are observed. Native write-failure/retry is subsequently qualified on the fresh native-profile installer. Sable retarget/animal assistance and final evidence closure remain open. |
 
 The [2026-10-26 review record](HISTORY.md#standalone-review-20261026) binds
 these results to exact source inventories and logs. Review found all inventory-v2
@@ -113,23 +113,32 @@ Both exact owned application PIDs and the temporary output-lock helper exited.
 The task-owned app/profile and output receipts are under
 `D:/RustSMF-Standalone-20261026/`. Use the
 [GenEye installed control skill](skills/geneye-installed-control/SKILL.md)
-for the remaining queue write-failure and Sable retarget/animal assistance cases.
+for current installed controls. At that stage, queue write-failure and Sable
+retarget/animal assistance remained open; the later queue qualification is below.
 The installed Transfer tab was reached, but the Retarget clips picker was not
 completed; operator dismissal of foreground dialogs cannot establish a UIA
 failure. Establish a verified isolated desktop/session before any more native
 picker actions. Recheck current process/HWND identity before each action and
 verify owned process release at closeout. No CUA or cursor input.
 
-## Isolated picker progress — 2026-10-30
+## Isolated native queue and profile renewal — 2026-10-30
 
-The [isolated picker route](INSTALLED_TEST_SESSION.md) now passes on the selected
-installer B: renderer observation, real owned Open/cancel, unchanged sampled input
-desktop and verified job/handle release. Four regression controls pass. This
-renews only that test capability on the identified installed executable. A queue
-prototype stopped at native filename/Open submission; no export write occurred.
-The real queue write-failure/retry case and Sable workflows remain unverified.
-No active-desktop retry, source-to-installer equivalence claim or public release
-replacement is included. Exact evidence is linked in the route document.
+The [installed route](INSTALLED_TEST_SESSION.md#final-qualified-case--2026-10-30)
+now binds the fresh native-profile installer, selected source and Signal Robot.
+Open/cancel, exact filename/Open, actual native staged-write failure and retry,
+dirty/live/captured state, A hash/time and independent 12,960 world-skin samples
+pass. Native autosave reaches the private profile, and canonical default recovery
+is unchanged after job/desktop/handle cleanup. Windows `--profile-dir` is opt-in;
+no-flag product locations and both apps' standalone boundaries remain unchanged.
+The dependency guard and source verify are separately recorded for this renewal;
+no new source-only isolation/browser/journey/visual matrix is implied.
+
+Earlier installer-B model runs touched the default native recovery generations:
+WebView isolation was insufficient. Their functional evidence remains dated,
+while the runbook records preserved current files and unknown pre-test contents.
+The new safe epoch proves preservation from discovery onward, not restoration.
+Sable retarget/animal assistance and final candidate closure remain open; no
+public preview replacement, commit, push or producer generation is included.
 
 ## Optional consumer qualification
 
@@ -147,3 +156,7 @@ bounded local regression; unqualified private motion does not keep the editor op
 <!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone-p7c-continuation | change=record partial installed proof and quiet control boundary -->
 
 AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | change=reconcile second-install evidence and distinguish verified picker isolation from pending native queue writes
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=installed-native-queue | change=bind actual native failure/retry and independent inspection to the selected installed epoch
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly

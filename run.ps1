@@ -558,7 +558,7 @@ switch -Exact ($NormalizedTask) {
         if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "dev-process ownership tests failed" }
         & $NodeExecutable --test scripts/standalone-launcher.test.mjs
         if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "standalone launcher tests failed" }
-        & $NodeExecutable --test scripts/installed-test-session.test.mjs
+        & $NodeExecutable --test scripts/installed-test-session.test.mjs scripts/installed-queue-proof.test.mjs
         if ($LASTEXITCODE -ne 0) { $ok = $false; Write-Warn "installed session ownership tests failed" }
         if (Test-Path $FrontendDir) {
             if (-not (Invoke-FrontendNpm @("run", "check:lint-coverage"))) { $ok = $false; Write-Warn "lint coverage check failed" }

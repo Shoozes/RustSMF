@@ -4,6 +4,7 @@
 
 #![cfg_attr(all(windows, not(debug_assertions)), windows_subsystem = "windows")]
 
+mod native_profile;
 mod retarget;
 
 use std::collections::HashSet;
@@ -493,6 +494,12 @@ fn write_project_rotating(target: &Path, data: &[u8]) -> Result<(), String> {
 }
 
 fn project_recovery_directory(app: &tauri::AppHandle) -> Result<PathBuf, String> {
+    if let Some(directory) = app
+        .state::<native_profile::NativeProfile>()
+        .recovery_directory()
+    {
+        return Ok(directory);
+    }
     Ok(app
         .path()
         .app_data_dir()
@@ -739,7 +746,22 @@ fn read_project_recovery(app: tauri::AppHandle, name: String) -> Result<Vec<u8>,
 }
 
 fn main() {
+    let profile = native_profile::profile_argument(std::env::args_os().skip(1))
+        .and_then(native_profile::NativeProfile::open)
+        .and_then(|profile| {
+            profile.attest()?;
+            Ok(profile)
+        });
+    let profile = match profile {
+        Ok(profile) => profile,
+        Err(error) => {
+            eprintln!("RustSMF profile initialization failed: {error}");
+            std::process::exit(2);
+        }
+    };
+    profile.configure_webview();
     let result = tauri::Builder::default()
+        .manage(profile)
         .plugin(tauri_plugin_dialog::init())
         .manage(NativeFileAuthority::default())
         .manage(retarget::RetargetPreflightJobs::default())
@@ -777,12 +799,12 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
-    struct TestDirectory {
+    pub(crate) struct TestDirectory {
         path: std::path::PathBuf,
     }
 
     impl TestDirectory {
-        fn new(label: &str) -> Self {
+        pub(crate) fn new(label: &str) -> Self {
             let nonce = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .expect("system clock should be after the Unix epoch")
@@ -793,7 +815,7 @@ mod tests {
             Self { path }
         }
 
-        fn path(&self) -> &std::path::Path {
+        pub(crate) fn path(&self) -> &std::path::Path {
             &self.path
         }
     }

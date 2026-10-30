@@ -25,7 +25,20 @@ Desktop destinations use the existing native save dialog for each item. Cancelin
 - `src/utils/materialPreview.test.ts`: nested captures, overlapping saves, concurrent display changes and replaced registrations retain source state until their own final reader exits.
 - `tests/export-queue.spec.ts`: ordinary chooser/pointer/keyboard controls, every preset, independent GLB accessor/instance-transform and sampled-motion checks after re-import, raw FBX/DAE structure, imported SMF fidelity, material/image captures, replacement, preparation cancellation, mocked native failures/retry/recovery and six-size/DPR/coarse/focus checks.
 
-Browser downloads and mocked Tauri IPC retain their source-specific proof. The selected packaged Windows candidate passed installed WebView preparation cancellation/retry and later native destination saves, destination cancellation, and retry of only the incomplete item while the first GLB hash stayed unchanged. The missing case is a real native write/publication failure followed by retry, not all native queue behavior. The 2026-10-30 isolated picker route passes Open/cancel; its subsequent queue prototype stopped at filename/Open submission before any write. [Installed test boundary](INSTALLED_TEST_SESSION.md), HISTORY and the compact receipts bind each lane to source/package. The public version/release is unchanged.
+Browser downloads and mocked Tauri IPC retain their source-specific proof.
+The fresh native-profile Windows installer passes an actual native publication
+failure and incomplete-only retry through the isolated desktop route. A new B
+destination is accepted; an owned handle blocks deletion of its real staged
+export, producing native `Failed to install staged export ... (os error 32)`.
+After release, retry writes B from the retained capture. Completed A's bytes and
+modification time remain exact. Live authored state and unsaved-change protection
+survive; independent accessor/skin/material/animation and sampled world-skin
+inspection pass. [Procedure and exact evidence](INSTALLED_TEST_SESSION.md) bind
+this bounded first-party fixture, paused input and fresh installer epoch. Native
+profile attestation, actual private autosave and unchanged default recovery are
+required. Earlier installer-B tests isolated only WebView and touched shared
+recovery; the runbook records that impact and the unknown pre-test state. Sable workflows,
+full product closure and public release replacement remain separate.
 
 <!--
 AI-created: 2026-10-15T04:24:55-04:00 | agent=Codex/root | task=docs
@@ -33,3 +46,7 @@ AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | chang
 -->
 
 AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | change=retain observed native destination/retry evidence and precisely identify missing write-failure acceptance
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=installed-native-queue | change=close real native publication failure/retry without changing queue production code
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly

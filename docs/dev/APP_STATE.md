@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-10-28
+Last reviewed: 2026-10-30
 
 ## Standalone product boundary
 
@@ -12,12 +12,17 @@ isolation and installed-dialog evidence is tracked in
 [STANDALONE_ACCEPTANCE.md](STANDALONE_ACCEPTANCE.md); the public 0.2.1 preview
 retains its older, separately identified package.
 
-The test-only [isolated picker route](INSTALLED_TEST_SESSION.md) now proves a
-real installed Open/cancel on a task-owned non-input desktop, with exact process,
-renderer, job and HWND ownership plus cleanup. Native filename submission for the
-subsequent queue test remains a control gap; no new write-failure/retry acceptance
-is claimed. Sable retarget/animal assistance and final installed-candidate closure
-remain open. These tests add no required product integration or engine dependency.
+The [isolated installed route](INSTALLED_TEST_SESSION.md) proves exact filename/Open
+and actual native queue publication failure/retry on the fresh native-profile
+installer, with independent output/skin inspection. The opt-in Windows
+`--profile-dir` contract separates WebView and native autosave, locks each
+profile to one app, and preserves default locations without the flag. Tests
+require PID/path attestation and unchanged default recovery after owned cleanup.
+Earlier model tests isolated only WebView and touched shared native recovery;
+the runbook preserves the incident and the unknown pre-test state. The new proof
+preserves recovery from discovery onward; it does not claim restoration.
+Sable retarget/animal assistance and final candidate closure remain open.
+Both apps and proofs remain separate; the public preview is unchanged.
 
 The optional skeletal producer now has an explicit v4 job for a single
 walkSlow hip-Y tick-90 loop endpoint. It uses the qualified root/body GLB
@@ -462,3 +467,7 @@ input contract, bounds, vendoring requirements, and native/browser WASM proof.
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=routed bounded span authoring and independent reference preservation -->
 
 AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | change=distinguish proven test-only picker route from pending native queue and Sable acceptance
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=installed-native-queue | change=record qualified native queue case and retain remaining product acceptance boundaries
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly

@@ -1327,13 +1327,22 @@ Last reviewed: 2026-09-25 (stable PL IDs and Guard references plus v0.2 palette,
 ### Q: What pitfall are we preventing?
 
 **ID:** PL-048
-**Guard:** `source/frontend/tests/lifecycle.spec.ts`
+**Guard:** `source/frontend/tests/lifecycle.spec.ts`, `scripts/installed-test-session.test.mjs`
 
 
 
 **What:** Independently guarded picker, file/drop, loader, and export awaits can each be locally fresh while still being globally stale, allowing an older result to replace or report over a newer user intent.
 
 **Context and constraints:** Browser and Tauri flows share one mounted model and one status surface. Codec work may outlive the user action that started it, while a failed replacement must preserve the prior edited model and a save lock must always release.
+
+**Installed-test counterpart, 2026-10-30:** A timed-out MTA UIA worker could still
+mutate the result object being serialized and turn its verdict into success.
+`InstalledPickerProbe.Await` now returns a separate failure object on timeout;
+the late-completion regression waits for an eventual worker success and proves
+the returned timeout remains failed. Final shutdown uses the owned job instead
+of sending to a historical HWND. Six session controls and four independent
+queue-proof refusal controls pass; the actual isolated native queue failure/retry
+also passes. See [the bounded installed route](INSTALLED_TEST_SESSION.md).
 
 **Why it happened:** Picker open and browser file reads used separate counters, so a delayed picker could call `loadModel` after a newer file/drop completed. Export had its own sequence but loads did not invalidate it, and the old implementation cleared the current model before a replacement parsed successfully. Simply invalidating export in `finally` would also have skipped lock release.
 
@@ -1760,3 +1769,34 @@ GLB post-parse rejection now uses that adapter across returned scenes without re
 **Relevance check:** Current. Any new viewport telemetry, overlay handle, or workspace-owned pointer tool must distinguish absent state from numeric zero and refresh object transforms before immediate hit testing.
 
 **Next prevention step:** Keep the repeated IK case in the focused browser audit when changing workspace-owned handles, and do not use `Number(getAttribute(...))` as a readiness predicate without an explicit null check.
+
+### Q: What pitfall are we preventing?
+
+**ID:** PL-063
+**Status:** Resolved for the qualified Windows profile case; historical recovery contents remain unknown.
+**Search hooks:** WebView profile does not isolate native autosave; shared recovery rotation; native profile attestation.
+**Guard:** `scripts/installed-test-session.test.mjs`, `scripts/installed-queue-proof.test.mjs`, `source/src-tauri/src/native_profile.rs`
+
+**What:** A fresh WebView profile does not isolate native app-data writes. Loading
+or editing a model can rotate native autosave generations even during a quiet,
+otherwise well-owned installed test.
+
+**Evidence:** Earlier installer-B queue trials wrote the shared default recovery
+folder. The discovered three files were preserved; no pre-test copy is known.
+Fresh profile-qualified queue and picker receipts prove unchanged canonical
+recovery hashes/times and actual private autosave after the repair. Exact paths
+and the unresolved historical impact belong to [the runbook](INSTALLED_TEST_SESSION.md#earlier-native-recovery-impact).
+
+**Current solution:** The approved opt-in Windows profile owns both native
+recovery and WebView, with schema/path checks and an OS lifetime lock. Tests
+require matching native PID/path attestation before any model action, back up
+known default recovery generations, and require exact equality after cleanup.
+An independent verifier refuses sentinel-only protection, missing attestation or
+changed default recovery. Unsupported executables stop before UIA. Defaults and
+other apps' standalone paths remain unchanged.
+
+**Relevance check:** Current. Browser/profile flags cannot establish native data
+isolation. Inventory actual file authorities before further installed workflows;
+new preservation evidence never implies restoration of earlier unknown bytes.
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=record demonstrated native autosave isolation gap and tested prevention

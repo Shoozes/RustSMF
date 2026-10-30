@@ -52,6 +52,13 @@ Compare the `Hash` value with the installer entry in `SHA256SUMS.txt`. The relea
 
 ## Formats and practical limits
 
+Current Windows source builds support `rustsmf.exe --profile-dir "D:\MyRustSMFProfile"`
+for a separate WebView and native autosave profile. Select an absolute new/empty
+directory, or reopen one already marked by RustSMF. A profile is locked to one
+running app. Without the flag, existing data locations stay unchanged. This
+option is newer than the public 0.2.1 preview; see the
+[profile contract and installed proof](docs/dev/INSTALLED_TEST_SESSION.md).
+
 | Action | Formats |
 | --- | --- |
 | Open | SMF, GLB/GLTF, FBX, DAE/Collada, OBJ |
@@ -103,4 +110,6 @@ Project-owned code and the Signal Robot and Sable samples are [MIT licensed](LIC
 
 <!--
 AI-edited: 2026-10-26 | agent=Codex/root | task=standalone | change=clarified independent product and candidate boundaries
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=document opt-in Windows data isolation and unchanged defaults
 -->

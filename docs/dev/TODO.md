@@ -27,21 +27,29 @@ The public 0.2.1 preview is distinct from the newer local source candidate.
 - Done when: Verify, browser, journey, strict visuals, native/actual-WASM proofs, ordinary exports, desktop smoke and Windows packaging pass with recorded identities and dependency locations.
 - Verification: Final verify passes (723 frontend tests, 14 Rust checks); browser 212, journeys 13, strict visuals 3, native/actual-WASM proofs, desktop smoke and packaging pass. Default browser routing also passes 212 with irrelevant siblings/ambient integration variables. Source identities and command receipts: [review record](HISTORY.md#standalone-review-20261026).
 
-## 3. Installed acceptance — finish remaining real-app cases
+## 3. Installed acceptance — Sable workflows, then candidate closure
 
-- What: Finish queue write-failure and Sable retarget/animal assistance acceptance.
-- Why: API/browser evidence and the older preview do not prove current installed workflows.
-- Where: Tauri, ZIP, project persistence, queue, retarget/animal owners; [acceptance](STANDALONE_ACCEPTANCE.md).
-- When: After isolated build/package proof.
-- How: Establish a verified isolated desktop/session before another native picker; minimizing the app alone let Windows dialogs jump onto the operator's screen. Recheck the task-owned installer/process identity and fresh HWND; use the [GenEye installed control skill](skills/geneye-installed-control/SKILL.md) and its renderer-child UIA helper. Preserve user settings/recovery and inspect saved project/export bytes independently. No CUA, physical pointer movement or global control-policy change.
-- Done when: A real queue write failure and retry preserve completed outputs; Sable retarget and bounded animal assistance are exercised; owned processes and temporary resources are released.
-- Verification: Installer A and five bundled resources passed. The minimized app's renderer-child UIA opened Signal Robot and Sable ZIPs, saved and reopened projects, refused malformed/missing resources, handled ambiguous ZIP cancel/selection, queued two GLBs with destination cancel/retry, and opened bundled Help. Independent Sable project/GLB continuity passed with four clips, skin, material and sampled animation. Clean installer B/profile B reopened the Sable project and saved byte-identical 3,150,386-byte project output; PID was released. Native dialogs still appeared in the operator's foreground; the operator closed a later locked-output Save As before write. Transfer was reached but no retarget was completed. See [acceptance](STANDALONE_ACCEPTANCE.md).
-- Next bounded pass, priority 1: Prove native filename/Open submission through the now-verified isolated route before continuing the installed queue write-failure/retry case. The prototype's owned picker did not settle after the filename/Open actions within 15 seconds, including the bounded synchronous fallback; no write occurred. Retain this exact control gap and avoid unchanged retries or active-desktop fallback. Then save A, cause a real native publication failure on task-owned B, verify the failed item and preserved captured/live state, release only the obstruction, retry B, independently inspect its output and prove A unchanged. Bind installer, PID/creation time, renderer/dialog HWND and desktop/job identities. [Route and receipts](INSTALLED_TEST_SESSION.md).
-- Priority 2: After that real queue case, complete Sable retarget and bounded animal assistance in a separate workflow pass using the proven isolated route. Preserve ambiguous-chain refusals and inspect saved/reopened animation independently.
-- Priority 3: Bind the final installed workflows, resources/notices and checksums to one selected installer/source candidate, refreshing affected evidence only when relevant installed bytes change; reconcile acceptance, queue, APP_STATE and HISTORY. Public preview/release replacement remains separately authorized. Optional P7C work never gates this product closure.
-- Work result 2026-10-30: The isolated real picker Open/cancel probe passes on the hash-verified installer B, with a dedicated MTA UIA worker and exact job/desktop-owned targets. Four regression controls cover preflight, real rendererless refusal/cleanup and cancellation. The input desktop stays unchanged in sampled observation; no owned picker is found there; job count is zero and every handle releases. The later queue-intake attempts fail before loading Signal Robot, so native write-failure/retry stays unverified. The unqualified queue prototype and failures remain in the evidence folder; only the proven picker tool is published. No product implementation, default dependency, installer or public release changes.
-- Work check 2026-10-29: The installed app is not running, the earlier output-lock owner has its release marker, and the existing browser test covers mocked native write failure and retry. GenEye's available `workspace probe` and `control` commands provide background observation/UIA but no verified isolated native-dialog session; this repository's `quiet-control.ps1` has no isolated launcher. The real installed write-failure case was not run, because its Save dialog could take the operator's foreground. First establish and prove the isolated session route, then run the case above; do not count the mock as installed acceptance.
-- After this batch: Freeze the final evidence/checksum set only after remaining cases pass. No public release replacement.
+- What: Complete actual installed Sable retarget/animal assistance, then freeze the selected installed-product evidence.
+- Why: API/browser checks and the public preview cannot establish these remaining installed workflows.
+- Where: Installed application, retarget/animal owners and [acceptance](STANDALONE_ACCEPTANCE.md).
+- When: After the completed isolated picker and native queue write-failure/retry case below; separately from optional consumer P7C.
+- How: Use Sable and a generated compatible motion fixture through exact owned UI controls on the isolated desktop. Inspect preview, committed animation and reopened bytes; preserve ambiguous-chain refusals and bind installer/source and cleanup.
+- Verification: Native picker/Open/queue failure-retry is now observed as recorded below. Installed Sable reached Transfer in the earlier pass but has no completed retarget or animal-assistance acceptance yet.
+- Priority 1: Use the verified isolated desktop route to retarget an original/generated compatible motion onto Sable, inspect preview, commit, save/reopen, and independently inspect the resulting animation. Exercise bounded animal-chain suggestions plus an explicit mapping correction; ambiguous anatomy must remain unresolved. Reuse the selected installer/source or demonstrate relevant equivalence before renewing another candidate.
+- Priority 2: Reconcile final workflow evidence, installer/source, resources/notices, checksums and recovery/cleanup into one local product candidate. Public preview/release replacement remains separately authorized. Keep each app standalone and optional engine receiving outside this gate.
+- Done when: Both remaining Sable workflows and final evidence closure pass on the identified candidate, with exact cleanup and known limits.
+
+### Completed isolated native queue and native profile case — 2026-10-30, local review/fix
+
+- Published picker review found and fixed a timeout-verdict race and a final close message using a historical HWND. Late UIA completion now cannot change the returned failure; shutdown uses the owned job. No commit/push is included in this review pass.
+- Native filename/Open and Save submission pass through UIA ValuePattern assignment, exact native text readback and BN_CLICKED to the owned button parent. The successful parent is the top-level dialog; the sequence is proven without attributing success solely to a different parent. Native Button.Invoke on this host attempted focus/input and failed; that route is excluded.
+- The real queue case saves A, denies deletion of B's actual native staged file, observes actionable `Failed to install staged export ... (os error 32)` in the installed queue, releases only its obstruction, and retries B. A's SHA-256 and exact modification ticks remain unchanged. B matches its preserved failed-stage bytes. Dirty replacement refusal passes before/after the failure; live authored rename survives, while queued captures retain their pre-edit state.
+- Independent accessor/index/material/skin/bind/animation inspection and 12,960 world-skin samples pass at the existing 1e-5 tolerance; maximum sampled world-skin difference is zero. The bounded Signal Robot case pauses and resets the imported clip to zero before capture; an earlier comparison against a playing snapshot remains retained as a reference-state mismatch. No tolerance was changed.
+- [Final execution and independent output proof](INSTALLED_TEST_SESSION.md#final-qualified-case--2026-10-30) bind the fresh native-profile installer/executable and current source. Native/Open/queue acceptance does not renew every later producer revision or replace the public preview. Previous installed ZIP, project, Help and second-install evidence remains at its own epoch.
+- The approved Windows `--profile-dir` contract now isolates both WebView and native autosave. A fresh installer passes native queue plus default picker/cancel, attested PID/path ownership, private autosave and unchanged default recovery checks. Ten test-control regressions and 19 native unit tests pass. The public preview is unchanged.
+- Earlier installer-B model runs touched/rotated shared native recovery despite WebView isolation. Current discovered files are preserved; no pre-test snapshot is known and restoration is not claimed. The [runbook incident record](INSTALLED_TEST_SESSION.md#earlier-native-recovery-impact) keeps this separate from new preservation proof.
+- Closeout/publication preserves this verified batch through the guarded main helper; it does not close the Sable workflows above or replace the preview. The exact remote commit and owned build-cache disposition are retained in the run's publication receipt.
+- Owned job/process/desktop/handle cleanup is required by each passing receipt. Failed/control attempts remain retained. [Procedure and regression commands](INSTALLED_TEST_SESSION.md).
 
 ## Optional P7C consumer qualification — coupled graph ready
 
@@ -63,7 +71,7 @@ The public 0.2.1 preview is distinct from the newer local source candidate.
 - Done when: The complete graph passes the unchanged physical and serialization criteria, or an exact remaining witness is retained with the smallest producer/consumer decision. Do not report the one-packet feasibility result as complete receiving.
 - Verification: Private complete producer graph contains 46 immutable packets/590 references from 25 root/body-adjusted clips. Independent reload found at most `1.1921e-7 m` world-skin difference across 801 samples; file/hash/lineage/support audit, repeat export and the consumer's strict v1 bundle admission passed, with nine unrelated packet payloads exact. An earlier graph was refused for an extra semantics field and is retained. The focused standalone RustSMF tests passed 24/24. The hypothetical fixed-root proxy is below the 1x clearance limit. GaimEngine engine receiving and full graph qualification are pending.
 
-## Housekeeping exception — publication scratch remains blocked
+## Housekeeping exceptions — named scratch and owned build cache remain blocked
 
 - What: Remove named scratch only through an authorized route.
 - Why: Reclaim disposable copies without affecting product acceptance.
@@ -72,6 +80,13 @@ The public 0.2.1 preview is distinct from the newer local source candidate.
 - How: Unlink dependencies without targets; remove only proven owned scratch.
 - Done when: Named scratch is absent; shared dependencies and retained proof remain intact.
 - Verification: All three remain. Current inventory found two shared-dependency junctions in the D: candidate and no reparse points in the C: candidate. The checked two-junction unlink and single named-ZIP deletion were both rejected by command policy before execution on 2026-10-26. Do not bypass that restriction.
+
+The native-profile closeout also retains four inactive, task-owned Cargo cache
+directories after automatic approval review rejected their scoped removal as
+`blocked by policy`. No deletion ran and no workaround was attempted. The
+[installed runbook](INSTALLED_TEST_SESSION.md#owned-closeout-resources) links the
+exact inventory, owner and roughly 4.43 GiB logical cleanup scope. Preserve
+installers, recovery, source and proof; cleanup requires a permitted owner action.
 
 The 2026-10-28 isolated hip-Y producer proof retained task-owned rebuildable
 outputs on D: after a passing verify: a failed global Cargo target (4.26 GB
@@ -85,3 +100,9 @@ removal is authorized.
 <!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone-p7c-continuation | change=record quiet installed control and bounded P7C refusals -->
 
 AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | change=close isolated picker capability and order native intake, queue failure/retry, Sable and candidate freeze
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=installed-native-queue | change=close exact native queue failure/retry and prioritize remaining installed Sable workflows
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile-closeout | change=separate saved verified progress from remaining installed acceptance

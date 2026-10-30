@@ -38,7 +38,7 @@
     },
     "workflow__context_bank": {
       "description": "Portable public context routing, validation, and generation entry points.",
-      "max_kb": 130,
+      "max_kb": 132,
       "paths": [
         "summary_bank.json",
         "scripts/context-bank-lib.mjs",
@@ -703,7 +703,7 @@
     },
     "subsystem__tauri_bridge": {
       "description": "Tauri command adapters, native file dialogs, authorized bounded reads, staged serialized writes, recovery ownership, and native smoke coverage.",
-      "max_kb": 108,
+      "max_kb": 120,
       "paths": [
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/src/backend-client/lazyClient.ts",
@@ -715,13 +715,15 @@
         "source/frontend/tests/native.spec.ts",
         "source/frontend/package.json",
         "source/src-tauri/src/main.rs",
+        "source/src-tauri/src/native_profile.rs",
         "source/src-tauri/Cargo.toml",
         "source/src-tauri/tauri.conf.json",
         "source/src-tauri/capabilities/default.json"
       ],
       "notes": [
         "Native dialogs grant canonical bounded read authority; staged writes and allowlisted recovery stay Rust-owned. Retarget delivery: workflow__retarget_production_integration.",
-        "lazyClient tests import/retry ownership; binaryPayload tests untrusted IPC. native.spec uses mocks; installed Windows observations remain separate."
+        "lazyClient tests import/retry ownership; binaryPayload tests untrusted IPC. native.spec uses mocks; installed Windows observations remain separate.",
+        "Windows opt-in --profile-dir owns native recovery and WebView together; defaults remain unchanged. Installed attestation/preservation proof: workflow__installed_product_tests."
       ]
     },
     "tests__quality": {
@@ -821,6 +823,7 @@
         "source/frontend/src/hooks/useLoadModel.ts",
         "source/frontend/src/backend-client/tauri.ts",
         "source/src-tauri/src/main.rs",
+        "source/src-tauri/src/native_profile.rs",
         "source/frontend/tests/lifecycle.spec.ts",
         "source/frontend/tests/project-recovery.spec.ts"
       ],
@@ -830,7 +833,8 @@
         "Native writes are serialized and use unique staged files; project save rotates bounded generations with restoration on failure, while recovery discovery/read accepts only the exact owned regular-file generations.",
         "Foreground saves remain single-flight. Autosave coalesces work to the newest trailing request while a write is active; successful model replacement invalidates queued old-model work and waits for an issued write before swapping roots, while canceled/failed pickers leave recovery work intact.",
         "A refused recovery write surfaces a Save Project action without losing prior recovery bytes or live edits. A current successful retry clears only the autosave-owned error; unrelated errors remain visible. The browser quota regression proves manual project bytes and resumed recovery through ordinary edits.",
-        "Focused project-recovery.spec.ts proves serialized state and continued save; native.spec.ts write/race coverage remains in subsystem__tauri_bridge."
+        "Focused project-recovery.spec.ts proves serialized state and continued save; native.spec.ts write/race coverage remains in subsystem__tauri_bridge.",
+        "Windows opt-in --profile-dir owns native recovery and WebView together; defaults remain unchanged. Installed attestation/preservation proof: workflow__installed_product_tests."
       ]
     },
     "issue__smf_conversion_spatial_fidelity": {
@@ -856,7 +860,7 @@
     },
     "issue__verification_current_head": {
       "description": "Current source proof, local gates, browser failure classification and owned cleanup.",
-      "max_kb": 98,
+      "max_kb": 100,
       "paths": [
         "README.md",
         "docs/dev/review.md",
@@ -1081,7 +1085,7 @@
       "notes": [
         "Canonical v1.rs is vendored verbatim where consumers cannot snapshot the RustSMF path crate; it uses existing libm 0.2.16.",
         "Input is parent-first uniform-scale local TRS and one/two calibrated direct chains with independent limb subtrees; output is corrected full TRS, aligned joint orientations, and bounded diagnostics.",
-        "Calibrate the hip bend plane as pole × upper-axis and knee plane normal with the positive (hip-to-knee) × (knee-to-ankle) sign. No contact schedule or root travel is owned here.",
+        "Calibrate the hip bend plane as pole \u00d7 upper-axis and knee plane normal with the positive (hip-to-knee) \u00d7 (knee-to-ankle) sign. No contact schedule or root travel is owned here.",
         "Native/WASM parity covered four fixtures and 548 exact numeric outputs; source npm run verify:rust is the shared compile-only gate and npm run transition:runtime-proof rebuilds and receipts the native/browser-WASM transition artifacts.",
         "Cargo.lock now includes native JSON transport dev dependencies and is owned by workflow__skeletal_planted_idle; Cargo.toml retains the unchanged exact libm runtime pin."
       ]
@@ -1618,11 +1622,6 @@
       "max_kb": 128,
       "paths": [
         "docs/dev/STANDALONE_ACCEPTANCE.md",
-        "docs/dev/INSTALLED_TEST_SESSION.md",
-        "scripts/installed-test-session.ps1",
-        "scripts/installed-test-native.cs",
-        "scripts/installed-test-uia.cs",
-        "scripts/installed-test-session.test.mjs",
         "docs/dev/skills/geneye-installed-control/SKILL.md",
         "docs/dev/skills/geneye-installed-control/IMPLEMENTATION_NOTES.md",
         "docs/dev/skills/geneye-installed-control/scripts/quiet-control.ps1",
@@ -1635,7 +1634,29 @@
       ],
       "notes": [
         "Static containment and executable launcher controls complement isolated build/export/package and actual installed-dialog proof; consumer motion qualification remains separate.",
-        "Launcher/manifests intentionally overlap project-integrity and quality routes because they own required public entry points."
+        "Launcher/manifests intentionally overlap project-integrity and quality routes because they own required public entry points.",
+        "Installed control implementation, native queue case and independent output proof: workflow__installed_product_tests. Separate source/installer/consumer epochs remain explicit."
+      ]
+    },
+    "workflow__installed_product_tests": {
+      "description": "RustSMF-owned isolated installed picker/Open/queue failure-retry tests, exact native readback, MTA/job/desktop ownership, independent GLB proof and truthful acceptance limits. No GenEye or GaimEngine runtime dependency.",
+      "max_kb": 112,
+      "paths": [
+        "docs/dev/INSTALLED_TEST_SESSION.md",
+        "scripts/installed-test-session.ps1",
+        "scripts/installed-test-native.cs",
+        "scripts/installed-test-uia.cs",
+        "scripts/installed-test-session.test.mjs",
+        "scripts/installed-test-dialog.cs",
+        "scripts/installed-test-queue.cs",
+        "scripts/installed-queue-proof.mjs",
+        "scripts/installed-queue-proof.test.mjs"
+      ],
+      "notes": [
+        "Fresh native-profile installer and original Signal Robot only; Sable workflows and public preview remain separate.",
+        "Independent accessor parser remains owned by the existing export-queue/browser proof helper. Expand feature__export_queue when changing that parser.",
+        "Workflow invocation/failure shutdown guards are neutral and exercise no sibling application.",
+        "Read subsystem__tauri_bridge for the public profile contract. WebView profile alone cannot isolate native autosave; require native session attestation and canonical recovery before/after equality."
       ]
     }
   },
