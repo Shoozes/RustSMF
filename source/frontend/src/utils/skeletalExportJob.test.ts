@@ -8,10 +8,34 @@ import {
   SKELETAL_EXPORT_JOB_V2_SCHEMA,
   SKELETAL_EXPORT_JOB_V3_SCHEMA,
   SKELETAL_EXPORT_JOB_V4_SCHEMA,
+  SKELETAL_EXPORT_JOB_V5_SCHEMA,
   selectSkeletalExportClips,
 } from './skeletalExportJob';
 import { CONDITIONING_MODE, CONDITIONING_NLERP_MODE } from './skeletalConditioning';
 import { HIP_Y_LOOP_ENDPOINT_POLICY } from './skeletalHipYLoopEndpoint';
+import { COUPLED_BODY_HEIGHT_POLICY } from './skeletalCoupledBodyHeight';
+
+test('v5 coupled route is opt-in, closed and leaves earlier jobs unchanged', () => {
+  const root = path.join(os.tmpdir(), 'skeletal-coupled-job');
+  const document = { $schema: SKELETAL_EXPORT_JOB_V5_SCHEMA,
+    input: { skinnedModel: path.join(root, 'endpoint.glb'), conditioningReport: path.join(root, 'endpoint-report.json'), originalSkinnedModel: path.join(root, 'original.glb') },
+    export: { rootJoint: 'LocomotionRoot', units: 'meters', upAxis: '+Y', forwardAxis: '+Z', handedness: 'right', ticksPerSecond: 60,
+      rootMotion: 'separate-track', clipIds: ['walkSlow'], twoKeyExportBoundary: 'preserve-unselected-emitted-keys.v1' },
+    coupledBodyHeight: { policy: COUPLED_BODY_HEIGHT_POLICY },
+    output: { generationRoot: path.join(root, 'generations'), conditioningRoot: path.join(root, 'conditioned') } };
+  const parsed = parseSkeletalExportJobDocument(document);
+  assert.equal(parsed.$schema, SKELETAL_EXPORT_JOB_V5_SCHEMA);
+  if (parsed.$schema === SKELETAL_EXPORT_JOB_V5_SCHEMA) assert.deepEqual(parsed.coupledBodyHeight, document.coupledBodyHeight);
+  for (const invalid of [
+    { ...document, coupledBodyHeight: { policy: 'other' } },
+    { ...document, coupledBodyHeight: { policy: COUPLED_BODY_HEIGHT_POLICY, maxDrop: 1 } },
+    { ...document, export: { ...document.export, twoKeyExportBoundary: 'other' } },
+    { ...document, input: { ...document.input, originalSkinnedModel: document.input.skinnedModel } },
+    { ...document, output: { ...document.output, currentPointer: path.join(root, 'generations/current.json') } },
+  ]) assert.throws(() => parseSkeletalExportJobDocument(invalid));
+  for (const oldSchema of [SKELETAL_EXPORT_JOB_SCHEMA, SKELETAL_EXPORT_JOB_V2_SCHEMA, SKELETAL_EXPORT_JOB_V3_SCHEMA, SKELETAL_EXPORT_JOB_V4_SCHEMA])
+    assert.throws(() => parseSkeletalExportJobDocument({ ...document, $schema: oldSchema }), /unsupported field/);
+});
 
 test('v4 endpoint route is explicit and leaves all older schemas closed', () => {
   const root = path.join(os.tmpdir(), 'skeletal-endpoint-job');

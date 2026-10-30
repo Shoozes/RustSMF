@@ -9,11 +9,13 @@ import { parseRotationSpanBake, assertDisjointRotationSpan } from './skeletalRot
 import { parsePelvisLayer } from './skeletalPelvisLayer';
 import { assertDisjointStanceTrajectory, parseStanceTrajectory } from './skeletalStanceTrajectory';
 import { parseHipYLoopEndpoint, type HipYLoopEndpointRecipe } from './skeletalHipYLoopEndpoint';
+import { parseCoupledBodyHeight, type CoupledBodyHeightRecipe } from './skeletalCoupledBodyHeight';
 
 export const SKELETAL_EXPORT_JOB_SCHEMA = 'rustsmf.skeletal-export-job.v1';
 export const SKELETAL_EXPORT_JOB_V2_SCHEMA = 'rustsmf.skeletal-export-job.v2';
 export const SKELETAL_EXPORT_JOB_V3_SCHEMA = 'rustsmf.skeletal-export-job.v3';
 export const SKELETAL_EXPORT_JOB_V4_SCHEMA = 'rustsmf.skeletal-export-job.v4';
+export const SKELETAL_EXPORT_JOB_V5_SCHEMA = 'rustsmf.skeletal-export-job.v5';
 export const SKELETAL_EXPORT_JOB_LIMIT = 1024 * 1024;
 
 interface SkeletalExportJobBase {
@@ -53,7 +55,14 @@ export interface SkeletalExportJobV4 extends SkeletalExportJobBase {
   endpoint: HipYLoopEndpointRecipe;
   output: SkeletalExportJobBase['output'] & { conditioningRoot: string };
 }
-export type SkeletalExportJob = SkeletalExportJobV1 | SkeletalExportJobV2 | SkeletalExportJobV3 | SkeletalExportJobV4;
+export interface SkeletalExportJobV5 extends SkeletalExportJobBase {
+  $schema: typeof SKELETAL_EXPORT_JOB_V5_SCHEMA;
+  input: SkeletalExportJobBase['input'] & { conditioningReport: string; originalSkinnedModel: string };
+  export: SkeletalExportJobBase['export'] & { clipIds: string[]; twoKeyExportBoundary: typeof TWO_KEY_EXPORT_BOUNDARY_POLICY };
+  coupledBodyHeight: CoupledBodyHeightRecipe;
+  output: SkeletalExportJobBase['output'] & { conditioningRoot: string };
+}
+export type SkeletalExportJob = SkeletalExportJobV1 | SkeletalExportJobV2 | SkeletalExportJobV3 | SkeletalExportJobV4 | SkeletalExportJobV5;
 
 export function selectSkeletalExportClips<T extends { name: string }>(
   sourceClips: readonly T[],
@@ -119,19 +128,20 @@ export function parseSkeletalExportJobDocument(
   const isV2 = schema === SKELETAL_EXPORT_JOB_V2_SCHEMA;
   const isV3 = schema === SKELETAL_EXPORT_JOB_V3_SCHEMA;
   const isV4 = schema === SKELETAL_EXPORT_JOB_V4_SCHEMA;
-  const selectsClips = isV2 || isV3 || isV4;
-  if (!isV1 && !selectsClips) fail(`Skeletal export job schema must be ${SKELETAL_EXPORT_JOB_SCHEMA}, ${SKELETAL_EXPORT_JOB_V2_SCHEMA}, ${SKELETAL_EXPORT_JOB_V3_SCHEMA} or ${SKELETAL_EXPORT_JOB_V4_SCHEMA}.`);
-  exactKeys(document, ['$schema', 'input', 'export', 'output', ...(isV3 ? ['conditioning'] : []), ...(isV4 ? ['endpoint'] : [])], 'Skeletal export job');
+  const isV5 = schema === SKELETAL_EXPORT_JOB_V5_SCHEMA;
+  const selectsClips = isV2 || isV3 || isV4 || isV5;
+  if (!isV1 && !selectsClips) fail(`Skeletal export job schema must be ${SKELETAL_EXPORT_JOB_SCHEMA}, ${SKELETAL_EXPORT_JOB_V2_SCHEMA}, ${SKELETAL_EXPORT_JOB_V3_SCHEMA}, ${SKELETAL_EXPORT_JOB_V4_SCHEMA} or ${SKELETAL_EXPORT_JOB_V5_SCHEMA}.`);
+  exactKeys(document, ['$schema', 'input', 'export', 'output', ...(isV3 ? ['conditioning'] : []), ...(isV4 ? ['endpoint'] : []), ...(isV5 ? ['coupledBodyHeight'] : [])], 'Skeletal export job');
   const input = record(document.input, 'job.input');
-  exactKeys(input, ['skinnedModel', ...(isV4 ? ['conditioningReport', 'originalSkinnedModel'] : [])], 'job.input');
+  exactKeys(input, ['skinnedModel', ...(isV4 || isV5 ? ['conditioningReport', 'originalSkinnedModel'] : [])], 'job.input');
   const skinnedModel = absolutePath(input.skinnedModel, 'job.input.skinnedModel', paths);
-  const conditioningReport = isV4 ? absolutePath(input.conditioningReport, 'job.input.conditioningReport', paths) : undefined;
-  const originalSkinnedModel = isV4 ? absolutePath(input.originalSkinnedModel, 'job.input.originalSkinnedModel', paths) : undefined;
+  const conditioningReport = isV4 || isV5 ? absolutePath(input.conditioningReport, 'job.input.conditioningReport', paths) : undefined;
+  const originalSkinnedModel = isV4 || isV5 ? absolutePath(input.originalSkinnedModel, 'job.input.originalSkinnedModel', paths) : undefined;
   if (conditioningReport && (path.extname(conditioningReport).toLocaleLowerCase('en-US') !== '.json'
     || paths.comparisonKey(conditioningReport) === paths.comparisonKey(skinnedModel)
     || paths.comparisonKey(conditioningReport) === paths.comparisonKey(originalSkinnedModel!)
     || paths.comparisonKey(originalSkinnedModel!) === paths.comparisonKey(skinnedModel)
-    || path.extname(originalSkinnedModel!).toLocaleLowerCase('en-US') !== '.glb')) fail('v4 inputs must be three distinct absolute .glb/.json paths.');
+    || path.extname(originalSkinnedModel!).toLocaleLowerCase('en-US') !== '.glb')) fail('v4/v5 inputs must be three distinct absolute .glb/.json paths.');
   if (path.extname(skinnedModel).toLocaleLowerCase('en-US') !== '.glb') {
     fail('job.input.skinnedModel must name one self-contained .glb. FBX, external glTF sidecars, and other formats are not admitted by this exporter slice.');
   }
@@ -142,7 +152,7 @@ export function parseSkeletalExportJobDocument(
   exactKeys(exportSettings, [
     'rootJoint', 'units', 'upAxis', 'forwardAxis', 'handedness', 'ticksPerSecond', 'rootMotion',
     ...(selectsClips ? ['clipIds'] : []),
-    ...((isV3 && Object.prototype.hasOwnProperty.call(exportSettings, 'twoKeyExportBoundary')) || isV4 ? ['twoKeyExportBoundary'] : []),
+    ...((isV3 && Object.prototype.hasOwnProperty.call(exportSettings, 'twoKeyExportBoundary')) || isV4 || isV5 ? ['twoKeyExportBoundary'] : []),
   ], 'job.export');
   if (typeof exportSettings.rootJoint !== 'string' || !exportSettings.rootJoint.trim()) {
     fail('job.export.rootJoint must name the source skeleton root joint.');
@@ -172,7 +182,7 @@ export function parseSkeletalExportJobDocument(
   const outputKeys = Object.prototype.hasOwnProperty.call(output, 'currentPointer')
     ? ['generationRoot', 'currentPointer']
     : ['generationRoot'];
-  exactKeys(output, [...outputKeys, ...(isV3 || isV4 ? ['conditioningRoot'] : [])], 'job.output');
+  exactKeys(output, [...outputKeys, ...(isV3 || isV4 || isV5 ? ['conditioningRoot'] : [])], 'job.output');
   const generationRoot = absolutePath(output.generationRoot, 'job.output.generationRoot', paths);
   const currentPointer = Object.prototype.hasOwnProperty.call(output, 'currentPointer')
     ? absolutePath(output.currentPointer, 'job.output.currentPointer', paths)
@@ -207,6 +217,16 @@ export function parseSkeletalExportJobDocument(
       input: { skinnedModel, conditioningReport: conditioningReport!, originalSkinnedModel: originalSkinnedModel! },
       export: { ...common.export, clipIds: clipIds!, twoKeyExportBoundary: TWO_KEY_EXPORT_BOUNDARY_POLICY },
       endpoint: parseHipYLoopEndpoint(document.endpoint),
+      output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
+  }
+  if (isV5) {
+    if (common.export.rootJoint !== 'LocomotionRoot' || exportSettings.twoKeyExportBoundary !== TWO_KEY_EXPORT_BOUNDARY_POLICY)
+      fail('v5 coupled export requires the conditioned locomotion root and explicit boundary policy.');
+    if (common.output.currentPointer) fail('Conditioned candidate jobs omit the current pointer.');
+    return { ...common, $schema: SKELETAL_EXPORT_JOB_V5_SCHEMA,
+      input: { skinnedModel, conditioningReport: conditioningReport!, originalSkinnedModel: originalSkinnedModel! },
+      export: { ...common.export, clipIds: clipIds!, twoKeyExportBoundary: TWO_KEY_EXPORT_BOUNDARY_POLICY },
+      coupledBodyHeight: parseCoupledBodyHeight(document.coupledBodyHeight),
       output: { ...common.output, conditioningRoot: absolutePath(output.conditioningRoot, 'job.output.conditioningRoot', paths) } };
   }
   if (isV3) {

@@ -6,22 +6,26 @@ import { bakeRotationSpan, parseRotationSpanBake, assertDisjointRotationSpan } f
 import { PELVIS_LAYER_POLICY, pelvisLayerRecipe, restorePelvisLayer, type PelvisLayerReport } from './skeletalPelvisLayer';
 import { assertDisjointStanceTrajectory, bakeStanceTrajectory, parseStanceTrajectory, STANCE_TRAJECTORY_POLICY } from './skeletalStanceTrajectory';
 import { restoreHipYLoopEndpointClip, validateHipYLoopEndpointReport, type HipYLoopEndpointReport } from './skeletalHipYLoopEndpoint';
+import { COUPLED_BODY_HEIGHT_POLICY, COUPLED_BODY_HEIGHT_PROFILE_SHA256, restoreCoupledBodyHeightClip, type CoupledBodyHeightReport } from './skeletalCoupledBodyHeight';
 
 export const TWO_KEY_EXPORT_BOUNDARY_POLICY = 'preserve-unselected-emitted-keys.v1' as const;
 type Report = ReturnType<typeof bakeTwoKeyRotations>['report'];
 type SpanReport = ReturnType<typeof bakeRotationSpan>['report'];
 type StanceReport = ReturnType<typeof bakeStanceTrajectory>['report'];
-export type TwoKeyExportBoundary = { policy: typeof TWO_KEY_EXPORT_BOUNDARY_POLICY; spanReport?: SpanReport; pelvisReport?: PelvisLayerReport; stanceReport?: StanceReport; endpointReport?: HipYLoopEndpointReport } & (
+export type TwoKeyExportBoundary = { policy: typeof TWO_KEY_EXPORT_BOUNDARY_POLICY; spanReport?: SpanReport; pelvisReport?: PelvisLayerReport; stanceReport?: StanceReport; endpointReport?: HipYLoopEndpointReport; coupledReport?: CoupledBodyHeightReport } & (
   { report: Report; reports?: never } | { reports: Report[]; report?: never } | { spanReport: SpanReport; report?: never; reports?: never } | { pelvisReport: PelvisLayerReport; report?: never; reports?: never } | { stanceReport: StanceReport; report?: never; reports?: never } | { endpointReport: HipYLoopEndpointReport; report?: never; reports?: never }
 );
 
 export function twoKeyExportReports(context: TwoKeyExportBoundary): readonly (Report | SpanReport | PelvisLayerReport | StanceReport)[] {
-  const single = Object.prototype.hasOwnProperty.call(context, 'report'), plural = Object.prototype.hasOwnProperty.call(context, 'reports'), span = Object.prototype.hasOwnProperty.call(context, 'spanReport'), pelvis = Object.prototype.hasOwnProperty.call(context, 'pelvisReport'), stance = Object.prototype.hasOwnProperty.call(context, 'stanceReport'), endpoint = Object.prototype.hasOwnProperty.call(context, 'endpointReport');
+  const single = Object.prototype.hasOwnProperty.call(context, 'report'), plural = Object.prototype.hasOwnProperty.call(context, 'reports'), span = Object.prototype.hasOwnProperty.call(context, 'spanReport'), pelvis = Object.prototype.hasOwnProperty.call(context, 'pelvisReport'), stance = Object.prototype.hasOwnProperty.call(context, 'stanceReport'), endpoint = Object.prototype.hasOwnProperty.call(context, 'endpointReport'), coupled = Object.prototype.hasOwnProperty.call(context, 'coupledReport');
   if (pelvis) pelvisLayerRecipe(context.pelvisReport!);
   if (endpoint) validateHipYLoopEndpointReport(context.endpointReport!);
+  if (coupled && (context.coupledReport?.policy !== COUPLED_BODY_HEIGHT_POLICY
+    || context.coupledReport.profileSha256 !== COUPLED_BODY_HEIGHT_PROFILE_SHA256
+    || !endpoint || !span || !plural)) throw new Error('Invalid coupled export-boundary provenance.');
   if (context.policy !== TWO_KEY_EXPORT_BOUNDARY_POLICY
     || (single && plural) || (!single && !plural && !span && !pelvis && !stance && !endpoint)
-    || Object.keys(context).sort().join(',') !== ['policy', ...(single ? ['report'] : plural ? ['reports'] : []), ...(span ? ['spanReport'] : []), ...(pelvis ? ['pelvisReport'] : []), ...(stance ? ['stanceReport'] : []), ...(endpoint ? ['endpointReport'] : [])].sort().join(',')) throw new Error('Invalid two-key export-boundary selection.');
+    || Object.keys(context).sort().join(',') !== ['policy', ...(single ? ['report'] : plural ? ['reports'] : []), ...(span ? ['spanReport'] : []), ...(pelvis ? ['pelvisReport'] : []), ...(stance ? ['stanceReport'] : []), ...(endpoint ? ['endpointReport'] : []), ...(coupled ? ['coupledReport'] : [])].sort().join(',')) throw new Error('Invalid two-key export-boundary selection.');
   const reports: Report[] = single ? [context.report!] : plural ? context.reports! : [];
   if (!Array.isArray(reports) || ((single || plural) && reports.length < 1) || reports.length > MAX_TWO_KEY_ROTATION_BAKES
     || reports.some(report => !report || report.policy !== 'two-adjacent-interior-rotations.v1'
@@ -59,6 +63,8 @@ export function twoKeyExportReports(context: TwoKeyExportBoundary): readonly (Re
 /** Restore the pre-authoring curve for unselected emitted keys, never source references. */
 export function twoKeyExportBaseline(clip: THREE.AnimationClip, context: TwoKeyExportBoundary, bones: readonly THREE.Bone[], roots: readonly string[], signal?: AbortSignal, scene?: THREE.Object3D, height?: number): THREE.AnimationClip {
   signal?.throwIfAborted();
+  const coupled = context.coupledReport?.clipId === clip.name ? context.coupledReport : undefined;
+  if (coupled) clip = restoreCoupledBodyHeightClip(clip, coupled);
   const endpoint = context.endpointReport?.clipId === clip.name ? context.endpointReport : undefined;
   if (endpoint) clip = restoreHipYLoopEndpointClip(clip, endpoint);
   const allReports = twoKeyExportReports(context).filter(report => report.clipId === clip.name);

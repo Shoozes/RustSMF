@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { readFileBounded } from './bounded-file-read';
 import { installNodeThreeRuntime } from './node-three-runtime';
 import { readSkeletalExportProducer } from './skeletal-export-producer';
@@ -13,6 +13,7 @@ import { MAX_MODEL_INPUT_BYTES } from '../src/utils/modelFormat';
 import { disposeThreeObject } from '../src/utils/threeDisposal';
 import { conditionSkeletalModel, CONDITIONING_NLERP_MODE, measureConditioningDifferences, type ConditioningReport } from '../src/utils/skeletalConditioning';
 import { bakeHipYLoopEndpoint, measureHipYLoopEndpointFidelity } from '../src/utils/skeletalHipYLoopEndpoint';
+import { bakeCoupledBodyHeight, COUPLED_BODY_HEIGHT_PROFILE_SHA256, COUPLED_BODY_HEIGHT_SOURCE_SHA256, measureCoupledBodyHeightFidelity } from '../src/utils/skeletalCoupledBodyHeight';
 import { TWO_KEY_EXPORT_BOUNDARY_POLICY, twoKeyExportReports, type TwoKeyExportBoundary } from '../src/utils/skeletalTwoKeyExportBoundary';
 import {
   prepareSkeletalExport,
@@ -26,11 +27,13 @@ import {
   SKELETAL_EXPORT_JOB_V2_SCHEMA,
   SKELETAL_EXPORT_JOB_V3_SCHEMA,
   SKELETAL_EXPORT_JOB_V4_SCHEMA,
+  SKELETAL_EXPORT_JOB_V5_SCHEMA,
   selectSkeletalExportClips,
   type SkeletalExportJob,
 } from '../src/utils/skeletalExportJob';
 import {
   normalizedSkeletalJsonBytes,
+  inheritedConditioningRecipeInput,
   publishSkeletalExportGeneration,
   publishConditionedSkeletalInput,
   skeletalInputSetIdentity,
@@ -90,7 +93,9 @@ function readInput(filePath: string, bytes: Uint8Array): SourceInput {
 
 function settingsDocument(job: SkeletalExportJob): Record<string, unknown> {
   const document: Record<string, unknown> = {
-    schema: job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA
+    schema: job.$schema === SKELETAL_EXPORT_JOB_V5_SCHEMA
+      ? 'rustsmf.skeletal-export-settings.v5'
+      : job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA
       ? 'rustsmf.skeletal-export-settings.v4'
       : job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA
       ? 'rustsmf.skeletal-export-settings.v3'
@@ -124,7 +129,8 @@ function settingsDocument(job: SkeletalExportJob): Record<string, unknown> {
   }
   if (job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA) document.conditioning = job.conditioning;
   if (job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA) document.endpoint = job.endpoint;
-  if ((job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA || job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA) && job.export.twoKeyExportBoundary) {
+  if (job.$schema === SKELETAL_EXPORT_JOB_V5_SCHEMA) document.coupledBodyHeight = job.coupledBodyHeight;
+  if ((job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA || job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA || job.$schema === SKELETAL_EXPORT_JOB_V5_SCHEMA) && job.export.twoKeyExportBoundary) {
     document.twoKeyExportSampling = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY,
       unselectedKeys: 'pre-authoring canonical chord at existing nominal tick/60',
       selectedKeys: 'authored re-imported GLB at existing nominal tick/60',
@@ -135,7 +141,7 @@ function settingsDocument(job: SkeletalExportJob): Record<string, unknown> {
     };
   }
   if ((job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.mode === CONDITIONING_NLERP_MODE)
-    || job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA) {
+    || job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA || job.$schema === SKELETAL_EXPORT_JOB_V5_SCHEMA) {
     document.animation = 'preserve float32 60 Hz sampled poses; canonical chord CUBICSPLINE joint rotations normalize to shortest-arc NLERP; translation, scale and locomotion yaw remain LINEAR with continuous yaw winding';
   }
   return document;
@@ -270,10 +276,60 @@ export async function runSkeletalExportJob(
       conditioning = await publishConditionedSkeletalInput(source.bytes, recipe, report, { generationRoot: job.output.conditioningRoot, signal });
       twoKeyExportBoundary = { ...context, endpointReport: baked.report };
       inputs.push({ role: 'original-skinned-model', sha256: sha256(originalBytes), bytes: originalBytes.byteLength },
-        { role: 'conditioning-recipe', sha256: sha256(priorRecipe), bytes: priorRecipe.byteLength },
+        inheritedConditioningRecipeInput(prior.recipe, prior.recipeIdentitySha256),
         { role: 'pre-endpoint-conditioning-report', sha256: sha256(priorBytes), bytes: priorBytes.byteLength },
         { role: 'pre-endpoint-skinned-model', sha256: input.sha256, bytes: input.bytes.byteLength },
         { role: 'hip-y-loop-endpoint-recipe', sha256: sha256(recipe), bytes: recipe.byteLength },
+        { role: 'conditioning-report', sha256: sha256(report), bytes: report.byteLength });
+    }
+    if (job.$schema === SKELETAL_EXPORT_JOB_V5_SCHEMA) {
+      const priorBytes = await readFileBounded(job.input.conditioningReport, SKELETAL_EXPORT_JOB_LIMIT, signal);
+      const originalBytes = await readFileBounded(job.input.originalSkinnedModel, MAX_MODEL_INPUT_BYTES, signal);
+      const profileBytes = await readFileBounded(fileURLToPath(new URL('../src/utils/walkSlowCoupledBodyHeight.v1.json', import.meta.url)), 64 * 1024, signal);
+      throwIfAborted(signal);
+      if (sha256(profileBytes) !== COUPLED_BODY_HEIGHT_PROFILE_SHA256 || input.sha256 !== COUPLED_BODY_HEIGHT_SOURCE_SHA256
+        || sha256(priorBytes) !== '883011dd245f1328c7812b720e2819e67f6c0d49191340e9e43fed88e83fd1be'
+        || sha256(originalBytes) !== 'e37f63b05b5f0873f95ed3b1468f0c736155e9f8af4ea9a4738bbcee151faf07')
+        fail('v5 coupled source/profile/lineage identity differs from the approved canonical graph.');
+      let prior: ConditioningReport & { sourceModelIdentitySha256: string; originalSourceIdentitySha256: string; recipeIdentitySha256: string;
+        hipYLoopEndpointBake?: { policy?: string }; preEndpointConditioningReportSha256?: string; differences?: unknown };
+      try { prior = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(priorBytes)) as typeof prior; }
+      catch { fail('v5 requires a valid UTF-8 conditioning report.'); }
+      if (!prior || typeof prior !== 'object' || prior.schema !== 'rustsmf.skeletal-conditioning.v1'
+        || prior.sourceModelIdentitySha256 !== input.sha256 || prior.originalSourceIdentitySha256 !== sha256(originalBytes)
+        || prior.recipeIdentitySha256 !== sha256(normalizedSkeletalJsonBytes(prior.recipe))
+        || prior.recipe.mode !== CONDITIONING_NLERP_MODE || prior.recipe.locomotionRootJoint !== job.export.rootJoint
+        || !prior.recipe.clipIds.includes('walkSlow') || prior.hipYLoopEndpointBake?.policy !== 'walkSlow-hip-y-loop-endpoint.v1'
+        || !prior.preEndpointConditioningReportSha256 || !prior.twoKeyRotationBakes || !prior.rotationSpanBake
+        || !prior.pelvisLayerBake || !prior.stanceTrajectoryBake) fail('v5 coupled report lacks the approved endpoint and composed-bake lineage.');
+      const context: TwoKeyExportBoundary = { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY,
+        reports: prior.twoKeyRotationBakes, spanReport: prior.rotationSpanBake,
+        pelvisReport: prior.pelvisLayerBake, stanceReport: prior.stanceTrajectoryBake,
+        endpointReport: prior.hipYLoopEndpointBake as TwoKeyExportBoundary['endpointReport'] };
+      twoKeyExportReports(context);
+      const baked = bakeCoupledBodyHeight(input.bytes, input.sha256, job.coupledBodyHeight);
+      const binLength = new DataView(baked.bytes.buffer).getUint32(12, true);
+      if (sha256(baked.bytes.subarray(28 + binLength)) !== '5e157a57aa874b1b897f69e833a4a6aecfb53586a45f93b6d91e2dbd3f9d0471')
+        fail('v5 coupled output differs from the qualified specimen BIN.');
+      source = readInput(input.path, baked.bytes);
+      original = loaded; loaded = undefined;
+      loaded = await loadGLB(bytesToArrayBuffer(baked.bytes));
+      const fidelity = measureCoupledBodyHeightFidelity(original, loaded, baked.report);
+      const recipe = normalizedSkeletalJsonBytes(job.coupledBodyHeight);
+      const report = normalizedSkeletalJsonBytes({ ...prior, sourceModelIdentitySha256: source.sha256, producer,
+        differencePolicy: prior.differencePolicy + ' Exact opt-in walkSlow coupled body-height correction; all unselected stored channels and outside-span interpolation retain the qualified source.',
+        preCoupledConditioningReportSha256: sha256(priorBytes), preCoupledSourceModelIdentitySha256: input.sha256,
+        coupledBodyHeightBake: baked.report, coupledBodyHeightFidelity: fidelity,
+        coupledProfileSha256: sha256(profileBytes), coupledOutputBinSha256: sha256(baked.bytes.subarray(28 + binLength)),
+        coupledOutputModelSha256: source.sha256 });
+      conditioning = await publishConditionedSkeletalInput(source.bytes, recipe, report, { generationRoot: job.output.conditioningRoot, signal });
+      twoKeyExportBoundary = { ...context, coupledReport: baked.report };
+      inputs.push({ role: 'original-skinned-model', sha256: sha256(originalBytes), bytes: originalBytes.byteLength },
+        inheritedConditioningRecipeInput(prior.recipe, prior.recipeIdentitySha256),
+        { role: 'pre-coupled-conditioning-report', sha256: sha256(priorBytes), bytes: priorBytes.byteLength },
+        { role: 'pre-coupled-skinned-model', sha256: input.sha256, bytes: input.bytes.byteLength },
+        { role: 'coupled-body-height-profile', sha256: sha256(profileBytes), bytes: profileBytes.byteLength },
+        { role: 'coupled-body-height-recipe', sha256: sha256(recipe), bytes: recipe.byteLength },
         { role: 'conditioning-report', sha256: sha256(report), bytes: report.byteLength });
     }
     const clips = job.$schema !== SKELETAL_EXPORT_JOB_SCHEMA
@@ -302,13 +358,17 @@ export async function runSkeletalExportJob(
     if (selectedEndpoint && clips.some(c => c.name === selectedEndpoint.clipId)) exportBoundary = exportBoundary
       ? { ...exportBoundary, endpointReport: selectedEndpoint }
       : { policy: TWO_KEY_EXPORT_BOUNDARY_POLICY, endpointReport: selectedEndpoint };
+    const selectedCoupled = twoKeyExportBoundary?.coupledReport;
+    if (selectedCoupled && clips.some(c => c.name === selectedCoupled.clipId)) exportBoundary = exportBoundary
+      ? { ...exportBoundary, coupledReport: selectedCoupled }
+      : fail('Coupled export requires its composed boundary reports.');
     const prepared = await prepareSkeletalExport({ ...loaded, clips }, {
       sourceIdentitySha256: source.sha256,
       rootJoint: job.export.rootJoint,
       signal,
       ...(exportBoundary ? { twoKeyExportBoundary: exportBoundary } : {}),
       ...(((job.$schema === SKELETAL_EXPORT_JOB_V3_SCHEMA && job.conditioning.mode === CONDITIONING_NLERP_MODE)
-        || job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA)
+        || job.$schema === SKELETAL_EXPORT_JOB_V4_SCHEMA || job.$schema === SKELETAL_EXPORT_JOB_V5_SCHEMA)
         ? { conditionedRotationMode: CONDITIONING_NLERP_MODE } : {}),
     });
     throwIfAborted(signal);

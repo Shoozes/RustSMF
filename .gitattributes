@@ -3,3 +3,5 @@ source/frontend/tests/fixtures/external-gltf/mesh.bin -text
 /THIRD_PARTY_LICENSES.txt -text whitespace=-trailing-space
 # The Sable manifest binds the recipe's exact bytes across platforms.
 /examples/black-cat/build_black_cat.py text eol=lf
+# The source-bound coupled profile is hashed as exact LF bytes.
+/source/frontend/src/utils/walkSlowCoupledBodyHeight.v1.json text eol=lf

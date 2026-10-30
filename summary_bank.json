@@ -327,7 +327,6 @@
         "source/frontend/src/utils/threeDisposal.ts",
         "source/frontend/src/utils/threeTypeGuards.ts",
         "source/frontend/src/utils/skeletalExport.ts",
-        "source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts",
         "source/frontend/src/utils/skeletalChordRotation.ts",
         "source/frontend/src/utils/animationTrackInterpolation.ts",
         "source/frontend/src/utils/skeletalExport.test.ts",
@@ -1548,7 +1547,6 @@
         "source/frontend/src/utils/skeletalPelvisLayer.test.ts",
         "source/frontend/src/utils/skeletalConditioning.ts",
         "source/frontend/src/utils/skeletalConditioningFidelity.ts",
-        "source/frontend/src/utils/skeletalTwoKeyExportBoundary.ts",
         "source/frontend/src/utils/skeletalExportJob.ts",
         "source/frontend/scripts/skeletal-export-cli.ts",
         "source/frontend/scripts/skeletal-export-producer.ts"
@@ -1600,6 +1598,19 @@
       ],
       "notes": [
         "Public producer contract and focused physical scope live here. Immutable generation and general job mechanics remain in workflow__skeletal_export; source root/body transfer stays in workflow__skeletal_root_body. GaimEngine owns runtime receiving and visual qualification."
+      ]
+    },
+    "workflow__skeletal_coupled_body_height": {
+      "description": "Exact opt-in v5 walkSlow coupled body-height profile, source-bound report, preservation and refusal proof.",
+      "max_kb": 56,
+      "paths": [
+        "docs/dev/SKELETAL_COUPLED_BODY_HEIGHT.md",
+        "source/frontend/src/utils/skeletalCoupledBodyHeight.ts",
+        "source/frontend/src/utils/skeletalCoupledBodyHeight.test.ts",
+        "source/frontend/src/utils/walkSlowCoupledBodyHeight.v1.json"
+      ],
+      "notes": [
+        "Job/CLI and immutable publication use workflow__skeletal_export; selected-key composition uses workflow__skeletal_export_boundary. GaimEngine owns actual receiving and P7C qualification."
       ]
     },
     "workflow__standalone_product": {

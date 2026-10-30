@@ -24,6 +24,8 @@ const EXPORTER_FILES = [
   'source/frontend/src/utils/skeletalStanceTrajectory.ts',
   'source/frontend/src/utils/skeletalRootBodyTransfer.ts',
   'source/frontend/src/utils/skeletalHipYLoopEndpoint.ts',
+  'source/frontend/src/utils/skeletalCoupledBodyHeight.ts',
+  'source/frontend/src/utils/walkSlowCoupledBodyHeight.v1.json',
   'source/frontend/src/utils/skeletalPelvisLayer.ts',
   'source/frontend/src/utils/skeletalChordRotation.ts',
   'source/frontend/src/utils/skeletalTransitionFloor.ts',

@@ -2,6 +2,81 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="p7c-coupled-body-height-20261029"></a>
+## 2026-10-29 - Opt-in walkSlow coupled body-height producer
+
+The approved private specimen's exact float32 correction profile was frozen
+as `walkSlow-coupled-body-height.v1`, profile SHA-256 `dacbc358`. The explicit
+`rustsmf.skeletal-export-job.v5` accepts only canonical v4 source GLB
+`32837faf`, report `883011dd` and original source `e37f63b0`; it refuses
+foreign source, stale lineage, extra recipe parameters and unsupported layout
+before publication. V1–v4 jobs and omission retain their prior paths.
+
+The public conditioned GLB `6edb68ea` has BIN SHA-256 `5e157a57`, byte-exact
+to the passing private candidate's BIN. The only JSON difference from that
+candidate is incidental preserved root-node metadata; no motion, mesh or bind
+field differs. Stored maxima are 0.1999999285 m hip drop, 24.364902° left
+and 18.618425° right, within 0.20 m/65°/25°. The declared authoring is hip-Y
+51–56, left three rotations46–56 and right three rotations51–56. The latter
+overlaps the accepted 48–65 span; the export boundary preserves the right
+key50 and all unselected components while composing the new selected keys.
+Independent GLB reload found 45 exact other clips, 1,227 exact unselected
+tracks, 495 exact unselected quaternion keys, three exact p50 source clips/78
+tracks, 92 exact root tracks, hip X/Z and endpoint90. The earlier private
+physical and V6 source-root results remain in
+`D:/Compact_Evidence/RustSMF/runs/p7c-coupled-body-height-20261029/` and
+`D:/Compact_Evidence/RustSMF/runs/p7c-coupled-body-height-v6-floor-20261029/`.
+
+The final normal producer graph is
+`D:/Compact_Evidence/RustSMF/runs/p7c-coupled-public-20261029/graph-verified/`,
+bundle SHA-256 `8e8221ad6b8e6ad63f640814becfc84bb0d3de1afd739ff8d4958eae19d7b58b`,
+conditioned report SHA-256 `7cf4b3f74c6c54a3f32061a42f12ebce0cdfa1b0daa79ff5cee72751025accbc`.
+All 46 packets/590 references regenerate through the v5 CLI. Thirteen
+`walkSlow` source clip occurrences and thirteen affected phase-45.25 source
+references changed; 105 other selected clip occurrences and 577 references
+are exact. All 46 asset hashes changed because asset identity includes the
+new source digest. Mesh/joints/sockets, support patches/spans and mappings
+apart from source identity are exact. The inherited `conditioning-recipe`
+manifest role matches the report recipe hash `01f1e0be`. A focused
+regression now guards that inherited role and refuses a wrong recipe digest.
+The preliminary `graph/` epoch lacked the role and was rejected by receiving
+before runtime. The intermediate `graph-final/` epoch was admitted by
+GaimEngine, then superseded when the role regression changed producer identity.
+All 46 asset, mapping and reference payload hashes in `graph-verified/` are
+byte-equal to `graph-final/`; their producer manifests and bundle identities
+remain distinct. Neither earlier graph was overwritten.
+
+Focused profile/job/endpoint tests passed 13/13, and the inherited-recipe
+regression passed. At final producer source identity `e4f5d035`, the workspace
+`pwsh -NoProfile -File ./run.ps1 -Task verify` passed in 138.0 s: 739
+frontend tests, 14 Rust checks, lint, both typechecks, build, integrity and
+76 Summary Bank groups with zero warnings. The separate source-only copy
+contains 1,405 Git-visible files byte-exact to the workspace at base
+`4e25461` before this final record update. It acquired locked npm dependencies
+offline, copied the pinned WASM tool as private bytes, and has no GaimEngine
+or GenEye sibling. Its final ordinary verify passed in 118.8 s with the same
+739 frontend/14 Rust checks. Its ordinary walkSlow CLI reproduced the final
+graph's conditioned model, asset, mapping and reference hashes with producer
+source identity `e4f5d035`. No task-owned process remains. Receipts and logs are in
+`D:/Compact_Evidence/RustSMF/runs/p7c-coupled-public-20261029/`.
+
+Consumer-owned GaimEngine admission passed actual native/WASM 46/590 receiving
+on the byte-equal intermediate graph. It subsequently passed fresh 46/590
+receiving on final bundle `8e8221ad` at its own producer identity, including
+independent source comparison, instance isolation, six-tick restore replay and
+owned release. The consumer receipt is
+`D:/Compact_Evidence/GaimEngine/runs/coupled-public-receiving-20261029/source-verified/receiving.json`
+(SHA-256 `02cad5ce`). Its 637-pose pilot retains one later right-sole planted
+drift failure (308.010 mm against 42.026 mm); affected committed
+floor/environment, broader replay and full visual acceptance remain separately
+source-bound. This producer integration does not close P7C or authorize a
+release.
+The initial local-retention decision was superseded by the operator's explicit
+closeout-and-publish request for verified scoped progress. Full P7C qualification
+and installed-product acceptance remain separate from that publication.
+
+<!-- AI-edited: 2026-10-29 | agent=Codex/root | task=p7c-coupled-public | change=record source-bound opt-in graph and explicit consumer boundary -->
+
 <a id="p7c-later-stance-private-20261029"></a>
 ## 2026-10-29 - Private later-stance sole-constrained trial refused
 

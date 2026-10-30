@@ -11,6 +11,8 @@ The [bounded span option](SKELETAL_ROTATION_SPAN.md) also preserves every
 unselected component at its selected ticks; source references remain independent.
 The [pelvis/leg layer](SKELETAL_PELVIS_LAYER.md) adds bounded post-bake composition
 with reverse provenance and component-preserving export.
+The [v5 coupled body-height recipe](SKELETAL_COUPLED_BODY_HEIGHT.md) is a
+source-bound opt-in after the v4 endpoint; older jobs remain unchanged.
 Retained singular and disjoint one–three-record plural v3 qualification passes
 46/590 native/WASM receiving and exact outside-runtime preservation at its
 recorded source identity. Omitted options retain their bytes. Skin clearance

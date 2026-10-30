@@ -18,6 +18,14 @@ and report as distinct inputs, refuses stale lineage, and retains v1-v3 job
 behavior. [The endpoint contract](SKELETAL_HIP_Y_LOOP_ENDPOINT.md) owns its
 limits; engine receiving and P7C physical/visual acceptance remain separate.
 
+An explicit v5 job adds the source-bound, opt-in
+[walkSlow coupled body-height recipe](SKELETAL_COUPLED_BODY_HEIGHT.md) after
+that endpoint. Its exact profile changes only the declared hip-Y and left/right
+leg intervals; older jobs and standalone product behavior are unchanged.
+The final 46-packet/590-reference producer graph is source-bound in HISTORY.
+GaimEngine receiving, committed physical replay and full P7C visual acceptance
+remain consumer-owned.
+
 ## Editing and interchange reliability
 
 A shared accepted-edit branch invalidates editor, Skin and Outliner redo together.

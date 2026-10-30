@@ -67,6 +67,13 @@ function sha256(bytes: Uint8Array): string {
   return createHash('sha256').update(bytes).digest('hex');
 }
 
+export function inheritedConditioningRecipeInput(recipe: unknown, expectedSha256: string): SkeletalExportInput {
+  const bytes = normalizedSkeletalJsonBytes(recipe);
+  const digest = sha256(bytes);
+  if (digest !== expectedSha256) throw new Error('Inherited conditioning recipe identity differs from its report.');
+  return { role: 'conditioning-recipe', sha256: digest, bytes: bytes.byteLength };
+}
+
 function throwIfAborted(signal?: AbortSignal): void {
   if (!signal?.aborted) return;
   const error = signal.reason instanceof Error ? signal.reason : new Error('Skeletal generation cancelled.');

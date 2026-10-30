@@ -8,9 +8,20 @@ import {
   publishSkeletalExportGeneration,
   publishConditionedSkeletalInput,
   skeletalInputSetIdentity,
+  inheritedConditioningRecipeInput,
+  normalizedSkeletalJsonBytes,
   type SkeletalExportArtifacts,
   type SkeletalExportPublicationStep,
 } from './skeletalExportGeneration';
+
+test('postconditioned generations retain the inherited recipe manifest role', () => {
+  const recipe = { mode: 'nlerp', clipIds: ['walkSlow'] };
+  const bytes = normalizedSkeletalJsonBytes(recipe);
+  const digest = createHash('sha256').update(bytes).digest('hex');
+  assert.deepEqual(inheritedConditioningRecipeInput(recipe, digest),
+    { role: 'conditioning-recipe', sha256: digest, bytes: bytes.byteLength });
+  assert.throws(() => inheritedConditioningRecipeInput(recipe, '0'.repeat(64)), /identity differs/);
+});
 
 test('conditioned input publication is immutable, repeatable and cleans its interrupted staging', async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), 'conditioned-publication-'));
