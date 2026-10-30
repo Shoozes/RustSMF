@@ -19,7 +19,7 @@ HISTORY record and its compact receipt. The candidate was committed locally as
 | Isolated build and verification | Source-only copy passed verify (723 frontend tests, 14 Rust checks), browser 212, journeys 13, strict visuals 3, retarget/transition native-WASM proof and desktop smoke. |
 | Ordinary exporters | Generated native-contact CLI success/refusal and job cancellation passed in verify; retained consumer proof is not renewed. |
 | Installed workflows | Installer A and five bundled resources passed. Quiet UIA loaded Signal Robot and Sable, saved/reopened projects, refused malformed/missing ZIP resources, handled ambiguous ZIP choice/cancel, saved and retried queued GLBs, and opened bundled Help. Independent project/GLB continuity passed; installer B/profile B reopened the Sable project and saved identical bytes. Queue write failure and Sable retarget/animal assistance remain open. |
-| Local release candidate | Installer, checksums, notices, samples and startup guide exist locally. Second clean install/profile, workflow acceptance and final evidence closure remain open. |
+| Local release candidate | Installer, checksums, notices, samples and startup guide exist locally. Second clean installation/profile B and byte-identical project reopen/save are observed. Native write-failure/retry, Sable retarget/animal assistance and final evidence closure remain open. |
 
 The [2026-10-26 review record](HISTORY.md#standalone-review-20261026) binds
 these results to exact source inventories and logs. Review found all inventory-v2
@@ -120,6 +120,17 @@ failure. Establish a verified isolated desktop/session before any more native
 picker actions. Recheck current process/HWND identity before each action and
 verify owned process release at closeout. No CUA or cursor input.
 
+## Isolated picker progress — 2026-10-30
+
+The [isolated picker route](INSTALLED_TEST_SESSION.md) now passes on the selected
+installer B: renderer observation, real owned Open/cancel, unchanged sampled input
+desktop and verified job/handle release. Four regression controls pass. This
+renews only that test capability on the identified installed executable. A queue
+prototype stopped at native filename/Open submission; no export write occurred.
+The real queue write-failure/retry case and Sable workflows remain unverified.
+No active-desktop retry, source-to-installer equivalence claim or public release
+replacement is included. Exact evidence is linked in the route document.
+
 ## Optional consumer qualification
 
 Keep the working Gaim-compatible skeletal exporter and `gaim.*` schemas. Normal
@@ -134,3 +145,5 @@ protected. A reproducible general tool defect can reopen source work through a
 bounded local regression; unqualified private motion does not keep the editor open.
 
 <!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone-p7c-continuation | change=record partial installed proof and quiet control boundary -->
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | change=reconcile second-install evidence and distinguish verified picker isolation from pending native queue writes

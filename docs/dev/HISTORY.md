@@ -2,6 +2,51 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="installed-isolated-picker-20261030"></a>
+## 2026-10-30 - Isolated installed picker and review disposition
+
+Complete with verified limitations. The supplied RustSMF-only review matches
+base `e46446dc8843dfd50813686760e53eb51bfa7288`. Its independent synthetic guard
+claims are attributed review evidence, not a new full verification here.
+Existing standalone implementations remain intact. Two stale records are fixed:
+installation/profile B is already observed, and native destination save/cancel
+plus incomplete-only retry are already observed. Actual native write-failure
+and retry, Sable retarget/animal assistance and final candidate closure stay open.
+
+The new test-only `scripts/installed-test-session.ps1` launches the selected
+installed executable and controller on a non-input desktop, owns descendants in
+a kill-on-close job, validates HWND/desktop/job membership (including the separate
+WebView renderer PID), and uses a dedicated non-window-owning MTA UIA thread.
+The final real Open/cancel probe passes at executable SHA-256
+`2688ecb8cf5093be700b8101149f94f160e388c0b10ad21ab85c9b581aaa7f13`,
+installer SHA-256 `01e10593ec5d62d39cd65ac7c2ecca267df9fa2c333d92ac75f70d61a16c79d2`.
+The input desktop remains unchanged in sampled checks; no owned picker appears
+there. Job count is zero and all recorded handles close. Four focused regressions
+pass, including actual rendererless refusal and cancellation. `verify` includes
+them; application code, installer, runtime dependencies and public release do not
+change. [Procedure and exact proof](INSTALLED_TEST_SESSION.md).
+The neighboring launcher/process/publication/dependency lane passes 36 tests;
+the dependency guard covers 461 owned source/configuration files. Summary Bank
+validation passes 76 groups with zero warnings. This focused test-tool closeout
+does not rerun or renew the complete application build/package gate.
+
+Initial probe errors exposed a parent-PID assumption for WebView children and
+renderer/control readiness gaps; those are corrected with exact job membership
+and bounded waits. A separate queue prototype still failed native filename/Open
+submission within 15 seconds, including its bounded synchronous fallback. It
+never reached an export or obstruction and proves no queue write failure/retry.
+The unqualified prototype remains only in the retained evidence, with each
+failed attempt and verified zero-process cleanup. No active-desktop fallback or
+additional identical attempt is authorized by this completion record.
+
+The selected source/package is the existing 2026-10-26 installer B, not a renewal
+of every later producer revision or the public preview. Both apps and their
+proofs remain separate. GaimEngine's checkout and protected Rust overlays are
+untouched by this RustSMF batch. TODO prioritizes quiet native filename submission,
+the real queue case, then separate Sable workflows and final candidate freeze.
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | change=bind completed picker capability, review dispositions and unresolved queue-control boundary
+
 <a id="p7c-coupled-body-height-20261029"></a>
 ## 2026-10-29 - Opt-in walkSlow coupled body-height producer
 

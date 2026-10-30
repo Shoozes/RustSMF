@@ -1615,9 +1615,14 @@
     },
     "workflow__standalone_product": {
       "description": "Repository independence, explicit optional test integrations and isolated installed-product acceptance.",
-      "max_kb": 88,
+      "max_kb": 128,
       "paths": [
         "docs/dev/STANDALONE_ACCEPTANCE.md",
+        "docs/dev/INSTALLED_TEST_SESSION.md",
+        "scripts/installed-test-session.ps1",
+        "scripts/installed-test-native.cs",
+        "scripts/installed-test-uia.cs",
+        "scripts/installed-test-session.test.mjs",
         "docs/dev/skills/geneye-installed-control/SKILL.md",
         "docs/dev/skills/geneye-installed-control/IMPLEMENTATION_NOTES.md",
         "docs/dev/skills/geneye-installed-control/scripts/quiet-control.ps1",

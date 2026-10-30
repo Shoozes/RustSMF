@@ -25,9 +25,11 @@ Desktop destinations use the existing native save dialog for each item. Cancelin
 - `src/utils/materialPreview.test.ts`: nested captures, overlapping saves, concurrent display changes and replaced registrations retain source state until their own final reader exits.
 - `tests/export-queue.spec.ts`: ordinary chooser/pointer/keyboard controls, every preset, independent GLB accessor/instance-transform and sampled-motion checks after re-import, raw FBX/DAE structure, imported SMF fidelity, material/image captures, replacement, preparation cancellation, mocked native failures/retry/recovery and six-size/DPR/coarse/focus checks.
 
-Browser downloads and mocked Tauri IPC retain their source-specific proof. The current-source packaged Windows candidate also passed installed WebView preparation cancellation and retry without issuing a save. Native destination saves/cancel and retry after a completed save remain unobserved. HISTORY and the compact receipt bind each lane to source/package. The public version/release is unchanged.
+Browser downloads and mocked Tauri IPC retain their source-specific proof. The selected packaged Windows candidate passed installed WebView preparation cancellation/retry and later native destination saves, destination cancellation, and retry of only the incomplete item while the first GLB hash stayed unchanged. The missing case is a real native write/publication failure followed by retry, not all native queue behavior. The 2026-10-30 isolated picker route passes Open/cancel; its subsequent queue prototype stopped at filename/Open submission before any write. [Installed test boundary](INSTALLED_TEST_SESSION.md), HISTORY and the compact receipts bind each lane to source/package. The public version/release is unchanged.
 
 <!--
 AI-created: 2026-10-15T04:24:55-04:00 | agent=Codex/root | task=docs
 AI-edited: 2026-10-16 | agent=Codex/root | task=installed-api-acceptance | change=distinguished packaged preparation proof from native destination saves
 -->
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | change=retain observed native destination/retry evidence and precisely identify missing write-failure acceptance

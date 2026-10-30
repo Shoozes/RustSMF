@@ -12,6 +12,13 @@ isolation and installed-dialog evidence is tracked in
 [STANDALONE_ACCEPTANCE.md](STANDALONE_ACCEPTANCE.md); the public 0.2.1 preview
 retains its older, separately identified package.
 
+The test-only [isolated picker route](INSTALLED_TEST_SESSION.md) now proves a
+real installed Open/cancel on a task-owned non-input desktop, with exact process,
+renderer, job and HWND ownership plus cleanup. Native filename submission for the
+subsequent queue test remains a control gap; no new write-failure/retry acceptance
+is claimed. Sable retarget/animal assistance and final installed-candidate closure
+remain open. These tests add no required product integration or engine dependency.
+
 The optional skeletal producer now has an explicit v4 job for a single
 walkSlow hip-Y tick-90 loop endpoint. It uses the qualified root/body GLB
 and report as distinct inputs, refuses stale lineage, and retains v1-v3 job
@@ -453,3 +460,5 @@ input contract, bounds, vendoring requirements, and native/browser WASM proof.
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-plural-union-boundary | change=closed bounded union sampling with renewed runtime proof and retained physical failures -->
 
 <!-- AI-edited: 2026-10-24 | agent=Codex/root | task=p7c-span-integration | change=routed bounded span authoring and independent reference preservation -->
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | change=distinguish proven test-only picker route from pending native queue and Sable acceptance

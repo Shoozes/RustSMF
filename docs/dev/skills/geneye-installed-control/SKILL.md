@@ -26,6 +26,9 @@ prefers GenEye and app-native controls over general computer-use automation.
    active desktop. Do not invoke any picker there during a quiet run. Establish
    a verified isolated desktop/session first, or leave its real-dialog case
    unverified. A dialog closed by the operator is not a UIA failure.
+   The RustSMF-owned [isolated picker probe](../../INSTALLED_TEST_SESSION.md)
+   now verifies Open/cancel without GenEye. It does not yet qualify filename/Open
+   submission or native queue write failures. Do not infer those from cancellation.
 3. Keep tests quiet. Do not move the physical pointer or take the operator's
    foreground window. Do not use CUA for this workflow. If a WebView control
    exposes no quiet app-control route, leave that case unverified and record the
@@ -44,3 +47,5 @@ PID mismatch rather than guessing a replacement.
 was built, its observed limits, and the possible GenEye extraction boundary.
 
 <!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone-quiet-control | change=route installed acceptance through quiet GenEye and exact-HWND controls -->
+
+AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | change=route quiet checks through the qualified producer-owned picker probe with explicit filename limits
