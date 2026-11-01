@@ -5,8 +5,8 @@ This file is the canonical home for completed repo/app work and its durable veri
 <a id="installed-sable-workflows-20261101"></a>
 ## 2026-11-01 - Installed Sable workflows and local candidate reconciliation
 
-Complete with verified limitations, locally above `10a1f3c`. The supplied
-review's final installed workflow batch is implemented through the existing
+Complete with verified limitations, published on `main` in `0b0b57e` above
+`10a1f3c`. The supplied review's final installed workflow batch is implemented through the existing
 isolated desktop and native-profile route. No application source changed.
 All 532 product inputs match the selected native-profile source manifest.
 Installer SHA-256 `284e44fb22c36b8458643db924463dd29d5301606eb70dea5a0cf1beabfe4a81`
