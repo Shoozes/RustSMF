@@ -92,6 +92,57 @@ The public verify task includes the ten controls. The Windows lifecycle and
 timeout tests explicitly skip on other platforms; positive installed proof
 remains a separate required lane.
 
+## Installed Sable transfer and animal assistance
+
+`-Scenario SableTransfer` uses the same isolated desktop, native profile and
+cleanup owner. It adds a hash-bound `-TransferManifest` and
+`-TransferManifestSha256`; the manifest's target must match `-Fixture` exactly.
+Both source files are checked before launch and again before UIA. The generated
+fixtures retain original Sable geometry, skin, rest frames and hierarchy. Two
+authored 12-degree local rotations exercise foreleg/tail transfer. An ambiguous
+variant replaces one deform-tail name with `OpaqueLink`; it does not change a
+producer recipe or use a consumer engine.
+
+```powershell
+$inputs = node scripts/installed-sable-fixtures.mjs --out '<fresh absolute inputs directory>' | ConvertFrom-Json
+pwsh -NoProfile -File scripts/installed-test-session.ps1 `
+  -Executable '<installed rustsmf.exe>' -ExpectedSha256 '<selected SHA-256>' `
+  -OutputRoot '<fresh absolute output directory>' -Scenario SableTransfer `
+  -Fixture $inputs.target.path -FixtureSha256 $inputs.target.sha256 `
+  -TransferManifest $inputs.path -TransferManifestSha256 $inputs.sha256
+node scripts/installed-sable-proof.mjs --receipt '<output>/receipt.json' `
+  --out '<output>/independent.json'
+node --test scripts/installed-test-session.test.mjs scripts/installed-queue-proof.test.mjs scripts/installed-sable-proof.test.mjs
+```
+
+The English UI case reviews the 24 suggested mappings, changes and corrects an
+explicit mapping in the public Profile JSON editor, exports that profile, and
+reruns native transfer with it. The incorrect draft is never applied. Saving
+the profile is separate from project Save. It checks preview invalidation and
+paused midpoint playback, exports the unchanged canonical model during preview,
+applies one additional clip, saves/reopens the project and discards the ambiguous
+transfer. Project Save retains a snapshot rather than clearing authoring history;
+the driver explicitly confirms replacement with its own saved project when that
+warning appears. Independent inspection requires all original clips/materials/skin to
+survive, the authored motion to match at every key/midpoint, and all five tail
+bones to remain unresolved in the ambiguous mapping. A status label alone is
+insufficient: the saved outputs, reviewed mappings and project bytes are checked.
+
+HTML file pickers can belong to a WebView child PID. Every selected dialog must
+be the unique common dialog on the exact owned job/desktop, even when its PID
+differs from the root app. More-menu retries are limited to that reversible
+disclosure and stop when the requested command appears; Save, Apply and picker
+submission are never blindly retried.
+
+The isolated HTML mapping dropdown has no qualified quiet selection route on
+this host; correction uses the existing editable profile instead. Optional
+`-PreviewHoldSeconds` (0–45) exposes a bounded `preview-ready.json` checkpoint
+and `<output>/preview-release` continuation. It does not require or invoke a
+capture provider. GenEye target resolution was unavailable for the observed
+isolated checkpoint; no new pixels, attended preview review or active-desktop
+fallback are claimed. These limits remain separate from native workflow and
+independent saved-motion proof.
+
 ## Native profile contract and preservation
 
 Current Windows source builds accept `--profile-dir <absolute directory>`.
@@ -158,8 +209,8 @@ establish preservation from the discovery checkpoint, not reversal of that impac
 
 Earlier readiness/pattern/overwrite and playing-reference failures remain retained.
 The final case pauses and resets the input rather than loosening tolerances.
-Sable retarget/animal assistance and final installed-candidate closure remain
-open. Previous app/standalone/consumer epochs remain separate; this focused
+Sable retarget/animal assistance and candidate reconciliation are recorded below.
+Previous app/standalone/consumer epochs remain separate; this focused
 installer renewal does not renew their whole historical matrices. Producer
 candidate generation stays stopped. No commit or push is included here.
 
@@ -187,3 +238,42 @@ The retained installer and evidence are outside this cleanup scope. The helper's
 remote commit confirmation is retained in the same run's publication receipt.
 
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile-closeout | change=account owned proof and policy-blocked cache cleanup explicitly
+
+## Qualified Sable workflows — 2026-11-01
+
+The native-profile installer and executable identified above are reused exactly.
+All 532 product inputs and all seven installed files match their recorded hashes;
+five bundled resources/notices and the uninstaller also match installed A.
+This batch changes test tooling and records only. The earlier full standalone
+matrix and queue proof keep their own source epochs.
+
+Original Sable SHA-256:
+`d3d5ad87506fe90c7eaf22e3a767924c4c7d6239cff51648361d88f2ad2d1f49`.
+Generated input manifest SHA-256:
+`9c5d607576c99c1b1b9e64a1bdd395ef44dccd4cc66290f6e8968984e8230db1`.
+The native case passes 24 suggested/reviewed mappings, explicit Profile JSON
+correction, paused midpoint preview, canonical preview isolation, Apply,
+Save/reopen and unresolved ambiguous-tail discard. The independent parser
+preserves four original clips plus the transferred clip across project and GLB
+outputs. It compares 61 times and 635,925 world-skin points, with maximum
+difference 0.0000013486628225260908 m under the unchanged 0.00002 limit.
+
+[Native execution](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/qualified-8/receipt.json),
+[independent proof](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/qualified-8/independent.json),
+[default picker regression](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/default-picker/receipt.json)
+and [final tested tool sources](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/tool-source-final.json)
+are retained. All 15 control/proof tests pass. Every owned job reaches zero
+processes and releases its handles/desktop; canonical recovery remains unchanged.
+Private profiles and outputs remain owned evidence, with no retained service.
+Earlier unsuccessful attempts retain their own failure and cleanup records.
+
+The [candidate summary](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/summary.json)
+reconciles accepted workflows, exact source/resources, checks and retention.
+GenEye could not resolve the isolated preview target, so new native pixels and
+attended review remain unclaimed. Quiet HTML dropdown selection also remains
+unverified; the existing Profile JSON correction route is observed. Both apps
+and their proofs remain separate. This verified batch is saved through the
+guarded main helper; no public release replacement or private producer
+generation is included.
+
+AI-edited: 2026-11-01 | agent=Codex/root | task=installed-sable-workflows | change=record native Sable transfer, independent motion and exact candidate limits

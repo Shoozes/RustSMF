@@ -7,19 +7,27 @@ libraries and installed development toolchains remain ordinary prerequisites.
 
 ## Selected candidate
 
-The 2026-10-26 candidate starts at `7a062c4` with the reviewed standalone changes.
-The exact changed-source inventory, commands and hashes belong to the dated
-HISTORY record and its compact receipt. The candidate was committed locally as
-`7b66717`; no public release replaced `0.2.1-preview`.
+The current local installed candidate is the native-profile installer qualified
+on 2026-10-30, reused for Sable on 2026-11-01 above `10a1f3c`. All 532 recorded
+product inputs match the current checkout; this batch changes test tooling and
+records only. Its exact source, installed files, checksums, accepted workflows,
+limits and cleanup belong to the [candidate record](HISTORY.md#installed-sable-workflows-20261101).
+The public `0.2.1-preview` remains separate and unchanged.
+
+The full isolated matrix below retains its 2026-10-26 source epoch, starting at
+`7a062c4` with reviewed standalone changes and committed as `7b66717`. Current
+equivalence checks find 474 of 486 application inputs unchanged; the 12 changed
+optional producer/native-profile paths have later proof. This comparison does
+not renew that entire historical matrix.
 
 | Acceptance | Current evidence boundary |
 | --- | --- |
-| Static dependency guard | Final isolated verify passed, including 17 guard regressions. Literal/static coverage only. |
+| Static dependency guard | Final isolated verify passed, including 17 guard regressions. The current 17 regressions and scan of 467 owned files pass again. Literal/static coverage only. |
 | Predictable browser routing | Direct default and `-NoGenEye` agree; ambient/sibling controls and explicit integration failure controls pass. |
 | Isolated build and verification | Source-only copy passed verify (723 frontend tests, 14 Rust checks), browser 212, journeys 13, strict visuals 3, retarget/transition native-WASM proof and desktop smoke. |
 | Ordinary exporters | Generated native-contact CLI success/refusal and job cancellation passed in verify; retained consumer proof is not renewed. |
-| Installed workflows | Installer A and five bundled resources passed. Quiet UIA loaded Signal Robot and Sable, saved/reopened projects, refused malformed/missing ZIP resources, handled ambiguous ZIP choice/cancel, saved and retried queued GLBs, and opened bundled Help. Independent project/GLB continuity passed; installer B/profile B reopened the Sable project and saved identical bytes. Real native failure/retry is subsequently renewed on the fresh native-profile installer; Sable retarget/animal assistance remain open. |
-| Local release candidate | Installer, checksums, notices, samples and startup guide exist locally. Second clean installation/profile B and byte-identical project reopen/save are observed. Native write-failure/retry is subsequently qualified on the fresh native-profile installer. Sable retarget/animal assistance and final evidence closure remain open. |
+| Installed workflows | Earlier model/ZIP/project/Help/second-install evidence retains its original epoch. Native queue write-failure/retry and Sable transfer/animal assistance now pass on the same native-profile installer, with independent outputs and verified recovery/cleanup. Relevant UI owners and five installed resources/notices match the earlier evidence. New native pixels and quiet HTML mapping-dropdown selection remain unverified. |
+| Local release candidate | Installer, exact product-source inventory, seven installed-file hashes, checksums, notices, sample and startup guide are reconciled. Functional installed acceptance is complete with the stated observation limits; publication/release requires a separate decision. |
 
 The [2026-10-26 review record](HISTORY.md#standalone-review-20261026) binds
 these results to exact source inventories and logs. Review found all inventory-v2
@@ -101,8 +109,8 @@ animation, skin and material presence. The export queue saved its first GLB,
 canceled a second destination, then retried only that incomplete item; the
 first output hash stayed unchanged. The operator closed a later foreground
 Save As dialog during a separate locked-output trial before a write was issued,
-so write-failure handling remains unverified. Bundled Help opened and closed
-through UIA.
+so that attempt did not verify write-failure handling. The later native-profile
+case below does. Bundled Help opened and closed through UIA.
 
 The same installer was silently installed to a second clean task-owned location
 with a separate WebView2 profile. That installed app reopened the Sable project,
@@ -114,7 +122,7 @@ The task-owned app/profile and output receipts are under
 `D:/RustSMF-Standalone-20261026/`. Use the
 [GenEye installed control skill](skills/geneye-installed-control/SKILL.md)
 for current installed controls. At that stage, queue write-failure and Sable
-retarget/animal assistance remained open; the later queue qualification is below.
+retarget/animal assistance remained open; their later qualifications are below.
 The installed Transfer tab was reached, but the Retarget clips picker was not
 completed; operator dismissal of foreground dialogs cannot establish a UIA
 failure. Establish a verified isolated desktop/session before any more native
@@ -137,8 +145,39 @@ Earlier installer-B model runs touched the default native recovery generations:
 WebView isolation was insufficient. Their functional evidence remains dated,
 while the runbook records preserved current files and unknown pre-test contents.
 The new safe epoch proves preservation from discovery onward, not restoration.
-Sable retarget/animal assistance and final candidate closure remain open; no
-public preview replacement, commit, push or producer generation is included.
+Sable retarget/animal assistance and candidate reconciliation follow below.
+No public preview replacement or producer generation is included.
+
+## Installed Sable and candidate reconciliation — 2026-11-01
+
+The same installer/executable passes actual native Open, retarget, preview,
+Apply and project Save/reopen using original Sable and generated compatible
+motion. The installed UI reviews 24 animal mappings. A deliberately incorrect
+draft mapping invalidates preview; the existing Profile JSON editor corrects it
+before transfer. The wrong draft is never applied. Preview at the midpoint
+leaves the canonical export unchanged. An ambiguous deform-tail name leaves all
+five tail bones unresolved; discarding it preserves the committed model.
+
+Independent accessor/skin/material/motion inspection preserves the original four
+clips plus the transferred fifth clip through Save/reopen. All 635,925 sampled
+world-skin points agree within the existing 0.00002 tolerance (maximum difference
+0.00000135 m). Fifteen driver/proof tests and the fresh default picker regression
+pass. Private native autosave exists, default recovery is unchanged and every
+owned job/desktop/handle is released. Earlier unsuccessful driver attempts remain
+failed evidence; they do not replace the qualified result.
+
+[Native receipt](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/qualified-8/receipt.json),
+[independent output inspection](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/qualified-8/independent.json),
+[source/resource comparison](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/candidate-equivalence.json)
+and the [local candidate record](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/summary.json)
+bind the results. No application build or full historical matrix was repeated.
+
+GenEye could not resolve the isolated preview target, so this pass claims no new
+native pixels or attended preview review. Quiet HTML mapping-dropdown selection
+remains unverified; the public Profile JSON correction path is proven instead.
+These limits and the earlier recovery incident remain visible for the separately
+authorized release decision. Neither observation tooling nor another engine is
+an application dependency. Private P7C generation remains stopped.
 
 ## Optional consumer qualification
 
@@ -160,3 +199,5 @@ AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | chan
 AI-edited: 2026-10-30 | agent=Codex/root | task=installed-native-queue | change=bind actual native failure/retry and independent inspection to the selected installed epoch
 
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly
+
+AI-edited: 2026-11-01 | agent=Codex/root | task=installed-sable-workflows | change=bind functional Sable acceptance and candidate equivalence while retaining observation and historical proof limits

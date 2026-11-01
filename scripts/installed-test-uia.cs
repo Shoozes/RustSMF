@@ -12,6 +12,7 @@ public sealed class InstalledPickerResult {
     public string[] rendererControls;
     public InstalledDialogResult submission;
     public InstalledQueueResult queue;
+    public InstalledSableResult sable;
 }
 public static class InstalledPickerProbe {
     public static void Own(IntPtr h,string jobName,string desktop) {
@@ -25,7 +26,7 @@ public static class InstalledPickerProbe {
         if(thread.Join(milliseconds))return result;
         return new InstalledPickerResult {pid=result.pid,stage="uia-worker-timeout",error="Dedicated MTA UIA worker timed out; outer job must release process tree."};
     }
-    public static InstalledPickerResult Run(int pid,string executable,string created,string desktop,string jobName,int seconds,string scenario,string fixture,string output) {
+    public static InstalledPickerResult Run(int pid,string executable,string created,string desktop,string jobName,int seconds,string scenario,string fixture,string output,string motion=null,string ambiguous=null,int captureSeconds=0) {
         var r=new InstalledPickerResult();r.pid=pid;
         var t=new Thread(()=>{
             try {
@@ -75,6 +76,7 @@ public static class InstalledPickerProbe {
                         var tools=root.FindFirst(TreeScope.Descendants,new PropertyCondition(AutomationElement.NameProperty,"Tools"));
                         if(tools!=null && tools.Current.IsEnabled){
                             if(scenario=="QueueWriteRetry"){r.queue=InstalledQueueCase.Run(root,renderer,pid,jobName,desktop,seconds,output,fixture);r.status=r.queue.status;r.stage=r.queue.stage;}
+                            else if(scenario=="SableTransfer"){r.sable=InstalledSableCase.Run(root,renderer,pid,jobName,desktop,seconds,output,motion,ambiguous,captureSeconds);r.status=r.sable.status;r.stage=r.sable.stage;}
                             else{r.status="passed";r.stage="fixture-loaded";}
                             return;
                         }
@@ -94,6 +96,6 @@ public static class InstalledPickerProbe {
             }catch(Exception e){r.error=e.ToString();}
         });
         t.SetApartmentState(ApartmentState.MTA);t.IsBackground=true;t.Start();
-        return Await(t,r,(seconds*(scenario=="QueueWriteRetry"?20:4)+10)*1000);
+        return Await(t,r,(seconds*(scenario=="SableTransfer"?40:scenario=="QueueWriteRetry"?20:4)+captureSeconds+10)*1000);
     }
 }

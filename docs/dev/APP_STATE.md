@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-10-30
+Last reviewed: 2026-11-01
 
 ## Standalone product boundary
 
@@ -21,7 +21,15 @@ require PID/path attestation and unchanged default recovery after owned cleanup.
 Earlier model tests isolated only WebView and touched shared native recovery;
 the runbook preserves the incident and the unknown pre-test state. The new proof
 preserves recovery from discovery onward; it does not claim restoration.
-Sable retarget/animal assistance and final candidate closure remain open.
+Installed Sable retarget/animal assistance now passes on that same installer:
+24 mappings, explicit profile correction, paused preview isolation, Apply,
+project Save/reopen and five unresolved ambiguous tail bones. Independent
+inspection preserves four original clips and the new transferred clip, with
+635,925 world-skin samples within the existing tolerance. The local candidate
+record reconciles source, resources, earlier proof epochs and cleanup.
+GenEye could not resolve the isolated preview target; new native pixels and
+attended review remain unclaimed. Quiet HTML dropdown selection is unverified;
+the existing Profile JSON correction route is observed. [Record and limits](HISTORY.md#installed-sable-workflows-20261101).
 Both apps and proofs remain separate; the public preview is unchanged.
 
 The optional skeletal producer now has an explicit v4 job for a single
@@ -471,3 +479,5 @@ AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | chan
 AI-edited: 2026-10-30 | agent=Codex/root | task=installed-native-queue | change=record qualified native queue case and retain remaining product acceptance boundaries
 
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly
+
+AI-edited: 2026-11-01 | agent=Codex/root | task=installed-sable-workflows | change=record completed functional Sable workflows and separate remaining observation limits

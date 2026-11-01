@@ -37,8 +37,10 @@ inspection pass. [Procedure and exact evidence](INSTALLED_TEST_SESSION.md) bind
 this bounded first-party fixture, paused input and fresh installer epoch. Native
 profile attestation, actual private autosave and unchanged default recovery are
 required. Earlier installer-B tests isolated only WebView and touched shared
-recovery; the runbook records that impact and the unknown pre-test state. Sable workflows,
-full product closure and public release replacement remain separate.
+recovery; the runbook records that impact and the unknown pre-test state. The
+[local candidate record](HISTORY.md#installed-sable-workflows-20261101) now adds
+Sable transfer/animal proof on the byte-identified same installer. Queue proof
+keeps its original epoch; public release replacement remains separate.
 
 <!--
 AI-created: 2026-10-15T04:24:55-04:00 | agent=Codex/root | task=docs
@@ -50,3 +52,5 @@ AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | chan
 AI-edited: 2026-10-30 | agent=Codex/root | task=installed-native-queue | change=close real native publication failure/retry without changing queue production code
 
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly
+
+AI-edited: 2026-11-01 | agent=Codex/root | task=installed-sable-workflows | change=link the reconciled local candidate without renewing queue proof

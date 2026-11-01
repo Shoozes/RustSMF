@@ -5,9 +5,12 @@ param(
     [ValidatePattern('^[a-fA-F0-9]{64}$')][string]$ExpectedSha256,
     [string]$OutputRoot,
     [ValidateRange(2,60)][int]$ProbeSeconds=15,
-    [ValidateSet('PickerCancel','OpenFixture','QueueWriteRetry')][string]$Scenario='PickerCancel',
+    [ValidateSet('PickerCancel','OpenFixture','QueueWriteRetry','SableTransfer')][string]$Scenario='PickerCancel',
     [string]$Fixture,
     [ValidatePattern('^[a-fA-F0-9]{64}$')][string]$FixtureSha256,
+    [string]$TransferManifest,
+    [ValidatePattern('^[a-fA-F0-9]{64}$')][string]$TransferManifestSha256,
+    [ValidateRange(0,45)][int]$PreviewHoldSeconds=0,
     [string]$ProtectedRecoveryRoot,
     [switch]$Worker,
     [string]$Configuration
@@ -21,7 +24,7 @@ if ($Worker) {
     Add-Type -Path $taskConfig.nativeLibrary
     Add-Type -AssemblyName UIAutomationClient
     Add-Type -AssemblyName UIAutomationTypes
-    Add-Type -Path @((Join-Path $taskConfig.scriptsRoot 'installed-test-uia.cs'),(Join-Path $taskConfig.scriptsRoot 'installed-test-dialog.cs'),(Join-Path $taskConfig.scriptsRoot 'installed-test-queue.cs')) -ReferencedAssemblies @('System.dll','UIAutomationClient','UIAutomationTypes','WindowsBase',$taskConfig.nativeLibrary)
+    Add-Type -Path @((Join-Path $taskConfig.scriptsRoot 'installed-test-uia.cs'),(Join-Path $taskConfig.scriptsRoot 'installed-test-dialog.cs'),(Join-Path $taskConfig.scriptsRoot 'installed-test-queue.cs'),(Join-Path $taskConfig.scriptsRoot 'installed-test-sable.cs')) -ReferencedAssemblies @('System.dll','UIAutomationClient','UIAutomationTypes','WindowsBase',$taskConfig.nativeLibrary)
     if ($taskConfig.desktop -notmatch '^RustSMF-test-[a-f0-9]{32}$' -or [InstalledTestNative]::InputName() -eq $taskConfig.desktop) { throw 'Worker refuses an input or unowned desktop before app launch.' }
     if ([InstalledTestNative]::DesktopName([InstalledTestNative]::GetThreadDesktop([InstalledTestNative]::GetCurrentThreadId())) -ne $taskConfig.desktop) { throw 'Worker desktop mismatch before app launch.' }
     $taskHasher=[Security.Cryptography.SHA256]::Create()
@@ -43,7 +46,12 @@ if ($Worker) {
         foreach($taskPair in @(@($taskProfileSession.root,$taskConfig.profile),@($taskProfileSession.nativeRecovery,(Join-Path $taskConfig.profile 'native/rustsmf-recovery')),@($taskProfileSession.webview,(Join-Path $taskConfig.profile 'webview')))){
             if(-not [string]::Equals([IO.Path]::GetFullPath($taskPair[0]),[IO.Path]::GetFullPath($taskPair[1]),[StringComparison]::OrdinalIgnoreCase)){throw 'Native profile directory escaped the selected task profile.'}
         }
-        $taskResult=[InstalledPickerProbe]::Run($taskApp.pid,$taskConfig.executable,$taskOwner.creationTimeUtc,$taskConfig.desktop,$taskConfig.jobName,$taskConfig.probeSeconds,$taskConfig.scenario,$taskConfig.fixture,$taskConfig.output)
+        foreach($taskInputFile in $taskConfig.transferFiles){
+            $taskInputHasher=[Security.Cryptography.SHA256]::Create()
+            try{$taskInputHash=[BitConverter]::ToString($taskInputHasher.ComputeHash([IO.File]::ReadAllBytes($taskInputFile.path))).Replace('-','').ToLowerInvariant()}finally{$taskInputHasher.Dispose()}
+            if($taskInputHash -ne $taskInputFile.sha256){throw 'Transfer input changed before UIA.'}
+        }
+        $taskResult=[InstalledPickerProbe]::Run($taskApp.pid,$taskConfig.executable,$taskOwner.creationTimeUtc,$taskConfig.desktop,$taskConfig.jobName,$taskConfig.probeSeconds,$taskConfig.scenario,$taskConfig.fixture,$taskConfig.output,$taskConfig.motion,$taskConfig.ambiguous,$taskConfig.previewHoldSeconds)
         $taskResult | ConvertTo-Json -Depth 8 | Set-Content -Encoding UTF8 -LiteralPath (Join-Path $taskConfig.output 'probe.json')
         $taskProfileSession|ConvertTo-Json|Set-Content -Encoding UTF8 -LiteralPath (Join-Path $taskConfig.output 'native-profile.json')
         if ($taskResult.status -ne 'passed') { exit 2 }
@@ -60,6 +68,20 @@ if ($Scenario -ne 'PickerCancel') {
     if (-not $Fixture -or -not [IO.Path]::IsPathFullyQualified($Fixture) -or -not $FixtureSha256) { throw 'Scenario requires an absolute fixture and expected hash.' }
     $Fixture=(Resolve-Path -LiteralPath $Fixture).Path
     if ((Get-FileHash -LiteralPath $Fixture -Algorithm SHA256).Hash.ToLowerInvariant() -ne $FixtureSha256.ToLowerInvariant()) { throw 'Fixture hash mismatch.' }
+}
+$taskTransferFiles=@();$taskMotion=$null;$taskAmbiguous=$null
+if($Scenario -eq 'SableTransfer'){
+    if(-not $TransferManifest -or -not [IO.Path]::IsPathFullyQualified($TransferManifest) -or -not $TransferManifestSha256){throw 'SableTransfer requires an absolute manifest and expected hash.'}
+    if((Get-FileHash -LiteralPath $TransferManifest -Algorithm SHA256).Hash.ToLowerInvariant() -ne $TransferManifestSha256.ToLowerInvariant()){throw 'Transfer manifest hash mismatch.'}
+    $taskTransfer=Get-Content -LiteralPath $TransferManifest -Raw|ConvertFrom-Json
+    if($taskTransfer.schema -ne 'rustsmf.installed-sable-inputs.v1'){throw 'Unsupported transfer inputs.'}
+    foreach($taskInputFile in @($taskTransfer.target,$taskTransfer.motion,$taskTransfer.ambiguous)){
+        if(-not $taskInputFile.path -or -not [IO.Path]::IsPathFullyQualified($taskInputFile.path) -or $taskInputFile.sha256 -notmatch '^[a-f0-9]{64}$'){throw 'Invalid transfer input identity.'}
+        if((Get-FileHash -LiteralPath $taskInputFile.path -Algorithm SHA256).Hash.ToLowerInvariant() -ne $taskInputFile.sha256){throw 'Transfer fixture hash mismatch.'}
+        $taskTransferFiles+=@{path=$taskInputFile.path;sha256=$taskInputFile.sha256}
+    }
+    if(-not [string]::Equals([IO.Path]::GetFullPath($taskTransfer.target.path),$Fixture,[StringComparison]::OrdinalIgnoreCase) -or $taskTransfer.target.sha256 -ne $FixtureSha256.ToLowerInvariant()){throw 'Transfer target differs from selected fixture.'}
+    $taskMotion=$taskTransfer.motion.path;$taskAmbiguous=$taskTransfer.ambiguous.path
 }
 if (Test-Path -LiteralPath $OutputRoot) { throw 'OutputRoot must be fresh; never reuse an installed test profile.' }
 if ($Executable.Contains('"') -or $OutputRoot.Contains('"')) { throw 'Quoted paths are refused.' }
@@ -87,6 +109,7 @@ Add-Type -Path $taskLibrary
 $taskDesktopName='RustSMF-test-'+[Guid]::NewGuid().ToString('N')
 $taskReceipt=[ordered]@{schema='rustsmf.installed-picker-session.v1';status='failed';stage='preflight';executable=$Executable;executableSha256=$ExpectedSha256.ToLowerInvariant();desktop=$taskDesktopName;sessionId=(Get-Process -Id $PID).SessionId;profile=$taskProfile;startedUtc=[DateTime]::UtcNow.ToString('o');inputDesktopSamples=0;inputDesktopChanged=$false;inputDesktopOwnedPickers=0;cleanup=$null;error=$null}
 $taskReceipt.scenario=$Scenario;$taskReceipt.fixture=$Fixture;$taskReceipt.fixtureSha256=$FixtureSha256
+if($Scenario -eq 'SableTransfer'){$taskReceipt.transferManifest=$TransferManifest;$taskReceipt.transferManifestSha256=$TransferManifestSha256.ToLowerInvariant();$taskReceipt.transferFiles=$taskTransferFiles}
 $taskCanonicalRecovery=Join-Path ([Environment]::GetFolderPath('ApplicationData')) 'com.shoozes.rustsmf/rustsmf-recovery'
 $taskRecoveryKind='canonical-known-folder'
 if($ProtectedRecoveryRoot){if(-not [IO.Path]::IsPathFullyQualified($ProtectedRecoveryRoot)){throw 'Protected recovery sentinel must be absolute.'};$taskCanonicalRecovery=$ProtectedRecoveryRoot;$taskRecoveryKind='test-sentinel'}
@@ -103,6 +126,7 @@ try {
     if ($taskDesktop -eq [IntPtr]::Zero) { throw [InstalledTestNative]::Error('CreateDesktopW') }
     $taskJob=[InstalledTestNative]::Job($taskDesktopName)
     $taskConfig=[ordered]@{desktop=$taskDesktopName;jobName=$taskDesktopName;executable=$Executable;expectedSha256=$ExpectedSha256.ToLowerInvariant();profile=$taskProfile;output=$OutputRoot;probeSeconds=$ProbeSeconds;nativeLibrary=$taskLibrary;scriptsRoot=$PSScriptRoot;scenario=$Scenario;fixture=$Fixture}
+    $taskConfig.transferFiles=$taskTransferFiles;$taskConfig.motion=$taskMotion;$taskConfig.ambiguous=$taskAmbiguous;$taskConfig.previewHoldSeconds=$PreviewHoldSeconds
     $taskConfigPath=Join-Path $OutputRoot 'configuration.json';$taskConfig | ConvertTo-Json | Set-Content -Encoding utf8BOM -LiteralPath $taskConfigPath
     $taskShell=Join-Path $env:SystemRoot 'System32/WindowsPowerShell/v1.0/powershell.exe'
     # Windows PowerShell must parse the worker branch without a PS7 requirement.
@@ -126,7 +150,7 @@ try {
                 if ($taskFound.Count) {$taskReceipt.inputDesktopOwnedPickers+=$taskFound.Count;throw 'Owned picker appeared on input desktop.'}
             }
         }
-        if ($taskTimer.Elapsed.TotalSeconds -gt ($ProbeSeconds*$(if($Scenario -eq 'QueueWriteRetry'){20}else{4})+35)) { throw 'Isolated worker timeout.' }
+        if ($taskTimer.Elapsed.TotalSeconds -gt ($ProbeSeconds*$(if($Scenario -eq 'SableTransfer'){40}elseif($Scenario -eq 'QueueWriteRetry'){20}else{4})+$PreviewHoldSeconds+35)) { throw 'Isolated worker timeout.' }
     }
     $taskReceipt.workerExitCode=[InstalledTestNative]::ExitCode($taskWorker.process)
     $taskReceipt.inputDesktopAfter=[InstalledTestNative]::InputName()

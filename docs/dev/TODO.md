@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-10-30
+Last reviewed: 2026-11-01
 
 RustSMF product acceptance is independent of optional engine receiving and private
 content qualification. Completed editor, format, reliability, ZIP, queue, retarget,
@@ -27,29 +27,24 @@ The public 0.2.1 preview is distinct from the newer local source candidate.
 - Done when: Verify, browser, journey, strict visuals, native/actual-WASM proofs, ordinary exports, desktop smoke and Windows packaging pass with recorded identities and dependency locations.
 - Verification: Final verify passes (723 frontend tests, 14 Rust checks); browser 212, journeys 13, strict visuals 3, native/actual-WASM proofs, desktop smoke and packaging pass. Default browser routing also passes 212 with irrelevant siblings/ambient integration variables. Source identities and command receipts: [review record](HISTORY.md#standalone-review-20261026).
 
-## 3. Installed acceptance — Sable workflows, then candidate closure
+## 3. Installed acceptance — complete with verified limitations
 
-- What: Complete actual installed Sable retarget/animal assistance, then freeze the selected installed-product evidence.
+- What: Actual installed Sable retarget/animal assistance and the selected local candidate evidence are complete.
 - Why: API/browser checks and the public preview cannot establish these remaining installed workflows.
 - Where: Installed application, retarget/animal owners and [acceptance](STANDALONE_ACCEPTANCE.md).
-- When: After the completed isolated picker and native queue write-failure/retry case below; separately from optional consumer P7C.
-- How: Use Sable and a generated compatible motion fixture through exact owned UI controls on the isolated desktop. Inspect preview, committed animation and reopened bytes; preserve ambiguous-chain refusals and bind installer/source and cleanup.
-- Verification: Native picker/Open/queue failure-retry is now observed as recorded below. Installed Sable reached Transfer in the earlier pass but has no completed retarget or animal-assistance acceptance yet.
-- Priority 1: Use the verified isolated desktop route to retarget an original/generated compatible motion onto Sable, inspect preview, commit, save/reopen, and independently inspect the resulting animation. Exercise bounded animal-chain suggestions plus an explicit mapping correction; ambiguous anatomy must remain unresolved. Reuse the selected installer/source or demonstrate relevant equivalence before renewing another candidate.
-- Priority 2: Reconcile final workflow evidence, installer/source, resources/notices, checksums and recovery/cleanup into one local product candidate. Public preview/release replacement remains separately authorized. Keep each app standalone and optional engine receiving outside this gate.
-- Done when: Both remaining Sable workflows and final evidence closure pass on the identified candidate, with exact cleanup and known limits.
+- When: Closed after native queue failure/retry; separately from optional consumer P7C.
+- How: Original Sable plus generated motion, installed UI, public profile correction, paused preview/canonical isolation, Apply, project Save/reopen and independent output inspection. The ambiguous deform-tail chain stays unresolved.
+- Verification: 24 reviewed mappings; original four clips plus one transferred clip; 635,925 world-skin samples with maximum difference 0.00000135 m under the existing 0.00002 tolerance. Fifteen control/proof tests, the default installed picker regression and 17 standalone guards pass. All 532 product inputs match the selected installer; five bundled resources/notices remain exact. Native recovery and owned job/desktop/handle cleanup pass. [Evidence and candidate record](HISTORY.md#installed-sable-workflows-20261101).
+- Done when: Both remaining Sable workflows and final evidence closure pass on the identified candidate, with exact cleanup and known limits. This functional gate is observed; new native pixels and attended preview review are not claimed.
+- Limits: GenEye could not resolve the isolated preview target. The HTML mapping dropdown has no qualified quiet selection route; explicit correction is proven through the existing Profile JSON controls. Earlier recovery impact and historical source-only/browser epochs remain explicit.
+- Next priority 1: Save this verified batch to existing `main` through the guarded helper. Decide separately whether to replace public preview assets; this batch does not include a release.
+- Next priority 2: If fresh native pixels or dropdown interaction are required for that decision, qualify an authorized quiet observation/control route. Keep this optional test capability outside app startup/build/runtime dependencies.
 
-### Completed isolated native queue and native profile case — 2026-10-30, local review/fix
+### Completed isolated native queue and native profile case — 2026-10-30
 
-- Published picker review found and fixed a timeout-verdict race and a final close message using a historical HWND. Late UIA completion now cannot change the returned failure; shutdown uses the owned job. No commit/push is included in this review pass.
-- Native filename/Open and Save submission pass through UIA ValuePattern assignment, exact native text readback and BN_CLICKED to the owned button parent. The successful parent is the top-level dialog; the sequence is proven without attributing success solely to a different parent. Native Button.Invoke on this host attempted focus/input and failed; that route is excluded.
-- The real queue case saves A, denies deletion of B's actual native staged file, observes actionable `Failed to install staged export ... (os error 32)` in the installed queue, releases only its obstruction, and retries B. A's SHA-256 and exact modification ticks remain unchanged. B matches its preserved failed-stage bytes. Dirty replacement refusal passes before/after the failure; live authored rename survives, while queued captures retain their pre-edit state.
-- Independent accessor/index/material/skin/bind/animation inspection and 12,960 world-skin samples pass at the existing 1e-5 tolerance; maximum sampled world-skin difference is zero. The bounded Signal Robot case pauses and resets the imported clip to zero before capture; an earlier comparison against a playing snapshot remains retained as a reference-state mismatch. No tolerance was changed.
-- [Final execution and independent output proof](INSTALLED_TEST_SESSION.md#final-qualified-case--2026-10-30) bind the fresh native-profile installer/executable and current source. Native/Open/queue acceptance does not renew every later producer revision or replace the public preview. Previous installed ZIP, project, Help and second-install evidence remains at its own epoch.
-- The approved Windows `--profile-dir` contract now isolates both WebView and native autosave. A fresh installer passes native queue plus default picker/cancel, attested PID/path ownership, private autosave and unchanged default recovery checks. Ten test-control regressions and 19 native unit tests pass. The public preview is unchanged.
-- Earlier installer-B model runs touched/rotated shared native recovery despite WebView isolation. Current discovered files are preserved; no pre-test snapshot is known and restoration is not claimed. The [runbook incident record](INSTALLED_TEST_SESSION.md#earlier-native-recovery-impact) keeps this separate from new preservation proof.
-- Closeout/publication preserves this verified batch through the guarded main helper; it does not close the Sable workflows above or replace the preview. The exact remote commit and owned build-cache disposition are retained in the run's publication receipt.
-- Owned job/process/desktop/handle cleanup is required by each passing receipt. Failed/control attempts remain retained. [Procedure and regression commands](INSTALLED_TEST_SESSION.md).
+- Native filename/Open/Save, real staged-write failure/retry, completed-output preservation, dirty/live/captured state and independent 12,960 world-skin samples pass. The same native-profile installer is reused for Sable after exact source/resource comparison. [Execution, source and output proof](INSTALLED_TEST_SESSION.md#final-qualified-case--2026-10-30).
+- Windows `--profile-dir` isolates WebView and native autosave. Default recovery remains unchanged in current tests; the [earlier recovery incident](INSTALLED_TEST_SESSION.md#earlier-native-recovery-impact) and unknown pre-test contents remain recorded. No restoration is claimed.
+- Published in `10a1f3c`; the public preview is separate. Old failed/control receipts, source manifests and policy-blocked cleanup retain their own ownership.
 
 ## Optional P7C consumer qualification — coupled graph ready
 
@@ -106,3 +101,5 @@ AI-edited: 2026-10-30 | agent=Codex/root | task=installed-native-queue | change=
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly
 
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile-closeout | change=separate saved verified progress from remaining installed acceptance
+
+AI-edited: 2026-11-01 | agent=Codex/root | task=installed-sable-workflows | change=close native Sable workflows and order candidate review, optional observation and separate consumer work

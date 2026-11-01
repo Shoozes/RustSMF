@@ -1639,7 +1639,7 @@
       ]
     },
     "workflow__installed_product_tests": {
-      "description": "RustSMF-owned isolated installed picker/Open/queue failure-retry tests, exact native readback, MTA/job/desktop ownership, independent GLB proof and truthful acceptance limits. No GenEye or GaimEngine runtime dependency.",
+      "description": "RustSMF-owned isolated installed picker/Open/queue tests and the shared Sable driver, exact native readback, MTA/job/desktop ownership and independent GLB proof. No GenEye or consumer runtime dependency.",
       "max_kb": 112,
       "paths": [
         "docs/dev/INSTALLED_TEST_SESSION.md",
@@ -1650,13 +1650,33 @@
         "scripts/installed-test-dialog.cs",
         "scripts/installed-test-queue.cs",
         "scripts/installed-queue-proof.mjs",
-        "scripts/installed-queue-proof.test.mjs"
+        "scripts/installed-queue-proof.test.mjs",
+        "scripts/installed-test-sable.cs"
       ],
       "notes": [
-        "Fresh native-profile installer and original Signal Robot only; Sable workflows and public preview remain separate.",
+        "Signal Robot owns the native queue failure/retry case; expand workflow__installed_sable_tests for original Sable transfer, profile correction and ambiguous-tail proof. The public preview is separate.",
         "Independent accessor parser remains owned by the existing export-queue/browser proof helper. Expand feature__export_queue when changing that parser.",
         "Workflow invocation/failure shutdown guards are neutral and exercise no sibling application.",
         "Read subsystem__tauri_bridge for the public profile contract. WebView profile alone cannot isolate native autosave; require native session attestation and canonical recovery before/after equality."
+      ]
+    },
+    "workflow__installed_sable_tests": {
+      "description": "Installed Sable transfer and bounded animal assistance: original generated motion, public profile correction, preview isolation, committed/project continuity and independent world-skin proof.",
+      "max_kb": 96,
+      "paths": [
+        "docs/dev/INSTALLED_TEST_SESSION.md",
+        "scripts/installed-test-sable.cs",
+        "scripts/installed-sable-fixtures.mjs",
+        "scripts/installed-sable-proof.mjs",
+        "scripts/installed-sable-proof.test.mjs",
+        "source/frontend/tests/helpers/asset-evidence.ts",
+        "source/frontend/tests/helpers/black-cat-evidence.ts",
+        "examples/black-cat/README.md"
+      ],
+      "notes": [
+        "Expand workflow__installed_product_tests for the shared session runner, profile attestation and job/desktop/cancellation lifecycle.",
+        "Test-only artifacts and generated fixtures; no product dependency, producer recipe, private P7C content or consumer engine.",
+        "Expand feature__retarget_assistance or feature__animal_chain_assistance only when changing the product mapping/bake contract."
       ]
     }
   },

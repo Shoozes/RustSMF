@@ -2,6 +2,74 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="installed-sable-workflows-20261101"></a>
+## 2026-11-01 - Installed Sable workflows and local candidate reconciliation
+
+Complete with verified limitations, locally above `10a1f3c`. The supplied
+review's final installed workflow batch is implemented through the existing
+isolated desktop and native-profile route. No application source changed.
+All 532 product inputs match the selected native-profile source manifest.
+Installer SHA-256 `284e44fb22c36b8458643db924463dd29d5301606eb70dea5a0cf1beabfe4a81`
+and executable `fccee3478f3afb11bf6140c3666702e93a59ddcfece5f3b044de3fd94aba2ac0`
+are unchanged. Seven installed files retain their hashes; the five resources/
+notices and uninstaller also match earlier installation A. The historical full
+standalone matrix remains dated: 474 of 486 application inputs are unchanged,
+and 12 optional-producer/native-profile paths have later proof. No full matrix
+renewal or public preview replacement is claimed.
+
+Original Sable and a generated compatible motion fixture exercise actual native
+Open, 24 animal-chain suggestions, explicit mapping correction through Profile
+JSON, invalidation and paused midpoint preview, Apply, project Save/reopen and
+ambiguous-tail refusal. The incorrect mapping draft is never applied. The preview
+export stays identical to the canonical baseline. The ambiguous fixture leaves
+all five tail bones unresolved, and its discard preserves the committed model.
+Save retains authoring history; the driver explicitly confirms replacement with
+its own saved snapshot when the unsaved-change warning appears.
+
+Independent accessor/material/skin/bind/motion inspection preserves the original
+Idle/Walk/Run/Sit clips and the transferred fifth clip. Committed, embedded-project,
+reopened and post-discard assets agree. At 61 times, 635,925 world-skin samples
+have maximum difference 0.0000013486628225260908 m under the existing 0.00002
+tolerance. Committed/reopened/post-discard GLB SHA-256 is
+`5573a69257f445055cec5ceaa036af45804163775926a9233ca8de8b4dc6e915`.
+No app parser, consumer engine or private producer pose is the output oracle.
+
+The driver handles owned WebView-child native dialogs and bounded stale UIA
+snapshot retries. More-menu retries affect reversible disclosure only; Save,
+Apply and native submissions are never blindly retried. Fifteen focused
+control/proof tests pass, including stale-input, foreign-target, false-transfer,
+ambiguous-map and incomplete/unsafe receipt refusals. The default installed
+picker/cancel regression passes again. Seventeen standalone guard tests and
+the scan of 467 owned files pass. Final repository/context checks are retained
+in the candidate summary. Earlier driver attempts remain failed evidence.
+
+Native profiles attest exact PID/paths and contain real private autosave.
+Default recovery hashes, lengths and modification ticks remain unchanged; owned
+jobs reach zero processes and close worker/job/desktop/input handles. Retained
+profiles, fixtures, failed witnesses and useful outputs are test-owned proof,
+with no retained service. The earlier shared-recovery incident is not reversed
+or hidden; old policy-blocked cleanup is outside this batch. GaimEngine's three
+Rust overlays remain unchanged and its standalone proof remains separate.
+
+GenEye could not resolve the isolated preview target. No new native pixels or
+attended preview review is claimed. Quiet HTML mapping-dropdown selection remains
+unverified; correction uses the existing public Profile JSON path. The candidate
+is ready for review of these limits. This verified task batch is saved through
+the guarded main helper; replacing the public preview remains a separate release
+decision. Private P7C generation remains stopped.
+
+All current proof is under
+`D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/`:
+[candidate summary](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/summary.json),
+[native receipt](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/qualified-8/receipt.json),
+[independent outputs](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/qualified-8/independent.json),
+[source/resource equivalence](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/candidate-equivalence.json),
+[final tool sources](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/tool-source-final.json).
+The [runbook](INSTALLED_TEST_SESSION.md#qualified-sable-workflows--2026-11-01)
+owns reproduction and observation limits.
+
+AI-edited: 2026-11-01 | agent=Codex/root | task=installed-sable-workflows | change=close functional installed acceptance with source-bound independent proof and explicit observation limits
+
 <a id="installed-native-queue-20261030"></a>
 ## 2026-10-30 - Published picker review and actual native queue failure/retry
 

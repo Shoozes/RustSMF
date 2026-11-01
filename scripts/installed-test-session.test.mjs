@@ -13,13 +13,21 @@ function pathParent(args){return resolve(args[args.indexOf('-OutputRoot')+1],'..
 const neutralApp=String.raw`class Fixture { static void Main(string[] args){var i=System.Array.IndexOf(args,"--profile-dir");var root=System.IO.Path.GetFullPath(args[i+1]);var native=System.IO.Path.Combine(root,"native","rustsmf-recovery");var web=System.IO.Path.Combine(root,"webview");System.IO.Directory.CreateDirectory(native);System.IO.Directory.CreateDirectory(web);var session=new {schema="rustsmf.profile-session.v1",pid=System.Diagnostics.Process.GetCurrentProcess().Id,root=root,nativeRecovery=native,webview=web};System.IO.File.WriteAllText(System.IO.Path.Combine(root,"rustsmf-profile-session.json"),new System.Web.Script.Serialization.JavaScriptSerializer().Serialize(session));System.Threading.Thread.Sleep(120000);} }`;
 function fixture(t){const path=mkdtempSync(join(tmpdir(),'rustsmf-desktop-é space-'));t.after(()=>{assert.ok(resolve(path).startsWith(resolve(tmpdir())+'\\'));rmSync(path,{recursive:true,force:true});});return path;}
 test('installed probe retains a dedicated MTA worker and refuses takeover APIs',()=>{
- const ps=readFileSync(script,'utf8'),native=readFileSync(join(root,'scripts/installed-test-native.cs'),'utf8'),uia=readFileSync(join(root,'scripts/installed-test-uia.cs'),'utf8');
+ const ps=readFileSync(script,'utf8'),native=readFileSync(join(root,'scripts/installed-test-native.cs'),'utf8'),uia=readFileSync(join(root,'scripts/installed-test-uia.cs'),'utf8'),sable=readFileSync(join(root,'scripts/installed-test-sable.cs'),'utf8');
  assert.match(uia,/SetApartmentState\(ApartmentState.MTA\)/);
  assert.match(native,/AssignProcessToJobObject/);assert.match(native,/0x2000/);
- assert.doesNotMatch(ps+native+uia,/SwitchDesktop\s*\(|SetCursorPos\s*\(|SendInput\s*\(|mouse_event\s*\(|ExecutionPolicy Bypass/);
+ assert.doesNotMatch(ps+native+uia+sable,/SwitchDesktop\s*\(|SetCursorPos\s*\(|SendInput\s*\(|mouse_event\s*\(|SetFocus\s*\(|ExecutionPolicy Bypass/);
  assert.match(uia,/Own\(cancelHandle,jobName,desktop\)/);
  assert.match(ps,/InputName\(\) -ne \$taskReceipt.inputDesktopBefore/);
  assert.doesNotMatch(ps,/PostMessageW\(/,'Final shutdown must use the owned job, not a historical HWND.');
+});
+test('transfer manifests reject changed inputs and a foreign target before creating a profile',{skip:!windows},t=>{
+ const path=fixture(t),output=join(path,'out'),input=join(path,'fixture.glb'),manifest=join(path,'inputs.json');writeFileSync(input,'test-owned bytes');
+ const hash=p=>createHash('sha256').update(readFileSync(p)).digest('hex'),row={path:input,sha256:hash(input)};
+ const data={schema:'rustsmf.installed-sable-inputs.v1',target:row,motion:row,ambiguous:row};
+ const invoke=()=>run(['-Executable',process.execPath,'-ExpectedSha256',hash(process.execPath),'-OutputRoot',output,'-Scenario','SableTransfer','-Fixture',input,'-FixtureSha256',hash(input),'-TransferManifest',manifest,'-TransferManifestSha256',hash(manifest)]);
+ data.motion={...row,sha256:'0'.repeat(64)};writeFileSync(manifest,JSON.stringify(data));let r=invoke();assert.notEqual(r.status,0);assert.match(r.stderr,/Transfer fixture hash mismatch/);assert.equal(existsSync(output),false);
+ data.motion=row;data.target={path:process.execPath,sha256:hash(process.execPath)};writeFileSync(manifest,JSON.stringify(data));r=invoke();assert.notEqual(r.status,0);assert.match(r.stderr,/Transfer target differs/);assert.equal(existsSync(output),false);
 });
 test('late UIA completion cannot turn a timeout verdict into success',{skip:!windows},t=>{
  const path=fixture(t),probe=join(path,'timeout.ps1');
@@ -31,7 +39,7 @@ Add-Type -Path (Join-Path $Scripts 'installed-test-native.cs') -OutputAssembly $
 Add-Type -Path $native
 Add-Type -AssemblyName UIAutomationClient
 Add-Type -AssemblyName UIAutomationTypes
-Add-Type -Path @((Join-Path $Scripts 'installed-test-uia.cs'),(Join-Path $Scripts 'installed-test-dialog.cs'),(Join-Path $Scripts 'installed-test-queue.cs')) -ReferencedAssemblies @('System.dll','UIAutomationClient','UIAutomationTypes','WindowsBase',$native) -OutputAssembly $uia
+Add-Type -Path @((Join-Path $Scripts 'installed-test-uia.cs'),(Join-Path $Scripts 'installed-test-dialog.cs'),(Join-Path $Scripts 'installed-test-queue.cs'),(Join-Path $Scripts 'installed-test-sable.cs')) -ReferencedAssemblies @('System.dll','UIAutomationClient','UIAutomationTypes','WindowsBase',$native) -OutputAssembly $uia
 Add-Type -Path $uia
 Add-Type -ReferencedAssemblies @($uia) -TypeDefinition @'
 using System;using System.Threading;
