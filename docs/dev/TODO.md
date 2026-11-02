@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-11-01
+Last reviewed: 2026-11-02
 
 RustSMF product acceptance is independent of optional engine receiving and private
 content qualification. Completed editor, format, reliability, ZIP, queue, retarget,
@@ -37,8 +37,10 @@ The public 0.2.1 preview is distinct from the newer local source candidate.
 - Verification: 24 reviewed mappings; original four clips plus one transferred clip; 635,925 world-skin samples with maximum difference 0.00000135 m under the existing 0.00002 tolerance. Fifteen control/proof tests, the default installed picker regression and 17 standalone guards pass. All 532 product inputs match the selected installer; five bundled resources/notices remain exact. Native recovery and owned job/desktop/handle cleanup pass. [Evidence and candidate record](HISTORY.md#installed-sable-workflows-20261101).
 - Done when: Both remaining Sable workflows and final evidence closure pass on the identified candidate, with exact cleanup and known limits. This functional gate is observed; new native pixels and attended preview review are not claimed.
 - Limits: GenEye could not resolve the isolated preview target. The HTML mapping dropdown has no qualified quiet selection route; explicit correction is proven through the existing Profile JSON controls. Earlier recovery impact and historical source-only/browser epochs remain explicit.
-- Next bounded pass: Read-only review of the identified installed candidate and its observation limits, then record whether public preview replacement requires fresh native preview pixels or quiet HTML dropdown interaction. Done when the decision binds the existing installer/source identity, accepted functional evidence, missing observations and required next gate. This batch is already on `main`; release/publication and P7C producer work are separate.
-- If that decision requires new observation, qualify an authorized quiet capture/control route as a separate pass. Keep this optional test capability outside app startup/build/runtime dependencies.
+- Next bounded pass: Before proposing public preview replacement, obtain and review fresh installed preview pixels on the selected installer (SHA-256 `284e44fb22c36b8458643db924463dd29d5301606eb70dea5a0cf1beabfe4a81`), with exact executable/source identity and owned-resource cleanup. The saved-motion proof does not establish visible rendering. Existing earlier-package pixels do not establish the newer package. Keep release/publication and P7C work separate.
+- Mapping dropdown: Direct installed selection remains unverified. Qualify it before claiming that control was accepted; the observed Profile JSON correction establishes a separate usable route. Quiet automation is not itself a product acceptance criterion. Use a qualified quiet route where possible; any attended alternative needs explicit authorization and must preserve the operator's desktop and recovery. Keep test capability outside app startup/build/runtime dependencies.
+- Done when: The selected package has reviewed, source-bound visible preview evidence and the dropdown is either exercised with a recorded result or explicitly excluded from the proposed release claims. Reassess the wider release gate and candidate identity before any publication; do not infer renewed historical matrices from this focused observation.
+- 2026-11-02 work intake: Installer and executable hashes match the qualified record; all 532 recorded product inputs match the working tree. The retained isolated preview attempt returned `target_not_found` for its owned renderer HWND. No changed capture route has been established, so a repeat of that attempt would not close the visual gate. The operator authorized an attended review with an isolated profile and no native picker actions on the active desktop; the existing Sable driver requires native pickers and refuses the input desktop. Qualify a compatible loading/capture route or a quiet capture capability before the observation; dropdown selection remains unverified.
 
 ### Completed isolated native queue and native profile case — 2026-10-30
 
@@ -116,3 +118,7 @@ AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile-closeout | change
 AI-edited: 2026-11-01 | agent=Codex/root | task=installed-sable-workflows | change=close native Sable workflows and order candidate review, optional observation and separate consumer work
 
 AI-edited: 2026-11-01 | agent=Codex/root | task=installed-review-recheck-cleanup | change=select bounded candidate decision and retain policy-blocked six-directory cleanup
+
+AI-edited: 2026-11-02 | agent=Codex/root | task=installed-candidate-review | change=record candidate observation recommendation and distinguish dropdown proof from quiet automation
+
+AI-edited: 2026-11-02 | agent=Codex/root | task=installed-observation-intake | change=recheck candidate identity and retain unresolved capture route

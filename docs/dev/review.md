@@ -1,10 +1,22 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-11-01
+Last reviewed: 2026-11-02
 
 Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
+
+## Candidate observation decision — 2026-11-02
+
+Read-only review and recheck began on clean `main` `9d23efcd501ef9eec827d82e19affc3b153d8ab9`. Since the preceding `fd16404` review, only TODO, this review and a context budget changed. The selected installed candidate remains installer SHA-256 `284e44fb22c36b8458643db924463dd29d5301606eb70dea5a0cf1beabfe4a81`, executable `fccee3478f3afb11bf6140c3666702e93a59ddcfece5f3b044de3fd94aba2ac0`; the recorded 532 product inputs match at the Sable qualification epoch. No installed run or fresh identity comparison was performed in this review.
+
+The prior native queue and Sable workflow findings remain closed at their recorded identities. New native preview pixels and direct HTML mapping-dropdown selection remain unverified. Profile JSON correction, paused preview state and independent saved-motion samples establish functional behavior, not visible preview quality or operation of that dropdown. Earlier native pixels and the full isolated/browser matrices belong to earlier source or installer epochs. No new product defect is established.
+
+Recommendation for a proposed public preview replacement: review fresh installed preview pixels on the exact selected package, and exercise the dropdown before claiming it accepted; alternatively explicitly exclude that control from the release claims. A quiet dropdown automation route is not itself an acceptance requirement. The next observation must follow the quiet installed-app contract; an attended alternative needs separate authorization. This recommendation does not authorize publication or assert that a new visual gate was previously agreed. TODO owns the bounded follow-up and its stopping condition.
+
+The four combined native context routes exceeded their 256 KiB budget and skipped 12 files; the relevant acceptance record and preview test were retrieved directly. This is a combined-request coverage limit, not proof that individual routes fail. No saved pack was written.
+
+AI-edited: 2026-11-02 | agent=Codex/root | task=installed-candidate-review | change=record review recheck and evidence-bound preview recommendation
 
 ## Installed candidate review and recheck — 2026-11-01
 
