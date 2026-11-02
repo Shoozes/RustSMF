@@ -49,6 +49,13 @@ without Invoke or Value patterns. An exact-HWND native message to a verified
 owned Edit or Button is a quiet app-control fallback. Reject a stale handle or
 PID mismatch rather than guessing a replacement.
 
+For one installed mapping dropdown, an isolated-desktop test reacquired the
+combo after UI re-render, required its UIA keyboard-focus readback, and posted
+bounded Down key pairs to the exact owned renderer. Preview invalidation and an
+exported reviewed mapping proved the selection. UIA ValuePattern alone did not.
+See [the diagnostic record](../../INSTALLED_TEST_SESSION.md#isolated-dropdown-and-capture-diagnostics--2026-11-02);
+do not extrapolate that result to other controls or desktops.
+
 [Implementation notes](IMPLEMENTATION_NOTES.md) record how this local UIA route
 was built, its observed limits, and the possible GenEye extraction boundary.
 
@@ -59,3 +66,5 @@ AI-edited: 2026-10-30 | agent=Codex/root | task=installed-isolated-picker | chan
 AI-edited: 2026-10-30 | agent=Codex/root | task=installed-native-queue | change=route verified native submission and preserve native input-proxy limitations
 
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly
+
+AI-edited: 2026-11-02 | agent=Codex/root | task=installed-preview-diagnostics | change=link bounded isolated mapping control proof

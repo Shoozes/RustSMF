@@ -134,8 +134,8 @@ differs from the root app. More-menu retries are limited to that reversible
 disclosure and stop when the requested command appears; Save, Apply and picker
 submission are never blindly retried.
 
-The isolated HTML mapping dropdown has no qualified quiet selection route on
-this host; correction uses the existing editable profile instead. Optional
+An isolated focused-key route for one HTML mapping is qualified below; the
+existing editable profile remains a separate correction route. Optional
 `-PreviewHoldSeconds` (0–45) exposes a bounded `preview-ready.json` checkpoint
 and `<output>/preview-release` continuation. It does not require or invoke a
 capture provider. GenEye target resolution was unavailable for the observed
@@ -239,6 +239,18 @@ remote commit confirmation is retained in the same run's publication receipt.
 
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile-closeout | change=account owned proof and policy-blocked cache cleanup explicitly
 
+## Isolated dropdown and capture diagnostics — 2026-11-02
+
+The retained native-profile executable `fccee3478f3afb11bf6140c3666702e93a59ddcfece5f3b044de3fd94aba2ac0` ran the Sable fixture on the task-owned non-input desktop. UIA expanded `Map FrontUpper_L` but exposed no option descendants; its apparently writable ValuePattern did not change the selected value. A subsequent bounded test reacquired the exact owned combo after re-render, focused it on the isolated desktop, checked `HasKeyboardFocus`, and posted Down key pairs to the owned renderer. The displayed selection advanced from `Auto: ForeUpper_L` through `Root` to `ForeUpper_L`; preview invalidated. Re-analysis succeeded and the native exported reviewed profile independently contains `FrontUpper_L` mapped to `ForeUpper_L` (SHA-256 `4cebd6b95fe23791ebbf9da5336bc3a05294a72645912b2f8a16abded21609ac`). This establishes the exercised dropdown route, not arbitrary mappings. The worker intentionally stopped after the export, so its overall diagnostic receipt says failed; its selected mapping and cleanup are separately observed. Input-desktop monitoring reported no owned pickers or desktop change, protected recovery was unchanged, and the job had zero active processes after cleanup.
+
+The [dropdown receipt](D:/Compact_Evidence/RustSMF/runs/installed-dropdown-verified-20261102/session-2/receipt.json), `dropdown-selection.txt`, exported profile and task-owned diagnostic harness remain together. Its first attempt encountered a stale UIA element; the second reacquired it before focus. Earlier expansion/ValuePattern receipts remain in the `installed-dropdown-20261102` run.
+
+For a distinct capture hypothesis, the qualified GenEye 0.5.1 executable ran from the same isolated desktop at the paused preview checkpoint using `capture --compositor-pid`. Target resolution reached Windows Graphics Capture, which failed to start with `0x80070057`; no image or visual acceptance resulted. The [capture receipt](D:/Compact_Evidence/RustSMF/runs/installed-isolated-capture-20261102/session/receipt.json) and `capture-diagnostic.txt` retain the result. The surrounding Sable session passed and released its job. No display capture or active-desktop picker fallback was used. A working isolated capture route remains open.
+
+The subsequent supervised-route attempt used GenEye's supported `supervise --hwnd` on the active desktop, targeting the app HWND reported and owned by a new isolated Sable checkpoint. The process and executable identity matched the run receipt. GenEye exited 1 with `capture_scope_denied: source identity unavailable: window is missing, hidden or minimized`; it created no supervision file and captured no pixels. The [supervisor record](D:/Compact_Evidence/RustSMF/runs/installed-supervisor-bound-20261102/session/supervisor-owner.json) and stderr retain the refusal. An earlier attempt to infer the root HWND across desktops stopped on owner mismatch before starting a supervisor. The Sable session subsequently passed, with no input-desktop picker or desktop change, unchanged protected recovery, zero owned job processes and closed desktop/job handles. The supervisor PID exited. A visible supervised source or compatible isolated capture environment is still needed.
+
+AI-edited: 2026-11-02 | agent=Codex/root | task=installed-preview-diagnostics | change=record isolated dropdown selection proof and compositor failure
+
 ## Qualified Sable workflows — 2026-11-01
 
 The native-profile installer and executable identified above are reused exactly.
@@ -269,9 +281,10 @@ Earlier unsuccessful attempts retain their own failure and cleanup records.
 
 The [candidate summary](D:/Compact_Evidence/RustSMF/runs/installed-sable-workflows-20261101/summary.json)
 reconciles accepted workflows, exact source/resources, checks and retention.
-GenEye could not resolve the isolated preview target, so new native pixels and
-attended review remain unclaimed. Quiet HTML dropdown selection also remains
-unverified; the existing Profile JSON correction route is observed. Both apps
+At that epoch GenEye could not resolve the isolated preview target, so new native pixels and
+attended review were not claimed. Quiet HTML dropdown selection was also
+unverified; the existing Profile JSON correction route was observed. The later
+focused dropdown test above qualifies one selection; capture remains open. Both apps
 and their proofs remain separate. This verified batch is saved through the
 guarded main helper; no public release replacement or private producer
 generation is included.
