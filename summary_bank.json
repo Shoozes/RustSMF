@@ -860,7 +860,7 @@
     },
     "issue__verification_current_head": {
       "description": "Current source proof, local gates, browser failure classification and owned cleanup.",
-      "max_kb": 100,
+      "max_kb": 104,
       "paths": [
         "README.md",
         "docs/dev/review.md",

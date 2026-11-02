@@ -1,10 +1,41 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-10-25
+Last reviewed: 2026-11-01
 
 Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
+
+## Installed candidate review and recheck — 2026-11-01
+
+Read-only review of clean `main` `fd16404` (also `origin/main`) selected the
+Summary Bank installed-Sable, standalone-product, orientation and verification
+routes, then inspected their source, consumers, contracts, tests and retained
+receipts. Both selected context routes generated without skipped files;
+`verify-context-bank` passed with 78 groups and no warnings. This review did not
+rerun the installed application or regenerate proof.
+
+- Verified closed against the earlier installed queue and Sable findings: the
+  native-profile queue case and the installed Sable transfer, correction,
+  Apply, Save/reopen and ambiguous-tail refusal have source-bound records.
+  The retained Sable receipt reports zero active job processes and unchanged
+  protected recovery. Independent proof reports 635,925 world-skin samples with
+  a maximum 0.00000135 m difference under the existing 0.00002 m limit.
+- Still open: fresh isolated native preview pixels and quiet HTML dropdown
+  selection were not qualified. The public 0.2.1 preview has not been replaced.
+  Optional P7C full physical and visual qualification remains separate; the
+  later right-sole drift witness is retained. No new installed source defect was
+  established by this review.
+- New records issue for cleanup: TODO lacked the six-directory Rust debug-output
+  batch that automatic approval review blocked on 2026-11-01. The selected
+  directories remained present after rejection; no deletion or workaround ran.
+
+Next bounded pass: review the identified installed candidate and observation
+limits, then record whether public preview replacement needs fresh native pixels
+or quiet dropdown interaction. Keep release/publication and P7C producer work
+outside that decision. TODO owns its Done When and the separate optional route.
+
+AI-edited: 2026-11-01 | agent=Codex/root | task=installed-review-recheck-cleanup | change=bind current review to installed proof, open limits and blocked storage batch
 
 ## P7C pelvis-layer integration — 2026-10-25
 

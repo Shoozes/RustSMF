@@ -37,8 +37,8 @@ The public 0.2.1 preview is distinct from the newer local source candidate.
 - Verification: 24 reviewed mappings; original four clips plus one transferred clip; 635,925 world-skin samples with maximum difference 0.00000135 m under the existing 0.00002 tolerance. Fifteen control/proof tests, the default installed picker regression and 17 standalone guards pass. All 532 product inputs match the selected installer; five bundled resources/notices remain exact. Native recovery and owned job/desktop/handle cleanup pass. [Evidence and candidate record](HISTORY.md#installed-sable-workflows-20261101).
 - Done when: Both remaining Sable workflows and final evidence closure pass on the identified candidate, with exact cleanup and known limits. This functional gate is observed; new native pixels and attended preview review are not claimed.
 - Limits: GenEye could not resolve the isolated preview target. The HTML mapping dropdown has no qualified quiet selection route; explicit correction is proven through the existing Profile JSON controls. Earlier recovery impact and historical source-only/browser epochs remain explicit.
-- Next priority 1: Review the published candidate and observation limits, then decide separately whether to replace public preview assets. This batch is already on `main`; it does not include a release.
-- Next priority 2: If fresh native pixels or dropdown interaction are required for that decision, qualify an authorized quiet observation/control route. Keep this optional test capability outside app startup/build/runtime dependencies.
+- Next bounded pass: Read-only review of the identified installed candidate and its observation limits, then record whether public preview replacement requires fresh native preview pixels or quiet HTML dropdown interaction. Done when the decision binds the existing installer/source identity, accepted functional evidence, missing observations and required next gate. This batch is already on `main`; release/publication and P7C producer work are separate.
+- If that decision requires new observation, qualify an authorized quiet capture/control route as a separate pass. Keep this optional test capability outside app startup/build/runtime dependencies.
 
 ### Completed isolated native queue and native profile case — 2026-10-30
 
@@ -83,6 +83,17 @@ directories after automatic approval review rejected their scoped removal as
 exact inventory, owner and roughly 4.43 GiB logical cleanup scope. Preserve
 installers, recovery, source and proof; cleanup requires a permitted owner action.
 
+A separate 2026-11-01 disk review measured three current-checkout Rust `debug`
+trees (`source/src-tauri/target`, `source/retarget-core/target` and
+`source/pose-contact/target`) at 4.37 GB logical, plus the `debug` trees in the
+2026-10-28 HipEndpoint and RootBody isolated Cargo targets and the 2026-10-29
+Coupled isolated Tauri target at 12.01 GB logical. All six selected scans were
+complete and unchanged on recheck; they had no nested links or observed
+executable users. The operator approved exactly those six directories, but
+automatic command review rejected their removal as `blocked by policy` before
+execution. All six remained present. Do not reroute the rejected operation;
+source, release builds, shared dependencies and retained proof remain protected.
+
 The 2026-10-28 isolated hip-Y producer proof retained task-owned rebuildable
 outputs on D: after a passing verify: a failed global Cargo target (4.26 GB
 logical), passing per-crate targets (4.29 GB combined), offline npm dependencies
@@ -103,3 +114,5 @@ AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify 
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile-closeout | change=separate saved verified progress from remaining installed acceptance
 
 AI-edited: 2026-11-01 | agent=Codex/root | task=installed-sable-workflows | change=close native Sable workflows and order candidate review, optional observation and separate consumer work
+
+AI-edited: 2026-11-01 | agent=Codex/root | task=installed-review-recheck-cleanup | change=select bounded candidate decision and retain policy-blocked six-directory cleanup
