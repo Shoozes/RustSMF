@@ -6,7 +6,7 @@ This file is the canonical home for completed repo/app work and its durable veri
 ## 2026-11-02 - Export cleanup review, recheck and selected candidate
 
 Complete with verified limitations. Candidate tree
-`0d9ddd35e2e1f928e892def9ded79f4af4626d04` is based on
+`6c132fe58095d853ffa4474cc94cb3bd5a61b9dd` is based on
 `f099e37ed1d0c855412d67766507359b4fe029d6` and includes the preserved earlier
 export-cleanup batch. The supplied review's narrow producer-side lifecycle scope was
 confirmed; no new architecture, format, retarget engine, consumer integration or
