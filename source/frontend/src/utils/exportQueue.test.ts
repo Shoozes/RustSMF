@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { ExportQueue, exportBasename, MAX_EXPORT_QUEUE_BYTES, MAX_EXPORT_RESULT_BYTES, type ExportQueueRunner, type ExportPreset } from './exportQueue';
+import { ExportOperationError, ExportQueue, exportBasename, MAX_EXPORT_QUEUE_BYTES, MAX_EXPORT_RESULT_BYTES, type ExportQueueRunner, type ExportPreset } from './exportQueue';
 
 const preset = { format: 'glb', includeAnimation: true } as const;
 function deferred<T>() { let resolve!: (value: T) => void; const promise = new Promise<T>(done => { resolve = done; }); return { promise, resolve }; }
@@ -106,4 +106,140 @@ test('disposal during an issued download retains its real receipt and releases o
   const running = s.queue.run({ ...s.runner, save: async () => gate.promise });
   await Promise.resolve(); s.queue.dispose(); assert.equal(s.released(), 0); gate.resolve('downloaded'); await running;
   assert.equal(s.released(), 1); assert.equal(s.queue.getState().items[0].status, 'downloaded'); s.queue.dispose(); assert.equal(s.released(), 1);
+});
+
+for (const outcome of ['saved', 'downloaded'] as const) test(`${outcome} outcome survives cleanup failure and cleanup retry never repeats output`, async () => {
+  const queue = new ExportQueue<{ bytes: number; value: number; dispose(): void }>();
+  let releases = 0, prepares = 0, saves = 0;
+  queue.add(preset, 'completed', () => ({ bytes: 16, value: 1, dispose() {
+    releases++;
+    if (releases === 1) throw new Error('GPU capture still referenced');
+  } }));
+  const runner: ExportQueueRunner<{ value: number }> = {
+    isCurrent: () => true,
+    prepare: async snapshot => { prepares++; return new Uint8Array([snapshot.value]); },
+    save: async () => { saves++; return outcome; },
+  };
+
+  await queue.run(runner);
+  assert.equal(queue.getState().items[0].status, outcome);
+  assert.match(queue.getState().items[0].cleanupError, /GPU capture still referenced/);
+  assert.equal(queue.getState().bytes, 16);
+
+  queue.retryCleanup();
+  assert.equal(queue.getState().items[0].status, outcome);
+  assert.equal(queue.getState().items[0].cleanupError, '');
+  assert.equal(queue.getState().bytes, 0);
+  assert.deepEqual({ prepares, saves, releases }, { prepares: 1, saves: 1, releases: 2 });
+});
+
+test('empty cleanup errors stay visible and retryable', async () => {
+  const queue = new ExportQueue<{ bytes: number; value: number; dispose(): void }>();
+  let releases = 0;
+  queue.add(preset, 'empty-cleanup-error', () => ({ bytes: 16, value: 1, dispose() {
+    releases++;
+    if (releases === 1) throw new Error();
+  } }));
+
+  const runner: ExportQueueRunner<{ value: number }> = {
+    isCurrent: () => true,
+    prepare: async snapshot => new Uint8Array([snapshot.value]),
+    save: async () => 'saved',
+  };
+  await queue.run(runner);
+
+  assert.ok(queue.getState().items[0].cleanupError);
+  assert.equal(queue.getState().bytes, 16);
+  queue.retryCleanup();
+  assert.equal(queue.getState().items[0].status, 'saved');
+  assert.equal(queue.getState().items[0].cleanupError, '');
+  assert.equal(queue.getState().bytes, 0);
+  assert.equal(releases, 2);
+});
+
+test('failed capture cleanup retains a cleanup-only owner until release succeeds', () => {
+  const queue = new ExportQueue<{ bytes: number; dispose(): void }>();
+  let releases = 0;
+  const owner = { bytes: 24, dispose() {
+    releases++;
+    if (releases === 1) throw new Error('capture resource remains referenced');
+  } };
+  const captureError = new ExportOperationError('Capture failed and cleanup remains incomplete.', [
+    new Error('scene copy failed'), new Error('capture resource remains referenced'),
+  ], { owner, error: new Error('capture resource remains referenced') });
+
+  assert.throws(() => queue.add(preset, 'partial-capture', () => {
+    try { owner.dispose(); } catch { throw captureError; }
+    throw new Error('Expected first cleanup to fail.');
+  }), /Capture failed and cleanup remains incomplete/);
+  assert.equal(releases, 1);
+  assert.equal(queue.getState().items.length, 1);
+  assert.equal(queue.getState().items[0].status, 'failed');
+  assert.match(queue.getState().items[0].message, /scene copy failed/);
+  assert.match(queue.getState().items[0].cleanupError, /capture resource remains referenced/);
+  assert.equal(queue.getState().bytes, 24);
+
+  queue.retryCleanup();
+  assert.equal(releases, 2);
+  assert.equal(queue.getState().items.length, 0);
+  assert.equal(queue.getState().bytes, 0);
+});
+
+test('queue disposal attempts every capture and a later cleanup retry releases only unresolved owners', () => {
+  const queue = new ExportQueue<{ bytes: number; dispose(): void }>();
+  const releases = [0, 0];
+  for (const index of [0, 1]) queue.add(preset, `item-${index}`, () => ({ bytes: 16, dispose() {
+    releases[index]++;
+    if (releases[index] === 1) throw new Error(`capture ${index} still referenced`);
+  } }));
+
+  queue.dispose();
+  assert.deepEqual(releases, [1, 1]);
+  assert.equal(queue.getState().bytes, 32);
+  assert.deepEqual(queue.getState().items.map(item => item.cleanupError), ['capture 0 still referenced', 'capture 1 still referenced']);
+
+  queue.dispose();
+  assert.deepEqual(releases, [2, 2]);
+  assert.equal(queue.getState().bytes, 0);
+  assert.deepEqual(queue.getState().items.map(item => item.cleanupError), ['', '']);
+});
+
+for (const phase of ['preparation', 'save'] as const) test(`${phase} failure and cleanup failure remain separately visible`, async () => {
+  const queue = new ExportQueue<{ bytes: number; value: number; dispose(): void }>();
+  let releases = 0, prepareCalls = 0, saveCalls = 0;
+  const prepareGate = deferred<void>(), prepareStarted = deferred<void>();
+  const saveGate = deferred<void>(), saveStarted = deferred<void>();
+  queue.add(preset, 'failed', () => ({ bytes: 16, value: 1, dispose() {
+    releases++;
+    if (releases === 1) throw new Error('capture release refused');
+  } }));
+  const runner: ExportQueueRunner<{ value: number }> = {
+    isCurrent: () => true,
+    prepare: async snapshot => {
+      prepareCalls++;
+      if (phase === 'preparation') {
+        prepareStarted.resolve(); await prepareGate.promise; throw new Error('encoder rejected source');
+      }
+      return new Uint8Array([snapshot.value]);
+    },
+    save: async () => {
+      saveCalls++; saveStarted.resolve(); await saveGate.promise; throw new Error('native write refused');
+    },
+  };
+  const running = queue.run(runner);
+  if (phase === 'preparation') { await prepareStarted.promise; queue.dispose(); prepareGate.resolve(); }
+  else { await saveStarted.promise; queue.dispose(); saveGate.resolve(); }
+  await running;
+
+  const item = queue.getState().items[0];
+  assert.equal(item.status, phase === 'preparation' ? 'canceled' : 'failed');
+  assert.match(item.message, phase === 'preparation' ? /encoder rejected source/ : /native write refused/);
+  assert.match(item.cleanupError, /capture release refused/);
+  assert.equal(queue.getState().bytes, 16);
+  const countsBeforeCleanupRetry = { prepareCalls, saveCalls };
+  queue.dispose();
+  assert.equal(queue.getState().items[0].message, item.message);
+  assert.equal(queue.getState().items[0].cleanupError, '');
+  assert.equal(queue.getState().bytes, 0);
+  assert.deepEqual({ prepareCalls, saveCalls }, countsBeforeCleanupRetry);
 });

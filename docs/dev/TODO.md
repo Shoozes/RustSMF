@@ -2,71 +2,33 @@
 
 Last reviewed: 2026-11-02
 
-RustSMF product acceptance is independent of optional engine receiving and private
-content qualification. Completed editor, format, reliability, ZIP, queue, retarget,
-animal-chain and preview narratives remain in [HISTORY.md](HISTORY.md).
-The public 0.2.1 preview is distinct from the newer local source candidate.
+The public `v0.2.1-preview` remains unchanged. RustSMF owns its producer,
+editor, formats and package acceptance. GaimEngine owns consumer receiving and
+visual acceptance; unchanged producer exports are not regenerated for a
+source-status change or a new chat. Completed independence, queue, Sable and
+producer work is recorded in [HISTORY.md](HISTORY.md), not as active backlog.
+Backlog status: the export cleanup repair is documented in
+[HISTORY.md](HISTORY.md#export-cleanup-recheck-2026-11-02). Its selected local
+candidate passes the installed queue failure/retry. One installed visual
+observation remains gated on a compatible capture environment. One dropdown
+selection route is qualified; broader mapping selection is not claimed.
 
-## 1. Standalone boundary — verified complete
+## 1. Installed preview observation — one gated release criterion
 
-- What: Guard repository-contained dependencies and explicit optional integrations.
-- Why: A fixed-file guard missed new paths; automatic GenEye discovery changed ordinary tests.
-- Where: Existing dependency guard, launcher, focused regressions and [acceptance](STANDALONE_ACCEPTANCE.md).
-- When: First, before isolated qualification.
-- How: Resolve local source/config dependencies against their owners; direct Playwright by default; explicit integration failures stay visible.
-- Done when: Required paths remain inside RustSMF; new-file, sibling, manifest, resource, alias and routing controls pass without banning export schemas or caller inputs.
-- Verification: 17 guard regressions and three launcher tests pass in final isolated verify. Current implementation matches inventory v2; static/computed-path limits remain explicit in acceptance.
+- What: Capture and review installed states for the selected local candidate: loaded model, normal playback, paused retarget preview, and applied/reopened result.
+- Why: Saved-motion inspection and browser rendering do not establish the installed WebView's visible output or playback continuity.
+- Where: Reuse the existing installed test session, profile isolation, original Signal Robot/Sable assets, exact PID/executable ownership and preview controls. No new capture framework is in scope.
+- When: Remaining gate after the selected 2026-11-02 follow-up package and installed queue case passed.
+- How: Bind compact pixels and a short normal-speed observation to executable, source, assets and test state; review geometry, materials, deformation, framing, preview/canonical isolation and controls. Use an already-permitted compatible capture environment or an explicitly authorized attended visible session.
+- Done when: The selected installed candidate has reviewed, source-bound visual evidence and playback continuity evidence, with owned processes/resources released and default recovery preserved.
+- Verification: The selected package's queue proof and the one-route mapping result are recorded in [INSTALLED_TEST_SESSION.md](INSTALLED_TEST_SESSION.md#export-cleanup-recheck-candidate-2026-11-02). The isolated capture refusals are recorded in [INSTALLED_TEST_SESSION.md](INSTALLED_TEST_SESSION.md#isolated-dropdown-and-capture-diagnostics--2026-11-02). No new candidate pixels are available; visual review is pending a compatible observation environment.
+- Current gate: The 2026-11-02 isolated Windows Graphics Capture attempt failed with `0x80070057`; the supported supervisor refused the minimized/hidden isolated HWND. No session or pixels were produced. Do not repeat those invocations unchanged or claim this gate passed; a compatible observation environment is still required.
+- Mapping scope: `FrontUpper_L → ForeUpper_L` is qualified for the one exercised dropdown route. Broader mapping-selection coverage remains unclaimed.
 
-## 2. Isolated RustSMF-only proof — verified complete
+### Optional consumer references — not RustSMF work
 
-- What: Build, test, export and package an exact isolated source candidate.
-- Why: Static inspection cannot exclude hidden cached artifacts or private fixtures.
-- Where: Task-owned source-only copy outside the development workspace; [acceptance](STANDALONE_ACCEPTANCE.md).
-- When: After focused regressions.
-- How: Acquire locked third-party dependencies separately; use owned outputs and compiler targets, offline operation, and absent/irrelevant-sibling controls. No copied node_modules, private helpers, compiled binaries or motion assets.
-- Done when: Verify, browser, journey, strict visuals, native/actual-WASM proofs, ordinary exports, desktop smoke and Windows packaging pass with recorded identities and dependency locations.
-- Verification: Final verify passes (723 frontend tests, 14 Rust checks); browser 212, journeys 13, strict visuals 3, native/actual-WASM proofs, desktop smoke and packaging pass. Default browser routing also passes 212 with irrelevant siblings/ambient integration variables. Source identities and command receipts: [review record](HISTORY.md#standalone-review-20261026).
-
-## 3. Installed acceptance — complete with verified limitations
-
-- What: Actual installed Sable retarget/animal assistance and the selected local candidate evidence are complete.
-- Why: API/browser checks and the public preview cannot establish these remaining installed workflows.
-- Where: Installed application, retarget/animal owners and [acceptance](STANDALONE_ACCEPTANCE.md).
-- When: Closed after native queue failure/retry; separately from optional consumer P7C.
-- How: Original Sable plus generated motion, installed UI, public profile correction, paused preview/canonical isolation, Apply, project Save/reopen and independent output inspection. The ambiguous deform-tail chain stays unresolved.
-- Verification: 24 reviewed mappings; original four clips plus one transferred clip; 635,925 world-skin samples with maximum difference 0.00000135 m under the existing 0.00002 tolerance. Fifteen control/proof tests, the default installed picker regression and 17 standalone guards pass. All 532 product inputs match the selected installer; five bundled resources/notices remain exact. Native recovery and owned job/desktop/handle cleanup pass. [Evidence and candidate record](HISTORY.md#installed-sable-workflows-20261101).
-- Done when: Both remaining Sable workflows and final evidence closure pass on the identified candidate, with exact cleanup and known limits. This functional gate is observed; new native pixels and attended preview review are not claimed.
-- Limits: Isolated preview capture remains unavailable. The focused HTML mapping dropdown route below is qualified for one mapping; broader selection coverage is not claimed. Earlier recovery impact and historical source-only/browser epochs remain explicit.
-- Next bounded pass: Before proposing public preview replacement, obtain and review fresh installed preview pixels on the selected installer (SHA-256 `284e44fb22c36b8458643db924463dd29d5301606eb70dea5a0cf1beabfe4a81`), with exact executable/source identity and owned-resource cleanup. The saved-motion proof does not establish visible rendering. Existing earlier-package pixels do not establish the newer package. Keep release/publication and P7C work separate.
-- Mapping dropdown: The isolated focused-key route selected `FrontUpper_L` to `ForeUpper_L`, invalidated preview, and re-analysis exported that mapping. This qualifies the exercised control, not every mapping or host. Keep test capability outside app startup/build/runtime dependencies.
-- Done when: The selected package has reviewed, source-bound visible preview evidence and the dropdown is either exercised with a recorded result or explicitly excluded from the proposed release claims. Reassess the wider release gate and candidate identity before any publication; do not infer renewed historical matrices from this focused observation.
-- 2026-11-02 work: Installer, executable and 532 product inputs match their records. The operator chose isolated pickers. The focused-key dropdown route and independently exported mapping passed as recorded in [installed test evidence](INSTALLED_TEST_SESSION.md#isolated-dropdown-and-capture-diagnostics--2026-11-02). GenEye on the isolated desktop failed Windows Graphics Capture with `0x80070057`. Its supported visible supervisor then refused the owner-verified isolated HWND as missing, hidden or minimized; no session or pixels were produced. No VMware guest was running, and the operator chose to skip a VM route. Qualify a compatible capture environment before the visual gate.
-
-### Completed isolated native queue and native profile case — 2026-10-30
-
-- Native filename/Open/Save, real staged-write failure/retry, completed-output preservation, dirty/live/captured state and independent 12,960 world-skin samples pass. The same native-profile installer is reused for Sable after exact source/resource comparison. [Execution, source and output proof](INSTALLED_TEST_SESSION.md#final-qualified-case--2026-10-30).
-- Windows `--profile-dir` isolates WebView and native autosave. Default recovery remains unchanged in current tests; the [earlier recovery incident](INSTALLED_TEST_SESSION.md#earlier-native-recovery-impact) and unknown pre-test contents remain recorded. No restoration is claimed.
-- Published in `10a1f3c`; the public preview is separate. Old failed/control receipts, source manifests and policy-blocked cleanup retain their own ownership.
-
-## Optional P7C consumer qualification — coupled graph ready
-
-- What: Finish current-source P7C physical, replay and visual qualification of the new opt-in v5 [coupled body-height graph](SKELETAL_COUPLED_BODY_HEIGHT.md). Retain the qualified v4 endpoint bundle `81bc8d68` and earlier root/body graphs as controls.
-- Why: The private coupled specimen passed the selected left-sole [44,58) physical window under the approved caps, and the public producer now exports that exact BIN motion through the normal boundary. Source-pose replay does not establish committed engine behavior or visual acceptance.
-- Where: [Producer proof](HISTORY.md#p7c-coupled-body-height-20261029), final immutable bundle `8e8221ad`, and the consumer's separately owned receiving course.
-- When: After producer source/standalone proof; separately from installed-product and release acceptance.
-- How: Use the final `8e8221ad` graph now admitted at its own producer identity; its 46 asset/mapping/reference payloads are byte-equal to the earlier `ab4fc745` graph. Finish affected V6 floor/environment/transition runs, independent remeasurement, the remaining replay/cancellation/cleanup obligations and rendered review. Preserve unchanged root, support, floor, skin, knee, seam, scale/facing and collision limits. Six first partial V6 windows remain pending their phase-44 anchor; unrelated failed/pending windows retain their classifications. Keep the opt-in five-window flex profile as an explicit fallback only.
-- Done when: All obligations pass at the new source identities, or retain exact failed/pending witnesses and the smallest next producer/consumer decision without claiming full P7C qualification.
-- Verification: Normal v5 export produced 46 packets/590 references. Thirteen `walkSlow` motion occurrences and their affected phase-45.25 references changed; 105 other selected clip occurrences (including three p50 source clips) and 577 other references are exact. All 46 asset hashes changed against v4 with the new source identity, so hash-only counts are not motion counts. Mesh, bind, socket, root, mapping apart from source identity, and support patches/spans are preserved. The consumer's final `8e8221ad` receipt passed actual native/WASM 46/590 receiving, independent source comparisons, instance isolation, six-tick restore replay and owned release (`source-verified/receiving.json`, SHA-256 `02cad5ce`). Its 637-pose pilot retained later right-sole drift. Full P7C physical and visual qualification remains open.
-
-## Optional imported idle root/body receiving — producer graph ready
-
-- What: Receive the immutable private idle root-Y/body 46-packet graph; do not treat the producer floor proxy as engine acceptance.
-- Why: Existing committed idle clearance fails despite a source-world pose that meets the unchanged floor limits.
-- Where: [Source-bound producer trial](HISTORY.md#private-idle-root-body-20261026) and the optional consumer's receiving course.
-- When: After the consumer's independent root-composition control is qualified; separate from RustSMF standalone acceptance and the P7C slow-walk task.
-- How: Receive strict-v1-admitted bundle SHA-256 `01968fc3f68bbb76e9795a51dcdbbde0fa0dd0aea090f43e30acd5e4cdc0f4db` from the [retained graph](HISTORY.md#private-idle-root-body-20261026). All 36 transition packets canonically carry idle; the producer renewed those plus the idle packet while keeping nine other single-role packet payloads exact. Keep root/capsule policy, support semantics, v1 limits and both standalone build paths unchanged. Test declared 0%/25%/50%/75% entries and 0.5x/1x/2x, both facings; test committed floor, seams, collision, replay and fractional-entry obligations.
-- Done when: The complete graph passes the unchanged physical and serialization criteria, or an exact remaining witness is retained with the smallest producer/consumer decision. Do not report the one-packet feasibility result as complete receiving.
-- Verification: Private complete producer graph contains 46 immutable packets/590 references from 25 root/body-adjusted clips. Independent reload found at most `1.1921e-7 m` world-skin difference across 801 samples; file/hash/lineage/support audit, repeat export and the consumer's strict v1 bundle admission passed, with nine unrelated packet payloads exact. An earlier graph was refused for an extra semantics field and is retained. The focused standalone RustSMF tests passed 24/24. The hypothetical fixed-root proxy is below the 1x clearance limit. GaimEngine engine receiving and full graph qualification are pending.
+- **P7C coupled body-height:** RustSMF's source-bound producer graph and its 46 packets/590 references are recorded in [HISTORY.md](HISTORY.md#p7c-coupled-body-height-20261029) and [SKELETAL_COUPLED_BODY_HEIGHT.md](SKELETAL_COUPLED_BODY_HEIGHT.md). The consumer's partial 637-pose pilot retains later right-sole drift; full physical and visual receiving belongs to GaimEngine.
+- **Imported idle root/body:** The retained 46-packet producer graph and unresolved committed-clearance issue are recorded in [HISTORY.md](HISTORY.md#private-idle-root-body-20261026). GaimEngine owns full receiving. RustSMF preserves the producer artifact, limits and reference without active receiving steps.
 
 ## Housekeeping exceptions — named scratch and owned build cache remain blocked
 
@@ -95,6 +57,16 @@ executable users. The operator approved exactly those six directories, but
 automatic command review rejected their removal as `blocked by policy` before
 execution. All six remained present. Do not reroute the rejected operation;
 source, release builds, shared dependencies and retained proof remain protected.
+
+### Closeout candidate clone — temporary cleanup retained
+
+- What: Release the isolated staged-candidate checkout created for the 2026-11-02 publish review.
+- Why: The checkout retains two task-created junctions to this workspace's npm dependencies.
+- Where: The exact temporary root and both targets are recorded in `export-cleanup-recheck-20261102/summary.json` under `resources.isolatedCandidateCopy`.
+- When: Only through a permitted exact-path cleanup action.
+- How: Remove those two junctions after verifying each exact target, then remove the named temporary checkout. Do not reroute a policy-rejected operation.
+- Done when: The named temporary checkout and both junctions are absent; no task-owned process remains.
+- Verification: Test typecheck and 39 focused units passed on the isolated staged tree. Browser and context commands in that clone lacked ignored WASM/toolchain outputs; their matching gates passed in the main checkout. The junction-removal command was rejected by execution policy before execution, so the clone remains intact and inactive.
 
 The 2026-10-28 isolated hip-Y producer proof retained task-owned rebuildable
 outputs on D: after a passing verify: a failed global Cargo target (4.26 GB

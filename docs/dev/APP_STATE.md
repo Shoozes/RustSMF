@@ -1,6 +1,6 @@
 # RustSMF App State
 
-Last reviewed: 2026-11-01
+Last reviewed: 2026-11-02
 
 ## Standalone product boundary
 
@@ -27,9 +27,19 @@ project Save/reopen and five unresolved ambiguous tail bones. Independent
 inspection preserves four original clips and the new transferred clip, with
 635,925 world-skin samples within the existing tolerance. The local candidate
 record reconciles source, resources, earlier proof epochs and cleanup.
-GenEye could not resolve the isolated preview target; new native pixels and
-attended review remain unclaimed. Quiet HTML dropdown selection is unverified;
-the existing Profile JSON correction route is observed. [Record and limits](HISTORY.md#installed-sable-workflows-20261101).
+The 2026-11-02 follow-up package passes the installed queue write-failure/retry
+and independent output proof. Its installer SHA-256 is
+`ea27cd5d54beb35f9df81dd429b38afad40c69d53676174f9e3a138a18dcdd88` and its
+installed executable SHA-256 is
+`c2f76eb3df38d780294ef64a211f9e85ff0780f03859e2181a51027639c9596f`. The
+source manifest binds 533 tracked inputs and nine changed source files; all
+matched after packaging. This focused package does not renew the earlier Sable
+workflows. Installed visual review remains open because the isolated capture
+route is unavailable. The 2026-11-02 Graphics Capture and supervisor attempts
+produced no pixels, so visual review and attended review remain unclaimed. One
+focused HTML dropdown route is qualified for `FrontUpper_L → ForeUpper_L`;
+broader mapping coverage is not claimed. The Profile JSON correction route is
+also observed. [Record and limits](INSTALLED_TEST_SESSION.md#export-cleanup-recheck-candidate-2026-11-02).
 Both apps and proofs remain separate; the public preview is unchanged.
 
 The optional skeletal producer now has an explicit v4 job for a single
@@ -78,7 +88,7 @@ Signal Robot remains the older installer sample. Drafts/references stay private.
 
 ## Export presets and queues on current source
 
-Export > Tools > Export queue captures the current authored model with an explicit GLB/FBX/DAE/SMF preset. Options holds filename and clip inclusion. Eight items and 128 MiB of estimated owned inputs are allowed. The estimate follows independent track/attribute copies, texture backing buffers and instance data, while preserving actual interleaved sharing. Geometry metadata and instance morph pixels are private. One foreground save owner serializes validated outputs with recovery; successful items are excluded from retry. Cancel stops preparation/pending work and waits for issued native saves. Browser results report download issuance. Replacement cancels pending captures; Retry retains their original inputs. Display changes made during source-material reads apply after the last reader, preserving export inputs. [EXPORT_QUEUE.md](EXPORT_QUEUE.md) owns lifecycle and limits; HISTORY binds verification to source. Version/installer remain unchanged; installed Windows queue acceptance is separate.
+Export > Tools > Export queue captures the current authored model with an explicit GLB/FBX/DAE/SMF preset. Options holds filename and clip inclusion. Eight items and 128 MiB of estimated owned inputs are allowed. The estimate follows independent track/attribute copies, texture backing buffers and instance data, while preserving actual interleaved sharing. Geometry metadata and instance morph pixels are private. One foreground save owner serializes validated outputs with recovery; saved outputs and issued browser downloads retain their truthful result if cleanup fails. Failed releases retain the capture and byte charge, expose a separate cleanup warning and use a cleanup-only retry. Queue disposal attempts each capture; capture disposal attempts each owned resource/canvas and retries only unresolved releases. Cancel stops preparation/pending work and waits for issued native saves. Replacement cancels pending captures; Retry retains their original inputs. Display changes made during source-material reads apply after the last reader, preserving export inputs. [EXPORT_QUEUE.md](EXPORT_QUEUE.md) owns lifecycle and limits; HISTORY binds verification to source. Installed Windows queue acceptance remains distinct.
 
 ## ZIP intake on current source
 

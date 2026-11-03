@@ -7,12 +7,26 @@ libraries and installed development toolchains remain ordinary prerequisites.
 
 ## Selected candidate
 
-The current local installed candidate is the native-profile installer qualified
-on 2026-10-30, reused for Sable on 2026-11-01 above `10a1f3c`. All 532 recorded
-product inputs match the current checkout; this batch changes test tooling and
-records only. Its exact source, installed files, checksums, accepted workflows,
-limits and cleanup belong to the [candidate record](HISTORY.md#installed-sable-workflows-20261101).
-The public `0.2.1-preview` remains separate and unchanged.
+The current local package is the follow-up export-cleanup candidate built from
+the local worktree based on `f099e37ed1d0c855412d67766507359b4fe029d6`. Its
+installer SHA-256 is
+`ea27cd5d54beb35f9df81dd429b38afad40c69d53676174f9e3a138a18dcdd88`; its
+installed executable SHA-256 is
+`c2f76eb3df38d780294ef64a211f9e85ff0780f03859e2181a51027639c9596f`. The source
+manifest records 533 tracked product inputs and nine changed source files.
+Final recheck matches 532/533 tracked inputs; the only later change is the test
+documentation in `source/frontend/tests/README.md`, which is absent from the
+installed payload and was followed by passing focused tests and test typecheck.
+All nine retained changed-source snapshots match their manifest. Installer,
+installed files and queue proof are recorded under
+`D:/Compact_Evidence/RustSMF/runs/export-cleanup-recheck-20261102/`. The
+actual installed queue write-failure/retry and independent output proof pass.
+This focused renewal does not repeat the broader installed workflows: Sable
+remains bound to the 2026-11-01 candidate in
+[HISTORY.md](HISTORY.md#installed-sable-workflows-20261101). One mapping route
+is qualified; broader mapping selection is not claimed. Installed visual review
+remains open pending a compatible capture route. The public `0.2.1-preview`
+remains separate and unchanged.
 
 The full isolated matrix below retains its 2026-10-26 source epoch, starting at
 `7a062c4` with reviewed standalone changes and committed as `7b66717`. Current
@@ -26,8 +40,8 @@ not renew that entire historical matrix.
 | Predictable browser routing | Direct default and `-NoGenEye` agree; ambient/sibling controls and explicit integration failure controls pass. |
 | Isolated build and verification | Source-only copy passed verify (723 frontend tests, 14 Rust checks), browser 212, journeys 13, strict visuals 3, retarget/transition native-WASM proof and desktop smoke. |
 | Ordinary exporters | Generated native-contact CLI success/refusal and job cancellation passed in verify; retained consumer proof is not renewed. |
-| Installed workflows | Earlier model/ZIP/project/Help/second-install evidence retains its original epoch. Native queue write-failure/retry and Sable transfer/animal assistance now pass on the same native-profile installer, with independent outputs and verified recovery/cleanup. Relevant UI owners and five installed resources/notices match the earlier evidence. New native pixels and quiet HTML mapping-dropdown selection remain unverified. |
-| Local release candidate | Installer, exact product-source inventory, seven installed-file hashes, checksums, notices, sample and startup guide are reconciled. Functional installed acceptance is complete with the stated observation limits; publication/release requires a separate decision. |
+| Installed workflows | Earlier model/ZIP/project/Help/second-install evidence retains its original epoch. The current follow-up package passes installed queue write-failure/retry with independent output proof, default recovery unchanged, registration restored byte-for-byte and owned cleanup complete. Sable transfer/animal assistance remains bound to the 2026-11-01 candidate. One dropdown selection route is qualified; broader selection and new candidate pixels remain unclaimed. |
+| Local package | The installer and all seven installed-file hashes are retained for the focused follow-up candidate. This does not renew other installed workflows or the full historical matrix. Installed visual review and any public release replacement remain separate decisions. |
 
 The [2026-10-26 review record](HISTORY.md#standalone-review-20261026) binds
 these results to exact source inventories and logs. Review found all inventory-v2

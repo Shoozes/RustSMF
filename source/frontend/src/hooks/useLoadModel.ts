@@ -1537,6 +1537,11 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     }, { waitForAutosave: false });
   }, [exportQueue, ui, withExportBusy]);
 
+  const retryExportQueueCleanup = useCallback(() => {
+    setExportQueueError('');
+    exportQueue.retryCleanup();
+  }, [exportQueue]);
+
   const cancelExportQueue = useCallback(() => exportQueue.cancel(), [exportQueue]);
 
   const handleExport = useCallback(async () => {
@@ -3577,6 +3582,7 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     exportQueueError,
     enqueueExport,
     runExportQueue,
+    retryExportQueueCleanup,
     cancelExportQueue,
     handleRunSmfRoundtripCheck,
     handleSaveSmfDiagnosticReport,

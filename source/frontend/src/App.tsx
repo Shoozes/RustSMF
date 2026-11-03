@@ -182,6 +182,7 @@ export default function App() {
     exportQueueError,
     enqueueExport,
     runExportQueue,
+    retryExportQueueCleanup,
     cancelExportQueue,
     handleRunSmfRoundtripCheck,
     handleSaveSmfDiagnosticReport,
@@ -1080,7 +1081,8 @@ export default function App() {
           quiet={theme.shellVariant === 'modern'}
           queue={{ state: exportQueueState, error: exportQueueError, disabled: ui.isLoading || !model.root,
             enqueue: enqueueExport, run: runExportQueue, cancel: cancelExportQueue,
-            retry: () => exportQueue.retry(), remove: id => exportQueue.remove(id), clear: () => exportQueue.clear() }}
+            retry: () => exportQueue.retry(), retryCleanup: retryExportQueueCleanup,
+            remove: id => exportQueue.remove(id), clear: () => exportQueue.clear() }}
           sourceFormat={sourceFormat}
           hasSkeleton={hasSkinnedModel}
           editorMode={editorMode}

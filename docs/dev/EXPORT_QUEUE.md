@@ -6,7 +6,7 @@ Choose Export, open Tools, then expand **Export queue**. Select GLB Runtime, FBX
 
 Each queued item retains its selected format and captured geometry, hierarchy, rig data, raw influences, source materials, textures and clips. UUID-addressed tracks bind to captured nodes. Later editing does not change that capture. Queued SMF uses imported SMF data when available. An unsupported explicit format is refused with its reason; no queue item changes format automatically. DAE accepts one named linear TRS clip and one solid material per mesh; texture/multi-clip loss is refused before capture. Presets reuse existing encoders and fidelity limits: GLB is the broadest path; FBX/DAE material and animation limits and SMF generated bone names, byte weights and scale restrictions still apply.
 
-The queue belongs to this editor session; it is not saved in projects. Up to eight items and 128 MiB of estimated owned captures are allowed. Encoded results also respect the existing 256 MiB save limit. The estimate counts arrays, decoded image copies and scene metadata before cloning. Remove or Clear releases retained captures. Finished items retain only their small result rows.
+The queue belongs to this editor session; it is not saved in projects. Up to eight items and 128 MiB of estimated owned captures are allowed. Encoded results also respect the existing 256 MiB save limit. The estimate counts arrays, decoded image copies and scene metadata before cloning. Remove or Clear releases retained captures. Finished items retain only their small result rows after cleanup succeeds; a failed release keeps its owner and byte charge visible until cleanup is retried or removal completes. If capture itself fails after acquiring resources and cleanup also fails, the failed item retains a cleanup-only owner and its estimate until cleanup succeeds.
 
 ## Ownership and cancellation
 
@@ -16,14 +16,18 @@ The estimate counts arrays at their actual clone sites: shared source track/attr
 
 Cancel stops pending items and aborts SMF worker preparation. Non-abortable encoders must settle before their private resources are released; their canceled results cannot issue a save. Model/resource replacement cancels queued work and invalidates active preparation. Retry incomplete uses the retained captures; remove and add again to capture new edits. Disposal suppresses late notifications and releases active resources after the operation settles.
 
+Output disposition and cleanup disposition are tracked separately. A completed native save remains **Saved**, and an issued browser download remains **Download issued**, if resource release fails. The item displays a cleanup error and keeps its byte charge and capture owner. **Retry cleanup** retries only unresolved resource releases; it does not encode, open another destination, issue another download or write completed output. Queue disposal attempts every independent capture, and each capture attempts every owned resource and canvas release. Successful releases are remembered so cleanup retry does not repeat them. Preparation/save errors remain visible alongside cleanup errors.
+
+Geometry and canvas copies enter the capture's ownership set as soon as allocation succeeds, before later metadata or image-copy operations can throw. If cleanup of a failed capture is incomplete, its row remains failed, displays both the capture and cleanup errors, and offers cleanup retry without treating the snapshot as exportable.
+
 Desktop destinations use the existing native save dialog for each item. Canceling a destination pauses the remaining queue. An already issued native dialog/write cannot be revoked; Cancel waits for its actual success, cancellation or failure, then stops. Browser results say **Download issued**, meaning the browser received a download request. Check the browser download list for completion or blocking; issuance does not prove a filesystem save. Retry includes failed/canceled items and never repeats successful writes or issued downloads.
 
 ## Evidence
 
-- `src/utils/exportQueue.test.ts`: order, limits, copied presets, retry, destination cancellation, stale completion, disposal and issued-save results.
-- `src/hooks/exportSnapshot.test.ts`: owned geometry, influences, bones/inverses, clips, metadata, source materials, textures, clone-allocation bounds, interleaving and instance morph cleanup.
+- `src/utils/exportQueue.test.ts`: order, limits, copied presets, retry, destination cancellation, stale completion, disposal and issued-save results. Fault injection covers saved/download-issued outcomes, preparation/save plus cleanup failures, exhaustive queue cleanup, empty cleanup errors and failed-capture cleanup-only retry.
+- `src/hooks/exportSnapshot.test.ts`: owned geometry, influences, bones/inverses, clips, metadata, source materials, textures, clone-allocation bounds, interleaving, instance morph cleanup and exhaustive/retryable resource release. Failure injection verifies partial geometry and canvas ownership survives incomplete cleanup.
 - `src/utils/materialPreview.test.ts`: nested captures, overlapping saves, concurrent display changes and replaced registrations retain source state until their own final reader exits.
-- `tests/export-queue.spec.ts`: ordinary chooser/pointer/keyboard controls, every preset, independent GLB accessor/instance-transform and sampled-motion checks after re-import, raw FBX/DAE structure, imported SMF fidelity, material/image captures, replacement, preparation cancellation, mocked native failures/retry/recovery and six-size/DPR/coarse/focus checks.
+- `tests/export-queue.spec.ts`: ordinary chooser/pointer/keyboard controls, every preset, independent GLB accessor/instance-transform and sampled-motion checks after re-import, raw FBX/DAE structure, imported SMF fidelity, material/image captures, replacement, preparation cancellation, mocked native failures/retry/recovery, cleanup-warning preservation of dirty model state and six-size/DPR/coarse/focus checks.
 
 Browser downloads and mocked Tauri IPC retain their source-specific proof.
 The fresh native-profile Windows installer passes an actual native publication

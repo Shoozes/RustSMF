@@ -148,6 +148,49 @@ test('queued GLB captures decoded textures and materials independently of the li
   expectMotion(captured.clips[0]); errors();
 });
 
+test('cleanup warning preserves a completed download and dirty authoring state', async ({ page }) => {
+  const errors = watchJourneyErrors(page);
+  const input = await createSkinnedGlbFixtureInputWithOptions({ withTexture: true });
+  const downloads: Download[] = [];
+  page.on('download', download => downloads.push(download));
+  await page.goto('/'); await open(page, input); await pauseJourney(page);
+  await renameSubmodel(page, 'Dirty_before_cleanup'); await add(page, 'glb', 'cleanup-fault');
+  await page.evaluate(() => {
+    const target = window as Window & { __exportQueueCleanupFailures?: number };
+    target.__exportQueueCleanupFailures = 1;
+    const descriptor = Object.getOwnPropertyDescriptor(HTMLCanvasElement.prototype, 'width');
+    if (!descriptor?.get || !descriptor.set) throw new Error('Canvas width control is unavailable.');
+    Object.defineProperty(HTMLCanvasElement.prototype, 'width', {
+      configurable: descriptor.configurable, enumerable: descriptor.enumerable,
+      get() { return descriptor.get!.call(this); },
+      set(value: number) {
+        if (value === 0 && target.__exportQueueCleanupFailures) {
+          target.__exportQueueCleanupFailures--;
+          throw new Error('injected capture canvas cleanup failure');
+        }
+        descriptor.set!.call(this, value);
+      },
+    });
+  });
+
+  await page.getByTestId('export-queue-run').click();
+  const item = page.getByTestId('export-queue-item');
+  await expect(item).toHaveAttribute('data-status', 'downloaded');
+  await expect(item).toContainText(/Resource cleanup failed:.*injected capture canvas cleanup failure/);
+  expect(downloads).toHaveLength(1);
+
+  await page.getByTestId('export-queue-cleanup-retry').click();
+  await expect(page.getByTestId('export-queue-cleanup-retry')).toHaveCount(0);
+  await expect(item).toHaveAttribute('data-status', 'downloaded');
+  expect(downloads).toHaveLength(1);
+  await page.getByTestId('model-file-input').setInputFiles({ name: 'replacement.obj', mimeType: 'text/plain', buffer: Buffer.from(SAMPLE_OBJ) });
+  await expect(page.getByTestId('replacement-dialog')).toContainText('Discard unsaved changes?');
+  await page.getByTestId('cancel-model-replacement').click();
+  await showModernPanel(page, 'scene');
+  await expect(page.getByTestId('outliner')).toContainText('Dirty_before_cleanup');
+  errors();
+});
+
 test('queued GLB preserves independently generated instance transforms through re-import', async ({ page }) => {
   const values = new Float32Array([-0.25,0,0, 0.25,0,0, 0,1,0, 0,0,1, 0,0,1, 0,0,1, -1,0,0, 1,0,0]);
   const data = Buffer.from(values.buffer);

@@ -251,6 +251,54 @@ The subsequent supervised-route attempt used GenEye's supported `supervise --hwn
 
 AI-edited: 2026-11-02 | agent=Codex/root | task=installed-preview-diagnostics | change=record isolated dropdown selection proof and compositor failure
 
+<a id="export-cleanup-recheck-candidate-2026-11-02"></a>
+## Export-cleanup follow-up candidate — 2026-11-02
+
+The selected local installer SHA-256 is
+`ea27cd5d54beb35f9df81dd429b38afad40c69d53676174f9e3a138a18dcdd88`; installed
+executable SHA-256 is
+`c2f76eb3df38d780294ef64a211f9e85ff0780f03859e2181a51027639c9596f`. Its
+source manifest binds 533 tracked inputs and nine changed source files. Final
+recheck matches 532/533 tracked inputs; the only later change is the test
+documentation in `source/frontend/tests/README.md`, which is absent from the
+installed payload and was followed by passing focused tests and test typecheck.
+All nine retained changed-source snapshots match their manifest. The actual
+isolated `QueueWriteRetry` case and independent parser pass: ten primitives,
+Wave/Turn clips and 12,960 world-skin samples with maximum difference zero at
+1e-5. Completed output A remains unchanged, dirty refusal remains present before
+and after B's native write failure, default recovery is unchanged, no input
+desktop picker appeared, and the owned job has zero active processes. The two
+existing per-user registration exports were restored byte-for-byte after the
+fresh installation.
+
+The final focused tests pass 39/39; the queue browser suite passes 15/15;
+closeout reran canonical verify after the canvas allocation regression and it
+passed across 131 frontend unit-test files and 14 Rust checks. `package:windows`
+produced this candidate. These checks do not renew the 2026-11-01 Sable package or the
+historical full installed matrix. The 2026-11-02 installed-preview capture
+attempts remain unsuccessful and produced no pixels. The public preview is
+unchanged.
+
+[Run summary, source manifest, package identity and installed receipts](D:/Compact_Evidence/RustSMF/runs/export-cleanup-recheck-20261102/summary.json).
+
+AI-edited: 2026-11-02 | agent=Codex/root | task=export-cleanup-recheck | change=repair partial-capture cleanup ownership and renew the selected local candidate
+
+<a id="export-cleanup-candidate-2026-11-02"></a>
+## Export-cleanup candidate — 2026-11-02
+
+Built from the worktree based on `f099e37ed1d0c855412d67766507359b4fe029d6`,
+the installer SHA-256 is
+`ddd352930781de5e2a3e7d34aab948cab0db66f2e4ad0513146f43b8ac44cb18`; installed
+executable SHA-256 is
+`98e3f9a2abcc8c00af227dbc3fd5eaf2c0e9bc8f2806ef16763e0a87606d3264`.
+`QueueWriteRetry` passes on the new isolated installation with actual staged
+write failure/retry, unchanged A and default recovery, preserved dirty refusal,
+independent outputs and zero-process cleanup. Sable and the historical matrix
+retain earlier source identities. The public preview is unchanged; installed
+visual review remains open. [Package, source and proof records](HISTORY.md#export-cleanup-lifecycle-2026-11-02).
+
+AI-edited: 2026-11-02 | agent=Codex/root | task=export-cleanup | change=qualify focused installed queue behavior on the local cleanup package and retain visual gate
+
 ## Qualified Sable workflows — 2026-11-01
 
 The native-profile installer and executable identified above are reused exactly.

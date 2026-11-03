@@ -25,6 +25,15 @@ GaimEngine and other consumers are optional export integrations.
 
 Drag to orbit · Right-drag to pan · Scroll to zoom. [User guide](docs/user/README.md).
 
+The download above remains the published `v0.2.1-preview`. A separate local
+candidate based on `f099e37` includes the export cleanup repair and has installer
+SHA-256 `ea27cd5d54beb35f9df81dd429b38afad40c69d53676174f9e3a138a18dcdd88` and
+installed executable SHA-256
+`c2f76eb3df38d780294ef64a211f9e85ff0780f03859e2181a51027639c9596f`. Its
+installed queue write-failure/retry passed. Installed visual review remains
+gated on a compatible capture route. The local package does not replace the
+published download. See [current acceptance and limits](docs/dev/STANDALONE_ACCEPTANCE.md).
+
 Try [Sable, our original black cat](examples/black-cat/README.md), a self-contained
 GLB with Idle, Walk, Run and Sit. The Windows preview download still includes
 Signal Robot.

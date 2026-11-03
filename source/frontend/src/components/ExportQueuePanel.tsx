@@ -5,16 +5,17 @@ import { EXPORT_PRESETS, MAX_EXPORT_QUEUE_ITEMS, type ExportFormat, type ExportP
 export interface ExportQueueControls {
   state: ExportQueueState; error: string; disabled: boolean;
   enqueue(preset: ExportPreset, basename: string): void;
-  run(): void; cancel(): void; retry(): void; remove(id: number): void; clear(): void;
+  run(): void; cancel(): void; retry(): void; retryCleanup(): void; remove(id: number): void; clear(): void;
 }
 const labels = { pending: 'Queued', preparing: 'Preparing…', saving: 'Choosing destination / saving…', saved: 'Saved', downloaded: 'Download issued', failed: 'Failed', canceled: 'Canceled' };
 
-export default function ExportQueuePanel({ state, error, disabled, enqueue, run, cancel, retry, remove, clear }: ExportQueueControls) {
+export default function ExportQueuePanel({ state, error, disabled, enqueue, run, cancel, retry, retryCleanup, remove, clear }: ExportQueueControls) {
   const [format, setFormat] = useState<ExportFormat>('glb');
   const [basename, setBasename] = useState('');
   const [includeAnimation, setIncludeAnimation] = useState(true);
-  const pending = state.items.some(item => item.status === 'pending');
-  const incomplete = state.items.some(item => item.status === 'failed' || item.status === 'canceled');
+  const pending = state.items.some(item => item.status === 'pending' && !item.cleanupError);
+  const incomplete = state.items.some(item => (item.status === 'failed' || item.status === 'canceled') && !item.cleanupError);
+  const cleanupPending = state.items.some(item => Boolean(item.cleanupError));
   return <details className="export-queue" data-testid="export-queue">
     <summary>Export queue{state.items.length > 0 && ` · ${state.items.length}`}</summary>
     <div className="export-queue-body">
@@ -34,14 +35,18 @@ export default function ExportQueuePanel({ state, error, disabled, enqueue, run,
         <ol className="export-queue-items" aria-label="Queued exports">
           {state.items.map(item => <li key={item.id} data-testid="export-queue-item" data-status={item.status}>
             <div><span className="export-queue-filename" title={item.filename}>{item.filename}</span><span className="export-queue-result">{labels[item.status]}{!item.preset.includeAnimation && ' · no clips'}</span>
-              {item.message && <span className="export-queue-error">{item.message}</span>}</div>
+              {item.message && <span className="export-queue-error">{item.message}</span>}
+              {item.cleanupError && <span className="export-queue-error">Resource cleanup failed: {item.cleanupError}</span>}</div>
             <button type="button" title={`Remove ${item.filename}`} aria-label={`Remove ${item.filename}`} disabled={state.running} onClick={() => remove(item.id)}><Trash size={14} /></button>
           </li>)}
         </ol>
         <div className="export-queue-actions">
           {state.running ? <button type="button" data-testid="export-queue-cancel" disabled={state.stopping} onClick={cancel}>{state.stopping ? 'Stopping…' : 'Cancel queue'}</button>
-            : pending ? <button type="button" data-testid="export-queue-run" disabled={disabled} onClick={run}>Export queued</button>
-            : incomplete ? <button type="button" data-testid="export-queue-retry" disabled={disabled} onClick={() => { retry(); run(); }}>Retry incomplete</button> : null}
+            : <>
+              {pending && <button type="button" data-testid="export-queue-run" disabled={disabled} onClick={run}>Export queued</button>}
+              {incomplete && <button type="button" data-testid="export-queue-retry" disabled={disabled} onClick={() => { retry(); run(); }}>Retry incomplete</button>}
+              {cleanupPending && <button type="button" data-testid="export-queue-cleanup-retry" onClick={retryCleanup}>Retry cleanup</button>}
+            </>}
           {!state.running && <button type="button" data-testid="export-queue-clear" onClick={clear}>Clear</button>}
         </div>
         <p className="export-queue-note">{(state.bytes / 1048576).toFixed(1)} / 128 MiB · {state.items.length} / {MAX_EXPORT_QUEUE_ITEMS} items.</p>

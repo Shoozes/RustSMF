@@ -38,7 +38,7 @@
     },
     "workflow__context_bank": {
       "description": "Portable public context routing, validation, and generation entry points.",
-      "max_kb": 132,
+      "max_kb": 133,
       "paths": [
         "summary_bank.json",
         "scripts/context-bank-lib.mjs",
@@ -112,7 +112,7 @@
     },
     "feature__theme_system": {
       "description": "Persisted themes, Modern model viewer with task drawers, Original presentation, responsive behavior and visual evidence.",
-      "max_kb": 244,
+      "max_kb": 245,
       "paths": [
         "source/frontend/src/theme.ts",
         "source/frontend/src/theme.test.ts",
@@ -860,7 +860,7 @@
     },
     "issue__verification_current_head": {
       "description": "Current source proof, local gates, browser failure classification and owned cleanup.",
-      "max_kb": 104,
+      "max_kb": 107,
       "paths": [
         "README.md",
         "docs/dev/review.md",
@@ -1271,7 +1271,7 @@
     },
     "feature__export_queue": {
       "description": "Captured format presets and bounded session queue: ownership, preparation, sequential destinations, cancellation and retry.",
-      "max_kb": 92,
+      "max_kb": 110,
       "paths": [
         "docs/dev/EXPORT_QUEUE.md",
         "source/frontend/src/utils/exportQueue.ts",
@@ -1287,7 +1287,7 @@
         "useLoadModel and App integration remain in subsystem__load_editor_orchestration and feature__theme_system.",
         "Captures own source materials, images, skin, hierarchy and clips; eight rows / 128 MiB inputs; results use the existing 256 MiB save bound.",
         "The foreground save owner reserves the queue and retains latest trailing autosave; pending/preparation cancellation cannot revoke issued native saves.",
-        "Explicit formats never fall back; completed native saves and browser download issuance are excluded from retry. Browser/mock IPC is separate from installed Windows evidence.",
+        "Explicit formats never fall back; completed native saves and browser download issuance are excluded from export retry. Failed capture/release cleanup retains owners and byte charges, attempts every independent capture/resource, and exposes cleanup-only retry. Browser/mock IPC is separate from installed Windows evidence.",
         "Snapshot estimates follow actual private track/attribute/image/instance copies; interleaved sharing is retained. Material display changes wait for active source readers.",
         "UUID-addressed channels remap to captured nodes; interchange-reliability.spec.ts in issue__external_model_resources owns delayed resources and captured known motion. DAE fidelity refusals share the direct export policy."
       ]
@@ -1640,7 +1640,7 @@
     },
     "workflow__installed_product_tests": {
       "description": "RustSMF-owned isolated installed picker/Open/queue tests and the shared Sable driver, exact native readback, MTA/job/desktop ownership and independent GLB proof. No GenEye or consumer runtime dependency.",
-      "max_kb": 112,
+      "max_kb": 114,
       "paths": [
         "docs/dev/INSTALLED_TEST_SESSION.md",
         "scripts/installed-test-session.ps1",

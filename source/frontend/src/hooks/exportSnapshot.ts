@@ -5,7 +5,7 @@ import { assertDaeExportFidelity } from '../loaders/dae';
 import { cloneImportedSmf } from '../loaders/smfData';
 import type { ImportedSmf } from '../loaders';
 import { withSourceMaterialStateSync } from '../utils/materialPreview';
-import type { ExportPreset, ExportQueueSnapshot } from '../utils/exportQueue';
+import { ExportOperationError, describeExportError, type ExportPreset, type ExportQueueSnapshot } from '../utils/exportQueue';
 import { buildSmfExportCandidate, type SmfExportCandidateInput } from './smfExportCandidate';
 import { cloneAnimationClips } from './editorSnapshots';
 
@@ -85,12 +85,13 @@ function snapshotBytes(root: THREE.Object3D | null, clips: THREE.AnimationClip[]
   return bytes;
 }
 
-function copyTextureImage(image: unknown): unknown {
+function copyTextureImage(image: unknown, ownCanvas: (canvas: HTMLCanvasElement) => void): unknown {
   if (!image) return image;
   if (typeof image === 'object' && 'data' in image) return structuredClone(image);
   if (typeof document === 'undefined') throw new Error('Texture capture requires a readable image.');
   const source = image as CanvasImageSource & { width: number; height: number };
   const canvas = document.createElement('canvas');
+  ownCanvas(canvas);
   canvas.width = source.width; canvas.height = source.height;
   const context = canvas.getContext('2d');
   if (!context || !canvas.width || !canvas.height) throw new Error('Texture is not ready. Wait for resources before queuing.');
@@ -116,17 +117,28 @@ export function captureExportSnapshot(input: SmfExportCandidateInput, preset: Re
     if (preset.format === 'dae') assertDaeExportFidelity(input.root!, clips);
     const bytes = snapshotBytes(input.root, clips, null, limit);
     const resources = new Set<{ dispose(): void }>();
-    const canvases: HTMLCanvasElement[] = [];
-    let disposed = false;
+    const canvases = new Map<HTMLCanvasElement, { width: boolean; height: boolean }>();
     const dispose = () => {
-      if (disposed) return;
-      disposed = true; resources.forEach(resource => resource.dispose());
-      canvases.forEach(canvas => { canvas.width = 0; canvas.height = 0; });
+      const errors: unknown[] = [];
+      for (const resource of [...resources]) {
+        try { resource.dispose(); resources.delete(resource); }
+        catch (error: unknown) { errors.push(error); }
+      }
+      for (const [canvas, released] of canvases) {
+        if (!released.width) {
+          try { canvas.width = 0; released.width = true; }
+          catch (error: unknown) { errors.push(error); }
+        }
+        if (!released.height) {
+          try { canvas.height = 0; released.height = true; }
+          catch (error: unknown) { errors.push(error); }
+        }
+        if (released.width && released.height) canvases.delete(canvas);
+      }
+      if (errors.length) throw new ExportOperationError('Captured export resource cleanup failed.', errors);
     };
     const ownImage = (source: unknown) => {
-      const image = copyTextureImage(source);
-      if (typeof HTMLCanvasElement !== 'undefined' && image instanceof HTMLCanvasElement) canvases.push(image);
-      return image;
+      return copyTextureImage(source, canvas => canvases.set(canvas, { width: false, height: false }));
     };
     try {
       const root = clone(input.root!) as THREE.Group;
@@ -172,8 +184,9 @@ export function captureExportSnapshot(input: SmfExportCandidateInput, preset: Re
         let geometry = geometries.get(node.geometry);
         if (!geometry) {
           const owned: THREE.BufferGeometry = node.geometry.clone();
+          resources.add(owned);
           owned.userData = structuredClone(node.geometry.userData);
-          geometries.set(node.geometry, owned); resources.add(owned); geometry = owned;
+          geometries.set(node.geometry, owned); geometry = owned;
         }
         node.geometry = geometry;
         node.material = Array.isArray(node.material) ? node.material.map(copyMaterial) : copyMaterial(node.material);
@@ -192,7 +205,14 @@ export function captureExportSnapshot(input: SmfExportCandidateInput, preset: Re
       });
       copyImportedSceneOwnership(input.root!, root);
       return { bytes, root, clips: capturedClips, smf: null, dispose };
-    } catch (error) { dispose(); throw error; }
+    } catch (error: unknown) {
+      try { dispose(); }
+      catch (cleanupError: unknown) {
+        throw new ExportOperationError(`Export capture failed (${describeExportError(error)}) and cleanup was incomplete (${describeExportError(cleanupError)}).`,
+          [error, cleanupError], { owner: { bytes, dispose }, error: cleanupError });
+      }
+      throw error;
+    }
   };
   return withSourceMaterialStateSync(input.root, capture);
 }

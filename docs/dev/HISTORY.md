@@ -2,6 +2,120 @@
 
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
+<a id="export-cleanup-recheck-2026-11-02"></a>
+## 2026-11-02 - Export cleanup review, recheck and selected candidate
+
+Complete with verified limitations. Candidate tree
+`0d9ddd35e2e1f928e892def9ded79f4af4626d04` is based on
+`f099e37ed1d0c855412d67766507359b4fe029d6` and includes the preserved earlier
+export-cleanup batch. The supplied review's narrow producer-side lifecycle scope was
+confirmed; no new architecture, format, retarget engine, consumer integration or
+public-preview change was warranted.
+
+Read-only recheck matched all 533 tracked source inputs and eight changed-source
+snapshots of the prior candidate to its prior manifest, installer, installed
+queue receipt and independent output proof. Two additional defects were
+reproduced and repaired: empty cleanup exceptions hid the retry action, and a
+failed capture could lose partially copied geometry/canvas ownership when
+cleanup also failed. Capture owners now travel with the cleanup error; the queue
+retains a failed cleanup-only row and its byte estimate until confirmed release.
+Clone ownership is registered immediately after allocation and before fallible
+metadata/image copying. The cleanup retry clears the associated top-level queue
+error while keeping the row's original capture failure visible.
+
+Focused units pass 39/39, including empty error, partial geometry and canvas
+failure/release cases. The queue browser suite passes 15/15. Product and test
+typechecks pass. Closeout reran canonical
+`pwsh -NoProfile -File .\run.ps1 -Task verify` after the canvas regression; it
+passed across 131 frontend unit-test files and 14 Rust checks, including the
+repository, Summary Bank/context, and Git safety gates.
+
+`pwsh -NoProfile -File .\run.ps1 -Task package:windows` produced installer
+SHA-256
+`ea27cd5d54beb35f9df81dd429b38afad40c69d53676174f9e3a138a18dcdd88` (3,029,379
+bytes); installed executable SHA-256 is
+`c2f76eb3df38d780294ef64a211f9e85ff0780f03859e2181a51027639c9596f`. The
+package manifest binds 533 tracked product inputs and nine changed-source
+snapshots. Final recheck matches 532/533 tracked inputs; the only later change is
+the test documentation in `source/frontend/tests/README.md`, which is absent
+from the installed payload and was followed by passing focused tests and test
+typecheck. All nine retained snapshots match their manifest. The prior installer was preserved separately. A fresh
+task-owned installation restored both existing per-user registration exports
+byte-for-byte.
+
+The new installed `QueueWriteRetry` case and independent verifier pass: ten
+primitives, Wave/Turn clips, 12,960 sampled world-skin points with maximum
+difference zero at 1e-5, unchanged completed output A and default recovery, dirty
+refusal before/after failure, zero input-desktop pickers and zero active owned
+processes. Eleven installed-session/proof controls pass. The current queue and
+prior Sable evidence retain their separate candidate identities.
+
+Closeout confirmed all task-owned app/job/desktop handles released and zero
+active job processes. The candidate installation, isolated profile and receipts
+remain retained as acceptance evidence and for the open visual gate. The
+pre-existing 2.29 GB project `output/retarget-core` Cargo cache was reused and
+retained under its shared build-cache owner; no cache deletion was run.
+The isolated staged-candidate clone passed test typecheck and 39 focused units.
+Its browser/context reruns lacked ignored WASM/toolchain outputs, while those
+gates passed in the main checkout. The clone remains inactive with two
+task-created dependency junctions because execution policy rejected their
+scoped removal; exact path, targets and cleanup owner are in the run summary.
+
+One installed-preview observation remains open: the prior isolated Graphics
+Capture attempt failed with `0x80070057`, and the supported supervisor refused
+the hidden/minimized target. Neither produced pixels; no capture retry or
+attended session was attempted. One dropdown route remains qualified and broader
+mapping selection remains unclaimed. The public `v0.2.1-preview` is unchanged;
+no public release or consumer-engine execution is included.
+
+Current source, package, receipts and output are retained under
+`D:/Compact_Evidence/RustSMF/runs/export-cleanup-recheck-20261102/`; the journal
+binds package and installed execution. The updated [review](review.md),
+[installed record](INSTALLED_TEST_SESSION.md#export-cleanup-recheck-candidate-2026-11-02),
+[acceptance summary](STANDALONE_ACCEPTANCE.md) and [remaining TODO](TODO.md)
+retain the scope and next gate.
+
+AI-edited: 2026-11-02 | agent=Codex/root | task=export-cleanup-review-recheck | change=record repaired capture cleanup ownership and renew one local candidate
+
+<a id="export-cleanup-lifecycle-2026-11-02"></a>
+## 2026-11-02 - Export cleanup lifecycle and installed queue renewal
+
+Complete with verified limitations, local and uncommitted on `main` above
+`f099e37ed1d0c855412d67766507359b4fe029d6`. Export results keep their truthful
+`saved`/`downloaded` state when capture release fails. Failed cleanup retains
+the resource owner and byte charge, attempts independent releases exhaustively,
+and exposes a cleanup-only retry separate from output preparation/save retry.
+Queue removal and disposal retain unresolved ownership. The panel and App
+integration expose the cleanup state without changing the eight-item/128-MiB
+limits or ordinary save ordering.
+
+Focused tests pass 35/35; the queue browser suite passes 15/15, including a
+cleanup retry that does not issue a second download and preserves dirty model
+state. Product/test typechecks pass. Canonical
+`pwsh -NoProfile -File .\run.ps1 -Task verify` passes, including the frontend
+gates and 14 Rust checks. `pwsh -NoProfile -File .\run.ps1 -Task package:windows`
+passes. Installer SHA-256 is
+`ddd352930781de5e2a3e7d34aab948cab0db66f2e4ad0513146f43b8ac44cb18`; it was
+silently installed to the task-owned evidence folder and the two existing
+per-user registration exports were restored byte-for-byte.
+
+The newly installed executable passes the isolated queue write-failure/retry
+journey. Independent inspection verifies five joints, ten primitives, Wave/Turn
+clips and 12,960 sampled world-skin points with maximum difference zero at
+1e-5. Existing output A remains byte- and tick-identical; dirty refusal remains
+true before/after failure; default recovery is unchanged; all owned job and
+desktop resources are released. The visual gate remains open: the compatible
+installed capture environment is still unavailable. This focused renewal does
+not rerun Sable or the historical full installed matrix. The public
+`v0.2.1-preview` remains unchanged; no release, commit or push is included.
+
+The [run summary](D:/Compact_Evidence/RustSMF/runs/export-cleanup-20261102/summary.json),
+installer, installed files, source manifest, receipts and focused command
+results are retained under `D:/Compact_Evidence/RustSMF/runs/export-cleanup-20261102/`. See the
+[installed procedure and limits](INSTALLED_TEST_SESSION.md#export-cleanup-candidate-2026-11-02).
+
+AI-edited: 2026-11-02 | agent=Codex/root | task=export-cleanup | change=implement cleanup ownership repair, complete local verify/package and renew installed queue proof
+
 <a id="installed-sable-workflows-20261101"></a>
 ## 2026-11-01 - Installed Sable workflows and local candidate reconciliation
 

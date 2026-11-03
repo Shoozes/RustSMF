@@ -7,6 +7,7 @@ import { makeAnimationEditState } from '../utils/animationEdits';
 import { registerMaterialPreviewRoot, updateMaterialPreview } from '../utils/materialPreview';
 import type { ImportedSmf } from '../loaders';
 import { installFileReaderTestPolyfill } from '../test/installFileReaderTestPolyfill';
+import { ExportOperationError } from '../utils/exportQueue';
 
 function fixture() {
   const root = new THREE.Group(); root.name = 'Authored'; root.userData = { metadata: { tag: 'captured' } };
@@ -140,6 +141,95 @@ test('instance morph pixels are owned and released without changing the live tex
     assert.equal((copy.morphTexture!.image as { data: Float32Array }).data[0], 1);
   } finally { capture.dispose(); capture.dispose(); }
   assert.equal(sourceDisposals, 0); assert.equal(ownedDisposals, 1);
+});
+test('capture cleanup attempts every owned resource and retries only failed disposals', () => {
+  const f = fixture(); const capture = captureExportSnapshot(f.input, preset, 1_000_000);
+  const mesh = capture.root!.getObjectByName('Triangle') as THREE.SkinnedMesh;
+  const geometry = mesh.geometry;
+  const material = mesh.material as THREE.MeshStandardMaterial;
+  const texture = material.map!;
+  const skeleton = mesh.skeleton;
+  const calls = new Map<object, number>();
+  for (const [resource, failFirst] of [[geometry, true], [material, false], [texture, true], [skeleton, false]] as const) {
+    const original = resource.dispose.bind(resource);
+    resource.dispose = () => {
+      const count = (calls.get(resource) ?? 0) + 1; calls.set(resource, count);
+      if (failFirst && count === 1) throw new Error(`release ${resource.type} refused`);
+      original();
+    };
+  }
+
+  assert.throws(() => capture.dispose(), (error: unknown) => error instanceof ExportOperationError && error.details.length === 2);
+  assert.deepEqual([geometry, material, texture, skeleton].map(resource => calls.get(resource)), [1, 1, 1, 1]);
+  capture.dispose();
+  assert.deepEqual([geometry, material, texture, skeleton].map(resource => calls.get(resource)), [2, 1, 2, 1]);
+  capture.dispose();
+  assert.deepEqual([geometry, material, texture, skeleton].map(resource => calls.get(resource)), [2, 1, 2, 1]);
+});
+test('failed capture cleanup retains a retryable owner for partially copied resources', () => {
+  const f = fixture();
+  f.geometry.userData = { cannotClone: () => undefined };
+  const originalClone = f.geometry.clone.bind(f.geometry);
+  let releaseAttempts = 0;
+  f.geometry.clone = () => {
+    const owned = originalClone();
+    const release = owned.dispose.bind(owned);
+    owned.dispose = () => {
+      releaseAttempts++;
+      if (releaseAttempts === 1) throw new Error('owned geometry remains referenced');
+      release();
+    };
+    return owned;
+  };
+
+  let failure: unknown;
+  try { captureExportSnapshot(f.input, preset, 1_000_000); }
+  catch (error: unknown) { failure = error; }
+
+  assert.ok(failure instanceof ExportOperationError);
+  const cleanupOwner = (failure as ExportOperationError).cleanup?.owner;
+  assert.ok(cleanupOwner);
+  assert.ok(cleanupOwner.bytes > 0);
+  assert.equal(releaseAttempts, 1);
+  cleanupOwner.dispose();
+  assert.equal(releaseAttempts, 2);
+});
+test('canvas ownership begins before fallible image copying and survives a failed release', () => {
+  const f = fixture();
+  f.material.map = new THREE.Texture({ width: 1, height: 1 });
+  let width = 0, height = 0, releaseAttempts = 0, failRelease = true;
+  const canvas = {
+    get width() { return width; },
+    set width(value: number) {
+      if (value === 0) {
+        releaseAttempts++;
+        if (failRelease) { failRelease = false; throw new Error('canvas width release refused'); }
+      }
+      width = value;
+    },
+    get height() { return height; },
+    set height(value: number) { height = value; },
+    getContext() { return { drawImage() { throw new Error('image copy refused'); }, getImageData() { return {}; } }; },
+  } as unknown as HTMLCanvasElement;
+  const previousDocument = Object.getOwnPropertyDescriptor(globalThis, 'document');
+  Object.defineProperty(globalThis, 'document', { configurable: true, value: { createElement: () => canvas } });
+  try {
+    let failure: unknown;
+    try { captureExportSnapshot(f.input, preset, 1_000_000); }
+    catch (error: unknown) { failure = error; }
+
+    assert.ok(failure instanceof ExportOperationError);
+    const cleanupOwner = (failure as ExportOperationError).cleanup?.owner;
+    assert.ok(cleanupOwner);
+    assert.equal(releaseAttempts, 1);
+    cleanupOwner.dispose();
+    assert.equal(releaseAttempts, 2);
+    assert.equal(width, 0);
+    assert.equal(height, 0);
+  } finally {
+    if (previousDocument) Object.defineProperty(globalThis, 'document', previousDocument);
+    else Reflect.deleteProperty(globalThis, 'document');
+  }
 });
 test('mesh and rig preset captures no clips without mutating canonical animation', () => {
   const f = fixture(); const capture = captureExportSnapshot(f.input, { ...preset, includeAnimation: false }, 1000000);
