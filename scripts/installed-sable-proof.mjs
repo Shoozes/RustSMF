@@ -47,9 +47,9 @@ export function assertMappingEvidence(inputs,suggested,corrected,ambiguous){
  for(const [source,target] of Object.entries(map)){assert.equal(target,inputs.ambiguous.aliases[source]);assert.ok(!source.startsWith('Tail')&&source!=='OpaqueLink'&&!target.startsWith('Tail'),'Unresolved tail cannot be rescued/guessed');}
  assert.equal(Object.keys(map).length,19,'The five ambiguous tail bones remain unmapped');
 }
-export function assertTransferredMotion(bytes,motionBytes,aliases){
+export function assertTransferredMotion(bytes,motionBytes,aliases,originalNames=['Idle','Walk','Run']){
  const out=readAssetEvidence(bytes),source=readAssetEvidence(motionBytes);
- assert.deepEqual(out.clips.map(c=>c.name).sort(),['Idle','Walk','Run','Sit','Installed Sable Motion'].sort());
+ assert.deepEqual(out.clips.map(c=>c.name).sort(),[...originalNames,'Installed Sable Motion'].sort());
  const clip=out.clips.find(c=>c.name==='Installed Sable Motion');assert.equal(clip.duration,1);
  // Same rest/hierarchy, renamed chains only: independent source world motion is
  // the oracle at every 30 Hz key and midpoint, including both endpoints.
@@ -88,8 +88,8 @@ export function verifyInstalledSable(receiptPath){
  assert.equal(project.state.currentClipName,'Installed Sable Motion');const embedded=Buffer.from(project.asset.bytesBase64,'base64');
  expectCatContinuity(originalClips(committed),baseline);
  for(const [label,bytes] of [['saved project',embedded],['reopened',reopened],['ambiguous discard',discarded]])assert.deepEqual(readAssetEvidence(bytes),readAssetEvidence(committed),label+' retains all independent accessors and motion');
- const motion=assertTransferredMotion(committed,fs.readFileSync(inputs.motion.path),inputs.motion.aliases);
- return {schema:'rustsmf.installed-sable-independent.v1',status:'passed',receipt:{path:path.resolve(receiptPath),sha256:sha256(receiptBytes)},fixture:inputs.target,outputs,originalClips:4,committedClips:5,reviewedMappings:24,ambiguousMappings:19,unresolvedTailBones:5,motion,scope:'Native installed transfer/correction/save/reopen with independent accessor, texture, skin and world-motion inspection; no app parser, runtime hook, consumer engine or private producer recipe. Pixels are a separate observation.'};
+ const motion=assertTransferredMotion(committed,fs.readFileSync(inputs.motion.path),inputs.motion.aliases,readAssetEvidence(original).clips.map(c=>c.name));
+ return {schema:'rustsmf.installed-sable-independent.v1',status:'passed',receipt:{path:path.resolve(receiptPath),sha256:sha256(receiptBytes)},fixture:inputs.target,outputs,originalClips:readAssetEvidence(original).clips.length,committedClips:readAssetEvidence(committed).clips.length,reviewedMappings:24,ambiguousMappings:19,unresolvedTailBones:5,motion,scope:'Native installed transfer/correction/save/reopen with independent accessor, texture, skin and world-motion inspection; no app parser, runtime hook, consumer engine or private producer recipe. Pixels are a separate observation.'};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(path.resolve(process.argv[1])).href){
  try{const i=process.argv.indexOf('--receipt');assert.ok(i>=0&&process.argv[i+1],'--receipt required');const result=verifyInstalledSable(process.argv[i+1]);const o=process.argv.indexOf('--out');if(o>=0)fs.writeFileSync(process.argv[o+1],JSON.stringify(result,null,2)+'\n',{flag:'wx'});console.log(JSON.stringify({status:result.status,reviewedMappings:result.reviewedMappings,unresolvedTailBones:result.unresolvedTailBones,committedClips:result.committedClips,skinSamples:result.motion.skinSamples,maximumSkinDifference:result.motion.maximumSkinDifference}));}catch(error){console.error(String(error.stack??error).slice(0,3500));process.exitCode=1;}

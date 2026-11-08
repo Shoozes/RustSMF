@@ -15,7 +15,7 @@ test('original Sable pack continues editing through project reopen and queued GL
   await expect(page.getByTestId('status-text')).toHaveText('Loaded: sable.glb', { timeout: 15000 });
   await pauseJourney(page);
   await (await workspaceControl(page, 'clip-item-0')).press('Enter');
-  await page.locator('[data-testid^="clip-item-"]').filter({ hasText: 'Sit (' }).click();
+  await page.locator('[data-testid^="clip-item-"]').filter({ hasText: 'Walk (' }).click();
   await pauseJourney(page);
   await page.getByTestId('scrub-slider').press('End');
   await renameSubmodel(page, 'Sable_Pack');
@@ -26,11 +26,11 @@ test('original Sable pack continues editing through project reopen and queued GL
   await expect(page.getByTestId('error-banner')).toBeHidden();
   const project = await downloadBytes(page, 'save-project-btn');
   const saved = JSON.parse(project.toString());
-  expect(saved.state).toMatchObject({ currentClipName: 'Sit', currentTime: 2, isPlaying: false });
+  expect(saved.state).toMatchObject({ currentClipName: 'Walk', currentTime: 1.2, isPlaying: false });
   expectCatContinuity(Buffer.from(saved.asset.bytesBase64, 'base64'));
   await reopenProject(page, project);
   await selectWorkspace(page, 'animate');
-  await expect(page.getByTestId('time-display')).toHaveText('2.00 / 2.00s');
+  await expect(page.getByTestId('time-display')).toHaveText('1.20 / 1.20s');
   await renameSubmodel(page, 'Sable_Continued');
   await clickEditorHistory(page, 'undo');
   await selectWorkspace(page, 'view');

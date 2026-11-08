@@ -1,29 +1,29 @@
 # RustSMF TODO
 
-Last reviewed: 2026-11-02
+Last reviewed: 2026-11-08
 
 The public `v0.2.1-preview` remains unchanged. RustSMF owns its producer,
 editor, formats and package acceptance. GaimEngine owns consumer receiving and
 visual acceptance; unchanged producer exports are not regenerated for a
 source-status change or a new chat. Completed independence, queue, Sable and
 producer work is recorded in [HISTORY.md](HISTORY.md), not as active backlog.
-Backlog status: the export cleanup repair is documented in
-[HISTORY.md](HISTORY.md#export-cleanup-recheck-2026-11-02). Its selected local
-candidate passes the installed queue failure/retry. One installed visual
-observation remains gated on a compatible capture environment. One dropdown
-selection route is qualified; broader mapping selection is not claimed.
+The rejected Sable Sit clip is removed from current source and its preview.
+The revised three-clip rebuild and source playback/continuity checks pass;
+installed evidence retains its recorded asset/package identities. The
+2026-11-08 filesystem recheck confirms the approved debug cache and temporary
+closeout clone are absent; their earlier blocked receipts remain historical.
 
-## 1. Installed preview observation — one gated release criterion
-
-- What: Capture and review installed states for the selected local candidate: loaded model, normal playback, paused retarget preview, and applied/reopened result.
-- Why: Saved-motion inspection and browser rendering do not establish the installed WebView's visible output or playback continuity.
-- Where: Reuse the existing installed test session, profile isolation, original Signal Robot/Sable assets, exact PID/executable ownership and preview controls. No new capture framework is in scope.
-- When: Remaining gate after the selected 2026-11-02 follow-up package and installed queue case passed.
-- How: Bind compact pixels and a short normal-speed observation to executable, source, assets and test state; review geometry, materials, deformation, framing, preview/canonical isolation and controls. Use an already-permitted compatible capture environment or an explicitly authorized attended visible session.
-- Done when: The selected installed candidate has reviewed, source-bound visual evidence and playback continuity evidence, with owned processes/resources released and default recovery preserved.
-- Verification: The selected package's queue proof and the one-route mapping result are recorded in [INSTALLED_TEST_SESSION.md](INSTALLED_TEST_SESSION.md#export-cleanup-recheck-candidate-2026-11-02). The isolated capture refusals are recorded in [INSTALLED_TEST_SESSION.md](INSTALLED_TEST_SESSION.md#isolated-dropdown-and-capture-diagnostics--2026-11-02). No new candidate pixels are available; visual review is pending a compatible observation environment.
-- Current gate: The 2026-11-02 isolated Windows Graphics Capture attempt failed with `0x80070057`; the supported supervisor refused the minimized/hidden isolated HWND. No session or pixels were produced. Do not repeat those invocations unchanged or claim this gate passed; a compatible observation environment is still required.
-- Mapping scope: `FrontUpper_L → ForeUpper_L` is qualified for the one exercised dropdown route. Broader mapping-selection coverage remains unclaimed.
+Backlog status: the selected installed visual criterion is complete. The
+operator-authorized attended run on 2026-11-08 reviewed loaded Sable, normal
+Walk playback, paused retarget preview and Apply/save/reopen on the retained
+follow-up executable with a newly bound three-clip fixture. Independent output
+and cleanup proof passed; default recovery stayed unchanged. See
+[HISTORY](HISTORY.md#installed-attended-observation-20261108) and the
+[installed record](INSTALLED_TEST_SESSION.md#attended-observation-20261108).
+No executable product batch remains selected. Policy-blocked housekeeping below
+remains outside product acceptance. Broader mapping coverage and historical
+matrices are not renewed by this bounded run; public preview replacement still
+requires a separate release decision.
 
 ### Optional consumer references — not RustSMF work
 
@@ -31,6 +31,14 @@ selection route is qualified; broader mapping selection is not claimed.
 - **Imported idle root/body:** The retained 46-packet producer graph and unresolved committed-clearance issue are recorded in [HISTORY.md](HISTORY.md#private-idle-root-body-20261026). GaimEngine owns full receiving. RustSMF preserves the producer artifact, limits and reference without active receiving steps.
 
 ## Housekeeping exceptions — named scratch and owned build cache remain blocked
+
+The attended observation also retains its inactive task-owned
+`Compact_Evidence/RustSMF/runs/installed-observation-attended-20261108/profile/webview/`
+cache (36,125,417 logical bytes). Automatic approval review rejected its exact
+scoped removal as `blocked by policy`; no deletion or alternate route ran.
+The run's `summary.json` owns its disposition. An owner action permitted by
+command policy may remove only that cache, preserving the profile attestation,
+native recovery, fixtures and required visual/output evidence.
 
 - What: Remove named scratch only through an authorized route.
 - Why: Reclaim disposable copies without affecting product acceptance.
@@ -57,16 +65,6 @@ executable users. The operator approved exactly those six directories, but
 automatic command review rejected their removal as `blocked by policy` before
 execution. All six remained present. Do not reroute the rejected operation;
 source, release builds, shared dependencies and retained proof remain protected.
-
-### Closeout candidate clone — temporary cleanup retained
-
-- What: Release the isolated staged-candidate checkout created for the 2026-11-02 publish review.
-- Why: The checkout retains two task-created junctions to this workspace's npm dependencies.
-- Where: The exact temporary root and both targets are recorded in `export-cleanup-recheck-20261102/summary.json` under `resources.isolatedCandidateCopy`.
-- When: Only through a permitted exact-path cleanup action.
-- How: Remove those two junctions after verifying each exact target, then remove the named temporary checkout. Do not reroute a policy-rejected operation.
-- Done when: The named temporary checkout and both junctions are absent; no task-owned process remains.
-- Verification: Test typecheck and 39 focused units passed on the isolated staged tree. Browser and context commands in that clone lacked ignored WASM/toolchain outputs; their matching gates passed in the main checkout. The junction-removal command was rejected by execution policy before execution, so the clone remains intact and inactive.
 
 The 2026-10-28 isolated hip-Y producer proof retained task-owned rebuildable
 outputs on D: after a passing verify: a failed global Cargo target (4.26 GB
@@ -100,3 +98,9 @@ AI-edited: 2026-11-02 | agent=Codex/root | task=installed-dropdown-diagnostic | 
 AI-edited: 2026-11-02 | agent=Codex/root | task=installed-capture-routing | change=record supervised capture dependency without claiming unrun proof
 
 AI-edited: 2026-11-02 | agent=Codex/root | task=installed-supervised-capture | change=record supervisor refusal and retain visual gate
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-review-cleanup | change=align public scope and current verified continuation -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=installed-attended-observation | change=record completed selected visual criterion and remaining scope -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-closeout-publish | change=polish candidate scope and account for retained owned cache -->

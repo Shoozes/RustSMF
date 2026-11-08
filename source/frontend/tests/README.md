@@ -155,7 +155,7 @@ keyboard, and file-selection paths without forced clicks or editor-state setters
 | Drag/drop loading | `lifecycle.spec.ts`: latest async load wins between file input and drop | Stale read errors and dirty replacement cases in that suite |
 | Selected FBX/GLTF sidecars and ready textures | `journeys/format-roundtrip.journey.spec.ts`: decoded embedded PNG, named bones and animated FBX round trip | `journeys/failure-preserves-work.journey.spec.ts`: missing buffer cancel/discard retains semantic asset and continued edits |
 | OBJ/MTL, DAE resources, PNG/JPEG bounds | `export-formats.spec.ts` sidecar cases; `src/utils/modelResourceBundle.test.ts`, `src/utils/materialRepair.test.ts`, `src/utils/imagePayload.test.ts` | Missing/ambiguous/unsafe URI, signature, dimension, aggregate decoded-memory and cleanup cases in those owners |
-| Original Sable model/animation pack | `black-cat.spec.ts`: ordinary Open, four clips and moving decoded model pixels | `blackCatAsset.test.ts`: independent topology/raw skin/known motion; Sable journey: project/queue/re-import and continued history |
+| Original Sable model/animation pack | `black-cat.spec.ts`: ordinary Open, three clips and moving decoded model pixels | `blackCatAsset.test.ts`: independent topology/raw skin/known motion; Sable journey: project/queue/re-import and continued history |
 | Project save/open and new edits | `journeys/project-continuity.journey.spec.ts`: decoded envelope/GLB, rename/reopen/edit/undo/redo | Malformed project and dirty cancel/discard in `journeys/failure-preserves-work.journey.spec.ts` |
 | Serialized selection, clip, time, speed and rig metadata | `project-recovery.spec.ts`: restored explicit state, semantic saved motion and subsequent edits | Recovery cancel retains dirty root; discard restores project; new history remains usable |
 | Recovery generations and corrupt storage | `project-recovery.spec.ts`: IPC recovery, save and single write ownership | Browser quota refusal is visible, keeps prior recovery bytes and live edits, permits independently decoded manual save, and retries when storage returns; malformed recovery journey and `src/utils/projectCodec.test.ts` envelope bounds |
@@ -282,3 +282,5 @@ When adding or moving a test:
 <!--
 AI-edited: 2026-10-16 | agent=Codex/root | task=review-recheck-cleanup | change=added GLB preparation failure ownership guard
 -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-remove-sit | change=reflect three-clip sample and preview -->

@@ -22,6 +22,19 @@ and the selected installation's WebView2 runtime. No installation or policy chan
 is performed. Normal regression checks use a neutral executable, not an installed
 RustSMF or another first-party application.
 
+<a id="attended-observation-20261108"></a>
+## Attended selected-candidate observation — 2026-11-08
+
+Explicit operator authorization enabled a visible session using a task adapter
+of the existing native job/UIA/dialog helpers; the public runner stays isolated.
+Loaded, paused-preview, applied/reopened PNGs and five seconds of 1x Walk at
+30 fps passed review. Independent outputs and recovery/owned-process cleanup
+passed. Supervised recording used the matching `--window-hwnd` selector.
+[HISTORY](HISTORY.md#installed-attended-observation-20261108) owns full source,
+fixture, occlusion limits and results; the retained run is
+`installed-observation-attended-20261108`. This closes the selected criterion,
+not old matrices, quiet isolated capture or a public release.
+
 ## Ownership and refusal
 
 The launcher creates a unique non-input desktop and kill-on-close job. It assigns
@@ -254,34 +267,19 @@ AI-edited: 2026-11-02 | agent=Codex/root | task=installed-preview-diagnostics | 
 <a id="export-cleanup-recheck-candidate-2026-11-02"></a>
 ## Export-cleanup follow-up candidate — 2026-11-02
 
-The selected local installer SHA-256 is
-`ea27cd5d54beb35f9df81dd429b38afad40c69d53676174f9e3a138a18dcdd88`; installed
-executable SHA-256 is
-`c2f76eb3df38d780294ef64a211f9e85ff0780f03859e2181a51027639c9596f`. Its
-source manifest binds 533 tracked inputs and nine changed source files. Final
-recheck matches 532/533 tracked inputs; the only later change is the test
-documentation in `source/frontend/tests/README.md`, which is absent from the
-installed payload and was followed by passing focused tests and test typecheck.
-All nine retained changed-source snapshots match their manifest. The actual
-isolated `QueueWriteRetry` case and independent parser pass: ten primitives,
-Wave/Turn clips and 12,960 world-skin samples with maximum difference zero at
-1e-5. Completed output A remains unchanged, dirty refusal remains present before
-and after B's native write failure, default recovery is unchanged, no input
-desktop picker appeared, and the owned job has zero active processes. The two
-existing per-user registration exports were restored byte-for-byte after the
-fresh installation.
-
-The final focused tests pass 39/39; the queue browser suite passes 15/15;
-closeout reran canonical verify after the canvas allocation regression and it
-passed across 131 frontend unit-test files and 14 Rust checks. `package:windows`
-produced this candidate. These checks do not renew the 2026-11-01 Sable package or the
-historical full installed matrix. The 2026-11-02 installed-preview capture
-attempts remain unsuccessful and produced no pixels. The public preview is
-unchanged.
-
-[Run summary, source manifest, package identity and installed receipts](D:/Compact_Evidence/RustSMF/runs/export-cleanup-recheck-20261102/summary.json).
-
-AI-edited: 2026-11-02 | agent=Codex/root | task=export-cleanup-recheck | change=repair partial-capture cleanup ownership and renew the selected local candidate
+Selected installer SHA-256:
+`ea27cd5d54beb35f9df81dd429b38afad40c69d53676174f9e3a138a18dcdd88`;
+installed executable SHA-256:
+`c2f76eb3df38d780294ef64a211f9e85ff0780f03859e2181a51027639c9596f`.
+Its native queue failure/retry and independent output proof pass, including
+12,960 world-skin samples at zero difference, completed-output preservation,
+unchanged default recovery and released owned resources. Registration exports
+were restored byte-for-byte. Package-closeout source inventories, exact commands,
+counts and the later test-README delta are in
+[HISTORY](HISTORY.md#export-cleanup-recheck-2026-11-02) and the
+[run summary](D:/Compact_Evidence/RustSMF/runs/export-cleanup-recheck-20261102/summary.json).
+The later attended observation above has its own three-clip fixture identity;
+it does not relabel the previous Sable or full installed matrices.
 
 <a id="export-cleanup-candidate-2026-11-02"></a>
 ## Export-cleanup candidate — 2026-11-02
@@ -338,3 +336,5 @@ guarded main helper; no public release replacement or private producer
 generation is included.
 
 AI-edited: 2026-11-01 | agent=Codex/root | task=installed-sable-workflows | change=record native Sable transfer, independent motion and exact candidate limits
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=installed-attended-observation | change=record completed selected visual criterion and remaining scope -->

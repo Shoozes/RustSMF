@@ -7,14 +7,14 @@ import { captureReview } from './helpers/review-capture';
 import { clickTimelineLaneAt } from './helpers/timeline-interactions';
 import { PNG } from 'pngjs';
 
-test('original Sable pack opens normally and all four clips play visible geometry', async ({ page }, testInfo) => {
+test('original Sable pack opens normally and all three clips play visible geometry', async ({ page }, testInfo) => {
   const errors = watchJourneyErrors(page);
   await page.goto('/');
   const choosing = page.waitForEvent('filechooser');
   await page.getByTestId('open-model-btn').click();
   await (await choosing).setFiles(BLACK_CAT_PATH);
   await expect(page.getByTestId('status-text')).toHaveText('Loaded: sable.glb', { timeout: 15000 });
-  await expect(page.getByTestId('status-text')).toHaveAttribute('title', /bones: 24.*clips: 4/);
+  await expect(page.getByTestId('status-text')).toHaveAttribute('title', /bones: 24.*clips: 3/);
   await selectWorkspace(page, 'animate', false);
   const play = page.getByTestId('timeline-play-btn');
   if ((await play.textContent())?.includes('Pause')) await play.click();
@@ -47,7 +47,7 @@ test('original Sable pack opens normally and all four clips play visible geometr
     await play.click();
     await slider.press('End');
     await expect(page.getByTestId('time-display')).toHaveText(`${duration.toFixed(2)} / ${duration.toFixed(2)}s`);
-    if (name !== 'Sit') await clickTimelineLaneAt(page, .5);
+    await clickTimelineLaneAt(page, .5);
     await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
     const after = PNG.sync.read(await page.getByTestId('three-canvas').screenshot());
     expect([after.width, after.height]).toEqual([before.width, before.height]);

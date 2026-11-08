@@ -122,9 +122,6 @@ test('independent skin samples retain the floor, planted Idle paws and actual ga
   for (const name of ['ForePaw_L', 'ForePaw_R', 'HindPaw_L', 'HindPaw_R']) {
     assert.ok(joint('Idle', 0, name).distanceTo(joint('Idle', 1.5, name)) < 2e-5);
   }
-  for (const name of ['ForePaw_L', 'ForePaw_R']) assert.ok(joint('Sit', 0, name).distanceTo(joint('Sit', 2, name)) < 2e-5, 'Sit keeps front paws planted');
-  const pelvis = (time: number) => new Vector3().setFromMatrixPosition(catWorldMatrices(bytes, 'Sit', time).get('Pelvis')!);
-  assert.ok(Math.abs(pelvis(2).y - .117) < 2e-5 && Math.abs(pelvis(2).z - .084) < 2e-5, 'Sit lowers and tucks the haunches under the torso');
   assert.ok(Math.abs(joint('Walk', 1).y - (.03+.036*Math.sin(Math.PI*((1/1.2-.66)/.34))**2)) < 2e-5);
   assert.ok(Math.abs(joint('Run', 17/30).y - (.0303+.054*Math.sin(Math.PI*((17/30/.8-.4)/.6))**2)) < 2e-5);
   // A receiving root advancing +Z cancels the in-place stance's backward travel.
@@ -133,7 +130,7 @@ test('independent skin samples retain the floor, planted Idle paws and actual ga
   assert.ok(Math.abs(later.z - start.z + .3 * .28 / .66 * (.4 / 1.2)) < 2e-5);
 });
 
-test('four original clips have known durations, vertical root motion, loop closure and a held Sit endpoint', () => {
+test('three original clips have known durations, vertical root motion and loop closure', () => {
   const bytes = blackCatBytes(), evidence = readAssetEvidence(bytes);
   assert.deepEqual(evidence.clips.map(c => c.name).sort(), Object.keys(CAT_CLIPS).sort());
   for (const clip of evidence.clips) { assert.ok(Math.abs(clip.duration - CAT_CLIPS[clip.name as keyof typeof CAT_CLIPS]) < 1e-6); expectMotion(clip); }
@@ -141,9 +138,6 @@ test('four original clips have known durations, vertical root motion, loop closu
   const root = (clip: string, time: number) => new Vector3().setFromMatrixPosition(catWorldMatrices(bytes, clip, time).get('Root')!);
   assert.ok(Math.abs(root('Idle', 1.5).y - .0042) < 1e-5);
   assert.ok(Math.abs(root('Run', .4).y - .021) < 1e-5);
-  assert.ok(Math.abs(root('Sit', 2).y + .126) < 1e-5);
-  const hold = catWorldMatrices(bytes, 'Sit', 1.8), end = catWorldMatrices(bytes, 'Sit', 2);
-  for (const name of evidence.joints) assert.ok(hold.get(name)!.elements.every((v, i) => Math.abs(v - end.get(name)!.elements[i]) < 2e-5), `Sit does not hold ${name}`);
 });
 
 function changeKey(clipName: string, bone: string, channel: string, key: number, values: number[]): Buffer {
@@ -171,7 +165,7 @@ test('loop and continuity guards reject terminal rotations, scales and unsampled
   assert.throws(() => expectCatMotionContinuity(interior, blackCatBytes()), /Walk motion .*Root position/);
 });
 
-test('Sable loads with explicit mappings and its actual Three mixer matches independently sampled Sit joints', async () => {
+test('Sable loads with explicit mappings and its actual Three mixer matches independently sampled Walk joints', async () => {
   installNodeThreeRuntime();
   const bytes = blackCatBytes(), model = await loadGLB(Uint8Array.from(bytes).buffer);
   try {
@@ -180,12 +174,12 @@ test('Sable loads with explicit mappings and its actual Three mixer matches inde
     assert.equal(map.ok, true); assert.equal(map.decisions.length, 24);
     assert.ok(map.decisions.every(decision => decision.method === 'manual' && decision.source === decision.target));
     assert.deepEqual(map.map, profile.retarget.manualMap);
-    const clip = model.clips.find(value => value.name === 'Sit')!;
-    const action = model.mixer.clipAction(clip); action.play(); action.paused = true; action.time = 2;
+    const clip = model.clips.find(value => value.name === 'Walk')!;
+    const action = model.mixer.clipAction(clip); action.play(); action.paused = true; action.time = .6;
     model.mixer.update(0); model.root.updateMatrixWorld(true);
-    const expected = catWorldMatrices(bytes, 'Sit', 2);
+    const expected = catWorldMatrices(bytes, 'Walk', .6);
     for (const bone of model.skeleton!.bones) {
-      assert.ok(bone.getWorldPosition(new Vector3()).distanceTo(new Vector3().setFromMatrixPosition(expected.get(bone.name)!)) < 2e-5, `Sit joint ${bone.name}`);
+      assert.ok(bone.getWorldPosition(new Vector3()).distanceTo(new Vector3().setFromMatrixPosition(expected.get(bone.name)!)) < 2e-5, `Walk joint ${bone.name}`);
     }
   } finally {
     model.mixer.stopAllAction(); model.mixer.uncacheRoot(model.root); disposeThreeObject(model.root);

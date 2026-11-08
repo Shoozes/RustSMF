@@ -14,7 +14,8 @@ installer SHA-256 is
 installed executable SHA-256 is
 `c2f76eb3df38d780294ef64a211f9e85ff0780f03859e2181a51027639c9596f`. The source
 manifest records 533 tracked product inputs and nine changed source files.
-Final recheck matches 532/533 tracked inputs; the only later change is the test
+Its recorded package-closeout recheck matched 532/533 inputs; at that time the
+only later change was the test
 documentation in `source/frontend/tests/README.md`, which is absent from the
 installed payload and was followed by passing focused tests and test typecheck.
 All nine retained changed-source snapshots match their manifest. Installer,
@@ -24,8 +25,11 @@ actual installed queue write-failure/retry and independent output proof pass.
 This focused renewal does not repeat the broader installed workflows: Sable
 remains bound to the 2026-11-01 candidate in
 [HISTORY.md](HISTORY.md#installed-sable-workflows-20261101). One mapping route
-is qualified; broader mapping selection is not claimed. Installed visual review
-remains open pending a compatible capture route. The public `0.2.1-preview`
+is qualified; broader mapping selection is not claimed. The 2026-11-08
+[attended visual observation](INSTALLED_TEST_SESSION.md#attended-observation-20261108)
+passed on this executable with a newly bound three-clip Sable fixture. This
+closes the selected observation criterion, not the full historical matrix or a
+release decision. The public `0.2.1-preview`
 remains separate and unchanged.
 
 The full isolated matrix below retains its 2026-10-26 source epoch, starting at
@@ -40,8 +44,8 @@ not renew that entire historical matrix.
 | Predictable browser routing | Direct default and `-NoGenEye` agree; ambient/sibling controls and explicit integration failure controls pass. |
 | Isolated build and verification | Source-only copy passed verify (723 frontend tests, 14 Rust checks), browser 212, journeys 13, strict visuals 3, retarget/transition native-WASM proof and desktop smoke. |
 | Ordinary exporters | Generated native-contact CLI success/refusal and job cancellation passed in verify; retained consumer proof is not renewed. |
-| Installed workflows | Earlier model/ZIP/project/Help/second-install evidence retains its original epoch. The current follow-up package passes installed queue write-failure/retry with independent output proof, default recovery unchanged, registration restored byte-for-byte and owned cleanup complete. Sable transfer/animal assistance remains bound to the 2026-11-01 candidate. One dropdown selection route is qualified; broader selection and new candidate pixels remain unclaimed. |
-| Local package | The installer and all seven installed-file hashes are retained for the focused follow-up candidate. This does not renew other installed workflows or the full historical matrix. Installed visual review and any public release replacement remain separate decisions. |
+| Installed workflows | Earlier model/ZIP/project/Help/second-install evidence retains its original epoch. The current follow-up package passes installed queue write-failure/retry with independent output proof, default recovery unchanged, registration restored byte-for-byte and owned cleanup complete. Sable transfer/animal assistance remains bound to the 2026-11-01 candidate. One dropdown selection route is qualified. New attended pixels and playback cover the selected executable with the three-clip fixture; broader selection remains unclaimed. |
+| Local package | The installer and all seven installed-file hashes are retained for the focused follow-up candidate. This does not renew other installed workflows or the full historical matrix. The bounded attended visual criterion passed; public release replacement remains a separate decision. |
 
 The [2026-10-26 review record](HISTORY.md#standalone-review-20261026) binds
 these results to exact source inventories and logs. Review found all inventory-v2
@@ -215,3 +219,5 @@ AI-edited: 2026-10-30 | agent=Codex/root | task=installed-native-queue | change=
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly
 
 AI-edited: 2026-11-01 | agent=Codex/root | task=installed-sable-workflows | change=bind functional Sable acceptance and candidate equivalence while retaining observation and historical proof limits
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=installed-attended-observation | change=record completed selected visual criterion and remaining scope -->

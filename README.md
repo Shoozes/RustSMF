@@ -6,7 +6,7 @@ Paint weights and export in one app. No external 3D editor required.
 
 RustSMF owns its editor, formats, retargeting and contact solver. Building, testing
 and packaging need only this repository and its declared third-party dependencies.
-GaimEngine and other consumers are optional export integrations.
+Other applications can consume its exported models and animations independently.
 
 [**Download for Windows x64**](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe) · [0.2.1 preview notes](https://github.com/Shoozes/RustSMF/releases/tag/v0.2.1-preview) · [Sample model](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb)
 
@@ -30,17 +30,18 @@ candidate based on `f099e37` includes the export cleanup repair and has installe
 SHA-256 `ea27cd5d54beb35f9df81dd429b38afad40c69d53676174f9e3a138a18dcdd88` and
 installed executable SHA-256
 `c2f76eb3df38d780294ef64a211f9e85ff0780f03859e2181a51027639c9596f`. Its
-installed queue write-failure/retry passed. Installed visual review remains
-gated on a compatible capture route. The local package does not replace the
-published download. See [current acceptance and limits](docs/dev/STANDALONE_ACCEPTANCE.md).
+installed queue write-failure/retry passed. A bounded attended installed
+visual observation also passed on this executable. The local package does not
+replace the published download. See
+[current acceptance and limits](docs/dev/STANDALONE_ACCEPTANCE.md).
 
 Try [Sable, our original black cat](examples/black-cat/README.md), a self-contained
-GLB with Idle, Walk, Run and Sit. The Windows preview download still includes
+GLB with Idle, Walk and Run. The Windows preview download still includes
 Signal Robot.
 
-[![Sable playing Idle, Walk, Run and Sit](docs/images/sable-motion.gif)](docs/images/sable-idle.webm)
+[![Sable playing Idle, Walk and Run](docs/images/sable-motion.gif)](docs/images/sable-idle.webm)
 
-WebM · [Idle](docs/images/sable-idle.webm) · [Walk](docs/images/sable-walk.webm) · [Run](docs/images/sable-run.webm) · [Sit](docs/images/sable-sit.webm) · 2.4 seconds each.
+WebM · [Idle](docs/images/sable-idle.webm) · [Walk](docs/images/sable-walk.webm) · [Run](docs/images/sable-run.webm) · 2.4 seconds each.
 
 <details>
 <summary>Windows requirements and download verification</summary>
@@ -122,3 +123,11 @@ AI-edited: 2026-10-26 | agent=Codex/root | task=standalone | change=clarified in
 
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=document opt-in Windows data isolation and unchanged defaults
 -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-remove-sit | change=reflect three-clip sample and preview -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-review-cleanup | change=align public scope and current verified continuation -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=installed-attended-observation | change=record completed selected visual criterion and remaining scope -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-closeout-publish | change=polish candidate scope and account for retained owned cache -->

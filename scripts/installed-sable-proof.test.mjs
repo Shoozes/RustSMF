@@ -27,6 +27,15 @@ test('independent motion guard rejects an unchanged canonical clip masquerading 
  const bad=structuredClone(d);bad.animations.at(-1).channels=bad.animations.at(-1).channels.filter(c=>d.nodes[c.target.node].name!=='ForeUpper_L');
  assert.throws(()=>assertTransferredMotion(replaceDoc(valid.bytes,bad),valid.bytes,valid.aliases),/world (translation|rotation|skin) drift/);
 });
+test('motion proof binds clip inventory to the selected asset epoch',()=>{
+ const d=doc(valid.bytes);for(const node of d.nodes)node.name=valid.aliases[node.name]??node.name;
+ const originals=doc(target).animations;
+ const legacy=structuredClone(originals.find(c=>c.name==='Idle'));legacy.name='Sit';
+ d.animations=[...originals,legacy,...d.animations];const bytes=replaceDoc(valid.bytes,d);
+ assert.throws(()=>assertTransferredMotion(bytes,valid.bytes,valid.aliases),/deep-equal/);
+ const result=assertTransferredMotion(bytes,valid.bytes,valid.aliases,[...originals.map(c=>c.name),'Sit']);
+ assert.ok(result.skinSamples>0);assert.ok(result.maximumSkinDifference<1e-12);
+});
 function receipt(){return {schema:'rustsmf.installed-sabletransfer-session.v1',scenario:'SableTransfer',status:'passed',probe:{status:'passed',pid:42,sable:{status:'passed',pausedAtZero:true,animalSuggestions:true,correctionInvalidatedPreview:true,correctionReviewed:true,previewAtMidpoint:true,ambiguousUnresolved:true,applied:true,reopened:true,suggestedUi:'RIG_MAP_ANIMAL_REVIEW',ambiguousUi:'RIG_MAP_ANIMAL_CHAIN_UNRESOLVED',previewUi:'Preview time',reopenedUi:'Workspace: Model\nLoaded: Sable',correctionRoute:'Public Profile JSON',initialProfileReadback:'{"retarget":{"manualMap":{"FrontUpper_L":"ForeUpper_R"}}}',correctedProfileReadback:'{"retarget":{"manualMap":{"FrontUpper_L":"ForeUpper_L"}}}',submissions:Array.from({length:11},()=>({closed:true}))}},cleanup:{activeJobProcesses:0,jobTerminated:true,jobHandleClosed:true,workerHandleClosed:true,desktopClosed:true,inputHandleClosed:true},inputDesktopChanged:false,inputDesktopOwnedPickers:0,inputDesktopSamples:1,protectedRecovery:{kind:'canonical-known-folder',unchanged:true,before:{files:[]},after:{files:[]}},nativeProfile:{schema:'rustsmf.profile-session.v1',pid:42},privateRecovery:{exists:true,files:[{name:'rustsmf-autosave.rsproj'}]}};}
 test('installed proof cannot pass incomplete preview, unsafe recovery, active jobs or failed native submission',()=>{
  assertSableSession(receipt());

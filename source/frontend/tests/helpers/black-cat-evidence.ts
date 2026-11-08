@@ -8,7 +8,7 @@ import { expectNumbersClose, readAssetEvidence, sampleTrack } from './asset-evid
 
 export const BLACK_CAT_PATH = fileURLToPath(new URL('../../../../examples/black-cat/sable.glb', import.meta.url));
 export const BLACK_CAT_MANIFEST = fileURLToPath(new URL('../../../../examples/black-cat/asset.json', import.meta.url));
-export const CAT_CLIPS = { Idle: 3, Walk: 1.2, Run: 0.8, Sit: 2 } as const;
+export const CAT_CLIPS = { Idle: 3, Walk: 1.2, Run: 0.8 } as const;
 
 // Inputs are immutable evidence buffers. Parse once per buffer, not once per vertex/sample.
 const parsed = new WeakMap<Buffer, { evidence: ReturnType<typeof readAssetEvidence>; nodes: { name: string; children?: number[] }[] }>();
@@ -78,7 +78,7 @@ export function expectCatLoop(bytes: Buffer, clip: 'Idle' | 'Walk' | 'Run'): voi
 }
 
 export function expectCatMotionContinuity(bytes: Buffer, before: Buffer): void {
-  for (const [clip, duration] of Object.entries(CAT_CLIPS)) for (const time of catSampleTimes(duration)) {
+  for (const { name: clip, duration } of catEvidence(before).evidence.clips) for (const time of catSampleTimes(duration)) {
     const actual = catWorldMatrices(bytes, clip, time), expected = catWorldMatrices(before, clip, time);
     for (const name of catEvidence(before).evidence.joints) assertTransforms(actual.get(name)!, expected.get(name)!, `${clip} motion ${time} ${name}`);
     assertSkin(catSkinnedVertices(bytes, clip, time), catSkinnedVertices(before, clip, time), `${clip} motion ${time}`);
@@ -156,8 +156,8 @@ export function expectCatContinuity(bytes: Buffer, before = blackCatBytes()): vo
       assert.ok(a.every((value, slot) => Math.abs(value.weight - e[slot].weight) < 1e-6), `raw influences at ${v}`);
     }
   }
-  expect(actual.clips.map(clip => clip.name).sort()).toEqual(Object.keys(CAT_CLIPS).sort());
-  for (const [name, duration] of Object.entries(CAT_CLIPS)) {
+  expect(actual.clips.map(clip => clip.name).sort()).toEqual(expected.clips.map(clip => clip.name).sort());
+  for (const {name, duration} of expected.clips) {
     expect(actual.clips.find(clip => clip.name === name)!.duration).toBeCloseTo(duration, 5);
   }
   expectCatMotionContinuity(bytes, before);

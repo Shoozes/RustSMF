@@ -1,23 +1,36 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-11-02
+Last reviewed: 2026-11-08
 
 Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
 
+## Sable removal review and recheck — 2026-11-08
+
+Reviewed `main` `b9fd67f` plus dirty Sable/cleanup changes through the Summary
+Bank asset, rebuild and installed-proof owners; files were read directly.
+Sit removal, preview and recorded source/browser continuity remain verified.
+The revised recipe now rebuilds with independent dense continuity proof.
+Cleanup removed private names from both READMEs, corrected absent cache/clone
+status and added a historical/current clip-inventory guard (five controls pass).
+[HISTORY](HISTORY.md#sable-removal-review-20261108) binds scope and proof.
+The subsequent explicitly authorized attended run closed the selected visual
+criterion on its exact installed executable and three-clip fixture;
+[HISTORY](HISTORY.md#installed-attended-observation-20261108) binds PNGs, playback,
+independent output and recovery/owned-job cleanup. No further product batch is
+selected; TODO retains policy-blocked housekeeping. Old matrices remain distinct.
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-review-cleanup | change=review scope proof and remaining observation -->
+
 ## Export cleanup review, recheck and cleanup — 2026-11-02
 
-The read-only review started from `main` at `f099e37ed1d0c855412d67766507359b4fe029d6` with the previous local export-cleanup batch already modified in the worktree. Summary Bank routing covered export queue/snapshot ownership, material preview state, load/editor orchestration, installed-product acceptance, test quality and context ownership. The previous package's 533 tracked source inputs, eight changed-source snapshots, installed `QueueWriteRetry` receipt, independent output proof and unchanged recovery were rechecked against their retained evidence; that package remains a distinct prior epoch.
-
-- Confirmed accepted scope: one local queue lifecycle repair and current-state documentation. Standalone ownership, export formats, retarget engine, consumer integrations and public preview identity do not need redesign or expansion.
-- New, reproduced and repaired: empty thrown cleanup errors produced a blank warning, hiding cleanup retry. A capture that failed during metadata/image copying could lose a partially allocated geometry/canvas owner when its first release also failed; the queue then had no retry row or retained byte charge. Cleanup-only capture rows now retain the owner and estimate, show both errors, and disappear only after release. Geometry and canvases become owned immediately after allocation.
-- Verified: focused units pass 39/39; the queue browser suite passes 15/15; product/test typechecks pass. Closeout reran canonical verify after the canvas allocation regression; it passed across 131 frontend unit-test files and 14 Rust checks, including the project, context, and Git safety gates. The follow-up installer `ea27cd5d54beb35f9df81dd429b38afad40c69d53676174f9e3a138a18dcdd88` and executable `c2f76eb3df38d780294ef64a211f9e85ff0780f03859e2181a51027639c9596f` pass isolated native queue failure/retry and independent output inspection. The package manifest binds 533 tracked inputs and nine changed-source snapshots. Final recheck matches 532/533 tracked inputs; the only later change is the test documentation in `source/frontend/tests/README.md`, which is absent from the installed payload and was followed by passing focused tests and test typecheck. All nine retained snapshots match their manifest. Full identities and receipts are in [HISTORY.md](HISTORY.md#export-cleanup-recheck-2026-11-02).
-- Still open: installed visual pixels/playback review has no compatible capture route. The unchanged isolated capture/supervisor failures produced no pixels. `FrontUpper_L → ForeUpper_L` is qualified through one dropdown route; broader mapping selection remains unclaimed. Sable and historical acceptance retain their own package epochs. The public `v0.2.1-preview` remains unchanged.
-
-Next bounded pass: obtain reviewed installed-preview pixels and a short normal-speed playback observation on the selected executable through a compatible, already-permitted capture route. If unavailable, preserve this as the one remaining product observation gate. No consumer-engine run, private producer work, new capture tooling or public release is included.
-
-AI-edited: 2026-11-02 | agent=Codex/root | task=export-cleanup-review-recheck | change=record source-bound findings, accepted cleanup and one remaining observation gate
+Completed queue cleanup findings, source/package identities and exact verification
+are retained in [HISTORY](HISTORY.md#export-cleanup-recheck-2026-11-02). That
+review closed empty cleanup-message and partial-capture ownership defects.
+Installed visual observation remained gated; one dropdown route was qualified,
+with broader mapping selection unclaimed. Sable and the historical installed
+matrix retain their own fixture/package epochs. TODO owns the open criterion.
 
 ## Candidate observation decision — 2026-11-02
 
@@ -336,3 +349,5 @@ AI-edited: 2026-10-23 | agent=Codex/root | task=p7b-scratch-closeout | change=cl
 <!-- AI-edited: 2026-10-25 | agent=Codex/root | task=p7c-pelvis-layer-integration | change=layer proof -->
 
 <!-- AI-edited: 2026-10-25 | agent=Codex/root | task=pelvis-recheck | change=closed refusals -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=installed-attended-observation | change=record completed selected visual criterion and remaining scope -->

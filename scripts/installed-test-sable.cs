@@ -120,7 +120,7 @@ public sealed class InstalledSableCase {
         Wait(()=>Find("Discard unsaved changes?")!=null||(Text().Contains("Loaded:")&&Find("Workspace: Model")!=null),"Project replacement did not settle.");
         if(Find("Discard unsaved changes?")!=null){r.reopenWarningShown=true;Act("Discard and load");r.reopenConfirmedTaskSnapshot=true;}
         // The modern status intentionally shows only Loaded: <name>. The
-        // independent output parser, not hidden status details, checks 5 clips.
+        // independent output parser, not hidden status details, checks retained clips plus the transferred clip.
         Wait(()=>Text().Contains("Loaded:")&&Find("Workspace: Model")!=null,"Saved project did not reopen.");r.reopenedUi=Text();Act("Workspace: Model");Act("Animate");PauseZero();r.reopenedExport=Export(r,"sable-reopened.glb");r.reopened=true;
         r.stage="ambiguous-chain";if(Find("Transfer")==null)Act("Tools");Act("Transfer");Source(r,ambiguous);if(Find("Find bone")==null)Act("Mapping details");Value("Find bone","");Wait(()=>Text().Contains("RIG_MAP_ANIMAL_CHAIN_UNRESOLVED"),"Ambiguous chain was not reported unresolved.");r.ambiguousUi=Text();
         r.ambiguousMapping=Save(r,"ambiguous-mapping.json","Export reviewed mapping");r.ambiguousUnresolved=true;Act("Discard transfer");PauseZero();r.afterDiscard=Export(r,"sable-after-discard.glb");r.finalUi=Text();

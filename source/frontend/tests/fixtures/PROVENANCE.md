@@ -55,7 +55,7 @@ The external GLTF browser rendering case creates a non-collinear Float32 triangl
 ## Sable original animation pack
 
 `examples/black-cat/` contains an original image-guided Tripo Pro design, repaired
-in Blender 5.2.1 LTS with original rig/weights and Idle/Walk/Run/Sit keys. The
+in Blender 5.2.1 LTS with original rig/weights and Idle/Walk/Run keys. The
 finished pack is MIT licensed, copyright 2026 Shoozes. Generation-specific paid
 rights evidence belongs to `docs/dev/ASSET_PROVENANCE.md`; `asset.json` binds the
 source/output hashes and geometry/clip contracts. The rejected procedural model,
@@ -64,3 +64,5 @@ raw Tripo drafts and borrowed fox reference stay private and are not test inputs
 <!--
 AI-edited: 2026-10-15T17:05:37.137Z | agent=Codex/root | task=original-assets | change=added original Sable pack and acceptance routes
 -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-remove-sit | change=reflect three-clip sample and preview -->

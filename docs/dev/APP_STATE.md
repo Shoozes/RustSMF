@@ -1,6 +1,28 @@
 # RustSMF App State
 
-Last reviewed: 2026-11-02
+Last reviewed: 2026-11-08
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=owned-cleanup | change=refresh continuation and correct package source coverage -->
+
+## Continuation checkpoint
+
+Export-cleanup source was published in `e19d7cc` with the history correction in
+`b9fd67f`. The recorded full verify, 39 focused units, 15 queue browser cases and
+installed queue proof remain historical results; this maintenance pass did not
+rerun them. The 2026-11-08 explicitly authorized attended installed observation
+now closes the selected visual criterion; [TODO.md](TODO.md) retains only
+policy-blocked housekeeping. The installed record binds the exact binary, new
+three-clip fixture, captures, playback and independent output proof.
+
+The retained `export-cleanup-recheck-20261102` run contains `summary.json`, the
+source manifest, package/install identities, native receipt and independent
+output proof. Keep its required bytes and fixed paths. Its temporary candidate
+clone and the separately approved debug cache are now absent on the 2026-11-08
+recheck. The operator reported removing the debug cache; the clone removal
+method is unknown. Earlier receipts keep their historical blocked status. No active experiment is launched
+by this maintenance pass. Use `pwsh -NoProfile -File .\run.ps1 -Task context`
+for continuation-document checks; builds require the existing pinned tools and
+npm dependencies.
 
 ## Standalone product boundary
 
@@ -32,11 +54,15 @@ and independent output proof. Its installer SHA-256 is
 `ea27cd5d54beb35f9df81dd429b38afad40c69d53676174f9e3a138a18dcdd88` and its
 installed executable SHA-256 is
 `c2f76eb3df38d780294ef64a211f9e85ff0780f03859e2181a51027639c9596f`. The
-source manifest binds 533 tracked inputs and nine changed source files; all
-matched after packaging. This focused package does not renew the earlier Sable
-workflows. Installed visual review remains open because the isolated capture
-route is unavailable. The 2026-11-02 Graphics Capture and supervisor attempts
-produced no pixels, so visual review and attended review remain unclaimed. One
+source manifest binds 533 tracked inputs and nine changed source files. The
+recorded package-closeout recheck matched 532/533 inputs at that epoch; only the
+frontend test README had then changed after packaging and is absent from the
+installed payload. All nine retained snapshots matched their manifest. This
+package does not renew the earlier Sable
+workflows. The later attended observation passed on this executable with the
+three-clip Sable fixture; it does not renew the full historical installed matrix.
+The earlier isolated capture failures remain historical and the quiet isolated
+capture route is still unqualified. One
 focused HTML dropdown route is qualified for `FrontUpper_L → ForeUpper_L`;
 broader mapping coverage is not claimed. The Profile JSON correction route is
 also observed. [Record and limits](INSTALLED_TEST_SESSION.md#export-cleanup-recheck-candidate-2026-11-02).
@@ -79,7 +105,14 @@ acceptance. HISTORY and the reliability receipt own candidate-specific results.
 
 ## Original Sable sample and motion pack
 
-Sable is the original 24-joint cat with Idle/Walk/Run/Sit and a packed 1K atlas.
+Sable is the original 24-joint cat with Idle/Walk/Run and a packed 1K atlas.
+The unsuitable Sit animation was removed from the GLB, Blender source and
+recipe on 2026-11-08. The README preview now contains only those three clips.
+Earlier installed Sable receipts retain their original four-clip asset epoch;
+the new attended observation separately qualifies the three-clip fixture on
+the retained executable. It does not replace the historical matrix. The revised
+three-clip recipe also rebuilt successfully in Blender 5.2.1; independent
+geometry, skin, texture, dense motion and loop checks passed against the sample.
 Dense loop/floor, project/recovery/export and alternate-output rebuild guards
 belong to the [guide](../../examples/black-cat/README.md),
 [authoring notes](SABLE_AUTHORING.md), provenance register and HISTORY.
@@ -491,3 +524,9 @@ AI-edited: 2026-10-30 | agent=Codex/root | task=installed-native-queue | change=
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly
 
 AI-edited: 2026-11-01 | agent=Codex/root | task=installed-sable-workflows | change=record completed functional Sable workflows and separate remaining observation limits
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-review-cleanup | change=align public scope and current verified continuation -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=installed-attended-observation | change=record completed selected visual criterion and remaining scope -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-closeout-publish | change=polish candidate scope and account for retained owned cache -->

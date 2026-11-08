@@ -20,7 +20,7 @@ from mathutils import Matrix, Quaternion, Vector
 
 FPS = 30
 METERS_PER_UNIT = .3
-CLIPS = {"Idle": (3.0, True), "Walk": (1.2, True), "Run": (0.8, True), "Sit": (2.0, False)}
+CLIPS = {"Idle": (3.0, True), "Walk": (1.2, True), "Run": (0.8, True)}
 TAIL = [(0, .65, 1.12), (0, .89, 1.02), (0, 1.12, .88), (0, 1.34, .80), (0, 1.55, .82), (0, 1.68, .90)]
 SPECS = {"Root": ((0, 0, 0), (0, .2, 0), None),
          "Pelvis": ((0, .32, 1.03), (0, 0, 1.06), "Root"),
@@ -184,7 +184,7 @@ def solve_knee(head, target, a, b, pole):
     return knee, head + direction*distance
 
 
-def foot_target(family, side, phase, clip, sit):
+def foot_target(family, side, phase, clip):
     rest = Vector(SPECS[f"{family}Paw_{side}"][0])
     # Baked local quaternion interpolation can dip the sole between fixed paw keys.
     # Reserve 0.3 mm for Run while retaining the root and stride trajectories.
@@ -201,8 +201,6 @@ def foot_target(family, side, phase, clip, sit):
             swing = (p-duty)/(1-duty)
             rest.y += .5*stride*math.cos(math.pi*swing)
             rest.z += lift*math.sin(math.pi*swing)**2
-    if family == "Hind":
-        rest.y -= .68*sit
     return rest
 
 
@@ -210,34 +208,24 @@ def pose(rig, clip, phase):
     for bone in rig.pose.bones:
         bone.matrix_basis = Matrix.Identity(4)
     p = phase
-    sit = (clamp(p/.8)**2 * (3-2*clamp(p/.8))) if clip == "Sit" else 0
-    bob = .007*(1-math.cos(math.tau*p)) if clip == "Idle" else .012*(1-math.cos(2*math.tau*p)) if clip == "Walk" else .035*(1-math.cos(math.tau*p)) if clip == "Run" else -.42*sit
-    root_delta = Vector((0, -.02*sit, bob))
+    bob = .007*(1-math.cos(math.tau*p)) if clip == "Idle" else .012*(1-math.cos(2*math.tau*p)) if clip == "Walk" else .035*(1-math.cos(math.tau*p)) if clip == "Run" else 0
+    root_delta = Vector((0, 0, bob))
     rig.pose.bones["Root"].matrix = Matrix.Translation(root_delta) @ rig.data.bones["Root"].matrix_local
-    rig.pose.bones["Pelvis"].rotation_quaternion = Quaternion((1, 0, 0), -.30*sit + (.035*math.sin(math.tau*p) if clip == "Run" else 0))
-    rig.pose.bones["Spine"].rotation_quaternion = Quaternion((1, 0, 0), -.30*sit + (.06*math.sin(math.tau*p) if clip == "Run" else 0))
-    rig.pose.bones["Neck"].rotation_quaternion = Quaternion((1, 0, 0), .20*sit)
-    rig.pose.bones["Head"].rotation_quaternion = Quaternion((0, 1, 0), 0 if clip == "Sit" else (.045 if clip == "Idle" else .015)*math.sin(math.tau*p))
+    rig.pose.bones["Pelvis"].rotation_quaternion = Quaternion((1, 0, 0), (.035*math.sin(math.tau*p) if clip == "Run" else 0))
+    rig.pose.bones["Spine"].rotation_quaternion = Quaternion((1, 0, 0), (.06*math.sin(math.tau*p) if clip == "Run" else 0))
+    rig.pose.bones["Neck"].rotation_quaternion = Quaternion((1, 0, 0), 0)
+    rig.pose.bones["Head"].rotation_quaternion = Quaternion((0, 1, 0), (.045 if clip == "Idle" else .015)*math.sin(math.tau*p))
     for i in range(1, 6):
-        angle = .16*sit if clip == "Sit" else (.055 if clip == "Idle" else .08)*math.sin(math.tau*p + (i-1)*.35)
+        angle = (.055 if clip == "Idle" else .08)*math.sin(math.tau*p + (i-1)*.35)
         rig.pose.bones[f"Tail{i:02}"].rotation_quaternion = Quaternion((0, 0, 1), angle)
     bpy.context.view_layer.update()
-    if clip == "Sit":
-        pelvis_head = Vector(SPECS["Pelvis"][0]) + Vector((0, -.60*sit, -.64*sit))
-        pelvis_tail = Vector(SPECS["Pelvis"][1]) + Vector((0, -.60*sit, -.64*sit))
-        set_absolute(rig, "Pelvis", pelvis_head, pelvis_tail)
-        chest = Vector(SPECS["Spine"][1])+Vector((0, -.20*sit, -.06*sit))
-        neck_end = Vector(SPECS["Neck"][1])+Vector((0, .10*sit, -.05*sit))
-        set_absolute(rig, "Spine", pelvis_tail, chest, fit_length=True)
-        set_absolute(rig, "Neck", chest, neck_end, fit_length=True)
-        set_absolute(rig, "Head", neck_end, neck_end+Vector(SPECS["Head"][1])-Vector(SPECS["Head"][0]))
     for side in ("L", "R"):
         for family in ("Fore", "Hind"):
             upper, lower = f"{family}Upper_{side}", f"{family}Lower_{side}"
             bone = rig.data.bones[upper]
             parent = rig.pose.bones[bone.parent.name]
             head = parent.matrix @ bone.parent.matrix_local.inverted() @ bone.head_local
-            ankle = foot_target(family, side, p, clip, sit)
+            ankle = foot_target(family, side, p, clip)
             offset = (Vector(SPECS[f"HindFoot_{side}"][0])-Vector(SPECS[f"HindPaw_{side}"][0])) if family == "Hind" else Vector((0, 0, 0))
             target = ankle + offset
             knee, target = solve_knee(head, target, rig.data.bones[upper].length, rig.data.bones[lower].length, Vector((0, -1 if family == "Hind" else 1, 0)))
@@ -346,7 +334,7 @@ def review_asset(rig, mesh, actions, camera, directory, glb_hash):
                             "paws_m": {bone: list(rig.matrix_world @ rig.pose.bones[bone].head) for bone in ["ForePaw_L", "ForePaw_R", "HindPaw_L", "HindPaw_R"]}})
             evaluated.to_mesh_clear()
     views = {"front": (0, -5, 1), "left": (5, 0, 1), "right": (-5, 0, 1), "back": (0, 5, 1)}
-    for clip, time, tag in [(None, 0, "rest"), ("Walk", .9, "walk-lift"), ("Run", 17/30, "run-lift"), ("Sit", 1, "sit-mid"), ("Sit", 2, "sit-held")]:
+    for clip, time, tag in [(None, 0, "rest"), ("Walk", .9, "walk-lift"), ("Run", 17/30, "run-lift")]:
         rig.animation_data.action = actions.get(clip)
         if clip is None:
             for bone in rig.pose.bones:
@@ -357,7 +345,7 @@ def review_asset(rig, mesh, actions, camera, directory, glb_hash):
             name = f"{tag}-{view}.png"; scene.render.filepath = str(directory / name); bpy.ops.render.render(write_still=True)
             captures.append({"path": name, "clip": clip, "time": time, "view": view})
     camera.location = Vector((3, -4, 2.6))*METERS_PER_UNIT; aim(camera, Vector((0, .03, .92))*METERS_PER_UNIT)
-    for name, time in [(None, 0), ("Idle", 1.5), ("Walk", .3), ("Run", .2), ("Sit", 2.0)]:
+    for name, time in [(None, 0), ("Idle", 1.5), ("Walk", .3), ("Run", .2)]:
         rig.animation_data.action = actions.get(name)
         if name is None:
             for bone in rig.pose.bones:
@@ -413,7 +401,7 @@ def main():
                 "blender": bpy.app.version_string, "fps": FPS, "units": "meters", "authoring_unit_meters": METERS_PER_UNIT, "blender_front": "-Y", "gltf_up": "+Y", "gltf_front": "+Z",
                 "joints": list(SPECS), "clips": [{"name": name, "duration": duration, "loop": loop, "in_place": True} for name, (duration, loop) in CLIPS.items()],
                 "topology": {"main_connected_body": main_topology, "welded_main_body": welded_body, "complete_mesh": topology(mesh.data), "intentional_components": "Two closed eye surfaces attached to Head; body, paws, ears and tail form one component."},
-                "locomotion": {"Walk": {"forward": "+Z", "nominal_meters_per_cycle": .3*.28/.66}, "Run": {"forward": "+Z", "nominal_meters_per_cycle": .3*.45/.4}, "Sit": {"hold_from_seconds": 1.6, "loop": False}},
+                "locomotion": {"Walk": {"forward": "+Z", "nominal_meters_per_cycle": .3*.28/.66}, "Run": {"forward": "+Z", "nominal_meters_per_cycle": .3*.45/.4}},
                 "materials": [mat.name for mat in mesh.data.materials], "uv": "Original UV atlas preserved through patch repair; one embedded 1024x1024 PNG, packed in Blender to fit browser recovery",
                 "files": {name: {"bytes": (output/name).stat().st_size, "sha256": hashlib.sha256((output/name).read_bytes()).hexdigest()} for name in ["sable.blend", "sable.glb"]}}
     (output / "asset.json").write_text(json.dumps(manifest, indent=2)+"\n", encoding="utf8")

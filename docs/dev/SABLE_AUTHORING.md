@@ -13,7 +13,7 @@ remain in [ASSET_PROVENANCE.md](ASSET_PROVENANCE.md); the
 ## Editable source
 
 The [Blender master](../../examples/black-cat/sable.blend) contains geometry, UVs,
-packed texture, weights and four retained actions. It opens at the neutral
+packed texture, weights and three retained actions. It opens at the neutral
 standing pose; actions can be selected in the Action Editor. Its authoring frame
 is +Z up and -Y forward, at 0.3 meters per authoring unit. The exported GLB uses
 meters, +Y up and +Z forward. Authoring lights, floor and cameras are not exported.
@@ -35,7 +35,7 @@ texture are retained. Omit `--output-dir` only when deliberately replacing the
 sample after backing up manual rig or animation edits.
 
 Add `--render --review-dir output/sable-review` for fixed-camera front, left,
-right and rear images at rest, Walk/Run lift, mid-Sit and held Sit, five
+right and rear images at rest and Walk/Run lift, four
 three-quarter views, and native evaluated-mesh floor/paw samples at every key
 and midpoint. Review output stays local.
 `asset.json` binds the generator and output bytes by SHA-256; Blender output is
@@ -46,9 +46,11 @@ editable geometry, UVs, packed texture, weights and actions.
 
 The raw GLB unit checks independently inspect hierarchy, UVs, influences, floor
 clearance, known root motion, gait lift, full rotation/scale/skinned loop seams
-and the held Sit ending. Deliberately damaged terminal and interior keys must fail.
-An alternate-output Blender rebuild passes the same independent continuity
-checks; this does not promise identical Blender file bytes. The
+for all three looping clips. Deliberately damaged terminal and interior keys must fail.
+The revised three-clip recipe rebuilt successfully in Blender 5.2.1 into a
+separate evidence directory. Independent geometry, skin, texture, dense motion
+and loop-seam checks passed against the distributed sample. File bytes are
+not promised identical across rebuilds. The
 browser and product journey check ordinary Open/playback, project continuation
 and independently sampled queued GLB roundtrip. See the
 [test inventory](../../source/frontend/tests/README.md).
@@ -56,3 +58,7 @@ and independently sampled queued GLB roundtrip. See the
 <!--
 AI-edited: 2026-10-16T16:21:33.101Z | agent=Codex/root | task=standalone-product-guidance | change=kept user workflows self-contained and routed optional sample authoring to developer notes
 -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-remove-sit | change=reflect three-clip sample and preview -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-review-cleanup | change=align public scope and current verified continuation -->

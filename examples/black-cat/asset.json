@@ -16,7 +16,7 @@
   },
   "generator": {
     "path": "build_black_cat.py",
-    "sha256": "ddea3910a2f001e6e3d5bba34123ef9daec80dc4fb196df0a0ae3552938c7d44"
+    "sha256": "34327038cd3ff23748016c4799fc49f8bca18bc0ba0ce2e31e2941cc7d3257b1"
   },
   "blender": "5.2.1 LTS",
   "fps": 30,
@@ -69,12 +69,6 @@
       "duration": 0.8,
       "loop": true,
       "in_place": true
-    },
-    {
-      "name": "Sit",
-      "duration": 2.0,
-      "loop": false,
-      "in_place": true
     }
   ],
   "topology": {
@@ -109,10 +103,6 @@
     "Run": {
       "forward": "+Z",
       "nominal_meters_per_cycle": 0.3375
-    },
-    "Sit": {
-      "hold_from_seconds": 1.6,
-      "loop": false
     }
   },
   "materials": [
@@ -121,12 +111,12 @@
   "uv": "Original UV atlas preserved through patch repair; one embedded 1024x1024 PNG, packed in Blender to fit browser recovery",
   "files": {
     "sable.blend": {
-      "bytes": 1917615,
-      "sha256": "f95dd4464bb9c22dcc78e6149588e0130f390299a31f40e669e95ba8eb77ef77"
+      "bytes": 1834316,
+      "sha256": "0e3691768f65490d714a99650d6d0531219a50ccd90a2e06509d80e37655e4eb"
     },
     "sable.glb": {
-      "bytes": 1805456,
-      "sha256": "d3d5ad87506fe90c7eaf22e3a767924c4c7d6239cff51648361d88f2ad2d1f49"
+      "bytes": 1797788,
+      "sha256": "7c24cf14e09f84bdb7512cbb328013e71faa881b8ccd25de5d197a4892f05dd1"
     }
   }
 }

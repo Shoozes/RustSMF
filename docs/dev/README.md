@@ -4,7 +4,7 @@
 
 Work locally on `main`, preserve existing changes, and publish only an explicitly reviewed scope. Maintainers use their ignored local `.tools/gitpush.ps1`; these private helpers and `.agents/` are absent from public source. AGENTS.md and `GIT_PUBLISH.md` own the maintainer synchronization contract. Public setup and checks use `run.ps1`; user/contributor entry points stay in the root README and CONTRIBUTING.md.
 
-RustSMF owns import/export, rig inspection, skin editing, retargeting, generic pose constraints, animation sampling and reproducible asset processing. `fight-game-study` owns fighter definitions, moves, candidate selection and game visual acceptance. `GaimEngine` owns scheduling, hosts, packages and target delivery. Jobs and game-specific mappings/appearance remain caller-owned; tool work reopens for a reproducible defect with a bounded noncombat fixture.
+RustSMF owns import/export, rig inspection, skin editing, retargeting, generic pose constraints, animation sampling and reproducible asset processing. Consumer applications own their content, scheduling, hosting, packaging and delivery. Jobs and application-specific mappings/appearance remain caller-owned; tool work reopens for a reproducible defect with a bounded fixture.
 
 RustSMF is a standalone product. No other first-party checkout is required to
 build, run, verify, package or maintain it. Versioned export formats are supported
@@ -62,3 +62,5 @@ Exact discovered test counts belong in dated verification evidence, not repeated
 <!--
 AI-edited: 2026-10-15T04:46:35-04:00 | agent=Codex/root | task=docs | change=closed export queue evidence and preserved ZIP ownership
 -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-review-cleanup | change=align public scope and current verified continuation -->

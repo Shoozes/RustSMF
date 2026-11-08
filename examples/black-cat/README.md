@@ -1,12 +1,12 @@
 # Sable: original black cat and animation pack
 
-[![Sable playing Idle, Walk, Run and Sit in RustSMF](../../docs/images/sable-motion.gif)](../../docs/images/sable-idle.webm)
+[![Sable playing Idle, Walk and Run in RustSMF](../../docs/images/sable-motion.gif)](../../docs/images/sable-idle.webm)
 
-WebM · [Idle](../../docs/images/sable-idle.webm) · [Walk](../../docs/images/sable-walk.webm) · [Run](../../docs/images/sable-run.webm) · [Sit](../../docs/images/sable-sit.webm) · 2.4 seconds each.
+WebM · [Idle](../../docs/images/sable-idle.webm) · [Walk](../../docs/images/sable-walk.webm) · [Run](../../docs/images/sable-run.webm) · 2.4 seconds each.
 
 [Open the self-contained GLB](sable.glb) · [Asset details](asset.json)
 
-A cat with a rig, texture and four animation clips.
+A cat with a rig, texture and three animation clips.
 [MIT licensed](../../LICENSE), copyright 2026 Shoozes.
 
 ## Try the pack
@@ -14,8 +14,6 @@ A cat with a rig, texture and four animation clips.
 1. Download [`sable.glb`](sable.glb) with **Download raw file**.
 2. Open it in RustSMF. Choose **Animate → Tools → Clips**, select a clip, then **Play**.
 3. Use **Save Project** to keep edits.
-
-For **Sit**, pause and scrub to the end to see the held pose.
 
 ### Export all clips — source builds
 
@@ -26,14 +24,13 @@ For **Sit**, pause and scrub to the end to see the held pose.
 The 0.2.1 preview uses its existing GLB export and has no queue. Its included
 sample is Signal Robot.
 
-Playback repeats every clip. Sit is authored to play once, then hold.
+Playback repeats all three clips.
 
 | Clip | Duration | Playback | Motion |
 | --- | --- | --- | --- |
 | Idle | 3.0 s | Loop | Breathing, head and tail motion; planted paws |
 | Walk | 1.2 s | Loop | In-place four-beat gait |
 | Run | 0.8 s | Loop | In-place paired gallop |
-| Sit | 2.0 s | Once | Lower into a sit; hold from 1.6 s |
 
 <details>
 <summary>Rig, motion and transfer details</summary>
@@ -88,8 +85,7 @@ exported.
 24-joint **mapping example**, with no coordinate/direction correction. Import it
 through **Animate → Transfer → Mapping details → Profile** when using a Sable
 source. Preview Idle/Walk/Run before Apply; new `Sable_Transfer_*` names preserve
-the original clips. Sit is deliberately excluded: its authored non-root
-translations and scale are not retained by this profile. The current transfer
+the original clips. The current transfer
 solver moves root/rotations; this example is not a lossless same-rig clip copier.
 Use GLB export with all clips to preserve the authored pack exactly. For another
 rig, review mapping, rest frames and proportions first; this profile establishes
@@ -107,3 +103,5 @@ Borrowed references and raw drafts are not included.
 AI-created: 2026-10-15 | agent=Codex/root | task=original-assets
 AI-edited: 2026-10-16 | agent=Codex/root | task=animal-chain-assistance | change=showed all four Sable clips
 -->
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-remove-sit | change=reflect three-clip sample and preview -->

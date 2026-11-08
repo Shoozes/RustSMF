@@ -19,9 +19,10 @@ prefers GenEye and app-native controls over general computer-use automation.
    `Chrome_RenderWidgetHostHWND` with UIA to reach actual buttons. Prefer its
    Invoke pattern or app-native messages without focus. For common dialogs,
    locate the filename edit and action buttons by current UIA/native properties.
-   Use `scripts/quiet-control.ps1` for exact owner-receipt checks and the
-   verified renderer/dialog control actions. `DialogSave` rejects an existing
-   output unless `-AllowExistingSave` is explicit for a reviewed overwrite test.
+   The public `scripts/installed-test-session.ps1` runner and its native/UIA/dialog
+   helpers own receipt checks and verified renderer/dialog control actions. The
+   historical `quiet-control.ps1` helper is not part of the public checkout.
+   The bounded dialog helper refuses an existing save destination.
    A minimized Tauri app can still put native Open/Save dialogs on the operator's
    active desktop. Do not invoke any picker there during a quiet run. Establish
    a verified isolated desktop/session first, or leave its real-dialog case
@@ -35,6 +36,10 @@ prefers GenEye and app-native controls over general computer-use automation.
    matching PID/path session attestation. WebView isolation alone does not isolate
    native recovery. Preserve the default recovery files before launch and require
    exact hashes/times after cleanup. Unsupported installers refuse before UIA.
+   An attended visible run requires explicit operator authorization. The
+   2026-11-08 task adapter and exact capture/control sequence are retained in
+   [the attended record](../../INSTALLED_TEST_SESSION.md#attended-observation-20261108);
+   that run does not change the isolated runner's default or its refusal guards.
 3. Keep tests quiet. Do not move the physical pointer or take the operator's
    foreground window. Do not use CUA for this workflow. If a WebView control
    exposes no quiet app-control route, leave that case unverified and record the
@@ -68,3 +73,5 @@ AI-edited: 2026-10-30 | agent=Codex/root | task=installed-native-queue | change=
 AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=qualify opt-in native isolation and retain earlier shared recovery impact explicitly
 
 AI-edited: 2026-11-02 | agent=Codex/root | task=installed-preview-diagnostics | change=link bounded isolated mapping control proof
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=installed-attended-observation | change=record completed selected visual criterion and remaining scope -->

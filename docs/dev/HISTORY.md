@@ -1,5 +1,71 @@
 # RustSMF History
 
+<a id="installed-attended-observation-20261108"></a>
+## 2026-11-08 - Selected installed visual observation completed
+
+After explicit operator authorization for an attended visible session, the
+retained follow-up executable `c2f76eb3df38d780294ef64a211f9e85ff0780f03859e2181a51027639c9596f`
+ran with a fresh attested native/WebView profile and task-owned kill-on-close
+job. The new three-clip Sable fixture is separately hash-bound; no old receipt
+was relabelled. The task adapter reuses the existing native/UIA/dialog helpers.
+No physical pointer input or product runtime hook was used.
+
+Reviewed compositor PNGs show the loaded model, paused retarget preview at
+0.50 s, applied result and saved/reopened result. GenEye 0.5.1 supervised
+`record-smooth --window-hwnd` retained five seconds of normal 1x Walk playback
+at 30 fps (150 frames). The supervisor badge and taskbar are recorded occluders
+outside the model body. This is bounded playback evidence, not all-clip or
+all-view visual qualification. The earlier compositor-selector recording
+attempt was rejected by the supervised target match; the matching window-handle
+selector succeeded under the same valid supervision grant.
+
+Independent inspection confirms preview export equals canonical baseline,
+Apply retains Idle/Walk/Run and adds Installed Sable Motion, and project/reopen
+preserve the paused 0.50 s state and exact independent asset values. Across
+635,925 sampled world-skin points, maximum difference is 0.000001348663 m under
+0.00002 m. Normal playback, framing, texture, deformation and visible controls
+were reviewed without a new rendering defect. Preview and canonical timelines
+have different heights; their framing changes are not pose differences.
+
+The app job and process handles closed with zero active processes. Canonical
+default recovery bytes and timestamps stayed exact. The bounded supervisor
+expired and revoked permission. Required images, MP4, native control responses,
+profile, fixtures, adapter source and independent proof are retained under
+`D:/Compact_Evidence/RustSMF/runs/installed-observation-attended-20261108/`.
+The selected TODO observation Done When is met. Quiet isolated capture, broader
+mapping selection, old matrices and public release are not newly qualified.
+No commit, push or release was performed.
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=installed-attended-observation | change=close selected observation with source-bound visual and cleanup proof -->
+
+
+<a id="sable-removal-review-20261108"></a>
+## 2026-11-08 - Remove rejected Sable Sit animation
+
+Removed Sit from the distributed GLB, editable Blender actions and rebuild recipe.
+Idle, Walk and Run descriptors and the entire GLB BIN chunk remain byte-identical
+to `b9fd67f`; mesh, skin, texture and remaining motion were preserved. Updated
+asset hashes, sample guides and clip consumers. The README GIF was re-encoded
+from the three existing labelled playback WebMs; the Sit WebM was removed.
+Reviewed GIF frames show only Idle/Walk/Run. Existing installed receipts keep
+their prior asset epoch; this change does not renew installed acceptance.
+
+Local checks: seven asset units, five installed-proof controls, test typecheck,
+three Sable browser cases and the project/queued-export continuation journey
+passed. Blender 5.2.1 saved exactly three retained actions; recipe syntax passed.
+The subsequent review rebuilt the three-clip recipe in Blender 5.2.1;
+independent geometry, skin, texture, dense motion and loop-seam checks passed.
+The new clip-inventory control accepts a historical four-clip fixture only
+when its original inventory is supplied, while refusing extra clips for the
+current three-clip pack. Both public READMEs now use generic consumer ownership.
+The review rechecked that the approved debug cache and temporary candidate
+clone are absent; no deletion was performed during this review. Earlier
+cleanup edits in APP_STATE were preserved. Source hashes, exact commands and
+rebuild output are retained in the `sable-review-20261108` compact-evidence run.
+No commit, push or release is included.
+
+<!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-remove-sit | change=remove unsuitable motion and refresh sample preview -->
+
 This file is the canonical home for completed repo/app work and its durable verification record. Current behavior belongs in `APP_STATE.md`; tracked scope and acceptance outcomes belong in `TODO.md`; recurring hazards belong in `PITFALL_LEDGER.md`.
 
 <a id="export-cleanup-recheck-2026-11-02"></a>
