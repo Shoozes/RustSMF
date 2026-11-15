@@ -1,5 +1,32 @@
 # Pitfall Ledger
 
+<a id="pl-064"></a>
+### Q: Why does supervision accept the HWND but recording refuses it?
+
+**ID:** PL-064
+**Guard:** `docs/dev/skills/geneye-installed-control/IMPLEMENTATION_NOTES.md`
+
+**Status:** resolved for the attended RustSMF Sable observation on GenEye 0.5.1.
+**Search hooks:** `record-smooth`, supervisor target mismatch, `--compositor-hwnd`, `--window-hwnd`.
+
+**What happened:** A visible supervisor grant bound to the verified app window
+was active, but a compositor recording selector failed the target match. The
+plain window selector on the same HWND succeeded under the same grant.
+
+**How to catch it:** Read the grant and requested selector together before
+recording. Verify the manifest, decoded frames and whether the model is
+obscured. A successful still capture cannot establish playback.
+
+**Current solution:** Use the matching window selector for supervised
+desktop-crop footage and use compositor stills for the reviewed paused states.
+The [attended record](HISTORY.md#installed-attended-observation-20261108)
+reports 150 frames over five seconds. Isolated capture remains unqualified.
+
+**Relevance check:** Current for supervised playback. Guard is procedure and
+observed evidence. Automated prevention effectiveness is unknown.
+
+<!-- AI-edited: 2026-11-15 | agent=Codex/root | task=workflow-proof | change=retain bounded playback selector lesson -->
+
 Last reviewed: 2026-09-25 (stable PL IDs and Guard references plus v0.2 palette, version-sync, and journey regression guards; prior DAE/FBX and retargeting records remain covered).
 
 ### Q: What pitfall are we preventing?

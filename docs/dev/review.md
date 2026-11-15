@@ -1,10 +1,26 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-11-08
+Last reviewed: 2026-11-15
 
 Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
+
+## Sample and workflow maintenance — 2026-11-15
+
+Reviewed `5d609d4` and the local catalog, storage and installed-control changes.
+The October native debug cache is absent, while its review receipts and WASM
+cache remain. The shared project index resolves the sample catalog. Signal
+Robot's GLB contains 2,400 vertices across ten primitives. Cleanup removed
+the stale hardcoded count from the generator's success message.
+
+The installed run remains historical. Its recorded evidence bucket is
+unavailable at both standard local roots. This review did not rerun live
+capture or infer a cache disposition from the missing folder. TODO records
+the evidence lookup needed before release reuse. No executable product batch
+was identified.
+
+<!-- AI-edited: 2026-11-15 | agent=Codex/root | task=review-recheck-cleanup | change=record catalog and evidence findings -->
 
 ## Sable removal review and recheck — 2026-11-08
 

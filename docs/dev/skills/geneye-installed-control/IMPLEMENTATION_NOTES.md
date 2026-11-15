@@ -4,7 +4,55 @@ This records the RustSMF installed-app control experiment so its useful pieces
 can be evaluated for a future GenEye CLI/API capability. The current helper is
 repository-local PowerShell, not a GenEye control API. GenEye supplies targeted
 observation; `scripts/quiet-control.ps1` supplies narrowly checked UIA and
-native-window actions.
+native-window actions. The tracked PowerShell helper records the earlier
+experiment. The installed-session runner owns the current acceptance workflow.
+
+## Choose the proof by outcome
+
+| What and why | Who, where and when | How to prove it |
+| --- | --- | --- |
+| Exercise Open, queue failure or retry | The RustSMF maintainer runs the isolated probe on Windows against a selected installed binary and fresh profile. | Use native controls and exact filename readback. Verify actual output or write refusal independently. |
+| Review model and paused preview pixels | Use GenEye on the exact app window when the task calls for installed visuals. | Capture the loaded, preview, applied and reopened states. Check resolved HWND/PID, quality and visible model region. |
+| Review normal-speed playback | Use a bounded, attended Windows session with operator authorization when isolated capture cannot supply pixels. | Verify supervision and record the matching window target. Check decoded duration, frame count and crop occlusion. |
+
+For the [November Sable run](../../HISTORY.md#installed-attended-observation-20261108),
+an isolated capture returned `0x80070057`. In the later attended session, the
+supervisor grant matched plain window capture. A compositor selector was
+rejected for recording, while the same HWND with `--window-hwnd` worked.
+Use compositor stills for paused states where supported and a short supervised
+window recording for motion. Review the model region for occlusion. The
+taskbar and supervisor badge were visible in the recording outside that region.
+
+In two PowerShell sessions, resolve the owned HWND and use a new task run
+directory for the grant and outputs. Here `$appHwnd` is the verified handle and
+`$runDir` is the existing task directory.
+
+```powershell
+GenEye supervise --hwnd $appHwnd --session-file "$runDir/supervised.json" --seconds 120
+```
+
+In the recording shell, while the supervisor is active:
+
+```powershell
+$env:GENEYE_SUPERVISED_CAPTURE_SESSION = "$runDir/supervised.json"
+try {
+    GenEye record-smooth --window-hwnd $appHwnd --duration-ms 5000 --fps 30 `
+        --out "$runDir/playback.mp4" --manifest "$runDir/playback-recording.json" `
+        --ffmpeg (Get-Command ffmpeg).Source
+    if ($LASTEXITCODE -ne 0) { throw 'GenEye recording failed' }
+} finally {
+    Remove-Item Env:GENEYE_SUPERVISED_CAPTURE_SESSION
+}
+```
+
+Use a fresh recording shell so a prior grant is never overwritten. After
+capture, let the bounded supervisor expire or use its visible stop control.
+Keep the terminal owner receipt and verify job exit and default recovery
+hashes and times. In the Sable case, baseline and preview exports matched,
+and Apply and save/reopen preserved the selected paused time and motion.
+Those comparisons complement the pixels. The commands were observed on GenEye
+0.5.1; the 0.5.2 CLI help accepts the shown flags. A new visual session would
+be needed to qualify 0.5.2 capture behavior.
 
 ## Why the helper exists
 

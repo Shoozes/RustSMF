@@ -1296,6 +1296,7 @@
       "description": "Sable asset contract, presentation and independent dense skin/motion guards.",
       "max_kb": 48,
       "paths": [
+        "examples/README.md",
         "examples/black-cat/README.md",
         "examples/black-cat/asset.json",
         "examples/black-cat/sable.retarget-profile.json",

@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-11-08
+Last reviewed: 2026-11-15
 
 The public `v0.2.1-preview` remains unchanged. RustSMF owns its producer,
 editor, formats and package acceptance. GaimEngine owns consumer receiving and
@@ -32,13 +32,26 @@ requires a separate release decision.
 
 ## Housekeeping exceptions — named scratch and owned build cache remain blocked
 
-The attended observation also retains its inactive task-owned
-`Compact_Evidence/RustSMF/runs/installed-observation-attended-20261108/profile/webview/`
-cache (36,125,417 logical bytes). Automatic approval review rejected its exact
-scoped removal as `blocked by policy`; no deletion or alternate route ran.
-The run's `summary.json` owns its disposition. An owner action permitted by
-command policy may remove only that cache, preserving the profile attestation,
-native recovery, fixtures and required visual/output evidence.
+The native October review debug directory is now absent. Its earlier removal
+attempt was blocked by policy, and the review receipts and WASM cache remain
+under `output/review-cleanup-20261007/`. Two 2026-11-02 review snapshots under `runtime-data/` total
+63,998,438 bytes and need their source/proof ownership resolved before removal.
+
+Three generated reference files in `output/skeletal-export-priority7a-20261021/`
+were compressed in place. The run receipt
+`runtime-data/storage-compaction-20261115.json` records unchanged hashes and
+timestamps and 10,456,200 fewer stored bytes.
+
+The attended run's WebView cache removal was blocked by policy on November 8.
+On November 15, the RustSMF evidence bucket was absent from both standard
+local evidence roots. A follow-up search by run name in the checkout's
+output and runtime directories and the local backup roots found no copy.
+The disposition of those files is unknown. Before reusing the attended
+evidence for a release, the maintainer needs the original run or archive.
+The evidence check is complete when the executable, fixture and captures
+match the recorded identities and the terminal receipt proves job exit and
+unchanged default recovery. The historical result remains in
+[HISTORY](HISTORY.md#installed-attended-observation-20261108).
 
 - What: Remove named scratch only through an authorized route.
 - Why: Reclaim disposable copies without affecting product acceptance.

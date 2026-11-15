@@ -1,5 +1,23 @@
 # RustSMF History
 
+<a id="storage-workflow-20261115"></a>
+## 2026-11-15 - Sample catalog and storage workflow
+
+The shared local game-projects index links to the RustSMF sample catalog.
+RustSMF kept its installer and test paths and corrected the catalog's stale
+Sit listing. The cleanup selected three generated reference JSON files in
+`output/skeletal-export-priority7a-20261021/generations/`. NTFS file compression
+reduced stored bytes by 10,456,200. All three files retained exact SHA-256,
+logical size and modification time and matched their generation manifests.
+The member receipt is `runtime-data/storage-compaction-20261115.json`.
+
+Automatic review blocked the native October cache deletion before execution.
+A later read-only check found the exact debug directory absent, with the
+sibling WASM debug cache and review receipts still present. The command that
+ultimately removed it was not observed. Other cleanup candidates remain in TODO.
+
+<!-- AI-edited: 2026-11-15 | agent=Codex/root | task=workflow-proof | change=record sample and storage cleanup observations -->
+
 <a id="installed-attended-observation-20261108"></a>
 ## 2026-11-08 - Selected installed visual observation completed
 

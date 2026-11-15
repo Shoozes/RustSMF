@@ -12,4 +12,4 @@ const result = await new GLTFExporter().parseAsync(scene, { binary: true, animat
 if (!(result instanceof ArrayBuffer)) throw new Error('Demo export did not produce a GLB');
 await mkdir(path.dirname(output), { recursive: true });
 await writeFile(output, new Uint8Array(result));
-console.log(`Generated ${path.basename(output)} (${result.byteLength} bytes); 5 bones, 2 clips, 240 vertices.`);
+console.log(`Generated ${path.basename(output)} (${result.byteLength} bytes).`);

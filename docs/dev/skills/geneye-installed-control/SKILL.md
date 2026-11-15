@@ -20,8 +20,9 @@ prefers GenEye and app-native controls over general computer-use automation.
    Invoke pattern or app-native messages without focus. For common dialogs,
    locate the filename edit and action buttons by current UIA/native properties.
    The public `scripts/installed-test-session.ps1` runner and its native/UIA/dialog
-   helpers own receipt checks and verified renderer/dialog control actions. The
-   historical `quiet-control.ps1` helper is not part of the public checkout.
+   helpers own receipt checks and verified renderer/dialog control actions.
+   The tracked [quiet-control helper](scripts/quiet-control.ps1) documents
+   earlier exact-HWND experiments. Use the session runner for acceptance.
    The bounded dialog helper refuses an existing save destination.
    A minimized Tauri app can still put native Open/Save dialogs on the operator's
    active desktop. Do not invoke any picker there during a quiet run. Establish
@@ -61,8 +62,10 @@ exported reviewed mapping proved the selection. UIA ValuePattern alone did not.
 See [the diagnostic record](../../INSTALLED_TEST_SESSION.md#isolated-dropdown-and-capture-diagnostics--2026-11-02);
 do not extrapolate that result to other controls or desktops.
 
-[Implementation notes](IMPLEMENTATION_NOTES.md) record how this local UIA route
-was built, its observed limits, and the possible GenEye extraction boundary.
+[Implementation notes](IMPLEMENTATION_NOTES.md#choose-the-proof-by-outcome)
+give worked examples for installed state, visible playback and saved output.
+Read the [selector pitfall](../../PITFALL_LEDGER.md#pl-064) when supervision is
+active but a playback recorder cannot match its target.
 
 <!-- AI-edited: 2026-10-26 | agent=Codex/root | task=standalone-quiet-control | change=route installed acceptance through quiet GenEye and exact-HWND controls -->
 

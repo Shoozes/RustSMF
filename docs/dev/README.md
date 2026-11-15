@@ -16,6 +16,21 @@ The 0.2.1 preview adds first-party MIT metadata, installed dependency notices an
 
 Keep developer docs concise and evidence-based. This repo has one current-state doc, one backlog, one pitfall ledger, and one context bank.
 
+### Samples, evidence and cleanup
+
+Use the [sample catalog](../../examples/README.md) to find authored examples.
+Link cross-project catalogs to this entry point and keep the sample paths
+stable for packaging and tests. Before cleaning old output, identify the
+producing run, check for active users and links, and locate its verifier or
+installed-package references. Record the exact retained or removed path.
+
+For hash-bound generated JSON on NTFS, compress reviewed files in place.
+Record each file's hash, timestamp and stored size before and after, then
+reopen the owning manifest and check its expected byte length and hash. The
+[November cleanup record](HISTORY.md#storage-workflow-20261115) shows the result.
+When an exact cache deletion is blocked, retain the path and cause in TODO and
+verify the filesystem again after any operator cleanup.
+
 ### Source launcher
 
 From the repository root, `run.bat` or `pwsh -File run.ps1` opens the numbered menu. Choose `2. Run if already installed`, or use `run.bat 2` / `pwsh -File run.ps1 -Task run` directly. `-Task dev` launches browser development.
@@ -64,3 +79,5 @@ AI-edited: 2026-10-15T04:46:35-04:00 | agent=Codex/root | task=docs | change=clo
 -->
 
 <!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-review-cleanup | change=align public scope and current verified continuation -->
+
+<!-- AI-edited: 2026-11-15 | agent=Codex/root | task=workflow-proof | change=record sample and evidence maintenance workflow -->

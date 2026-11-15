@@ -35,7 +35,8 @@ visual observation also passed on this executable. The local package does not
 replace the published download. See
 [current acceptance and limits](docs/dev/STANDALONE_ACCEPTANCE.md).
 
-Try [Sable, our original black cat](examples/black-cat/README.md), a self-contained
+Browse the [sample catalog](examples/README.md) or try
+[Sable, our original black cat](examples/black-cat/README.md), a self-contained
 GLB with Idle, Walk and Run. The Windows preview download still includes
 Signal Robot.
 
