@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-11-15
+Last reviewed: 2026-11-16
 
 The public `v0.2.1-preview` remains unchanged. RustSMF owns its producer,
 editor, formats and package acceptance. GaimEngine owns consumer receiving and
@@ -34,8 +34,17 @@ requires a separate release decision.
 
 The native October review debug directory is now absent. Its earlier removal
 attempt was blocked by policy, and the review receipts and WASM cache remain
-under `output/review-cleanup-20261007/`. Two 2026-11-02 review snapshots under `runtime-data/` total
-63,998,438 bytes and need their source/proof ownership resolved before removal.
+under `output/review-cleanup-20261007/`.
+
+The operator completed the approved nine-path cleanup. A filesystem recheck
+confirmed that the three native debug trees, two November publication
+snapshots, and four October passing logs are absent. Publication receipts,
+reviewed captures, and the compact results summary remain. The summary still
+matches its recorded SHA-256. Tracked source, the release executable, and the
+preview installer were present on recheck. Old debug binaries require a
+rebuild, and the original snapshot paths and full passing transcripts are
+retired. The local approval manifest and recheck are in
+`runtime-data/storage-retirement-review-20261116/`.
 
 Three generated reference files in `output/skeletal-export-priority7a-20261021/`
 were compressed in place. The run receipt
@@ -68,16 +77,10 @@ directories after automatic approval review rejected their scoped removal as
 exact inventory, owner and roughly 4.43 GiB logical cleanup scope. Preserve
 installers, recovery, source and proof; cleanup requires a permitted owner action.
 
-A separate 2026-11-01 disk review measured three current-checkout Rust `debug`
-trees (`source/src-tauri/target`, `source/retarget-core/target` and
-`source/pose-contact/target`) at 4.37 GB logical, plus the `debug` trees in the
-2026-10-28 HipEndpoint and RootBody isolated Cargo targets and the 2026-10-29
-Coupled isolated Tauri target at 12.01 GB logical. All six selected scans were
-complete and unchanged on recheck; they had no nested links or observed
-executable users. The operator approved exactly those six directories, but
-automatic command review rejected their removal as `blocked by policy` before
-execution. All six remained present. Do not reroute the rejected operation;
-source, release builds, shared dependencies and retained proof remain protected.
+The November 1 disk review also measured three older isolated `debug` trees
+at 12.01 GB logical in the HipEndpoint, RootBody, and Coupled runs. Automatic
+review blocked their removal at that time. Their present disposition was
+outside the nine-path recheck.
 
 The 2026-10-28 isolated hip-Y producer proof retained task-owned rebuildable
 outputs on D: after a passing verify: a failed global Cargo target (4.26 GB
@@ -117,3 +120,4 @@ AI-edited: 2026-11-02 | agent=Codex/root | task=installed-supervised-capture | c
 <!-- AI-edited: 2026-11-08 | agent=Codex/root | task=installed-attended-observation | change=record completed selected visual criterion and remaining scope -->
 
 <!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-closeout-publish | change=polish candidate scope and account for retained owned cache -->
+<!-- AI-edited: 2026-11-16 | agent=Codex/root | task=storage-retirement | change=record verified operator cleanup -->
