@@ -278,6 +278,31 @@ test.describe('RustSMF export formats flow (Chromium)', () => {
       expect(getBrowserErrors(page).filter((entry) => entry.includes('ERROR'))).toEqual([]);
     });
 
+  test('Export workspace GLB keeps the imported rest pose during autoplay', async ({ page }) => {
+    await page.goto('/');
+    await page.getByTestId('model-file-input').setInputFiles(
+      await createSkinnedGlbFixtureInputWithOptions({ clipDuration: 20 }),
+    );
+    await expect(page.getByTestId('status-text')).toHaveAttribute('title', /bones: 2.*clips: 1/);
+    await selectWorkspace(page, 'export', false);
+    const canvas = page.getByTestId('three-canvas');
+    await expect.poll(async () => Number(await canvas.getAttribute('data-playback-time'))).toBeGreaterThan(0.5);
+
+    const downloadPromise = page.waitForEvent('download');
+    await clickSecondaryCommand(page, 'export-glb-btn');
+    const download = await downloadPromise;
+    const glb = readGlbJson(fs.readFileSync(await download.path())) as {
+      nodes: Array<{ name?: string; translation?: number[]; rotation?: number[] }>;
+    };
+    const root = glb.nodes.find(node => node.name === 'FixtureRoot');
+    const tip = glb.nodes.find(node => node.name === 'FixtureTip');
+    expect(root).toBeDefined();
+    expect(tip).toBeDefined();
+    expect(root?.translation ?? [0, 0, 0]).toEqual([0, 0, 0]);
+    expect(tip?.rotation ?? [0, 0, 0, 1]).toEqual([0, 0, 0, 1]);
+    await expect(page.getByTestId('status-text')).toContainText('verified 2 bones, 1 clips');
+  });
+
   test('generated skinned GLB load, GLB export, and SMF conversion', async ({ page }) => {
       await page.goto('/');
 

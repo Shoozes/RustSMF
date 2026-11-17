@@ -3,8 +3,8 @@ import { withSourceMaterialState } from '../utils/materialPreview';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { disposeThreeObject } from '../utils/threeDisposal';
-import { isThreeBone, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
-import type { PreviewRestTransforms } from '../utils/workspacePlayback';
+import { isThreeBone, isThreeMesh, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
+import type { PreviewRestState } from '../utils/workspacePlayback';
 import { bytesToArrayBuffer } from './smfBinary';
 import { ensureGeometryAttributes } from './geometryAttributes';
 import {
@@ -193,18 +193,29 @@ function resourceBasePath(name: string): string {
 export async function exportGLB(
   root: THREE.Group,
   clips: THREE.AnimationClip[] = [],
-  previewRestTransforms?: PreviewRestTransforms,
+  previewRestState?: PreviewRestState,
 ): Promise<Uint8Array> {
   return withSourceMaterialState(root, async () => {
     const { GLTFExporter } = await import('three/examples/jsm/exporters/GLTFExporter.js');
     const exporter = new GLTFExporter();
+    const playbackDefaults = clips.length ? previewRestState : undefined;
     exporter.register(writer => {
       const nodesWithoutSkinRoot: Array<Record<string, unknown>> = [];
       return {
+        writeMesh(mesh, definition) {
+          // Three seeds a shared mesh's fallback from the first instance it writes.
+          const weights = playbackDefaults?.get(mesh)?.weights;
+          if (weights) definition.weights = weights;
+        },
         writeNode(node, definition) {
-          // Animated GLB nodes use TRS. Serialize the underlying pose without touching the live mixer.
-          const rest = clips.length ? previewRestTransforms?.get(node) : undefined;
-          if (rest) Object.assign(definition, rest);
+          const rest = playbackDefaults?.get(node);
+          const { weights, ...transforms } = rest ?? {};
+          if (rest) Object.assign(definition, transforms);
+          if (playbackDefaults && typeof definition.mesh === 'number' && isThreeMesh(node)
+            && node.morphTargetInfluences?.length) {
+            // Other instances can have their own defaults even if they share a mesh definition.
+            definition.weights = weights ?? [...node.morphTargetInfluences];
+          }
           if (isThreeSkinnedMesh(node) && importedSkinsWithoutRoot.has(node.skeleton)) {
             nodesWithoutSkinRoot.push(definition);
           }

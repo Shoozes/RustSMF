@@ -33,6 +33,9 @@ pose, inverse binds, geometry, appearance, and all eight clip timings. Across
 root-motion difference. The fixture, exported derivative, and receipts stay in
 local pilot evidence.
 
+The [morph default follow-up](HISTORY.md#glb-morph-defaults-20261117)
+closed with direct Model and Export browser proof and reimported animation samples.
+
 ### Optional consumer references — not RustSMF work
 
 - **P7C coupled body-height:** RustSMF's source-bound producer graph and its 46 packets/590 references are recorded in [HISTORY.md](HISTORY.md#p7c-coupled-body-height-20261029) and [SKELETAL_COUPLED_BODY_HEIGHT.md](SKELETAL_COUPLED_BODY_HEIGHT.md). The consumer's partial 637-pose pilot retains later right-sole drift; full physical and visual receiving belongs to GaimEngine.
@@ -130,3 +133,4 @@ AI-edited: 2026-11-02 | agent=Codex/root | task=installed-supervised-capture | c
 <!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-closeout-publish | change=polish candidate scope and account for retained owned cache -->
 <!-- AI-edited: 2026-11-16 | agent=Codex/root | task=storage-retirement | change=record verified operator cleanup -->
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=ordinary-glb-pilot | change=record verified Model-autoplay exchange -->
+<!-- AI-edited: 2026-11-17 | agent=Codex/root | task=glb-morph-defaults | change=close the selected batch after browser and reimport verification -->

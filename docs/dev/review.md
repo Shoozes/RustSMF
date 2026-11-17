@@ -1,10 +1,35 @@
 # RustSMF Review Snapshot
 
-Last reviewed: 2026-11-15
+Last reviewed: 2026-11-17
 
 Current behavior belongs in [APP_STATE.md](APP_STATE.md), selected work and
 completion criteria in [TODO.md](TODO.md), and dated command/source evidence in
 [HISTORY.md](HISTORY.md).
+
+## GLB preview export and context routing
+
+Reviewed clean `main` at `865eaff` against `5036beb`, covering direct GLB
+export, playback, queued capture, and the context and project integrity gates.
+The retained Model download and Blender receipt matched their recorded hashes.
+The independent Blender result confirms rest fidelity and zero evaluated mesh
+and root delta over 180 samples for the pinned fixture.
+
+The Export workspace still serialized the preview pose. A browser regression
+exported a root offset of `0.00277` on the baseline and the exact imported
+translation and rotation after the repair. Direct GLB export now shares the
+preview-pose handling between Model and Export. The context validator also
+passed after rebudgeting overlapping routes and routing the GLB-specific tests
+through their own group.
+The production browser build passed the autoplay and sibling-order export
+tests. The GLB, playback, and queue-snapshot unit tests, test typecheck, and
+focused ESLint checks also passed.
+
+The review also reproduced an animated morph target serializing its sampled
+value as the default. The [follow-up](HISTORY.md#glb-morph-defaults-20261117)
+records the repair and proof. The installed preview and consumer-engine
+qualification retain their existing scope.
+
+<!-- AI-edited: 2026-11-17 | agent=Codex/root | task=review-recheck-cleanup | change=record GLB workspace and context gate findings -->
 
 ## Sample and workflow maintenance — 2026-11-15
 

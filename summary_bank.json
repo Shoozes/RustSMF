@@ -309,7 +309,7 @@
     },
     "workflow__skeletal_export": {
       "description": "Strict v1/v2 GLB skeletal export and immutable publication; explicit continuous conditioning is routed through workflow__skeletal_conditioning.",
-      "max_kb": 250,
+      "max_kb": 252,
       "paths": [
         "docs/dev/SKELETAL_EXPORT.md",
         "source/frontend/package.json",
@@ -391,7 +391,7 @@
     },
     "feature__fbx_support": {
       "description": "FBX import with bounded selected texture sidecars, binary FBX 7500 export, pre-save validation, and round-trip coverage.",
-      "max_kb": 132,
+      "max_kb": 134,
       "paths": [
         "source/frontend/src/loaders/fbx.ts",
         "source/frontend/src/loaders/fbx.test.ts",
@@ -442,7 +442,6 @@
         "source/frontend/src/loaders/geometryAttributes.ts",
         "source/frontend/src/loaders/geometryAttributes.test.ts",
         "source/frontend/src/loaders/glb.ts",
-        "source/frontend/src/loaders/glb.test.ts",
         "source/frontend/src/loaders/fbx.ts",
         "source/frontend/src/loaders/fbx.test.ts",
         "source/frontend/src/loaders/obj.ts",
@@ -495,17 +494,21 @@
       ]
     },
     "issue__glb_roundtrip_identity": {
-      "description": "Stable GLB scene envelopes, authored-root preservation, matrix-only animation guards and repeated roundtrip proof.",
+      "description": "GLB scene envelopes, skin roots, node defaults during preview playback, and round-trip proof.",
       "max_kb": 80,
       "paths": [
         "source/frontend/src/loaders/glb.ts",
         "source/frontend/src/loaders/glb.test.ts",
         "source/frontend/src/loaders/geometryAttributes.ts",
-        "source/frontend/src/utils/glbContainer.ts"
+        "source/frontend/src/utils/glbContainer.ts",
+        "source/frontend/src/utils/workspacePlayback.ts",
+        "source/frontend/tests/glb-morph-export.spec.ts",
+        "source/frontend/tests/helpers/morph-glb-fixture.ts"
       ],
       "notes": [
         "Loader-owned identity scene envelopes are exported as scenes, not additional nodes; existing named wrappers are never flattened by guessing.",
-        "Authored root transforms and animation require real nodes. Animated export rejects matrix-only transforms that TRS serialization cannot retain."
+        "Authored root transforms and animation require real nodes. Animated export rejects matrix-only transforms that TRS serialization cannot retain.",
+        "Direct GLB export uses the Model or Export preview's underlying transforms and per-node morph defaults. subsystem__load_editor_orchestration routes the editor export entry points."
       ]
     },
     "subsystem__viewport_editor": {
@@ -646,7 +649,7 @@
     },
     "feature__skin_authoring": {
       "description": "Skin paint and regional smoothing, Modern direct-paint chrome, brush indexing, auto-weight algorithms, history, exportability, and browser ownership.",
-      "max_kb": 158,
+      "max_kb": 160,
       "paths": [
         "source/frontend/src/components/SkinPanel.tsx",
         "source/frontend/src/components/ModernSkinWorkspace.tsx",
@@ -860,7 +863,7 @@
     },
     "issue__verification_current_head": {
       "description": "Current source proof, local gates, browser failure classification and owned cleanup.",
-      "max_kb": 107,
+      "max_kb": 109,
       "paths": [
         "README.md",
         "docs/dev/review.md",
@@ -932,7 +935,7 @@
       "description": "Archived compatibility route for the former combined browser authoring/format pack.",
       "archived": true,
       "archive_note": "Use feature__rig_ik_pose, feature__skin_authoring, feature__animation_authoring, feature__fbx_support, and feature__theme_system.",
-      "max_kb": 170,
+      "max_kb": 172,
       "paths": [
         "source/frontend/tests/animation.spec.ts",
         "source/frontend/tests/export-formats.spec.ts",

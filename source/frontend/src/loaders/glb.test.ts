@@ -2,12 +2,13 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert';
 import * as THREE from 'three';
 import { createSkinnedGlbFixtureInput } from '../../tests/helpers/skinned-glb-fixture';
+import { createSharedMorphGlbFixture } from '../../tests/helpers/morph-glb-fixture';
 import { disposeThreeObject } from '../utils/threeDisposal';
 import { exportGLB, loadGLB, validateExportedGLB } from './glb';
 import { buildGlbContainer, parseGlbContainer as parseGlb } from '../utils/glbContainer';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { createModelResourceBundle } from '../utils/modelResourceBundle';
-import { activateWorkspacePlayback, getModelPreviewRestTransforms } from '../utils/workspacePlayback';
+import { activateWorkspacePlayback, getPreviewRestState } from '../utils/workspacePlayback';
 
 function toArrayBuffer(buffer: Buffer): ArrayBuffer {
   return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
@@ -197,7 +198,7 @@ describe('GLB recovery export validation', () => {
       live.forEach((channel, index) => assert.notDeepStrictEqual(channel, rest[index]));
       // This property is unrelated to the preview and remains editable.
       tip.position.x = 0.375;
-      const bytes = await exportGLB(root, clips, getModelPreviewRestTransforms(root));
+      const bytes = await exportGLB(root, clips, getPreviewRestState(root));
       const exported = await loadGLB(toArrayBuffer(Buffer.from(bytes)));
       try {
         const exportedHips = exported.root.getObjectByName(hips.name)!;
@@ -209,6 +210,44 @@ describe('GLB recovery export validation', () => {
         assert.deepStrictEqual([hips.position.toArray(), hips.scale.toArray(), tip.quaternion.toArray()], live);
         assert.ok(action.isRunning());
       } finally { disposeThreeObject(exported.root); }
+    } finally { mixer.stopAllAction(); disposeThreeObject(root); }
+  });
+
+  it('preserves distinct node morph defaults and the animation curve on preview export', async () => {
+    const fixture = await createSharedMorphGlbFixture();
+    const source = await loadGLB(toArrayBuffer(fixture.buffer));
+    const { root, clips, mixer } = source;
+    try {
+      const animated = root.getObjectByName('AnimatedShape') as THREE.Mesh;
+      const staticShape = root.getObjectByName('StaticShape') as THREE.Mesh;
+      assert.equal(animated.geometry, staticShape.geometry);
+      assert.deepStrictEqual(animated.morphTargetInfluences, [0.25]);
+      assert.deepStrictEqual(staticShape.morphTargetInfluences, [0.75]);
+      const action = activateWorkspacePlayback(mixer, {
+        clips, isPlaying: true, currentTime: 10, playbackSpeed: 1,
+      }, 'view')!;
+      assert.deepStrictEqual(animated.morphTargetInfluences, [0.625]);
+
+      const bytes = await exportGLB(root, clips, getPreviewRestState(root));
+      const exported = await loadGLB(toArrayBuffer(Buffer.from(bytes)));
+      try {
+        const restored = exported.root.getObjectByName('AnimatedShape') as THREE.Mesh;
+        const sibling = exported.root.getObjectByName('StaticShape') as THREE.Mesh;
+        assert.equal(restored.geometry, sibling.geometry);
+        assert.deepStrictEqual(restored.morphTargetInfluences, [0.25]);
+        assert.deepStrictEqual(sibling.morphTargetInfluences, [0.75]);
+        const replay = exported.mixer.clipAction(exported.clips[0]);
+        replay.setLoop(THREE.LoopOnce, 1);
+        replay.clampWhenFinished = true;
+        replay.play();
+        for (const [time, expected] of [[0, 0.25], [5, 0.4375], [10, 0.625], [20, 1]]) {
+          exported.mixer.setTime(time);
+          assert.deepStrictEqual(restored.morphTargetInfluences, [expected]);
+          assert.deepStrictEqual(sibling.morphTargetInfluences, [0.75]);
+        }
+        assert.deepStrictEqual(animated.morphTargetInfluences, [0.625]);
+        assert.ok(action.isRunning());
+      } finally { exported.mixer.stopAllAction(); disposeThreeObject(exported.root); }
     } finally { mixer.stopAllAction(); disposeThreeObject(root); }
   });
 

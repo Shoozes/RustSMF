@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { EditorMode } from '../store';
 import type { SkinPaintPoseMode } from './skinDiagnostics';
-import { isThreeSkinnedMesh } from './threeTypeGuards';
+import { isThreeMesh, isThreeSkinnedMesh } from './threeTypeGuards';
 
 export interface WorkspacePlaybackIntent {
   clips: THREE.AnimationClip[];
@@ -11,17 +11,17 @@ export interface WorkspacePlaybackIntent {
   playbackSpeed: number;
 }
 
-type GltfTransform = 'translation' | 'rotation' | 'scale';
-export type PreviewRestTransforms = ReadonlyMap<THREE.Object3D, Partial<Record<GltfTransform, number[]>>>;
+type GltfNodeDefaults = Partial<Record<'translation' | 'rotation' | 'scale' | 'weights', number[]>>;
+export type PreviewRestState = ReadonlyMap<THREE.Object3D, GltfNodeDefaults>;
 
-const modelPreviewRestTransforms = new WeakMap<THREE.Object3D, PreviewRestTransforms>();
+const previewRestStates = new WeakMap<THREE.Object3D, PreviewRestState>();
 
-export function getModelPreviewRestTransforms(root: THREE.Object3D): PreviewRestTransforms | undefined {
-  return modelPreviewRestTransforms.get(root);
+export function getPreviewRestState(root: THREE.Object3D): PreviewRestState | undefined {
+  return previewRestStates.get(root);
 }
 
-function capturePreviewRestTransforms(root: THREE.Object3D, clip: THREE.AnimationClip): PreviewRestTransforms {
-  const transforms = new Map<THREE.Object3D, Partial<Record<GltfTransform, number[]>>>();
+function capturePreviewRestState(root: THREE.Object3D, clip: THREE.AnimationClip): PreviewRestState {
+  const states = new Map<THREE.Object3D, GltfNodeDefaults>();
   for (const track of clip.tracks) {
     const { nodeName, objectName, objectIndex, propertyName } = THREE.PropertyBinding.parseTrackName(track.name);
     const target = THREE.PropertyBinding.findNode(root, nodeName);
@@ -31,14 +31,17 @@ function capturePreviewRestTransforms(root: THREE.Object3D, clip: THREE.Animatio
       : objectName ? undefined : target;
     if (!node) continue;
 
-    const defaults = transforms.get(node) ?? {};
+    const defaults = states.get(node) ?? {};
     if (propertyName === 'position') defaults.translation ??= node.position.toArray();
     else if (propertyName === 'quaternion' || propertyName === 'rotation') defaults.rotation ??= node.quaternion.toArray();
     else if (propertyName === 'scale') defaults.scale ??= node.scale.toArray();
+    else if (propertyName === 'morphTargetInfluences' && isThreeMesh(node) && node.morphTargetInfluences?.length) {
+      defaults.weights ??= [...node.morphTargetInfluences];
+    }
     else continue;
-    transforms.set(node, defaults);
+    states.set(node, defaults);
   }
-  return transforms;
+  return states;
 }
 
 export function workspaceUsesRestPose(editorMode: EditorMode, skinPaintPose: SkinPaintPoseMode = 'rest'): boolean {
@@ -58,7 +61,7 @@ export function activateWorkspacePlayback(
 ): THREE.AnimationAction | null {
   mixer.stopAllAction();
   const root = mixer.getRoot();
-  if (root instanceof THREE.Object3D) modelPreviewRestTransforms.delete(root);
+  if (root instanceof THREE.Object3D) previewRestStates.delete(root);
   if (workspaceUsesRestPose(editorMode, skinPaintPose) || intent.clips.length === 0) return null;
 
   const clip = (
@@ -69,8 +72,8 @@ export function activateWorkspacePlayback(
   if (!clip) return null;
 
   // The stopped action has restored the underlying values, before preview applies another sample.
-  if (editorMode === 'view' && root instanceof THREE.Object3D) {
-    modelPreviewRestTransforms.set(root, capturePreviewRestTransforms(root, clip));
+  if ((editorMode === 'view' || editorMode === 'export') && root instanceof THREE.Object3D) {
+    previewRestStates.set(root, capturePreviewRestState(root, clip));
   }
   const action = mixer.clipAction(clip);
   action.reset();
