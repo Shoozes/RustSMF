@@ -36,15 +36,13 @@ local pilot evidence.
 The [morph default follow-up](HISTORY.md#glb-morph-defaults-20261117)
 closed with direct Model and Export browser proof and reimported animation samples.
 
-## Web Edition fixes awaiting Pages deployment
-
-- What: Deploy the reviewed Classic toolbar, keyboard focus, Help, and export readiness fixes to GitHub Pages.
-- Why: The public build still clips Classic controls at narrow widths, loses focus when switching themes, and leaves Classic users without in-editor save guidance.
-- Where: [Live Web Edition](https://shoozes.github.io/RustSMF/) and [Classic](https://shoozes.github.io/RustSMF/?theme=classic).
-- When: After the reviewed commit is on `main` and the Pages deployment is authorized.
-- How: Dispatch the existing Pages workflow on `main` and run the hosted browser suite. [Web Edition runbook](WEB_EDITION.md).
-- Done when: The corrected build is live and the hosted suite proves Classic toolbar reachability, keyboard theme switching, Help focus return, and project round-trip at phone width.
-- Verification: The live review reproduced the three issues on `494f91a`. The local Pages suite passed with the fixes. Hosted proof of the corrected build is pending deployment.
+The Classic Web Edition fixes went live on 2026-11-17. The
+[Pages workflow run 44191668484](https://github.com/Shoozes/RustSMF/actions/runs/44191668484)
+deployed `9c9f7d0133c01f807a33b1f8f9fd8da1d05a5209` from `main`. All five
+hosted Chromium checks passed. They covered Modern project and GLB round
+trips, Classic toolbar reachability, keyboard theme switching, Help focus
+return, Classic project reopen and GLB export at 390 px, and retarget WASM
+delivery.
 
 ### Optional consumer references — not RustSMF work
 
@@ -145,3 +143,4 @@ AI-edited: 2026-11-02 | agent=Codex/root | task=installed-supervised-capture | c
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=ordinary-glb-pilot | change=record verified Model-autoplay exchange -->
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=glb-morph-defaults | change=close the selected batch after browser and reimport verification -->
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=web-edition-review | change=record verified local Classic fixes and pending Pages deployment -->
+<!-- AI-edited: 2026-11-17 | agent=Codex/root | task=web-edition-deploy | change=close the Pages deployment task after hosted browser verification -->
