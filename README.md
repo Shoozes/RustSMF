@@ -8,7 +8,7 @@ RustSMF owns its editor, formats, retargeting and contact solver. Building, test
 and packaging need only this repository and its declared third-party dependencies.
 Other applications can consume its exported models and animations independently.
 
-[**Download for Windows x64**](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe) · [0.2.1 preview notes](https://github.com/Shoozes/RustSMF/releases/tag/v0.2.1-preview) · [Sample model](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb)
+[**Open Web Edition**](https://shoozes.github.io/RustSMF/) · [**Open Classic**](https://shoozes.github.io/RustSMF/?theme=classic) · [**Download for Windows x64**](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe) · [0.2.1 preview notes](https://github.com/Shoozes/RustSMF/releases/tag/v0.2.1-preview) · [Sample model](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb)
 
 ![Our test dummy in RustSMF Modern, with animation controls and Tools closed](docs/images/rustsmf-modern-overview.png)
 
@@ -18,14 +18,22 @@ Other applications can consume its exported models and animations independently.
 
 ## Try it
 
-1. Install the **Windows preview .exe**, then launch **RustSMF**.
+1. Open the **Web Edition** in your browser or install and launch the **Windows preview**.
 2. Download [Signal Robot](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb). **Open** `rustsmf-demo.glb`.
 3. Choose **Animate**, open **Tools**, select **Wave**, then **Play**.
 4. Use **Save Project** for editable `.rsproj` files. Use **Export** for models.
 
 Drag to orbit · Right-drag to pan · Scroll to zoom. [User guide](docs/user/README.md).
 
-The download above remains the published `v0.2.1-preview`. A separate local
+In the Web Edition, models are processed in your browser. Use **Save Project** before closing the tab, then open the downloaded `.rsproj` to resume.
+
+### Classic workspace
+
+For the familiar GameMaker-inspired layout, use **Open Classic** above or choose **More → Theme → Classic (Original SMF)** in the Web Edition. The **Theme** selector in Classic returns you to Modern.
+
+![RustSMF Web Edition in Classic mode with Signal Robot in four viewports and the animation timeline above them](docs/images/rustsmf-classic-web.png)
+
+The Windows download above is the published `v0.2.1-preview`. A separate local
 candidate based on `f099e37` includes the export cleanup repair and has installer
 SHA-256 `ea27cd5d54beb35f9df81dd429b38afad40c69d53676174f9e3a138a18dcdd88` and
 installed executable SHA-256
@@ -132,3 +140,4 @@ AI-edited: 2026-10-30 | agent=Codex/root | task=native-profile | change=document
 <!-- AI-edited: 2026-11-08 | agent=Codex/root | task=installed-attended-observation | change=record completed selected visual criterion and remaining scope -->
 
 <!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-closeout-publish | change=polish candidate scope and account for retained owned cache -->
+<!-- AI-edited: 2026-11-17 | agent=Codex/root | task=web-edition | change=add Web Edition and Classic launch links and screenshot -->

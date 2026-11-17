@@ -2,6 +2,17 @@
 
 Edit models, rigs, animation and skin weights in RustSMF. Your files stay local.
 
+## Start in your browser
+
+1. [Open RustSMF Web Edition](https://shoozes.github.io/RustSMF/) or [open Classic](https://shoozes.github.io/RustSMF/?theme=classic).
+2. Open your model or download the [Signal Robot sample](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/rustsmf-demo.glb) and open it.
+3. Use **Save Project** before closing the tab. **Open Project** reopens the
+   downloaded `.rsproj`. **Export** downloads a model.
+
+Classic uses the GameMaker-inspired tool shelves, four viewports and numbered
+workspace tabs. In Modern, choose **More → Theme → Classic (Original SMF)**.
+Use the **Theme** selector in Classic to return to Modern.
+
 ## Start with the Windows preview
 
 1. [Download the installer](https://github.com/Shoozes/RustSMF/releases/download/v0.2.1-preview/RustSMF_0.2.1_x64-setup.exe), install it, then launch **RustSMF**.
@@ -59,7 +70,8 @@ Viewport R/S/T shortcuts stay inactive while typing.
 - **Save Project:** keep the model, clips, rig metadata and selection/playback in `.rsproj`.
 - **Open Project:** continue editing. Undo history and editor preferences are not restored.
 - **Export:** keep SMF, FBX or DAE sources in that format; other sources export as GLB. **More** selects a format.
-- **Recover:** restore available autosaved work from **More**.
+- **Recover:** in the desktop app, restore available autosaved work from **More**.
+  The hosted Web Edition uses explicit project downloads.
 
 Source builds also offer **Export → Tools → Export queue**:
 
@@ -133,3 +145,4 @@ For scripted batch jobs, see the [CLI reference](../dev/GAME_READY_CLI.md).
 <!--
 AI-edited: 2026-10-16 | agent=Codex/root | task=review-cleanup | change=clarified texture warnings and source-aware export defaults
 -->
+<!-- AI-edited: 2026-11-17 | agent=Codex/root | task=web-edition | change=document browser launch, Classic, and manual project saves -->

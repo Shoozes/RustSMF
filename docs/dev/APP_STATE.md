@@ -34,6 +34,11 @@ isolation and installed-dialog evidence is tracked in
 [STANDALONE_ACCEPTANCE.md](STANDALONE_ACCEPTANCE.md); the public 0.2.1 preview
 retains its older, separately identified package.
 
+The [Web Edition](https://shoozes.github.io/RustSMF/) uses the browser editor
+and Rust WASM worker. Project saves and model exports are downloads. The
+hosted edition remembers the theme and uses explicit project files for
+reopening work. [Web build and deployment proof](WEB_EDITION.md).
+
 The [isolated installed route](INSTALLED_TEST_SESSION.md) proves exact filename/Open
 and actual native queue publication failure/retry on the fresh native-profile
 installer, with independent output/skin inspection. The opt-in Windows
@@ -531,3 +536,4 @@ AI-edited: 2026-11-01 | agent=Codex/root | task=installed-sable-workflows | chan
 <!-- AI-edited: 2026-11-08 | agent=Codex/root | task=installed-attended-observation | change=record completed selected visual criterion and remaining scope -->
 
 <!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-closeout-publish | change=polish candidate scope and account for retained owned cache -->
+<!-- AI-edited: 2026-11-17 | agent=Codex/root | task=web-edition | change=record hosted editor and manual project persistence -->

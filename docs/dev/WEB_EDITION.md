@@ -32,6 +32,10 @@ open **Deploy RustSMF Web Edition** and run it from `main`. The workflow
 builds from the locked dependencies and uploads the Pages output. Each
 deployment is manual.
 
+The repository allows only the workflow's pinned GitHub actions and the
+pinned artifact uploader called by `upload-pages-artifact`. When updating
+the pins, account for the uploader's dependency in the repository allowlist.
+
 Run the same browser lane against the public deployment after the workflow
 completes:
 
@@ -43,5 +47,15 @@ npm --prefix source --workspace frontend run test:web -- --workers=1
 Record the deployed commit, workflow run, and hosted smoke result before
 advertising a first deployment. If a release needs a rollback, put the
 reviewed repair or revert on `main` and dispatch the workflow again.
+
+## First deployment
+
+On 2026-11-17, [workflow run 44185157129](https://github.com/Shoozes/RustSMF/actions/runs/44185157129)
+deployed `494f91a8aec7bd4b0ae4af0d82146a3b460c6b7d`. The three hosted Chromium
+checks passed in a fresh browser. They exercised manual project and GLB
+downloads and reimport, verified that project bytes stayed out of browser
+storage, and ran the retarget worker using WebAssembly served under
+`/RustSMF/`. The README capture shows the same Pages build running the
+Classic layout with the first-party Signal Robot sample.
 
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=web-edition | change=document Pages build, browser persistence and deploy proof -->
