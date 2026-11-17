@@ -7,6 +7,7 @@ import { exportGLB, loadGLB, validateExportedGLB } from './glb';
 import { buildGlbContainer, parseGlbContainer as parseGlb } from '../utils/glbContainer';
 import { GLTFLoader, type GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { createModelResourceBundle } from '../utils/modelResourceBundle';
+import { activateWorkspacePlayback, getModelPreviewRestTransforms } from '../utils/workspacePlayback';
 
 function toArrayBuffer(buffer: Buffer): ArrayBuffer {
   return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
@@ -160,6 +161,55 @@ describe('GLB recovery export validation', () => {
       source.mixer.stopAllAction();
       disposeThreeObject(source.root);
     }
+  });
+
+  it('retains the absence of an optional skin root in ordinary GLB export', async () => {
+    const fixture = await createSkinnedGlbFixtureInput();
+    const { json, binary } = parseGlb(fixture.buffer);
+    const [skin] = json.skins as Array<{ skeleton?: number }>;
+    assert.equal(typeof skin.skeleton, 'number');
+    for (const hasRoot of [true, false]) {
+      if (!hasRoot) delete skin.skeleton;
+      const source = await loadGLB(toArrayBuffer(Buffer.from(buildGlbContainer(json, binary))));
+      try {
+        const bytes = await exportGLB(source.root, source.clips);
+        const [exported] = parseGlb(bytes).json.skins as Array<{ skeleton?: number }>;
+        assert.equal(typeof exported.skeleton === 'number', hasRoot);
+        await validateExportedGLB(bytes, source.root, source.clips);
+      } finally { disposeThreeObject(source.root); }
+    }
+  });
+
+  it('exports underlying GLB transforms during Model playback without changing the live pose', async () => {
+    const fixture = await createSkinnedGlbFixtureInput();
+    const source = await loadGLB(toArrayBuffer(fixture.buffer));
+    const { root, clips, mixer } = source;
+    const hips = root.getObjectByName('FixtureRoot')!;
+    const tip = root.getObjectByName('FixtureTip')!;
+    const rest = [hips.position.toArray(), hips.scale.toArray(), tip.quaternion.toArray()];
+    const clip = clips[0];
+    clip.tracks.push(new THREE.VectorKeyframeTrack('FixtureRoot.scale', [0, clip.duration], [2, 2, 2, 3, 3, 3]));
+    const action = activateWorkspacePlayback(mixer, {
+      clips, isPlaying: true, currentTime: clip.duration / 2, playbackSpeed: 1,
+    }, 'view')!;
+    try {
+      const live = [hips.position.toArray(), hips.scale.toArray(), tip.quaternion.toArray()];
+      live.forEach((channel, index) => assert.notDeepStrictEqual(channel, rest[index]));
+      // This property is unrelated to the preview and remains editable.
+      tip.position.x = 0.375;
+      const bytes = await exportGLB(root, clips, getModelPreviewRestTransforms(root));
+      const exported = await loadGLB(toArrayBuffer(Buffer.from(bytes)));
+      try {
+        const exportedHips = exported.root.getObjectByName(hips.name)!;
+        const exportedTip = exported.root.getObjectByName(tip.name)!;
+        assert.deepStrictEqual([exportedHips.position.toArray(), exportedHips.scale.toArray(), exportedTip.quaternion.toArray()], rest);
+        assert.equal(exportedTip.position.x, tip.position.x);
+        assert.deepStrictEqual(exported.clips[0].tracks.map(track => [track.name, Array.from(track.values)]),
+          clip.tracks.map(track => [track.name, Array.from(track.values)]));
+        assert.deepStrictEqual([hips.position.toArray(), hips.scale.toArray(), tip.quaternion.toArray()], live);
+        assert.ok(action.isRunning());
+      } finally { disposeThreeObject(exported.root); }
+    } finally { mixer.stopAllAction(); disposeThreeObject(root); }
   });
 
   it('blocks a file that drops an expected animation clip', async () => {

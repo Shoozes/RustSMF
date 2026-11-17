@@ -4,6 +4,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { disposeThreeObject } from '../utils/threeDisposal';
 import { isThreeBone, isThreeSkinnedMesh } from '../utils/threeTypeGuards';
+import type { PreviewRestTransforms } from '../utils/workspacePlayback';
 import { bytesToArrayBuffer } from './smfBinary';
 import { ensureGeometryAttributes } from './geometryAttributes';
 import {
@@ -36,9 +37,14 @@ function collectSkeletonBones(root: THREE.Object3D): THREE.Bone[] {
 
 // Loader scene envelopes are not authored nodes. Never infer ownership from names.
 const importedSceneRoots = new WeakSet<THREE.Object3D>();
+const importedSkinsWithoutRoot = new WeakSet<THREE.Skeleton>();
 
 export function copyImportedSceneOwnership(source: THREE.Object3D, copy: THREE.Object3D): void {
   if (importedSceneRoots.has(source)) importedSceneRoots.add(copy);
+}
+
+export function copyImportedSkinRootOmission(source: THREE.Skeleton, copy: THREE.Skeleton): void {
+  if (importedSkinsWithoutRoot.has(source)) importedSkinsWithoutRoot.add(copy);
 }
 
 export async function loadGLB(urlOrBuffer: string | ArrayBuffer | ModelResourceBundle): Promise<LoadedModel> {
@@ -55,6 +61,30 @@ export async function loadGLB(urlOrBuffer: string | ArrayBuffer | ModelResourceB
     resourceFailure ??= new Error(`GLB/GLTF resource failed to load: ${url}`);
   };
   const loader = new GLTFLoader(manager);
+  loader.register(parser => ({
+    name: 'RustSMF_authored_skin_roots',
+    afterRoot(gltf) {
+      const nodes = parser.json.nodes as Array<{ skin?: number }> | undefined;
+      const skins = parser.json.skins as Array<{ skeleton?: number }> | undefined;
+      if (!nodes || !skins?.length) return null;
+      for (const scene of gltf.scenes) scene.traverse(mesh => {
+        if (!isThreeSkinnedMesh(mesh) || !mesh.skeleton) return;
+        // Three places primitives under a group when one glTF node has several meshes.
+        let node: THREE.Object3D | null = mesh;
+        while (node) {
+          const index = parser.associations.get(node)?.nodes;
+          if (index !== undefined) {
+            const skinIndex = nodes[index]?.skin;
+            const skin = skinIndex === undefined ? undefined : skins[skinIndex];
+            if (skin && skin.skeleton === undefined) importedSkinsWithoutRoot.add(mesh.skeleton);
+            break;
+          }
+          node = node.parent;
+        }
+      });
+      return null;
+    },
+  }));
   // Three normalizes even valid float weights, causing drift on animation-only
   // roundtrips. Snapshot source accessors before meshes mutate the shared cache.
   loader.register(parser => {
@@ -160,10 +190,36 @@ function resourceBasePath(name: string): string {
 
 
 /** Export the source scene, skin and clips as a self-contained GLB. */
-export async function exportGLB(root: THREE.Group, clips: THREE.AnimationClip[] = []): Promise<Uint8Array> {
+export async function exportGLB(
+  root: THREE.Group,
+  clips: THREE.AnimationClip[] = [],
+  previewRestTransforms?: PreviewRestTransforms,
+): Promise<Uint8Array> {
   return withSourceMaterialState(root, async () => {
     const { GLTFExporter } = await import('three/examples/jsm/exporters/GLTFExporter.js');
     const exporter = new GLTFExporter();
+    exporter.register(writer => {
+      const nodesWithoutSkinRoot: Array<Record<string, unknown>> = [];
+      return {
+        writeNode(node, definition) {
+          // Animated GLB nodes use TRS. Serialize the underlying pose without touching the live mixer.
+          const rest = clips.length ? previewRestTransforms?.get(node) : undefined;
+          if (rest) Object.assign(definition, rest);
+          if (isThreeSkinnedMesh(node) && importedSkinsWithoutRoot.has(node.skeleton)) {
+            nodesWithoutSkinRoot.push(definition);
+          }
+        },
+        afterParse() {
+          if (nodesWithoutSkinRoot.length === 0) return;
+          // Three sets node.skin after writeNode and invents a root from the first joint.
+          const { json } = writer as typeof writer & { json: { skins?: Array<{ skeleton?: number }> } };
+          for (const node of nodesWithoutSkinRoot) {
+            const skin = typeof node.skin === 'number' ? json.skins?.[node.skin] : undefined;
+            if (skin) delete skin.skeleton;
+          }
+        },
+      };
+    });
     if (clips.length) root.traverse(node => {
       if (!node.matrixAutoUpdate && !node.matrix.equals(new THREE.Matrix4().compose(node.position, node.quaternion, node.scale))) {
         throw new Error(`GLB animated export cannot preserve the matrix-only transform of ${node.name || '(unnamed node)'}. Apply the matrix to position/rotation/scale before export.`);

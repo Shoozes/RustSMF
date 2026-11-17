@@ -55,6 +55,7 @@ import { findBoneByName } from '../utils/bonePicker';
 import { createSeqGuard } from '../utils/seqGuard';
 import { disposeThreeObject } from '../utils/threeDisposal';
 import { isThreeBone } from '../utils/threeTypeGuards';
+import { getModelPreviewRestTransforms } from '../utils/workspacePlayback';
 import {
   assertModelInputSize,
   detectModelFormat,
@@ -1273,7 +1274,10 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
     isCurrentExport: () => boolean,
   ) => {
     ui.setStatus('Exporting current model as GLB...');
-    const bytes = await exportGLB(root, clips);
+    const previewRest = ui.editorMode === 'view' && lastSourceFormatRef.current === 'glb'
+      ? getModelPreviewRestTransforms(root)
+      : undefined;
+    const bytes = await exportGLB(root, clips, previewRest);
     if (!isCurrentExport()) return null;
     ui.setStatus('Validating exported GLB round-trip...');
     const summary = await validateExportedGLB(bytes, root, clips);

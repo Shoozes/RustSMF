@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { clone } from 'three/examples/jsm/utils/SkeletonUtils.js';
-import { copyImportedSceneOwnership } from '../loaders/glb';
+import { copyImportedSceneOwnership, copyImportedSkinRootOmission } from '../loaders/glb';
 import { assertDaeExportFidelity } from '../loaders/dae';
 import { cloneImportedSmf } from '../loaders/smfData';
 import type { ImportedSmf } from '../loaders';
@@ -146,7 +146,13 @@ export function captureExportSnapshot(input: SmfExportCandidateInput, preset: Re
       input.root!.traverse(node => sourceNodes.push(node));
       root.traverse(node => capturedNodes.push(node));
       if (sourceNodes.length !== capturedNodes.length) throw new Error('Export capture hierarchy changed. Try again.');
-      const capturedByUuid = new Map(sourceNodes.map((node, index) => [node.uuid, capturedNodes[index]]));
+      const capturedByUuid = new Map(sourceNodes.map((node, index) => {
+        const captured = capturedNodes[index];
+        if (node instanceof THREE.SkinnedMesh && captured instanceof THREE.SkinnedMesh) {
+          copyImportedSkinRootOmission(node.skeleton, captured.skeleton);
+        }
+        return [node.uuid, captured];
+      }));
       const capturedClips = cloneAnimationClips(clips);
       for (const clip of capturedClips) for (const track of clip.tracks) {
         const binding = THREE.PropertyBinding.parseTrackName(track.name);

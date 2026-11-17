@@ -1,6 +1,6 @@
 # RustSMF TODO
 
-Last reviewed: 2026-11-16
+Last reviewed: 2026-11-17
 
 The public `v0.2.1-preview` remains unchanged. RustSMF owns its producer,
 editor, formats and package acceptance. GaimEngine owns consumer receiving and
@@ -24,6 +24,14 @@ No executable product batch remains selected. Policy-blocked housekeeping below
 remains outside product acceptance. Broader mapping coverage and historical
 matrices are not renewed by this bounded run; public preview replacement still
 requires a separate release decision.
+
+The ordinary GLB exchange pilot with Blender Tools is complete for the pinned
+fixture. RustSMF exported directly from Model during autoplay. Blender 5.2.1
+reimported it with default settings and matched the 65-joint hierarchy, rest
+pose, inverse binds, geometry, appearance, and all eight clip timings. Across
+180 samples of SuppliedIdle and Mixamo.Walk, Blender measured zero vertex or
+root-motion difference. The fixture, exported derivative, and receipts stay in
+local pilot evidence.
 
 ### Optional consumer references — not RustSMF work
 
@@ -121,3 +129,4 @@ AI-edited: 2026-11-02 | agent=Codex/root | task=installed-supervised-capture | c
 
 <!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-closeout-publish | change=polish candidate scope and account for retained owned cache -->
 <!-- AI-edited: 2026-11-16 | agent=Codex/root | task=storage-retirement | change=record verified operator cleanup -->
+<!-- AI-edited: 2026-11-17 | agent=Codex/root | task=ordinary-glb-pilot | change=record verified Model-autoplay exchange -->
