@@ -1346,6 +1346,7 @@ export default function App() {
       data-shell-variant={theme.shellVariant}
       data-ui-theme={theme.shellVariant === 'modern' ? 'lumen-alloy' : undefined}
       data-editor-mode={editorMode}
+      data-web-edition={IS_WEB_EDITION || undefined}
     >
       <Toolbar
         onOpen={handleOpen}
@@ -1379,7 +1380,8 @@ export default function App() {
         setThemeId={handleThemeChange}
       />
 
-      {theme.shellVariant === 'modern' && <HelpDialog open={helpOpen} status={ui.status}
+      {(IS_WEB_EDITION || theme.shellVariant === 'modern') && <HelpDialog open={helpOpen} status={ui.status}
+        classic={theme.shellVariant === 'original'}
         onDismiss={() => setHelpOpen(false)} onClosed={() => helpTriggerRef.current?.focus()} />}
       {archiveActivity && <ModelArchiveDialog activity={archiveActivity} onCancel={cancelArchive} onChoose={chooseArchiveModel} />}
 

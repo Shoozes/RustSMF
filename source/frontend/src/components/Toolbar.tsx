@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import {
   ArrowUUpLeft,
   ArrowUUpRight,
@@ -100,12 +100,14 @@ interface ThemeSwitcherProps {
   theme: AppThemeDefinition;
   themeId: AppThemeId;
   setThemeId: (themeId: AppThemeId) => void;
+  selectRef?: React.Ref<HTMLSelectElement>;
 }
 
-const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ theme, themeId, setThemeId }) => (
+const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ theme, themeId, setThemeId, selectRef }) => (
   <label className="theme-switcher">
     <span className="theme-switcher-label">Theme</span>
     <select
+      ref={selectRef}
       data-testid="theme-select"
       className="theme-select"
       value={themeId}
@@ -126,14 +128,14 @@ const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ theme, themeId, setThemeI
 );
 
 const SecondaryCommands: React.FC<Pick<ToolbarProps,
-  'onOpenProject' | 'onRecoverProject' | 'onExportGlb' | 'onExportFbx' | 'onExportDae' | 'onExportSmf' | 'smfExportEnabled' | 'onPing' | 'isLoading'
->> = ({ onOpenProject, onRecoverProject, onExportGlb, onExportFbx, onExportDae, onExportSmf, smfExportEnabled, onPing, isLoading }) => (
+  'onOpenProject' | 'onRecoverProject' | 'onExportGlb' | 'onExportFbx' | 'onExportDae' | 'onExportSmf' | 'smfExportEnabled' | 'onPing' | 'isLoading' | 'hasModel'
+>> = ({ onOpenProject, onRecoverProject, onExportGlb, onExportFbx, onExportDae, onExportSmf, smfExportEnabled, onPing, isLoading, hasModel }) => (
   <div className="modern-command-menu-grid">
     <button className="toolbar-action" data-testid="open-project-btn" onClick={onOpenProject} disabled={isLoading}>Open Project</button>
     {!IS_WEB_EDITION && <button className="toolbar-action" data-testid="recover-project-btn" onClick={onRecoverProject} disabled={isLoading}>Recover</button>}
-    <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading}>Export GLB</button>
-    <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={isLoading}>Export FBX</button>
-    <button className="toolbar-action" data-testid="export-dae-btn" onClick={onExportDae} disabled={isLoading}>Export DAE</button>
+    <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading || (IS_WEB_EDITION && !hasModel)}>Export GLB</button>
+    <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={isLoading || (IS_WEB_EDITION && !hasModel)}>Export FBX</button>
+    <button className="toolbar-action" data-testid="export-dae-btn" onClick={onExportDae} disabled={isLoading || (IS_WEB_EDITION && !hasModel)}>Export DAE</button>
     <button
       className="toolbar-action"
       data-testid="export-smf-btn"
@@ -147,7 +149,11 @@ const SecondaryCommands: React.FC<Pick<ToolbarProps,
   </div>
 );
 
-const ModernToolbar: React.FC<ToolbarProps> = (props) => {
+interface ToolbarShellProps extends ToolbarProps {
+  themeFocusRef: React.RefCallback<HTMLElement>;
+}
+
+const ModernToolbar: React.FC<ToolbarShellProps> = (props) => {
   const headerRef = useRef<HTMLElement>(null);
   const workspaceRef = useRef<HTMLDetailsElement>(null);
   const closeSiblingMenus = (event: React.SyntheticEvent<HTMLDetailsElement>) => {
@@ -237,7 +243,7 @@ const ModernToolbar: React.FC<ToolbarProps> = (props) => {
           <ExportIcon size={18} aria-hidden="true" />
         </button>
         <details className="toolbar-menu modern-command-menu" onToggle={closeSiblingMenus}>
-          <summary className="toolbar-menu-summary" data-testid="modern-more-menu-button" aria-label="More commands">
+          <summary ref={props.themeFocusRef} className="toolbar-menu-summary" data-testid="modern-more-menu-button" aria-label="More commands">
             <DotsThreeVertical size={20} aria-hidden="true" />
           </summary>
           <div className="toolbar-menu-panel modern-command-menu-panel" data-testid="modern-more-menu-panel">
@@ -258,7 +264,7 @@ const ModernToolbar: React.FC<ToolbarProps> = (props) => {
   );
 };
 
-const OriginalToolbar: React.FC<ToolbarProps> = (props) => {
+const OriginalToolbar: React.FC<ToolbarShellProps> = (props) => {
   const {
     onOpen,
     onOpenProject,
@@ -282,48 +288,65 @@ const OriginalToolbar: React.FC<ToolbarProps> = (props) => {
     theme,
     themeId,
     setThemeId,
+    themeFocusRef,
+    onOpenHelp,
   } = props;
+  const exportUnavailable = isLoading || (IS_WEB_EDITION && !hasModel);
   return (
     <div className="toolbar original-toolbar">
       <div className="toolbar-primary">
         <div className="toolbar-brand">{theme.chromeLabel}</div>
         <div className="toolbar-action-group toolbar-file-actions" aria-label="File actions">
-          <button className="toolbar-action" data-testid="open-model-btn" onClick={onOpen} disabled={isLoading}>Open Asset</button>
-          <button className="toolbar-action toolbar-action-muted" data-testid="open-project-btn" onClick={onOpenProject} disabled={isLoading}>Open Project</button>
-          <button className="toolbar-action toolbar-action-muted" data-testid="save-project-btn" onClick={onSaveProject} disabled={isLoading || !hasModel}>Save Project</button>
+          <button className="toolbar-action toolbar-file-action-wide" data-testid="open-model-btn" onClick={onOpen} disabled={isLoading}>Open Asset</button>
+          <button className="toolbar-action toolbar-action-muted toolbar-file-action-wide" data-testid="open-project-btn" onClick={onOpenProject} disabled={isLoading}>Open Project</button>
+          <button className="toolbar-action toolbar-action-muted toolbar-file-action-wide" data-testid="save-project-btn" onClick={onSaveProject} disabled={isLoading || !hasModel}>Save Project</button>
           {!IS_WEB_EDITION && <button className="toolbar-action toolbar-action-muted" data-testid="recover-project-btn" onClick={onRecoverProject} disabled={isLoading}>Recover</button>}
-          <button className="toolbar-action" data-testid="export-btn" onClick={onExport} disabled={isLoading}>Export Asset</button>
-          <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading}>GLB</button>
-          <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={isLoading}>FBX</button>
-          <button className="toolbar-action" data-testid="export-dae-btn" onClick={onExportDae} disabled={isLoading}>DAE</button>
+          <button className="toolbar-action toolbar-file-action-wide" data-testid="export-btn" onClick={onExport} disabled={exportUnavailable}>Export Asset</button>
+          <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={exportUnavailable}>GLB</button>
+          <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={exportUnavailable}>FBX</button>
+          <button className="toolbar-action" data-testid="export-dae-btn" onClick={onExportDae} disabled={exportUnavailable}>DAE</button>
           <button className="toolbar-action" data-testid="export-smf-btn" onClick={onExportSmf} disabled={isLoading || !smfExportEnabled}>SMF</button>
           {!IS_WEB_EDITION && <button className="toolbar-action toolbar-action-muted" data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>Ping</button>}
         </div>
         <div className="toolbar-action-group toolbar-history-actions" aria-label="Editor history">
           <button className="toolbar-action toolbar-action-muted" data-testid="editor-undo-btn" onClick={onUndo} disabled={isLoading || !undoAvailable} type="button">Undo</button>
           <button className="toolbar-action toolbar-action-muted" data-testid="editor-redo-btn" onClick={onRedo} disabled={isLoading || !redoAvailable} type="button">Redo</button>
+          {IS_WEB_EDITION && <button className="toolbar-action" data-testid="help-open" onClick={event => onOpenHelp(event.currentTarget)} type="button">Help</button>}
         </div>
       </div>
       <WorkspaceTabs editorMode={editorMode} isLoading={isLoading} labels={theme.workspaceLabels} setEditorMode={setEditorMode} />
       <HiddenWorkspaceSelect editorMode={editorMode} isLoading={isLoading} labels={theme.workspaceLabels} setEditorMode={setEditorMode} />
       <ViewportControls {...props} variant="toolbar" />
-      <ThemeSwitcher theme={theme} themeId={themeId} setThemeId={setThemeId} />
+      <ThemeSwitcher theme={theme} themeId={themeId} setThemeId={setThemeId} selectRef={themeFocusRef} />
     </div>
   );
 };
 
-const Toolbar: React.FC<ToolbarProps> = (props) => (
-  <>
-    {props.theme.shellVariant === 'modern' ? <ModernToolbar {...props} /> : <OriginalToolbar {...props} />}
-    <input
-      type="file"
-      data-testid="model-file-input"
-      style={{ display: 'none' }}
-      accept={SUPPORTED_MODEL_INTAKE_ACCEPT}
-      multiple
-      onChange={props.onFileChange}
-    />
-  </>
-);
+const Toolbar: React.FC<ToolbarProps> = (props) => {
+  const restoreThemeFocus = useRef(false);
+  const themeFocusRef = useCallback((control: HTMLElement | null) => {
+    if (!control || !restoreThemeFocus.current) return;
+    restoreThemeFocus.current = false;
+    control.focus();
+  }, []);
+  const setThemeId = (themeId: AppThemeId) => {
+    restoreThemeFocus.current = themeId !== props.themeId;
+    props.setThemeId(themeId);
+  };
+  const ShellToolbar = props.theme.shellVariant === 'modern' ? ModernToolbar : OriginalToolbar;
+  return (
+    <>
+      <ShellToolbar {...props} setThemeId={setThemeId} themeFocusRef={themeFocusRef} />
+      <input
+        type="file"
+        data-testid="model-file-input"
+        style={{ display: 'none' }}
+        accept={SUPPORTED_MODEL_INTAKE_ACCEPT}
+        multiple
+        onChange={props.onFileChange}
+      />
+    </>
+  );
+};
 
 export default Toolbar;

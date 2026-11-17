@@ -5,6 +5,11 @@ selection and downloads, including manual `.rsproj` save and reopen. A theme
 preference can persist in browser settings. Project autosave and recovery are
 disabled because the Shoozes Pages projects share one browser storage origin.
 
+In current source, Classic keeps the project and export actions in its compact
+toolbar at narrow and desktop widths. Help next to Undo and Redo explains
+manual project downloads and links to the third-party notices. A keyboard
+theme switch moves focus to Theme in Classic or More commands in Modern.
+
 ## Local build and proof
 
 Use Node 24 and a Rust toolchain with the `wasm32-unknown-unknown` target.
@@ -22,7 +27,9 @@ The browser runner builds once, serves the Pages output under `/RustSMF/`, and
 closes its preview server at the end of the run. It exercises explicit
 downloads and reimport, storage behavior, Classic launch and theme switching,
 and actual retarget worker and WebAssembly delivery without cross-origin
-isolation. Web artifacts and notices are under `source/frontend/dist-pages/`.
+isolation. Classic coverage checks toolbar reachability across widths and opens,
+saves, and reopens a project at phone width. Web artifacts and notices are
+under `source/frontend/dist-pages/`.
 
 ## Deploy
 
@@ -59,3 +66,4 @@ storage, and ran the retarget worker using WebAssembly served under
 Classic layout with the first-party Signal Robot sample.
 
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=web-edition | change=document Pages build, browser persistence and deploy proof -->
+<!-- AI-edited: 2026-11-17 | agent=Codex/root | task=web-edition-review | change=document Classic toolbar, Help, and browser coverage -->

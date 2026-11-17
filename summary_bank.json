@@ -133,7 +133,6 @@
         "design-qa.md",
         "docs/references/theme-qa/README.md",
         "source/frontend/tests/modern-authoring-layout.spec.ts",
-        "source/frontend/tests/preview-readiness.spec.ts",
         "source/frontend/src/components/WorkspaceTasks.tsx",
         "source/frontend/src/components/workspaceTaskContext.ts"
       ],
@@ -146,7 +145,7 @@
         "ViewportControls exposes separate Rig fade and reversible Hide rig/Show rig controls so helper geometry can be removed for shaded-skin inspection without mutating source or export state.",
         "docs/references/theme-qa/README.md owns the preserved-source comparison and final fidelity evidence paths.",
         "The theme cap includes the shared task-shell source and six-size authoring proof; detailed Skin behavior stays in its authoring route.",
-        "Shared task navigation and authoring actions are routed in feature__workspace_tasks; Help and concise status behavior retain their preview workflow owner."
+        "Shared task navigation is routed in feature__workspace_tasks. Shared Help styling lives in index.css; load workflow__preview_release for its content and preview checks."
       ]
     },
     "feature__model_outliner_materials": {
@@ -267,7 +266,7 @@
         "source/frontend/tests/web-edition.spec.ts"
       ],
       "notes": [
-        "Pages uses the existing editor under /RustSMF/ with manual release and project downloads; desktop release and theme styling retain their existing routes."
+        "Pages uses the existing editor under /RustSMF/ with manual release and project downloads. Load feature__theme_system for Classic toolbar and theme focus, and workflow__preview_release for shared Help."
       ]
     },
     "workflow__game_ready_cli": {
@@ -1168,6 +1167,7 @@
         "source/frontend/scripts/generate-preview-demo.ts",
         "source/frontend/src/utils/previewDemo.ts",
         "source/frontend/src/utils/previewDemo.test.ts",
+        "source/frontend/src/components/HelpDialog.tsx",
         "source/frontend/tests/preview-readiness.spec.ts",
         "source/frontend/tests/helpers/render-evidence.ts",
         "source/frontend/tests/render-evidence.spec.ts"

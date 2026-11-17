@@ -3,9 +3,9 @@ import { X } from '@phosphor-icons/react';
 import { version } from '../../package.json';
 import { IS_WEB_EDITION } from '../webEdition';
 
-interface HelpDialogProps { open: boolean; status: string; onDismiss: () => void; onClosed: () => void }
+interface HelpDialogProps { open: boolean; status: string; classic: boolean; onDismiss: () => void; onClosed: () => void }
 
-export default function HelpDialog({ open, status, onDismiss, onClosed }: HelpDialogProps) {
+export default function HelpDialog({ open, status, classic, onDismiss, onClosed }: HelpDialogProps) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const dialog = ref.current;
@@ -37,12 +37,16 @@ export default function HelpDialog({ open, status, onDismiss, onClosed }: HelpDi
       <p className="preview-help-version">{version} {IS_WEB_EDITION ? 'Web Edition' : 'preview'} · MIT</p>
       <dl>
         <dt>Open</dt><dd>Open or drop a model. Select related files together. Drag to orbit; right-drag to pan; scroll to zoom.</dd>
-        <dt>Edit</dt><dd>Choose a workspace, then open Tools. Use Undo or Redo to revise edits.</dd>
+        <dt>Edit</dt><dd>{classic ? 'Choose a workspace from the tabs.' : 'Choose a workspace, then open Tools.'} Use Undo or Redo to revise edits.</dd>
         <dt>Save Project</dt><dd>{IS_WEB_EDITION
           ? 'Download an .rsproj before closing the tab. Use Open Project to continue.'
           : 'Save your work as .rsproj. Use Open Project to continue.'}</dd>
-        {IS_WEB_EDITION && <><dt>Classic</dt><dd>Choose Classic (Original SMF) under Theme in More.</dd></>}
-        <dt>Export</dt><dd>Export keeps SMF, FBX or DAE sources in that format; otherwise GLB. More selects a format.</dd>
+        {IS_WEB_EDITION && <><dt>Theme</dt><dd>{classic
+          ? 'Choose Modern under Theme to switch layouts.'
+          : 'Choose Classic (Original SMF) under Theme in More.'}</dd></>}
+        <dt>Export</dt><dd>Export keeps SMF, FBX or DAE sources in that format; otherwise GLB. {classic
+          ? 'Use the format buttons to choose a different format.'
+          : 'More selects a format.'}</dd>
         <dt>Format limits</dt><dd>GLB embeds textures. DAE keeps texture files separate. SMF cannot store scale animation. Unsupported exports show an error.</dd>
       </dl>
       <p className="preview-help-shortcuts"><kbd>Ctrl Z</kbd> Undo · <kbd>Ctrl Y</kbd> Redo · <kbd>Esc</kbd> Close</p>

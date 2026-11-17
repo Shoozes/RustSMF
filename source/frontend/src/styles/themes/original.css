@@ -806,3 +806,75 @@
 .app-shell[data-theme="original"] .toolbar-viewport .toolbar-menu-summary > svg {
   display: none;
 }
+
+.app-shell[data-theme="original"][data-web-edition="true"] .toolbar {
+  grid-template-columns: 136px minmax(0, 1fr) minmax(128px, max-content);
+  overflow: visible;
+}
+
+.app-shell[data-theme="original"][data-web-edition="true"] .toolbar-file-actions {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.app-shell[data-theme="original"][data-web-edition="true"] .toolbar-file-action-wide {
+  grid-column: span 2;
+}
+
+.app-shell[data-theme="original"][data-web-edition="true"] .mode-tablist {
+  grid-template-columns: repeat(5, minmax(0, 126px));
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.app-shell[data-theme="original"][data-web-edition="true"] .theme-switcher {
+  grid-template-columns: auto;
+}
+
+.app-shell[data-theme="original"][data-web-edition="true"] .theme-select {
+  width: auto;
+}
+
+.app-shell[data-theme="original"][data-web-edition="true"] :is(.toolbar, .preview-help) :focus-visible {
+  outline: 2px solid var(--ui-accent-border);
+  outline-offset: -2px;
+}
+
+.app-shell[data-theme="original"] .preview-help kbd {
+  color: var(--ui-text-strong);
+}
+
+.app-shell[data-theme="original"] .preview-help::backdrop {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 800px) {
+  .app-shell[data-theme="original"][data-web-edition="true"] .toolbar {
+    grid-template-areas:
+      "brand theme"
+      "workspace workspace"
+      "file file"
+      "viewport history";
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: repeat(4, auto);
+    flex-shrink: 0;
+  }
+
+  .app-shell[data-theme="original"][data-web-edition="true"] .toolbar-file-actions {
+    display: grid;
+    grid-template-rows: none;
+  }
+
+  .app-shell[data-theme="original"][data-web-edition="true"] .toolbar-file-action-wide {
+    grid-column: auto;
+  }
+
+  .app-shell[data-theme="original"][data-web-edition="true"] :is(.toolbar-action, .mode-tab, .theme-select, .layout-btn, .toolbar-menu-summary) {
+    height: auto;
+    min-height: 24px;
+  }
+
+  .app-shell[data-theme="original"][data-web-edition="true"] .mode-tab {
+    text-align: center;
+  }
+}
