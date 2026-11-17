@@ -3,6 +3,7 @@
 // remain DOM-owned and never accept arbitrary native paths.
 
 import { Channel, invoke } from '@tauri-apps/api/core'
+import { IS_WEB_EDITION } from '../webEdition'
 import { bytesToArrayBuffer } from '../loaders'
 import { normalizeBinaryBundlePayload, normalizeBinaryPayload } from './binaryPayload'
 import {
@@ -300,6 +301,7 @@ export async function openProjectFile(): Promise<Uint8Array | null> {
 export async function autosaveProject(data: Uint8Array): Promise<boolean> {
   assertModelInputSize('autosave project', data.byteLength)
   if (isTauriEnv()) return invokeCommand<boolean>('autosave_project', { data })
+  if (IS_WEB_EDITION) return false
   try {
     localStorage.setItem('rustsmf.project.autosave.0', new TextDecoder().decode(data))
     return true
@@ -310,6 +312,7 @@ export async function autosaveProject(data: Uint8Array): Promise<boolean> {
 
 export async function discoverProjectRecovery(): Promise<readonly string[]> {
   if (isTauriEnv()) return invokeCommand<string[]>('discover_project_recovery')
+  if (IS_WEB_EDITION) return []
   return localStorage.getItem('rustsmf.project.autosave.0') ? ['rustsmf.project.autosave.0'] : []
 }
 
@@ -318,6 +321,7 @@ export async function readProjectRecovery(name: string): Promise<Uint8Array> {
     const payload = await invokeCommand<unknown>('read_project_recovery', { name })
     return normalizeBinaryPayload(payload, name)
   }
+  if (IS_WEB_EDITION) throw new Error('Use Open Project to load a saved .rsproj file.')
   const value = localStorage.getItem(name)
   if (!value) throw new Error(`Project recovery generation "${name}" was not found.`)
   return new TextEncoder().encode(value)

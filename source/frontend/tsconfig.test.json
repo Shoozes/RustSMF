@@ -6,6 +6,8 @@
   },
   "include": [
     "playwright.config.ts",
+    "playwright.pages.config.ts",
+    "src/vite-env.d.ts",
     "scripts/**/*.ts",
     "src/**/*.test.ts",
     "tests/**/*.ts"

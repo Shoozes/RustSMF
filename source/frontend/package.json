@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:web": "vite build --mode pages",
+    "prebuild:web": "node ../../scripts/build-retarget-wasm.mjs --install-tools",
+    "postbuild:web": "node scripts/copy-web-notices.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
     "check:production-any": "node scripts/check-production-any.mjs",
@@ -16,6 +19,7 @@
     "lint": "eslint .",
     "test:unit": "node scripts/run-unit-tests.mjs",
     "test:e2e": "playwright test",
+    "test:web": "playwright test --config=playwright.pages.config.ts",
     "test:e2e:list": "playwright test --list",
     "test:journey": "playwright test --config=playwright.journey.config.ts",
     "test:journey:hand-wave": "playwright test --config=playwright.journey.config.ts tests/journeys/hand-wave.journey.spec.ts",

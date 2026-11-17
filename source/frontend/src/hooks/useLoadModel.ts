@@ -2,6 +2,7 @@ import { useCallback, useMemo, useRef, useEffect, useState, useSyncExternalStore
 import type * as THREE from 'three';
 import type { OpenResult, TauriClient } from '../backend-client/tauri';
 import { createLazyClientLoader } from '../backend-client/lazyClient';
+import { IS_WEB_EDITION } from '../webEdition';
 import { buildThreeScene as buildSmfScene, loadGLB, loadFBX, loadDAE, loadOBJ, exportGLB, validateExportedGLB, exportFBX, validateExportedFBX, exportDAE, validateExportedDAE, bytesToArrayBuffer, SmfConversionError, collectSkinnedMeshes, compareSmfRoundtrip, inspectThreeToSmfSource, makeDiagnosticReport } from '../loaders';
 import type { ImportedSmf, SmfDiagnosticReport, SmfRoundtripReport } from '../loaders';
 import { useUiSlice, useModelSlice, usePlaybackSlice } from '../store';
@@ -1376,7 +1377,9 @@ export function useLoadModel(options: UseLoadModelOptions = {}) {
         if (!isCurrentExport()) return;
         const ok = await (await getTauriClient()).saveProjectFile(data, `rustsmf-project${PROJECT_EXTENSION}`);
         if (!isCurrentExport()) return;
-        ui.setStatus(ok ? 'Saved RustSMF project snapshot atomically.' : 'Project save canceled.');
+        ui.setStatus(ok
+          ? IS_WEB_EDITION ? 'Project download requested. Check Downloads.' : 'Saved RustSMF project snapshot atomically.'
+          : 'Project save canceled.');
       } catch (error: unknown) {
         if (!isCurrentExport()) return;
         const message = errorMessage(error);

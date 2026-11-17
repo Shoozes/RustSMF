@@ -18,6 +18,7 @@ import AnimatePanel from './components/AnimatePanel';
 import WorkspaceTasks, { TaskSection } from './components/WorkspaceTasks';
 import ExportPanel from './components/ExportPanel';
 import { useAppTheme } from './hooks/useAppTheme'
+import { IS_WEB_EDITION } from './webEdition'
 import { useLoadModel } from './hooks/useLoadModel'
 import type { EditorMode } from './store'
 import { getAppTheme, type AppThemeId } from './theme'
@@ -369,7 +370,7 @@ export default function App() {
     autosaveProjectRef.current = handleAutosaveProject;
   }, [handleAutosaveProject]);
   useEffect(() => {
-    if (!hasModel) return;
+    if (IS_WEB_EDITION || !hasModel) return;
     const timer = window.setTimeout(() => {
       void autosaveProjectRef.current();
     }, 1200);

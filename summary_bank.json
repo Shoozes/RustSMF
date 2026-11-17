@@ -13,6 +13,7 @@
       ".secrets",
       "build",
       "dist",
+      "dist-pages",
       "node_modules",
       "output",
       "playwright-report",
@@ -38,7 +39,7 @@
     },
     "workflow__context_bank": {
       "description": "Portable public context routing, validation, and generation entry points.",
-      "max_kb": 133,
+      "max_kb": 135,
       "paths": [
         "summary_bank.json",
         "scripts/context-bank-lib.mjs",
@@ -251,9 +252,27 @@
         "Animate Transfer stages worker results for private preview before one history transaction; feature__retarget_assistance owns that lifecycle. Reviewed preset maps export through the existing explicit manualMap fields."
       ]
     },
+    "workflow__web_edition": {
+      "description": "GitHub Pages build, browser storage, Classic entry point, and deployed smoke checks.",
+      "max_kb": 52,
+      "paths": [
+        ".github/workflows/deploy-pages.yml",
+        "docs/dev/WEB_EDITION.md",
+        "source/frontend/vite.config.ts",
+        "source/frontend/scripts/copy-web-notices.mjs",
+        "source/frontend/src/webEdition.ts",
+        "source/frontend/src/hooks/useAppTheme.ts",
+        "source/frontend/src/backend-client/tauri.ts",
+        "source/frontend/playwright.pages.config.ts",
+        "source/frontend/tests/web-edition.spec.ts"
+      ],
+      "notes": [
+        "Pages uses the existing editor under /RustSMF/ with manual release and project downloads; desktop release and theme styling retain their existing routes."
+      ]
+    },
     "workflow__game_ready_cli": {
       "description": "Versioned local job parsing, bounded input, validation, immutable generation publication, and machine-readable evidence.",
-      "max_kb": 216,
+      "max_kb": 218,
       "paths": [
         "docs/dev/GAME_READY_CLI.md",
         "source/frontend/scripts/game-ready-cli.ts",

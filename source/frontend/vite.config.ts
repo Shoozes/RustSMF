@@ -7,7 +7,8 @@ const THREE_VENDOR_PATTERNS = [
   '/node_modules/three/examples/jsm/'
 ];
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: mode === 'pages' ? '/RustSMF/' : '/',
   plugins: [react()],
   worker: { format: 'es' },
   resolve: {
@@ -17,6 +18,7 @@ export default defineConfig({
     include: ['three', 'three/examples/jsm/controls/TransformControls']
   },
   build: {
+    outDir: mode === 'pages' ? 'dist-pages' : 'dist',
     manifest: true,
     chunkSizeWarningLimit: 1200,
     rollupOptions: {
@@ -42,5 +44,7 @@ export default defineConfig({
       'Cross-Origin-Embedder-Policy': 'require-corp',
       'Cross-Origin-Opener-Policy': 'same-origin'
     }
-  }
-});
+  },
+  // Pages cannot inherit the development server's cross-origin headers.
+  preview: mode === 'pages' ? { headers: {} } : undefined,
+}));

@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { browserTestEndpoint } from './scripts/browser-test-endpoint';
 
-const endpoint = browserTestEndpoint(process.env.RUSTSMF_PLAYWRIGHT_PORT);
+export const endpoint = browserTestEndpoint(process.env.RUSTSMF_PLAYWRIGHT_PORT);
 
 const quoteShellArgument = (value: string): string => (
   process.platform === 'win32'
@@ -18,7 +18,7 @@ const bundledNpmCli = path.join(
   'bin',
   'npm-cli.js',
 );
-const npmCommand = existsSync(bundledNpmCli)
+export const npmCommand = existsSync(bundledNpmCli)
   ? `${quoteShellArgument(process.execPath)} ${quoteShellArgument(bundledNpmCli)}`
   : 'npm';
 
@@ -40,7 +40,7 @@ if (
  */
 export default defineConfig({
   testDir: './tests',
-  testIgnore: '**/*.journey.spec.ts',
+  testIgnore: ['**/*.journey.spec.ts', '**/web-edition.spec.ts'],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,

@@ -17,6 +17,7 @@ import {
   type AppThemeId,
 } from '../theme';
 import { SUPPORTED_MODEL_INTAKE_ACCEPT } from '../utils/modelFormat';
+import { IS_WEB_EDITION } from '../webEdition';
 import ViewportControls, { type ViewportControlsProps } from './ViewportControls';
 
 interface ToolbarProps extends Omit<ViewportControlsProps, 'variant'> {
@@ -114,7 +115,9 @@ const ThemeSwitcher: React.FC<ThemeSwitcherProps> = ({ theme, themeId, setThemeI
       aria-describedby="appearance-theme-description"
       title={theme.description}
     >
-      {APP_THEMES.map((option) => <option key={option.id} value={option.id}>{option.label}</option>)}
+      {APP_THEMES.map((option) => <option key={option.id} value={option.id}>
+        {IS_WEB_EDITION && option.id === 'original' ? 'Classic (Original SMF)' : option.label}
+      </option>)}
     </select>
     <span id="appearance-theme-description" data-testid="theme-description" className="sr-only">
       {theme.description}
@@ -127,7 +130,7 @@ const SecondaryCommands: React.FC<Pick<ToolbarProps,
 >> = ({ onOpenProject, onRecoverProject, onExportGlb, onExportFbx, onExportDae, onExportSmf, smfExportEnabled, onPing, isLoading }) => (
   <div className="modern-command-menu-grid">
     <button className="toolbar-action" data-testid="open-project-btn" onClick={onOpenProject} disabled={isLoading}>Open Project</button>
-    <button className="toolbar-action" data-testid="recover-project-btn" onClick={onRecoverProject} disabled={isLoading}>Recover</button>
+    {!IS_WEB_EDITION && <button className="toolbar-action" data-testid="recover-project-btn" onClick={onRecoverProject} disabled={isLoading}>Recover</button>}
     <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading}>Export GLB</button>
     <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={isLoading}>Export FBX</button>
     <button className="toolbar-action" data-testid="export-dae-btn" onClick={onExportDae} disabled={isLoading}>Export DAE</button>
@@ -140,7 +143,7 @@ const SecondaryCommands: React.FC<Pick<ToolbarProps,
     >
       Export SMF
     </button>
-    <button className="toolbar-action toolbar-action-muted" data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>Backend status</button>
+    {!IS_WEB_EDITION && <button className="toolbar-action toolbar-action-muted" data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>Backend status</button>}
   </div>
 );
 
@@ -288,13 +291,13 @@ const OriginalToolbar: React.FC<ToolbarProps> = (props) => {
           <button className="toolbar-action" data-testid="open-model-btn" onClick={onOpen} disabled={isLoading}>Open Asset</button>
           <button className="toolbar-action toolbar-action-muted" data-testid="open-project-btn" onClick={onOpenProject} disabled={isLoading}>Open Project</button>
           <button className="toolbar-action toolbar-action-muted" data-testid="save-project-btn" onClick={onSaveProject} disabled={isLoading || !hasModel}>Save Project</button>
-          <button className="toolbar-action toolbar-action-muted" data-testid="recover-project-btn" onClick={onRecoverProject} disabled={isLoading}>Recover</button>
+          {!IS_WEB_EDITION && <button className="toolbar-action toolbar-action-muted" data-testid="recover-project-btn" onClick={onRecoverProject} disabled={isLoading}>Recover</button>}
           <button className="toolbar-action" data-testid="export-btn" onClick={onExport} disabled={isLoading}>Export Asset</button>
           <button className="toolbar-action" data-testid="export-glb-btn" onClick={onExportGlb} disabled={isLoading}>GLB</button>
           <button className="toolbar-action" data-testid="export-fbx-btn" onClick={onExportFbx} disabled={isLoading}>FBX</button>
           <button className="toolbar-action" data-testid="export-dae-btn" onClick={onExportDae} disabled={isLoading}>DAE</button>
           <button className="toolbar-action" data-testid="export-smf-btn" onClick={onExportSmf} disabled={isLoading || !smfExportEnabled}>SMF</button>
-          <button className="toolbar-action toolbar-action-muted" data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>Ping</button>
+          {!IS_WEB_EDITION && <button className="toolbar-action toolbar-action-muted" data-testid="ping-rust-btn" onClick={onPing} disabled={isLoading}>Ping</button>}
         </div>
         <div className="toolbar-action-group toolbar-history-actions" aria-label="Editor history">
           <button className="toolbar-action toolbar-action-muted" data-testid="editor-undo-btn" onClick={onUndo} disabled={isLoading || !undoAvailable} type="button">Undo</button>

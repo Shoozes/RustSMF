@@ -34,7 +34,7 @@ function toPosix(path) {
 
 function walkFiles(directory, output = []) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
-    if (entry.isSymbolicLink() || entry.name === 'node_modules' || entry.name === 'dist') continue
+    if (entry.isSymbolicLink() || ['node_modules', 'dist', 'dist-pages'].includes(entry.name)) continue
     const absolutePath = resolve(directory, entry.name)
     if (entry.isDirectory()) walkFiles(absolutePath, output)
     else if (entry.isFile()) output.push(absolutePath)
