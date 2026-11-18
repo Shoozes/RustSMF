@@ -6,6 +6,9 @@ Prefer dynamic and modular solutions over hard-coding.
 
 Comments are direct and minimal. No decorative lines. No emojis in code or docs.
 
+Track follow-up work in [docs/dev/TODO.md](docs/dev/TODO.md).
+Keep TODO comments out of code.
+
 Prioritize correctness and readability over cleverness.
 
 TypeScript React in the front

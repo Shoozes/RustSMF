@@ -13,17 +13,15 @@ installed evidence retains its recorded asset/package identities. The
 2026-11-08 filesystem recheck confirms the approved debug cache and temporary
 closeout clone are absent; their earlier blocked receipts remain historical.
 
-Backlog status: the selected installed visual criterion is complete. The
+The selected installed visual criterion is complete. The
 operator-authorized attended run on 2026-11-08 reviewed loaded Sable, normal
 Walk playback, paused retarget preview and Apply/save/reopen on the retained
 follow-up executable with a newly bound three-clip fixture. Independent output
 and cleanup proof passed; default recovery stayed unchanged. See
 [HISTORY](HISTORY.md#installed-attended-observation-20261108) and the
 [installed record](INSTALLED_TEST_SESSION.md#attended-observation-20261108).
-No executable product batch remains selected. Policy-blocked housekeeping below
-remains outside product acceptance. Broader mapping coverage and historical
-matrices are not renewed by this bounded run; public preview replacement still
-requires a separate release decision.
+Policy-blocked housekeeping remains outside product acceptance. Public preview
+replacement requires a separate release decision.
 
 The ordinary GLB exchange pilot with Blender Tools is complete for the pinned
 fixture. RustSMF exported directly from Model during autoplay. Blender 5.2.1
@@ -33,7 +31,8 @@ pose, inverse binds, geometry, appearance, and all eight clip timings. Across
 root-motion difference. The fixture, exported derivative, and receipts stay in
 local pilot evidence.
 
-The [morph default follow-up](HISTORY.md#glb-morph-defaults-20261117)
+Backlog status: no executable product batch selected. Policy-blocked
+housekeeping remains recorded below. The [morph default follow-up](HISTORY.md#glb-morph-defaults-20261117)
 closed with direct Model and Export browser proof and reimported animation samples.
 
 The Classic Web Edition fixes went live on 2026-11-17. The
@@ -93,7 +92,7 @@ unchanged default recovery. The historical result remains in
 - When: Command policy permits the exact named operations; separate from qualification.
 - How: Unlink dependencies without targets; remove only proven owned scratch.
 - Done when: Named scratch is absent; shared dependencies and retained proof remain intact.
-- Verification: All three remain. Current inventory found two shared-dependency junctions in the D: candidate and no reparse points in the C: candidate. The checked two-junction unlink and single named-ZIP deletion were both rejected by command policy before execution on 2026-10-26. Do not bypass that restriction.
+- Verification: On 2026-11-17, the repository-local ZIP and candidate directory were present. The named D: candidate directory was absent; its disposition is unknown. The checked two-junction unlink and single named-ZIP deletion were both rejected by command policy before execution on 2026-10-26. Do not bypass that restriction.
 
 The named scratch scope also includes only the `candidate/` subdirectory under
 `runtime-data/web-edition-mobile-gestures-publish-20261118/`. The Pages closeout
@@ -153,7 +152,9 @@ AI-edited: 2026-11-02 | agent=Codex/root | task=installed-supervised-capture | c
 <!-- AI-edited: 2026-11-08 | agent=Codex/root | task=sable-closeout-publish | change=polish candidate scope and account for retained owned cache -->
 <!-- AI-edited: 2026-11-16 | agent=Codex/root | task=storage-retirement | change=record verified operator cleanup -->
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=ordinary-glb-pilot | change=record verified Model-autoplay exchange -->
+<!-- AI-edited: 2026-11-17 | agent=Codex/root | task=review-recheck-cleanup | change=select verified morph default follow-up -->
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=glb-morph-defaults | change=close the selected batch after browser and reimport verification -->
+<!-- AI-edited: 2026-11-17 | agent=Codex/root | task=work-queue-recheck | change=record current presence of the named blocked scratch paths -->
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=web-edition-review | change=record verified local Classic fixes and pending Pages deployment -->
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=web-edition-deploy | change=close the Pages deployment task after hosted browser verification -->
 <!-- AI-edited: 2026-11-18 | agent=Codex/root | task=web-mobile-gestures-deploy | change=record verified Pages deployment and hosted Modern and Classic tests -->
