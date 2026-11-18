@@ -95,6 +95,12 @@ unchanged default recovery. The historical result remains in
 - Done when: Named scratch is absent; shared dependencies and retained proof remain intact.
 - Verification: All three remain. Current inventory found two shared-dependency junctions in the D: candidate and no reparse points in the C: candidate. The checked two-junction unlink and single named-ZIP deletion were both rejected by command policy before execution on 2026-10-26. Do not bypass that restriction.
 
+The named scratch scope also includes only the `candidate/` subdirectory under
+`runtime-data/web-edition-mobile-gestures-publish-20261118/`. The Pages closeout
+recorded 33,100,196 bytes and a policy rejection before removal. The current
+recheck confirmed that the directory is still present. Preserve the sibling
+publish allowlist and the separate release and hosted-test receipts.
+
 The native-profile closeout also retains four inactive, task-owned Cargo cache
 directories after automatic approval review rejected their scoped removal as
 `blocked by policy`. No deletion ran and no workaround was attempted. The
