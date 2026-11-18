@@ -36,6 +36,7 @@ interface ToolbarProps extends Omit<ViewportControlsProps, 'variant'> {
   onRedo: () => void;
   undoAvailable: boolean;
   redoAvailable: boolean;
+  modelFileInputRef: React.Ref<HTMLInputElement>;
   onFileChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   editorMode: EditorMode;
   setEditorMode: (mode: EditorMode) => void;
@@ -338,9 +339,12 @@ const Toolbar: React.FC<ToolbarProps> = (props) => {
     <>
       <ShellToolbar {...props} setThemeId={setThemeId} themeFocusRef={themeFocusRef} />
       <input
+        ref={props.modelFileInputRef}
         type="file"
         data-testid="model-file-input"
-        style={{ display: 'none' }}
+        className={IS_WEB_EDITION ? 'sr-only' : 'hidden'}
+        tabIndex={-1}
+        aria-hidden="true"
         accept={SUPPORTED_MODEL_INTAKE_ACCEPT}
         multiple
         onChange={props.onFileChange}

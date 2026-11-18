@@ -1335,6 +1335,9 @@ export default function App() {
     </div>
   );
 
+  const modelFileInputRef = useRef<HTMLInputElement>(null);
+  // Open the browser picker during the tap or key press. Loading starts on change.
+  const openAsset = IS_WEB_EDITION ? () => modelFileInputRef.current?.click() : handleOpen;
   const showTimeline = theme.shellVariant === 'original' ? workspace.showTimeline : editorMode === 'animate';
   const statusText = theme.shellVariant === 'modern' ? modernStatus(ui.status) : ui.status;
 
@@ -1349,7 +1352,7 @@ export default function App() {
       data-web-edition={IS_WEB_EDITION || undefined}
     >
       <Toolbar
-        onOpen={handleOpen}
+        onOpen={openAsset}
         onOpenProject={handleOpenProject}
         onSaveProject={handleSaveProject}
         onRecoverProject={handleRecoverProject}
@@ -1364,6 +1367,7 @@ export default function App() {
         onRedo={handleEditorRedo}
         undoAvailable={editorUndoAvailable || outlinerUndoAvailable || skinUndoAvailable}
         redoAvailable={editorRedoAvailable || outlinerRedoAvailable || skinRedoAvailable}
+        modelFileInputRef={modelFileInputRef}
         onFileChange={handleFileInputChange}
         editorMode={editorMode}
         setEditorMode={handleEditorModeChange}
@@ -1535,7 +1539,7 @@ export default function App() {
           {theme.shellVariant === 'modern' && !hasModel && !ui.isLoading && (
             <div className="modern-empty-state" data-testid="modern-empty-state">
               <p>Drop a model here</p>
-              <button type="button" className="modern-empty-open" data-testid="modern-empty-open" onClick={handleOpen}>
+              <button type="button" className="modern-empty-open" data-testid="modern-empty-open" onClick={openAsset}>
                 or open a file
               </button>
             </div>

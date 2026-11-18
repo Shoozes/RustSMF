@@ -186,6 +186,37 @@ test('Classic Help explains project downloads and returns focus to its launcher'
   await expect(launcher).toBeFocused();
 });
 
+test.describe('Mobile Open Asset', () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+
+  for (const { name, entry, launcherId } of [
+    { name: 'Modern toolbar', entry: webPath, launcherId: 'open-model-btn' },
+    { name: 'Modern empty state', entry: webPath, launcherId: 'modern-empty-open' },
+    { name: 'Classic toolbar', entry: webPath + '?theme=classic', launcherId: 'open-model-btn' },
+  ]) {
+    test(`${name} can retry a picker that yields no selection`, async ({ page }) => {
+      const assertErrors = watchJourneyErrors(page);
+      await page.goto(entry);
+      const launcher = page.getByTestId(launcherId);
+      const first = page.waitForEvent('filechooser');
+      await launcher.tap();
+      const picker = await first;
+
+      // The intercepted picker delivers no change, cancel, or focus event.
+      await expect(page.getByTestId('open-model-btn')).toBeEnabled({ timeout: 1500 });
+      await expect(page.getByTestId('loading-overlay')).toHaveCount(0);
+      expect(await picker.element().getAttribute('data-testid')).toBe('model-file-input');
+
+      const retry = page.waitForEvent('filechooser');
+      await launcher.tap();
+      await (await retry).setFiles(robot);
+      await expect(page.getByTestId('status-text')).toContainText('Loaded: rustsmf-demo.glb');
+      await expect(page.getByTestId('open-model-btn')).toBeEnabled();
+      assertErrors();
+    });
+  }
+});
+
 test('Pages serves runnable retarget worker JavaScript and WASM under the repository path', async ({ page, context }) => {
   const assertErrors = watchJourneyErrors(page);
   const responses: Response[] = [];
