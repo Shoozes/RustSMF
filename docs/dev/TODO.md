@@ -44,6 +44,12 @@ trips, Classic toolbar reachability, keyboard theme switching, Help focus
 return, Classic project reopen and GLB export at 390 px, and retarget WASM
 delivery.
 
+The Web Edition mobile gesture fixes went live on 2026-11-18 with commit
+`678975dfcd845eef5d7b70540ffcd916a6cee83c` from `main`. All 10
+hosted Chromium tests passed. Emulated touch tests verified that the scene
+stayed pinned while panels scrolled in Modern and Classic.
+[Pages workflow run 44381829510](https://github.com/Shoozes/RustSMF/actions/runs/44381829510).
+
 ### Optional consumer references — not RustSMF work
 
 - **P7C coupled body-height:** RustSMF's source-bound producer graph and its 46 packets/590 references are recorded in [HISTORY.md](HISTORY.md#p7c-coupled-body-height-20261029) and [SKELETAL_COUPLED_BODY_HEIGHT.md](SKELETAL_COUPLED_BODY_HEIGHT.md). The consumer's partial 637-pose pilot retains later right-sole drift; full physical and visual receiving belongs to GaimEngine.
@@ -144,3 +150,4 @@ AI-edited: 2026-11-02 | agent=Codex/root | task=installed-supervised-capture | c
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=glb-morph-defaults | change=close the selected batch after browser and reimport verification -->
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=web-edition-review | change=record verified local Classic fixes and pending Pages deployment -->
 <!-- AI-edited: 2026-11-17 | agent=Codex/root | task=web-edition-deploy | change=close the Pages deployment task after hosted browser verification -->
+<!-- AI-edited: 2026-11-18 | agent=Codex/root | task=web-mobile-gestures-deploy | change=record verified Pages deployment and hosted Modern and Classic tests -->
