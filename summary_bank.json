@@ -260,13 +260,14 @@
         "source/frontend/vite.config.ts",
         "source/frontend/scripts/copy-web-notices.mjs",
         "source/frontend/src/webEdition.ts",
+        "source/frontend/src/styles/web-edition.css",
         "source/frontend/src/hooks/useAppTheme.ts",
         "source/frontend/src/backend-client/tauri.ts",
         "source/frontend/playwright.pages.config.ts",
         "source/frontend/tests/web-edition.spec.ts"
       ],
       "notes": [
-        "Pages uses the existing editor under /RustSMF/ with manual release and project downloads. Load feature__theme_system for Classic toolbar and theme focus, and workflow__preview_release for shared Help."
+        "Pages uses the existing editor under /RustSMF/ with manual release and project downloads. The Pages marker in main.tsx scopes touch gestures and panel scrolling. Load feature__theme_system for Classic toolbar and theme focus, and workflow__preview_release for shared Help."
       ]
     },
     "workflow__game_ready_cli": {

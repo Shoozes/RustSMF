@@ -4,9 +4,13 @@ import App from './App'
 import './index.css'
 import './styles/themes/modern.css'
 import './styles/themes/original.css'
+import './styles/web-edition.css'
 import { IS_WEB_EDITION } from './webEdition'
 
-if (IS_WEB_EDITION) document.title = 'RustSMF Web Edition'
+if (IS_WEB_EDITION) {
+  document.title = 'RustSMF Web Edition'
+  document.documentElement.dataset.webEdition = 'true'
+}
 
 const root = createRoot(document.getElementById('root')!)
 root.render(

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { IS_WEB_EDITION } from '../webEdition';
 
 type OrbitEventFilter = (x: number, y: number, button?: number) => boolean;
 
@@ -84,7 +85,10 @@ export class SimpleOrbit {
     const onTouchEnd = endDrag;
     const onTouchCancel = endDrag;
     const onTouchMove = (e: TouchEvent) => {
-      if (!this.enabled || !this.dragging || e.touches.length !== 1) return;
+      if (e.touches.length !== 1) return;
+      // A canvas drag owns the touch move in every pane.
+      if (IS_WEB_EDITION && e.cancelable) e.preventDefault();
+      if (!this.enabled || !this.dragging) return;
       const tx = e.touches[0].clientX;
       const ty = e.touches[0].clientY;
       if (!shouldHandle(tx, ty, 0)) return;
@@ -99,7 +103,7 @@ export class SimpleOrbit {
     canvas.addEventListener('touchstart', onTouchStart);
     canvas.addEventListener('touchend', onTouchEnd);
     canvas.addEventListener('touchcancel', onTouchCancel);
-    canvas.addEventListener('touchmove', onTouchMove);
+    canvas.addEventListener('touchmove', onTouchMove, { passive: false });
     window.addEventListener('blur', endDrag);
 
     return () => {

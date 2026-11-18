@@ -1,4 +1,4 @@
-import { expect, test, type Response } from '@playwright/test';
+import { expect, test, type Page, type Response } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 import { expectMotion, readAssetEvidence } from './helpers/asset-evidence';
 import { revealSecondaryCommands, workspaceControl } from './helpers/modern-shell';
@@ -213,6 +213,72 @@ test.describe('Mobile Open Asset', () => {
       await expect(page.getByTestId('status-text')).toContainText('Loaded: rustsmf-demo.glb');
       await expect(page.getByTestId('open-model-btn')).toBeEnabled();
       assertErrors();
+    });
+  }
+});
+
+async function swipeUp(page: Page, x: number, y: number, distance: number) {
+  const session = await page.context().newCDPSession(page);
+  try {
+    await session.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] });
+    for (let step = 1; step <= 6; step++) {
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchMove', touchPoints: [{ x, y: y - distance * step / 6 }],
+      });
+    }
+    await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+    await page.evaluate(() => new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+  } finally {
+    await session.detach();
+  }
+}
+
+test.describe('Mobile gestures', () => {
+  test.use({ viewport: { width: 740, height: 360 }, hasTouch: true, isMobile: true });
+
+  for (const { name, entry, classic } of [
+    { name: 'Modern', entry: webPath, classic: false },
+    { name: 'Classic', entry: webPath + '?theme=classic', classic: true },
+  ]) {
+    test(`${name} keeps the scene still while panels scroll`, async ({ page }, testInfo) => {
+      await page.goto(entry);
+      await page.getByTestId('model-file-input').setInputFiles(robot);
+      await expect(page.getByTestId('status-text')).toContainText('Loaded: rustsmf-demo.glb');
+      const scene = page.getByTestId('viewport-container');
+      const canvas = page.getByTestId('three-canvas');
+      const bounds = (await scene.boundingBox())!;
+      const visibleHeight = Math.min(bounds.height, page.viewportSize()!.height - bounds.y);
+      await swipeUp(page, bounds.x + bounds.width * 0.75, bounds.y + visibleHeight * 0.44, visibleHeight * 0.28);
+      expect((await scene.boundingBox())!.y).toBe(bounds.y);
+      await expect(page.locator('html')).toHaveCSS('overscroll-behavior-y', 'none');
+      await expect(canvas).toHaveCSS('touch-action', 'pinch-zoom');
+      await expect(page.getByTestId('open-model-btn')).toHaveCSS('user-select', 'none');
+
+      if (!classic) await page.getByTestId('modern-tools-button').tap();
+      const panel = classic ? page.getByTestId('outliner') : page.locator('.workspace-task-content');
+      await expect(panel).toBeInViewport();
+      const panelBounds = (await panel.boundingBox())!;
+      if (classic) {
+        expect(panelBounds.x).toBeGreaterThanOrEqual(bounds.x + bounds.width - 1);
+        expect(panelBounds.y).toBe(bounds.y);
+      }
+      await swipeUp(page, panelBounds.x + panelBounds.width / 2, panelBounds.y + panelBounds.height - 8,
+        Math.min(100, panelBounds.height - 16));
+      await expect.poll(() => panel.evaluate(element => (
+        element.scrollTop + (element.querySelector('.outliner-list')?.scrollTop ?? 0)
+      ))).toBeGreaterThan(0);
+      expect((await scene.boundingBox())!.y).toBe(bounds.y);
+      expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      await captureReview(page, testInfo, `mobile-${name.toLowerCase()}-landscape.png`);
+
+      if (!classic) {
+        await page.keyboard.press('Escape');
+        await expect(page.getByTestId('modern-support-panel')).toBeHidden();
+        await revealSecondaryCommands(page);
+        await page.getByTestId('help-open').tap();
+        await expect(page.getByTestId('help-dialog')).toBeVisible();
+        expect(await page.evaluate(() => window.scrollY)).toBe(0);
+      }
     });
   }
 });

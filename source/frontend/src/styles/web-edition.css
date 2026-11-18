@@ -1,0 +1,82 @@
+@media (pointer: coarse) {
+  html[data-web-edition],
+  html[data-web-edition] body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  html[data-web-edition] #root {
+    height: 100dvh;
+    overflow: hidden;
+  }
+
+  html[data-web-edition] :is(button, summary, .viewport-container canvas) {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  html[data-web-edition] :is(button, summary) {
+    touch-action: manipulation;
+  }
+
+  html[data-web-edition] .viewport-container canvas {
+    touch-action: none;
+    touch-action: pinch-zoom;
+  }
+
+  html[data-web-edition] :is(.sidebar, .inspector-stack, .preview-help, .timeline, .toolbar-menu-panel) {
+    overscroll-behavior: contain;
+  }
+
+  html[data-web-edition] .modern-toolbar .toolbar-menu-panel {
+    max-height: calc(100dvh - 3.5rem);
+    overflow-y: auto;
+  }
+
+  html[data-web-edition] .viewport-controls-overlay .toolbar-menu-panel {
+    max-height: calc(100dvh - 8rem);
+    overflow-y: auto;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 800px) {
+  html[data-web-edition] .app-shell[data-shell-variant="original"] .main-area {
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html[data-web-edition] .app-shell[data-shell-variant="original"] .viewport-container {
+    flex: 1 1 0;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  html[data-web-edition] .app-shell[data-shell-variant="original"] :is(.inspector-stack, .sidebar) {
+    flex: 0 1 auto;
+    min-height: 0;
+    max-height: 25%;
+  }
+}
+
+@media (pointer: coarse) and (min-width: 600px) and (max-width: 800px) and (orientation: landscape) {
+  html[data-web-edition] .app-shell[data-shell-variant="original"] .main-area {
+    flex-direction: row;
+  }
+
+  html[data-web-edition] .app-shell[data-shell-variant="original"] .viewport-container {
+    order: 1;
+    min-width: 0;
+  }
+
+  html[data-web-edition] .app-shell[data-shell-variant="original"] .inspector-stack {
+    order: 0;
+    flex: 0 0 136px;
+    max-height: none;
+  }
+
+  html[data-web-edition] .app-shell[data-shell-variant="original"] .sidebar {
+    flex: 0 0 128px;
+    max-height: none;
+  }
+}
